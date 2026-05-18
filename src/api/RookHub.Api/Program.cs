@@ -121,8 +121,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// M-5: Auto-migrate only in Development
-if (app.Environment.IsDevelopment())
+// Auto-migrate on startup
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
