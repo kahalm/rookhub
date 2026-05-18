@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -12,13 +12,59 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatDialogModule, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
+  selector: 'app-team-players-dialog',
+  standalone: true,
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule],
+  template: `
+    <h2 class="dialog-title">{{ data.teamName }}</h2>
+    <div class="dialog-table-scroll">
+      <table mat-table [dataSource]="data.players" class="full-width">
+        <ng-container matColumnDef="boardNumber">
+          <th mat-header-cell *matHeaderCellDef>Br.</th>
+          <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
+        </ng-container>
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <td mat-cell *matCellDef="let p">{{ p.title }}</td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="elo">
+          <th mat-header-cell *matHeaderCellDef>Elo</th>
+          <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+      </table>
+    </div>
+    <div class="dialog-actions">
+      <button mat-button mat-dialog-close>Close</button>
+    </div>
+  `,
+  styles: [`
+    .dialog-title { margin: 0 0 1rem; font-size: 1.2rem; }
+    .dialog-table-scroll { overflow-x: auto; max-height: 60vh; }
+    .full-width { width: 100%; }
+    .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+  `]
+})
+export class TeamPlayersDialogComponent {
+  columns = ['boardNumber', 'title', 'name', 'elo'];
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: any[] }) {}
+}
+
+@Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -56,9 +102,14 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             @if (playersLoading) {
               <app-loading-spinner />
             } @else {
+              @if (hasFavorites) {
+                <div class="filter-bar">
+                  <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
+                </div>
+              }
               <!-- Desktop: full table -->
               <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="players" class="full-width">
+                <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="playerSort = $event" class="full-width">
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let p">
@@ -68,15 +119,15 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef>Nr.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nr.</th>
                     <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
                   </ng-container>
                   <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef>Title</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
                     <td mat-cell *matCellDef="let p">{{ p.title }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
                     <td mat-cell *matCellDef="let p">{{ p.name }}</td>
                   </ng-container>
                   <ng-container matColumnDef="fideId">
@@ -84,19 +135,25 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
                   </ng-container>
                   <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef>Elo</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Elo</th>
                     <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
                   </ng-container>
                   <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef>Country</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Country</th>
                     <td mat-cell *matCellDef="let p">{{ p.country }}</td>
                   </ng-container>
                   <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef>Team</th>
-                    <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Team' : 'Verein' }}</th>
+                    <td mat-cell *matCellDef="let p">
+                      @if (p.teamName && isTeamTournament) {
+                        <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
+                      } @else {
+                        {{ p.teamName }}
+                      }
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef>Br.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Br.</th>
                     <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
@@ -106,7 +163,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 
               <!-- Mobile: card list -->
               <div class="mobile-only player-cards">
-                @for (p of players; track p.snr) {
+                @for (p of displayedPlayers; track p.snr) {
                   <div class="player-card" (click)="toggleFavorite(p)">
                     <div class="player-main">
                       <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
@@ -119,7 +176,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     <div class="player-details">
                       @if (p.elo) { <span>{{ p.elo }}</span> }
                       @if (p.country) { <span>{{ p.country }}</span> }
-                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
+                      @if (p.teamName) { <span>{{ isTeamTournament ? '' : '' }}{{ p.teamName }}</span> }
                       @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
                     </div>
                   </div>
@@ -134,7 +191,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             } @else {
               <!-- Desktop -->
               <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="favorites" class="full-width">
+                <table mat-table [dataSource]="sortedFavorites" matSort (matSortChange)="favoriteSort = $event" class="full-width">
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let p">
@@ -142,15 +199,15 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef>Nr.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nr.</th>
                     <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
                   </ng-container>
                   <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef>Title</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
                     <td mat-cell *matCellDef="let p">{{ p.title }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
                     <td mat-cell *matCellDef="let p">{{ p.name }}</td>
                   </ng-container>
                   <ng-container matColumnDef="fideId">
@@ -158,19 +215,25 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
                   </ng-container>
                   <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef>Elo</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Elo</th>
                     <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
                   </ng-container>
                   <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef>Country</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Country</th>
                     <td mat-cell *matCellDef="let p">{{ p.country }}</td>
                   </ng-container>
                   <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef>Team</th>
-                    <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Team' : 'Verein' }}</th>
+                    <td mat-cell *matCellDef="let p">
+                      @if (p.teamName && isTeamTournament) {
+                        <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
+                      } @else {
+                        {{ p.teamName }}
+                      }
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef>Br.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Br.</th>
                     <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
@@ -180,7 +243,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 
               <!-- Mobile -->
               <div class="mobile-only player-cards">
-                @for (p of favorites; track p.snr) {
+                @for (p of sortedFavorites; track p.snr) {
                   <div class="player-card" (click)="removeFavorite(p)">
                     <div class="player-main">
                       <mat-icon class="fav-icon-sm fav-active">star</mat-icon>
@@ -204,18 +267,25 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             @if (teamsLoading) {
               <app-loading-spinner />
             } @else {
+              @if (hasFavorites) {
+                <div class="filter-bar">
+                  <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
+                </div>
+              }
               <div class="table-scroll">
-                <table mat-table [dataSource]="teams" class="full-width">
+                <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort = $event" class="full-width">
                   <ng-container matColumnDef="rank">
                     <th mat-header-cell *matHeaderCellDef>Rank</th>
                     <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef>Team</th>
-                    <td mat-cell *matCellDef="let t">{{ t.name }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Team</th>
+                    <td mat-cell *matCellDef="let t">
+                      <span class="team-link" (click)="showTeamPlayers(t.name)">{{ t.name }}</span>
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="points">
-                    <th mat-header-cell *matHeaderCellDef>Points</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Points</th>
                     <td mat-cell *matCellDef="let t">{{ t.points }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
@@ -236,29 +306,41 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                 </mat-select>
               </mat-form-field>
               @if (hasFavorites) {
-                <mat-slide-toggle [(ngModel)]="showFavoritePairingsOnly">Nur Favoriten</mat-slide-toggle>
+                <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
               }
             </div>
             @if (pairingsLoading) {
               <app-loading-spinner />
             } @else {
               <div class="table-scroll">
-                <table mat-table [dataSource]="filteredPairings" class="full-width">
+                <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef>Board</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Board</th>
                     <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="white">
-                    <th mat-header-cell *matHeaderCellDef>White</th>
-                    <td mat-cell *matCellDef="let p">{{ p.white }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Home' : 'White' }}</th>
+                    <td mat-cell *matCellDef="let p">
+                      @if (isTeamTournament) {
+                        <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
+                      } @else {
+                        {{ p.white }}
+                      }
+                    </td>
                   </ng-container>
                   <ng-container matColumnDef="result">
                     <th mat-header-cell *matHeaderCellDef>Result</th>
                     <td mat-cell *matCellDef="let p">{{ p.result }}</td>
                   </ng-container>
                   <ng-container matColumnDef="black">
-                    <th mat-header-cell *matHeaderCellDef>Black</th>
-                    <td mat-cell *matCellDef="let p">{{ p.black }}</td>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Away' : 'Black' }}</th>
+                    <td mat-cell *matCellDef="let p">
+                      @if (isTeamTournament) {
+                        <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
+                      } @else {
+                        {{ p.black }}
+                      }
+                    </td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="pairingColumns"></tr>
                   <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
@@ -275,6 +357,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .full-width { width: 100%; }
     .table-scroll { overflow-x: auto; }
     .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
     mat-card { margin-bottom: 1rem; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .empty-hint { padding: 1.5rem; color: #888; }
@@ -283,6 +366,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
     .fav-icon:hover { color: #ffc107; }
     .remove-fav:hover { color: #f44336 !important; }
+
+    .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
+    .team-link:hover { color: #0d47a1; }
 
     /* Mobile card list for players */
     .mobile-only { display: none; }
@@ -339,9 +425,15 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   playerColumns = ['fav', 'snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
   teamColumns = ['rank', 'name', 'points'];
   pairingColumns = ['board', 'white', 'result', 'black'];
-  showFavoritePairingsOnly = false;
+  showFavoritesOnly = false;
   favoriteSnrs: Set<number> = new Set();
   selectedTabIndex = 0;
+
+  // Sort states
+  playerSort: Sort = { active: '', direction: '' };
+  favoriteSort: Sort = { active: '', direction: '' };
+  teamSort: Sort = { active: '', direction: '' };
+  pairingSort: Sort = { active: '', direction: '' };
 
   subscription: any = null;
   toggling = false;
@@ -351,7 +443,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private static readonly TAB_NAMES = ['players', 'favorites', 'teams', 'pairings'];
   private id!: string;
 
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
@@ -519,7 +611,28 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Favorites
+  // --- Sorting ---
+
+  private sortData<T>(data: T[], sort: Sort): T[] {
+    if (!sort.active || sort.direction === '') return data;
+    const dir = sort.direction === 'asc' ? 1 : -1;
+    const key = sort.active === 'team' ? 'teamName' : sort.active === 'board' ? 'boardNumber' : sort.active;
+    return [...data].sort((a: any, b: any) => {
+      const valA = a[key] ?? '';
+      const valB = b[key] ?? '';
+      if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
+      return String(valA).localeCompare(String(valB)) * dir;
+    });
+  }
+
+  // --- Team/Individual detection ---
+
+  get isTeamTournament(): boolean {
+    return this.teams.length > 0;
+  }
+
+  // --- Favorites ---
+
   private get favKey(): string { return `favorites_${this.id}`; }
 
   private loadFavorites(): void {
@@ -548,10 +661,44 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return names;
   }
 
-  get filteredPairings(): any[] {
-    if (!this.showFavoritePairingsOnly) return this.pairings;
-    const names = this.favoriteNames;
-    return this.pairings.filter(p => names.has(p.white) || names.has(p.black));
+  get favoriteTeamNames(): Set<string> {
+    const teamNames = new Set<string>();
+    for (const p of this.players) {
+      if (this.favoriteSnrs.has(p.snr) && p.teamName) teamNames.add(p.teamName);
+    }
+    return teamNames;
+  }
+
+  get displayedPlayers(): any[] {
+    let data = this.showFavoritesOnly ? this.players.filter(p => this.favoriteSnrs.has(p.snr)) : this.players;
+    return this.sortData(data, this.playerSort);
+  }
+
+  get sortedFavorites(): any[] {
+    return this.sortData(this.favorites, this.favoriteSort);
+  }
+
+  get displayedTeams(): any[] {
+    let data = this.teams;
+    if (this.showFavoritesOnly) {
+      const favTeams = this.favoriteTeamNames;
+      data = data.filter(t => favTeams.has(t.name));
+    }
+    return this.sortData(data, this.teamSort);
+  }
+
+  get displayedPairings(): any[] {
+    let data = this.pairings;
+    if (this.showFavoritesOnly) {
+      if (this.isTeamTournament) {
+        const favTeams = this.favoriteTeamNames;
+        data = data.filter(p => favTeams.has(p.white) || favTeams.has(p.black));
+      } else {
+        const names = this.favoriteNames;
+        data = data.filter(p => names.has(p.white) || names.has(p.black));
+      }
+    }
+    return this.sortData(data, this.pairingSort);
   }
 
   get favorites(): any[] {
@@ -577,5 +724,23 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.favoriteSnrs.delete(player.snr);
     this.saveFavorites();
     this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
+  }
+
+  // --- Team detail dialog ---
+
+  showTeamPlayers(teamName: string): void {
+    const team = this.teams.find(t => t.name === teamName);
+    if (!team) return;
+    this.http.get<any>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
+      next: (result) => {
+        this.dialog.open(TeamPlayersDialogComponent, {
+          data: { teamName: result.name, players: result.players || [] },
+          width: '500px'
+        });
+      },
+      error: () => {
+        this.snackBar.open('Failed to load team details', 'Close', { duration: 3000 });
+      }
+    });
   }
 }

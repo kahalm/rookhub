@@ -76,6 +76,20 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [HttpGet("{id}/teams/{snr}")]
+    public async Task<IActionResult> GetTeamDetail(string id, int snr)
+    {
+        try
+        {
+            var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams/{snr}");
+            return Ok(result);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { message = "Crawler service unavailable." });
+        }
+    }
+
     [HttpGet("{id}/pairings")]
     public async Task<IActionResult> GetPairings(string id, [FromQuery] int? round)
     {
