@@ -12,7 +12,9 @@ public class TournamentFavorite
     [Required, MaxLength(50)]
     public string CrawlerTournamentId { get; set; } = string.Empty;
 
-    public int PlayerSnr { get; set; }
+    public int? PlayerSnr { get; set; }
+
+    public int? TeamSnr { get; set; }
 
     public DateTime FavoritedAt { get; set; } = DateTime.UtcNow;
 }

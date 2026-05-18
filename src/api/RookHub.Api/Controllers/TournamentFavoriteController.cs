@@ -32,6 +32,7 @@ public class TournamentFavoriteController : BaseApiController
                 Id = f.Id,
                 CrawlerTournamentId = f.CrawlerTournamentId,
                 PlayerSnr = f.PlayerSnr,
+                TeamSnr = f.TeamSnr,
                 FavoritedAt = f.FavoritedAt
             })
             .ToListAsync();
@@ -67,6 +68,7 @@ public class TournamentFavoriteController : BaseApiController
             Id = fav.Id,
             CrawlerTournamentId = fav.CrawlerTournamentId,
             PlayerSnr = fav.PlayerSnr,
+            TeamSnr = fav.TeamSnr,
             FavoritedAt = fav.FavoritedAt
         });
     }
@@ -94,6 +96,55 @@ public class TournamentFavoriteController : BaseApiController
             .FirstOrDefaultAsync(f => f.UserId == GetUserId()
                                    && f.CrawlerTournamentId == tournamentId
                                    && f.PlayerSnr == playerSnr);
+
+        if (fav == null)
+            return NotFound(new { message = "Favorite not found." });
+
+        _db.TournamentFavorites.Remove(fav);
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    /// <summary>Add a team favorite.</summary>
+    [HttpPost("team")]
+    public async Task<ActionResult<TournamentFavoriteDto>> CreateTeamFavorite([FromBody] CreateTeamFavoriteDto dto)
+    {
+        var userId = GetUserId();
+        var exists = await _db.TournamentFavorites
+            .AnyAsync(f => f.UserId == userId
+                        && f.CrawlerTournamentId == dto.CrawlerTournamentId
+                        && f.TeamSnr == dto.TeamSnr);
+
+        if (exists)
+            return Conflict(new { message = "Already favorited." });
+
+        var fav = new TournamentFavorite
+        {
+            UserId = userId,
+            CrawlerTournamentId = dto.CrawlerTournamentId,
+            TeamSnr = dto.TeamSnr
+        };
+
+        _db.TournamentFavorites.Add(fav);
+        await _db.SaveChangesAsync();
+
+        return Ok(new TournamentFavoriteDto
+        {
+            Id = fav.Id,
+            CrawlerTournamentId = fav.CrawlerTournamentId,
+            TeamSnr = fav.TeamSnr,
+            FavoritedAt = fav.FavoritedAt
+        });
+    }
+
+    /// <summary>Remove a team favorite by tournament + team SNR.</summary>
+    [HttpDelete("by-team/{tournamentId}/{teamSnr}")]
+    public async Task<IActionResult> DeleteByTeam(string tournamentId, int teamSnr)
+    {
+        var fav = await _db.TournamentFavorites
+            .FirstOrDefaultAsync(f => f.UserId == GetUserId()
+                                   && f.CrawlerTournamentId == tournamentId
+                                   && f.TeamSnr == teamSnr);
 
         if (fav == null)
             return NotFound(new { message = "Favorite not found." });
