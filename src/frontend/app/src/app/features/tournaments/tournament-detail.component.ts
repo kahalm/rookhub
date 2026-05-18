@@ -261,6 +261,7 @@ export class TournamentDetailComponent implements OnInit {
           this.rounds = Array.from({ length: t.roundCount }, (_, i) => i + 1);
         }
         this.loadPlayers();
+        this.loadTeams();
       },
       error: () => { this.loading = false; }
     });
