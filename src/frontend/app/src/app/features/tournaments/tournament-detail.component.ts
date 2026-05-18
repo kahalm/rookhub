@@ -143,9 +143,9 @@ export class TeamPlayersDialogComponent {
                     <td mat-cell *matCellDef="let p">{{ p.country }}</td>
                   </ng-container>
                   <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Team' : 'Verein' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Team' : 'Verein' }}</th>
                     <td mat-cell *matCellDef="let p">
-                      @if (p.teamName && isTeamTournament) {
+                      @if (p.teamName && hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
                       } @else {
                         {{ p.teamName }}
@@ -176,7 +176,7 @@ export class TeamPlayersDialogComponent {
                     <div class="player-details">
                       @if (p.elo) { <span>{{ p.elo }}</span> }
                       @if (p.country) { <span>{{ p.country }}</span> }
-                      @if (p.teamName) { <span>{{ isTeamTournament ? '' : '' }}{{ p.teamName }}</span> }
+                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
                       @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
                     </div>
                   </div>
@@ -241,9 +241,9 @@ export class TeamPlayersDialogComponent {
                     <td mat-cell *matCellDef="let p">{{ p.board }}</td>
                   </ng-container>
                   <ng-container matColumnDef="white">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Home' : 'White' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Home' : 'White' }}</th>
                     <td mat-cell *matCellDef="let p">
-                      @if (isTeamTournament) {
+                      @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
                       } @else {
                         {{ p.white }}
@@ -255,9 +255,9 @@ export class TeamPlayersDialogComponent {
                     <td mat-cell *matCellDef="let p">{{ p.result }}</td>
                   </ng-container>
                   <ng-container matColumnDef="black">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Away' : 'Black' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Away' : 'Black' }}</th>
                     <td mat-cell *matCellDef="let p">
-                      @if (isTeamTournament) {
+                      @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
                       } @else {
                         {{ p.black }}
@@ -287,7 +287,6 @@ export class TeamPlayersDialogComponent {
     .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
     .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
     .fav-icon:hover { color: #ffc107; }
-    .remove-fav:hover { color: #f44336 !important; }
 
     .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
     .team-link:hover { color: #0d47a1; }
@@ -350,6 +349,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   showFavoritesOnly = false;
   favoriteSnrs: Set<number> = new Set();
   selectedTabIndex = 0;
+  hasTeamPairings = false;
 
   // Sort states
   playerSort: Sort = { active: '', direction: '' };
@@ -364,13 +364,16 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
   private id!: string;
 
+  // Map playerSnr -> server favorite ID for deletion
+  private favoriteIdMap: Map<number, number> = new Map();
+
   constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
     const tab = this.route.snapshot.queryParams['tab'];
     const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
-    if (tabIndex > 0) this.selectedTabIndex = tabIndex;
+    if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
     this.loadFavorites();
     this.http.get(`/api/tournaments/${this.id}`).subscribe({
       next: (t: any) => {
@@ -381,6 +384,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         }
         this.loadPlayers();
         this.loadTeams();
+        if (this.selectedTabIndex === 2) this.loadPairings();
       },
       error: () => { this.loading = false; }
     });
@@ -494,7 +498,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   onTabChange(event: any): void {
     this.selectedTabIndex = event.index;
     const tabName = TournamentDetailComponent.TAB_NAMES[event.index];
-    this.router.navigate([], { queryParams: tabName === 'players' ? {} : { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.router.navigate([], { queryParams: { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
     if (event.index === 1 && this.teams.length === 0) this.loadTeams();
     if (event.index === 2 && this.pairings.length === 0) this.loadPairings();
   }
@@ -519,13 +523,19 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.pairingsLoading = true;
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
       next: (p) => {
-        // Normalize: team pairings have homeTeam/awayTeam, individual have white/black
-        this.pairings = p.map(item => {
-          if (item.homeTeam !== undefined) {
-            return { board: item.matchNumber, white: item.homeTeam, black: item.awayTeam, result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : '' };
-          }
-          return { ...item, board: item.boardNumber };
-        });
+        // Detect team vs individual pairings based on data format
+        if (p.length > 0 && p[0].homeTeam !== undefined) {
+          this.hasTeamPairings = true;
+          this.pairings = p.map(item => ({
+            board: item.matchNumber,
+            white: item.homeTeam,
+            black: item.awayTeam,
+            result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : ''
+          }));
+        } else {
+          this.hasTeamPairings = false;
+          this.pairings = p.map(item => ({ ...item, board: item.boardNumber }));
+        }
         this.pairingsLoading = false;
       },
       error: () => { this.pairingsLoading = false; }
@@ -546,24 +556,20 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- Team/Individual detection ---
-
-  get isTeamTournament(): boolean {
-    return this.teams.length > 0;
-  }
-
-  // --- Favorites ---
-
-  private get favKey(): string { return `favorites_${this.id}`; }
+  // --- Favorites (server-side) ---
 
   private loadFavorites(): void {
-    const stored = localStorage.getItem(this.favKey);
-    this.favoriteSnrs = stored ? new Set(JSON.parse(stored)) : new Set();
-  }
-
-  private saveFavorites(): void {
-    this.favoriteSnrs = new Set(this.favoriteSnrs);
-    localStorage.setItem(this.favKey, JSON.stringify([...this.favoriteSnrs]));
+    this.http.get<any[]>(`/api/tournament-favorites?tournamentId=${this.id}`).subscribe({
+      next: (favs) => {
+        this.favoriteSnrs = new Set(favs.map(f => f.playerSnr));
+        this.favoriteIdMap = new Map(favs.map(f => [f.playerSnr, f.id]));
+      },
+      error: () => {
+        // Fallback: load from localStorage for unauthenticated users
+        const stored = localStorage.getItem(`favorites_${this.id}`);
+        this.favoriteSnrs = stored ? new Set(JSON.parse(stored)) : new Set();
+      }
+    });
   }
 
   get hasFavorites(): boolean {
@@ -607,7 +613,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   get displayedPairings(): any[] {
     let data = this.pairings;
     if (this.showFavoritesOnly) {
-      if (this.isTeamTournament) {
+      if (this.hasTeamPairings) {
         const favTeams = this.favoriteTeamNames;
         data = data.filter(p => favTeams.has(p.white) || favTeams.has(p.black));
       } else {
@@ -624,13 +630,27 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   toggleFavorite(player: any): void {
     if (this.favoriteSnrs.has(player.snr)) {
+      // Remove favorite
       this.favoriteSnrs.delete(player.snr);
+      this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
+      this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
+        next: () => { this.favoriteIdMap.delete(player.snr); },
+        error: () => {}
+      });
     } else {
+      // Add favorite
       this.favoriteSnrs.add(player.snr);
+      this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
+      this.http.post<any>('/api/tournament-favorites', {
+        crawlerTournamentId: this.id,
+        playerSnr: player.snr
+      }).subscribe({
+        next: (fav) => { this.favoriteIdMap.set(player.snr, fav.id); },
+        error: () => {}
+      });
     }
-    this.saveFavorites();
   }
 
   // --- Team detail dialog ---

@@ -62,7 +62,7 @@ import { forkJoin } from 'rxjs';
             <mat-card>
               <mat-card-header>
                 <mat-card-title>{{ t.name }}</mat-card-title>
-                <mat-card-subtitle>{{ t.location }} | {{ t.date }}</mat-card-subtitle>
+                <mat-card-subtitle>{{ formatSubtitle(t) }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-actions>
                 <button mat-button [routerLink]="['/tournaments', t.id]">Details</button>
@@ -125,6 +125,10 @@ export class TournamentListComponent implements OnInit, OnDestroy {
   }
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+
+  formatSubtitle(t: any): string {
+    return [t.location, t.date].filter((v: any) => !!v).join(' | ');
+  }
 
   ngOnInit(): void {
     const stored = localStorage.getItem('hiddenTournaments');
