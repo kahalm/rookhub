@@ -87,7 +87,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
-  frontend:
+  rookhub:
     image: ghcr.io/kahalm/rookhub-frontend:latest
     container_name: rookhub-frontend
     restart: unless-stopped
