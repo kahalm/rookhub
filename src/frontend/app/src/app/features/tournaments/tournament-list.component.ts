@@ -95,12 +95,15 @@ import { forkJoin } from 'rxjs';
   styles: [`
     .tournament-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .crawl-card { margin-bottom: 2rem; }
-    .crawl-form { display: flex; align-items: flex-start; gap: 1rem; }
-    .crawl-form mat-form-field { flex: 1; max-width: 400px; }
+    .crawl-form { display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .crawl-form mat-form-field { flex: 1; min-width: 0; max-width: 400px; }
     .crawl-form button { margin-top: 4px; }
     .crawl-status { margin-top: 0.5rem; color: #666; font-style: italic; }
     .crawl-error { margin-top: 0.5rem; color: #f44336; }
-    .tournament-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
+    .tournament-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
+    @media (max-width: 768px) {
+      .tournament-container { padding: 0.75rem; }
+    }
   `]
 })
 export class TournamentListComponent implements OnInit, OnDestroy {

@@ -16,10 +16,21 @@ import { AuthService } from '../../core/auth.service';
       <span class="logo" routerLink="/dashboard">RookHub</span>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
-        <button mat-button routerLink="/dashboard">Dashboard</button>
-        <button mat-button routerLink="/repertoires">Repertoires</button>
-        <button mat-button routerLink="/tournaments">Tournaments</button>
-        <button mat-button routerLink="/friends">Friends</button>
+        <div class="nav-links">
+          <button mat-button routerLink="/dashboard">Dashboard</button>
+          <button mat-button routerLink="/repertoires">Repertoires</button>
+          <button mat-button routerLink="/tournaments">Tournaments</button>
+          <button mat-button routerLink="/friends">Friends</button>
+        </div>
+        <button mat-icon-button class="mobile-menu-btn" [matMenuTriggerFor]="navMenu">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <mat-menu #navMenu="matMenu">
+          <button mat-menu-item routerLink="/dashboard">Dashboard</button>
+          <button mat-menu-item routerLink="/repertoires">Repertoires</button>
+          <button mat-menu-item routerLink="/tournaments">Tournaments</button>
+          <button mat-menu-item routerLink="/friends">Friends</button>
+        </mat-menu>
         <button mat-icon-button [matMenuTriggerFor]="userMenu">
           <mat-icon>account_circle</mat-icon>
         </button>
@@ -36,6 +47,11 @@ import { AuthService } from '../../core/auth.service';
   styles: [`
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
     .spacer { flex: 1 1 auto; }
+    .mobile-menu-btn { display: none; }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .mobile-menu-btn { display: inline-flex; }
+    }
   `]
 })
 export class NavbarComponent {

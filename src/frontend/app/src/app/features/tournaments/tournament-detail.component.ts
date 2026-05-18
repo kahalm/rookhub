@@ -387,7 +387,10 @@ export class TeamPlayersDialogComponent {
       .desktop-only { display: none; }
       .mobile-only { display: block; }
       .btn-label { display: none; }
-      .action-bar button, .action-bar a { min-width: 0; padding: 0 12px; }
+      .action-bar button, .action-bar a {
+        min-width: 0; padding: 0; width: 40px; height: 40px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
     }
