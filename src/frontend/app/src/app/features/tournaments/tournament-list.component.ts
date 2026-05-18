@@ -157,8 +157,10 @@ export class TournamentListComponent implements OnInit {
   }
 
   startCrawl(): void {
-    const id = this.crawlId.trim();
+    let id = this.crawlId.trim();
     if (!id) return;
+    // Strip tnr prefix and URL parts - user might paste full URL or "tnr1234567"
+    id = id.replace(/.*tnr/i, '').replace(/\..*/g, '');
     this.crawling = true;
     this.crawlError = '';
     this.crawlJobId = null;

@@ -230,8 +230,10 @@ export class TournamentDetailComponent implements OnInit {
   refresh(): void {
     if (!this.tournament?.chessResultsId) return;
     this.refreshing = true;
+    // Strip tnr prefix if present - crawler adds it automatically
+    const crawlId = this.tournament.chessResultsId.replace(/^tnr/i, '');
     this.http.post<any>('/api/tournaments/crawl', {
-      chessResultsId: this.tournament.chessResultsId,
+      chessResultsId: crawlId,
       jobType: 'Full'
     }).subscribe({
       next: (job) => this.pollRefreshJob(job.id),
