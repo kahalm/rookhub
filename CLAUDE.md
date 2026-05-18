@@ -198,8 +198,17 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 - **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein grosser Sammel-Commit. So bleibt die History nachvollziehbar und Rollbacks sind einfach.
 
+## Versionierung
+
+- **Aktuelle Version**: `0.1.0`
+- Definiert in `src/frontend/app/src/environments/environment.ts`
+- Angezeigt im Footer der Desktop-Version
+- Bei jedem Feature Minor erhoehen (0.x.0), bei jedem Fix Patch erhoehen (0.0.x)
+- Version in `environment.ts` UND in diesem Abschnitt aktualisieren
+
 ## Wichtige Konventionen
 
+- **Keine Default-Werte in Compose-Example-Dateien** – `compose.yml.example` und `compose.vpn.example` verwenden `${VAR}` ohne `:-default`. Alle Werte muessen explizit in der `.env`-Datei gesetzt werden.
 - Crawler-Proxy-Endpoints muessen mit tatsaechlichen Crawler-Routen uebereinstimmen
 - Angular nutzt lazy-loaded standalone components (kein NgModule)
 - JWT-Claims: `ClaimTypes.NameIdentifier` = UserId, `ClaimTypes.Name` = Username

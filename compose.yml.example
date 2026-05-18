@@ -6,26 +6,24 @@
 # 3. Create .env (see below) and adjust values
 # 4. Start:           docker compose up -d
 #
-# Required .env variables:
+# Required .env variables (no defaults – all must be set explicitly):
+#   MARIADB_ROOT_PASSWORD=
+#   DB_HOST=
+#   DB_PORT=
+#   DB_EXTERNAL_PORT=
+#   CRAWLER_DB_NAME=
+#   CRAWLER_DB_USER=
+#   CRAWLER_DB_PASSWORD=
+#   ROOKHUB_DB_NAME=
+#   ROOKHUB_DB_USER=
+#   ROOKHUB_DB_PASSWORD=
 #   JWT_KEY=<min-32-char-secret-for-jwt-signing>
-#
-# Optional .env overrides (defaults shown):
-#   MARIADB_ROOT_PASSWORD=rootpassword
-#   DB_HOST=mariadb
-#   DB_PORT=3306
-#   DB_EXTERNAL_PORT=3307
-#   CRAWLER_DB_NAME=chessresults
-#   CRAWLER_DB_USER=chessresults
-#   CRAWLER_DB_PASSWORD=chessresults
-#   ROOKHUB_DB_NAME=rookhub
-#   ROOKHUB_DB_USER=rookhub
-#   ROOKHUB_DB_PASSWORD=rookhub_secret
-#   JWT_ISSUER=RookHub
-#   JWT_AUDIENCE=RookHub
-#   FRONTEND_PORT=8085
-#   API_PORT=5001
-#   DB_DATA_PATH=mariadb-data        (named volume, or host path like /data/mariadb)
-#   INIT_DB_PATH=./init-db.sh
+#   JWT_ISSUER=
+#   JWT_AUDIENCE=
+#   FRONTEND_PORT=
+#   API_PORT=
+#   DB_DATA_PATH=              (named volume, or host path like /data/mariadb)
+#   INIT_DB_PATH=
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
@@ -41,18 +39,18 @@ services:
     container_name: rookhub-mariadb
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpassword}
-      CRAWLER_DB_NAME: ${CRAWLER_DB_NAME:-chessresults}
-      CRAWLER_DB_USER: ${CRAWLER_DB_USER:-chessresults}
-      CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD:-chessresults}
-      ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME:-rookhub}
-      ROOKHUB_DB_USER: ${ROOKHUB_DB_USER:-rookhub}
-      ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD:-rookhub_secret}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
+      CRAWLER_DB_USER: ${CRAWLER_DB_USER}
+      CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
+      ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME}
+      ROOKHUB_DB_USER: ${ROOKHUB_DB_USER}
+      ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD}
     ports:
-      - "${DB_EXTERNAL_PORT:-3307}:3306"
+      - "${DB_EXTERNAL_PORT}:3306"
     volumes:
-      - ${DB_DATA_PATH:-mariadb-data}:/var/lib/mysql
-      - ${INIT_DB_PATH:-./init-db.sh}:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ${DB_DATA_PATH}:/var/lib/mysql
+      - ${INIT_DB_PATH}:/docker-entrypoint-initdb.d/init-db.sh:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
@@ -69,7 +67,7 @@ services:
       mariadb:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=${DB_HOST:-mariadb};Port=${DB_PORT:-3306};Database=${CRAWLER_DB_NAME:-chessresults};User=${CRAWLER_DB_USER:-chessresults};Password=${CRAWLER_DB_PASSWORD:-chessresults};"
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
       ASPNETCORE_ENVIRONMENT: Production
 
   # ── RookHub API ────────────────────────────────────────────────────────────
@@ -78,17 +76,17 @@ services:
     container_name: rookhub-api
     restart: unless-stopped
     ports:
-      - "${API_PORT:-5001}:8080"
+      - "${API_PORT}:8080"
     depends_on:
       mariadb:
         condition: service_healthy
       crawler:
         condition: service_started
     environment:
-      ConnectionStrings__DefaultConnection: "Server=${DB_HOST:-mariadb};Port=${DB_PORT:-3306};Database=${ROOKHUB_DB_NAME:-rookhub};User=${ROOKHUB_DB_USER:-rookhub};Password=${ROOKHUB_DB_PASSWORD:-rookhub_secret};"
-      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set in .env or environment}
-      Jwt__Issuer: ${JWT_ISSUER:-RookHub}
-      Jwt__Audience: ${JWT_AUDIENCE:-RookHub}
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://crawler:8080
       ASPNETCORE_ENVIRONMENT: Production
 
@@ -98,7 +96,7 @@ services:
     container_name: rookhub-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-8085}:80"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       - api
 
