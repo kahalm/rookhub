@@ -1,0 +1,86 @@
+###############################################################################
+# RookHub full-stack deployment (ohne VPN)
+#
+# 1. Clone:           git clone https://github.com/kahalm/rookhub.git && cd rookhub
+# 2. Copy this file:  cp compose.yml.example compose.yml
+# 3. Create .env with required variables (see below)
+# 4. Start:           docker compose up --build -d
+#
+# Required .env variables:
+#   JWT_KEY=<min-32-char-secret-for-jwt-signing>
+#   MYSQL_ROOT_PASSWORD=<root-db-password>
+#
+# Ports:
+#   8085  -> Frontend (nginx)
+#   5001  -> RookHub API  (Swagger: http://localhost:5001/swagger)
+#   3307  -> MariaDB      (beide DBs: chessresults + rookhub)
+###############################################################################
+
+services:
+
+  # ── Shared MariaDB ─────────────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:11
+    container_name: rookhub-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ChessResults Crawler ──────────────────────────────────────────────────
+  crawler:
+    build:
+      context: https://github.com/kahalm/chessreslults_crawler.git#master:src/ChessResultsCrawler
+    container_name: rookhub-crawler
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=chessresults;User=chessresults;Password=chessresults;"
+      ASPNETCORE_ENVIRONMENT: Production
+
+  # ── RookHub API ────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: https://github.com/kahalm/rookhub.git#master:src/api/RookHub.Api
+    container_name: rookhub-api
+    restart: unless-stopped
+    ports:
+      - "5001:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      crawler:
+        condition: service_started
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=rookhub;User=rookhub;Password=rookhub_secret;"
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set in .env or environment}
+      Jwt__Issuer: RookHub
+      Jwt__Audience: RookHub
+      Crawler__BaseUrl: http://crawler:8080
+      ASPNETCORE_ENVIRONMENT: Production
+
+  # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: https://github.com/kahalm/rookhub.git#master:src/frontend
+    container_name: rookhub-frontend
+    restart: unless-stopped
+    ports:
+      - "8085:80"
+    depends_on:
+      - api
+
+volumes:
+  mariadb-data:
