@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RookHub.Api.Data;
+using RookHub.Api.Middleware;
 using RookHub.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<FriendService>();
 builder.Services.AddScoped<RepertoireService>();
+builder.Services.AddHostedService<RoundMonitorService>();
 
 // Crawler Proxy HttpClient
 var crawlerBaseUrl = builder.Configuration["Crawler:BaseUrl"] ?? "http://host.docker.internal:8080";
@@ -154,6 +156,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
