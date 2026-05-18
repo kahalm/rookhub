@@ -1,0 +1,149 @@
+###############################################################################
+# RookHub full-stack deployment mit Gluetun VPN (WireGuard)
+#
+# 1. Clone:           git clone https://github.com/kahalm/rookhub.git && cd rookhub
+# 2. Copy this file:  cp compose.vpn.example compose.vpn.yml
+# 3. Create .env (see below) and adjust values
+# 4. Start:           docker compose -f compose.vpn.yml up -d
+#
+# Required .env variables (no defaults – all must be set explicitly):
+#   MARIADB_ROOT_PASSWORD=
+#   DB_HOST=
+#   DB_PORT=
+#   DB_EXTERNAL_PORT=
+#   CRAWLER_DB_NAME=
+#   CRAWLER_DB_USER=
+#   CRAWLER_DB_PASSWORD=
+#   ROOKHUB_DB_NAME=
+#   ROOKHUB_DB_USER=
+#   ROOKHUB_DB_PASSWORD=
+#   JWT_KEY=<min-32-char-secret-for-jwt-signing>
+#   JWT_ISSUER=
+#   JWT_AUDIENCE=
+#   FRONTEND_PORT=
+#   API_PORT=
+#   DB_DATA_PATH=
+#   INIT_DB_PATH=
+#   VPN_SERVICE_PROVIDER=
+#   VPN_TYPE=
+#   WIREGUARD_PRIVATE_KEY=
+#   WIREGUARD_PRESHARED_KEY=
+#   WIREGUARD_ADDRESSES=
+#   SERVER_COUNTRIES=
+#   FIREWALL_VPN_INPUT_PORTS=
+#
+# Ports:
+#   ${FRONTEND_PORT}    -> Frontend (nginx)
+#   ${API_PORT}          -> RookHub API
+#   ${DB_EXTERNAL_PORT}  -> MariaDB
+###############################################################################
+
+services:
+
+  # ── Shared MariaDB ─────────────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:11
+    container_name: rookhub-mariadb-dev
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
+      CRAWLER_DB_USER: ${CRAWLER_DB_USER}
+      CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
+      ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME}
+      ROOKHUB_DB_USER: ${ROOKHUB_DB_USER}
+      ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD}
+    ports:
+      - "${DB_EXTERNAL_PORT}:3306"
+    volumes:
+      - ${DB_DATA_PATH}:/var/lib/mysql
+      - ${INIT_DB_PATH}:/docker-entrypoint-initdb.d/init-db.sh:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rookhub-dev
+
+  # ── Gluetun VPN (WireGuard) ───────────────────────────────────────────────
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: rookhub-gluetun-dev
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER}
+      VPN_TYPE: ${VPN_TYPE}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY}
+      WIREGUARD_PRESHARED_KEY: ${WIREGUARD_PRESHARED_KEY}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES}
+      SERVER_COUNTRIES: ${SERVER_COUNTRIES}
+      FIREWALL_VPN_INPUT_PORTS: ${FIREWALL_VPN_INPUT_PORTS}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000 || wget -q --spider https://ipinfo.io || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - rookhub-dev
+
+  # ── ChessResults Crawler (via Gluetun VPN) ────────────────────────────────
+  crawler:
+    image: ghcr.io/kahalm/rookhub-crawler:latest
+    container_name: rookhub-crawler-dev
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      gluetun:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
+      ASPNETCORE_ENVIRONMENT: Production
+
+  # ── RookHub API ────────────────────────────────────────────────────────────
+  api:
+    image: ghcr.io/kahalm/rookhub-api:latest
+    container_name: rookhub-api-dev
+    restart: unless-stopped
+    ports:
+      - "${API_PORT}:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      crawler:
+        condition: service_started
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Crawler__BaseUrl: http://gluetun:8080
+      ASPNETCORE_ENVIRONMENT: Production
+    networks:
+      - rookhub-dev
+
+  # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
+  rookhub:
+    image: ghcr.io/kahalm/rookhub-frontend:latest
+    container_name: rookhub-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      - api
+    networks:
+      - rookhub-dev
+
+networks:
+  rookhub-dev:
+
+volumes:
+  mariadb-data:
