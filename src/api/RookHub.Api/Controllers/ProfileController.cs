@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
@@ -9,13 +8,11 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/profile")]
 [Authorize]
-public class ProfileController : ControllerBase
+public class ProfileController : BaseApiController
 {
     private readonly ProfileService _profileService;
 
     public ProfileController(ProfileService profileService) => _profileService = profileService;
-
-    private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<ProfileDto>> GetMyProfile()

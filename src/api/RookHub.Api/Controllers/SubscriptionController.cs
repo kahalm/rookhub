@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,13 +10,11 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/subscriptions")]
 [Authorize]
-public class SubscriptionController : ControllerBase
+public class SubscriptionController : BaseApiController
 {
     private readonly AppDbContext _db;
 
     public SubscriptionController(AppDbContext db) => _db = db;
-
-    private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<List<TournamentSubscriptionDto>>> GetAll()

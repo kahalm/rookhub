@@ -119,18 +119,18 @@ public class RepertoireService
         var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
 
+        if (fileStream.CanSeek && fileStream.Length > MaxFileSize)
+            throw new InvalidOperationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
+
         using var reader = new StreamReader(fileStream);
         var content = await reader.ReadToEndAsync();
-
-        if (content.Length > MaxFileSize)
-            throw new InvalidOperationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
 
         var file = new RepertoireFile
         {
             RepertoireId = repertoireId,
             FileName = fileName,
             PgnContent = content,
-            FileSize = content.Length
+            FileSize = fileStream.CanSeek ? fileStream.Length : content.Length
         };
 
         _db.RepertoireFiles.Add(file);

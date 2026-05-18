@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -103,7 +103,7 @@ import { forkJoin } from 'rxjs';
     .tournament-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
   `]
 })
-export class TournamentListComponent implements OnInit {
+export class TournamentListComponent implements OnInit, OnDestroy {
   tournaments: any[] = [];
   subscriptions: any[] = [];
   loading = true;
@@ -114,6 +114,7 @@ export class TournamentListComponent implements OnInit {
   crawlJobId: number | null = null;
   crawlError = '';
   private hiddenIds: Set<string> = new Set();
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
 
   get visibleTournaments(): any[] {
     return this.tournaments.filter(t => !this.hiddenIds.has(t.id?.toString()));
@@ -129,6 +130,10 @@ export class TournamentListComponent implements OnInit {
     const stored = localStorage.getItem('hiddenTournaments');
     if (stored) this.hiddenIds = new Set(JSON.parse(stored));
     this.loadTournaments();
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   hide(tournament: any): void {
@@ -209,23 +214,26 @@ export class TournamentListComponent implements OnInit {
   }
 
   private pollCrawlJob(jobId: number): void {
-    const interval = setInterval(() => {
+    this.pollInterval = setInterval(() => {
       this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
         next: (job) => {
           if (job.status === 'Completed') {
-            clearInterval(interval);
+            if (this.pollInterval) clearInterval(this.pollInterval);
+            this.pollInterval = null;
             this.crawling = false;
             this.crawlId = '';
             this.snackBar.open('Tournament imported!', 'Close', { duration: 3000 });
             this.loadTournaments();
           } else if (job.status === 'Failed') {
-            clearInterval(interval);
+            if (this.pollInterval) clearInterval(this.pollInterval);
+            this.pollInterval = null;
             this.crawling = false;
             this.crawlError = job.errorMessage || 'Crawl failed';
           }
         },
         error: () => {
-          clearInterval(interval);
+          if (this.pollInterval) clearInterval(this.pollInterval);
+          this.pollInterval = null;
           this.crawling = false;
           this.crawlError = 'Lost connection to crawl job';
         }

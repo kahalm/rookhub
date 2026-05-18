@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
@@ -9,13 +8,11 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/repertoires")]
 [Authorize]
-public class RepertoireController : ControllerBase
+public class RepertoireController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
 
     public RepertoireController(RepertoireService repertoireService) => _repertoireService = repertoireService;
-
-    private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<List<RepertoireDto>>> GetAll()
@@ -70,11 +67,19 @@ public class RepertoireController : ControllerBase
         }
     }
 
+    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+
     [HttpPost("{id}/files")]
     public async Task<ActionResult<RepertoireFileDto>> UploadFile(int id, IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file provided." });
+
+        if (!Path.GetExtension(file.FileName).Equals(".pgn", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Only .pgn files are allowed." });
+
+        if (file.Length > MaxFileSize)
+            return BadRequest(new { message = $"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB." });
 
         try
         {

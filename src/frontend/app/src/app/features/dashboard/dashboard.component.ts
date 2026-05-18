@@ -6,6 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
 @Component({
   selector: 'app-dashboard',
@@ -78,11 +80,15 @@ export class DashboardComponent implements OnInit {
   constructor(public auth: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
-    this.http.get<any[]>('/api/repertoires').subscribe(r => this.repertoireCount = r.length);
-    this.http.get<any[]>('/api/subscriptions').subscribe(s => {
-      this.subscriptions = s;
-      this.subscriptionCount = s.length;
+    forkJoin({
+      repertoires: this.http.get<any[]>('/api/repertoires').pipe(catchError(() => of([]))),
+      subscriptions: this.http.get<any[]>('/api/subscriptions').pipe(catchError(() => of([]))),
+      friends: this.http.get<any[]>('/api/friends').pipe(catchError(() => of([])))
+    }).subscribe(({ repertoires, subscriptions, friends }) => {
+      this.repertoireCount = repertoires.length;
+      this.subscriptions = subscriptions;
+      this.subscriptionCount = subscriptions.length;
+      this.friendCount = friends.length;
     });
-    this.http.get<any[]>('/api/friends').subscribe(f => this.friendCount = f.length);
   }
 }

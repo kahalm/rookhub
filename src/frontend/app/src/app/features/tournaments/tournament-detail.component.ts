@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -318,7 +318,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     }
   `]
 })
-export class TournamentDetailComponent implements OnInit {
+export class TournamentDetailComponent implements OnInit, OnDestroy {
   tournament: any = null;
   players: any[] = [];
   teams: any[] = [];
@@ -338,6 +338,7 @@ export class TournamentDetailComponent implements OnInit {
   subscription: any = null;
   toggling = false;
   refreshing = false;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
 
   private id!: string;
 
@@ -359,6 +360,10 @@ export class TournamentDetailComponent implements OnInit {
       error: () => { this.loading = false; }
     });
     this.loadSubscription();
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   loadSubscription(): void {
@@ -421,22 +426,25 @@ export class TournamentDetailComponent implements OnInit {
   }
 
   private pollRefreshJob(jobId: number): void {
-    const interval = setInterval(() => {
+    this.pollInterval = setInterval(() => {
       this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
         next: (job) => {
           if (job.status === 'Completed') {
-            clearInterval(interval);
+            if (this.pollInterval) clearInterval(this.pollInterval);
+            this.pollInterval = null;
             this.refreshing = false;
             this.snackBar.open('Data refreshed!', 'Close', { duration: 2000 });
             this.reloadAll();
           } else if (job.status === 'Failed') {
-            clearInterval(interval);
+            if (this.pollInterval) clearInterval(this.pollInterval);
+            this.pollInterval = null;
             this.refreshing = false;
             this.snackBar.open(job.errorMessage || 'Refresh failed', 'Close', { duration: 3000 });
           }
         },
         error: () => {
-          clearInterval(interval);
+          if (this.pollInterval) clearInterval(this.pollInterval);
+          this.pollInterval = null;
           this.refreshing = false;
           this.snackBar.open('Lost connection to crawl job', 'Close', { duration: 3000 });
         }
@@ -449,7 +457,7 @@ export class TournamentDetailComponent implements OnInit {
       next: (t: any) => {
         this.tournament = t;
         if (t.totalRounds) {
-          this.rounds = Array.from({ length: t.roundCount }, (_, i) => i + 1);
+          this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
       }
     });

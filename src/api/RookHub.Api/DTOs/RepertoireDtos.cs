@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.DTOs;
 
 public class RepertoireDto
@@ -32,14 +34,20 @@ public class RepertoireFileDto
 
 public class CreateRepertoireDto
 {
+    [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
     public string? Description { get; set; }
     public bool IsPublic { get; set; }
 }
 
 public class UpdateRepertoireDto
 {
+    [MaxLength(200)]
     public string? Name { get; set; }
+
+    [MaxLength(1000)]
     public string? Description { get; set; }
     public bool? IsPublic { get; set; }
 }

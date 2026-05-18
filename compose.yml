@@ -63,7 +63,7 @@ services:
         condition: service_started
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=rookhub;User=rookhub;Password=rookhub_secret;"
-      Jwt__Key: ${JWT_KEY:-RookHubSuperSecretKeyThatIsAtLeast32CharsLong!}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set in .env or environment}
       Jwt__Issuer: RookHub
       Jwt__Audience: RookHub
       Crawler__BaseUrl: http://crawler:8080

@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -45,19 +47,41 @@ builder.Services.AddHttpClient<CrawlerProxyService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// CORS for chess.com extension
+// CORS policies
 builder.Services.AddCors(options =>
 {
+    // Policy for the Chrome extension (applied only to ExtensionController)
     options.AddPolicy("ExtensionPolicy", policy =>
     {
         policy.WithOrigins(
-                "https://www.chess.com",
-                "chrome-extension://*",
-                "http://localhost:4200")
+                "https://www.chess.com")
+            // Add specific chrome-extension://YOUR_EXTENSION_ID origins here
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
     });
+    // Default policy for frontend
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:4200",
+                "http://localhost:8085")
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
+// M-11: Rate limiting for auth endpoints
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
 builder.Services.AddControllers();
@@ -87,17 +111,39 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Auto-migrate
-using (var scope = app.Services.CreateScope())
+// M-5: Auto-migrate only in Development
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// H-5: Global exception handler
+app.UseExceptionHandler(error =>
+{
+    error.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+            title = "An unexpected error occurred.",
+            status = 500
+        });
+    });
+});
 
-app.UseCors("ExtensionPolicy");
+// H-8: Swagger only in Development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

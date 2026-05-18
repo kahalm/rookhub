@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
@@ -9,13 +8,11 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/friends")]
 [Authorize]
-public class FriendController : ControllerBase
+public class FriendController : BaseApiController
 {
     private readonly FriendService _friendService;
 
     public FriendController(FriendService friendService) => _friendService = friendService;
-
-    private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<ActionResult<List<FriendDto>>> GetFriends()

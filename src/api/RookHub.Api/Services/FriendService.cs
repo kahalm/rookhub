@@ -58,7 +58,18 @@ public class FriendService
             (f.RequesterId == addresseeId && f.AddresseeId == requesterId));
 
         if (existing != null)
-            throw new InvalidOperationException("A friendship or request already exists.");
+        {
+            // M-12: Allow re-request after decline by removing the old record
+            if (existing.Status == FriendshipStatus.Declined)
+            {
+                _db.Friendships.Remove(existing);
+                await _db.SaveChangesAsync();
+            }
+            else
+            {
+                throw new InvalidOperationException("A friendship or request already exists.");
+            }
+        }
 
         if (!await _db.AppUsers.AnyAsync(u => u.Id == addresseeId))
             throw new KeyNotFoundException("User not found.");
