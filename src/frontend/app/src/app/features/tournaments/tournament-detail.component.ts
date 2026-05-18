@@ -388,9 +388,10 @@ export class TeamPlayersDialogComponent {
       .mobile-only { display: block; }
       .btn-label { display: none; }
       .action-bar button, .action-bar a {
-        min-width: 0; padding: 0; width: 40px; height: 40px; border-radius: 50%;
+        min-width: 0 !important; padding: 0 !important; width: 44px; height: 44px; border-radius: 50%;
         display: inline-flex; align-items: center; justify-content: center;
       }
+      :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
     }
