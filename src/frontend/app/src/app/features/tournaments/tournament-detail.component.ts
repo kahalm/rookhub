@@ -228,7 +228,7 @@ export class TeamPlayersDialogComponent {
                 </mat-select>
               </mat-form-field>
               @if (hasFavorites) {
-                <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
+                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
               }
             </div>
             @if (pairingsLoading) {
