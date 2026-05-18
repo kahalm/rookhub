@@ -185,84 +185,6 @@ export class TeamPlayersDialogComponent {
             }
           </mat-tab>
 
-          <mat-tab label="Favorites ({{ favorites.length }})">
-            @if (favorites.length === 0) {
-              <p class="empty-hint">Click the star next to a player to add them to favorites.</p>
-            } @else {
-              <!-- Desktop -->
-              <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="sortedFavorites" matSort (matSortChange)="favoriteSort = $event" class="full-width">
-                  <ng-container matColumnDef="fav">
-                    <th mat-header-cell *matHeaderCellDef></th>
-                    <td mat-cell *matCellDef="let p">
-                      <mat-icon class="fav-icon fav-active remove-fav" (click)="removeFavorite(p)">star</mat-icon>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nr.</th>
-                    <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
-                    <td mat-cell *matCellDef="let p">{{ p.title }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
-                    <td mat-cell *matCellDef="let p">{{ p.name }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="fideId">
-                    <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
-                    <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Elo</th>
-                    <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Country</th>
-                    <td mat-cell *matCellDef="let p">{{ p.country }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Team' : 'Verein' }}</th>
-                    <td mat-cell *matCellDef="let p">
-                      @if (p.teamName && isTeamTournament) {
-                        <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
-                      } @else {
-                        {{ p.teamName }}
-                      }
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Br.</th>
-                    <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
-                </table>
-              </div>
-
-              <!-- Mobile -->
-              <div class="mobile-only player-cards">
-                @for (p of sortedFavorites; track p.snr) {
-                  <div class="player-card" (click)="removeFavorite(p)">
-                    <div class="player-main">
-                      <mat-icon class="fav-icon-sm fav-active">star</mat-icon>
-                      <span class="player-snr">{{ p.snr }}</span>
-                      <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
-                      <span class="player-name">{{ p.name }}</span>
-                    </div>
-                    <div class="player-details">
-                      @if (p.elo) { <span>{{ p.elo }}</span> }
-                      @if (p.country) { <span>{{ p.country }}</span> }
-                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
-                      @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </mat-tab>
-
           <mat-tab label="Teams ({{ teams.length }})">
             @if (teamsLoading) {
               <app-loading-spinner />
@@ -316,7 +238,7 @@ export class TeamPlayersDialogComponent {
                 <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
                   <ng-container matColumnDef="board">
                     <th mat-header-cell *matHeaderCellDef mat-sort-header>Board</th>
-                    <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
+                    <td mat-cell *matCellDef="let p">{{ p.board }}</td>
                   </ng-container>
                   <ng-container matColumnDef="white">
                     <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ isTeamTournament ? 'Home' : 'White' }}</th>
@@ -431,7 +353,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   // Sort states
   playerSort: Sort = { active: '', direction: '' };
-  favoriteSort: Sort = { active: '', direction: '' };
   teamSort: Sort = { active: '', direction: '' };
   pairingSort: Sort = { active: '', direction: '' };
 
@@ -440,7 +361,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   refreshing = false;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
 
-  private static readonly TAB_NAMES = ['players', 'favorites', 'teams', 'pairings'];
+  private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
   private id!: string;
 
   constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog) {}
@@ -574,8 +495,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.selectedTabIndex = event.index;
     const tabName = TournamentDetailComponent.TAB_NAMES[event.index];
     this.router.navigate([], { queryParams: tabName === 'players' ? {} : { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
-    if (event.index === 2 && this.teams.length === 0) this.loadTeams();
-    if (event.index === 3 && this.pairings.length === 0) this.loadPairings();
+    if (event.index === 1 && this.teams.length === 0) this.loadTeams();
+    if (event.index === 2 && this.pairings.length === 0) this.loadPairings();
   }
 
   loadPlayers(): void {
@@ -601,9 +522,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         // Normalize: team pairings have homeTeam/awayTeam, individual have white/black
         this.pairings = p.map(item => {
           if (item.homeTeam !== undefined) {
-            return { white: item.homeTeam, black: item.awayTeam, result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : '' };
+            return { board: item.matchNumber, white: item.homeTeam, black: item.awayTeam, result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : '' };
           }
-          return item;
+          return { ...item, board: item.boardNumber };
         });
         this.pairingsLoading = false;
       },
@@ -674,10 +595,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return this.sortData(data, this.playerSort);
   }
 
-  get sortedFavorites(): any[] {
-    return this.sortData(this.favorites, this.favoriteSort);
-  }
-
   get displayedTeams(): any[] {
     let data = this.teams;
     if (this.showFavoritesOnly) {
@@ -701,10 +618,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return this.sortData(data, this.pairingSort);
   }
 
-  get favorites(): any[] {
-    return this.players.filter(p => this.favoriteSnrs.has(p.snr));
-  }
-
   isFavorite(player: any): boolean {
     return this.favoriteSnrs.has(player.snr);
   }
@@ -718,12 +631,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
     }
     this.saveFavorites();
-  }
-
-  removeFavorite(player: any): void {
-    this.favoriteSnrs.delete(player.snr);
-    this.saveFavorites();
-    this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
   }
 
   // --- Team detail dialog ---
