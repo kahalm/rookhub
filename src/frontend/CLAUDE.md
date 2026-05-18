@@ -1,0 +1,125 @@
+# RookHub Frontend
+
+Angular 19 Frontend fuer das RookHub-Portal. Teil des RookHub-Projekts (`C:/git/rookhub`), haengt vom **ChessResults Crawler** (`C:/git/chessreslults_crawler`) ab – Turnierdaten werden ueber die RookHub API vom Crawler bezogen. Bei Aenderungen immer alle drei Schichten bedenken.
+
+## Zusammenspiel
+
+```
+Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler API (.NET)
+     :8085 (Docker)                        :5001                           :8080
+     :4200 (ng serve)
+```
+
+- Aenderungen an RookHub-API-DTOs/Endpoints muessen in den entsprechenden Components/Services nachgezogen werden
+- Aenderungen an Crawler-Datenstrukturen fliessen als JSON durch den Proxy und koennen Tournament-Components betreffen
+- `/api/*` wird in Docker von nginx auf die RookHub API geproxied (nginx.conf)
+- Bei `ng serve` muss ein Proxy oder die API auf einem erreichbaren Port laufen
+
+## Tech Stack
+
+| Komponente | Version |
+|-----------|---------|
+| Angular | 19.2 |
+| Angular Material | 19.2.19 |
+| Angular CDK | 19.2.19 |
+| TypeScript | 5.7 |
+| RxJS | 7.8 |
+| Node (Build) | 24 (Docker), lokal: 24.14 |
+| SCSS | - |
+
+## Architektur-Entscheidungen
+
+- **Standalone Components** – kein NgModule, jede Component deklariert eigene Imports
+- **Lazy Loading** – alle Feature-Routes werden per `loadComponent()` geladen
+- **Functional Guards** – `authGuard` als `CanActivateFn`
+- **Functional Interceptors** – `authInterceptor` als `HttpInterceptorFn`
+- **provideHttpClient / provideRouter** – keine Module-basierte Konfiguration
+- **Angular Material** – fuer alle UI-Komponenten (Toolbar, Cards, Lists, Tables, Dialogs, Tabs, etc.)
+
+## Auth-Flow
+
+1. Login/Register -> `AuthService.login()` / `.register()` -> POST an `/api/auth/*`
+2. Response enthaelt JWT -> wird in `localStorage` als `rookhub_user` gespeichert
+3. `authInterceptor` haengt `Authorization: Bearer <token>` an alle Requests
+4. `authGuard` prueft `AuthService.isLoggedIn` -> redirect zu `/login` wenn nicht eingeloggt
+5. `AuthService.currentUser$` (BehaviorSubject) fuer reaktive UI-Updates (Navbar etc.)
+
+## Routing
+
+| Route | Component | Auth |
+|-------|-----------|------|
+| `/login` | LoginComponent | nein |
+| `/register` | RegisterComponent | nein |
+| `/dashboard` | DashboardComponent | ja |
+| `/profile` | ProfileComponent | ja |
+| `/friends` | FriendsComponent | ja |
+| `/repertoires` | RepertoireListComponent | ja |
+| `/repertoires/:id` | RepertoireDetailComponent | ja |
+| `/tournaments` | TournamentListComponent | ja |
+| `/tournaments/:id` | TournamentDetailComponent | ja |
+| `/` | redirect -> `/dashboard` | - |
+| `**` | redirect -> `/dashboard` | - |
+
+## Verzeichnisstruktur
+
+```
+app/src/app/
+  core/
+    auth.service.ts          JWT-Management, Login/Register/Logout, localStorage
+    auth.guard.ts            CanActivateFn, redirect zu /login
+    auth.interceptor.ts      HttpInterceptorFn, Bearer-Token an Requests
+  features/
+    auth/
+      login.component.ts     Login-Formular (username + password)
+      register.component.ts  Registrierung (username + email + password)
+    dashboard/
+      dashboard.component.ts Uebersicht: Repertoire-Count, Subscription-Count, Freunde-Count, Abo-Liste
+    profile/
+      profile.component.ts   Profil bearbeiten (DisplayName, FideId, ChessResults, Chess.com, Lichess)
+    friends/
+      friends.component.ts   Freundesliste + Requests (Tabs), User-Suche, Request senden/akzeptieren/ablehnen
+    repertoire/
+      repertoire-list.component.ts          Liste aller Repertoires, Create-Dialog
+      repertoire-detail.component.ts        Dateien-Liste, Drag&Drop Upload, Download, Delete
+      create-repertoire-dialog.component.ts MatDialog: Name, Description, IsPublic
+    tournaments/
+      tournament-list.component.ts          Turnierliste vom Crawler, Subscribe-Button
+      tournament-detail.component.ts        Tabs: Players (Table), Teams (Table), Pairings (Table + Round-Select)
+  shared/
+    navbar/
+      navbar.component.ts   Material Toolbar, Navigation, User-Menu mit Logout
+    loading-spinner/
+      loading-spinner.component.ts  Zentrierter MatSpinner
+```
+
+## API-Aufrufe (alle relativ, nginx proxied zu API)
+
+| Component | Endpoints |
+|-----------|-----------|
+| AuthService | POST `/api/auth/register`, POST `/api/auth/login` |
+| DashboardComponent | GET `/api/repertoires`, GET `/api/subscriptions`, GET `/api/friends` |
+| ProfileComponent | GET `/api/profile`, PUT `/api/profile` |
+| FriendsComponent | GET `/api/friends`, GET `/api/friends/requests`, POST `/api/friends/request/{id}`, POST `/api/friends/accept/{id}`, POST `/api/friends/decline/{id}`, DELETE `/api/friends/{id}`, GET `/api/friends/search?q=` |
+| RepertoireListComponent | GET `/api/repertoires`, POST `/api/repertoires`, DELETE `/api/repertoires/{id}` |
+| RepertoireDetailComponent | GET `/api/repertoires/{id}`, POST `/api/repertoires/{id}/files` (multipart), GET `/api/repertoires/{id}/files/{fileId}` (blob), DELETE `/api/repertoires/{id}/files/{fileId}` |
+| TournamentListComponent | GET `/api/tournaments`, POST `/api/subscriptions` |
+| TournamentDetailComponent | GET `/api/tournaments/{id}`, GET `/api/tournaments/{id}/players`, GET `/api/tournaments/{id}/teams`, GET `/api/tournaments/{id}/pairings?round=` |
+
+## Development
+
+```bash
+cd app
+npm install
+npx ng serve              # http://localhost:4200 (braucht API auf :5001)
+npx ng build              # Production Build -> dist/app/browser/
+npx ng build --watch      # Watch-Mode
+```
+
+Fuer den vollen Stack: `docker compose -f compose.yml up --build` im rookhub Root.
+
+## Build-Konfiguration
+
+- Budget: 750kB warning / 1.5MB error (initial bundle)
+- Output: `dist/app/browser/` (wird in Docker nach nginx kopiert)
+- SCSS als Style-Preprocessor
+- Keine Server-Side Rendering / SSR

@@ -1,0 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace RookHub.Api.Models;
+
+public class Repertoire
+{
+    public int Id { get; set; }
+
+    public int UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+
+    [Required, MaxLength(200)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
+    public string? Description { get; set; }
+
+    public bool IsPublic { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<RepertoireFile> Files { get; set; } = new List<RepertoireFile>();
+}

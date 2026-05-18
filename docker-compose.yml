@@ -1,0 +1,50 @@
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: rookhub-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-rookhub}
+      MYSQL_USER: ${DB_USER:-rookhub}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-rookhub_secret}
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    volumes:
+      - rookhub-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./src/api/RookHub.Api
+      dockerfile: Dockerfile
+    container_name: rookhub-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mariadb;Port=3306;Database=${DB_NAME:-rookhub};User=${DB_USER:-rookhub};Password=${DB_PASSWORD:-rookhub_secret};
+      - Jwt__Key=${JWT_KEY:-RookHubSuperSecretKeyThatIsAtLeast32CharsLong!}
+      - Jwt__Issuer=${JWT_ISSUER:-RookHub}
+      - Jwt__Audience=${JWT_AUDIENCE:-RookHub}
+      - Crawler__BaseUrl=${CRAWLER_BASE_URL:-http://host.docker.internal:8080}
+    ports:
+      - "${API_PORT:-5001}:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: rookhub-frontend
+    ports:
+      - "${FRONTEND_PORT:-8085}:80"
+    depends_on:
+      - api
+
+volumes:
+  rookhub-db-data:

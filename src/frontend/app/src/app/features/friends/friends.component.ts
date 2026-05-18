@@ -1,0 +1,141 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { MatCardModule } from '@angular/material/card';
+import { MatListModule } from '@angular/material/list';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+
+@Component({
+  selector: 'app-friends',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatSnackBarModule, LoadingSpinnerComponent],
+  template: `
+    <div class="friends-container">
+      <h1>Friends</h1>
+
+      <mat-card class="search-card">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Search users</mat-label>
+          <input matInput [(ngModel)]="searchQuery" (keyup.enter)="search()">
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="search()">Search</button>
+      </mat-card>
+
+      @if (searchResults.length > 0) {
+        <mat-card>
+          <mat-card-header><mat-card-title>Search Results</mat-card-title></mat-card-header>
+          <mat-list>
+            @for (user of searchResults; track user.userId) {
+              <mat-list-item>
+                <span matListItemTitle>{{ user.username }}</span>
+                <span matListItemLine>{{ user.displayName || '' }}</span>
+                <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta>
+                  <mat-icon>person_add</mat-icon>
+                </button>
+              </mat-list-item>
+            }
+          </mat-list>
+        </mat-card>
+      }
+
+      <mat-tab-group>
+        <mat-tab label="Friends ({{ friends.length }})">
+          @if (loading) {
+            <app-loading-spinner />
+          } @else {
+            <mat-list>
+              @for (friend of friends; track friend.friendshipId) {
+                <mat-list-item>
+                  <span matListItemTitle>{{ friend.username }}</span>
+                  <span matListItemLine>{{ friend.displayName || '' }}</span>
+                  <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)" matListItemMeta>
+                    <mat-icon>person_remove</mat-icon>
+                  </button>
+                </mat-list-item>
+              } @empty {
+                <p class="empty-text">No friends yet. Search for users to add friends!</p>
+              }
+            </mat-list>
+          }
+        </mat-tab>
+        <mat-tab label="Requests ({{ requests.length }})">
+          <mat-list>
+            @for (req of requests; track req.friendshipId) {
+              <mat-list-item>
+                <span matListItemTitle>{{ req.requesterUsername }}</span>
+                <span matListItemLine>Sent {{ req.createdAt | date }}</span>
+                <div matListItemMeta>
+                  <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="declineRequest(req.friendshipId)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </mat-list-item>
+            } @empty {
+              <p class="empty-text">No pending requests.</p>
+            }
+          </mat-list>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  `,
+  styles: [`
+    .friends-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
+    .search-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; }
+    .search-field { flex: 1; margin-bottom: -1.25em; }
+    .empty-text { padding: 1rem; color: #888; }
+  `]
+})
+export class FriendsComponent implements OnInit {
+  friends: any[] = [];
+  requests: any[] = [];
+  searchResults: any[] = [];
+  searchQuery = '';
+  loading = true;
+
+  constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.loading = true;
+    this.http.get<any[]>('/api/friends').subscribe(f => { this.friends = f; this.loading = false; });
+    this.http.get<any[]>('/api/friends/requests').subscribe(r => this.requests = r);
+  }
+
+  search(): void {
+    if (this.searchQuery.length < 2) return;
+    this.http.get<any[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
+      .subscribe(r => this.searchResults = r);
+  }
+
+  sendRequest(userId: number): void {
+    this.http.post(`/api/friends/request/${userId}`, {}).subscribe({
+      next: () => this.snackBar.open('Friend request sent', 'Close', { duration: 2000 }),
+      error: (err) => this.snackBar.open(err.error?.message || 'Failed', 'Close', { duration: 3000 })
+    });
+  }
+
+  acceptRequest(id: number): void {
+    this.http.post(`/api/friends/accept/${id}`, {}).subscribe(() => this.loadData());
+  }
+
+  declineRequest(id: number): void {
+    this.http.post(`/api/friends/decline/${id}`, {}).subscribe(() => this.loadData());
+  }
+
+  removeFriend(id: number): void {
+    this.http.delete(`/api/friends/${id}`).subscribe(() => this.loadData());
+  }
+}

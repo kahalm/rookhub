@@ -1,0 +1,203 @@
+# RookHub
+
+Zentrales Webportal fuer schachrelevante Funktionen: PGN-Repertoire-Verwaltung, Turnierdaten, Benutzerprofile mit FIDE/ChessResults-Verlinkung, Freundeslisten. Gehoert zusammen mit dem **ChessResults Crawler** (`C:/git/chessreslults_crawler`) – bei Aenderungen immer beide Projekte beruecksichtigen.
+
+## Zusammenspiel der Projekte
+
+```
+RookHub Frontend (Angular :8085)
+    |  /api/* via nginx proxy
+RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- crawl -->  chess-results.com
+    |                                                   |
+    v                                                   v
+  rookhub DB (MariaDB)                            chessresults DB (MariaDB)
+```
+
+- **chessreslults_crawler**: Backend-Crawler der Turnierdaten von chess-results.com extrahiert. Reine REST-API, kein Frontend. Eigene MariaDB-Datenbank `chessresults`.
+- **RookHub** (dieses Projekt): Webportal mit Angular-Frontend + .NET API. Leitet Turnier-Anfragen als Proxy an den Crawler weiter. Eigene MariaDB-Datenbank `rookhub`.
+
+### Kritische Abhaengigkeiten zwischen den Projekten
+- `Services/CrawlerProxyService.cs` – HTTP-Client zum Crawler, muss Crawler-Routen kennen
+- `Controllers/TournamentProxyController.cs` – Mappt RookHub-Routen 1:1 auf Crawler-Routen
+- Crawler-Endpoint-Aenderungen muessen in diesen beiden Dateien nachgezogen werden
+- Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping)
+
+## Tech Stack
+
+| Komponente | Technologie | Version |
+|-----------|-------------|---------|
+| Backend Runtime | .NET | 9.0 |
+| Web Framework | ASP.NET Core Web API | 9.0 |
+| ORM | EF Core + Pomelo | 9.0.0 (Pomelo) / 9.0.5 (EF Design) |
+| Datenbank | MariaDB | 11 |
+| Auth | JWT Bearer + BCrypt.Net-Next | 9.0.5 / 4.2.0 |
+| API Docs | Swashbuckle (Swagger) | 6.9.0 |
+| Frontend | Angular | 19.2 |
+| UI Library | Angular Material | 19.2.19 |
+| Frontend Webserver | nginx (alpine) | latest |
+| Tests | xUnit + InMemory DB | - |
+
+**Hinweis**: RookHub nutzt Swashbuckle 6.9.0 (nicht 10.x) wegen Kompatibilitaet mit .NET 9's OpenAPI-Namespace.
+
+## REST API
+
+### Auth (offen, kein JWT noetig)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| POST | `/api/auth/register` | Registrierung (username, email, password) |
+| POST | `/api/auth/login` | Login, gibt JWT zurueck |
+
+### Profil (auth)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/profile` | Eigenes Profil |
+| PUT | `/api/profile` | Profil bearbeiten |
+| GET | `/api/profile/{username}` | Oeffentliches Profil (auch ohne Auth) |
+
+### Freunde (auth)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/friends` | Freundesliste |
+| GET | `/api/friends/requests` | Offene Anfragen |
+| POST | `/api/friends/request/{userId}` | Anfrage senden |
+| POST | `/api/friends/accept/{friendshipId}` | Annehmen |
+| POST | `/api/friends/decline/{friendshipId}` | Ablehnen |
+| DELETE | `/api/friends/{friendshipId}` | Entfernen |
+| GET | `/api/friends/search?q={query}` | User suchen (min. 2 Zeichen) |
+
+### Repertoires (auth)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/repertoires` | Alle eigenen Repertoires |
+| POST | `/api/repertoires` | Neues Repertoire erstellen |
+| GET | `/api/repertoires/{id}` | Repertoire mit Dateien |
+| PUT | `/api/repertoires/{id}` | Metadaten aendern |
+| DELETE | `/api/repertoires/{id}` | Loeschen |
+| POST | `/api/repertoires/{id}/files` | PGN hochladen (multipart, max 10 MB) |
+| GET | `/api/repertoires/{id}/files/{fileId}` | PGN herunterladen |
+| DELETE | `/api/repertoires/{id}/files/{fileId}` | Datei loeschen |
+| GET | `/api/repertoires/{id}/pgn` | Alle PGNs kombiniert |
+
+### Extension API (auth, CORS fuer chess.com)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/extension/repertoires` | Leichtgewichtige Liste |
+| GET | `/api/extension/repertoires/{id}/pgn` | Kombinierter PGN-Text |
+
+CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost:4200`
+
+### Turnier-Proxy (auth, leitet an Crawler weiter)
+| Methode | Endpoint | Crawler-Route |
+|---------|----------|---------------|
+| GET | `/api/tournaments` | `/api/tournaments` |
+| GET | `/api/tournaments/{id}` | `/api/tournaments/{id}` |
+| GET | `/api/tournaments/{id}/players?team=&sortBy=` | `/api/tournaments/{id}/players` |
+| GET | `/api/tournaments/{id}/teams` | `/api/tournaments/{id}/teams` |
+| GET | `/api/tournaments/{id}/pairings?round=` | `/api/tournaments/{id}/pairings` |
+| GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` |
+| POST | `/api/tournaments/crawl` | `/api/tournaments/crawl` |
+
+**Achtung**: Der Crawler nutzt `/api/crawl` (nicht `/api/tournaments/crawl`). Der Proxy-Endpoint muss ggf. angepasst werden.
+
+### Turnier-Abos (auth)
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/subscriptions` | Meine abonnierten Turniere |
+| POST | `/api/subscriptions` | Turnier abonnieren |
+| DELETE | `/api/subscriptions/{id}` | Abo entfernen |
+
+## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
+
+| Tabelle | Zweck | Wichtige Felder / Constraints |
+|---------|-------|-------------------------------|
+| AppUsers | Auth | Username (unique), Email (unique), PasswordHash, CreatedAt |
+| UserProfiles | Schach-Identitaet | UserId (1:1 zu AppUser), FideId, ChessResultsId, ChessComUsername, LichessUsername, DisplayName |
+| Friendships | Freundesliste | RequesterId, AddresseeId (unique pair), Status (Pending/Accepted/Declined) |
+| Repertoires | PGN-Sammlungen | UserId, Name, Description, IsPublic, CreatedAt, UpdatedAt |
+| RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
+| TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
+
+Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions; Repertoire -> Files.
+Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
+
+## Projektstruktur
+
+```
+compose.yml                 Kompletter Stack (MariaDB + Crawler + API + Frontend)
+init-db.sql                 Erstellt beide DBs + User beim ersten MariaDB-Start
+.env.example                Umgebungsvariablen-Template
+src/
+  api/RookHub.Api/
+    Controllers/            AuthController, ProfileController, FriendController,
+                            RepertoireController, ExtensionController,
+                            TournamentProxyController, SubscriptionController
+    Services/               AuthService (JWT+BCrypt), ProfileService, FriendService,
+                            RepertoireService (CRUD+Upload+CombinedPGN), CrawlerProxyService (HttpClient)
+    Models/                 AppUser, UserProfile, Friendship, Repertoire, RepertoireFile, TournamentSubscription
+    DTOs/                   AuthDtos, ProfileDtos, FriendDtos, RepertoireDtos, TournamentDtos
+    Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
+    Program.cs              Startup: DB, JWT, CORS, Swagger, Auto-Migration, Health-Endpoint
+    Dockerfile              Multi-stage .NET Build
+  frontend/
+    app/                    Angular 19 CLI Projekt (siehe src/frontend/CLAUDE.md)
+    nginx.conf              Proxy /api/ -> api:8080, SPA-Fallback
+    Dockerfile              Multi-stage Node Build + nginx
+tests/
+  RookHub.Api.Tests/        xUnit (18 Tests: Auth, Profile, Friends, Repertoire)
+```
+
+## Lokales Development
+
+### Kompletter Stack via Docker
+```bash
+docker compose -f compose.yml up --build
+```
+
+| Port | Dienst | URL |
+|------|--------|-----|
+| 8085 | Frontend (nginx) | http://localhost:8085 |
+| 5001 | RookHub API | http://localhost:5001/swagger |
+| 8080 | Crawler API | http://localhost:8080/swagger/ui/index.html |
+| 3306 | MariaDB | Host: localhost, DBs: `chessresults` + `rookhub` |
+
+### Angular standalone (ohne Docker)
+```bash
+cd src/frontend/app
+npm install
+npx ng serve    # http://localhost:4200, braucht API auf :5001
+```
+
+### API standalone (ohne Docker, braucht MariaDB auf :3306)
+```bash
+cd src/api/RookHub.Api
+dotnet run
+```
+
+### Tests
+```bash
+cd tests/RookHub.Api.Tests
+dotnet test     # 18 Tests (Auth, Profile, Friends, Repertoire)
+```
+
+## EF Core Migrations
+
+```bash
+cd src/api/RookHub.Api
+dotnet ef migrations add <MigrationName>    # Nutzt DesignTimeDbContextFactory
+dotnet ef database update                   # Braucht laufende MariaDB
+```
+Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automatisch angewendet.
+
+## Arbeitsweise
+
+- **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein grosser Sammel-Commit. So bleibt die History nachvollziehbar und Rollbacks sind einfach.
+
+## Wichtige Konventionen
+
+- Crawler-Proxy-Endpoints muessen mit tatsaechlichen Crawler-Routen uebereinstimmen
+- Angular nutzt lazy-loaded standalone components (kein NgModule)
+- JWT-Claims: `ClaimTypes.NameIdentifier` = UserId, `ClaimTypes.Name` = Username
+- PGN-Upload-Limit: 10 MB pro Datei (in `RepertoireService`)
+- Alle Controller holen UserId via `User.FindFirstValue(ClaimTypes.NameIdentifier)`
+- Friendship-Status ist eine State Machine: Pending -> Accepted/Declined
+- Nur der Addressee kann Accept/Decline ausfuehren
