@@ -1,0 +1,46 @@
+###############################################################################
+# VPN-Overlay fuer RookHub
+#
+#   docker compose -f compose.yml -f compose.vpn.yml up --build
+#
+# Routet den Crawler-Traffic durch Gluetun (WireGuard).
+# Benoetigt VPN-Variablen in .env (siehe .env.example).
+###############################################################################
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: rookhub-gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER:-airvpn}
+      VPN_TYPE: ${VPN_TYPE:-wireguard}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?WIREGUARD_PRIVATE_KEY must be set}
+      WIREGUARD_PRESHARED_KEY: ${WIREGUARD_PRESHARED_KEY:-}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:?WIREGUARD_ADDRESSES must be set}
+      SERVER_COUNTRIES: ${SERVER_COUNTRIES:-Germany}
+      FIREWALL_VPN_INPUT_PORTS: 8080
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider https://ipinfo.io || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  crawler:
+    # Crawler-Traffic geht durch Gluetun-VPN (shared network namespace)
+    network_mode: "service:gluetun"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      gluetun:
+        condition: service_healthy
+
+  api:
+    environment:
+      # Crawler ist ueber gluetun erreichbar (shared network namespace)
+      Crawler__BaseUrl: http://gluetun:8080
