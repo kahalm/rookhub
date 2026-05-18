@@ -10,13 +10,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -28,6 +29,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             <mat-card-subtitle>{{ tournament.location }} | {{ tournament.date }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
+            <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
+              <mat-icon>refresh</mat-icon> Refresh
+            </button>
             @if (subscription) {
               <button mat-raised-button color="warn" (click)="unsubscribe()" [disabled]="toggling">
                 <mat-icon>notifications_off</mat-icon> Unsubscribe
@@ -38,6 +42,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               </button>
             }
           </mat-card-actions>
+          @if (refreshing) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          }
         </mat-card>
 
         <mat-tab-group (selectedTabChange)="onTabChange($event)">
@@ -156,6 +163,7 @@ export class TournamentDetailComponent implements OnInit {
 
   subscription: any = null;
   toggling = false;
+  refreshing = false;
 
   private id!: string;
 
@@ -217,6 +225,59 @@ export class TournamentDetailComponent implements OnInit {
         this.snackBar.open('Failed to unsubscribe', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  refresh(): void {
+    if (!this.tournament?.chessResultsId) return;
+    this.refreshing = true;
+    this.http.post<any>('/api/tournaments/crawl', {
+      chessResultsId: this.tournament.chessResultsId,
+      jobType: 'Full'
+    }).subscribe({
+      next: (job) => this.pollRefreshJob(job.id),
+      error: () => {
+        this.refreshing = false;
+        this.snackBar.open('Failed to start refresh', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  private pollRefreshJob(jobId: number): void {
+    const interval = setInterval(() => {
+      this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
+        next: (job) => {
+          if (job.status === 'Completed') {
+            clearInterval(interval);
+            this.refreshing = false;
+            this.snackBar.open('Data refreshed!', 'Close', { duration: 2000 });
+            this.reloadAll();
+          } else if (job.status === 'Failed') {
+            clearInterval(interval);
+            this.refreshing = false;
+            this.snackBar.open(job.errorMessage || 'Refresh failed', 'Close', { duration: 3000 });
+          }
+        },
+        error: () => {
+          clearInterval(interval);
+          this.refreshing = false;
+          this.snackBar.open('Lost connection to crawl job', 'Close', { duration: 3000 });
+        }
+      });
+    }, 2000);
+  }
+
+  private reloadAll(): void {
+    this.http.get(`/api/tournaments/${this.id}`).subscribe({
+      next: (t: any) => {
+        this.tournament = t;
+        if (t.roundCount) {
+          this.rounds = Array.from({ length: t.roundCount }, (_, i) => i + 1);
+        }
+      }
+    });
+    this.loadPlayers();
+    this.teams = [];
+    this.pairings = [];
   }
 
   onTabChange(event: any): void {
