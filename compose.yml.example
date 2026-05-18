@@ -11,18 +11,26 @@
 #
 # Optional .env overrides (defaults shown):
 #   MYSQL_ROOT_PASSWORD=rootpassword
+#   DB_HOST=mariadb
+#   DB_PORT=3306
+#   DB_EXTERNAL_PORT=3307
+#   CRAWLER_DB_NAME=chessresults
 #   CRAWLER_DB_USER=chessresults
 #   CRAWLER_DB_PASSWORD=chessresults
+#   ROOKHUB_DB_NAME=rookhub
 #   ROOKHUB_DB_USER=rookhub
 #   ROOKHUB_DB_PASSWORD=rookhub_secret
+#   JWT_ISSUER=RookHub
+#   JWT_AUDIENCE=RookHub
 #   FRONTEND_PORT=8085
 #   API_PORT=5001
-#   DB_PORT=3307
+#   DB_DATA_PATH=mariadb-data        (named volume, or host path like /data/mariadb)
+#   INIT_DB_PATH=./init-db.sql
 #
 # Ports:
-#   ${FRONTEND_PORT}  -> Frontend (nginx)
-#   ${API_PORT}        -> RookHub API
-#   ${DB_PORT}         -> MariaDB
+#   ${FRONTEND_PORT}    -> Frontend (nginx)
+#   ${API_PORT}          -> RookHub API
+#   ${DB_EXTERNAL_PORT}  -> MariaDB
 ###############################################################################
 
 services:
@@ -35,10 +43,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
     ports:
-      - "${DB_PORT:-3307}:3306"
+      - "${DB_EXTERNAL_PORT:-3307}:3306"
     volumes:
-      - mariadb-data:/var/lib/mysql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ${DB_DATA_PATH:-mariadb-data}:/var/lib/mysql
+      - ${INIT_DB_PATH:-./init-db.sql}:/docker-entrypoint-initdb.d/init-db.sql:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
@@ -55,7 +63,7 @@ services:
       mariadb:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=chessresults;User=${CRAWLER_DB_USER:-chessresults};Password=${CRAWLER_DB_PASSWORD:-chessresults};"
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST:-mariadb};Port=${DB_PORT:-3306};Database=${CRAWLER_DB_NAME:-chessresults};User=${CRAWLER_DB_USER:-chessresults};Password=${CRAWLER_DB_PASSWORD:-chessresults};"
       ASPNETCORE_ENVIRONMENT: Production
 
   # ── RookHub API ────────────────────────────────────────────────────────────
@@ -71,7 +79,7 @@ services:
       crawler:
         condition: service_started
     environment:
-      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=rookhub;User=${ROOKHUB_DB_USER:-rookhub};Password=${ROOKHUB_DB_PASSWORD:-rookhub_secret};"
+      ConnectionStrings__DefaultConnection: "Server=${DB_HOST:-mariadb};Port=${DB_PORT:-3306};Database=${ROOKHUB_DB_NAME:-rookhub};User=${ROOKHUB_DB_USER:-rookhub};Password=${ROOKHUB_DB_PASSWORD:-rookhub_secret};"
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set in .env or environment}
       Jwt__Issuer: ${JWT_ISSUER:-RookHub}
       Jwt__Audience: ${JWT_AUDIENCE:-RookHub}
