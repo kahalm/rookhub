@@ -28,7 +28,7 @@ public class TournamentMonitorController : ControllerBase
 
         if (monitor is not null)
         {
-            monitor.ActiveUntil = DateTime.UtcNow.AddHours(12);
+            monitor.ActiveUntil = DateTime.UtcNow.AddHours(1);
             await _db.SaveChangesAsync();
             return Ok(new
             {
@@ -71,7 +71,7 @@ public class TournamentMonitorController : ControllerBase
         {
             CrawlerTournamentId = tournamentId,
             CrawlerTournamentDbId = dbId,
-            ActiveUntil = DateTime.UtcNow.AddHours(12),
+            ActiveUntil = DateTime.UtcNow.AddHours(1),
             LastKnownRounds = knownRounds
         };
 
