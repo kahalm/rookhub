@@ -22,9 +22,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync("/api/tournaments");
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -36,9 +36,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync($"/api/tournaments/{id}");
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -56,9 +56,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync(query);
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -70,9 +70,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams");
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -87,9 +87,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync(query);
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -101,9 +101,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/rounds/check");
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -115,9 +115,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.PostAsync("/api/crawl", body);
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 
@@ -129,9 +129,9 @@ public class TournamentProxyController : ControllerBase
             var result = await _proxy.GetAsync($"/api/crawl/{jobId}");
             return Ok(result);
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            return StatusCode(502, new { message = "Crawler service unavailable.", detail = ex.Message });
+            return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
 }

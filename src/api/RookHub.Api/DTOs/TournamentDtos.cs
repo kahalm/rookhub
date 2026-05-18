@@ -12,7 +12,7 @@ public class TournamentSubscriptionDto
 
 public class CreateSubscriptionDto
 {
-    [Required, MaxLength(50)]
+    [Required, MaxLength(50), RegularExpression(@"^\d{1,10}$", ErrorMessage = "CrawlerTournamentId must be a numeric ID (1-10 digits).")]
     public string CrawlerTournamentId { get; set; } = string.Empty;
 
     [Required, MaxLength(300)]

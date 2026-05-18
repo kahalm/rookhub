@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RookHub.Api.Validation;
 
 namespace RookHub.Api.DTOs;
 
@@ -10,7 +11,7 @@ public class RegisterDto
     [Required, EmailAddress, MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, MinLength(8), MaxLength(100)]
+    [Required, MinLength(10), MaxLength(100), PasswordComplexity]
     public string Password { get; set; } = string.Empty;
 }
 

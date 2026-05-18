@@ -56,8 +56,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "https://www.chess.com")
             // Add specific chrome-extension://YOUR_EXTENSION_ID origins here
-            .AllowAnyMethod()
-            .AllowAnyHeader()
+            .WithMethods("GET", "POST")
+            .WithHeaders("Authorization", "Content-Type")
             .AllowCredentials();
     });
     // Default policy for frontend
@@ -73,8 +73,18 @@ builder.Services.AddCors(options =>
 });
 
 // M-11: Rate limiting for auth endpoints
+// S-6: Global rate limiting for all endpoints
 builder.Services.AddRateLimiter(options =>
 {
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
     options.AddFixedWindowLimiter("auth", limiter =>
     {
         limiter.PermitLimit = 10;

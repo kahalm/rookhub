@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -122,13 +123,26 @@ public class RepertoireService
         if (fileStream.CanSeek && fileStream.Length > MaxFileSize)
             throw new InvalidOperationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
 
+        // S-14: Sanitize filename to prevent path traversal
+        var safeFileName = Path.GetFileName(fileName);
+        safeFileName = Regex.Replace(safeFileName, @"[^a-zA-Z0-9_.-]", "_");
+        if (string.IsNullOrWhiteSpace(safeFileName)) safeFileName = "upload.pgn";
+
         using var reader = new StreamReader(fileStream);
         var content = await reader.ReadToEndAsync();
+
+        // S-24: Content-length check after ReadToEnd (for non-seekable streams)
+        if (content.Length > MaxFileSize)
+            throw new InvalidOperationException($"File content exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
+
+        // S-13: Basic PGN content validation
+        if (!content.Contains("[Event") && !content.Contains("1."))
+            throw new InvalidOperationException("File does not appear to be valid PGN content.");
 
         var file = new RepertoireFile
         {
             RepertoireId = repertoireId,
-            FileName = fileName,
+            FileName = safeFileName,
             PgnContent = content,
             FileSize = fileStream.CanSeek ? fileStream.Length : content.Length
         };

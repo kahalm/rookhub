@@ -6,7 +6,7 @@
 # Ports:
 #   8085  -> Frontend (nginx)
 #   5001  -> RookHub API  (Swagger: http://localhost:5001/swagger)
-#   8080  -> Crawler API  (Swagger: http://localhost:8080/swagger/ui/index.html)
+#   (Crawler API only reachable internally via Docker network)
 #   3307  -> MariaDB      (beide DBs: chessresults + rookhub)
 ###############################################################################
 
@@ -38,8 +38,7 @@ services:
       dockerfile: Dockerfile
     container_name: rookhub-crawler
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    # S-1: No external port – crawler only reachable within Docker network
     depends_on:
       mariadb:
         condition: service_healthy

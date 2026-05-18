@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -83,10 +84,11 @@ public class FriendController : BaseApiController
     }
 
     [HttpGet("search")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<List<UserSearchResultDto>>> Search([FromQuery] string q)
     {
-        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
-            return BadRequest(new { message = "Query must be at least 2 characters." });
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 3)
+            return BadRequest(new { message = "Query must be at least 3 characters." });
 
         return Ok(await _friendService.SearchUsersAsync(q, GetUserId()));
     }
