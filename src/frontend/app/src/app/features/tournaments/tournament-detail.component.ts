@@ -235,7 +235,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   }
                 </mat-select>
               </mat-form-field>
-              @if (favoriteSnrs.size > 0) {
+              @if (hasFavorites) {
                 <mat-slide-toggle [(ngModel)]="showFavoritePairingsOnly">Nur Favoriten</mat-slide-toggle>
               }
             </div>
@@ -528,7 +528,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   private saveFavorites(): void {
+    this.favoriteSnrs = new Set(this.favoriteSnrs);
     localStorage.setItem(this.favKey, JSON.stringify([...this.favoriteSnrs]));
+  }
+
+  get hasFavorites(): boolean {
+    return this.favoriteSnrs.size > 0;
   }
 
   get subtitle(): string {
