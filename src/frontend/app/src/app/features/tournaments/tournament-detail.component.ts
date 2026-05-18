@@ -92,6 +92,15 @@ export class TeamPlayersDialogComponent {
                 <mat-icon>notifications</mat-icon><span class="btn-label"> Subscribe</span>
               </button>
             }
+            @if (monitoring) {
+              <button mat-raised-button color="primary" (click)="toggleMonitor()" [disabled]="monitorToggling">
+                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitoring bis {{ monitorActiveUntil | date:'HH:mm' }}</span>
+              </button>
+            } @else {
+              <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling">
+                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitor</span>
+              </button>
+            }
           </mat-card-actions>
           @if (refreshing) {
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -426,6 +435,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   subscription: any = null;
   toggling = false;
   refreshing = false;
+  monitoring = false;
+  monitorActiveUntil: Date | null = null;
+  monitorToggling = false;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
 
   private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
@@ -457,6 +469,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       error: () => { this.loading = false; }
     });
     this.loadSubscription();
+    this.loadMonitorStatus();
   }
 
   ngOnDestroy(): void {
@@ -503,6 +516,47 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.snackBar.open('Failed to unsubscribe', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  loadMonitorStatus(): void {
+    this.http.get<any>(`/api/tournament-monitors/${this.id}`).subscribe({
+      next: (res) => {
+        this.monitoring = res.active;
+        this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
+      },
+      error: () => {}
+    });
+  }
+
+  toggleMonitor(): void {
+    this.monitorToggling = true;
+    if (this.monitoring) {
+      this.http.delete(`/api/tournament-monitors/${this.id}`).subscribe({
+        next: () => {
+          this.monitoring = false;
+          this.monitorActiveUntil = null;
+          this.monitorToggling = false;
+          this.snackBar.open('Monitoring stopped', 'Close', { duration: 2000 });
+        },
+        error: () => {
+          this.monitorToggling = false;
+          this.snackBar.open('Failed to stop monitoring', 'Close', { duration: 3000 });
+        }
+      });
+    } else {
+      this.http.post<any>(`/api/tournament-monitors/${this.id}`, {}).subscribe({
+        next: (res) => {
+          this.monitoring = true;
+          this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
+          this.monitorToggling = false;
+          this.snackBar.open('Monitoring activated', 'Close', { duration: 2000 });
+        },
+        error: () => {
+          this.monitorToggling = false;
+          this.snackBar.open('Failed to activate monitoring', 'Close', { duration: 3000 });
+        }
+      });
+    }
   }
 
   refresh(): void {
