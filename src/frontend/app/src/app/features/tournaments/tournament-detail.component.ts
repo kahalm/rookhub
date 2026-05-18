@@ -50,7 +50,8 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     </div>
   `,
   styles: [`
-    .dialog-title { margin: 0 0 1rem; font-size: 1.2rem; }
+    :host { display: block; padding: 1.25rem; }
+    .dialog-title { margin: 0 0 1rem; font-size: 1.2rem; word-break: break-word; }
     .dialog-table-scroll { overflow-x: auto; max-height: 60vh; }
     .full-width { width: 100%; }
     .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
@@ -773,7 +774,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },
-          width: '500px'
+          width: '500px',
+          maxWidth: '95vw'
         });
       },
       error: () => {
