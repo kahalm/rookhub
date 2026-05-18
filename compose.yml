@@ -19,11 +19,17 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      CRAWLER_DB_NAME: chessresults
+      CRAWLER_DB_USER: chessresults
+      CRAWLER_DB_PASSWORD: chessresults
+      ROOKHUB_DB_NAME: rookhub
+      ROOKHUB_DB_USER: rookhub
+      ROOKHUB_DB_PASSWORD: rookhub_secret
     ports:
       - "3307:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
