@@ -29,6 +29,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             <mat-card-subtitle>{{ tournament.location }} | {{ tournament.date }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
+            <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
+              <mat-icon>open_in_new</mat-icon> Chess-Results
+            </a>
             <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
               <mat-icon>refresh</mat-icon> Refresh
             </button>
@@ -53,21 +56,37 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <app-loading-spinner />
             } @else {
               <table mat-table [dataSource]="players" class="full-width">
-                <ng-container matColumnDef="rank">
-                  <th mat-header-cell *matHeaderCellDef>Rank</th>
-                  <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
+                <ng-container matColumnDef="snr">
+                  <th mat-header-cell *matHeaderCellDef>Nr.</th>
+                  <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
+                </ng-container>
+                <ng-container matColumnDef="title">
+                  <th mat-header-cell *matHeaderCellDef>Title</th>
+                  <td mat-cell *matCellDef="let p">{{ p.title }}</td>
                 </ng-container>
                 <ng-container matColumnDef="name">
                   <th mat-header-cell *matHeaderCellDef>Name</th>
                   <td mat-cell *matCellDef="let p">{{ p.name }}</td>
                 </ng-container>
-                <ng-container matColumnDef="rating">
-                  <th mat-header-cell *matHeaderCellDef>Rating</th>
-                  <td mat-cell *matCellDef="let p">{{ p.rating }}</td>
+                <ng-container matColumnDef="fideId">
+                  <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
+                  <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
                 </ng-container>
-                <ng-container matColumnDef="points">
-                  <th mat-header-cell *matHeaderCellDef>Points</th>
-                  <td mat-cell *matCellDef="let p">{{ p.points }}</td>
+                <ng-container matColumnDef="elo">
+                  <th mat-header-cell *matHeaderCellDef>Elo</th>
+                  <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
+                </ng-container>
+                <ng-container matColumnDef="country">
+                  <th mat-header-cell *matHeaderCellDef>Country</th>
+                  <td mat-cell *matCellDef="let p">{{ p.country }}</td>
+                </ng-container>
+                <ng-container matColumnDef="team">
+                  <th mat-header-cell *matHeaderCellDef>Team</th>
+                  <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
+                </ng-container>
+                <ng-container matColumnDef="board">
+                  <th mat-header-cell *matHeaderCellDef>Br.</th>
+                  <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
@@ -157,7 +176,7 @@ export class TournamentDetailComponent implements OnInit {
   teamsLoading = false;
   pairingsLoading = false;
 
-  playerColumns = ['rank', 'name', 'rating', 'points'];
+  playerColumns = ['snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
   teamColumns = ['rank', 'name', 'points'];
   pairingColumns = ['board', 'white', 'result', 'black'];
 
