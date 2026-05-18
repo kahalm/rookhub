@@ -41,7 +41,7 @@ services:
     container_name: rookhub-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       CRAWLER_DB_NAME: ${CRAWLER_DB_NAME:-chessresults}
       CRAWLER_DB_USER: ${CRAWLER_DB_USER:-chessresults}
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD:-chessresults}
