@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# All variables must be set via environment (compose.yml)
+# All variables must be set via environment (compose.dev.yml / compose.vpn.yml)
 : "${CRAWLER_DB_NAME:?CRAWLER_DB_NAME is not set}"
 : "${CRAWLER_DB_USER:?CRAWLER_DB_USER is not set}"
 : "${CRAWLER_DB_PASSWORD:?CRAWLER_DB_PASSWORD is not set}"

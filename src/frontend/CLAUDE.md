@@ -115,7 +115,7 @@ npx ng build              # Production Build -> dist/app/browser/
 npx ng build --watch      # Watch-Mode
 ```
 
-Fuer den vollen Stack: `docker compose -f compose.yml up --build` im rookhub Root.
+Fuer den vollen Stack: `docker compose -f compose.dev.yml --env-file .env.dev up --build` im rookhub Root.
 
 ## Build-Konfiguration
 

@@ -123,9 +123,11 @@ Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 ## Projektstruktur
 
 ```
-compose.yml                 Kompletter Stack (MariaDB + Crawler + API + Frontend)
-init-db.sql                 Erstellt beide DBs + User beim ersten MariaDB-Start
-.env.example                Umgebungsvariablen-Template
+compose.dev.yml             Dev-Stack ohne VPN (MariaDB + Crawler + API + Frontend)
+compose.vpn.yml             Prod-Stack mit Gluetun VPN (WireGuard)
+init-db.sh                  Erstellt beide DBs + User beim ersten MariaDB-Start
+.env.dev.example            Umgebungsvariablen-Template (Development)
+.env.vpn.example            Umgebungsvariablen-Template (VPN/Production)
 src/
   api/RookHub.Api/
     Controllers/            AuthController, ProfileController, FriendController,
@@ -150,7 +152,11 @@ tests/
 
 ### Kompletter Stack via Docker
 ```bash
-docker compose -f compose.yml up --build
+# Development (ohne VPN):
+docker compose -f compose.dev.yml --env-file .env.dev up --build
+
+# Production (mit Gluetun VPN):
+docker compose -f compose.vpn.yml --env-file .env.vpn up --build
 ```
 
 | Port | Dienst | URL |
