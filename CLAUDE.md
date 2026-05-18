@@ -197,14 +197,17 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 ## Arbeitsweise
 
 - **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein grosser Sammel-Commit. So bleibt die History nachvollziehbar und Rollbacks sind einfach.
+- **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build noetig.
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.1.0`
+- **Aktuelle Version**: `0.2.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
-- Angezeigt im Footer der Desktop-Version
-- Bei jedem Feature Minor erhoehen (0.x.0), bei jedem Fix Patch erhoehen (0.0.x)
+- Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
+- **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
+- **Changelog pflegen**: Jeden Eintrag im `changelog`-Array in `environment.ts` vermerken (Version, Datum, Liste der Aenderungen)
 - Version in `environment.ts` UND in diesem Abschnitt aktualisieren
+- Changelog ist im Frontend einsehbar durch Klick auf die Versionsnummer im Footer
 
 ## Wichtige Konventionen
 
