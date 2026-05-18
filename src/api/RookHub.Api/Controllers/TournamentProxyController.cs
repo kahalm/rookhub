@@ -148,4 +148,18 @@ public class TournamentProxyController : ControllerBase
             return StatusCode(502, new { message = "Crawler service unavailable." });
         }
     }
+
+    [HttpGet("crawler/ip")]
+    public async Task<IActionResult> GetCrawlerIp()
+    {
+        try
+        {
+            var result = await _proxy.GetAsync("/api/health/ip");
+            return Ok(result);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { message = "Crawler service unavailable." });
+        }
+    }
 }
