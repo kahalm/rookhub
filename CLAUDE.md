@@ -208,6 +208,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 - **Changelog pflegen**: Jeden Eintrag im `changelog`-Array in `environment.ts` vermerken (Version, Datum, Liste der Aenderungen)
 - Version in `environment.ts` UND in diesem Abschnitt aktualisieren
 - Changelog ist im Frontend einsehbar durch Klick auf die Versionsnummer im Footer
+- **Gilt auch fuer Aenderungen im Crawler-Repo** (`C:/git/chessreslults_crawler`): Features/Fixes dort muessen ebenfalls hier Version + Changelog erhoehen und committet werden
 
 ## Wichtige Konventionen
 
