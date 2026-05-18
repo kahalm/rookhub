@@ -23,7 +23,7 @@ import { AuthService } from '../../core/auth.service';
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>Username</mat-label>
-              <input matInput [(ngModel)]="username" name="username" required>
+              <input matInput [(ngModel)]="username" name="username" required autofocus>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
