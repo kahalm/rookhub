@@ -28,20 +28,20 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             <mat-card-title>{{ tournament.name }}</mat-card-title>
             <mat-card-subtitle>{{ tournament.location }} | {{ tournament.date }}</mat-card-subtitle>
           </mat-card-header>
-          <mat-card-actions>
+          <mat-card-actions class="action-bar">
             <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
-              <mat-icon>open_in_new</mat-icon> Chess-Results
+              <mat-icon>open_in_new</mat-icon><span class="btn-label"> Chess-Results</span>
             </a>
             <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
-              <mat-icon>refresh</mat-icon> Refresh
+              <mat-icon>refresh</mat-icon><span class="btn-label"> Refresh</span>
             </button>
             @if (subscription) {
               <button mat-raised-button color="warn" (click)="unsubscribe()" [disabled]="toggling">
-                <mat-icon>notifications_off</mat-icon> Unsubscribe
+                <mat-icon>notifications_off</mat-icon><span class="btn-label"> Unsubscribe</span>
               </button>
             } @else {
               <button mat-raised-button color="primary" (click)="subscribe()" [disabled]="toggling">
-                <mat-icon>notifications</mat-icon> Subscribe
+                <mat-icon>notifications</mat-icon><span class="btn-label"> Subscribe</span>
               </button>
             }
           </mat-card-actions>
@@ -51,69 +51,93 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
         </mat-card>
 
         <mat-tab-group (selectedTabChange)="onTabChange($event)">
-          <mat-tab label="Players">
+          <mat-tab label="Players ({{ players.length }})">
             @if (playersLoading) {
               <app-loading-spinner />
             } @else {
-              <table mat-table [dataSource]="players" class="full-width">
-                <ng-container matColumnDef="snr">
-                  <th mat-header-cell *matHeaderCellDef>Nr.</th>
-                  <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
-                </ng-container>
-                <ng-container matColumnDef="title">
-                  <th mat-header-cell *matHeaderCellDef>Title</th>
-                  <td mat-cell *matCellDef="let p">{{ p.title }}</td>
-                </ng-container>
-                <ng-container matColumnDef="name">
-                  <th mat-header-cell *matHeaderCellDef>Name</th>
-                  <td mat-cell *matCellDef="let p">{{ p.name }}</td>
-                </ng-container>
-                <ng-container matColumnDef="fideId">
-                  <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
-                  <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
-                </ng-container>
-                <ng-container matColumnDef="elo">
-                  <th mat-header-cell *matHeaderCellDef>Elo</th>
-                  <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
-                </ng-container>
-                <ng-container matColumnDef="country">
-                  <th mat-header-cell *matHeaderCellDef>Country</th>
-                  <td mat-cell *matCellDef="let p">{{ p.country }}</td>
-                </ng-container>
-                <ng-container matColumnDef="team">
-                  <th mat-header-cell *matHeaderCellDef>Team</th>
-                  <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
-                </ng-container>
-                <ng-container matColumnDef="board">
-                  <th mat-header-cell *matHeaderCellDef>Br.</th>
-                  <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
-              </table>
+              <!-- Desktop: full table -->
+              <div class="table-scroll desktop-only">
+                <table mat-table [dataSource]="players" class="full-width">
+                  <ng-container matColumnDef="snr">
+                    <th mat-header-cell *matHeaderCellDef>Nr.</th>
+                    <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="title">
+                    <th mat-header-cell *matHeaderCellDef>Title</th>
+                    <td mat-cell *matCellDef="let p">{{ p.title }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="fideId">
+                    <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
+                    <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="elo">
+                    <th mat-header-cell *matHeaderCellDef>Elo</th>
+                    <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="country">
+                    <th mat-header-cell *matHeaderCellDef>Country</th>
+                    <td mat-cell *matCellDef="let p">{{ p.country }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="team">
+                    <th mat-header-cell *matHeaderCellDef>Team</th>
+                    <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="board">
+                    <th mat-header-cell *matHeaderCellDef>Br.</th>
+                    <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
+                </table>
+              </div>
+
+              <!-- Mobile: card list -->
+              <div class="mobile-only player-cards">
+                @for (p of players; track p.snr) {
+                  <div class="player-card">
+                    <div class="player-main">
+                      <span class="player-snr">{{ p.snr }}</span>
+                      <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
+                      <span class="player-name">{{ p.name }}</span>
+                    </div>
+                    <div class="player-details">
+                      @if (p.elo) { <span>{{ p.elo }}</span> }
+                      @if (p.country) { <span>{{ p.country }}</span> }
+                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
+                      @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
+                    </div>
+                  </div>
+                }
+              </div>
             }
           </mat-tab>
 
-          <mat-tab label="Teams">
+          <mat-tab label="Teams ({{ teams.length }})">
             @if (teamsLoading) {
               <app-loading-spinner />
             } @else {
-              <table mat-table [dataSource]="teams" class="full-width">
-                <ng-container matColumnDef="rank">
-                  <th mat-header-cell *matHeaderCellDef>Rank</th>
-                  <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
-                </ng-container>
-                <ng-container matColumnDef="name">
-                  <th mat-header-cell *matHeaderCellDef>Team</th>
-                  <td mat-cell *matCellDef="let t">{{ t.name }}</td>
-                </ng-container>
-                <ng-container matColumnDef="points">
-                  <th mat-header-cell *matHeaderCellDef>Points</th>
-                  <td mat-cell *matCellDef="let t">{{ t.points }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
-              </table>
+              <div class="table-scroll">
+                <table mat-table [dataSource]="teams" class="full-width">
+                  <ng-container matColumnDef="rank">
+                    <th mat-header-cell *matHeaderCellDef>Rank</th>
+                    <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Team</th>
+                    <td mat-cell *matCellDef="let t">{{ t.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="points">
+                    <th mat-header-cell *matHeaderCellDef>Points</th>
+                    <td mat-cell *matCellDef="let t">{{ t.points }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
+                </table>
+              </div>
             }
           </mat-tab>
 
@@ -131,26 +155,28 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             @if (pairingsLoading) {
               <app-loading-spinner />
             } @else {
-              <table mat-table [dataSource]="pairings" class="full-width">
-                <ng-container matColumnDef="board">
-                  <th mat-header-cell *matHeaderCellDef>Board</th>
-                  <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
-                </ng-container>
-                <ng-container matColumnDef="white">
-                  <th mat-header-cell *matHeaderCellDef>White</th>
-                  <td mat-cell *matCellDef="let p">{{ p.white }}</td>
-                </ng-container>
-                <ng-container matColumnDef="result">
-                  <th mat-header-cell *matHeaderCellDef>Result</th>
-                  <td mat-cell *matCellDef="let p">{{ p.result }}</td>
-                </ng-container>
-                <ng-container matColumnDef="black">
-                  <th mat-header-cell *matHeaderCellDef>Black</th>
-                  <td mat-cell *matCellDef="let p">{{ p.black }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="pairingColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
-              </table>
+              <div class="table-scroll">
+                <table mat-table [dataSource]="pairings" class="full-width">
+                  <ng-container matColumnDef="board">
+                    <th mat-header-cell *matHeaderCellDef>Board</th>
+                    <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="white">
+                    <th mat-header-cell *matHeaderCellDef>White</th>
+                    <td mat-cell *matCellDef="let p">{{ p.white }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="result">
+                    <th mat-header-cell *matHeaderCellDef>Result</th>
+                    <td mat-cell *matCellDef="let p">{{ p.result }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="black">
+                    <th mat-header-cell *matHeaderCellDef>Black</th>
+                    <td mat-cell *matCellDef="let p">{{ p.black }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="pairingColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
+                </table>
+              </div>
             }
           </mat-tab>
         </mat-tab-group>
@@ -158,10 +184,47 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     }
   `,
   styles: [`
-    .detail-container { padding: 2rem; max-width: 1000px; margin: 0 auto; }
+    .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
     .full-width { width: 100%; }
+    .table-scroll { overflow-x: auto; }
     .round-selector { padding: 1rem 0; }
     mat-card { margin-bottom: 1rem; }
+    .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* Mobile card list for players */
+    .mobile-only { display: none; }
+    .player-cards { padding: 0.5rem 0; }
+    .player-card {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .player-main {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+    }
+    .player-snr { color: #888; min-width: 2rem; }
+    .player-title { font-weight: 600; color: #1565c0; }
+    .player-name { font-weight: 500; }
+    .player-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      padding-left: 2.4rem;
+      font-size: 0.82rem;
+      color: #666;
+    }
+    .player-details span:not(:last-child)::after { content: "\\00b7"; margin-left: 0.5rem; }
+
+    @media (max-width: 768px) {
+      .detail-container { padding: 0.75rem; }
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+      .btn-label { display: none; }
+      .action-bar button, .action-bar a { min-width: 0; padding: 0 12px; }
+    }
   `]
 })
 export class TournamentDetailComponent implements OnInit {
