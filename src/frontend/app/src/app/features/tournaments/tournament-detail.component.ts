@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -11,13 +11,14 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -26,7 +27,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
         <mat-card>
           <mat-card-header>
             <mat-card-title>{{ tournament.name }}</mat-card-title>
-            <mat-card-subtitle>{{ tournament.location }} | {{ tournament.date }}</mat-card-subtitle>
+            <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions class="action-bar">
             <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
@@ -50,7 +51,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
           }
         </mat-card>
 
-        <mat-tab-group (selectedTabChange)="onTabChange($event)">
+        <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
           <mat-tab label="Players ({{ players.length }})">
             @if (playersLoading) {
               <app-loading-spinner />
@@ -234,12 +235,15 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   }
                 </mat-select>
               </mat-form-field>
+              @if (favoriteSnrs.size > 0) {
+                <mat-slide-toggle [(ngModel)]="showFavoritePairingsOnly">Nur Favoriten</mat-slide-toggle>
+              }
             </div>
             @if (pairingsLoading) {
               <app-loading-spinner />
             } @else {
               <div class="table-scroll">
-                <table mat-table [dataSource]="pairings" class="full-width">
+                <table mat-table [dataSource]="filteredPairings" class="full-width">
                   <ng-container matColumnDef="board">
                     <th mat-header-cell *matHeaderCellDef>Board</th>
                     <td mat-cell *matCellDef="let p; let i = index">{{ i + 1 }}</td>
@@ -270,7 +274,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
     .full-width { width: 100%; }
     .table-scroll { overflow-x: auto; }
-    .round-selector { padding: 1rem 0; }
+    .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     mat-card { margin-bottom: 1rem; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .empty-hint { padding: 1.5rem; color: #888; }
@@ -315,6 +319,8 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
       .mobile-only { display: block; }
       .btn-label { display: none; }
       .action-bar button, .action-bar a { min-width: 0; padding: 0 12px; }
+      :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
+      :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
     }
   `]
 })
@@ -333,19 +339,25 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   playerColumns = ['fav', 'snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
   teamColumns = ['rank', 'name', 'points'];
   pairingColumns = ['board', 'white', 'result', 'black'];
-  private favoriteSnrs: Set<number> = new Set();
+  showFavoritePairingsOnly = false;
+  favoriteSnrs: Set<number> = new Set();
+  selectedTabIndex = 0;
 
   subscription: any = null;
   toggling = false;
   refreshing = false;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
 
+  private static readonly TAB_NAMES = ['players', 'favorites', 'teams', 'pairings'];
   private id!: string;
 
-  constructor(private route: ActivatedRoute, private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
+    const tab = this.route.snapshot.queryParams['tab'];
+    const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
+    if (tabIndex > 0) this.selectedTabIndex = tabIndex;
     this.loadFavorites();
     this.http.get(`/api/tournaments/${this.id}`).subscribe({
       next: (t: any) => {
@@ -467,6 +479,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   onTabChange(event: any): void {
+    this.selectedTabIndex = event.index;
+    const tabName = TournamentDetailComponent.TAB_NAMES[event.index];
+    this.router.navigate([], { queryParams: tabName === 'players' ? {} : { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
     if (event.index === 2 && this.teams.length === 0) this.loadTeams();
     if (event.index === 3 && this.pairings.length === 0) this.loadPairings();
   }
@@ -514,6 +529,24 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   private saveFavorites(): void {
     localStorage.setItem(this.favKey, JSON.stringify([...this.favoriteSnrs]));
+  }
+
+  get subtitle(): string {
+    return [this.tournament?.location, this.tournament?.date].filter(Boolean).join(' | ');
+  }
+
+  get favoriteNames(): Set<string> {
+    const names = new Set<string>();
+    for (const p of this.players) {
+      if (this.favoriteSnrs.has(p.snr)) names.add(p.name);
+    }
+    return names;
+  }
+
+  get filteredPairings(): any[] {
+    if (!this.showFavoritePairingsOnly) return this.pairings;
+    const names = this.favoriteNames;
+    return this.pairings.filter(p => names.has(p.white) || names.has(p.black));
   }
 
   get favorites(): any[] {

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -39,7 +39,7 @@ import { AuthService } from '../../core/auth.service';
           </form>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button routerLink="/login">Already have an account? Login</a>
+          <a mat-button routerLink="/login" [queryParams]="{ returnUrl: returnUrl }">Already have an account? Login</a>
         </mat-card-actions>
       </mat-card>
     </div>
@@ -57,13 +57,17 @@ export class RegisterComponent {
   password = '';
   loading = false;
 
-  constructor(private auth: AuthService, private router: Router, private snackBar: MatSnackBar) {}
+  returnUrl: string;
+
+  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar) {
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+  }
 
   onSubmit(): void {
     this.loading = true;
     this.auth.register(this.username, this.email, this.password).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (err) => {
         this.loading = false;
