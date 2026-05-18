@@ -58,6 +58,14 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <!-- Desktop: full table -->
               <div class="table-scroll desktop-only">
                 <table mat-table [dataSource]="players" class="full-width">
+                  <ng-container matColumnDef="fav">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let p">
+                      <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite(p)">
+                        {{ isFavorite(p) ? 'star' : 'star_border' }}
+                      </mat-icon>
+                    </td>
+                  </ng-container>
                   <ng-container matColumnDef="snr">
                     <th mat-header-cell *matHeaderCellDef>Nr.</th>
                     <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
@@ -98,8 +106,83 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <!-- Mobile: card list -->
               <div class="mobile-only player-cards">
                 @for (p of players; track p.snr) {
-                  <div class="player-card">
+                  <div class="player-card" (click)="toggleFavorite(p)">
                     <div class="player-main">
+                      <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
+                        {{ isFavorite(p) ? 'star' : 'star_border' }}
+                      </mat-icon>
+                      <span class="player-snr">{{ p.snr }}</span>
+                      <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
+                      <span class="player-name">{{ p.name }}</span>
+                    </div>
+                    <div class="player-details">
+                      @if (p.elo) { <span>{{ p.elo }}</span> }
+                      @if (p.country) { <span>{{ p.country }}</span> }
+                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
+                      @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </mat-tab>
+
+          <mat-tab label="Favorites ({{ favorites.length }})">
+            @if (favorites.length === 0) {
+              <p class="empty-hint">Click the star next to a player to add them to favorites.</p>
+            } @else {
+              <!-- Desktop -->
+              <div class="table-scroll desktop-only">
+                <table mat-table [dataSource]="favorites" class="full-width">
+                  <ng-container matColumnDef="fav">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let p">
+                      <mat-icon class="fav-icon fav-active remove-fav" (click)="removeFavorite(p)">star</mat-icon>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="snr">
+                    <th mat-header-cell *matHeaderCellDef>Nr.</th>
+                    <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="title">
+                    <th mat-header-cell *matHeaderCellDef>Title</th>
+                    <td mat-cell *matCellDef="let p">{{ p.title }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="fideId">
+                    <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
+                    <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="elo">
+                    <th mat-header-cell *matHeaderCellDef>Elo</th>
+                    <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="country">
+                    <th mat-header-cell *matHeaderCellDef>Country</th>
+                    <td mat-cell *matCellDef="let p">{{ p.country }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="team">
+                    <th mat-header-cell *matHeaderCellDef>Team</th>
+                    <td mat-cell *matCellDef="let p">{{ p.teamName }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="board">
+                    <th mat-header-cell *matHeaderCellDef>Br.</th>
+                    <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
+                </table>
+              </div>
+
+              <!-- Mobile -->
+              <div class="mobile-only player-cards">
+                @for (p of favorites; track p.snr) {
+                  <div class="player-card" (click)="removeFavorite(p)">
+                    <div class="player-main">
+                      <mat-icon class="fav-icon-sm fav-active">star</mat-icon>
                       <span class="player-snr">{{ p.snr }}</span>
                       <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
                       <span class="player-name">{{ p.name }}</span>
@@ -190,6 +273,12 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .round-selector { padding: 1rem 0; }
     mat-card { margin-bottom: 1rem; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .empty-hint { padding: 1.5rem; color: #888; }
+
+    .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
+    .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
+    .fav-icon:hover { color: #ffc107; }
+    .remove-fav:hover { color: #f44336 !important; }
 
     /* Mobile card list for players */
     .mobile-only { display: none; }
@@ -197,7 +286,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .player-card {
       padding: 0.75rem 1rem;
       border-bottom: 1px solid rgba(0,0,0,0.08);
+      cursor: pointer;
     }
+    .player-card:hover { background: rgba(0,0,0,0.02); }
     .player-main {
       display: flex;
       align-items: baseline;
@@ -239,9 +330,10 @@ export class TournamentDetailComponent implements OnInit {
   teamsLoading = false;
   pairingsLoading = false;
 
-  playerColumns = ['snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
+  playerColumns = ['fav', 'snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
   teamColumns = ['rank', 'name', 'points'];
   pairingColumns = ['board', 'white', 'result', 'black'];
+  private favoriteSnrs: Set<number> = new Set();
 
   subscription: any = null;
   toggling = false;
@@ -253,12 +345,13 @@ export class TournamentDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
+    this.loadFavorites();
     this.http.get(`/api/tournaments/${this.id}`).subscribe({
       next: (t: any) => {
         this.tournament = t;
         this.loading = false;
-        if (t.roundCount) {
-          this.rounds = Array.from({ length: t.roundCount }, (_, i) => i + 1);
+        if (t.totalRounds) {
+          this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
         this.loadPlayers();
         this.loadTeams();
@@ -355,7 +448,7 @@ export class TournamentDetailComponent implements OnInit {
     this.http.get(`/api/tournaments/${this.id}`).subscribe({
       next: (t: any) => {
         this.tournament = t;
-        if (t.roundCount) {
+        if (t.totalRounds) {
           this.rounds = Array.from({ length: t.roundCount }, (_, i) => i + 1);
         }
       }
@@ -366,8 +459,8 @@ export class TournamentDetailComponent implements OnInit {
   }
 
   onTabChange(event: any): void {
-    if (event.index === 1 && this.teams.length === 0) this.loadTeams();
-    if (event.index === 2 && this.pairings.length === 0) this.loadPairings();
+    if (event.index === 2 && this.teams.length === 0) this.loadTeams();
+    if (event.index === 3 && this.pairings.length === 0) this.loadPairings();
   }
 
   loadPlayers(): void {
@@ -389,8 +482,54 @@ export class TournamentDetailComponent implements OnInit {
   loadPairings(): void {
     this.pairingsLoading = true;
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
-      next: (p) => { this.pairings = p; this.pairingsLoading = false; },
+      next: (p) => {
+        // Normalize: team pairings have homeTeam/awayTeam, individual have white/black
+        this.pairings = p.map(item => {
+          if (item.homeTeam !== undefined) {
+            return { white: item.homeTeam, black: item.awayTeam, result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : '' };
+          }
+          return item;
+        });
+        this.pairingsLoading = false;
+      },
       error: () => { this.pairingsLoading = false; }
     });
+  }
+
+  // Favorites
+  private get favKey(): string { return `favorites_${this.id}`; }
+
+  private loadFavorites(): void {
+    const stored = localStorage.getItem(this.favKey);
+    this.favoriteSnrs = stored ? new Set(JSON.parse(stored)) : new Set();
+  }
+
+  private saveFavorites(): void {
+    localStorage.setItem(this.favKey, JSON.stringify([...this.favoriteSnrs]));
+  }
+
+  get favorites(): any[] {
+    return this.players.filter(p => this.favoriteSnrs.has(p.snr));
+  }
+
+  isFavorite(player: any): boolean {
+    return this.favoriteSnrs.has(player.snr);
+  }
+
+  toggleFavorite(player: any): void {
+    if (this.favoriteSnrs.has(player.snr)) {
+      this.favoriteSnrs.delete(player.snr);
+      this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
+    } else {
+      this.favoriteSnrs.add(player.snr);
+      this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
+    }
+    this.saveFavorites();
+  }
+
+  removeFavorite(player: any): void {
+    this.favoriteSnrs.delete(player.snr);
+    this.saveFavorites();
+    this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
   }
 }

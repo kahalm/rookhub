@@ -58,7 +58,7 @@ import { forkJoin } from 'rxjs';
         </mat-card>
       } @else {
         <div class="tournament-grid">
-          @for (t of tournaments; track t.id) {
+          @for (t of visibleTournaments; track t.id) {
             <mat-card>
               <mat-card-header>
                 <mat-card-title>{{ t.name }}</mat-card-title>
@@ -75,10 +75,18 @@ import { forkJoin } from 'rxjs';
                     <mat-icon>notifications</mat-icon> Subscribe
                   </button>
                 }
+                <button mat-button (click)="hide(t)">
+                  <mat-icon>visibility_off</mat-icon> Hide
+                </button>
               </mat-card-actions>
             </mat-card>
           } @empty {
             <p>No tournaments found.</p>
+          }
+          @if (hiddenCount > 0) {
+            <button mat-button (click)="showAll()">
+              <mat-icon>visibility</mat-icon> Show {{ hiddenCount }} hidden
+            </button>
           }
         </div>
       }
@@ -105,11 +113,32 @@ export class TournamentListComponent implements OnInit {
   crawling = false;
   crawlJobId: number | null = null;
   crawlError = '';
+  private hiddenIds: Set<string> = new Set();
+
+  get visibleTournaments(): any[] {
+    return this.tournaments.filter(t => !this.hiddenIds.has(t.id?.toString()));
+  }
+
+  get hiddenCount(): number {
+    return this.tournaments.length - this.visibleTournaments.length;
+  }
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
 
   ngOnInit(): void {
+    const stored = localStorage.getItem('hiddenTournaments');
+    if (stored) this.hiddenIds = new Set(JSON.parse(stored));
     this.loadTournaments();
+  }
+
+  hide(tournament: any): void {
+    this.hiddenIds.add(tournament.id?.toString());
+    localStorage.setItem('hiddenTournaments', JSON.stringify([...this.hiddenIds]));
+  }
+
+  showAll(): void {
+    this.hiddenIds.clear();
+    localStorage.removeItem('hiddenTournaments');
   }
 
   loadTournaments(): void {
