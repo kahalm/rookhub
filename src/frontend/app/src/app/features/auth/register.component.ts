@@ -31,7 +31,7 @@ import { AuthService } from '../../core/auth.service';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="8">
+              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="3">
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
               {{ loading ? 'Registering...' : 'Register' }}
@@ -67,7 +67,10 @@ export class RegisterComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.snackBar.open(err.error?.message || 'Registration failed', 'Close', { duration: 3000 });
+        const msg = err.error?.message
+          || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
+          || 'Registration failed';
+        this.snackBar.open(msg, 'Close', { duration: 5000 });
       }
     });
   }

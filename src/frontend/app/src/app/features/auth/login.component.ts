@@ -62,7 +62,10 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.snackBar.open(err.error?.message || 'Login failed', 'Close', { duration: 3000 });
+        const msg = err.error?.message
+          || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
+          || 'Login failed';
+        this.snackBar.open(msg, 'Close', { duration: 5000 });
       }
     });
   }
