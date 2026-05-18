@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
     public DbSet<TournamentSubscription> TournamentSubscriptions => Set<TournamentSubscription>();
     public DbSet<TournamentFavorite> TournamentFavorites => Set<TournamentFavorite>();
+    public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +81,16 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(tf => new { tf.UserId, tf.CrawlerTournamentId, tf.PlayerSnr }).IsUnique();
+        });
+
+        modelBuilder.Entity<TournamentUserSetting>(e =>
+        {
+            e.HasOne(s => s.User)
+             .WithMany(u => u.TournamentUserSettings)
+             .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(s => new { s.UserId, s.CrawlerTournamentId }).IsUnique();
         });
     }
 }

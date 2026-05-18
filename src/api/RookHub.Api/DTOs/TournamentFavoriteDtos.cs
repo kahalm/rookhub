@@ -18,3 +18,8 @@ public class CreateTournamentFavoriteDto
     [Required]
     public int PlayerSnr { get; set; }
 }
+
+public class TournamentSettingsDto
+{
+    public bool ShowFavoritesOnly { get; set; }
+}

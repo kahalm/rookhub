@@ -102,4 +102,41 @@ public class TournamentFavoriteController : BaseApiController
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
+    /// <summary>Get settings (showFavoritesOnly) for a tournament.</summary>
+    [HttpGet("settings/{tournamentId}")]
+    public async Task<IActionResult> GetSettings(string tournamentId)
+    {
+        var setting = await _db.TournamentUserSettings
+            .FirstOrDefaultAsync(s => s.UserId == GetUserId() && s.CrawlerTournamentId == tournamentId);
+
+        return Ok(new { showFavoritesOnly = setting?.ShowFavoritesOnly ?? false });
+    }
+
+    /// <summary>Save settings (showFavoritesOnly) for a tournament.</summary>
+    [HttpPut("settings/{tournamentId}")]
+    public async Task<IActionResult> SaveSettings(string tournamentId, [FromBody] TournamentSettingsDto dto)
+    {
+        var userId = GetUserId();
+        var setting = await _db.TournamentUserSettings
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.CrawlerTournamentId == tournamentId);
+
+        if (setting == null)
+        {
+            setting = new TournamentUserSetting
+            {
+                UserId = userId,
+                CrawlerTournamentId = tournamentId,
+                ShowFavoritesOnly = dto.ShowFavoritesOnly
+            };
+            _db.TournamentUserSettings.Add(setting);
+        }
+        else
+        {
+            setting.ShowFavoritesOnly = dto.ShowFavoritesOnly;
+        }
+
+        await _db.SaveChangesAsync();
+        return Ok(new { showFavoritesOnly = setting.ShowFavoritesOnly });
+    }
 }

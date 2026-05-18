@@ -21,4 +21,5 @@ public class AppUser
     public ICollection<Repertoire> Repertoires { get; set; } = new List<Repertoire>();
     public ICollection<TournamentSubscription> TournamentSubscriptions { get; set; } = new List<TournamentSubscription>();
     public ICollection<TournamentFavorite> TournamentFavorites { get; set; } = new List<TournamentFavorite>();
+    public ICollection<TournamentUserSetting> TournamentUserSettings { get; set; } = new List<TournamentUserSetting>();
 }

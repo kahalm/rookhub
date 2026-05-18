@@ -104,7 +104,7 @@ export class TeamPlayersDialogComponent {
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
                 </div>
               }
               <!-- Desktop: full table -->
@@ -191,7 +191,7 @@ export class TeamPlayersDialogComponent {
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [(ngModel)]="showFavoritesOnly">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
                 </div>
               }
               <div class="table-scroll">
@@ -564,11 +564,18 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.favoriteSnrs = new Set(favs.map(f => f.playerSnr));
         this.favoriteIdMap = new Map(favs.map(f => [f.playerSnr, f.id]));
       },
-      error: () => {
-        // Fallback: load from localStorage for unauthenticated users
-        const stored = localStorage.getItem(`favorites_${this.id}`);
-        this.favoriteSnrs = stored ? new Set(JSON.parse(stored)) : new Set();
-      }
+      error: () => {}
+    });
+    this.http.get<any>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
+      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; },
+      error: () => {}
+    });
+  }
+
+  onFavoritesToggle(checked: boolean): void {
+    this.showFavoritesOnly = checked;
+    this.http.put(`/api/tournament-favorites/settings/${this.id}`, { showFavoritesOnly: checked }).subscribe({
+      error: () => {}
     });
   }
 
