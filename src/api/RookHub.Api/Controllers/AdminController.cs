@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +9,7 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = "Admin")]
-public class AdminController : ControllerBase
+public class AdminController : BaseApiController
 {
     private readonly AppDbContext _db;
 
@@ -29,7 +28,10 @@ public class AdminController : ControllerBase
         var query = _db.AppUsers.AsQueryable();
 
         if (!string.IsNullOrEmpty(search))
+        {
+            if (search.Length > 100) search = search[..100];
             query = query.Where(u => u.Username.Contains(search) || u.Email.Contains(search));
+        }
 
         var totalCount = await query.CountAsync();
 
@@ -53,7 +55,7 @@ public class AdminController : ControllerBase
     [HttpDelete("users/{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
-        var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var currentUserId = GetUserId();
         if (id == currentUserId)
             return BadRequest(new { message = "Cannot delete yourself." });
 
@@ -76,7 +78,7 @@ public class AdminController : ControllerBase
     [HttpPost("users/{id}/toggle-admin")]
     public async Task<IActionResult> ToggleAdmin(int id)
     {
-        var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var currentUserId = GetUserId();
         if (id == currentUserId)
             return BadRequest(new { message = "Cannot toggle your own admin status." });
 

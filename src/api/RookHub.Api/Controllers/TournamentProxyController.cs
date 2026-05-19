@@ -129,6 +129,10 @@ public class TournamentProxyController : ControllerBase
     [HttpPost("crawl")]
     public async Task<IActionResult> Crawl([FromBody] JsonElement body)
     {
+        if (body.ValueKind == JsonValueKind.Undefined ||
+            !body.TryGetProperty("chessResultsId", out _))
+            return BadRequest(new { message = "Request body must contain chessResultsId." });
+
         try
         {
             var result = await _proxy.PostAsync("/api/crawl", body);

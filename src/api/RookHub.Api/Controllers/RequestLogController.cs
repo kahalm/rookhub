@@ -33,9 +33,17 @@ public class RequestLogController : ControllerBase
 
         if (from.HasValue) query = query.Where(r => r.Timestamp >= from.Value);
         if (to.HasValue) query = query.Where(r => r.Timestamp <= to.Value);
-        if (!string.IsNullOrEmpty(path)) query = query.Where(r => r.Path.Contains(path));
+        if (!string.IsNullOrEmpty(path))
+        {
+            if (path.Length > 200) path = path[..200];
+            query = query.Where(r => r.Path.Contains(path));
+        }
         if (!string.IsNullOrEmpty(method)) query = query.Where(r => r.Method == method);
-        if (!string.IsNullOrEmpty(userName)) query = query.Where(r => r.UserName != null && r.UserName.Contains(userName));
+        if (!string.IsNullOrEmpty(userName))
+        {
+            if (userName.Length > 100) userName = userName[..100];
+            query = query.Where(r => r.UserName != null && r.UserName.Contains(userName));
+        }
         if (minStatus.HasValue) query = query.Where(r => r.StatusCode >= minStatus.Value);
 
         var totalCount = await query.CountAsync();

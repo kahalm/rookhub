@@ -90,6 +90,8 @@ public class FriendController : BaseApiController
         if (string.IsNullOrWhiteSpace(q) || q.Length < 3)
             return BadRequest(new { message = "Query must be at least 3 characters." });
 
+        if (q.Length > 50) q = q[..50];
+
         return Ok(await _friendService.SearchUsersAsync(q, GetUserId()));
     }
 }

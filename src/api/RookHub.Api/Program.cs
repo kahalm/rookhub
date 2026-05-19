@@ -43,10 +43,12 @@ builder.Services.AddHostedService<RoundMonitorService>();
 
 // Crawler Proxy HttpClient
 var crawlerBaseUrl = builder.Configuration["Crawler:BaseUrl"] ?? "http://host.docker.internal:8080";
+if (!Uri.TryCreate(crawlerBaseUrl, UriKind.Absolute, out var crawlerUri))
+    throw new InvalidOperationException($"Invalid Crawler:BaseUrl: {crawlerBaseUrl}");
 var crawlerApiKey = builder.Configuration["Crawler:ApiKey"];
 builder.Services.AddHttpClient<CrawlerProxyService>(client =>
 {
-    client.BaseAddress = new Uri(crawlerBaseUrl);
+    client.BaseAddress = crawlerUri;
     client.Timeout = TimeSpan.FromSeconds(30);
     if (!string.IsNullOrEmpty(crawlerApiKey))
         client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
@@ -99,6 +101,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+builder.Services.AddResponseCompression();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -157,6 +160,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseResponseCompression();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();

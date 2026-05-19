@@ -11,7 +11,7 @@ public class RegisterDto
     [Required, EmailAddress, MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, MinLength(3), MaxLength(1024)]
+    [Required, MinLength(8), MaxLength(1024), PasswordComplexity]
     public string Password { get; set; } = string.Empty;
 }
 

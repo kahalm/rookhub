@@ -15,11 +15,13 @@ public class TournamentMonitorController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly CrawlerProxyService _proxy;
+    private readonly ILogger<TournamentMonitorController> _logger;
 
-    public TournamentMonitorController(AppDbContext db, CrawlerProxyService proxy)
+    public TournamentMonitorController(AppDbContext db, CrawlerProxyService proxy, ILogger<TournamentMonitorController> logger)
     {
         _db = db;
         _proxy = proxy;
+        _logger = logger;
     }
 
     [HttpPost("{tournamentId}")]
@@ -64,9 +66,9 @@ public class TournamentMonitorController : ControllerBase
             if (checkResult.TryGetProperty("knownRounds", out var kr))
                 knownRounds = kr.GetInt32();
         }
-        catch
+        catch (Exception ex)
         {
-            // Fall back to totalRounds from tournament
+            _logger.LogWarning(ex, "Failed to check rounds for {TournamentId}, falling back to totalRounds", tournamentId);
         }
 
         monitor = new TournamentMonitor

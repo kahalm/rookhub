@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.6.3',
+  version: '0.6.4',
   changelog: [
+    { version: '0.6.4', date: '2026-05-19', changes: [
+      'Security: Input-Validierung und Laengenbegrenzungen auf allen Suchfeldern',
+      'Security: Passwort-Policy auf 8 Zeichen + Komplexitaet erhoeht',
+      'Security: Crawler-Body-Validierung im Proxy-Controller',
+      'Fix: HealthController gibt 503 statt falsches 200 bei IP-Fehler',
+      'Fix: Leere Catch-Bloecke durch Logging ersetzt',
+      'Performance: Response Compression aktiviert',
+    ]},
     { version: '0.6.3', date: '2026-05-19', changes: [
       'Security: API-Key-Authentifizierung fuer Crawler-Endpoints',
       'Security: TournamentMonitorController erfordert jetzt Authentifizierung',
