@@ -44,8 +44,28 @@ export class ShareTournamentDialogComponent {
   ) {}
 
   copyLink(): void {
-    navigator.clipboard.writeText(this.data.url).then(() => {
-      this.snackBar.open('Link kopiert!', 'Close', { duration: 2000 });
-    });
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(this.data.url).then(() => {
+        this.snackBar.open('Link kopiert!', '', { duration: 2000 });
+      }).catch(() => this.fallbackCopy());
+    } else {
+      this.fallbackCopy();
+    }
+  }
+
+  private fallbackCopy(): void {
+    const textarea = document.createElement('textarea');
+    textarea.value = this.data.url;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      this.snackBar.open('Link kopiert!', '', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Kopieren fehlgeschlagen', '', { duration: 2000 });
+    }
+    document.body.removeChild(textarea);
   }
 }

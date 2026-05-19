@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.6.5',
+  version: '0.6.6',
   changelog: [
+    { version: '0.6.6', date: '2026-05-19', changes: [
+      'Fix: Copy-Button im Share-Dialog funktioniert jetzt auch ohne HTTPS (Fallback)',
+    ]},
     { version: '0.6.5', date: '2026-05-19', changes: [
       'Fix: Typo im Repository-Namen korrigiert (chessreslults → chessresults)',
     ]},
