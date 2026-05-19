@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.8.0',
+  version: '0.8.1',
   changelog: [
+    { version: '0.8.1', date: '2026-05-19', changes: [
+      'Fix: PGN-Parser unterstuetzt Chessbase-Annotationen (RAV-Varianten, Labels, NAGs)',
+      'Fix: Header-Erkennung ignoriert jetzt ] in Kommentaren wie {[%tqu ...]}',
+    ]},
     { version: '0.8.0', date: '2026-05-19', changes: [
       'Repertoire: Neues Lines/Tree/Edit-Layout mit Inline-Schachbrett',
       'Repertoire: Lines-Ansicht zeigt alle Partien mit Zugliste und Navigation',

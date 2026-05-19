@@ -60,6 +60,48 @@ describe('parsePgnText', () => {
   });
 });
 
+describe('annotated PGN', () => {
+  const ANNOTATED_PGN = `[Event "Repertoire"]
+[White "Nimzo-Indian"]
+[Black "Guide"]
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Result "*"]
+
+{[%tqu "En","find the move","","","d2d4","",10]} 1. d4 Nf6 2. c4 e6 3. Nc3 {Comment.} Bb4 4. Qc2 O-O 5. e4 ({A)} 5.a3 Bxc3+ 6.Qxc3) ({B)} 5.Nf3) c5 6. e5 (6.a3 Bxc3+ 7.bxc3) Ne8 *`;
+
+  it('should parse PGN with RAV variations', () => {
+    const games = parsePgnText(ANNOTATED_PGN);
+    expect(games.length).toBe(1);
+    // Main line: 1.d4 Nf6 2.c4 e6 3.Nc3 Bb4 4.Qc2 O-O 5.e4 c5 6.e5 Ne8 = 12 half-moves
+    expect(games[0].moves.length).toBe(12);
+    expect(games[0].moves[0].san).toBe('d4');
+    expect(games[0].moves[11].san).toBe('Ne8');
+  });
+
+  it('should strip NAG symbols', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 $1 Nc6 $14 *`;
+    const games = parsePgnText(pgn);
+    expect(games.length).toBe(1);
+    expect(games[0].moves.length).toBe(4);
+  });
+
+  it('should handle nested variations', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+1. e4 (1. d4 d5 (1...Nf6 2. c4)) e5 2. Nf3 *`;
+    const games = parsePgnText(pgn);
+    expect(games.length).toBe(1);
+    expect(games[0].moves.length).toBe(3);
+    expect(games[0].moves[0].san).toBe('e4');
+    expect(games[0].moves[1].san).toBe('e5');
+    expect(games[0].moves[2].san).toBe('Nf3');
+  });
+});
+
 describe('START_FEN', () => {
   it('should be the standard starting position', () => {
     expect(START_FEN).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
