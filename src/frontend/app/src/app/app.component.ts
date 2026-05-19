@@ -11,7 +11,7 @@ import { environment } from '../environments/environment';
     <app-navbar (changelogClick)="showChangelog = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
-      <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}</span>
+      <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
     </footer>
     @if (showChangelog) {
       <div class="changelog-overlay" (click)="showChangelog = false">
@@ -40,6 +40,7 @@ import { environment } from '../environments/environment';
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
     .version-link:hover { color: #aaa; text-decoration: underline; }
+    .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
     .changelog-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center; z-index: 1000;
@@ -62,6 +63,7 @@ import { environment } from '../environments/environment';
 })
 export class AppComponent {
   version = environment.version;
+  production = environment.production;
   changelog = environment.changelog;
   showChangelog = false;
 }

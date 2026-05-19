@@ -62,3 +62,5 @@ jobs:
           context: src/frontend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            BUILD_ENV=${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || 'dev' }}

@@ -1,6 +1,11 @@
 export const environment = {
-  version: '0.6.1',
+  production: false,
+  version: '0.6.2',
   changelog: [
+    { version: '0.6.2', date: '2026-05-19', changes: [
+      'Dev-Badge im Footer: zeigt "dev" neben der Version im Dev-Build',
+      'CI/CD: :dev und :latest Tag-Schema fuer Docker-Images',
+    ]},
     { version: '0.6.1', date: '2026-05-19', changes: [
       'CI/CD: GitHub Actions bauen Docker-Images bei Push (latest) und Tag (versioniert)',
       'Prod-Compose nutzt IMAGE_TAG fuer getaggte Versionen',
