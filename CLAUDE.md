@@ -226,7 +226,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.6.6`
+- **Aktuelle Version**: `0.6.7`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
@@ -240,6 +240,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 2. [ ] `version` und `changelog`-Array in `src/frontend/app/src/environments/environment.ts` aktualisiert?
 3. [ ] `Aktuelle Version` in diesem Abschnitt angepasst?
 4. [ ] Versionsaenderung committet?
+5. [ ] **Nach jedem Commit dem User die aktuelle Version mitteilen** (z.B. "Version: 0.6.6")
 
 **NIEMALS committen ohne diese Checkliste abzuarbeiten.** Auch reine Test- oder Doku-Aenderungen erhoehen die Patch-Version.
 
