@@ -21,14 +21,16 @@ public class FriendServiceExtendedTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private async Task<int> CreateUserAsync(string username)
+    private async Task<int> CreateUserAsync(string username, Action<UserProfile>? configureProfile = null)
     {
+        var profile = new UserProfile();
+        configureProfile?.Invoke(profile);
         var user = new AppUser
         {
             Username = username,
             Email = $"{username}@example.com",
             PasswordHash = "hash",
-            Profile = new UserProfile()
+            Profile = profile
         };
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
@@ -109,5 +111,57 @@ public class FriendServiceExtendedTests : IDisposable
 
         Assert.Equal(FriendshipStatus.Pending, friendship2.Status);
         Assert.NotEqual(friendship1.Id, friendship2.Id);
+    }
+
+    [Fact]
+    public async Task SearchUsers_FindsByChessComUsername()
+    {
+        var me = await CreateUserAsync("me");
+        var magnus = await CreateUserAsync("magnus", p => p.ChessComUsername = "MagnusCarlsen");
+
+        var results = await _friendService.SearchUsersAsync("MagnusCarlsen", me);
+
+        Assert.Single(results);
+        Assert.Equal("magnus", results[0].Username);
+        Assert.Equal("MagnusCarlsen", results[0].ChessComUsername);
+    }
+
+    [Fact]
+    public async Task SearchUsers_FindsByChessResultsId()
+    {
+        var me = await CreateUserAsync("me");
+        var player = await CreateUserAsync("player1", p => p.ChessResultsId = "CR-12345");
+
+        var results = await _friendService.SearchUsersAsync("CR-12345", me);
+
+        Assert.Single(results);
+        Assert.Equal("player1", results[0].Username);
+        Assert.Equal("CR-12345", results[0].ChessResultsId);
+    }
+
+    [Fact]
+    public async Task SearchUsers_FindsByLichessUsername()
+    {
+        var me = await CreateUserAsync("me");
+        var player = await CreateUserAsync("lichessplayer", p => p.LichessUsername = "DrNykterstein");
+
+        var results = await _friendService.SearchUsersAsync("DrNykterstein", me);
+
+        Assert.Single(results);
+        Assert.Equal("lichessplayer", results[0].Username);
+        Assert.Equal("DrNykterstein", results[0].LichessUsername);
+    }
+
+    [Fact]
+    public async Task SearchUsers_FindsByFideId()
+    {
+        var me = await CreateUserAsync("me");
+        var player = await CreateUserAsync("fideplayer", p => p.FideId = "1503014");
+
+        var results = await _friendService.SearchUsersAsync("1503014", me);
+
+        Assert.Single(results);
+        Assert.Equal("fideplayer", results[0].Username);
+        Assert.Equal("1503014", results[0].FideId);
     }
 }

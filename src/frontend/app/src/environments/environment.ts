@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.8.6',
+  version: '0.8.7',
   changelog: [
+    { version: '0.8.7', date: '2026-05-19', changes: [
+      'Freunde-Suche durchsucht jetzt auch Chess.com, Lichess, FIDE-ID und ChessResults-ID',
+      'Suchergebnisse zeigen vorhandene Schach-Identitaeten an',
+    ]},
     { version: '0.8.6', date: '2026-05-19', changes: [
       'Fix: Schachbrett-Rendering komplett ueberarbeitet (JS-basierte Dimensionen statt CSS-Tricks)',
       'Chessground bekommt jetzt explizite Pixel-Groesse via JavaScript',

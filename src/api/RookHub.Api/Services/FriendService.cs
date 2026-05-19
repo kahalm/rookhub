@@ -133,13 +133,23 @@ public class FriendService
             .Include(u => u.Profile)
             .Where(u => u.Id != currentUserId &&
                        (u.Username.Contains(query) ||
-                        (u.Profile != null && u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(query))))
+                        (u.Profile != null && (
+                            (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(query)) ||
+                            (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.Contains(query)) ||
+                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.Contains(query)) ||
+                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(query)) ||
+                            (u.Profile.FideId != null && u.Profile.FideId.Contains(query))
+                        ))))
             .Take(20)
             .Select(u => new UserSearchResultDto
             {
                 UserId = u.Id,
                 Username = u.Username,
-                DisplayName = u.Profile != null ? u.Profile.DisplayName : null
+                DisplayName = u.Profile != null ? u.Profile.DisplayName : null,
+                ChessResultsId = u.Profile != null ? u.Profile.ChessResultsId : null,
+                ChessComUsername = u.Profile != null ? u.Profile.ChessComUsername : null,
+                LichessUsername = u.Profile != null ? u.Profile.LichessUsername : null,
+                FideId = u.Profile != null ? u.Profile.FideId : null
             })
             .ToListAsync();
     }

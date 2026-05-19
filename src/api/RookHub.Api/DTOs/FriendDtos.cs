@@ -21,4 +21,8 @@ public class UserSearchResultDto
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
+    public string? ChessResultsId { get; set; }
+    public string? ChessComUsername { get; set; }
+    public string? LichessUsername { get; set; }
+    public string? FideId { get; set; }
 }

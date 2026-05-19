@@ -36,6 +36,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <mat-list-item>
                 <span matListItemTitle>{{ user.username }}</span>
                 <span matListItemLine>{{ user.displayName || '' }}</span>
+                @if (getChessIdentities(user)) {
+                  <span matListItemLine class="chess-identities">{{ getChessIdentities(user) }}</span>
+                }
                 <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta>
                   <mat-icon>person_add</mat-icon>
                 </button>
@@ -93,6 +96,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .search-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; }
     .search-field { flex: 1; margin-bottom: -1.25em; }
     .empty-text { padding: 1rem; color: #888; }
+    .chess-identities { font-size: 0.75rem; color: #999; }
   `]
 })
 export class FriendsComponent implements OnInit {
@@ -137,5 +141,14 @@ export class FriendsComponent implements OnInit {
 
   removeFriend(id: number): void {
     this.http.delete(`/api/friends/${id}`).subscribe(() => this.loadData());
+  }
+
+  getChessIdentities(user: any): string {
+    const parts: string[] = [];
+    if (user.chessComUsername) parts.push(`chess.com: ${user.chessComUsername}`);
+    if (user.lichessUsername) parts.push(`lichess: ${user.lichessUsername}`);
+    if (user.fideId) parts.push(`FIDE: ${user.fideId}`);
+    if (user.chessResultsId) parts.push(`CR: ${user.chessResultsId}`);
+    return parts.join(' | ');
   }
 }
