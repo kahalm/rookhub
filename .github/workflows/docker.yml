@@ -26,7 +26,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-api
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=dev,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
       - uses: docker/build-push-action@v6
@@ -52,7 +53,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-frontend
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=dev,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
       - uses: docker/build-push-action@v6

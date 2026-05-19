@@ -31,7 +31,6 @@
 #   WIREGUARD_ADDRESSES=
 #   SERVER_COUNTRIES=
 #   FIREWALL_VPN_INPUT_PORTS=
-#   IMAGE_TAG=latest           (oder getaggte Version, z.B. 0.6.0)
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
@@ -96,7 +95,7 @@ services:
 
   # ── ChessResults Crawler (via Gluetun VPN) ────────────────────────────────
   crawler:
-    image: ghcr.io/kahalm/rookhub-crawler:${IMAGE_TAG:-latest}
+    image: ghcr.io/kahalm/rookhub-crawler:latest
     container_name: rookhub-crawler
     restart: unless-stopped
     network_mode: "service:gluetun"
@@ -111,7 +110,7 @@ services:
 
   # ── RookHub API ────────────────────────────────────────────────────────────
   api:
-    image: ghcr.io/kahalm/rookhub-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/kahalm/rookhub-api:latest
     container_name: rookhub-api
     restart: unless-stopped
     ports:
@@ -135,7 +134,7 @@ services:
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
   rookhub:
-    image: ghcr.io/kahalm/rookhub-frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/kahalm/rookhub-frontend:latest
     container_name: rookhub-frontend
     restart: unless-stopped
     ports:
