@@ -15,6 +15,8 @@ public class AppUser
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
+    public bool IsAdmin { get; set; } = false;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public UserProfile? Profile { get; set; }

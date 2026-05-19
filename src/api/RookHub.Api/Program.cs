@@ -123,11 +123,12 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Auto-migrate on startup
+// Auto-migrate on startup + seed admin
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+    await AdminSeeder.SeedAsync(db, app.Configuration);
 }
 
 // H-5: Global exception handler
@@ -162,6 +163,6 @@ app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { }

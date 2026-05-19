@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -6,6 +7,7 @@ namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/request-logs")]
+[Authorize(Roles = "Admin")]
 public class RequestLogController : ControllerBase
 {
     private readonly AppDbContext _db;

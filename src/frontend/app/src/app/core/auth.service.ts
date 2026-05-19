@@ -7,6 +7,7 @@ export interface AuthResponse {
   token: string;
   username: string;
   userId: number;
+  isAdmin: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -27,6 +28,10 @@ export class AuthService {
 
   get currentUser(): AuthResponse | null {
     return this.currentUserSubject.value;
+  }
+
+  get isAdmin(): boolean {
+    return this.currentUserSubject.value?.isAdmin ?? false;
   }
 
   register(username: string, email: string, password: string): Observable<AuthResponse> {

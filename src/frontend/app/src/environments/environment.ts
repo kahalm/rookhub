@@ -1,6 +1,12 @@
 export const environment = {
-  version: '0.5.2',
+  version: '0.6.0',
   changelog: [
+    { version: '0.6.0', date: '2026-05-19', changes: [
+      'Admin-System: Benutzerverwaltung mit Admin-Rolle (IsAdmin)',
+      'Admin-Seed beim Start ueber ADMIN_USERNAME/ADMIN_PASSWORD Env-Variablen',
+      'Admin-Panel mit User-Verwaltung und Request-Log-Ansicht',
+      'RequestLogController jetzt nur fuer Admins zugaenglich',
+    ]},
     { version: '0.5.2', date: '2026-05-19', changes: [
       'Commit-Checkliste in beiden CLAUDE.md verankert (Version, Changelog, Tests)',
     ]},

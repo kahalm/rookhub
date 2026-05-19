@@ -88,6 +88,8 @@ services:
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://crawler:8080
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Production
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────

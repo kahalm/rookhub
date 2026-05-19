@@ -43,7 +43,8 @@ public class AuthService
         {
             Token = GenerateJwt(user),
             Username = user.Username,
-            UserId = user.Id
+            UserId = user.Id,
+            IsAdmin = user.IsAdmin
         };
     }
 
@@ -57,7 +58,8 @@ public class AuthService
         {
             Token = GenerateJwt(user),
             Username = user.Username,
-            UserId = user.Id
+            UserId = user.Id,
+            IsAdmin = user.IsAdmin
         };
     }
 
@@ -66,11 +68,14 @@ public class AuthService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured")));
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username)
         };
+
+        if (user.IsAdmin)
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],

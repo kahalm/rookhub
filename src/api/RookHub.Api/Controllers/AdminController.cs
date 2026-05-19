@@ -1,0 +1,99 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+
+namespace RookHub.Api.Controllers;
+
+[ApiController]
+[Route("api/admin")]
+[Authorize(Roles = "Admin")]
+public class AdminController : ControllerBase
+{
+    private readonly AppDbContext _db;
+
+    public AdminController(AppDbContext db) => _db = db;
+
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = _db.AppUsers.AsQueryable();
+
+        if (!string.IsNullOrEmpty(search))
+            query = query.Where(u => u.Username.Contains(search) || u.Email.Contains(search));
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(u => u.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(u => new AdminUserDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email,
+                IsAdmin = u.IsAdmin,
+                CreatedAt = u.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(new { items, totalCount, page, pageSize });
+    }
+
+    [HttpDelete("users/{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (id == currentUserId)
+            return BadRequest(new { message = "Cannot delete yourself." });
+
+        var user = await _db.AppUsers.FindAsync(id);
+        if (user == null)
+            return NotFound();
+
+        // Remove friendships first (Restrict delete behavior)
+        var friendships = await _db.Friendships
+            .Where(f => f.RequesterId == id || f.AddresseeId == id)
+            .ToListAsync();
+        _db.Friendships.RemoveRange(friendships);
+
+        _db.AppUsers.Remove(user);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpPost("users/{id}/toggle-admin")]
+    public async Task<IActionResult> ToggleAdmin(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (id == currentUserId)
+            return BadRequest(new { message = "Cannot toggle your own admin status." });
+
+        var user = await _db.AppUsers.FindAsync(id);
+        if (user == null)
+            return NotFound();
+
+        user.IsAdmin = !user.IsAdmin;
+        await _db.SaveChangesAsync();
+
+        return Ok(new AdminUserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            IsAdmin = user.IsAdmin,
+            CreatedAt = user.CreatedAt
+        });
+    }
+}

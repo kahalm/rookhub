@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -21,6 +21,9 @@ import { AuthService } from '../../core/auth.service';
           <button mat-button routerLink="/repertoires">Repertoires</button>
           <button mat-button routerLink="/tournaments">Tournaments</button>
           <button mat-button routerLink="/friends">Friends</button>
+          @if (auth.isAdmin) {
+            <button mat-button routerLink="/admin">Admin</button>
+          }
         </div>
         <button mat-icon-button class="mobile-menu-btn" [matMenuTriggerFor]="navMenu">
           <mat-icon>menu</mat-icon>
@@ -30,12 +33,16 @@ import { AuthService } from '../../core/auth.service';
           <button mat-menu-item routerLink="/repertoires">Repertoires</button>
           <button mat-menu-item routerLink="/tournaments">Tournaments</button>
           <button mat-menu-item routerLink="/friends">Friends</button>
+          @if (auth.isAdmin) {
+            <button mat-menu-item routerLink="/admin">Admin</button>
+          }
         </mat-menu>
         <button mat-icon-button [matMenuTriggerFor]="userMenu">
           <mat-icon>account_circle</mat-icon>
         </button>
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">Profile</button>
+          <button mat-menu-item (click)="changelogClick.emit()">Changelog</button>
           <button mat-menu-item (click)="auth.logout()">Logout</button>
         </mat-menu>
       } @else {
@@ -55,5 +62,6 @@ import { AuthService } from '../../core/auth.service';
   `]
 })
 export class NavbarComponent {
+  @Output() changelogClick = new EventEmitter<void>();
   constructor(public auth: AuthService) {}
 }
