@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.8.2',
+  version: '0.8.3',
   changelog: [
+    { version: '0.8.3', date: '2026-05-19', changes: [
+      'Fix: Schachbrett-Layout im Repertoire-Detail korrigiert (feste Breite 400px, responsive Breakpoint)',
+    ]},
     { version: '0.8.2', date: '2026-05-19', changes: [
       'PGN-Kommentare werden in der Zugliste angezeigt (kursiv, unter dem Zug)',
       'Chessbase-Annotationen ([%csl], [%cal], [%tqu]) werden aus Kommentaren entfernt',

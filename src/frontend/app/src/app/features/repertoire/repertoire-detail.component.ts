@@ -128,14 +128,12 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      flex-shrink: 0;
-      width: 100%;
-      max-width: 480px;
+      flex: 0 0 400px;
     }
     .nav-buttons { display: flex; gap: 4px; }
     .side-panel {
       flex: 1;
-      min-width: 0;
+      min-width: 250px;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
       height: 520px;
@@ -145,13 +143,14 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       max-width: 800px;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       .detail-header { flex-wrap: wrap; }
       .viewer-layout {
         flex-direction: column;
+        align-items: center;
       }
-      .board-section { max-width: 100%; }
-      .side-panel { width: 100%; height: 400px; }
+      .board-section { flex: 0 0 auto; width: 100%; max-width: 400px; }
+      .side-panel { width: 100%; min-width: 0; height: 400px; }
     }
   `]
 })
