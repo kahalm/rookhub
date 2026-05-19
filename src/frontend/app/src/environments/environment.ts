@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.7.0',
+  version: '0.8.0',
   changelog: [
+    { version: '0.8.0', date: '2026-05-19', changes: [
+      'Repertoire: Neues Lines/Tree/Edit-Layout mit Inline-Schachbrett',
+      'Repertoire: Lines-Ansicht zeigt alle Partien mit Zugliste und Navigation',
+      'Repertoire: Tree-Ansicht mit Zugbaum, Haeufigkeiten und Breadcrumb-Navigation',
+      'Repertoire: Edit-Ansicht fuer Datei-Upload und -Verwaltung',
+      'Repertoire: Keyboard-Navigation (Pfeiltasten) in der Lines-Ansicht',
+      'Refactor: PGN-Parser als geteiltes Modul extrahiert',
+    ]},
     { version: '0.7.0', date: '2026-05-19', changes: [
       'PGN-Viewer: Interaktives Schachbrett mit Zugnavigation (chess.js + chessground)',
       'PGN-Viewer: Zugliste mit Klick-Navigation und Keyboard-Support (Pfeiltasten, Home/End)',

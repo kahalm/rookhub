@@ -1,10 +1,6 @@
-import { Chess, Move } from 'chess.js';
+import { ParsedGame, START_FEN, parsePgnText } from './pgn-parser';
 
-export interface ParsedGame {
-  headers: Record<string, string>;
-  moves: Move[];
-  fens: string[];
-}
+export type { ParsedGame } from './pgn-parser';
 
 export class PgnViewerService {
   games: ParsedGame[] = [];
@@ -17,7 +13,7 @@ export class PgnViewerService {
 
   get currentFen(): string {
     const game = this.currentGame;
-    if (!game) return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    if (!game) return START_FEN;
     if (this.currentMoveIndex < 0) return game.fens[0];
     return game.fens[this.currentMoveIndex + 1];
   }
@@ -30,7 +26,7 @@ export class PgnViewerService {
   }
 
   loadPgn(pgnText: string): void {
-    this.games = this.splitAndParse(pgnText);
+    this.games = parsePgnText(pgnText);
     this.currentGameIndex = 0;
     this.currentMoveIndex = -1;
   }
@@ -71,34 +67,5 @@ export class PgnViewerService {
     if (game && index >= -1 && index < game.moves.length) {
       this.currentMoveIndex = index;
     }
-  }
-
-  private splitAndParse(pgnText: string): ParsedGame[] {
-    const rawGames = pgnText.split(/\n\n(?=\[Event )/);
-    const parsed: ParsedGame[] = [];
-
-    for (const raw of rawGames) {
-      const trimmed = raw.trim();
-      if (!trimmed) continue;
-
-      try {
-        const chess = new Chess();
-        chess.loadPgn(trimmed);
-
-        const headers = chess.getHeaders();
-        const moves = chess.history({ verbose: true });
-
-        const fens: string[] = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'];
-        for (const move of moves) {
-          fens.push(move.after);
-        }
-
-        parsed.push({ headers, moves, fens });
-      } catch {
-        // Skip unparseable games
-      }
-    }
-
-    return parsed;
   }
 }

@@ -1,167 +1,242 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { PgnViewerComponent, PgnViewerData } from '../../shared/pgn-viewer/pgn-viewer.component';
+import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { RepertoireLinesComponent } from './repertoire-lines.component';
+import { RepertoireTreeComponent } from './repertoire-tree.component';
+import { RepertoireEditComponent } from './repertoire-edit.component';
+import { RepertoireViewerService } from './repertoire-viewer.service';
+import { MoveTreeService } from './move-tree.service';
+
+type ViewMode = 'lines' | 'tree' | 'edit';
 
 @Component({
   selector: 'app-repertoire-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, MatSnackBarModule, MatDialogModule, LoadingSpinnerComponent],
+  imports: [
+    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
+    LoadingSpinnerComponent, ChessBoardComponent,
+    RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
+  ],
   template: `
     @if (loading) {
       <app-loading-spinner />
     } @else if (repertoire) {
       <div class="detail-container">
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ repertoire.name }}</mat-card-title>
-            <mat-card-subtitle>{{ repertoire.description || 'No description' }} | {{ repertoire.isPublic ? 'Public' : 'Private' }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="upload-area"
-                 (dragover)="onDragOver($event)"
-                 (drop)="onDrop($event)"
-                 (click)="fileInput.click()">
-              <mat-icon>cloud_upload</mat-icon>
-              <p>Drag & drop PGN files here or click to upload</p>
-              <input #fileInput type="file" accept=".pgn" multiple (change)="onFileSelect($event)" hidden>
-            </div>
+        <div class="detail-header">
+          <div class="header-info">
+            <h2>{{ repertoire.name }}</h2>
+            <span class="subtitle">{{ repertoire.description || 'No description' }}</span>
+          </div>
+          <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
+            <mat-button-toggle value="lines">
+              <mat-icon>list</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle value="tree">
+              <mat-icon>account_tree</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle value="edit">
+              <mat-icon>edit</mat-icon>
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
 
-            <h3>Files ({{ repertoire.files.length }})</h3>
-            <mat-list>
-              @for (file of repertoire.files; track file.id) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>description</mat-icon>
-                  <span matListItemTitle>{{ file.fileName }}</span>
-                  <span matListItemLine>{{ formatSize(file.fileSize) }} | {{ file.uploadedAt | date }}</span>
-                  <div matListItemMeta>
-                    <button mat-icon-button (click)="viewFile(file.id, file.fileName)" title="View PGN">
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="downloadFile(file.id, file.fileName)">
-                      <mat-icon>download</mat-icon>
-                    </button>
-                    <button mat-icon-button color="warn" (click)="deleteFile(file.id)">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
-                </mat-list-item>
-              } @empty {
-                <p class="empty-text">No files yet. Upload PGN files to get started!</p>
+        @if (mode === 'edit') {
+          <div class="edit-panel">
+            <app-repertoire-edit
+              [repertoireId]="id"
+              [files]="repertoire.files"
+              (fileUploaded)="onFileChanged()"
+              (fileDeleted)="onFileChanged()" />
+          </div>
+        } @else {
+          <div class="viewer-layout">
+            <div class="board-section">
+              <app-chess-board
+                [fen]="mode === 'lines' ? viewerService.currentFen : treeService.currentFen"
+                [lastMove]="mode === 'lines' ? viewerService.lastMove : treeService.lastMove" />
+              @if (mode === 'lines' && viewerService.selectedLineIndex >= 0) {
+                <div class="nav-buttons">
+                  <button mat-icon-button (click)="viewerService.goToStart()" [disabled]="viewerService.currentMoveIndex < 0">
+                    <mat-icon>skip_previous</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="viewerService.goBack()" [disabled]="viewerService.currentMoveIndex < 0">
+                    <mat-icon>navigate_before</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="viewerService.goForward()"
+                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1">
+                    <mat-icon>navigate_next</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="viewerService.goToEnd()"
+                          [disabled]="!viewerService.selectedGame || viewerService.currentMoveIndex >= viewerService.selectedGame.moves.length - 1">
+                    <mat-icon>skip_next</mat-icon>
+                  </button>
+                </div>
               }
-            </mat-list>
-          </mat-card-content>
-        </mat-card>
+            </div>
+            <div class="side-panel">
+              @if (mode === 'lines') {
+                <app-repertoire-lines
+                  [lines]="viewerService.lines"
+                  [selectedIndex]="viewerService.selectedLineIndex"
+                  [moves]="viewerService.currentMoves"
+                  [currentMoveIndex]="viewerService.currentMoveIndex"
+                  (lineSelected)="viewerService.selectLine($event)"
+                  (lineDeselected)="viewerService.deselectLine()"
+                  (moveClicked)="viewerService.goToMove($event)" />
+              } @else if (mode === 'tree') {
+                <app-repertoire-tree
+                  [children]="treeService.children"
+                  [breadcrumbs]="treeService.breadcrumbs"
+                  (nodeSelected)="treeService.selectChild($event)"
+                  (goUp)="treeService.goUp()"
+                  (goToRoot)="treeService.goToRoot()"
+                  (goToDepth)="treeService.goToDepth($event)" />
+              }
+            </div>
+          </div>
+        }
       </div>
     }
   `,
   styles: [`
-    .detail-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
-    .upload-area {
-      border: 2px dashed #ccc; border-radius: 8px; padding: 2rem;
-      text-align: center; cursor: pointer; margin: 1rem 0;
-      transition: border-color 0.2s;
+    .detail-container { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      gap: 1rem;
     }
-    .upload-area:hover { border-color: #3f51b5; }
-    .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: #888; }
-    .empty-text { padding: 1rem; color: #888; }
+    .header-info h2 { margin: 0; }
+    .subtitle { color: #666; font-size: 14px; }
+
+    .viewer-layout {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .board-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 480px;
+    }
+    .nav-buttons { display: flex; gap: 4px; }
+    .side-panel {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      height: 520px;
+      overflow: hidden;
+    }
+    .edit-panel {
+      max-width: 800px;
+    }
+
+    @media (max-width: 768px) {
+      .detail-header { flex-wrap: wrap; }
+      .viewer-layout {
+        flex-direction: column;
+      }
+      .board-section { max-width: 100%; }
+      .side-panel { width: 100%; height: 400px; }
+    }
   `]
 })
 export class RepertoireDetailComponent implements OnInit {
   repertoire: any = null;
   loading = true;
-  private id!: number;
+  mode: ViewMode = 'lines';
+  id!: number;
 
-  constructor(private route: ActivatedRoute, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog) {}
+  viewerService = new RepertoireViewerService();
+  treeService = new MoveTreeService();
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private http: HttpClient,
+  ) {}
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
+    const modeParam = this.route.snapshot.queryParamMap.get('mode');
+    if (modeParam === 'tree' || modeParam === 'edit') {
+      this.mode = modeParam;
+    }
     this.loadRepertoire();
   }
 
-  loadRepertoire(): void {
+  setMode(mode: ViewMode): void {
+    this.mode = mode;
+    this.router.navigate([], {
+      queryParams: { mode },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  onFileChanged(): void {
+    this.loadRepertoire();
+    this.loadCombinedPgn();
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    if (this.mode !== 'lines' || this.viewerService.selectedLineIndex < 0) return;
+    switch (event.key) {
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.viewerService.goBack();
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        this.viewerService.goForward();
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.viewerService.goToStart();
+        break;
+      case 'End':
+        event.preventDefault();
+        this.viewerService.goToEnd();
+        break;
+    }
+  }
+
+  private loadRepertoire(): void {
     this.loading = true;
     this.http.get(`/api/repertoires/${this.id}`).subscribe({
-      next: (r) => { this.repertoire = r; this.loading = false; },
+      next: (r) => {
+        this.repertoire = r;
+        this.loading = false;
+        this.loadCombinedPgn();
+      },
       error: () => { this.loading = false; }
     });
   }
 
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    if (event.dataTransfer?.files) {
-      this.uploadFiles(event.dataTransfer.files);
-    }
-  }
-
-  onFileSelect(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
-      this.uploadFiles(input.files);
-    }
-  }
-
-  private uploadFiles(files: FileList): void {
-    for (let i = 0; i < files.length; i++) {
-      const formData = new FormData();
-      formData.append('file', files[i]);
-      this.http.post(`/api/repertoires/${this.id}/files`, formData).subscribe({
-        next: () => {
-          this.loadRepertoire();
-          this.snackBar.open(`Uploaded ${files[i].name}`, 'Close', { duration: 2000 });
-        },
-        error: (err) => this.snackBar.open(err.error?.message || 'Upload failed', 'Close', { duration: 3000 })
-      });
-    }
-  }
-
-  viewFile(fileId: number, fileName: string): void {
-    this.http.get(`/api/repertoires/${this.id}/files/${fileId}`, { responseType: 'text' }).subscribe({
+  private loadCombinedPgn(): void {
+    this.http.get(`/api/repertoires/${this.id}/pgn`, { responseType: 'text' }).subscribe({
       next: (pgn) => {
-        this.dialog.open(PgnViewerComponent, {
-          data: { pgn, fileName } as PgnViewerData,
-          width: '95vw',
-          maxWidth: '1000px',
-          height: '90vh',
-          panelClass: 'pgn-viewer-dialog',
-        });
+        this.viewerService.loadPgn(pgn);
+        this.treeService.buildTree(pgn);
       },
-      error: () => this.snackBar.open('Failed to load PGN', 'Close', { duration: 3000 }),
+      error: () => {
+        this.viewerService.loadPgn('');
+        this.treeService.buildTree('');
+      }
     });
-  }
-
-  downloadFile(fileId: number, fileName: string): void {
-    this.http.get(`/api/repertoires/${this.id}/files/${fileId}`, { responseType: 'blob' }).subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
-  }
-
-  deleteFile(fileId: number): void {
-    if (confirm('Delete this file?')) {
-      this.http.delete(`/api/repertoires/${this.id}/files/${fileId}`).subscribe(() => this.loadRepertoire());
-    }
-  }
-
-  formatSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 }
