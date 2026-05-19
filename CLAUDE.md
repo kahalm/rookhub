@@ -180,9 +180,34 @@ dotnet run
 ```
 
 ### Tests
+
+**Pflicht**: Jedes neue Feature, jeder neue Endpoint und jeder Bugfix MUSS mit mindestens einem Test abgedeckt werden. Kein PR/Commit ohne passenden Test.
+
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 18 Tests (Auth, Profile, Friends, Repertoire)
+dotnet test     # 70 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, RequestLog)
+```
+
+### Test-Pattern
+- **InMemory DB** pro Testklasse via `UseInMemoryDatabase(Guid.NewGuid().ToString())`
+- **IDisposable** fuer DB-Cleanup
+- **xUnit `[Fact]`** Attribute
+- **Namenskonvention**: `MethodName_Scenario_ExpectedResult`
+- **Service-Tests** (FriendService, RepertoireService, AuthService, ProfileService) testen direkt gegen InMemory-DB
+- **Controller mit Inline-DB-Logik** (Subscription, Favorites, Monitor, RequestLog) werden direkt als Controller-Instanz getestet
+- **BaseApiController.GetUserId()** wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
+- **Helper-Methode** `CreateUserAsync()` fuer Test-Daten in jeder Testklasse
+
+### Teststruktur
+```
+tests/RookHub.Api.Tests/
+  UnitTest1.cs                     AuthServiceTests, ProfileServiceTests, FriendServiceTests, RepertoireServiceTests
+  SubscriptionServiceTests.cs      SubscriptionController-Tests
+  TournamentFavoriteTests.cs       TournamentFavoriteController-Tests
+  TournamentMonitorTests.cs        TournamentMonitor DB-Logik
+  FriendServiceExtendedTests.cs    Erweiterte FriendService-Tests
+  RepertoireServiceExtendedTests.cs Erweiterte RepertoireService-Tests
+  RequestLogQueryTests.cs          RequestLog-Query/Filter-Tests
 ```
 
 ## EF Core Migrations
@@ -201,7 +226,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.4.0`
+- **Aktuelle Version**: `0.5.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
