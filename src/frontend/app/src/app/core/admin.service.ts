@@ -22,9 +22,11 @@ export interface RequestLog {
   timestamp: string;
   method: string;
   path: string;
+  queryString: string | null;
   statusCode: number;
   durationMs: number;
   userName: string | null;
+  ipAddress: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

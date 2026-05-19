@@ -11,6 +11,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminService, AdminUser, RequestLog } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
@@ -20,7 +22,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatSnackBarModule, MatChipsModule, LoadingSpinnerComponent
+    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, LoadingSpinnerComponent
   ],
   template: `
     <div class="admin-container">
@@ -95,38 +97,102 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 
         <mat-tab label="Request Logs">
           <div class="tab-content">
+            <div class="log-filters">
+              <mat-form-field appearance="outline" class="filter-field">
+                <mat-label>Pfad</mat-label>
+                <input matInput [(ngModel)]="logFilterPath" placeholder="/api/...">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="filter-field filter-small">
+                <mat-label>Methode</mat-label>
+                <mat-select [(ngModel)]="logFilterMethod">
+                  <mat-option value="">Alle</mat-option>
+                  <mat-option value="GET">GET</mat-option>
+                  <mat-option value="POST">POST</mat-option>
+                  <mat-option value="PUT">PUT</mat-option>
+                  <mat-option value="DELETE">DELETE</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="filter-field filter-small">
+                <mat-label>Status</mat-label>
+                <mat-select [(ngModel)]="logFilterStatus">
+                  <mat-option value="">Alle</mat-option>
+                  <mat-option value="400">4xx+ (Fehler)</mat-option>
+                  <mat-option value="500">5xx (Server)</mat-option>
+                  <mat-option value="200">2xx+ (OK)</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="filter-field">
+                <mat-label>Benutzer</mat-label>
+                <input matInput [(ngModel)]="logFilterUser">
+              </mat-form-field>
+
+              <div class="filter-actions">
+                <button mat-raised-button color="primary" (click)="applyLogFilters()">
+                  <mat-icon>search</mat-icon> Filtern
+                </button>
+                <button mat-button (click)="resetLogFilters()">
+                  <mat-icon>clear</mat-icon> Zuruecksetzen
+                </button>
+              </div>
+            </div>
+
+            <div class="log-summary">
+              {{ logsTotalCount }} Eintraege
+              @if (hasActiveLogFilters()) {
+                <span class="filter-hint">(gefiltert)</span>
+              }
+            </div>
+
             @if (logsLoading) {
               <app-loading-spinner />
             } @else {
-              <table mat-table [dataSource]="logs" class="full-width">
-                <ng-container matColumnDef="timestamp">
-                  <th mat-header-cell *matHeaderCellDef>Time</th>
-                  <td mat-cell *matCellDef="let l">{{ l.timestamp | date:'short' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="method">
-                  <th mat-header-cell *matHeaderCellDef>Method</th>
-                  <td mat-cell *matCellDef="let l">{{ l.method }}</td>
-                </ng-container>
-                <ng-container matColumnDef="path">
-                  <th mat-header-cell *matHeaderCellDef>Path</th>
-                  <td mat-cell *matCellDef="let l">{{ l.path }}</td>
-                </ng-container>
-                <ng-container matColumnDef="statusCode">
-                  <th mat-header-cell *matHeaderCellDef>Status</th>
-                  <td mat-cell *matCellDef="let l">{{ l.statusCode }}</td>
-                </ng-container>
-                <ng-container matColumnDef="durationMs">
-                  <th mat-header-cell *matHeaderCellDef>Duration</th>
-                  <td mat-cell *matCellDef="let l">{{ l.durationMs }}ms</td>
-                </ng-container>
-                <ng-container matColumnDef="userName">
-                  <th mat-header-cell *matHeaderCellDef>User</th>
-                  <td mat-cell *matCellDef="let l">{{ l.userName || '-' }}</td>
-                </ng-container>
+              <div class="table-responsive">
+                <table mat-table [dataSource]="logs" class="full-width log-table">
+                  <ng-container matColumnDef="timestamp">
+                    <th mat-header-cell *matHeaderCellDef>Zeit</th>
+                    <td mat-cell *matCellDef="let l">{{ l.timestamp | date:'dd.MM. HH:mm:ss' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="method">
+                    <th mat-header-cell *matHeaderCellDef>Methode</th>
+                    <td mat-cell *matCellDef="let l">
+                      <span class="method-badge method-{{ l.method | lowercase }}">{{ l.method }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="path">
+                    <th mat-header-cell *matHeaderCellDef>Pfad</th>
+                    <td mat-cell *matCellDef="let l" [matTooltip]="l.queryString || ''">
+                      {{ l.path }}@if (l.queryString) { <span class="qs-indicator">?</span> }
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="statusCode">
+                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <td mat-cell *matCellDef="let l">
+                      <span [class]="'status-badge status-' + getStatusClass(l.statusCode)">{{ l.statusCode }}</span>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="durationMs">
+                    <th mat-header-cell *matHeaderCellDef>Dauer</th>
+                    <td mat-cell *matCellDef="let l" [class.slow-request]="l.durationMs > 1000">
+                      {{ l.durationMs }}ms
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="userName">
+                    <th mat-header-cell *matHeaderCellDef>Benutzer</th>
+                    <td mat-cell *matCellDef="let l">{{ l.userName || '-' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="ipAddress">
+                    <th mat-header-cell *matHeaderCellDef>IP</th>
+                    <td mat-cell *matCellDef="let l">{{ l.ipAddress || '-' }}</td>
+                  </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: logColumns;"></tr>
-              </table>
+                  <tr mat-header-row *matHeaderRowDef="logColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: logColumns;"
+                      [class.error-row]="row.statusCode >= 400"></tr>
+                </table>
+              </div>
 
               <mat-paginator
                 [length]="logsTotalCount"
@@ -143,11 +209,44 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     </div>
   `,
   styles: [`
-    .admin-container { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .admin-container { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
     .tab-content { padding: 16px 0; }
     .search-field { width: 100%; max-width: 400px; }
     .full-width { width: 100%; }
     .admin-badge { color: #ff9800; font-size: 20px; }
+    .table-responsive { overflow-x: auto; }
+
+    .log-filters {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
+      margin-bottom: 8px; padding: 12px; background: #fafafa; border-radius: 8px;
+    }
+    .filter-field { flex: 1; min-width: 150px; }
+    .filter-small { max-width: 160px; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; padding-top: 4px; }
+    .log-summary { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+    .filter-hint { color: #1976d2; font-weight: 500; }
+
+    .method-badge {
+      font-size: 0.75rem; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+      font-family: monospace;
+    }
+    .method-get { background: #e3f2fd; color: #1565c0; }
+    .method-post { background: #e8f5e9; color: #2e7d32; }
+    .method-put { background: #fff3e0; color: #e65100; }
+    .method-delete { background: #fce4ec; color: #c62828; }
+
+    .status-badge { font-weight: 600; font-family: monospace; padding: 2px 6px; border-radius: 4px; }
+    .status-ok { background: #e8f5e9; color: #2e7d32; }
+    .status-redirect { background: #fff3e0; color: #e65100; }
+    .status-client-error { background: #fce4ec; color: #c62828; }
+    .status-server-error { background: #f3e5f5; color: #6a1b9a; }
+
+    .qs-indicator { color: #999; font-size: 0.8rem; }
+    .slow-request { color: #e65100; font-weight: 500; }
+    .error-row { background: #fff8f8; }
+
+    .log-table td { font-size: 0.85rem; }
+    .log-table th { font-size: 0.8rem; font-weight: 600; }
   `]
 })
 export class AdminComponent implements OnInit {
@@ -164,7 +263,12 @@ export class AdminComponent implements OnInit {
   logsPageSize = 50;
   logsTotalCount = 0;
   logsLoading = false;
-  logColumns = ['timestamp', 'method', 'path', 'statusCode', 'durationMs', 'userName'];
+  logColumns = ['timestamp', 'method', 'path', 'statusCode', 'durationMs', 'userName', 'ipAddress'];
+
+  logFilterPath = '';
+  logFilterMethod = '';
+  logFilterStatus = '';
+  logFilterUser = '';
 
   constructor(private adminService: AdminService, private snackBar: MatSnackBar) {}
 
@@ -190,20 +294,51 @@ export class AdminComponent implements OnInit {
 
   loadLogs(): void {
     this.logsLoading = true;
-    this.adminService.getRequestLogs({
+    const params: Record<string, string> = {
       page: this.logsPage.toString(),
       pageSize: this.logsPageSize.toString()
-    }).subscribe({
+    };
+    if (this.logFilterPath) params['path'] = this.logFilterPath;
+    if (this.logFilterMethod) params['method'] = this.logFilterMethod;
+    if (this.logFilterStatus) params['minStatus'] = this.logFilterStatus;
+    if (this.logFilterUser) params['userName'] = this.logFilterUser;
+
+    this.adminService.getRequestLogs(params).subscribe({
       next: res => {
         this.logs = res.items;
         this.logsTotalCount = res.totalCount;
         this.logsLoading = false;
       },
       error: () => {
-        this.snackBar.open('Failed to load logs', 'OK', { duration: 3000 });
+        this.snackBar.open('Logs konnten nicht geladen werden', 'OK', { duration: 3000 });
         this.logsLoading = false;
       }
     });
+  }
+
+  applyLogFilters(): void {
+    this.logsPage = 1;
+    this.loadLogs();
+  }
+
+  resetLogFilters(): void {
+    this.logFilterPath = '';
+    this.logFilterMethod = '';
+    this.logFilterStatus = '';
+    this.logFilterUser = '';
+    this.logsPage = 1;
+    this.loadLogs();
+  }
+
+  hasActiveLogFilters(): boolean {
+    return !!(this.logFilterPath || this.logFilterMethod || this.logFilterStatus || this.logFilterUser);
+  }
+
+  getStatusClass(code: number): string {
+    if (code >= 500) return 'server-error';
+    if (code >= 400) return 'client-error';
+    if (code >= 300) return 'redirect';
+    return 'ok';
   }
 
   onUsersPageChange(event: PageEvent): void {

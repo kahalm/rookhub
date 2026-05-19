@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.6.7',
+  version: '0.6.8',
   changelog: [
+    { version: '0.6.8', date: '2026-05-19', changes: [
+      'Admin: Log-Bereich mit Filtern (Pfad, Methode, Status, Benutzer)',
+      'Admin: Farbige Status-Codes, Methoden-Badges, IP-Spalte',
+      'Admin: Langsame Requests (>1s) hervorgehoben',
+    ]},
     { version: '0.6.7', date: '2026-05-19', changes: [
       'Checkliste: Nach jedem Commit wird die aktuelle Version mitgeteilt',
     ]},
