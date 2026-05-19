@@ -1,6 +1,6 @@
 # RookHub
 
-Zentrales Webportal fuer schachrelevante Funktionen: PGN-Repertoire-Verwaltung, Turnierdaten, Benutzerprofile mit FIDE/ChessResults-Verlinkung, Freundeslisten. Gehoert zusammen mit dem **ChessResults Crawler** (`C:/git/chessreslults_crawler`) – bei Aenderungen immer beide Projekte beruecksichtigen.
+Zentrales Webportal fuer schachrelevante Funktionen: PGN-Repertoire-Verwaltung, Turnierdaten, Benutzerprofile mit FIDE/ChessResults-Verlinkung, Freundeslisten. Gehoert zusammen mit dem **ChessResults Crawler** (`C:/git/chessresults_crawler`) – bei Aenderungen immer beide Projekte beruecksichtigen.
 
 ## Zusammenspiel der Projekte
 
@@ -13,7 +13,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
   rookhub DB (MariaDB)                            chessresults DB (MariaDB)
 ```
 
-- **chessreslults_crawler**: Backend-Crawler der Turnierdaten von chess-results.com extrahiert. Reine REST-API, kein Frontend. Eigene MariaDB-Datenbank `chessresults`.
+- **chessresults_crawler**: Backend-Crawler der Turnierdaten von chess-results.com extrahiert. Reine REST-API, kein Frontend. Eigene MariaDB-Datenbank `chessresults`.
 - **RookHub** (dieses Projekt): Webportal mit Angular-Frontend + .NET API. Leitet Turnier-Anfragen als Proxy an den Crawler weiter. Eigene MariaDB-Datenbank `rookhub`.
 
 ### Kritische Abhaengigkeiten zwischen den Projekten
@@ -226,14 +226,14 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.6.4`
+- **Aktuelle Version**: `0.6.5`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
 - **Changelog pflegen**: Jeden Eintrag im `changelog`-Array in `environment.ts` vermerken (Version, Datum, Liste der Aenderungen)
 - Version in `environment.ts` UND in diesem Abschnitt aktualisieren
 - Changelog ist im Frontend einsehbar durch Klick auf die Versionsnummer im Footer
-- **Gilt auch fuer Aenderungen im Crawler-Repo** (`C:/git/chessreslults_crawler`): Features/Fixes dort muessen ebenfalls hier Version + Changelog erhoehen und committet werden
+- **Gilt auch fuer Aenderungen im Crawler-Repo** (`C:/git/chessresults_crawler`): Features/Fixes dort muessen ebenfalls hier Version + Changelog erhoehen und committet werden
 
 ### Checkliste vor JEDEM Commit (beide Projekte)
 1. [ ] Tests vorhanden fuer die Aenderung?

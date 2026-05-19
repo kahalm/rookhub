@@ -62,7 +62,7 @@ services:
   # ── ChessResults Crawler (via Gluetun VPN) ────────────────────────────────
   crawler:
     build:
-      context: ../chessreslults_crawler/src/ChessResultsCrawler
+      context: ../chessresults_crawler/src/ChessResultsCrawler
       dockerfile: Dockerfile
     container_name: rookhub-crawler
     restart: unless-stopped

@@ -33,7 +33,7 @@ Zentrales Webportal fuer Schachspieler: PGN-Repertoire-Verwaltung, Live-Turnierd
 |-----------|-------------|------------|
 | **RookHub Frontend** | Angular 19 SPA mit Angular Material | `src/frontend/` |
 | **RookHub API** | .NET 9 REST-API, JWT-Auth, Proxy zum Crawler | `src/api/` |
-| **ChessResults Crawler** | .NET 9 Crawler fuer chess-results.com | [`chessreslults_crawler`](../chessreslults_crawler) |
+| **ChessResults Crawler** | .NET 9 Crawler fuer chess-results.com | [`chessresults_crawler`](../chessresults_crawler) |
 | **MariaDB** | Shared DB-Server mit zwei Datenbanken (`rookhub` + `chessresults`) | via Docker |
 
 ## Tech Stack
@@ -52,11 +52,11 @@ Zentrales Webportal fuer Schachspieler: PGN-Repertoire-Verwaltung, Live-Turnierd
 ## Voraussetzungen
 
 - [Docker](https://docs.docker.com/get-docker/) + Docker Compose
-- Das [chessreslults_crawler](../chessreslults_crawler)-Repository als Sibling-Verzeichnis:
+- Das [chessresults_crawler](../chessresults_crawler)-Repository als Sibling-Verzeichnis:
   ```
   git/
     rookhub/              # dieses Repo
-    chessreslults_crawler/ # Crawler-Repo
+    chessresults_crawler/ # Crawler-Repo
   ```
 
 ## Schnellstart
@@ -65,7 +65,7 @@ Zentrales Webportal fuer Schachspieler: PGN-Repertoire-Verwaltung, Live-Turnierd
 
 ```bash
 git clone <repo-url> rookhub
-git clone <repo-url> chessreslults_crawler
+git clone <repo-url> chessresults_crawler
 ```
 
 ### 2. Environment einrichten
