@@ -27,6 +27,10 @@ export class RepertoireViewerService {
     return this.selectedGame?.moves ?? [];
   }
 
+  get currentComments(): { [moveIndex: number]: string } {
+    return this.selectedGame?.comments ?? {};
+  }
+
   get currentFen(): string {
     const game = this.selectedGame;
     if (!game) return START_FEN;

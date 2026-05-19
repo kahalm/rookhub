@@ -25,6 +25,7 @@ import { RepertoireLine } from './repertoire-viewer.service';
           <app-move-list
             [moves]="moves"
             [currentMoveIndex]="currentMoveIndex"
+            [comments]="comments"
             (moveClicked)="moveClicked.emit($event)" />
         </div>
       </div>
@@ -95,6 +96,7 @@ export class RepertoireLinesComponent {
   @Input() selectedIndex = -1;
   @Input() moves: Move[] = [];
   @Input() currentMoveIndex = -1;
+  @Input() comments: { [moveIndex: number]: string } = {};
 
   @Output() lineSelected = new EventEmitter<number>();
   @Output() lineDeselected = new EventEmitter<void>();

@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.8.1',
+  version: '0.8.2',
   changelog: [
+    { version: '0.8.2', date: '2026-05-19', changes: [
+      'PGN-Kommentare werden in der Zugliste angezeigt (kursiv, unter dem Zug)',
+      'Chessbase-Annotationen ([%csl], [%cal], [%tqu]) werden aus Kommentaren entfernt',
+      'PGN-Viewer Dialog zeigt ebenfalls Kommentare an',
+    ]},
     { version: '0.8.1', date: '2026-05-19', changes: [
       'Fix: PGN-Parser unterstuetzt Chessbase-Annotationen (RAV-Varianten, Labels, NAGs)',
       'Fix: Header-Erkennung ignoriert jetzt ] in Kommentaren wie {[%tqu ...]}',

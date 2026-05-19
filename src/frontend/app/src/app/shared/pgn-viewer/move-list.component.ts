@@ -15,9 +15,15 @@ import { Move } from 'chess.js';
         <span class="move-number">{{ pair.number }}.</span>
         <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
               (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
+        @if (comments[pair.whiteIndex]) {
+          <span class="comment">{{ comments[pair.whiteIndex] }}</span>
+        }
         @if (pair.black) {
           <span class="move" [class.active]="pair.blackIndex === currentMoveIndex"
                 (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</span>
+        }
+        @if (pair.blackIndex !== undefined && comments[pair.blackIndex!]) {
+          <span class="comment">{{ comments[pair.blackIndex!] }}</span>
         }
       }
     </div>
@@ -43,11 +49,21 @@ import { Move } from 'chess.js';
     }
     .move:hover { background: #e0e0e0; }
     .move.active { background: #1976d2; color: white; }
+    .comment {
+      width: 100%;
+      color: #666;
+      font-style: italic;
+      font-size: 12px;
+      font-family: 'Roboto', sans-serif;
+      line-height: 1.5;
+      padding: 2px 4px 6px;
+    }
   `]
 })
 export class MoveListComponent implements OnChanges {
   @Input() moves: Move[] = [];
   @Input() currentMoveIndex = -1;
+  @Input() comments: { [moveIndex: number]: string } = {};
   @Output() moveClicked = new EventEmitter<number>();
 
   @ViewChild('moveListEl') moveListEl!: ElementRef<HTMLElement>;

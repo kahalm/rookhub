@@ -102,6 +102,44 @@ describe('annotated PGN', () => {
   });
 });
 
+describe('comments', () => {
+  it('should extract comments and associate with moves', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+1. e4 {Best move} e5 {Solid reply} 2. Nf3 *`;
+    const games = parsePgnText(pgn);
+    expect(games.length).toBe(1);
+    expect(games[0].comments[0]).toBe('Best move');
+    expect(games[0].comments[1]).toBe('Solid reply');
+    expect(games[0].comments[2]).toBeUndefined();
+  });
+
+  it('should strip Chessbase annotations from comments', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+1. e4 {[%csl Ge4]A strong move.} e5 {[%cal Re5e4]} *`;
+    const games = parsePgnText(pgn);
+    expect(games[0].comments[0]).toBe('A strong move.');
+    expect(games[0].comments[1]).toBeUndefined(); // only annotation, no text
+  });
+
+  it('should handle comment before first move', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+{Starting comment} 1. e4 e5 *`;
+    const games = parsePgnText(pgn);
+    expect(games[0].comments[-1]).toBe('Starting comment');
+  });
+
+  it('should return empty comments for PGN without comments', () => {
+    const games = parsePgnText(SINGLE_GAME);
+    expect(Object.keys(games[0].comments).length).toBe(0);
+  });
+});
+
 describe('START_FEN', () => {
   it('should be the standard starting position', () => {
     expect(START_FEN).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');

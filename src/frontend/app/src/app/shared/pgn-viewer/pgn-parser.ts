@@ -4,6 +4,7 @@ export interface ParsedGame {
   headers: Record<string, string>;
   moves: Move[];
   fens: string[];
+  comments: { [moveIndex: number]: string };
 }
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -57,6 +58,39 @@ function stripNags(moveText: string): string {
     .replace(/[⩲⩱±∓⊕⊖∞⩵↑→⇆∆□⊞⊟≤≥⪯⪰]+/g, '');
 }
 
+/**
+ * Extract comments from cleaned move text and associate with move indices.
+ * Comments appear as {text} in PGN. Chessbase annotations like [%csl ...],
+ * [%cal ...], [%tqu ...] are stripped from display text.
+ * Returns a map of moveIndex -> comment text. Index -1 = before first move.
+ */
+function extractComments(cleanedMoveText: string): { [moveIndex: number]: string } {
+  const comments: { [moveIndex: number]: string } = {};
+  const segments = cleanedMoveText.split(/(\{[^}]*\})/);
+  let moveIndex = -1;
+
+  for (const segment of segments) {
+    if (segment.startsWith('{')) {
+      let text = segment.slice(1, -1).trim();
+      // Strip Chessbase annotations
+      text = text.replace(/\[%[^\]]*\]/g, '').trim();
+      if (text) {
+        comments[moveIndex] = comments[moveIndex]
+          ? comments[moveIndex] + ' ' + text
+          : text;
+      }
+    } else {
+      // Count chess moves in non-comment text
+      const withoutNumbers = segment.replace(/\d+\.{1,3}/g, ' ');
+      const withoutResult = withoutNumbers.replace(/\b(1-0|0-1|1\/2-1\/2|\*)\b/g, ' ');
+      const tokens = withoutResult.trim().split(/\s+/).filter(t => t.length > 0);
+      moveIndex += tokens.length;
+    }
+  }
+
+  return comments;
+}
+
 export function parsePgnText(pgnText: string): ParsedGame[] {
   const rawGames = pgnText.split(/\n\n(?=\[Event )/);
   const parsed: ParsedGame[] = [];
@@ -83,9 +117,12 @@ export function parsePgnText(pgnText: string): ParsedGame[] {
         moveText = trimmed.substring(lastHeaderEnd);
       }
 
-      // Clean move text: strip variations, NAGs, and special annotations
+      // Clean move text: strip variations and NAGs
       moveText = stripVariations(moveText);
       moveText = stripNags(moveText);
+
+      // Extract comments before feeding to chess.js (which strips them)
+      const comments = extractComments(moveText);
 
       // Reconstruct cleaned PGN
       const cleanedPgn = headers.join('\n') + '\n\n' + moveText;
@@ -103,7 +140,7 @@ export function parsePgnText(pgnText: string): ParsedGame[] {
         fens.push(move.after);
       }
 
-      parsed.push({ headers: gameHeaders, moves, fens });
+      parsed.push({ headers: gameHeaders, moves, fens, comments });
     } catch {
       // Skip unparseable games
     }

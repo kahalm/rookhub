@@ -87,6 +87,7 @@ export interface PgnViewerData {
             <app-move-list
               [moves]="game.moves"
               [currentMoveIndex]="service.currentMoveIndex"
+              [comments]="game.comments"
               (moveClicked)="service.goToMove($event)" />
           }
         </div>
