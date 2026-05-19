@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.8.5',
+  version: '0.8.6',
   changelog: [
+    { version: '0.8.6', date: '2026-05-19', changes: [
+      'Fix: Schachbrett-Rendering komplett ueberarbeitet (JS-basierte Dimensionen statt CSS-Tricks)',
+      'Chessground bekommt jetzt explizite Pixel-Groesse via JavaScript',
+      'ResizeObserver haelt das Brett bei Fensteraenderungen quadratisch',
+    ]},
     { version: '0.8.5', date: '2026-05-19', changes: [
       'Fix: Chessground-Board rendert jetzt korrekt (padding-bottom Trick statt aspect-ratio)',
       'Fix: Board-Wrapper mit zwei DIVs damit Chessground konkrete Dimensionen bekommt',

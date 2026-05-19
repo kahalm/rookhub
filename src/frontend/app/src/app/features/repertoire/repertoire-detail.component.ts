@@ -135,7 +135,6 @@ type ViewMode = 'lines' | 'tree' | 'edit';
     .board-section app-chess-board {
       display: block;
       width: 400px;
-      height: 400px;
     }
     .nav-buttons { display: flex; gap: 4px; }
     .side-panel {
@@ -157,7 +156,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
         align-items: center;
       }
       .board-section { width: 100%; max-width: 400px; }
-      .board-section app-chess-board { width: 100%; height: auto; aspect-ratio: 1; }
+      .board-section app-chess-board { width: 100%; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
     }
   `]

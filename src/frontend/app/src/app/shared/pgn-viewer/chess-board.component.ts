@@ -9,11 +9,9 @@ import { Key } from 'chessground/types';
 @Component({
   selector: 'app-chess-board',
   standalone: true,
-  template: `<div class="board-outer"><div #boardEl class="board-inner"></div></div>`,
+  template: `<div #boardEl></div>`,
   styles: [`
-    :host { display: block; width: 100%; max-width: 560px; }
-    .board-outer { width: 100%; position: relative; padding-bottom: 100%; }
-    .board-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    :host { display: block; width: 100%; }
   `]
 })
 export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -24,9 +22,28 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
+  private initAttempts = 0;
 
   ngAfterViewInit(): void {
-    this.ground = Chessground(this.boardEl.nativeElement, {
+    this.initBoard();
+  }
+
+  private initBoard(): void {
+    const el = this.boardEl.nativeElement;
+    const hostWidth = (this.boardEl.nativeElement.parentElement as HTMLElement)?.clientWidth
+      || el.clientWidth;
+
+    if (hostWidth === 0 && this.initAttempts < 10) {
+      this.initAttempts++;
+      requestAnimationFrame(() => this.initBoard());
+      return;
+    }
+
+    const size = hostWidth || 400;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+
+    this.ground = Chessground(el, {
       fen: this.fen,
       viewOnly: true,
       lastMove: this.lastMove as Key[] | undefined,
@@ -36,9 +53,15 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     });
 
     this.resizeObserver = new ResizeObserver(() => {
+      const hostEl = el.parentElement as HTMLElement;
+      const w = hostEl?.clientWidth || el.clientWidth;
+      if (w > 0 && w !== el.clientWidth) {
+        el.style.width = `${w}px`;
+        el.style.height = `${w}px`;
+      }
       this.ground?.redrawAll();
     });
-    this.resizeObserver.observe(this.boardEl.nativeElement);
+    this.resizeObserver.observe(el.parentElement || el);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
