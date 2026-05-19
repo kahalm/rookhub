@@ -20,6 +20,7 @@
 #   JWT_KEY=<min-32-char-secret-for-jwt-signing>
 #   JWT_ISSUER=
 #   JWT_AUDIENCE=
+#   CRAWLER_API_KEY=
 #   FRONTEND_PORT=
 #   API_PORT=
 #   DB_DATA_PATH=              (named volume, or host path like /data/mariadb)
@@ -68,6 +69,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
+      API_KEY: ${CRAWLER_API_KEY}
       ASPNETCORE_ENVIRONMENT: Production
 
   # ── RookHub API ────────────────────────────────────────────────────────────
@@ -88,6 +90,7 @@ services:
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://crawler:8080
+      Crawler__ApiKey: ${CRAWLER_API_KEY}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Production

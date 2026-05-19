@@ -43,10 +43,13 @@ builder.Services.AddHostedService<RoundMonitorService>();
 
 // Crawler Proxy HttpClient
 var crawlerBaseUrl = builder.Configuration["Crawler:BaseUrl"] ?? "http://host.docker.internal:8080";
+var crawlerApiKey = builder.Configuration["Crawler:ApiKey"];
 builder.Services.AddHttpClient<CrawlerProxyService>(client =>
 {
     client.BaseAddress = new Uri(crawlerBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
+    if (!string.IsNullOrEmpty(crawlerApiKey))
+        client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
 });
 
 // CORS policies

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -9,6 +10,7 @@ namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/tournament-monitors")]
+[Authorize]
 public class TournamentMonitorController : ControllerBase
 {
     private readonly AppDbContext _db;

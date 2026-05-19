@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.6.2',
+  version: '0.6.3',
   changelog: [
+    { version: '0.6.3', date: '2026-05-19', changes: [
+      'Security: API-Key-Authentifizierung fuer Crawler-Endpoints',
+      'Security: TournamentMonitorController erfordert jetzt Authentifizierung',
+      'Security: .env.dev aus Git-Tracking entfernt',
+    ]},
     { version: '0.6.2', date: '2026-05-19', changes: [
       'Dev-Badge im Footer: zeigt "dev" neben der Version im Dev-Build',
       'CI/CD: :dev und :latest Tag-Schema fuer Docker-Images',
