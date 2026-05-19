@@ -9,11 +9,11 @@ import { Key } from 'chessground/types';
 @Component({
   selector: 'app-chess-board',
   standalone: true,
-  template: `<div #boardEl class="board-wrap"></div>`,
+  template: `<div class="board-outer"><div #boardEl class="board-inner"></div></div>`,
   styles: [`
     :host { display: block; width: 100%; max-width: 560px; }
-    .board-wrap { aspect-ratio: 1; width: 100%; }
-    .board-wrap ::ng-deep .cg-wrap { width: 100%; height: 100%; }
+    .board-outer { width: 100%; position: relative; padding-bottom: 100%; }
+    .board-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   `]
 })
 export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
