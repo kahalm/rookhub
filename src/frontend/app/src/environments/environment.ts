@@ -1,6 +1,9 @@
 export const environment = {
-  version: '0.5.1',
+  version: '0.5.2',
   changelog: [
+    { version: '0.5.2', date: '2026-05-19', changes: [
+      'Commit-Checkliste in beiden CLAUDE.md verankert (Version, Changelog, Tests)',
+    ]},
     { version: '0.5.1', date: '2026-05-19', changes: [
       '73 neue Unit-Tests fuer beide Projekte (Crawler + RookHub)',
       'Test-Pflicht in CLAUDE.md verankert: jedes Feature/Endpoint/Bugfix braucht Tests',
