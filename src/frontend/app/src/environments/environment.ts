@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.8.3',
+  version: '0.8.4',
   changelog: [
+    { version: '0.8.4', date: '2026-05-19', changes: [
+      'Fix: Schachbrett rendert jetzt korrekt neben der Zugliste (explizite 400x400px Dimensionen fuer Chessground)',
+    ]},
     { version: '0.8.3', date: '2026-05-19', changes: [
       'Fix: Schachbrett-Layout im Repertoire-Detail korrigiert (feste Breite 400px, responsive Breakpoint)',
     ]},

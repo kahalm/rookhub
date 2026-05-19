@@ -120,15 +120,22 @@ type ViewMode = 'lines' | 'tree' | 'edit';
 
     .viewer-layout {
       display: flex;
+      flex-direction: row;
       gap: 1rem;
       align-items: flex-start;
     }
     .board-section {
+      width: 400px;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      flex: 0 0 400px;
+    }
+    .board-section app-chess-board {
+      display: block;
+      width: 400px;
+      height: 400px;
     }
     .nav-buttons { display: flex; gap: 4px; }
     .side-panel {
@@ -136,7 +143,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       min-width: 250px;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
-      height: 520px;
+      height: 440px;
       overflow: hidden;
     }
     .edit-panel {
@@ -149,7 +156,8 @@ type ViewMode = 'lines' | 'tree' | 'edit';
         flex-direction: column;
         align-items: center;
       }
-      .board-section { flex: 0 0 auto; width: 100%; max-width: 400px; }
+      .board-section { width: 100%; max-width: 400px; }
+      .board-section app-chess-board { width: 100%; height: auto; aspect-ratio: 1; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
     }
   `]
