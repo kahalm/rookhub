@@ -24,6 +24,7 @@
 #   API_PORT=
 #   DB_DATA_PATH=              (named volume, or host path like /data/mariadb)
 #   INIT_DB_PATH=
+#   IMAGE_TAG=latest           (oder getaggte Version, z.B. 0.6.0)
 #
 # Ports:
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
@@ -60,7 +61,7 @@ services:
 
   # ── ChessResults Crawler ──────────────────────────────────────────────────
   crawler:
-    image: ghcr.io/kahalm/rookhub-crawler:latest
+    image: ghcr.io/kahalm/rookhub-crawler:${IMAGE_TAG:-latest}
     container_name: rookhub-crawler
     restart: unless-stopped
     depends_on:
@@ -72,7 +73,7 @@ services:
 
   # ── RookHub API ────────────────────────────────────────────────────────────
   api:
-    image: ghcr.io/kahalm/rookhub-api:latest
+    image: ghcr.io/kahalm/rookhub-api:${IMAGE_TAG:-latest}
     container_name: rookhub-api
     restart: unless-stopped
     ports:
@@ -94,7 +95,7 @@ services:
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
   rookhub:
-    image: ghcr.io/kahalm/rookhub-frontend:latest
+    image: ghcr.io/kahalm/rookhub-frontend:${IMAGE_TAG:-latest}
     container_name: rookhub-frontend
     restart: unless-stopped
     ports:

@@ -1,6 +1,10 @@
 export const environment = {
-  version: '0.6.0',
+  version: '0.6.1',
   changelog: [
+    { version: '0.6.1', date: '2026-05-19', changes: [
+      'CI/CD: GitHub Actions bauen Docker-Images bei Push (latest) und Tag (versioniert)',
+      'Prod-Compose nutzt IMAGE_TAG fuer getaggte Versionen',
+    ]},
     { version: '0.6.0', date: '2026-05-19', changes: [
       'Admin-System: Benutzerverwaltung mit Admin-Rolle (IsAdmin)',
       'Admin-Seed beim Start ueber ADMIN_USERNAME/ADMIN_PASSWORD Env-Variablen',
