@@ -8,7 +8,7 @@ import { environment } from '../environments/environment';
   standalone: true,
   imports: [RouterOutlet, NavbarComponent],
   template: `
-    <app-navbar />
+    <app-navbar (changelogClick)="showChangelog = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
       <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}</span>

@@ -28,6 +28,7 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
@@ -42,6 +43,7 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}/players")]
     public async Task<IActionResult> GetPlayers(string id, [FromQuery] string? team, [FromQuery] string? sortBy)
     {
@@ -62,6 +64,7 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}/teams")]
     public async Task<IActionResult> GetTeams(string id)
     {
@@ -76,6 +79,7 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}/teams/{snr}")]
     public async Task<IActionResult> GetTeamDetail(string id, int snr)
     {
@@ -90,6 +94,7 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}/pairings")]
     public async Task<IActionResult> GetPairings(string id, [FromQuery] int? round)
     {

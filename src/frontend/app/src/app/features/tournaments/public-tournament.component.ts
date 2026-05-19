@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -10,64 +10,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
-import { MatDialogModule, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { NotificationService } from '../../core/notification.service';
+import { TeamPlayersDialogComponent } from './tournament-detail.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 
 @Component({
-  selector: 'app-team-players-dialog',
+  selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule],
-  template: `
-    <h2 class="dialog-title">{{ data.teamName }}</h2>
-    <div class="dialog-table-scroll">
-      <table mat-table [dataSource]="data.players" class="full-width">
-        <ng-container matColumnDef="boardNumber">
-          <th mat-header-cell *matHeaderCellDef>Br.</th>
-          <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
-        </ng-container>
-        <ng-container matColumnDef="title">
-          <th mat-header-cell *matHeaderCellDef>Title</th>
-          <td mat-cell *matCellDef="let p">{{ p.title }}</td>
-        </ng-container>
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
-          <td mat-cell *matCellDef="let p">{{ p.name }}</td>
-        </ng-container>
-        <ng-container matColumnDef="elo">
-          <th mat-header-cell *matHeaderCellDef>Elo</th>
-          <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-      </table>
-    </div>
-    <div class="dialog-actions">
-      <button mat-button mat-dialog-close>Close</button>
-    </div>
-  `,
-  styles: [`
-    :host { display: block; padding: 1.25rem; }
-    .dialog-title { margin: 0 0 1rem; font-size: 1.2rem; word-break: break-word; }
-    .dialog-table-scroll { overflow-x: auto; max-height: 60vh; }
-    .full-width { width: 100%; }
-    .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
-  `]
-})
-export class TeamPlayersDialogComponent {
-  columns = ['boardNumber', 'title', 'name', 'elo'];
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: any[] }) {}
-}
-
-@Component({
-  selector: 'app-tournament-detail',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -82,34 +36,10 @@ export class TeamPlayersDialogComponent {
             <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
               <mat-icon>open_in_new</mat-icon><span class="btn-label"> Chess-Results</span>
             </a>
-            <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
-              <mat-icon>refresh</mat-icon><span class="btn-label"> Refresh</span>
-            </button>
-            @if (subscription) {
-              <button mat-raised-button color="warn" (click)="unsubscribe()" [disabled]="toggling">
-                <mat-icon>notifications_off</mat-icon><span class="btn-label"> Unsubscribe</span>
-              </button>
-            } @else {
-              <button mat-raised-button color="primary" (click)="subscribe()" [disabled]="toggling">
-                <mat-icon>notifications</mat-icon><span class="btn-label"> Subscribe</span>
-              </button>
-            }
-            @if (monitoring) {
-              <button mat-raised-button color="primary" (click)="toggleMonitor()" [disabled]="monitorToggling">
-                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitoring bis {{ monitorActiveUntil | date:'HH:mm' }}</span>
-              </button>
-            } @else {
-              <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling">
-                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitor</span>
-              </button>
-            }
             <button mat-raised-button (click)="share()">
               <mat-icon>share</mat-icon><span class="btn-label"> Teilen</span>
             </button>
           </mat-card-actions>
-          @if (refreshing) {
-            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-          }
         </mat-card>
 
         <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
@@ -122,7 +52,7 @@ export class TeamPlayersDialogComponent {
                   <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
                 </div>
               }
-              <!-- Desktop: full table -->
+              <!-- Desktop -->
               <div class="table-scroll desktop-only">
                 <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="playerSort = $event" class="full-width">
                   <ng-container matColumnDef="fav">
@@ -176,7 +106,7 @@ export class TeamPlayersDialogComponent {
                 </table>
               </div>
 
-              <!-- Mobile: card list -->
+              <!-- Mobile -->
               <div class="mobile-only player-cards">
                 @for (p of displayedPlayers; track p.snr) {
                   <div class="player-card" (click)="toggleFavorite(p)">
@@ -257,7 +187,7 @@ export class TeamPlayersDialogComponent {
             @if (pairingsLoading) {
               <app-loading-spinner />
             } @else {
-              <!-- Desktop: full table -->
+              <!-- Desktop -->
               <div class="table-scroll desktop-only">
                 <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
                   <ng-container matColumnDef="board">
@@ -293,7 +223,7 @@ export class TeamPlayersDialogComponent {
                 </table>
               </div>
 
-              <!-- Mobile: card list -->
+              <!-- Mobile -->
               <div class="mobile-only pairing-cards">
                 @for (p of displayedPairings; track p.board) {
                   <div class="pairing-card">
@@ -322,6 +252,14 @@ export class TeamPlayersDialogComponent {
           </mat-tab>
         </mat-tab-group>
       </div>
+    } @else {
+      <div class="detail-container">
+        <mat-card>
+          <mat-card-content>
+            <p>Turnier nicht gefunden.</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
     }
   `,
   styles: [`
@@ -332,7 +270,6 @@ export class TeamPlayersDialogComponent {
     .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
     mat-card { margin-bottom: 1rem; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .empty-hint { padding: 1.5rem; color: #888; }
 
     .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
     .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
@@ -341,7 +278,6 @@ export class TeamPlayersDialogComponent {
     .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
     .team-link:hover { color: #0d47a1; }
 
-    /* Mobile card list for players */
     .mobile-only { display: none; }
     .player-cards { padding: 0.5rem 0; }
     .player-card {
@@ -351,50 +287,30 @@ export class TeamPlayersDialogComponent {
     }
     .player-card:hover { background: rgba(0,0,0,0.02); }
     .player-main {
-      display: flex;
-      align-items: baseline;
-      gap: 0.4rem;
-      font-size: 0.95rem;
+      display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.95rem;
     }
     .player-snr { color: #888; min-width: 2rem; }
     .player-title { font-weight: 600; color: #1565c0; }
     .player-name { font-weight: 500; }
     .player-details {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
-      padding-left: 2.4rem;
-      font-size: 0.82rem;
-      color: #666;
+      display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;
+      padding-left: 2.4rem; font-size: 0.82rem; color: #666;
     }
     .player-details span:not(:last-child)::after { content: "\\00b7"; margin-left: 0.5rem; }
 
     .result-cell { white-space: nowrap; }
 
-    /* Mobile card list for pairings */
     .pairing-cards { padding: 0.5rem 0; }
     .pairing-card {
-      display: flex;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
-      align-items: center;
+      display: flex; gap: 0.75rem; padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08); align-items: center;
     }
     .pairing-board { color: #888; min-width: 1.5rem; font-size: 0.85rem; }
     .pairing-teams { flex: 1; min-width: 0; }
     .pairing-team {
-      font-size: 0.93rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      font-size: 0.93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .pairing-result {
-      font-size: 0.82rem;
-      color: #666;
-      padding: 0.15rem 0;
-      white-space: nowrap;
-    }
+    .pairing-result { font-size: 0.82rem; color: #666; padding: 0.15rem 0; white-space: nowrap; }
 
     @media (max-width: 768px) {
       .detail-container { padding: 0.75rem; }
@@ -411,7 +327,7 @@ export class TeamPlayersDialogComponent {
     }
   `]
 })
-export class TournamentDetailComponent implements OnInit, OnDestroy {
+export class PublicTournamentComponent implements OnInit {
   tournament: any = null;
   players: any[] = [];
   teams: any[] = [];
@@ -432,36 +348,22 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   selectedTabIndex = 0;
   hasTeamPairings = false;
 
-  // Sort states
   playerSort: Sort = { active: '', direction: '' };
   teamSort: Sort = { active: '', direction: '' };
   pairingSort: Sort = { active: '', direction: '' };
 
-  subscription: any = null;
-  toggling = false;
-  refreshing = false;
-  monitoring = false;
-  monitorActiveUntil: Date | null = null;
-  monitorToggling = false;
-  private pollInterval: ReturnType<typeof setInterval> | null = null;
-  private monitorPollInterval: ReturnType<typeof setInterval> | null = null;
-  private lastKnownRounds = 0;
-
-  private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
   private id!: string;
 
-  // Map playerSnr -> server favorite ID for deletion
-  private favoriteIdMap: Map<number, number> = new Map();
-  private teamFavoriteIdMap: Map<number, number> = new Map();
-
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog, private notificationService: NotificationService) {}
+  constructor(
+    private route: ActivatedRoute,
+    private http: HttpClient,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
-    const tab = this.route.snapshot.queryParams['tab'];
-    const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
-    if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
-    this.loadFavorites();
+    this.loadLocalFavorites();
     this.http.get(`/api/tournaments/${this.id}`).subscribe({
       next: (t: any) => {
         this.tournament = t;
@@ -475,215 +377,23 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       },
       error: () => { this.loading = false; }
     });
-    this.loadSubscription();
-    this.loadMonitorStatus();
   }
 
-  ngOnDestroy(): void {
-    if (this.pollInterval) clearInterval(this.pollInterval);
-    this.stopMonitorPoll();
-  }
+  // --- Share ---
 
-  loadSubscription(): void {
-    this.http.get<any[]>('/api/subscriptions').subscribe({
-      next: (subs) => {
-        this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
-      }
+  share(): void {
+    const url = window.location.origin + '/t/' + this.id;
+    this.dialog.open(ShareTournamentDialogComponent, {
+      data: { url },
+      width: '400px',
+      maxWidth: '95vw'
     });
   }
 
-  subscribe(): void {
-    this.toggling = true;
-    this.http.post<any>('/api/subscriptions', {
-      crawlerTournamentId: this.id,
-      tournamentName: this.tournament?.name ?? ''
-    }).subscribe({
-      next: (sub) => {
-        this.subscription = sub;
-        this.toggling = false;
-        this.snackBar.open('Subscribed!', 'Close', { duration: 2000 });
-      },
-      error: (err) => {
-        this.toggling = false;
-        this.snackBar.open(err.error?.message || 'Failed', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  unsubscribe(): void {
-    if (!this.subscription) return;
-    this.toggling = true;
-    this.http.delete(`/api/subscriptions/${this.subscription.id}`).subscribe({
-      next: () => {
-        this.subscription = null;
-        this.toggling = false;
-        this.snackBar.open('Unsubscribed', 'Close', { duration: 2000 });
-      },
-      error: () => {
-        this.toggling = false;
-        this.snackBar.open('Failed to unsubscribe', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  loadMonitorStatus(): void {
-    this.http.get<any>(`/api/tournament-monitors/${this.id}`).subscribe({
-      next: (res) => {
-        this.monitoring = res.active;
-        this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
-        if (res.active && res.lastKnownRounds) {
-          this.lastKnownRounds = res.lastKnownRounds;
-          this.startMonitorPoll();
-        }
-      },
-      error: () => {}
-    });
-  }
-
-  toggleMonitor(): void {
-    this.monitorToggling = true;
-    if (this.monitoring) {
-      this.http.delete(`/api/tournament-monitors/${this.id}`).subscribe({
-        next: () => {
-          this.monitoring = false;
-          this.monitorActiveUntil = null;
-          this.monitorToggling = false;
-          this.stopMonitorPoll();
-          this.snackBar.open('Monitoring stopped', 'Close', { duration: 2000 });
-        },
-        error: () => {
-          this.monitorToggling = false;
-          this.snackBar.open('Failed to stop monitoring', 'Close', { duration: 3000 });
-        }
-      });
-    } else {
-      this.notificationService.requestPermission();
-      this.http.post<any>(`/api/tournament-monitors/${this.id}`, {}).subscribe({
-        next: (res) => {
-          this.monitoring = true;
-          this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
-          this.lastKnownRounds = res.lastKnownRounds || 0;
-          this.monitorToggling = false;
-          this.startMonitorPoll();
-          this.snackBar.open('Monitoring activated', 'Close', { duration: 2000 });
-        },
-        error: () => {
-          this.monitorToggling = false;
-          this.snackBar.open('Failed to activate monitoring', 'Close', { duration: 3000 });
-        }
-      });
-    }
-  }
-
-  private startMonitorPoll(): void {
-    this.stopMonitorPoll();
-    this.monitorPollInterval = setInterval(() => {
-      // Stop if monitoring expired
-      if (this.monitorActiveUntil && new Date() > this.monitorActiveUntil) {
-        this.monitoring = false;
-        this.monitorActiveUntil = null;
-        this.stopMonitorPoll();
-        return;
-      }
-      this.http.get<any>(`/api/tournament-monitors/${this.id}`).subscribe({
-        next: (res) => {
-          if (!res.active) {
-            this.monitoring = false;
-            this.monitorActiveUntil = null;
-            this.stopMonitorPoll();
-            return;
-          }
-          if (res.lastKnownRounds > this.lastKnownRounds) {
-            const newRound = res.lastKnownRounds;
-            this.lastKnownRounds = newRound;
-            // Browser notification
-            this.notificationService.notify('Neue Runde verfuegbar!', {
-              body: `Runde ${newRound} wurde publiziert.`,
-              icon: '/favicon.ico'
-            });
-            // Snackbar as fallback
-            this.snackBar.open(`Neue Runde verfuegbar! Runde ${newRound}`, 'Close', { duration: 5000 });
-            // Reload data
-            this.reloadAll();
-            if (this.selectedTabIndex === 2) {
-              this.selectedRound = newRound;
-              this.loadPairings();
-            }
-          }
-        }
-      });
-    }, 30000);
-  }
-
-  private stopMonitorPoll(): void {
-    if (this.monitorPollInterval) {
-      clearInterval(this.monitorPollInterval);
-      this.monitorPollInterval = null;
-    }
-  }
-
-  refresh(): void {
-    if (!this.tournament?.chessResultsId) return;
-    this.refreshing = true;
-    // Strip tnr prefix if present - crawler adds it automatically
-    const crawlId = this.tournament.chessResultsId.replace(/^tnr/i, '');
-    this.http.post<any>('/api/tournaments/crawl', {
-      chessResultsId: crawlId,
-      jobType: 'Full'
-    }).subscribe({
-      next: (job) => this.pollRefreshJob(job.id),
-      error: () => {
-        this.refreshing = false;
-        this.snackBar.open('Failed to start refresh', 'Close', { duration: 3000 });
-      }
-    });
-  }
-
-  private pollRefreshJob(jobId: number): void {
-    this.pollInterval = setInterval(() => {
-      this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
-        next: (job) => {
-          if (job.status === 'Completed') {
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            this.pollInterval = null;
-            this.refreshing = false;
-            this.snackBar.open('Data refreshed!', 'Close', { duration: 2000 });
-            this.reloadAll();
-          } else if (job.status === 'Failed') {
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            this.pollInterval = null;
-            this.refreshing = false;
-            this.snackBar.open(job.errorMessage || 'Refresh failed', 'Close', { duration: 3000 });
-          }
-        },
-        error: () => {
-          if (this.pollInterval) clearInterval(this.pollInterval);
-          this.pollInterval = null;
-          this.refreshing = false;
-          this.snackBar.open('Lost connection to crawl job', 'Close', { duration: 3000 });
-        }
-      });
-    }, 2000);
-  }
-
-  private reloadAll(): void {
-    this.http.get(`/api/tournaments/${this.id}`).subscribe({
-      next: (t: any) => {
-        this.tournament = t;
-        if (t.totalRounds) {
-          this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
-        }
-      }
-    });
-    this.loadPlayers();
-    this.teams = [];
-    this.pairings = [];
-  }
+  // --- Data loading ---
 
   onTabChange(event: any): void {
     this.selectedTabIndex = event.index;
-    const tabName = TournamentDetailComponent.TAB_NAMES[event.index];
-    this.router.navigate([], { queryParams: { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
     if (event.index === 1 && this.teams.length === 0) this.loadTeams();
     if (event.index === 2 && this.pairings.length === 0) this.loadPairings();
   }
@@ -708,7 +418,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.pairingsLoading = true;
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
       next: (p) => {
-        // Detect team vs individual pairings based on data format
         if (p.length > 0 && p[0].homeTeam !== undefined) {
           this.hasTeamPairings = true;
           this.pairings = p.map(item => ({
@@ -741,29 +450,31 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- Favorites (server-side) ---
+  // --- localStorage Favorites ---
 
-  private loadFavorites(): void {
-    this.http.get<any[]>(`/api/tournament-favorites?tournamentId=${this.id}`).subscribe({
-      next: (favs) => {
-        this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr));
-        this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr));
-        this.favoriteIdMap = new Map(favs.filter(f => f.playerSnr).map(f => [f.playerSnr, f.id]));
-        this.teamFavoriteIdMap = new Map(favs.filter(f => f.teamSnr).map(f => [f.teamSnr, f.id]));
-      },
-      error: () => {}
-    });
-    this.http.get<any>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
-      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; },
-      error: () => {}
-    });
+  private get playerFavKey(): string { return `public_fav_players_${this.id}`; }
+  private get teamFavKey(): string { return `public_fav_teams_${this.id}`; }
+  private get filterKey(): string { return `public_fav_filter_${this.id}`; }
+
+  private loadLocalFavorites(): void {
+    try {
+      const players = localStorage.getItem(this.playerFavKey);
+      if (players) this.favoriteSnrs = new Set(JSON.parse(players));
+      const teams = localStorage.getItem(this.teamFavKey);
+      if (teams) this.favoriteTeamSnrs = new Set(JSON.parse(teams));
+      const filter = localStorage.getItem(this.filterKey);
+      if (filter) this.showFavoritesOnly = JSON.parse(filter);
+    } catch {}
+  }
+
+  private saveLocalFavorites(): void {
+    localStorage.setItem(this.playerFavKey, JSON.stringify([...this.favoriteSnrs]));
+    localStorage.setItem(this.teamFavKey, JSON.stringify([...this.favoriteTeamSnrs]));
   }
 
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
-    this.http.put(`/api/tournament-favorites/settings/${this.id}`, { showFavoritesOnly: checked }).subscribe({
-      error: () => {}
-    });
+    localStorage.setItem(this.filterKey, JSON.stringify(checked));
   }
 
   get hasFavorites(): boolean {
@@ -787,11 +498,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   get favoriteTeamNames(): Set<string> {
     const names = new Set<string>();
-    // Directly favorited teams (by SNR → Name)
     for (const t of this.teams) {
       if (this.favoriteTeamSnrs.has(t.snr)) names.add(t.name);
     }
-    // Teams with favorited players
     for (const p of this.players) {
       if (this.favoriteSnrs.has(p.snr) && p.teamName) names.add(p.teamName);
     }
@@ -836,27 +545,14 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   toggleFavorite(player: any): void {
     if (this.favoriteSnrs.has(player.snr)) {
-      // Remove favorite
       this.favoriteSnrs.delete(player.snr);
-      this.favoriteSnrs = new Set(this.favoriteSnrs);
-      this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
-      this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
-        next: () => { this.favoriteIdMap.delete(player.snr); },
-        error: () => {}
-      });
+      this.snackBar.open(`${player.name} entfernt`, 'Close', { duration: 1500 });
     } else {
-      // Add favorite
       this.favoriteSnrs.add(player.snr);
-      this.favoriteSnrs = new Set(this.favoriteSnrs);
-      this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
-      this.http.post<any>('/api/tournament-favorites', {
-        crawlerTournamentId: this.id,
-        playerSnr: player.snr
-      }).subscribe({
-        next: (fav) => { this.favoriteIdMap.set(player.snr, fav.id); },
-        error: () => {}
-      });
+      this.snackBar.open(`${player.name} favorisiert`, 'Close', { duration: 1500 });
     }
+    this.favoriteSnrs = new Set(this.favoriteSnrs);
+    this.saveLocalFavorites();
   }
 
   isTeamFavorite(team: any): boolean {
@@ -866,36 +562,16 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   toggleTeamFavorite(team: any): void {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
-      this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
-      this.snackBar.open(`${team.name} removed from favorites`, 'Close', { duration: 1500 });
-      this.http.delete(`/api/tournament-favorites/by-team/${this.id}/${team.snr}`).subscribe({
-        next: () => { this.teamFavoriteIdMap.delete(team.snr); },
-        error: () => {}
-      });
+      this.snackBar.open(`${team.name} entfernt`, 'Close', { duration: 1500 });
     } else {
       this.favoriteTeamSnrs.add(team.snr);
-      this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
-      this.snackBar.open(`${team.name} added to favorites`, 'Close', { duration: 1500 });
-      this.http.post<any>('/api/tournament-favorites/team', {
-        crawlerTournamentId: this.id,
-        teamSnr: team.snr
-      }).subscribe({
-        next: (fav) => { this.teamFavoriteIdMap.set(team.snr, fav.id); },
-        error: () => {}
-      });
+      this.snackBar.open(`${team.name} favorisiert`, 'Close', { duration: 1500 });
     }
+    this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
+    this.saveLocalFavorites();
   }
 
   // --- Team detail dialog ---
-
-  share(): void {
-    const url = window.location.origin + '/t/' + this.id;
-    this.dialog.open(ShareTournamentDialogComponent, {
-      data: { url },
-      width: '400px',
-      maxWidth: '95vw'
-    });
-  }
 
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
@@ -909,7 +585,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         });
       },
       error: () => {
-        this.snackBar.open('Failed to load team details', 'Close', { duration: 3000 });
+        this.snackBar.open('Team-Details konnten nicht geladen werden', 'Close', { duration: 3000 });
       }
     });
   }
