@@ -7,12 +7,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { PgnViewerComponent, PgnViewerData } from '../../shared/pgn-viewer/pgn-viewer.component';
 
 @Component({
   selector: 'app-repertoire-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, MatSnackBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, MatSnackBarModule, MatDialogModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -41,6 +43,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   <span matListItemTitle>{{ file.fileName }}</span>
                   <span matListItemLine>{{ formatSize(file.fileSize) }} | {{ file.uploadedAt | date }}</span>
                   <div matListItemMeta>
+                    <button mat-icon-button (click)="viewFile(file.id, file.fileName)" title="View PGN">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
                     <button mat-icon-button (click)="downloadFile(file.id, file.fileName)">
                       <mat-icon>download</mat-icon>
                     </button>
@@ -75,7 +80,7 @@ export class RepertoireDetailComponent implements OnInit {
   loading = true;
   private id!: number;
 
-  constructor(private route: ActivatedRoute, private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private route: ActivatedRoute, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;
@@ -120,6 +125,21 @@ export class RepertoireDetailComponent implements OnInit {
         error: (err) => this.snackBar.open(err.error?.message || 'Upload failed', 'Close', { duration: 3000 })
       });
     }
+  }
+
+  viewFile(fileId: number, fileName: string): void {
+    this.http.get(`/api/repertoires/${this.id}/files/${fileId}`, { responseType: 'text' }).subscribe({
+      next: (pgn) => {
+        this.dialog.open(PgnViewerComponent, {
+          data: { pgn, fileName } as PgnViewerData,
+          width: '95vw',
+          maxWidth: '1000px',
+          height: '90vh',
+          panelClass: 'pgn-viewer-dialog',
+        });
+      },
+      error: () => this.snackBar.open('Failed to load PGN', 'Close', { duration: 3000 }),
+    });
   }
 
   downloadFile(fileId: number, fileName: string): void {

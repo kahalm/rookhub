@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.6.8',
+  version: '0.7.0',
   changelog: [
+    { version: '0.7.0', date: '2026-05-19', changes: [
+      'PGN-Viewer: Interaktives Schachbrett mit Zugnavigation (chess.js + chessground)',
+      'PGN-Viewer: Zugliste mit Klick-Navigation und Keyboard-Support (Pfeiltasten, Home/End)',
+      'PGN-Viewer: Multi-Game-Support fuer PGN-Dateien mit mehreren Partien',
+    ]},
     { version: '0.6.8', date: '2026-05-19', changes: [
       'Admin: Log-Bereich mit Filtern (Pfad, Methode, Status, Benutzer)',
       'Admin: Farbige Status-Codes, Methoden-Badges, IP-Spalte',

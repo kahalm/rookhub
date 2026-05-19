@@ -17,3 +17,13 @@ html {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Chessground board styles */
+@import 'chessground/assets/chessground.base.css';
+@import 'chessground/assets/chessground.brown.css';
+@import 'chessground/assets/chessground.cburnett.css';
+
+/* PGN Viewer dialog: no padding */
+.pgn-viewer-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
+  padding: 0;
+}
