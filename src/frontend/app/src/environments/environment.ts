@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.9.0',
+  version: '0.9.1',
   changelog: [
+    { version: '0.9.1', date: '2026-05-20', changes: [
+      'Fix: Spielersuche zeigt bei exaktem Namens-Treffer nur diesen an (statt alle mit gleichem Vornamen)',
+    ]},
     { version: '0.9.0', date: '2026-05-20', changes: [
       'Spielersuche im Profil: Vorname/Nachname eingeben und auf ChessResults + FIDE suchen',
       'Suchergebnisse zeigen Name, Titel, Elo, Land und IDs an',

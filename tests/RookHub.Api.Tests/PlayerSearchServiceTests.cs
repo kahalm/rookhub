@@ -75,6 +75,57 @@ public class PlayerSearchServiceTests
     }
 
     [Fact]
+    public async Task SearchAsync_ExactMatch_FiltersOutOtherResults()
+    {
+        var crResponse = JsonSerializer.Serialize(new[]
+        {
+            new { name = "Oberschmid, Patrik", fideId = "111", chessResultsId = "999", elo = 2000, country = "AUT", title = (string?)null },
+            new { name = "Oberschmid, Patrick", fideId = "222", chessResultsId = "888", elo = 1900, country = "GER", title = (string?)null },
+            new { name = "Obermaier, Patrik", fideId = "333", chessResultsId = "777", elo = 1800, country = "GER", title = (string?)null },
+        });
+        var fideResponse = JsonSerializer.Serialize(new[]
+        {
+            new { name = "Oberschmid, Patrik", fideid = 111, rating = 2000, country = "AUT", title = (string?)null },
+            new { name = "Obermann, Patrik", fideid = 444, rating = 1700, country = "GER", title = (string?)null },
+        });
+
+        var service = new PlayerSearchService(
+            CreateCrawlerProxy(new MockHttpMessageHandler(crResponse)),
+            CreateFideClientFactory(new MockHttpMessageHandler(fideResponse)),
+            new LoggerFactory().CreateLogger<PlayerSearchService>());
+
+        var result = await service.SearchAsync("Oberschmid", "Patrik");
+
+        // Only exact match "Oberschmid, Patrik" should remain
+        Assert.Single(result.ChessResultsResults);
+        Assert.Equal("Oberschmid, Patrik", result.ChessResultsResults[0].Name);
+
+        Assert.Single(result.FideResults);
+        Assert.Equal("Oberschmid, Patrik", result.FideResults[0].Name);
+    }
+
+    [Fact]
+    public async Task SearchAsync_NoExactMatch_ReturnsAllResults()
+    {
+        var crResponse = JsonSerializer.Serialize(new[]
+        {
+            new { name = "Huber, Johannes", fideId = "111", chessResultsId = "999", elo = 2000, country = "AUT", title = (string?)null },
+            new { name = "Huber, Johan", fideId = "222", chessResultsId = "888", elo = 1900, country = "GER", title = (string?)null },
+        });
+        var fideResponse = JsonSerializer.Serialize(Array.Empty<object>());
+
+        var service = new PlayerSearchService(
+            CreateCrawlerProxy(new MockHttpMessageHandler(crResponse)),
+            CreateFideClientFactory(new MockHttpMessageHandler(fideResponse)),
+            new LoggerFactory().CreateLogger<PlayerSearchService>());
+
+        var result = await service.SearchAsync("Huber", "Johann");
+
+        // No exact match for "Huber, Johann" -> return all
+        Assert.Equal(2, result.ChessResultsResults.Count);
+    }
+
+    [Fact]
     public async Task SearchAsync_FideUnavailable_ReturnsChessResultsOnly()
     {
         var crResponse = JsonSerializer.Serialize(new[]

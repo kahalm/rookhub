@@ -26,9 +26,22 @@ public class PlayerSearchService
 
         return new PlayerSearchResultDto
         {
-            ChessResultsResults = await crTask,
-            FideResults = await fideTask
+            ChessResultsResults = FilterExactMatches(await crTask, lastName, firstName),
+            FideResults = FilterExactMatches(await fideTask, lastName, firstName)
         };
+    }
+
+    private static List<PlayerSearchItemDto> FilterExactMatches(List<PlayerSearchItemDto> items, string lastName, string? firstName)
+    {
+        if (items.Count <= 1 || string.IsNullOrWhiteSpace(firstName))
+            return items;
+
+        // Expected format: "LastName, FirstName"
+        var exactName = $"{lastName}, {firstName}";
+        var exact = items.Where(i =>
+            i.Name.Equals(exactName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return exact.Count > 0 ? exact : items;
     }
 
     private async Task<List<PlayerSearchItemDto>> SearchChessResultsAsync(string lastName, string? firstName)
