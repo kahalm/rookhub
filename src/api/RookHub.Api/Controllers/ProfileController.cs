@@ -47,15 +47,12 @@ public class ProfileController : BaseApiController
 
     [HttpGet("player-search")]
     public async Task<ActionResult<PlayerSearchResultDto>> SearchPlayers(
-        [FromQuery] string? lastName, [FromQuery] string? firstName, [FromQuery] string? chessResultsId)
+        [FromQuery] string lastName, [FromQuery] string? firstName)
     {
-        var hasName = !string.IsNullOrWhiteSpace(lastName) && lastName.Trim().Length >= 2;
-        var hasId = !string.IsNullOrWhiteSpace(chessResultsId);
+        if (string.IsNullOrWhiteSpace(lastName) || lastName.Trim().Length < 2)
+            return BadRequest(new { message = "lastName must be at least 2 characters." });
 
-        if (!hasName && !hasId)
-            return BadRequest(new { message = "lastName (min 2 chars) or chessResultsId required." });
-
-        return Ok(await _playerSearchService.SearchAsync(lastName?.Trim(), firstName?.Trim(), chessResultsId?.Trim()));
+        return Ok(await _playerSearchService.SearchAsync(lastName.Trim(), firstName?.Trim()));
     }
 
     [HttpGet("{username}")]
