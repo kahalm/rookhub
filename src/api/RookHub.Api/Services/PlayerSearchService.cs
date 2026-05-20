@@ -17,9 +17,9 @@ public class PlayerSearchService
         _logger = logger;
     }
 
-    public async Task<PlayerSearchResultDto> SearchAsync(string lastName, string? firstName)
+    public async Task<PlayerSearchResultDto> SearchAsync(string? lastName, string? firstName, string? chessResultsId = null)
     {
-        var crTask = SearchChessResultsAsync(lastName, firstName);
+        var crTask = SearchChessResultsAsync(lastName, firstName, chessResultsId);
         var fideTask = SearchFideAsync(lastName, firstName);
 
         await Task.WhenAll(crTask, fideTask);
@@ -31,7 +31,7 @@ public class PlayerSearchService
         };
     }
 
-    private static List<PlayerSearchItemDto> FilterExactMatches(List<PlayerSearchItemDto> items, string lastName, string? firstName)
+    private static List<PlayerSearchItemDto> FilterExactMatches(List<PlayerSearchItemDto> items, string? lastName, string? firstName)
     {
         if (items.Count <= 1 || string.IsNullOrWhiteSpace(firstName))
             return items;
@@ -44,13 +44,18 @@ public class PlayerSearchService
         return exact.Count > 0 ? exact : items;
     }
 
-    private async Task<List<PlayerSearchItemDto>> SearchChessResultsAsync(string lastName, string? firstName)
+    private async Task<List<PlayerSearchItemDto>> SearchChessResultsAsync(string? lastName, string? firstName, string? identNumber)
     {
         try
         {
-            var path = $"/api/players/search?lastName={Uri.EscapeDataString(lastName)}";
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(lastName))
+                parts.Add($"lastName={Uri.EscapeDataString(lastName)}");
             if (!string.IsNullOrWhiteSpace(firstName))
-                path += $"&firstName={Uri.EscapeDataString(firstName)}";
+                parts.Add($"firstName={Uri.EscapeDataString(firstName)}");
+            if (!string.IsNullOrWhiteSpace(identNumber))
+                parts.Add($"identNumber={Uri.EscapeDataString(identNumber)}");
+            var path = $"/api/players/search?{string.Join("&", parts)}";
 
             var json = await _crawlerProxy.GetAsync(path);
             var items = new List<PlayerSearchItemDto>();
@@ -80,8 +85,10 @@ public class PlayerSearchService
         }
     }
 
-    private async Task<List<PlayerSearchItemDto>> SearchFideAsync(string lastName, string? firstName)
+    private async Task<List<PlayerSearchItemDto>> SearchFideAsync(string? lastName, string? firstName)
     {
+        if (string.IsNullOrWhiteSpace(lastName)) return [];
+
         try
         {
             var client = _httpClientFactory.CreateClient("FideSearch");

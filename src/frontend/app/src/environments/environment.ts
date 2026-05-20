@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.9.1',
+  version: '0.9.2',
   changelog: [
+    { version: '0.9.2', date: '2026-05-20', changes: [
+      'Spielersuche unterstuetzt jetzt auch Suche per ChessResults-ID',
+      'Suche moeglich per Name, ChessResults-ID oder beides kombiniert',
+    ]},
     { version: '0.9.1', date: '2026-05-20', changes: [
       'Fix: Spielersuche zeigt bei exaktem Namens-Treffer nur diesen an (statt alle mit gleichem Vornamen)',
     ]},

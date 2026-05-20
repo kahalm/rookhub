@@ -66,7 +66,7 @@ interface PlayerSearchItem {
                   <input matInput [(ngModel)]="profile.lastName" name="lastName">
                 </mat-form-field>
                 <button mat-stroked-button type="button" (click)="searchPlayer()"
-                  [disabled]="!profile.lastName || profile.lastName.trim().length < 2 || searching"
+                  [disabled]="searching || ((!profile.lastName || profile.lastName.trim().length < 2) && !profile.chessResultsId?.trim())"
                   class="search-btn">
                   @if (searching) {
                     <mat-spinner diameter="20"></mat-spinner>
@@ -195,13 +195,23 @@ export class ProfileComponent implements OnInit {
   }
 
   searchPlayer(): void {
-    if (!this.profile?.lastName || this.profile.lastName.trim().length < 2) return;
+    if (!this.profile) return;
+    const hasName = this.profile.lastName && this.profile.lastName.trim().length >= 2;
+    const hasId = this.profile.chessResultsId && this.profile.chessResultsId.trim().length > 0;
+    if (!hasName && !hasId) return;
+
     this.searching = true;
     this.searchResults = null;
 
-    let params = new HttpParams().set('lastName', this.profile.lastName.trim());
+    let params = new HttpParams();
+    if (this.profile.lastName?.trim()) {
+      params = params.set('lastName', this.profile.lastName.trim());
+    }
     if (this.profile.firstName?.trim()) {
       params = params.set('firstName', this.profile.firstName.trim());
+    }
+    if (this.profile.chessResultsId?.trim()) {
+      params = params.set('chessResultsId', this.profile.chessResultsId.trim());
     }
 
     this.http.get<PlayerSearchResult>('/api/profile/player-search', { params }).subscribe({
