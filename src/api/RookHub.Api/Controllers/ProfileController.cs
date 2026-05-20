@@ -11,8 +11,13 @@ namespace RookHub.Api.Controllers;
 public class ProfileController : BaseApiController
 {
     private readonly ProfileService _profileService;
+    private readonly PlayerSearchService _playerSearchService;
 
-    public ProfileController(ProfileService profileService) => _profileService = profileService;
+    public ProfileController(ProfileService profileService, PlayerSearchService playerSearchService)
+    {
+        _profileService = profileService;
+        _playerSearchService = playerSearchService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<ProfileDto>> GetMyProfile()
@@ -38,6 +43,16 @@ public class ProfileController : BaseApiController
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+
+    [HttpGet("player-search")]
+    public async Task<ActionResult<PlayerSearchResultDto>> SearchPlayers(
+        [FromQuery] string lastName, [FromQuery] string? firstName)
+    {
+        if (string.IsNullOrWhiteSpace(lastName) || lastName.Trim().Length < 2)
+            return BadRequest(new { message = "lastName must be at least 2 characters." });
+
+        return Ok(await _playerSearchService.SearchAsync(lastName.Trim(), firstName?.Trim()));
     }
 
     [HttpGet("{username}")]

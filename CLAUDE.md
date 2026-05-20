@@ -53,6 +53,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | GET | `/api/profile` | Eigenes Profil |
 | PUT | `/api/profile` | Profil bearbeiten |
 | GET | `/api/profile/{username}` | Oeffentliches Profil (auch ohne Auth) |
+| GET | `/api/profile/player-search?lastName=&firstName=` | Spielersuche (ChessResults + FIDE) |
 
 ### Freunde (auth)
 | Methode | Endpoint | Zweck |
@@ -226,7 +227,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.8.7`
+- **Aktuelle Version**: `0.9.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

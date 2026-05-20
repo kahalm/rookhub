@@ -154,6 +154,35 @@ public class ProfileServiceTests : IDisposable
         var profile = await _profileService.GetProfileByUsernameAsync("alice");
         Assert.Equal("alice", profile.Username);
     }
+
+    [Fact]
+    public async Task UpdateProfile_SetsFirstNameLastName()
+    {
+        var userId = await CreateUserAsync();
+        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto
+        {
+            FirstName = "Johann",
+            LastName = "Huber"
+        });
+
+        Assert.Equal("Johann", result.FirstName);
+        Assert.Equal("Huber", result.LastName);
+    }
+
+    [Fact]
+    public async Task GetProfile_ReturnsFirstNameLastName()
+    {
+        var userId = await CreateUserAsync();
+        await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto
+        {
+            FirstName = "Maria",
+            LastName = "Schmidt"
+        });
+
+        var profile = await _profileService.GetProfileAsync(userId);
+        Assert.Equal("Maria", profile.FirstName);
+        Assert.Equal("Schmidt", profile.LastName);
+    }
 }
 
 public class FriendServiceTests : IDisposable

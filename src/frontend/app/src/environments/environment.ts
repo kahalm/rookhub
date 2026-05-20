@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.8.7',
+  version: '0.9.0',
   changelog: [
+    { version: '0.9.0', date: '2026-05-20', changes: [
+      'Spielersuche im Profil: Vorname/Nachname eingeben und auf ChessResults + FIDE suchen',
+      'Suchergebnisse zeigen Name, Titel, Elo, Land und IDs an',
+      'Klick auf Ergebnis uebernimmt ChessResults-ID und/oder FIDE-ID automatisch',
+      'Bei genau einem Treffer pro Quelle wird die ID automatisch ausgefuellt',
+      'Neue Profil-Felder: Vorname und Nachname',
+    ]},
     { version: '0.8.7', date: '2026-05-19', changes: [
       'Freunde-Suche durchsucht jetzt auch Chess.com, Lichess, FIDE-ID und ChessResults-ID',
       'Suchergebnisse zeigen vorhandene Schach-Identitaeten an',

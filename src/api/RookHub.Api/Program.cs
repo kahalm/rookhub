@@ -39,6 +39,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<FriendService>();
 builder.Services.AddScoped<RepertoireService>();
+builder.Services.AddScoped<PlayerSearchService>();
 builder.Services.AddHostedService<RoundMonitorService>();
 
 // Crawler Proxy HttpClient
@@ -52,6 +53,13 @@ builder.Services.AddHttpClient<CrawlerProxyService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
     if (!string.IsNullOrEmpty(crawlerApiKey))
         client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
+});
+
+// FIDE search HttpClient
+builder.Services.AddHttpClient("FideSearch", client =>
+{
+    client.BaseAddress = new Uri("https://api.chesstools.org");
+    client.Timeout = TimeSpan.FromSeconds(15);
 });
 
 // CORS policies

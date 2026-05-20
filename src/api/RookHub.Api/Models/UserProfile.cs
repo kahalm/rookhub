@@ -9,6 +9,12 @@ public class UserProfile
     public int UserId { get; set; }
     public AppUser User { get; set; } = null!;
 
+    [MaxLength(50)]
+    public string? FirstName { get; set; }
+
+    [MaxLength(50)]
+    public string? LastName { get; set; }
+
     [MaxLength(100)]
     public string? DisplayName { get; set; }
 

@@ -6,6 +6,8 @@ public class ProfileDto
 {
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     public string? DisplayName { get; set; }
     public string? FideId { get; set; }
     public string? ChessResultsId { get; set; }
@@ -15,6 +17,12 @@ public class ProfileDto
 
 public class UpdateProfileDto
 {
+    [MaxLength(50)]
+    public string? FirstName { get; set; }
+
+    [MaxLength(50)]
+    public string? LastName { get; set; }
+
     [MaxLength(50)]
     public string? DisplayName { get; set; }
 

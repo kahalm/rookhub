@@ -45,6 +45,8 @@ public class ProfileService
             _db.UserProfiles.Add(profile);
         }
 
+        if (dto.FirstName != null) profile.FirstName = dto.FirstName;
+        if (dto.LastName != null) profile.LastName = dto.LastName;
         if (dto.DisplayName != null) profile.DisplayName = dto.DisplayName;
         if (dto.FideId != null) profile.FideId = dto.FideId;
         if (dto.ChessResultsId != null) profile.ChessResultsId = dto.ChessResultsId;
@@ -59,6 +61,8 @@ public class ProfileService
     {
         UserId = user.Id,
         Username = user.Username,
+        FirstName = user.Profile?.FirstName,
+        LastName = user.Profile?.LastName,
         DisplayName = user.Profile?.DisplayName,
         FideId = user.Profile?.FideId,
         ChessResultsId = user.Profile?.ChessResultsId,
