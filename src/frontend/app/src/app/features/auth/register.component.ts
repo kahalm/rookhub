@@ -67,7 +67,7 @@ export class RegisterComponent {
     this.loading = true;
     this.auth.register(this.username, this.email, this.password).subscribe({
       next: () => {
-        this.router.navigateByUrl(this.returnUrl);
+        this.router.navigate([this.returnUrl], { queryParams: { quickstart: '1' } });
       },
       error: (err) => {
         this.loading = false;

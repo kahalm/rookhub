@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { RouterOutlet, Router } from '@angular/router';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { environment } from '../environments/environment';
 
@@ -8,7 +8,7 @@ import { environment } from '../environments/environment';
   standalone: true,
   imports: [RouterOutlet, NavbarComponent],
   template: `
-    <app-navbar (changelogClick)="showChangelog = true" />
+    <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
       <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
@@ -30,6 +30,32 @@ import { environment } from '../environments/environment';
               </ul>
             </div>
           }
+        </div>
+      </div>
+    }
+    @if (showQuickstart) {
+      <div class="changelog-overlay" (click)="showQuickstart = false">
+        <div class="changelog-content quickstart-content" (click)="$event.stopPropagation()">
+          <div class="changelog-header">
+            <h3>Quickstart</h3>
+            <button (click)="showQuickstart = false">&times;</button>
+          </div>
+          <div class="qs-item">
+            <span class="qs-icon">&#x2B50;</span>
+            <div><strong>Subscribe</strong><br><span class="qs-desc">Abonniere Turniere fuer schnellen Zugriff auf Spieler, Paarungen und Ergebnisse.</span></div>
+          </div>
+          <div class="qs-item">
+            <span class="qs-icon">&#x1F514;</span>
+            <div><strong>Monitor</strong><br><span class="qs-desc">Aktiviere den Monitor bei einem Turnier &ndash; neue Runden werden automatisch erkannt und gecrawlt.</span></div>
+          </div>
+          <div class="qs-item">
+            <span class="qs-icon">&#x2764;</span>
+            <div><strong>Favoriten</strong><br><span class="qs-desc">Markiere Spieler oder Teams als Favorit fuer schnellen Zugriff in der Turnieransicht.</span></div>
+          </div>
+          <div class="qs-item">
+            <span class="qs-icon">&#x1F50D;</span>
+            <div><strong>ChessResults-ID</strong><br><span class="qs-desc">Hinterlege deine ChessResults-ID im Profil &ndash; anstehende Turniere werden automatisch abonniert.</span></div>
+          </div>
         </div>
       </div>
     }
@@ -59,11 +85,28 @@ import { environment } from '../environments/environment';
     .changelog-date { color: #666; font-size: 0.85rem; margin-left: 8px; }
     .changelog-entry ul { margin: 4px 0 0 20px; padding: 0; }
     .changelog-entry li { font-size: 0.85rem; margin-bottom: 2px; }
+    .qs-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+    .qs-icon { font-size: 1.4rem; min-width: 28px; text-align: center; }
+    .qs-desc { font-size: 0.85rem; color: #aaa; }
   `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   version = environment.version;
   production = environment.production;
   changelog = environment.changelog;
   showChangelog = false;
+  showQuickstart = false;
+
+  constructor(private router: Router) {}
+
+  ngOnInit(): void {
+    this.router.events.subscribe(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('quickstart') === '1') {
+        this.showQuickstart = true;
+        // Clean up query param
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    });
+  }
 }

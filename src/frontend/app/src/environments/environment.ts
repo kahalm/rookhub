@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.9.4',
+  version: '0.9.5',
   changelog: [
+    { version: '0.9.5', date: '2026-05-21', changes: [
+      'Quickstart-Guide im User-Menue erklaert Subscribe, Monitor, Favoriten und ChessResults-ID',
+      'Quickstart wird automatisch nach Registrierung angezeigt',
+    ]},
     { version: '0.9.4', date: '2026-05-21', changes: [
       'Dashboard: Abonnierte Turniere sind jetzt klickbar und fuehren zur Turnierseite',
     ]},

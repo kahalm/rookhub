@@ -42,6 +42,7 @@ import { AuthService } from '../../core/auth.service';
         </button>
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">Profile</button>
+          <button mat-menu-item (click)="quickstartClick.emit()">Quickstart</button>
           <button mat-menu-item (click)="changelogClick.emit()">Changelog</button>
           <button mat-menu-item (click)="auth.logout()">Logout</button>
         </mat-menu>
@@ -63,5 +64,6 @@ import { AuthService } from '../../core/auth.service';
 })
 export class NavbarComponent {
   @Output() changelogClick = new EventEmitter<void>();
+  @Output() quickstartClick = new EventEmitter<void>();
   constructor(public auth: AuthService) {}
 }
