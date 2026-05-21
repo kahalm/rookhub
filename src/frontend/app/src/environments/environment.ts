@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.9.6',
+  version: '0.9.7',
   changelog: [
+    { version: '0.9.7', date: '2026-05-21', changes: [
+      'Info-Button neben Login/Register zeigt Quickstart-Guide für nicht eingeloggte User',
+      'Quickstart aus dem User-Menü entfernt',
+    ]},
     { version: '0.9.6', date: '2026-05-21', changes: [
       'Fix: Quickstart-Icons für Monitor und ChessResults-ID korrigiert',
       'Fix: Umlaute im Quickstart-Guide',
