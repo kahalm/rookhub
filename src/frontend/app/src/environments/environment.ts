@@ -1,9 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.9.5',
+  version: '0.9.6',
   changelog: [
+    { version: '0.9.6', date: '2026-05-21', changes: [
+      'Fix: Quickstart-Icons für Monitor und ChessResults-ID korrigiert',
+      'Fix: Umlaute im Quickstart-Guide',
+    ]},
     { version: '0.9.5', date: '2026-05-21', changes: [
-      'Quickstart-Guide im User-Menue erklaert Subscribe, Monitor, Favoriten und ChessResults-ID',
+      'Quickstart-Guide im User-Menü erklärt Subscribe, Monitor, Favoriten und ChessResults-ID',
       'Quickstart wird automatisch nach Registrierung angezeigt',
     ]},
     { version: '0.9.4', date: '2026-05-21', changes: [

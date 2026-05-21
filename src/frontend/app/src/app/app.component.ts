@@ -42,18 +42,18 @@ import { environment } from '../environments/environment';
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x2B50;</span>
-            <div><strong>Subscribe</strong><br><span class="qs-desc">Abonniere Turniere fuer schnellen Zugriff auf Spieler, Paarungen und Ergebnisse.</span></div>
+            <div><strong>Subscribe</strong><br><span class="qs-desc">Abonniere Turniere für schnellen Zugriff auf Spieler, Paarungen und Ergebnisse.</span></div>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x1F514;</span>
+            <span class="qs-icon">&#x23F0;</span>
             <div><strong>Monitor</strong><br><span class="qs-desc">Aktiviere den Monitor bei einem Turnier &ndash; neue Runden werden automatisch erkannt und gecrawlt.</span></div>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x2764;</span>
-            <div><strong>Favoriten</strong><br><span class="qs-desc">Markiere Spieler oder Teams als Favorit fuer schnellen Zugriff in der Turnieransicht.</span></div>
+            <div><strong>Favoriten</strong><br><span class="qs-desc">Markiere Spieler oder Teams als Favorit für schnellen Zugriff in der Turnieransicht.</span></div>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x1F50D;</span>
+            <span class="qs-icon">&#x265E;</span>
             <div><strong>ChessResults-ID</strong><br><span class="qs-desc">Hinterlege deine ChessResults-ID im Profil &ndash; anstehende Turniere werden automatisch abonniert.</span></div>
           </div>
         </div>
