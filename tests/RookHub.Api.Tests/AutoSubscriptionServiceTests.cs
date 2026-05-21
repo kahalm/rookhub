@@ -25,7 +25,7 @@ public class AutoSubscriptionServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     private async Task<int> CreateUserAsync(string username = "testuser", string? lastName = null,
-        string? firstName = null, string? chessResultsId = null)
+        string? firstName = null, string? chessResultsId = null, string? fideId = null)
     {
         var user = new AppUser
         {
@@ -36,7 +36,8 @@ public class AutoSubscriptionServiceTests : IDisposable
             {
                 LastName = lastName,
                 FirstName = firstName,
-                ChessResultsId = chessResultsId
+                ChessResultsId = chessResultsId,
+                FideId = fideId
             }
         };
         _db.AppUsers.Add(user);
@@ -164,6 +165,116 @@ public class AutoSubscriptionServiceTests : IDisposable
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
         Assert.Empty(subs);
+    }
+
+    // --- AutoFavorite Tests ---
+
+    private static string PlayersJson(params (int snr, string name, string? fideId)[] players)
+    {
+        var list = players.Select(p => new { snr = p.snr, name = p.name, fideId = p.fideId });
+        return JsonSerializer.Serialize(list);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_MatchesByFideId_CreatesFavorite()
+    {
+        var userId = await CreateUserAsync(lastName: "Mustermann", firstName: "Max", fideId: "1234567");
+
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        { UserId = userId, CrawlerTournamentId = "T1", TournamentName = "Test" });
+        await _db.SaveChangesAsync();
+
+        var proxy = CreateMockProxy(PlayersJson((1, "Mustermann, Max", "1234567"), (2, "Other, Player", "9999999")));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T1", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Single(favs);
+        Assert.Equal(1, favs[0].PlayerSnr);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_MatchesByName_CreatesFavorite()
+    {
+        var userId = await CreateUserAsync(lastName: "Schmidt", firstName: "Anna");
+
+        var proxy = CreateMockProxy(PlayersJson((5, "Schmidt, Anna", null), (6, "Mueller, Hans", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T2", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Single(favs);
+        Assert.Equal(5, favs[0].PlayerSnr);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_MatchesFriend_CreatesFavorite()
+    {
+        var userId = await CreateUserAsync(username: "user1", lastName: "Huber", firstName: "Karl");
+        var friendId = await CreateUserAsync(username: "friend1", lastName: "Berger", firstName: "Lisa", fideId: "7777777");
+
+        _db.Friendships.Add(new Friendship
+        {
+            RequesterId = userId,
+            AddresseeId = friendId,
+            Status = FriendshipStatus.Accepted
+        });
+        await _db.SaveChangesAsync();
+
+        var proxy = CreateMockProxy(PlayersJson(
+            (10, "Berger, Lisa", "7777777"),
+            (11, "Huber, Karl", null),
+            (12, "Unknown, Person", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T3", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).OrderBy(f => f.PlayerSnr).ToListAsync();
+        Assert.Equal(2, favs.Count);
+        Assert.Equal(10, favs[0].PlayerSnr); // Friend matched by FIDE-ID
+        Assert.Equal(11, favs[1].PlayerSnr); // User matched by name
+    }
+
+    [Fact]
+    public async Task AutoFavorite_AlreadyFavorited_SkipsDuplicate()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl", fideId: "5555555");
+
+        _db.TournamentFavorites.Add(new TournamentFavorite
+        { UserId = userId, CrawlerTournamentId = "T4", PlayerSnr = 3 });
+        await _db.SaveChangesAsync();
+
+        var proxy = CreateMockProxy(PlayersJson((3, "Huber, Karl", "5555555")));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T4", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId && f.CrawlerTournamentId == "T4").ToListAsync();
+        Assert.Single(favs); // No duplicate
+    }
+
+    [Fact]
+    public async Task AutoFavorite_NoPlayers_DoesNothing()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
+
+        var proxy = CreateMockProxy("[]");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T5", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Empty(favs);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_NoMatchingProfile_DoesNothing()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
+
+        var proxy = CreateMockProxy(PlayersJson((1, "Completely, Different", null), (2, "Another, Person", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T6", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Empty(favs);
     }
 
     private class MockHttpMessageHandler : HttpMessageHandler

@@ -150,5 +150,125 @@ public class AutoSubscriptionService : BackgroundService
             await db.SaveChangesAsync(ct);
             _logger.LogInformation("AutoSubscription: Created {Count} new subscriptions for user {UserId}", newSubscriptions, userId);
         }
+
+        // Auto-favorite players for subscriptions that don't have favorites yet
+        var subsWithoutFavorites = await db.TournamentSubscriptions
+            .Where(s => s.UserId == userId)
+            .Where(s => !db.TournamentFavorites.Any(f => f.UserId == userId
+                && f.CrawlerTournamentId == s.CrawlerTournamentId))
+            .Select(s => s.CrawlerTournamentId)
+            .ToListAsync(ct);
+
+        foreach (var tid in subsWithoutFavorites)
+        {
+            try
+            {
+                await AutoFavoritePlayersAsync(db, proxy, userId, tid, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AutoFavorite failed for user {UserId}, tournament {TournamentId}", userId, tid);
+            }
+        }
+    }
+
+    public async Task AutoFavoritePlayersAsync(AppDbContext db, CrawlerProxyService proxy,
+        int userId, string crawlerTournamentId, CancellationToken ct)
+    {
+        // 1. Fetch players from crawler
+        JsonElement playersJson;
+        try
+        {
+            playersJson = await proxy.GetAsync($"/api/tournaments/{Uri.EscapeDataString(crawlerTournamentId)}/players");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch players for tournament {TournamentId}", crawlerTournamentId);
+            return;
+        }
+
+        if (playersJson.ValueKind != JsonValueKind.Array) return;
+
+        var players = new List<(int Snr, string Name, string? FideId)>();
+        foreach (var p in playersJson.EnumerateArray())
+        {
+            var snr = p.TryGetProperty("snr", out var s) ? s.GetInt32() : 0;
+            var name = p.TryGetProperty("name", out var n) ? n.GetString() : null;
+            var fideId = p.TryGetProperty("fideId", out var f) ? f.GetString() : null;
+            if (snr > 0 && !string.IsNullOrWhiteSpace(name))
+                players.Add((snr, name, fideId));
+        }
+
+        if (players.Count == 0) return;
+
+        // 2. Load profiles: user + accepted friends
+        var friendUserIds = await db.Friendships
+            .Where(f => (f.RequesterId == userId || f.AddresseeId == userId)
+                      && f.Status == FriendshipStatus.Accepted)
+            .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
+            .ToListAsync(ct);
+
+        var allUserIds = friendUserIds.Prepend(userId).Distinct().ToList();
+        var profiles = await db.UserProfiles
+            .Where(p => allUserIds.Contains(p.UserId))
+            .ToListAsync(ct);
+
+        if (profiles.Count == 0) return;
+
+        // 3. Load existing favorites to avoid duplicates
+        var existingFavSnrs = await db.TournamentFavorites
+            .Where(f => f.UserId == userId && f.CrawlerTournamentId == crawlerTournamentId && f.PlayerSnr != null)
+            .Select(f => f.PlayerSnr!.Value)
+            .ToListAsync(ct);
+        var existingSet = new HashSet<int>(existingFavSnrs);
+
+        // 4. Match profiles against players
+        var newFavorites = 0;
+        foreach (var profile in profiles)
+        {
+            if (string.IsNullOrWhiteSpace(profile.LastName)) continue;
+
+            foreach (var (snr, name, fideId) in players)
+            {
+                if (existingSet.Contains(snr)) continue;
+
+                var matched = false;
+
+                // FIDE-ID match (primary)
+                if (!string.IsNullOrWhiteSpace(profile.FideId) && !string.IsNullOrWhiteSpace(fideId)
+                    && string.Equals(profile.FideId, fideId, StringComparison.OrdinalIgnoreCase))
+                {
+                    matched = true;
+                }
+                // Name match (fallback)
+                else if (name.Contains(profile.LastName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrWhiteSpace(profile.FirstName))
+                        matched = name.Contains(profile.FirstName, StringComparison.OrdinalIgnoreCase);
+                    else
+                        matched = true;
+                }
+
+                if (matched)
+                {
+                    db.TournamentFavorites.Add(new TournamentFavorite
+                    {
+                        UserId = userId,
+                        CrawlerTournamentId = crawlerTournamentId,
+                        PlayerSnr = snr
+                    });
+                    existingSet.Add(snr);
+                    newFavorites++;
+                    break; // One match per profile is enough
+                }
+            }
+        }
+
+        if (newFavorites > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            _logger.LogInformation("AutoFavorite: Created {Count} favorites for user {UserId} in tournament {TournamentId}",
+                newFavorites, userId, crawlerTournamentId);
+        }
     }
 }

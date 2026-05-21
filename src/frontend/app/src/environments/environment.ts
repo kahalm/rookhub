@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.9.8',
+  version: '0.9.9',
   changelog: [
+    { version: '0.9.9', date: '2026-05-21', changes: [
+      'Spieler und Freunde werden bei Turnier-Abos automatisch als Favoriten markiert',
+      'Matching ueber FIDE-ID und Name',
+    ]},
     { version: '0.9.8', date: '2026-05-21', changes: [
       'Fix: Dashboard-Turnier-Links nutzen jetzt korrekte ID (nicht mehr ChessResults-ID)',
       'Crawler akzeptiert sowohl interne DB-ID als auch ChessResults-ID in Turnier-Routen',
