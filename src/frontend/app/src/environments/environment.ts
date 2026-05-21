@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.9.2',
+  version: '0.9.3',
   changelog: [
+    { version: '0.9.3', date: '2026-05-20', changes: [
+      'Anstehende Turniere werden automatisch abonniert wenn ChessResults-ID hinterlegt',
+      'Taegliche automatische Suche nach neuen Turnier-Anmeldungen',
+    ]},
     { version: '0.9.2', date: '2026-05-20', changes: [
       'Revert: Spielersuche wieder rein per Vor-/Nachname (ChessResults-ID-Suche entfernt)',
     ]},

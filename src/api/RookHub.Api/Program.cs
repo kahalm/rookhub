@@ -40,6 +40,8 @@ builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<FriendService>();
 builder.Services.AddScoped<RepertoireService>();
 builder.Services.AddScoped<PlayerSearchService>();
+builder.Services.AddSingleton<AutoSubscriptionService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
 builder.Services.AddHostedService<RoundMonitorService>();
 
 // Crawler Proxy HttpClient

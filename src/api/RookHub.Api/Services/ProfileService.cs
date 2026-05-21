@@ -8,8 +8,15 @@ namespace RookHub.Api.Services;
 public class ProfileService
 {
     private readonly AppDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<ProfileService> _logger;
 
-    public ProfileService(AppDbContext db) => _db = db;
+    public ProfileService(AppDbContext db, IServiceScopeFactory scopeFactory, ILogger<ProfileService> logger)
+    {
+        _db = db;
+        _scopeFactory = scopeFactory;
+        _logger = logger;
+    }
 
     public async Task<ProfileDto> GetProfileAsync(int userId)
     {
@@ -54,7 +61,30 @@ public class ProfileService
         if (dto.LichessUsername != null) profile.LichessUsername = dto.LichessUsername;
 
         await _db.SaveChangesAsync();
+
+        // Trigger auto-subscription if ChessResultsId is set and LastName is available
+        if (!string.IsNullOrWhiteSpace(profile.ChessResultsId) && !string.IsNullOrWhiteSpace(profile.LastName))
+        {
+            _ = Task.Run(() => TriggerAutoSubscriptionAsync(userId));
+        }
+
         return MapToDto(user);
+    }
+
+    private async Task TriggerAutoSubscriptionAsync(int userId)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
+            var autoSub = scope.ServiceProvider.GetRequiredService<AutoSubscriptionService>();
+            await autoSub.CheckUserAsync(db, proxy, userId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Auto-subscription trigger failed for user {UserId}", userId);
+        }
     }
 
     private static ProfileDto MapToDto(AppUser user) => new()
