@@ -55,11 +55,11 @@ import { AuthService } from '../../core/auth.service';
         <h2>Subscribed Tournaments</h2>
         <mat-list>
           @for (sub of subscriptions; track sub.id) {
-            <mat-list-item>
+            <a mat-list-item [routerLink]="['/tournaments', sub.crawlerTournamentId]" class="tournament-link">
               <mat-icon matListItemIcon>emoji_events</mat-icon>
               <span matListItemTitle>{{ sub.tournamentName }}</span>
               <span matListItemLine>Subscribed {{ sub.subscribedAt | date }}</span>
-            </mat-list-item>
+            </a>
           }
         </mat-list>
       }
@@ -69,6 +69,8 @@ import { AuthService } from '../../core/auth.service';
     .dashboard { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
+    .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
+    .tournament-link:hover { background: rgba(0,0,0,0.04); }
   `]
 })
 export class DashboardComponent implements OnInit {

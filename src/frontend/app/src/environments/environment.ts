@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.9.3',
+  version: '0.9.4',
   changelog: [
+    { version: '0.9.4', date: '2026-05-21', changes: [
+      'Dashboard: Abonnierte Turniere sind jetzt klickbar und fuehren zur Turnierseite',
+    ]},
     { version: '0.9.3', date: '2026-05-20', changes: [
       'Anstehende Turniere werden automatisch abonniert wenn ChessResults-ID hinterlegt',
       'Taegliche automatische Suche nach neuen Turnier-Anmeldungen',
