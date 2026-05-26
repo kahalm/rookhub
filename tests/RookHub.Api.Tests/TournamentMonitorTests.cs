@@ -133,4 +133,49 @@ public class TournamentMonitorTests : IDisposable
 
         Assert.Null(monitor);
     }
+
+    [Fact]
+    public async Task FavoritedSnrs_AggregatesDistinctPlayerSnrs()
+    {
+        // Create users
+        var user1 = new AppUser { Username = "user1", Email = "u1@test.com", PasswordHash = "hash" };
+        var user2 = new AppUser { Username = "user2", Email = "u2@test.com", PasswordHash = "hash" };
+        _db.AppUsers.AddRange(user1, user2);
+        await _db.SaveChangesAsync();
+
+        // Both users favorite the same player SNR 5, plus user1 favorites SNR 10
+        _db.TournamentFavorites.AddRange(
+            new TournamentFavorite { UserId = user1.Id, CrawlerTournamentId = "100", PlayerSnr = 5 },
+            new TournamentFavorite { UserId = user1.Id, CrawlerTournamentId = "100", PlayerSnr = 10 },
+            new TournamentFavorite { UserId = user2.Id, CrawlerTournamentId = "100", PlayerSnr = 5 },
+            // Team favorite (no PlayerSnr) should be excluded
+            new TournamentFavorite { UserId = user1.Id, CrawlerTournamentId = "100", TeamSnr = 3 },
+            // Different tournament should be excluded
+            new TournamentFavorite { UserId = user1.Id, CrawlerTournamentId = "200", PlayerSnr = 99 }
+        );
+        await _db.SaveChangesAsync();
+
+        // Simulate what RoundMonitorService does
+        var favSnrs = await _db.TournamentFavorites
+            .Where(f => f.CrawlerTournamentId == "100" && f.PlayerSnr != null)
+            .Select(f => f.PlayerSnr!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        Assert.Equal(2, favSnrs.Count);
+        Assert.Contains(5, favSnrs);
+        Assert.Contains(10, favSnrs);
+    }
+
+    [Fact]
+    public async Task FavoritedSnrs_NoFavorites_ReturnsEmpty()
+    {
+        var favSnrs = await _db.TournamentFavorites
+            .Where(f => f.CrawlerTournamentId == "100" && f.PlayerSnr != null)
+            .Select(f => f.PlayerSnr!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        Assert.Empty(favSnrs);
+    }
 }

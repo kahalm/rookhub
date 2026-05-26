@@ -112,6 +112,21 @@ public class TournamentProxyController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
+    [HttpGet("{id}/players/{snr:int}/results")]
+    public async Task<IActionResult> GetPlayerResults(string id, int snr)
+    {
+        try
+        {
+            var result = await _proxy.GetAsync($"/api/tournaments/{id}/players/{snr}/results");
+            return Ok(result);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { message = "Crawler service unavailable." });
+        }
+    }
+
     [HttpGet("{id}/rounds/check")]
     public async Task<IActionResult> CheckRounds(string id)
     {
@@ -136,6 +151,25 @@ public class TournamentProxyController : ControllerBase
         try
         {
             var result = await _proxy.PostAsync("/api/crawl", body);
+            return Ok(result);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { message = "Crawler service unavailable." });
+        }
+    }
+
+    [HttpPost("crawl/player-details")]
+    public async Task<IActionResult> CrawlPlayerDetails([FromBody] JsonElement body)
+    {
+        if (body.ValueKind == JsonValueKind.Undefined ||
+            !body.TryGetProperty("chessResultsId", out _) ||
+            !body.TryGetProperty("playerSnrs", out _))
+            return BadRequest(new { message = "Request body must contain chessResultsId and playerSnrs." });
+
+        try
+        {
+            var result = await _proxy.PostAsync("/api/crawl/player-details", body);
             return Ok(result);
         }
         catch (HttpRequestException)

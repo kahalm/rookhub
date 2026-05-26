@@ -90,6 +90,35 @@ public class RoundMonitorService : BackgroundService
 
                     await proxy.PostAsync("/api/crawl", crawlBody);
 
+                    // Trigger player detail crawl for favorited players
+                    try
+                    {
+                        var favSnrs = await db.TournamentFavorites
+                            .Where(f => f.CrawlerTournamentId == monitor.CrawlerTournamentId && f.PlayerSnr != null)
+                            .Select(f => f.PlayerSnr!.Value)
+                            .Distinct()
+                            .ToListAsync(ct);
+
+                        if (favSnrs.Count > 0)
+                        {
+                            _logger.LogInformation(
+                                "Triggering player detail crawl for {Count} favorited player(s) in tournament {TournamentId}",
+                                favSnrs.Count, monitor.CrawlerTournamentId);
+
+                            await proxy.PostJsonAsync("/api/crawl/player-details", new
+                            {
+                                chessResultsId = monitor.CrawlerTournamentId,
+                                playerSnrs = favSnrs
+                            });
+                        }
+                    }
+                    catch (Exception favEx) when (favEx is not OperationCanceledException)
+                    {
+                        _logger.LogWarning(favEx,
+                            "Error triggering player detail crawl for tournament {TournamentId}",
+                            monitor.CrawlerTournamentId);
+                    }
+
                     // Update known rounds
                     if (checkResult.TryGetProperty("availableRounds", out var ar))
                         monitor.LastKnownRounds = ar.GetInt32();

@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.9.9',
+  version: '0.10.0',
   changelog: [
+    { version: '0.10.0', date: '2026-05-26', changes: [
+      'Backend: Automatisches Detail-Crawling (art=9) fuer favorisierte Spieler bei neuer Runde',
+      'Crawler: Neuer Endpoint POST /api/crawl/player-details fuer Spieler-Einzelergebnisse',
+      'Crawler: Neuer Endpoint GET /api/tournaments/{id}/players/{snr}/results',
+      'PlayerResult-Model erweitert: OpponentSnr, OpponentName, OpponentElo, Points',
+      'Claude-Settings fuer beide Projekte vereinheitlicht',
+    ]},
     { version: '0.9.9', date: '2026-05-21', changes: [
       'Spieler und Freunde werden bei Turnier-Abos automatisch als Favoriten markiert',
       'Matching ueber FIDE-ID und Name',

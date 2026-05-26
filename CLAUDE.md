@@ -95,8 +95,10 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | GET | `/api/tournaments/{id}/players?team=&sortBy=` | `/api/tournaments/{id}/players` |
 | GET | `/api/tournaments/{id}/teams` | `/api/tournaments/{id}/teams` |
 | GET | `/api/tournaments/{id}/pairings?round=` | `/api/tournaments/{id}/pairings` |
+| GET | `/api/tournaments/{id}/players/{snr}/results` | `/api/tournaments/{id}/players/{snr}/results` |
 | GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` |
 | POST | `/api/tournaments/crawl` | `/api/tournaments/crawl` |
+| POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` |
 
 **Achtung**: Der Crawler nutzt `/api/crawl` (nicht `/api/tournaments/crawl`). Der Proxy-Endpoint muss ggf. angepasst werden.
 
@@ -186,7 +188,7 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 70 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, RequestLog)
+dotnet test     # 107 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, RequestLog)
 ```
 
 ### Test-Pattern
@@ -227,7 +229,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.9.9`
+- **Aktuelle Version**: `0.10.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

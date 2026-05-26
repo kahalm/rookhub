@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:chess-results.com)",
+      "WebFetch(domain:s1.chess-results.com)",
+      "WebFetch(domain:s2.chess-results.com)",
+      "WebFetch(domain:s3.chess-results.com)",
+      "WebFetch(domain:s4.chess-results.com)",
+      "WebFetch(domain:s5.chess-results.com)",
+      "WebFetch(domain:ratings.fide.com)",
+      "WebFetch(domain:app.fide.com)",
+      "WebSearch"
+    ]
+  }
+}
