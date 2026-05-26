@@ -21,6 +21,7 @@ import { AuthService } from '../../core/auth.service';
           <button mat-button routerLink="/repertoires">Repertoires</button>
           <button mat-button routerLink="/tournaments">Tournaments</button>
           <button mat-button routerLink="/friends">Friends</button>
+          <button mat-button routerLink="/puzzles">Puzzles</button>
           @if (auth.isAdmin) {
             <button mat-button routerLink="/admin">Admin</button>
           }
@@ -33,6 +34,7 @@ import { AuthService } from '../../core/auth.service';
           <button mat-menu-item routerLink="/repertoires">Repertoires</button>
           <button mat-menu-item routerLink="/tournaments">Tournaments</button>
           <button mat-menu-item routerLink="/friends">Friends</button>
+          <button mat-menu-item routerLink="/puzzles">Puzzles</button>
           @if (auth.isAdmin) {
             <button mat-menu-item routerLink="/admin">Admin</button>
           }

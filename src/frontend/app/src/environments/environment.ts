@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.10.0',
+  version: '0.11.0',
   changelog: [
+    { version: '0.11.0', date: '2026-05-26', changes: [
+      'Puzzle-Feature: Lichess-Puzzles interaktiv loesen mit Chessground-Board',
+      'Puzzle-Filter: Rating-Range und Skip-Solved',
+      'Puzzle-Statistiken: Accuracy, Streak, History',
+      'Admin: CSV-Import fuer Lichess-Puzzle-Datenbank',
+      'Dashboard: Puzzle-Stats-Card',
+    ]},
     { version: '0.10.0', date: '2026-05-26', changes: [
       'Backend: Automatisches Detail-Crawling (art=9) fuer favorisierte Spieler bei neuer Runde',
       'Crawler: Neuer Endpoint POST /api/crawl/player-details fuer Spieler-Einzelergebnisse',

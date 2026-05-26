@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
     public DbSet<RequestLog> RequestLogs => Set<RequestLog>();
+    public DbSet<Puzzle> Puzzles => Set<Puzzle>();
+    public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -105,6 +107,28 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<TournamentMonitor>(e =>
         {
             e.HasIndex(m => m.CrawlerTournamentId).IsUnique();
+        });
+
+        modelBuilder.Entity<Puzzle>(e =>
+        {
+            e.HasIndex(p => p.LichessId).IsUnique();
+            e.HasIndex(p => p.Rating);
+        });
+
+        modelBuilder.Entity<PuzzleAttempt>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.Puzzle)
+             .WithMany()
+             .HasForeignKey(a => a.PuzzleId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(a => new { a.UserId, a.PuzzleId });
+            e.HasIndex(a => a.AttemptedAt).IsDescending();
         });
     }
 }

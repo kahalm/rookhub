@@ -49,6 +49,17 @@ import { AuthService } from '../../core/auth.service';
             <button mat-button routerLink="/friends">Manage Friends</button>
           </mat-card-actions>
         </mat-card>
+
+        <mat-card>
+          <mat-card-header>
+            <mat-icon mat-card-avatar>extension</mat-icon>
+            <mat-card-title>Puzzles</mat-card-title>
+            <mat-card-subtitle>{{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-actions>
+            <button mat-button routerLink="/puzzles">Solve Puzzles</button>
+          </mat-card-actions>
+        </mat-card>
       </div>
 
       @if (subscriptions.length > 0) {
@@ -77,6 +88,8 @@ export class DashboardComponent implements OnInit {
   repertoireCount = 0;
   subscriptionCount = 0;
   friendCount = 0;
+  puzzleSolved = 0;
+  puzzleAccuracy = 0;
   subscriptions: any[] = [];
 
   constructor(public auth: AuthService, private http: HttpClient) {}
@@ -85,12 +98,15 @@ export class DashboardComponent implements OnInit {
     forkJoin({
       repertoires: this.http.get<any[]>('/api/repertoires').pipe(catchError(() => of([]))),
       subscriptions: this.http.get<any[]>('/api/subscriptions').pipe(catchError(() => of([]))),
-      friends: this.http.get<any[]>('/api/friends').pipe(catchError(() => of([])))
-    }).subscribe(({ repertoires, subscriptions, friends }) => {
+      friends: this.http.get<any[]>('/api/friends').pipe(catchError(() => of([]))),
+      puzzleStats: this.http.get<any>('/api/puzzles/stats').pipe(catchError(() => of({ solved: 0, accuracy: 0 })))
+    }).subscribe(({ repertoires, subscriptions, friends, puzzleStats }) => {
       this.repertoireCount = repertoires.length;
       this.subscriptions = subscriptions;
       this.subscriptionCount = subscriptions.length;
       this.friendCount = friends.length;
+      this.puzzleSolved = puzzleStats.solved || 0;
+      this.puzzleAccuracy = puzzleStats.accuracy || 0;
     });
   }
 }

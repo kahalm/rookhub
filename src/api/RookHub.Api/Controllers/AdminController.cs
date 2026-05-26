@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
 
@@ -12,8 +13,13 @@ namespace RookHub.Api.Controllers;
 public class AdminController : BaseApiController
 {
     private readonly AppDbContext _db;
+    private readonly PuzzleService _puzzleService;
 
-    public AdminController(AppDbContext db) => _db = db;
+    public AdminController(AppDbContext db, PuzzleService puzzleService)
+    {
+        _db = db;
+        _puzzleService = puzzleService;
+    }
 
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers(
@@ -97,5 +103,35 @@ public class AdminController : BaseApiController
             IsAdmin = user.IsAdmin,
             CreatedAt = user.CreatedAt
         });
+    }
+
+    [HttpPost("puzzles/import")]
+    public async Task<IActionResult> ImportPuzzles(
+        IFormFile file,
+        [FromQuery] int? minRating,
+        [FromQuery] int? maxRating,
+        [FromQuery] int? maxCount)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "No file provided." });
+
+        using var stream = file.OpenReadStream();
+        var imported = await _puzzleService.ImportFromCsvAsync(stream, minRating, maxRating, maxCount);
+        return Ok(new { imported });
+    }
+
+    [HttpGet("puzzles/count")]
+    public async Task<IActionResult> GetPuzzleCount()
+    {
+        var count = await _db.Puzzles.CountAsync();
+        return Ok(new { count });
+    }
+
+    [HttpDelete("puzzles")]
+    public async Task<IActionResult> ClearPuzzles()
+    {
+        await _db.PuzzleAttempts.ExecuteDeleteAsync();
+        await _db.Puzzles.ExecuteDeleteAsync();
+        return NoContent();
     }
 }
