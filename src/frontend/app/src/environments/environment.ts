@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.11.2',
+  version: '0.11.3',
   changelog: [
+    { version: '0.11.3', date: '2026-05-26', changes: [
+      'Performance: Puzzle-Loading von 10+ Sekunden auf unter 1 Sekunde optimiert',
+      'Backend: ID-Range-Ansatz statt COUNT+SKIP auf 5.3M Rows',
+      'Frontend: Naechstes Puzzle wird im Hintergrund vorgeladen',
+    ]},
     { version: '0.11.2', date: '2026-05-26', changes: [
       'Fix: Puzzle-Board rendert korrekt (Critical CSS + inlineCritical deaktiviert)',
       'Fix: Puzzle-Zuege funktionieren (Chessground viewOnly-Bug umgangen)',

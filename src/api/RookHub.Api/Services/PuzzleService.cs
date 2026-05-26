@@ -34,13 +34,26 @@ public class PuzzleService
             query = query.Where(p => !solvedIds.Contains(p.Id));
         }
 
-        var count = await query.CountAsync();
-        if (count == 0) return null;
+        // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
+        // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
+        // ID-range picks a random point in the PK space and seeks forward – O(1).
+        var minId = await _db.Puzzles.MinAsync(p => (int?)p.Id);
+        var maxId = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
+        if (minId == null || maxId == null) return null;
 
-        var offset = Random.Shared.Next(count);
-        var puzzle = await query.Skip(offset).FirstAsync();
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            var randomId = Random.Shared.Next(minId.Value, maxId.Value + 1);
+            var puzzle = await query
+                .Where(p => p.Id >= randomId)
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+            if (puzzle != null) return MapToDto(puzzle);
+        }
 
-        return MapToDto(puzzle);
+        // Fallback: get any matching puzzle
+        var fallback = await query.OrderBy(p => p.Id).FirstOrDefaultAsync();
+        return fallback == null ? null : MapToDto(fallback);
     }
 
     public async Task<PuzzleDto?> GetByIdAsync(int id)

@@ -15,6 +15,7 @@ import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
+import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAILED';
 
@@ -216,6 +217,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private solutionMoves: string[] = [];
   private moveIndex = 0;
   private attemptRecorded = false;
+  private nextPuzzle: PuzzleDto | null = null;
 
   constructor(private puzzleService: PuzzleService, private authService: AuthService) {}
 
@@ -238,17 +240,27 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.elapsedSeconds = 0;
 
-    this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved)
-      .subscribe({
+    const source$ = this.nextPuzzle
+      ? of(this.nextPuzzle)
+      : this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved);
+    this.nextPuzzle = null;
+
+    source$.subscribe({
         next: puzzle => {
           this.puzzle = puzzle;
           this.setupPuzzle(puzzle);
+          this.prefetchNext();
         },
         error: () => {
           this.state = 'LOADING';
           this.puzzle = null;
         }
       });
+  }
+
+  private prefetchNext(): void {
+    this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved)
+      .subscribe({ next: p => this.nextPuzzle = p, error: () => {} });
   }
 
   private setupPuzzle(puzzle: PuzzleDto): void {
