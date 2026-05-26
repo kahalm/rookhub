@@ -9,9 +9,14 @@ import { Color, Key } from 'chessground/types';
 @Component({
   selector: 'app-puzzle-board',
   standalone: true,
-  template: `<div #boardEl></div>`,
+  template: `<div #boardEl class="cg-wrap"></div>`,
   styles: [`
     :host { display: block; width: 100%; }
+    .cg-wrap {
+      position: relative;
+      display: block;
+      overflow: hidden;
+    }
   `]
 })
 export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -32,7 +37,29 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private initAttempts = 0;
 
   ngAfterViewInit(): void {
+    this.ensureChessgroundCss();
     this.initBoard();
+  }
+
+  /**
+   * Inject critical chessground CSS rules into <head> as a <style> element.
+   * Angular loads the global stylesheet with media="print" (deferred), so
+   * chessground base CSS (display:block, position:absolute on custom elements)
+   * is NOT available when Chessground first reads getBoundingClientRect().
+   * This ensures the rules are immediately available.
+   */
+  private ensureChessgroundCss(): void {
+    if (document.getElementById('cg-critical-css')) return;
+    const style = document.createElement('style');
+    style.id = 'cg-critical-css';
+    style.textContent = `
+      .cg-wrap { position: relative; display: block; }
+      cg-container { position: absolute; width: 100%; height: 100%; display: block; top: 0; }
+      cg-board { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+      cg-board square { position: absolute; top: 0; left: 0; width: 12.5%; height: 12.5%; }
+      cg-board piece { position: absolute; top: 0; left: 0; width: 12.5%; height: 12.5%; z-index: 2; will-change: transform; }
+    `;
+    document.head.appendChild(style);
   }
 
   private initBoard(): void {
@@ -49,11 +76,15 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
 
+    // IMPORTANT: Never init with viewOnly:true - Chessground only binds
+    // mouse/touch event listeners during init, and skips them when viewOnly=true.
+    // Later toggling viewOnly via .set() does NOT re-bind the listeners.
+    // Instead, control interactivity via movable.color/dests.
     this.ground = Chessground(el, {
       fen: this.fen,
       orientation: this.orientation,
       turnColor: this.turnColor,
-      viewOnly: this.viewOnly,
+      viewOnly: false,
       check: this.check,
       lastMove: this.lastMove as Key[] | undefined,
       animation: { enabled: true, duration: 200 },
@@ -62,7 +93,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       movable: {
         free: false,
         color: this.viewOnly ? undefined : this.turnColor,
-        dests: this.dests,
+        dests: this.viewOnly ? undefined : this.dests,
         showDests: true
       },
       events: {
@@ -72,10 +103,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
-    // Fix: custom elements (cg-container, cg-board) default to display:inline
-    // which ignores width/height. Force block/absolute positioning via JS
-    // in case the global chessground CSS hasn't applied yet.
-    this.fixChessgroundStyles(el);
+    // After init, force a redraw to ensure correct dimensions
+    requestAnimationFrame(() => this.ground?.redrawAll());
 
     this.resizeObserver = new ResizeObserver(() => {
       const hostEl = el.parentElement as HTMLElement;
@@ -89,42 +118,18 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.resizeObserver.observe(el.parentElement || el);
   }
 
-  private fixChessgroundStyles(el: HTMLElement): void {
-    const cgContainer = el.querySelector('cg-container') as HTMLElement | null;
-    const cgBoard = el.querySelector('cg-board') as HTMLElement | null;
-    if (cgContainer) {
-      cgContainer.style.position = 'absolute';
-      cgContainer.style.width = '100%';
-      cgContainer.style.height = '100%';
-      cgContainer.style.display = 'block';
-      cgContainer.style.top = '0';
-    }
-    if (cgBoard) {
-      cgBoard.style.position = 'absolute';
-      cgBoard.style.top = '0';
-      cgBoard.style.left = '0';
-      cgBoard.style.width = '100%';
-      cgBoard.style.height = '100%';
-      cgBoard.style.display = 'block';
-    }
-    // Force layout recalculation, then redraw with correct dimensions
-    void el.offsetHeight;
-    requestAnimationFrame(() => this.ground?.redrawAll());
-  }
-
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
     this.ground.set({
       fen: this.fen,
       orientation: this.orientation,
       turnColor: this.turnColor,
-      viewOnly: this.viewOnly,
       check: this.check,
       lastMove: this.lastMove as Key[] | undefined,
       movable: {
         free: false,
         color: this.viewOnly ? undefined : this.turnColor,
-        dests: this.dests,
+        dests: this.viewOnly ? undefined : this.dests,
         showDests: true
       }
     });

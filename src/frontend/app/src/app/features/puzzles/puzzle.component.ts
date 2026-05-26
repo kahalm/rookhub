@@ -269,8 +269,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.playMove(this.solutionMoves[0]);
       this.moveIndex = 1;
-      this.updateBoard();
       this.state = 'AWAITING_USER_MOVE';
+      this.updateBoard();
       this.startTimer();
     }, 600);
   }

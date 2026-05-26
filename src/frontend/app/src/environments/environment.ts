@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.11.1',
+  version: '0.11.2',
   changelog: [
+    { version: '0.11.2', date: '2026-05-26', changes: [
+      'Fix: Puzzle-Board rendert korrekt (Critical CSS + inlineCritical deaktiviert)',
+      'Fix: Puzzle-Zuege funktionieren (Chessground viewOnly-Bug umgangen)',
+      'Fix: State-Reihenfolge in Puzzle-Setup korrigiert (dests vor Board-Update)',
+    ]},
     { version: '0.11.1', date: '2026-05-26', changes: [
       'Puzzles ohne Anmeldung spielbar (Route + API offen)',
       'Stats und Attempts nur fuer eingeloggte User',

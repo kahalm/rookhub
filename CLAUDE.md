@@ -229,7 +229,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.11.1`
+- **Aktuelle Version**: `0.11.2`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
@@ -246,6 +246,11 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 5. [ ] **Nach jedem Commit dem User die aktuelle Version mitteilen** (z.B. "Version: 0.6.6")
 
 **NIEMALS committen ohne diese Checkliste abzuarbeiten.** Auch reine Test- oder Doku-Aenderungen erhoehen die Patch-Version.
+
+## Screenshots
+
+- Screenshots liegen in `C:/git/screenshot/` (z.B. `Screenshot.jpg`)
+- Diesen Pfad nutzen um visuelle Pruefungen durchzufuehren
 
 ## Wichtige Konventionen
 
