@@ -103,6 +103,28 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandom_AnonymousUser_IgnoresExcludeSolved()
+    {
+        var userId = await CreateUserAsync();
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "anon1");
+
+        _db.PuzzleAttempts.Add(new PuzzleAttempt
+        {
+            UserId = userId,
+            PuzzleId = puzzle.Id,
+            Solved = true,
+            TimeSpentSeconds = 30
+        });
+        await _db.SaveChangesAsync();
+
+        // Anonymous user (null) with excludeSolved=true should still get puzzles
+        var result = await _service.GetRandomAsync(null, null, null, null, excludeSolved: true);
+
+        Assert.NotNull(result);
+        Assert.Equal(puzzle.Id, result!.Id);
+    }
+
+    [Fact]
     public async Task GetRandom_FiltersByTheme()
     {
         var userId = await CreateUserAsync();

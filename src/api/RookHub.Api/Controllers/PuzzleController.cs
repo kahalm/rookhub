@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
@@ -14,6 +15,7 @@ public class PuzzleController : BaseApiController
 
     public PuzzleController(PuzzleService puzzleService) => _puzzleService = puzzleService;
 
+    [AllowAnonymous]
     [HttpGet("random")]
     public async Task<IActionResult> GetRandom(
         [FromQuery] int? minRating,
@@ -21,12 +23,14 @@ public class PuzzleController : BaseApiController
         [FromQuery] string? themes,
         [FromQuery] bool excludeSolved = false)
     {
-        var puzzle = await _puzzleService.GetRandomAsync(GetUserId(), minRating, maxRating, themes, excludeSolved);
+        int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
+        var puzzle = await _puzzleService.GetRandomAsync(userId, minRating, maxRating, themes, excludeSolved);
         if (puzzle == null)
             return NotFound(new { message = "No puzzles found matching criteria." });
         return Ok(puzzle);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {

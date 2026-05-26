@@ -48,6 +48,7 @@ import { AuthService } from '../../core/auth.service';
           <button mat-menu-item (click)="auth.logout()">Logout</button>
         </mat-menu>
       } @else {
+        <button mat-button routerLink="/puzzles">Puzzles</button>
         <button mat-icon-button (click)="quickstartClick.emit()" aria-label="Info">
           <mat-icon>info_outline</mat-icon>
         </button>

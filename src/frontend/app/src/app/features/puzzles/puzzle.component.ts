@@ -12,6 +12,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatInputModule } from '@angular/material/input';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
+import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
@@ -146,7 +147,9 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
                 </mat-form-field>
               </div>
               <div class="filter-actions">
-                <mat-slide-toggle [(ngModel)]="excludeSolved">Skip solved</mat-slide-toggle>
+                @if (isLoggedIn) {
+                  <mat-slide-toggle [(ngModel)]="excludeSolved">Skip solved</mat-slide-toggle>
+                }
                 <button mat-raised-button color="primary" (click)="loadNext()">Load Puzzle</button>
               </div>
             </mat-card-content>
@@ -214,11 +217,15 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private moveIndex = 0;
   private attemptRecorded = false;
 
-  constructor(private puzzleService: PuzzleService) {}
+  constructor(private puzzleService: PuzzleService, private authService: AuthService) {}
+
+  get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
 
   ngOnInit(): void {
     this.loadNext();
-    this.puzzleService.getStats().subscribe(s => this.stats = s);
+    if (this.isLoggedIn) {
+      this.puzzleService.getStats().subscribe(s => this.stats = s);
+    }
   }
 
   ngOnDestroy(): void {
@@ -395,7 +402,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   private recordAttempt(solved: boolean): void {
-    if (!this.puzzle || this.attemptRecorded) return;
+    if (!this.puzzle || this.attemptRecorded || !this.isLoggedIn) return;
     this.attemptRecorded = true;
     this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
       this.puzzleService.getStats().subscribe(s => this.stats = s);

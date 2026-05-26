@@ -72,6 +72,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
+    // Fix: custom elements (cg-container, cg-board) default to display:inline
+    // which ignores width/height. Force block/absolute positioning via JS
+    // in case the global chessground CSS hasn't applied yet.
+    this.fixChessgroundStyles(el);
+
     this.resizeObserver = new ResizeObserver(() => {
       const hostEl = el.parentElement as HTMLElement;
       const w = hostEl?.clientWidth || el.clientWidth;
@@ -82,6 +87,29 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       this.ground?.redrawAll();
     });
     this.resizeObserver.observe(el.parentElement || el);
+  }
+
+  private fixChessgroundStyles(el: HTMLElement): void {
+    const cgContainer = el.querySelector('cg-container') as HTMLElement | null;
+    const cgBoard = el.querySelector('cg-board') as HTMLElement | null;
+    if (cgContainer) {
+      cgContainer.style.position = 'absolute';
+      cgContainer.style.width = '100%';
+      cgContainer.style.height = '100%';
+      cgContainer.style.display = 'block';
+      cgContainer.style.top = '0';
+    }
+    if (cgBoard) {
+      cgBoard.style.position = 'absolute';
+      cgBoard.style.top = '0';
+      cgBoard.style.left = '0';
+      cgBoard.style.width = '100%';
+      cgBoard.style.height = '100%';
+      cgBoard.style.display = 'block';
+    }
+    // Force layout recalculation, then redraw with correct dimensions
+    void el.offsetHeight;
+    requestAnimationFrame(() => this.ground?.redrawAll());
   }
 
   ngOnChanges(changes: SimpleChanges): void {

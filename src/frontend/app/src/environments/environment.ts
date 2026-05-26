@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.11.0',
+  version: '0.11.1',
   changelog: [
+    { version: '0.11.1', date: '2026-05-26', changes: [
+      'Puzzles ohne Anmeldung spielbar (Route + API offen)',
+      'Stats und Attempts nur fuer eingeloggte User',
+      'Puzzles-Link in Navbar auch fuer nicht eingeloggte User sichtbar',
+    ]},
     { version: '0.11.0', date: '2026-05-26', changes: [
       'Puzzle-Feature: Lichess-Puzzles interaktiv loesen mit Chessground-Board',
       'Puzzle-Filter: Rating-Range und Skip-Solved',

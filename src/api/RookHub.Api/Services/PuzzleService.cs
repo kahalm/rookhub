@@ -11,7 +11,7 @@ public class PuzzleService
 
     public PuzzleService(AppDbContext db) => _db = db;
 
-    public async Task<PuzzleDto?> GetRandomAsync(int userId, int? minRating, int? maxRating, string? themes, bool excludeSolved)
+    public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved)
     {
         var query = _db.Puzzles.AsQueryable();
 
@@ -25,10 +25,11 @@ public class PuzzleService
             foreach (var theme in themeList)
                 query = query.Where(p => p.Themes != null && p.Themes.Contains(theme));
         }
-        if (excludeSolved)
+        if (excludeSolved && userId.HasValue)
         {
+            var uid = userId.Value;
             var solvedIds = _db.PuzzleAttempts
-                .Where(a => a.UserId == userId && a.Solved)
+                .Where(a => a.UserId == uid && a.Solved)
                 .Select(a => a.PuzzleId);
             query = query.Where(p => !solvedIds.Contains(p.Id));
         }
