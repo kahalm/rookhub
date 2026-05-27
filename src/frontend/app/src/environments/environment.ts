@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.15.1',
+  version: '0.15.2',
   changelog: [
+    { version: '0.15.2', date: '2026-05-27', changes: [
+      'Tests: 110 neue Tests (122 → 232), alle Controller vollständig getestet',
+      'Tests: TournamentProxyController, PuzzleController, AuthController, ProfileController, FriendController, RepertoireController, ExtensionController, RequestLogController, RoundMonitorService',
+    ]},
     { version: '0.15.1', date: '2026-05-27', changes: [
       'Fix: Premoves im normalen Puzzle Mode funktionieren jetzt',
     ]},
