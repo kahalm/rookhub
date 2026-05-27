@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.15.4',
+  version: '0.15.5',
   changelog: [
+    { version: '0.15.5', date: '2026-05-27', changes: [
+      'E2E Tests: Falscher Zug + Premove in Puzzle Mode und Endless Mode',
+    ]},
     { version: '0.15.4', date: '2026-05-27', changes: [
       'Puzzle Mode: Show Eval und Reset Buttons nach falschem Zug',
       'Fix: Endless Mode kein sofortiges Wrong bei Stockfish-Fehler',
