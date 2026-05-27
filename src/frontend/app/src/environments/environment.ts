@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.13.7',
+  version: '0.13.8',
   changelog: [
+    { version: '0.13.8', date: '2026-05-27', changes: [
+      'Fix: Fehlende EF-Migration fuer Puzzles-Tabelle hinzugefuegt (Prod-Deployment)',
+    ]},
     { version: '0.13.7', date: '2026-05-27', changes: [
       'Stockfish Suchtiefe von 12 auf 16 erhoeht (~2400 Elo)',
     ]},
