@@ -26,6 +26,15 @@ test.describe('Puzzles', () => {
     await expect(page.locator('body')).toContainText('Endless Puzzle Mode');
   });
 
+  test('puzzle shows eval and reset buttons after loading', async ({ page }) => {
+    await page.goto('/puzzles');
+
+    // Board and status card should be visible
+    const board = page.locator('app-puzzle-board, cg-board, .cg-wrap').first();
+    await expect(board).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.status-card')).toBeVisible({ timeout: 5_000 });
+  });
+
   test('endless mode starts after clicking start button', async ({ page }) => {
     await page.goto('/puzzles/endless');
 

@@ -991,7 +991,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
         this.updateBoard();
       }, 400);
     } catch {
-      if (!this.aborted) this.loseLife();
+      if (!this.aborted) {
+        // Stockfish error — let the player continue instead of losing a life
+        this.state = 'PLAYING';
+        this.updateBoard();
+      }
     }
   }
 

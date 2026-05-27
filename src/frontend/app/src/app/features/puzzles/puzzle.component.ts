@@ -73,7 +73,22 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                   <div class="status-center">
                     <mat-spinner diameter="24"></mat-spinner>
                     <p class="status-text">Stockfish denkt...</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                        <span class="eval-arrow">→</span>
+                        <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                      </div>
+                    }
                     <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                      </button>
+                      <button mat-button (click)="resetPuzzle()">
+                        <mat-icon>replay</mat-icon>
+                        Reset
+                      </button>
                       <button mat-button color="warn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
                         Give Up
@@ -84,7 +99,26 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                 @case ('PLAYING') {
                   <div class="status-center">
                     <p class="status-text">Dein Zug gegen Stockfish...</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        @if (evalLoading) {
+                          <mat-spinner diameter="16"></mat-spinner>
+                        } @else {
+                          <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                          <span class="eval-arrow">→</span>
+                          <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                        }
+                      </div>
+                    }
                     <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                      </button>
+                      <button mat-button (click)="resetPuzzle()">
+                        <mat-icon>replay</mat-icon>
+                        Reset
+                      </button>
                       @if (!mouseslipUsed && !onSolutionPath) {
                         <button mat-button (click)="mouseslip()">
                           <mat-icon>mouse</mat-icon>
@@ -224,6 +258,11 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
     .failed .result-icon { color: #f44336; }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
+    .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
+    .eval-item { display: flex; align-items: center; gap: 0.25rem; }
+    .eval-label { font-size: 0.8em; color: rgba(0,0,0,0.5); }
+    .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
+    .eval-arrow { color: rgba(0,0,0,0.4); }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
@@ -280,6 +319,13 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   alternativeSolve = false;
   mouseslipUsed = false;
 
+  // Eval
+  showEval = false;
+  evalLoading = false;
+  initialEval = '';
+  currentEval = '';
+  private initialFen = '';
+
   constructor(
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
@@ -315,6 +361,9 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
+    this.showEval = false;
+    this.initialEval = '';
+    this.currentEval = '';
 
     const source$ = this.nextPuzzle
       ? of(this.nextPuzzle)
@@ -360,6 +409,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       this.playMove(this.solutionMoves[0]);
       this.moveIndex = 1;
       this.state = 'AWAITING_USER_MOVE';
+      this.initialFen = this.chess.fen();
       this.updateBoard();
       this.startTimer();
     }, 600);
@@ -431,6 +481,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     try {
       const result = await this.stockfish.getBestMove(this.chess.fen(), this.stockfishDepth);
       if (this.aborted) return;
+      this.currentEval = result.eval;
       this.playMove(result.move);
       this.updateBoard();
 
@@ -594,6 +645,34 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
       this.puzzleService.getStats().subscribe(s => this.stats = s);
     });
+  }
+
+  toggleEval(): void {
+    this.showEval = !this.showEval;
+    if (this.showEval && this.state === 'PLAYING') {
+      this.refreshEval();
+    }
+  }
+
+  private async refreshEval(): Promise<void> {
+    this.evalLoading = true;
+    try {
+      if (!this.initialEval && this.initialFen) {
+        this.initialEval = await this.stockfish.getEval(this.initialFen, this.stockfishDepth);
+      }
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.stockfishDepth);
+    } catch {}
+    this.evalLoading = false;
+  }
+
+  resetPuzzle(): void {
+    if (!this.puzzle) return;
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.currentEval = '';
+    this.initialEval = '';
+    this.showEval = false;
+    this.setupPuzzle(this.puzzle);
   }
 
   // --- Config persistence ---
