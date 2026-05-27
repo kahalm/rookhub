@@ -10,11 +10,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, PuzzleDto } from './puzzle.service';
+import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
-type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'CORRECT' | 'WRONG' | 'GAME_OVER';
+type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
+  | 'CORRECT' | 'REFUTATION' | 'REFUTATION_USER' | 'WRONG' | 'GAME_OVER';
 
 interface EndlessConfig {
   startElo: number;
@@ -25,6 +27,7 @@ interface EndlessConfig {
 
 const CONFIG_KEY = 'rookhub_endless_config';
 const HIGHSCORE_KEY = 'rookhub_endless_highscore';
+const REFUTATION_DEPTH = 5; // half-moves after wrong move
 
 @Component({
   selector: 'app-endless-puzzle',
@@ -103,7 +106,7 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                 [turnColor]="turnColor"
                 [dests]="dests"
                 [lastMove]="lastMove"
-                [viewOnly]="state !== 'AWAITING_USER_MOVE'"
+                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'REFUTATION_USER'"
                 [check]="isCheck"
                 (moveMade)="onMoveMade($event)"
               />
@@ -133,6 +136,18 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
                         <p class="status-text">Correct!</p>
+                      </div>
+                    }
+                    @case ('REFUTATION') {
+                      <div class="status-center refutation">
+                        <mat-spinner diameter="24"></mat-spinner>
+                        <p class="status-text">Analyzing...</p>
+                      </div>
+                    }
+                    @case ('REFUTATION_USER') {
+                      <div class="status-center refutation">
+                        <p class="status-text">Continue playing...</p>
+                        <p class="refutation-hint">{{ refutationMovesLeft }} moves remaining</p>
                       </div>
                     }
                     @case ('WRONG') {
@@ -280,6 +295,8 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
+    .refutation .status-text { color: #ff9800; }
+    .refutation-hint { font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
@@ -337,6 +354,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
   isNewHighscore = false;
   highscore = 0;
 
+  // Refutation state
+  refutationMovesLeft = 0;
+
   // Session timer
   sessionSeconds = 0;
   private sessionInterval?: ReturnType<typeof setInterval>;
@@ -357,9 +377,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private moveIndex = 0;
   private prefetchedPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
+  private stockfishReady = false;
 
   constructor(
     private puzzleService: PuzzleService,
+    private stockfish: StockfishService,
     private authService: AuthService,
     private router: Router
   ) {
@@ -370,6 +392,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.stopSessionTimer();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.stockfish.destroy();
   }
 
   // --- Config helpers ---
@@ -407,6 +430,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.prefetchedPuzzle = null;
     this.sessionSeconds = 0;
     this.startSessionTimer();
+
+    // Init Stockfish in background (don't block game start)
+    if (!this.stockfishReady) {
+      this.stockfish.init().then(() => this.stockfishReady = true).catch(() => {});
+    }
+
     this.loadPuzzle();
   }
 
@@ -425,7 +454,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const min = this.currentMinRating;
     const max = this.currentMaxRating;
 
-    // Use prefetched puzzle if it matches the current level
     if (this.prefetchedPuzzle &&
         this.prefetchedPuzzle.rating >= min &&
         this.prefetchedPuzzle.rating <= max) {
@@ -451,7 +479,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   private onNoPuzzle(): void {
-    // No puzzles at this rating — natural game over
     this.endGame();
   }
 
@@ -466,7 +493,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     });
   }
 
-  // --- Puzzle setup & moves (reused logic from PuzzleComponent) ---
+  // --- Puzzle setup & moves ---
 
   private setupPuzzle(puzzle: PuzzleDto): void {
     this.solutionMoves = puzzle.moves.split(' ');
@@ -491,6 +518,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   onMoveMade(event: { orig: Key; dest: Key }): void {
+    // Handle refutation user moves
+    if (this.state === 'REFUTATION_USER') {
+      this.onRefutationUserMove(event);
+      return;
+    }
+
     if (this.state !== 'AWAITING_USER_MOVE') return;
 
     const expectedUci = this.solutionMoves[this.moveIndex];
@@ -504,7 +537,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
       if (this.moveIndex >= this.solutionMoves.length) {
         this.onPuzzleSolved();
       } else {
-        // Play opponent response
         this.updateBoard();
         setTimeout(() => {
           this.playMove(this.solutionMoves[this.moveIndex]);
@@ -519,7 +551,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
         }, 400);
       }
     } else {
-      this.onPuzzleFailed();
+      // Wrong move — start refutation instead of immediate failure
+      this.startRefutation(event.orig, event.dest);
     }
   }
 
@@ -529,25 +562,107 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.recordAttempt(true);
     this.updateBoard();
 
-    // Advance level and auto-load next
     this.autoAdvanceTimer = setTimeout(() => {
       this.level++;
       this.loadPuzzle();
     }, 800);
   }
 
-  private onPuzzleFailed(): void {
+  // --- Refutation flow ---
+
+  private startRefutation(orig: Key, dest: Key): void {
+    // Play the user's wrong move on the board
+    const from = orig as string as Square;
+    const to = dest as string as Square;
+    // Detect promotion for wrong moves too
+    const moves = this.chess.moves({ verbose: true });
+    const matchingMove = moves.find(m => m.from === from && m.to === to);
+    if (matchingMove) {
+      this.chess.move(matchingMove);
+    } else {
+      // Fallback: try with queen promotion
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { /* ignore */ }
+    }
+    this.lastMove = [orig, dest];
+
     this.lives--;
     this.recordAttempt(false);
+    this.refutationMovesLeft = REFUTATION_DEPTH;
+
+    // If Stockfish not ready or game is over immediately, skip refutation
+    if (!this.stockfishReady || this.chess.isGameOver()) {
+      this.finishRefutation();
+      return;
+    }
+
+    this.playStockfishRefutation();
+  }
+
+  private async playStockfishRefutation(): Promise<void> {
+    this.state = 'REFUTATION';
+    this.updateBoard();
+
+    if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
+      this.finishRefutation();
+      return;
+    }
+
+    try {
+      const bestMove = await this.stockfish.getBestMove(this.chess.fen(), 12);
+      this.refutationMovesLeft--;
+
+      // Play Stockfish's response
+      this.playMove(bestMove);
+      this.updateBoard();
+
+      if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
+        // Delay before showing WRONG so user can see the final position
+        this.autoAdvanceTimer = setTimeout(() => this.finishRefutation(), 800);
+        return;
+      }
+
+      // Let user make the next move
+      this.autoAdvanceTimer = setTimeout(() => {
+        this.state = 'REFUTATION_USER';
+        this.updateBoard();
+      }, 600);
+    } catch {
+      // Stockfish error — end refutation immediately
+      this.finishRefutation();
+    }
+  }
+
+  private onRefutationUserMove(event: { orig: Key; dest: Key }): void {
+    const from = event.orig as string as Square;
+    const to = event.dest as string as Square;
+
+    const moves = this.chess.moves({ verbose: true });
+    const matchingMove = moves.find(m => m.from === from && m.to === to);
+    if (matchingMove) {
+      this.chess.move(matchingMove);
+    } else {
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
+    }
+    this.lastMove = [event.orig, event.dest];
+    this.refutationMovesLeft--;
+
+    if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
+      this.updateBoard();
+      this.autoAdvanceTimer = setTimeout(() => this.finishRefutation(), 800);
+      return;
+    }
+
+    // Stockfish responds next
+    this.playStockfishRefutation();
+  }
+
+  private finishRefutation(): void {
+    this.state = 'WRONG';
+    this.updateBoard();
 
     if (this.lives <= 0) {
-      this.state = 'WRONG';
-      this.updateBoard();
       this.autoAdvanceTimer = setTimeout(() => this.endGame(), 1200);
     } else {
-      this.state = 'WRONG';
-      this.updateBoard();
-      // Same level, new puzzle — discard prefetch (it's for next level)
       this.prefetchedPuzzle = null;
       this.autoAdvanceTimer = setTimeout(() => this.loadPuzzle(), 1200);
     }
@@ -573,7 +688,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
-    this.dests = this.state === 'AWAITING_USER_MOVE' ? this.calcDests() : new Map();
+    const interactive = this.state === 'AWAITING_USER_MOVE' || this.state === 'REFUTATION_USER';
+    this.dests = interactive ? this.calcDests() : new Map();
   }
 
   private calcDests(): Map<Key, Key[]> {

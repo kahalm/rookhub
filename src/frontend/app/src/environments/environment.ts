@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.12.1',
+  version: '0.12.2',
   changelog: [
+    { version: '0.12.2', date: '2026-05-27', changes: [
+      'Endless Mode: Stockfish-Refutation bei falschem Zug (5 Halbzuege Weiterspiel statt sofortigem Game Over)',
+      'Endless Mode: User sieht die beste Antwort auf seinen Fehler und kann weiterspielen',
+      'Stockfish 18 Lite (WASM) als Web Worker integriert',
+    ]},
     { version: '0.12.1', date: '2026-05-27', changes: [
       'Endless Mode: Standard Step-Size und Range auf 40 erhoeht',
     ]},
