@@ -571,7 +571,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   state: EndlessState = 'CONFIG';
-  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: false };
+  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: true };
 
   lives = 3;
   level = 0;

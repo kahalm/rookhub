@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.13.8',
+  version: '0.13.9',
   changelog: [
+    { version: '0.13.9', date: '2026-05-27', changes: [
+      'Endless Mode: Fasttrack standardmaessig aktiviert',
+    ]},
     { version: '0.13.8', date: '2026-05-27', changes: [
       'Fix: Fehlende EF-Migration fuer Puzzles-Tabelle hinzugefuegt (Prod-Deployment)',
     ]},
