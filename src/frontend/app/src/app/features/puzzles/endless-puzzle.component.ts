@@ -990,18 +990,22 @@ export class EndlessPuzzleComponent implements OnDestroy {
       .filter(s => s.mistakeAtRatings.length > 0)
       .slice(-FASTTRACK_SESSION_COUNT);
 
-    // Auto-calculate from history, fallback to startElo+400/+800
+    // Auto-calculate from history, ensure minimum startElo+400/+800
+    const defaultFirst = this.config.startElo + 400;
+    const defaultSecond = this.config.startElo + 800;
     if (withMistakes.length > 0) {
-      this.fasttrackAutoFirst = Math.round(
+      const avgFirst = Math.round(
         withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
       );
       const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
-      this.fasttrackAutoSecond = withSecond.length > 0
+      const avgSecond = withSecond.length > 0
         ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
-        : this.fasttrackAutoFirst + 100;
+        : avgFirst + 100;
+      this.fasttrackAutoFirst = Math.max(defaultFirst, avgFirst);
+      this.fasttrackAutoSecond = Math.max(defaultSecond, avgSecond);
     } else {
-      this.fasttrackAutoFirst = this.config.startElo + 400;
-      this.fasttrackAutoSecond = this.config.startElo + 800;
+      this.fasttrackAutoFirst = defaultFirst;
+      this.fasttrackAutoSecond = defaultSecond;
     }
 
     // Apply manual overrides from config, or use auto values
@@ -1123,8 +1127,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
         this.config = { ...this.config, ...saved };
       }
     } catch {}
-    // Migrate old defaults
-    if (this.config.step < 40) this.config.step = 40;
+    // Clamp step size
+    if (this.config.step < 10) this.config.step = 10;
+    if (this.config.step > 200) this.config.step = 200;
     // Clear stale thresholds that are at or below startElo
     if (this.config.fasttrackThreshold1 != null && this.config.fasttrackThreshold1 <= this.config.startElo) {
       this.config.fasttrackThreshold1 = undefined;

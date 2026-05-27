@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.13.3',
+  version: '0.13.4',
   changelog: [
+    { version: '0.13.4', date: '2026-05-27', changes: [
+      'Fasttrack: Auto-Thresholds mindestens startElo+400/+800 (keine sinnlosen niedrigen Werte mehr)',
+      'Fasttrack: Step Size auf 10–200 geclampt',
+    ]},
     { version: '0.13.3', date: '2026-05-27', changes: [
       'Endless Mode: Rating-Range aus DB geladen, alle Inputs validiert gegen tatsaechliche Puzzle-Range',
       'Endless Mode: Leere Rating-Bereiche werden automatisch uebersprungen',
