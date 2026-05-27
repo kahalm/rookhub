@@ -9,6 +9,7 @@ export interface StockfishResult {
 export class StockfishService implements OnDestroy {
   private worker?: Worker;
   private initPromise?: Promise<void>;
+  private pending: Promise<any> = Promise.resolve();
 
   init(): Promise<void> {
     if (this.initPromise) return this.initPromise;
@@ -21,9 +22,7 @@ export class StockfishService implements OnDestroy {
         return;
       }
 
-      const timeout = setTimeout(() => {
-        reject('Stockfish init timeout');
-      }, 15000);
+      const timeout = setTimeout(() => reject('Stockfish init timeout'), 15000);
 
       this.worker.onerror = () => {
         clearTimeout(timeout);
@@ -47,7 +46,18 @@ export class StockfishService implements OnDestroy {
 
   async getBestMove(fen: string, depth = 12): Promise<StockfishResult> {
     await this.init();
-    const sideToMove = fen.split(' ')[1]; // 'w' or 'b'
+    const task = this.pending.then(() => this.runSearch(fen, depth));
+    this.pending = task.catch(() => {});
+    return task;
+  }
+
+  async getEval(fen: string, depth = 12): Promise<string> {
+    const result = await this.getBestMove(fen, depth);
+    return result.eval;
+  }
+
+  private runSearch(fen: string, depth: number): Promise<StockfishResult> {
+    const sideToMove = fen.split(' ')[1];
 
     return new Promise<StockfishResult>((resolve, reject) => {
       let lastEval = '0.0';
@@ -90,11 +100,6 @@ export class StockfishService implements OnDestroy {
     });
   }
 
-  async getEval(fen: string, depth = 12): Promise<string> {
-    const result = await this.getBestMove(fen, depth);
-    return result.eval;
-  }
-
   private send(cmd: string): void {
     this.worker?.postMessage(cmd);
   }
@@ -109,6 +114,7 @@ export class StockfishService implements OnDestroy {
       this.worker.terminate();
       this.worker = undefined;
       this.initPromise = undefined;
+      this.pending = Promise.resolve();
     }
   }
 }

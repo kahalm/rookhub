@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, PuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -15,25 +16,43 @@ import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
+// AWAITING_USER_MOVE = first move only (no buttons)
+// THINKING = opponent responding (buttons visible, board locked)
+// PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
-  | 'CORRECT' | 'REFUTATION' | 'REFUTATION_USER' | 'WRONG' | 'GAME_OVER';
+  | 'THINKING' | 'PLAYING' | 'CORRECT' | 'WRONG' | 'GAME_OVER';
 
 interface EndlessConfig {
   startElo: number;
   step: number;
   rangeWidth: number;
   themes: string;
+  fasttrack: boolean;
+}
+
+interface EndlessSession {
+  timestamp: number;
+  config: EndlessConfig;
+  totalSolved: number;
+  maxRating: number;
+  durationSeconds: number;
+  mistakeAtRatings: number[];
 }
 
 const CONFIG_KEY = 'rookhub_endless_config';
 const HIGHSCORE_KEY = 'rookhub_endless_highscore';
+const HISTORY_KEY = 'rookhub_endless_history';
+const MAX_HISTORY_SESSIONS = 50;
+const FASTTRACK_SESSION_COUNT = 10;
+const MIN_FASTTRACK_SESSIONS = 3;
 
 @Component({
   selector: 'app-endless-puzzle',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, PuzzleBoardComponent
+    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
+    PuzzleBoardComponent
   ],
   template: `
     <div class="endless-page">
@@ -65,13 +84,40 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                   </mat-form-field>
                 </div>
 
+                <div class="fasttrack-section">
+                  <mat-slide-toggle [(ngModel)]="config.fasttrack" [disabled]="!canFasttrack" (change)="onFasttrackToggle()">
+                    Fasttrack
+                  </mat-slide-toggle>
+                  @if (!canFasttrack) {
+                    <p class="fasttrack-hint">Min. {{ MIN_FASTTRACK_SESSIONS }} sessions with mistakes needed ({{ sessionsWithMistakesCount }} so far)</p>
+                  }
+                </div>
+
                 <div class="level-preview">
-                  <h4>Level Preview</h4>
-                  <div class="preview-levels">
-                    @for (lvl of previewLevels; track lvl.level) {
-                      <span class="preview-chip">Lv {{ lvl.level }}: {{ lvl.min }}–{{ lvl.max }}</span>
-                    }
-                  </div>
+                  @if (config.fasttrack && fasttrackPhase1Step > 0) {
+                    <h4>Fasttrack Preview</h4>
+                    <div class="fasttrack-preview">
+                      <div class="fasttrack-phase">
+                        <span class="phase-label">Phase 1 (Lv 1–5)</span>
+                        <span class="phase-detail">Step {{ fasttrackPhase1Step }} | {{ config.startElo }} → {{ fasttrackAvgFirst }}</span>
+                      </div>
+                      <div class="fasttrack-phase">
+                        <span class="phase-label">Phase 2 (Lv 6–10)</span>
+                        <span class="phase-detail">Step {{ fasttrackPhase2Step }} | {{ fasttrackAvgFirst }} → {{ fasttrackAvgSecond }}</span>
+                      </div>
+                      <div class="fasttrack-phase">
+                        <span class="phase-label">Phase 3 (Lv 11+)</span>
+                        <span class="phase-detail">Step 20</span>
+                      </div>
+                    </div>
+                  } @else {
+                    <h4>Level Preview</h4>
+                    <div class="preview-levels">
+                      @for (lvl of previewLevels; track lvl.level) {
+                        <span class="preview-chip">Lv {{ lvl.level }}: {{ lvl.min }}–{{ lvl.max }}</span>
+                      }
+                    </div>
+                  }
                 </div>
 
                 <div class="lives-display config-lives">
@@ -85,6 +131,10 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                     <mat-icon>emoji_events</mat-icon>
                     Highscore: {{ highscore }} Rating
                   </div>
+                }
+
+                @if (sessionHistory.length > 0) {
+                  <p class="session-count">{{ sessionHistory.length }} sessions played</p>
                 }
 
                 <button mat-raised-button color="primary" class="start-btn" (click)="startGame()">
@@ -105,7 +155,7 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                 [turnColor]="turnColor"
                 [dests]="dests"
                 [lastMove]="lastMove"
-                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'REFUTATION_USER'"
+                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING'"
                 [check]="isCheck"
                 (moveMade)="onMoveMade($event)"
               />
@@ -131,6 +181,63 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                         <p class="status-text">Your turn! Find the best move.</p>
                       </div>
                     }
+                    @case ('THINKING') {
+                      <div class="status-center">
+                        <mat-spinner diameter="24"></mat-spinner>
+                        <p class="status-text">Opponent is thinking...</p>
+                        @if (showEval) {
+                          <div class="eval-compare">
+                            <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                            <span class="eval-arrow">→</span>
+                            <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                          </div>
+                        }
+                        <div class="play-actions">
+                          <button mat-button (click)="toggleEval()">
+                            <mat-icon>analytics</mat-icon>
+                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                          </button>
+                          <button mat-button (click)="resetPuzzle()">
+                            <mat-icon>replay</mat-icon>
+                            Reset
+                          </button>
+                          <button mat-button color="warn" (click)="giveUp()">
+                            <mat-icon>flag</mat-icon>
+                            Give Up
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    @case ('PLAYING') {
+                      <div class="status-center">
+                        <p class="status-text">Your move...</p>
+                        @if (showEval) {
+                          <div class="eval-compare">
+                            @if (evalLoading) {
+                              <mat-spinner diameter="16"></mat-spinner>
+                            } @else {
+                              <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                              <span class="eval-arrow">→</span>
+                              <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                            }
+                          </div>
+                        }
+                        <div class="play-actions">
+                          <button mat-button (click)="toggleEval()">
+                            <mat-icon>analytics</mat-icon>
+                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                          </button>
+                          <button mat-button (click)="resetPuzzle()">
+                            <mat-icon>replay</mat-icon>
+                            Reset
+                          </button>
+                          <button mat-button color="warn" (click)="giveUp()">
+                            <mat-icon>flag</mat-icon>
+                            Give Up
+                          </button>
+                        </div>
+                      </div>
+                    }
                     @case ('CORRECT') {
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
@@ -140,51 +247,6 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                         } @else {
                           <p class="status-text">Correct!</p>
                         }
-                      </div>
-                    }
-                    @case ('REFUTATION') {
-                      <div class="status-center refutation">
-                        <mat-spinner diameter="24"></mat-spinner>
-                        <p class="status-text">Stockfish is thinking...</p>
-                        @if (showEval && currentEval) {
-                          <p class="eval-display">{{ currentEval }}</p>
-                        }
-                        <div class="refutation-actions">
-                          <button mat-button (click)="toggleEval()">
-                            <mat-icon>analytics</mat-icon>
-                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
-                          </button>
-                          <button mat-button (click)="resetPuzzle()">
-                            <mat-icon>replay</mat-icon>
-                            Reset
-                          </button>
-                          <button mat-button color="warn" (click)="giveUp()">
-                            <mat-icon>flag</mat-icon>
-                            Give Up
-                          </button>
-                        </div>
-                      </div>
-                    }
-                    @case ('REFUTATION_USER') {
-                      <div class="status-center refutation">
-                        <p class="status-text">Your move...</p>
-                        @if (showEval && currentEval) {
-                          <p class="eval-display">{{ currentEval }}</p>
-                        }
-                        <div class="refutation-actions">
-                          <button mat-button (click)="toggleEval()">
-                            <mat-icon>analytics</mat-icon>
-                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
-                          </button>
-                          <button mat-button (click)="resetPuzzle()">
-                            <mat-icon>replay</mat-icon>
-                            Reset
-                          </button>
-                          <button mat-button color="warn" (click)="giveUp()">
-                            <mat-icon>flag</mat-icon>
-                            Give Up
-                          </button>
-                        </div>
                       </div>
                     }
                     @case ('WRONG') {
@@ -224,6 +286,9 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                       </mat-icon>
                     }
                   </div>
+                  @if (config.fasttrack) {
+                    <div class="phase-indicator">{{ currentPhaseLabel }}</div>
+                  }
                 </mat-card-content>
               </mat-card>
 
@@ -277,6 +342,12 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
                     <span class="go-label">Time</span>
                   </div>
                 </div>
+                @if (currentSessionMistakes.length > 0) {
+                  <div class="mistake-ratings">
+                    <mat-icon>heart_broken</mat-icon>
+                    <span>Lives lost at: {{ currentSessionMistakes.join(', ') }}</span>
+                  </div>
+                }
                 @if (isNewHighscore) {
                   <div class="new-highscore">
                     <mat-icon>emoji_events</mat-icon>
@@ -303,11 +374,16 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
   styles: [`
     .endless-page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
 
-    /* Config Screen */
     .config-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .config-card { max-width: 500px; width: 100%; }
     .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; margin-top: 1rem; }
     .config-fields mat-form-field:last-child { grid-column: 1 / -1; }
+    .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .fasttrack-hint { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0; }
+    .fasttrack-preview { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
+    .fasttrack-phase { display: flex; justify-content: space-between; font-size: 0.85em; }
+    .phase-label { font-weight: 500; }
+    .phase-detail { color: rgba(0,0,0,0.6); font-variant-numeric: tabular-nums; }
     .level-preview { margin-bottom: 1rem; }
     .level-preview h4 { margin: 0 0 0.5rem; color: rgba(0,0,0,0.6); font-size: 0.9em; }
     .preview-levels { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -320,9 +396,9 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-weight: 500; margin-bottom: 1rem;
     }
+    .session-count { text-align: center; font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0 0 1rem; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
 
-    /* Play Screen */
     .play-screen { display: flex; gap: 1.5rem; align-items: flex-start; }
     .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
@@ -332,13 +408,17 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
-    .refutation .status-text { color: #ff9800; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
-    .eval-display {
-      font-size: 1.4em; font-weight: bold; font-variant-numeric: tabular-nums;
-      margin: 0; padding: 4px 12px; border-radius: 6px; background: rgba(0,0,0,0.06);
+    .eval-compare {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 6px 14px; border-radius: 8px; background: rgba(0,0,0,0.04);
+      font-variant-numeric: tabular-nums;
     }
-    .refutation-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
+    .eval-item { display: flex; flex-direction: column; align-items: center; }
+    .eval-label { font-size: 0.7em; color: rgba(0,0,0,0.5); text-transform: uppercase; }
+    .eval-value { font-size: 1.2em; font-weight: bold; }
+    .eval-arrow { color: rgba(0,0,0,0.3); font-size: 1.2em; }
+    .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
@@ -346,6 +426,10 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
     .heart { font-size: 28px; width: 28px; height: 28px; }
     .heart.full { color: #f44336; }
     .heart.empty { color: rgba(0,0,0,0.2); }
+    .phase-indicator {
+      text-align: center; font-size: 0.8em; color: rgba(0,0,0,0.5);
+      margin-top: 0.25rem; font-style: italic;
+    }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .level-badge { font-size: 0.9em; color: rgba(0,0,0,0.6); }
@@ -355,7 +439,6 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
       font-size: 0.85em; white-space: nowrap;
     }
 
-    /* Game Over Screen */
     .gameover-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .gameover-card { max-width: 500px; width: 100%; text-align: center; }
     .gameover-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin: 1.5rem 0; }
@@ -363,6 +446,10 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
     .gameover-stat mat-icon { color: rgba(0,0,0,0.5); }
     .go-value { font-size: 1.5em; font-weight: bold; }
     .go-label { font-size: 0.85em; color: rgba(0,0,0,0.6); }
+    .mistake-ratings {
+      display: flex; align-items: center; gap: 0.5rem; justify-content: center;
+      color: #f44336; font-size: 0.9em; margin-bottom: 1rem;
+    }
     .new-highscore {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-size: 1.2em; font-weight: bold; margin-bottom: 1rem;
@@ -385,9 +472,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   state: EndlessState = 'CONFIG';
-  config: EndlessConfig = { startElo: 700, step: 40, rangeWidth: 40, themes: '' };
+  config: EndlessConfig = { startElo: 700, step: 40, rangeWidth: 40, themes: '', fasttrack: false };
 
-  // Game state
   lives = 3;
   level = 0;
   solved = 0;
@@ -396,9 +482,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
   highscore = 0;
   alternativeSolve = false;
 
-  // Refutation state
-  inRefutation = false;
+  // Eval
   showEval = false;
+  evalLoading = false;
+  initialEval = '';
   currentEval = '';
 
   // Session timer
@@ -406,7 +493,21 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private sessionInterval?: ReturnType<typeof setInterval>;
   private sessionStart = 0;
 
-  // Board state
+  // Session history
+  sessionHistory: EndlessSession[] = [];
+  currentSessionMistakes: number[] = [];
+  readonly MIN_FASTTRACK_SESSIONS = MIN_FASTTRACK_SESSIONS;
+
+  // Fasttrack
+  fasttrackPhase1Step = 0;
+  fasttrackPhase2Step = 0;
+  fasttrackAvgFirst = 0;
+  fasttrackAvgSecond = 0;
+
+  // Dynamic rating
+  _currentMinRating = 0;
+
+  // Board
   puzzle: PuzzleDto | null = null;
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   orientation: Color = 'white';
@@ -415,13 +516,15 @@ export class EndlessPuzzleComponent implements OnDestroy {
   lastMove?: [Key, Key];
   isCheck = false;
 
-  // Puzzle solving
+  // Puzzle logic
   private chess = new Chess();
   private solutionMoves: string[] = [];
   private moveIndex = 0;
+  private onSolutionPath = true;
+  private initialFen = '';
   private prefetchedPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
-  private refutationAborted = false;
+  private aborted = false;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -431,6 +534,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
   ) {
     this.loadConfig();
     this.loadHighscore();
+    this.loadSessionHistory();
+    if (this.config.fasttrack) this.computeFasttrackSteps();
     this.stockfish.init().catch(() => {});
   }
 
@@ -440,7 +545,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.stockfish.destroy();
   }
 
-  // --- Config helpers ---
+  // --- Config ---
 
   get previewLevels(): { level: number; min: number; max: number }[] {
     const levels = [];
@@ -451,16 +556,29 @@ export class EndlessPuzzleComponent implements OnDestroy {
     return levels;
   }
 
-  get currentMinRating(): number {
-    return this.config.startElo + this.level * this.config.step;
+  get currentMinRating(): number { return this._currentMinRating; }
+  get currentMaxRating(): number { return this._currentMinRating + this.config.rangeWidth; }
+  get currentRating(): number { return this._currentMinRating; }
+
+  get canFasttrack(): boolean {
+    return this.sessionsWithMistakesCount >= MIN_FASTTRACK_SESSIONS;
   }
 
-  get currentMaxRating(): number {
-    return this.currentMinRating + this.config.rangeWidth;
+  get sessionsWithMistakesCount(): number {
+    return this.sessionHistory.filter(s => s.mistakeAtRatings.length > 0).length;
   }
 
-  get currentRating(): number {
-    return this.currentMinRating;
+  get currentPhaseLabel(): string {
+    if (!this.config.fasttrack) return '';
+    if (this.solved < 5) return `Phase 1 (step ${this.fasttrackPhase1Step})`;
+    if (this.solved < 10) return `Phase 2 (step ${this.fasttrackPhase2Step})`;
+    return 'Phase 3 (step 20)';
+  }
+
+  onFasttrackToggle(): void {
+    if (this.config.fasttrack) {
+      this.computeFasttrackSteps();
+    }
   }
 
   // --- Game lifecycle ---
@@ -470,31 +588,34 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.lives = 3;
     this.level = 0;
     this.solved = 0;
+    this._currentMinRating = this.config.startElo;
     this.maxRatingReached = this.config.startElo;
     this.isNewHighscore = false;
     this.prefetchedPuzzle = null;
     this.sessionSeconds = 0;
+    this.currentSessionMistakes = [];
+    if (this.config.fasttrack) this.computeFasttrackSteps();
     this.startSessionTimer();
     this.loadPuzzle();
   }
 
   playAgain(): void {
     this.state = 'CONFIG';
+    if (this.config.fasttrack) this.computeFasttrackSteps();
   }
 
-  backToPuzzles(): void {
-    this.router.navigate(['/puzzles']);
-  }
+  backToPuzzles(): void { this.router.navigate(['/puzzles']); }
 
-  // --- Puzzle loading ---
+  // --- Loading ---
 
   private loadPuzzle(): void {
     this.state = 'LOADING';
-    this.inRefutation = false;
     this.alternativeSolve = false;
+    this.showEval = false;
+    this.initialEval = '';
     this.currentEval = '';
-    const min = this.currentMinRating;
-    const max = this.currentMaxRating;
+    const min = this._currentMinRating;
+    const max = this._currentMinRating + this.config.rangeWidth;
 
     if (this.prefetchedPuzzle &&
         this.prefetchedPuzzle.rating >= min &&
@@ -521,8 +642,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   private prefetchNext(): void {
-    const nextLevel = this.level + 1;
-    const min = this.config.startElo + nextLevel * this.config.step;
+    const nextSolved = this.solved + 1;
+    const nextStep = this.getStepForSolved(nextSolved);
+    const min = this._currentMinRating + nextStep;
     const max = min + this.config.rangeWidth;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
@@ -531,14 +653,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
     });
   }
 
-  // --- Puzzle setup & moves ---
+  // --- Puzzle setup ---
 
   private setupPuzzle(puzzle: PuzzleDto): void {
     this.solutionMoves = puzzle.moves.split(' ');
     this.moveIndex = 0;
     this.chess = new Chess(puzzle.fen);
-    this.inRefutation = false;
-    this.refutationAborted = false;
+    this.onSolutionPath = true;
+    this.aborted = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -553,157 +675,125 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.playMove(this.solutionMoves[0]);
       this.moveIndex = 1;
       this.state = 'AWAITING_USER_MOVE';
+      this.initialFen = this.chess.fen();
       this.updateBoard();
     }, 600);
   }
 
+  // --- Move handling (unified for all states after first move) ---
+
   onMoveMade(event: { orig: Key; dest: Key }): void {
-    if (this.state === 'REFUTATION_USER') {
-      this.onRefutationUserMove(event);
+    if (this.state === 'PLAYING') {
+      this.handleMove(event);
       return;
     }
-
     if (this.state !== 'AWAITING_USER_MOVE') return;
+    // First move — transition to unified flow
+    this.handleMove(event);
+  }
 
-    const expectedUci = this.solutionMoves[this.moveIndex];
-    const userUci = event.orig + event.dest;
+  private handleMove(event: { orig: Key; dest: Key }): void {
+    if (this.onSolutionPath) {
+      const expectedUci = this.solutionMoves[this.moveIndex];
+      const userUci = event.orig + event.dest;
 
-    if (userUci === expectedUci.substring(0, 4)) {
-      this.playMove(expectedUci);
-      this.moveIndex++;
-
-      if (this.moveIndex >= this.solutionMoves.length) {
-        this.onPuzzleSolved(false);
+      if (userUci === expectedUci.substring(0, 4)) {
+        // Correct — follow solution
+        this.playMove(expectedUci);
+        this.moveIndex++;
+        this.advanceAfterCorrectMove();
       } else {
-        this.updateBoard();
-        setTimeout(() => {
-          this.playMove(this.solutionMoves[this.moveIndex]);
-          this.moveIndex++;
-          this.updateBoard();
-
-          if (this.moveIndex >= this.solutionMoves.length) {
-            this.onPuzzleSolved(false);
-          } else {
-            this.state = 'AWAITING_USER_MOVE';
-          }
-        }, 400);
+        // Wrong — leave solution path
+        this.playFreeMove(event.orig, event.dest);
+        this.onSolutionPath = false;
+        if (this.chess.isGameOver()) { this.handleGameOver(); return; }
+        this.opponentRespond();
       }
     } else {
-      this.startRefutation(event.orig, event.dest);
+      // Off-path: accept any legal move
+      this.playFreeMove(event.orig, event.dest);
+      if (this.chess.isGameOver()) { this.handleGameOver(); return; }
+      this.opponentRespond();
     }
   }
 
-  private onPuzzleSolved(alternative: boolean): void {
-    this.alternativeSolve = alternative;
-    this.state = 'CORRECT';
-    this.solved++;
-    this.inRefutation = false;
-    this.recordAttempt(true);
-    this.updateBoard();
-
-    this.autoAdvanceTimer = setTimeout(() => {
-      this.level++;
-      this.loadPuzzle();
-    }, alternative ? 1500 : 800);
-  }
-
-  // --- Refutation flow (endless Stockfish play) ---
-
-  private startRefutation(orig: Key, dest: Key): void {
-    // Play the user's wrong move on chess.js
-    const from = orig as string as Square;
-    const to = dest as string as Square;
-    const moves = this.chess.moves({ verbose: true });
-    const matchingMove = moves.find(m => m.from === from && m.to === to);
-    if (matchingMove) {
-      this.chess.move(matchingMove);
-    } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { /* ignore */ }
-    }
-    this.lastMove = [orig, dest];
-
-    this.inRefutation = true;
-    this.refutationAborted = false;
-
-    if (this.chess.isGameOver()) {
-      this.onRefutationGameOver();
+  private advanceAfterCorrectMove(): void {
+    if (this.moveIndex >= this.solutionMoves.length) {
+      this.puzzleSolved(false);
       return;
     }
-
-    this.playStockfishResponse();
+    // Play opponent's solution response
+    this.state = 'THINKING';
+    this.updateBoard();
+    this.autoAdvanceTimer = setTimeout(() => {
+      if (this.aborted) return;
+      this.playMove(this.solutionMoves[this.moveIndex]);
+      this.moveIndex++;
+      this.updateBoard();
+      if (this.moveIndex >= this.solutionMoves.length) {
+        this.puzzleSolved(false);
+        return;
+      }
+      this.state = 'PLAYING';
+      this.updateBoard();
+    }, 400);
   }
 
-  private async playStockfishResponse(): Promise<void> {
-    if (this.refutationAborted) return;
-    this.state = 'REFUTATION';
+  private async opponentRespond(): Promise<void> {
+    this.state = 'THINKING';
     this.updateBoard();
 
     try {
       const result = await this.stockfish.getBestMove(this.chess.fen(), 12);
-      if (this.refutationAborted) return;
-
+      if (this.aborted) return;
       this.currentEval = result.eval;
       this.playMove(result.move);
       this.updateBoard();
 
       if (this.chess.isGameOver()) {
-        this.onRefutationGameOver();
+        this.handleGameOver();
         return;
       }
 
-      // Let user play next
       this.autoAdvanceTimer = setTimeout(() => {
-        if (this.refutationAborted) return;
-        this.state = 'REFUTATION_USER';
+        if (this.aborted) return;
+        this.state = 'PLAYING';
         this.updateBoard();
       }, 400);
     } catch {
-      if (!this.refutationAborted) this.loseLife();
+      if (!this.aborted) this.loseLife();
     }
   }
 
-  private onRefutationUserMove(event: { orig: Key; dest: Key }): void {
-    const from = event.orig as string as Square;
-    const to = event.dest as string as Square;
-
-    const moves = this.chess.moves({ verbose: true });
-    const matchingMove = moves.find(m => m.from === from && m.to === to);
-    if (matchingMove) {
-      this.chess.move(matchingMove);
-    } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
-    }
-    this.lastMove = [event.orig, event.dest];
-
-    if (this.chess.isGameOver()) {
-      this.updateBoard();
-      this.onRefutationGameOver();
-      return;
-    }
-
-    this.playStockfishResponse();
-  }
-
-  private onRefutationGameOver(): void {
-    // User checkmated Stockfish?
+  private handleGameOver(): void {
     if (this.chess.isCheckmate()) {
-      // Whose turn is it? The loser's.
-      const loserColor = this.chess.turn(); // side that is checkmated
+      const loserColor = this.chess.turn();
       const userColor = this.orientation === 'white' ? 'w' : 'b';
-
       if (loserColor !== userColor) {
-        // User mated Stockfish → alternative solve!
-        this.onPuzzleSolved(true);
+        this.puzzleSolved(true);
         return;
       }
     }
-    // Stockfish mated user, or draw → lose life
     this.loseLife();
   }
 
+  private puzzleSolved(alternative: boolean): void {
+    this.alternativeSolve = alternative;
+    this.state = 'CORRECT';
+    this.solved++;
+    this.recordAttempt(true);
+    this.updateBoard();
+
+    this.autoAdvanceTimer = setTimeout(() => {
+      this._currentMinRating += this.getCurrentStep();
+      this.level++;
+      this.loadPuzzle();
+    }, alternative ? 1500 : 800);
+  }
+
   private loseLife(): void {
+    this.currentSessionMistakes.push(this._currentMinRating);
     this.lives--;
-    this.inRefutation = false;
     this.recordAttempt(false);
     this.state = 'WRONG';
     this.updateBoard();
@@ -716,27 +806,38 @@ export class EndlessPuzzleComponent implements OnDestroy {
     }
   }
 
-  // --- Refutation buttons ---
+  // --- Buttons ---
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && !this.currentEval && this.state === 'REFUTATION_USER') {
-      this.stockfish.getEval(this.chess.fen(), 12)
-        .then(ev => this.currentEval = ev)
-        .catch(() => {});
+    if (this.showEval && this.state === 'PLAYING') {
+      this.refreshEval();
     }
+  }
+
+  private async refreshEval(): Promise<void> {
+    this.evalLoading = true;
+    try {
+      if (!this.initialEval && this.initialFen) {
+        this.initialEval = await this.stockfish.getEval(this.initialFen, 12);
+      }
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), 12);
+    } catch {}
+    this.evalLoading = false;
   }
 
   resetPuzzle(): void {
     if (!this.puzzle) return;
-    this.refutationAborted = true;
+    this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.currentEval = '';
+    this.initialEval = '';
+    this.showEval = false;
     this.setupPuzzle(this.puzzle);
   }
 
   giveUp(): void {
-    this.refutationAborted = true;
+    this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.loseLife();
   }
@@ -744,7 +845,45 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private endGame(): void {
     this.stopSessionTimer();
     this.checkHighscore();
+    this.recordSession();
     this.state = 'GAME_OVER';
+  }
+
+  // --- Step calculation ---
+
+  private getCurrentStep(): number {
+    if (!this.config.fasttrack) return this.config.step;
+    return this.getStepForSolved(this.solved);
+  }
+
+  private getStepForSolved(solvedCount: number): number {
+    if (!this.config.fasttrack) return this.config.step;
+    if (solvedCount <= 5) return this.fasttrackPhase1Step;
+    if (solvedCount <= 10) return this.fasttrackPhase2Step;
+    return 20;
+  }
+
+  private computeFasttrackSteps(): void {
+    const withMistakes = this.sessionHistory
+      .filter(s => s.mistakeAtRatings.length > 0)
+      .slice(-FASTTRACK_SESSION_COUNT);
+
+    if (withMistakes.length < MIN_FASTTRACK_SESSIONS) {
+      this.config.fasttrack = false;
+      return;
+    }
+
+    this.fasttrackAvgFirst = Math.round(
+      withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
+    );
+
+    const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
+    this.fasttrackAvgSecond = withSecond.length > 0
+      ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
+      : this.fasttrackAvgFirst + 100;
+
+    this.fasttrackPhase1Step = Math.max(10, Math.round((this.fasttrackAvgFirst - this.config.startElo) / 5));
+    this.fasttrackPhase2Step = Math.max(10, Math.round((this.fasttrackAvgSecond - this.fasttrackAvgFirst) / 5));
   }
 
   // --- Board helpers ---
@@ -757,11 +896,24 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
+  private playFreeMove(orig: Key, dest: Key): void {
+    const from = orig as string as Square;
+    const to = dest as string as Square;
+    const moves = this.chess.moves({ verbose: true });
+    const match = moves.find(m => m.from === from && m.to === to);
+    if (match) {
+      this.chess.move(match);
+    } else {
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
+    }
+    this.lastMove = [orig, dest];
+  }
+
   private updateBoard(): void {
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
-    const interactive = this.state === 'AWAITING_USER_MOVE' || this.state === 'REFUTATION_USER';
+    const interactive = this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING';
     this.dests = interactive ? this.calcDests() : new Map();
   }
 
@@ -835,5 +987,34 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.isNewHighscore = true;
       try { localStorage.setItem(HIGHSCORE_KEY, String(this.highscore)); } catch {}
     }
+  }
+
+  // --- Session History ---
+
+  private loadSessionHistory(): void {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) this.sessionHistory = JSON.parse(raw) || [];
+    } catch { this.sessionHistory = []; }
+  }
+
+  private saveSessionHistory(): void {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(this.sessionHistory)); } catch {}
+  }
+
+  private recordSession(): void {
+    const session: EndlessSession = {
+      timestamp: Date.now(),
+      config: { ...this.config },
+      totalSolved: this.solved,
+      maxRating: this.maxRatingReached,
+      durationSeconds: this.sessionSeconds,
+      mistakeAtRatings: [...this.currentSessionMistakes]
+    };
+    this.sessionHistory.push(session);
+    if (this.sessionHistory.length > MAX_HISTORY_SESSIONS) {
+      this.sessionHistory = this.sessionHistory.slice(-MAX_HISTORY_SESSIONS);
+    }
+    this.saveSessionHistory();
   }
 }

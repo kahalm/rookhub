@@ -1,7 +1,20 @@
 export const environment = {
   production: false,
-  version: '0.12.3',
+  version: '0.13.0',
   changelog: [
+    { version: '0.13.0', date: '2026-05-27', changes: [
+      'Endless Mode: Session-History trackt alle Spieldurchlaeufe (max 50, localStorage)',
+      'Endless Mode: Fasttrack-Option ueberspringt leichte Puzzles basierend auf vergangenen Sessions',
+      'Endless Mode: 3-Phasen Fasttrack-Algorithmus (Phase 1: bis 1. Fehler-Avg, Phase 2: bis 2. Fehler-Avg, Phase 3: Step 20)',
+      'Endless Mode: Dynamisches Rating-System statt fester Level-Berechnung',
+      'Endless Mode: Fehler-Ratings im Game-Over-Screen angezeigt',
+      'Endless Mode: Phase-Indikator waehrend Fasttrack-Spiel',
+    ]},
+    { version: '0.12.4', date: '2026-05-27', changes: [
+      'Endless Mode: Einheitliches UI nach erstem Zug (kein Unterschied zwischen richtig/falsch sichtbar)',
+      'Endless Mode: Correct nur bei komplett geloestem Puzzle, sonst immer Reset/Give Up/Eval Buttons',
+      'Endless Mode: Eval-Vergleich Start vs. Aktuell beim Klick auf Show Eval',
+    ]},
     { version: '0.12.3', date: '2026-05-27', changes: [
       'Endless Mode: Stockfish spielt nach falschem Zug endlos weiter (kein Limit)',
       'Endless Mode: Matt gegen Stockfish zaehlt als alternative Loesung',
