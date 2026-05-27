@@ -1,10 +1,16 @@
 export const environment = {
   production: false,
-  version: '0.12.2',
+  version: '0.12.3',
   changelog: [
+    { version: '0.12.3', date: '2026-05-27', changes: [
+      'Endless Mode: Stockfish spielt nach falschem Zug endlos weiter (kein Limit)',
+      'Endless Mode: Matt gegen Stockfish zaehlt als alternative Loesung',
+      'Endless Mode: Show Eval, Reset (kein Lebensverlust), Give Up Buttons',
+      'Endless Mode: Eval-Anzeige aus Weiss-Perspektive',
+      'Fix: CSP + WASM MIME-Type fuer Stockfish Web Worker',
+    ]},
     { version: '0.12.2', date: '2026-05-27', changes: [
-      'Endless Mode: Stockfish-Refutation bei falschem Zug (5 Halbzuege Weiterspiel statt sofortigem Game Over)',
-      'Endless Mode: User sieht die beste Antwort auf seinen Fehler und kann weiterspielen',
+      'Endless Mode: Stockfish-Refutation bei falschem Zug',
       'Stockfish 18 Lite (WASM) als Web Worker integriert',
     ]},
     { version: '0.12.1', date: '2026-05-27', changes: [

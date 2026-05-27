@@ -1,19 +1,39 @@
 import { Injectable, OnDestroy } from '@angular/core';
 
+export interface StockfishResult {
+  move: string;
+  eval: string; // from white's perspective, e.g. "+1.5", "-0.3", "#3", "#-2"
+}
+
 @Injectable({ providedIn: 'root' })
 export class StockfishService implements OnDestroy {
   private worker?: Worker;
-  private ready = false;
+  private initPromise?: Promise<void>;
 
   init(): Promise<void> {
-    if (this.worker) return Promise.resolve();
+    if (this.initPromise) return this.initPromise;
 
-    return new Promise<void>((resolve) => {
-      this.worker = new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+    this.initPromise = new Promise<void>((resolve, reject) => {
+      try {
+        this.worker = new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+      } catch {
+        reject('Failed to create Stockfish worker');
+        return;
+      }
+
+      const timeout = setTimeout(() => {
+        reject('Stockfish init timeout');
+      }, 15000);
+
+      this.worker.onerror = () => {
+        clearTimeout(timeout);
+        reject('Stockfish worker error');
+      };
+
       const handler = (e: MessageEvent) => {
         if (typeof e.data === 'string' && e.data.includes('readyok')) {
           this.worker!.removeEventListener('message', handler);
-          this.ready = true;
+          clearTimeout(timeout);
           resolve();
         }
       };
@@ -21,12 +41,17 @@ export class StockfishService implements OnDestroy {
       this.send('uci');
       this.send('isready');
     });
+
+    return this.initPromise;
   }
 
-  getBestMove(fen: string, depth = 12): Promise<string> {
-    if (!this.worker || !this.ready) return Promise.reject('Stockfish not ready');
+  async getBestMove(fen: string, depth = 12): Promise<StockfishResult> {
+    await this.init();
+    const sideToMove = fen.split(' ')[1]; // 'w' or 'b'
 
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<StockfishResult>((resolve, reject) => {
+      let lastEval = '0.0';
+
       const timeout = setTimeout(() => {
         this.worker!.removeEventListener('message', handler);
         reject('Stockfish timeout');
@@ -34,12 +59,26 @@ export class StockfishService implements OnDestroy {
 
       const handler = (e: MessageEvent) => {
         const line = e.data as string;
-        if (typeof line === 'string' && line.startsWith('bestmove')) {
+        if (typeof line !== 'string') return;
+
+        const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
+        if (scoreMatch) {
+          let value = parseInt(scoreMatch[2], 10);
+          if (sideToMove === 'b') value = -value;
+          if (scoreMatch[1] === 'cp') {
+            const v = value / 100;
+            lastEval = (v >= 0 ? '+' : '') + v.toFixed(1);
+          } else {
+            lastEval = value > 0 ? `#${value}` : `#${value}`;
+          }
+        }
+
+        if (line.startsWith('bestmove')) {
           clearTimeout(timeout);
           this.worker!.removeEventListener('message', handler);
           const move = line.split(' ')[1];
           if (move && move !== '(none)') {
-            resolve(move);
+            resolve({ move, eval: lastEval });
           } else {
             reject('No move found');
           }
@@ -49,6 +88,11 @@ export class StockfishService implements OnDestroy {
       this.send(`position fen ${fen}`);
       this.send(`go depth ${depth}`);
     });
+  }
+
+  async getEval(fen: string, depth = 12): Promise<string> {
+    const result = await this.getBestMove(fen, depth);
+    return result.eval;
   }
 
   private send(cmd: string): void {
@@ -64,7 +108,7 @@ export class StockfishService implements OnDestroy {
       this.send('quit');
       this.worker.terminate();
       this.worker = undefined;
-      this.ready = false;
+      this.initPromise = undefined;
     }
   }
 }

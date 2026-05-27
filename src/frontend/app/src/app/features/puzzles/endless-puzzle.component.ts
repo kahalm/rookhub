@@ -27,7 +27,6 @@ interface EndlessConfig {
 
 const CONFIG_KEY = 'rookhub_endless_config';
 const HIGHSCORE_KEY = 'rookhub_endless_highscore';
-const REFUTATION_DEPTH = 5; // half-moves after wrong move
 
 @Component({
   selector: 'app-endless-puzzle',
@@ -135,19 +134,57 @@ const REFUTATION_DEPTH = 5; // half-moves after wrong move
                     @case ('CORRECT') {
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
-                        <p class="status-text">Correct!</p>
+                        @if (alternativeSolve) {
+                          <p class="status-text">Checkmate!</p>
+                          <p class="alt-hint">Alternative solution — the puzzle had a different intended line.</p>
+                        } @else {
+                          <p class="status-text">Correct!</p>
+                        }
                       </div>
                     }
                     @case ('REFUTATION') {
                       <div class="status-center refutation">
                         <mat-spinner diameter="24"></mat-spinner>
-                        <p class="status-text">Analyzing...</p>
+                        <p class="status-text">Stockfish is thinking...</p>
+                        @if (showEval && currentEval) {
+                          <p class="eval-display">{{ currentEval }}</p>
+                        }
+                        <div class="refutation-actions">
+                          <button mat-button (click)="toggleEval()">
+                            <mat-icon>analytics</mat-icon>
+                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                          </button>
+                          <button mat-button (click)="resetPuzzle()">
+                            <mat-icon>replay</mat-icon>
+                            Reset
+                          </button>
+                          <button mat-button color="warn" (click)="giveUp()">
+                            <mat-icon>flag</mat-icon>
+                            Give Up
+                          </button>
+                        </div>
                       </div>
                     }
                     @case ('REFUTATION_USER') {
                       <div class="status-center refutation">
-                        <p class="status-text">Continue playing...</p>
-                        <p class="refutation-hint">{{ refutationMovesLeft }} moves remaining</p>
+                        <p class="status-text">Your move...</p>
+                        @if (showEval && currentEval) {
+                          <p class="eval-display">{{ currentEval }}</p>
+                        }
+                        <div class="refutation-actions">
+                          <button mat-button (click)="toggleEval()">
+                            <mat-icon>analytics</mat-icon>
+                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                          </button>
+                          <button mat-button (click)="resetPuzzle()">
+                            <mat-icon>replay</mat-icon>
+                            Reset
+                          </button>
+                          <button mat-button color="warn" (click)="giveUp()">
+                            <mat-icon>flag</mat-icon>
+                            Give Up
+                          </button>
+                        </div>
                       </div>
                     }
                     @case ('WRONG') {
@@ -296,7 +333,12 @@ const REFUTATION_DEPTH = 5; // half-moves after wrong move
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .refutation .status-text { color: #ff9800; }
-    .refutation-hint { font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0; }
+    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .eval-display {
+      font-size: 1.4em; font-weight: bold; font-variant-numeric: tabular-nums;
+      margin: 0; padding: 4px 12px; border-radius: 6px; background: rgba(0,0,0,0.06);
+    }
+    .refutation-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
@@ -336,7 +378,6 @@ const REFUTATION_DEPTH = 5; // half-moves after wrong move
   `]
 })
 export class EndlessPuzzleComponent implements OnDestroy {
-  // Screen: which view to show
   get screen(): 'config' | 'play' | 'gameover' {
     if (this.state === 'GAME_OVER') return 'gameover';
     if (this.state === 'CONFIG') return 'config';
@@ -353,9 +394,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
   maxRatingReached = 0;
   isNewHighscore = false;
   highscore = 0;
+  alternativeSolve = false;
 
   // Refutation state
-  refutationMovesLeft = 0;
+  inRefutation = false;
+  showEval = false;
+  currentEval = '';
 
   // Session timer
   sessionSeconds = 0;
@@ -377,7 +421,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private moveIndex = 0;
   private prefetchedPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
-  private stockfishReady = false;
+  private refutationAborted = false;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -387,6 +431,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   ) {
     this.loadConfig();
     this.loadHighscore();
+    this.stockfish.init().catch(() => {});
   }
 
   ngOnDestroy(): void {
@@ -430,12 +475,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.prefetchedPuzzle = null;
     this.sessionSeconds = 0;
     this.startSessionTimer();
-
-    // Init Stockfish in background (don't block game start)
-    if (!this.stockfishReady) {
-      this.stockfish.init().then(() => this.stockfishReady = true).catch(() => {});
-    }
-
     this.loadPuzzle();
   }
 
@@ -451,6 +490,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   private loadPuzzle(): void {
     this.state = 'LOADING';
+    this.inRefutation = false;
+    this.alternativeSolve = false;
+    this.currentEval = '';
     const min = this.currentMinRating;
     const max = this.currentMaxRating;
 
@@ -467,7 +509,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
       next: p => this.onPuzzleLoaded(p),
-      error: () => this.onNoPuzzle()
+      error: () => this.endGame()
     });
   }
 
@@ -476,10 +518,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.trackMaxRating(puzzle.rating);
     this.setupPuzzle(puzzle);
     this.prefetchNext();
-  }
-
-  private onNoPuzzle(): void {
-    this.endGame();
   }
 
   private prefetchNext(): void {
@@ -499,6 +537,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.solutionMoves = puzzle.moves.split(' ');
     this.moveIndex = 0;
     this.chess = new Chess(puzzle.fen);
+    this.inRefutation = false;
+    this.refutationAborted = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -518,7 +558,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   onMoveMade(event: { orig: Key; dest: Key }): void {
-    // Handle refutation user moves
     if (this.state === 'REFUTATION_USER') {
       this.onRefutationUserMove(event);
       return;
@@ -530,12 +569,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const userUci = event.orig + event.dest;
 
     if (userUci === expectedUci.substring(0, 4)) {
-      // Correct move
       this.playMove(expectedUci);
       this.moveIndex++;
 
       if (this.moveIndex >= this.solutionMoves.length) {
-        this.onPuzzleSolved();
+        this.onPuzzleSolved(false);
       } else {
         this.updateBoard();
         setTimeout(() => {
@@ -544,91 +582,83 @@ export class EndlessPuzzleComponent implements OnDestroy {
           this.updateBoard();
 
           if (this.moveIndex >= this.solutionMoves.length) {
-            this.onPuzzleSolved();
+            this.onPuzzleSolved(false);
           } else {
             this.state = 'AWAITING_USER_MOVE';
           }
         }, 400);
       }
     } else {
-      // Wrong move — start refutation instead of immediate failure
       this.startRefutation(event.orig, event.dest);
     }
   }
 
-  private onPuzzleSolved(): void {
+  private onPuzzleSolved(alternative: boolean): void {
+    this.alternativeSolve = alternative;
     this.state = 'CORRECT';
     this.solved++;
+    this.inRefutation = false;
     this.recordAttempt(true);
     this.updateBoard();
 
     this.autoAdvanceTimer = setTimeout(() => {
       this.level++;
       this.loadPuzzle();
-    }, 800);
+    }, alternative ? 1500 : 800);
   }
 
-  // --- Refutation flow ---
+  // --- Refutation flow (endless Stockfish play) ---
 
   private startRefutation(orig: Key, dest: Key): void {
-    // Play the user's wrong move on the board
+    // Play the user's wrong move on chess.js
     const from = orig as string as Square;
     const to = dest as string as Square;
-    // Detect promotion for wrong moves too
     const moves = this.chess.moves({ verbose: true });
     const matchingMove = moves.find(m => m.from === from && m.to === to);
     if (matchingMove) {
       this.chess.move(matchingMove);
     } else {
-      // Fallback: try with queen promotion
       try { this.chess.move({ from, to, promotion: 'q' }); } catch { /* ignore */ }
     }
     this.lastMove = [orig, dest];
 
-    this.lives--;
-    this.recordAttempt(false);
-    this.refutationMovesLeft = REFUTATION_DEPTH;
+    this.inRefutation = true;
+    this.refutationAborted = false;
 
-    // If Stockfish not ready or game is over immediately, skip refutation
-    if (!this.stockfishReady || this.chess.isGameOver()) {
-      this.finishRefutation();
+    if (this.chess.isGameOver()) {
+      this.onRefutationGameOver();
       return;
     }
 
-    this.playStockfishRefutation();
+    this.playStockfishResponse();
   }
 
-  private async playStockfishRefutation(): Promise<void> {
+  private async playStockfishResponse(): Promise<void> {
+    if (this.refutationAborted) return;
     this.state = 'REFUTATION';
     this.updateBoard();
 
-    if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
-      this.finishRefutation();
-      return;
-    }
-
     try {
-      const bestMove = await this.stockfish.getBestMove(this.chess.fen(), 12);
-      this.refutationMovesLeft--;
+      const result = await this.stockfish.getBestMove(this.chess.fen(), 12);
+      if (this.refutationAborted) return;
 
-      // Play Stockfish's response
-      this.playMove(bestMove);
+      this.currentEval = result.eval;
+      this.playMove(result.move);
       this.updateBoard();
 
-      if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
-        // Delay before showing WRONG so user can see the final position
-        this.autoAdvanceTimer = setTimeout(() => this.finishRefutation(), 800);
+      if (this.chess.isGameOver()) {
+        this.onRefutationGameOver();
         return;
       }
 
-      // Let user make the next move
+      // Let user play next
       this.autoAdvanceTimer = setTimeout(() => {
+        if (this.refutationAborted) return;
         this.state = 'REFUTATION_USER';
         this.updateBoard();
-      }, 600);
+      }, 400);
     } catch {
-      // Stockfish error — end refutation immediately
-      this.finishRefutation();
+      if (!this.refutationAborted) this.loseLife();
     }
   }
 
@@ -644,19 +674,37 @@ export class EndlessPuzzleComponent implements OnDestroy {
       try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
     }
     this.lastMove = [event.orig, event.dest];
-    this.refutationMovesLeft--;
 
-    if (this.refutationMovesLeft <= 0 || this.chess.isGameOver()) {
+    if (this.chess.isGameOver()) {
       this.updateBoard();
-      this.autoAdvanceTimer = setTimeout(() => this.finishRefutation(), 800);
+      this.onRefutationGameOver();
       return;
     }
 
-    // Stockfish responds next
-    this.playStockfishRefutation();
+    this.playStockfishResponse();
   }
 
-  private finishRefutation(): void {
+  private onRefutationGameOver(): void {
+    // User checkmated Stockfish?
+    if (this.chess.isCheckmate()) {
+      // Whose turn is it? The loser's.
+      const loserColor = this.chess.turn(); // side that is checkmated
+      const userColor = this.orientation === 'white' ? 'w' : 'b';
+
+      if (loserColor !== userColor) {
+        // User mated Stockfish → alternative solve!
+        this.onPuzzleSolved(true);
+        return;
+      }
+    }
+    // Stockfish mated user, or draw → lose life
+    this.loseLife();
+  }
+
+  private loseLife(): void {
+    this.lives--;
+    this.inRefutation = false;
+    this.recordAttempt(false);
     this.state = 'WRONG';
     this.updateBoard();
 
@@ -666,6 +714,31 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.prefetchedPuzzle = null;
       this.autoAdvanceTimer = setTimeout(() => this.loadPuzzle(), 1200);
     }
+  }
+
+  // --- Refutation buttons ---
+
+  toggleEval(): void {
+    this.showEval = !this.showEval;
+    if (this.showEval && !this.currentEval && this.state === 'REFUTATION_USER') {
+      this.stockfish.getEval(this.chess.fen(), 12)
+        .then(ev => this.currentEval = ev)
+        .catch(() => {});
+    }
+  }
+
+  resetPuzzle(): void {
+    if (!this.puzzle) return;
+    this.refutationAborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.currentEval = '';
+    this.setupPuzzle(this.puzzle);
+  }
+
+  giveUp(): void {
+    this.refutationAborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.loseLife();
   }
 
   private endGame(): void {
@@ -728,9 +801,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // --- Tracking ---
 
   private trackMaxRating(rating: number): void {
-    if (rating > this.maxRatingReached) {
-      this.maxRatingReached = rating;
-    }
+    if (rating > this.maxRatingReached) this.maxRatingReached = rating;
   }
 
   private recordAttempt(solved: boolean): void {
@@ -743,17 +814,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private loadConfig(): void {
     try {
       const raw = localStorage.getItem(CONFIG_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        this.config = { ...this.config, ...saved };
-      }
+      if (raw) this.config = { ...this.config, ...JSON.parse(raw) };
     } catch {}
   }
 
   private saveConfig(): void {
-    try {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config));
-    } catch {}
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config)); } catch {}
   }
 
   private loadHighscore(): void {
@@ -767,9 +833,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     if (this.maxRatingReached > this.highscore) {
       this.highscore = this.maxRatingReached;
       this.isNewHighscore = true;
-      try {
-        localStorage.setItem(HIGHSCORE_KEY, String(this.highscore));
-      } catch {}
+      try { localStorage.setItem(HIGHSCORE_KEY, String(this.highscore)); } catch {}
     }
   }
 }
