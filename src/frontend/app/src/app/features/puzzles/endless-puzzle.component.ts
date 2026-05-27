@@ -349,6 +349,13 @@ const FASTTRACK_SESSION_COUNT = 10;
                               <mat-icon>visibility</mat-icon> Show Solution
                             </button>
                           </div>
+                        } @else if (reviewingWrongPuzzle) {
+                          <p class="status-text solution-review">Solution</p>
+                          <div class="alt-actions">
+                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                              <mat-icon>skip_next</mat-icon> Continue
+                            </button>
+                          </div>
                         } @else {
                           <p class="status-text">Correct!</p>
                         }
@@ -358,6 +365,14 @@ const FASTTRACK_SESSION_COUNT = 10;
                       <div class="status-center failed">
                         <mat-icon class="result-icon">cancel</mat-icon>
                         <p class="status-text">Wrong!</p>
+                        <div class="wrong-actions">
+                          <button mat-button (click)="showIntendedSolution()">
+                            <mat-icon>visibility</mat-icon> Show Solution
+                          </button>
+                          <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                            <mat-icon>skip_next</mat-icon> Continue
+                          </button>
+                        </div>
                       </div>
                     }
                   }
@@ -643,6 +658,8 @@ const FASTTRACK_SESSION_COUNT = 10;
     .failed .result-icon { color: #f44336; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .solution-review { color: rgba(0,0,0,0.6); }
     .eval-compare {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 6px 14px; border-radius: 8px; background: rgba(0,0,0,0.04);
@@ -808,6 +825,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private prefetchedPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   private aborted = false;
+  reviewingWrongPuzzle = false;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -984,6 +1002,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.reviewingWrongPuzzle = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -1139,8 +1158,20 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.loadPuzzle();
   }
 
+  continueAfterWrong(): void {
+    this.reviewingWrongPuzzle = false;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    if (this.lives <= 0) {
+      this.endGame();
+    } else {
+      this.prefetchedPuzzle = null;
+      this.loadPuzzle();
+    }
+  }
+
   showIntendedSolution(): void {
     if (!this.puzzle) return;
+    if (this.state === 'WRONG') this.reviewingWrongPuzzle = true;
     // Reset board to puzzle start and play through intended solution
     this.solutionMoves = this.puzzle.moves.split(' ');
     this.chess = new Chess(this.puzzle.fen);
@@ -1178,13 +1209,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.recordAttempt(false);
     this.state = 'WRONG';
     this.updateBoard();
-
-    if (this.lives <= 0) {
-      this.autoAdvanceTimer = setTimeout(() => this.endGame(), 1200);
-    } else {
-      this.prefetchedPuzzle = null;
-      this.autoAdvanceTimer = setTimeout(() => this.loadPuzzle(), 1200);
-    }
   }
 
   // --- Buttons ---

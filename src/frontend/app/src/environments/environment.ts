@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.18.1',
+  version: '0.18.2',
   changelog: [
+    { version: '0.18.2', date: '2026-05-27', changes: [
+      'Endless Mode: Bei falschem Puzzle kein Auto-Advance, stattdessen Show Solution + Continue Buttons',
+    ]},
     { version: '0.18.1', date: '2026-05-27', changes: [
       'Endless Mode: Stockfish Depth waehrend laufender Serie per Slider anpassbar',
     ]},
