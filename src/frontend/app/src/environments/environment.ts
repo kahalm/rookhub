@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.14.4',
+  version: '0.14.5',
   changelog: [
+    { version: '0.14.5', date: '2026-05-27', changes: [
+      'Fix: Premove funktioniert jetzt (Figuren während Gegnerzug anklickbar)',
+    ]},
     { version: '0.14.4', date: '2026-05-27', changes: [
       'Fix: Premove-System komplett überarbeitet (Zug wird nach Gegnerzug automatisch ausgeführt)',
       'Fix: Hilfe-Overlay mit korrekten Umlauten',
