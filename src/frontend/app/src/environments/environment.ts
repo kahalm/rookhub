@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.14.0',
+  version: '0.14.1',
   changelog: [
+    { version: '0.14.1', date: '2026-05-27', changes: [
+      'Endless Mode: Hilfe-Overlay erklaert Spielablauf, Stockfish, Buttons und Einstellungen',
+    ]},
     { version: '0.14.0', date: '2026-05-27', changes: [
       'Endless Mode: Mouseslip-Button macht letzten Zug gratis rueckgaengig (einmal pro Puzzle)',
     ]},
