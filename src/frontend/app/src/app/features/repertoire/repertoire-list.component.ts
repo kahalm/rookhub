@@ -9,6 +9,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
+import { Repertoire } from '../../core/models';
 
 @Component({
   selector: 'app-repertoire-list',
@@ -55,7 +56,7 @@ import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.comp
   `]
 })
 export class RepertoireListComponent implements OnInit {
-  repertoires: any[] = [];
+  repertoires: Repertoire[] = [];
   loading = true;
 
   constructor(private http: HttpClient, private dialog: MatDialog, private snackBar: MatSnackBar) {}
@@ -66,7 +67,7 @@ export class RepertoireListComponent implements OnInit {
 
   loadRepertoires(): void {
     this.loading = true;
-    this.http.get<any[]>('/api/repertoires').subscribe({
+    this.http.get<Repertoire[]>('/api/repertoires').subscribe({
       next: (r) => { this.repertoires = r; this.loading = false; },
       error: () => { this.loading = false; }
     });

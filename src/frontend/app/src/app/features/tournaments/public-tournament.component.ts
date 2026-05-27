@@ -17,6 +17,7 @@ import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { TeamPlayersDialogComponent } from './tournament-detail.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
 
 @Component({
   selector: 'app-public-tournament',
@@ -328,10 +329,10 @@ import { ShareTournamentDialogComponent } from './share-tournament-dialog.compon
   `]
 })
 export class PublicTournamentComponent implements OnInit {
-  tournament: any = null;
-  players: any[] = [];
-  teams: any[] = [];
-  pairings: any[] = [];
+  tournament: Tournament | null = null;
+  players: TournamentPlayer[] = [];
+  teams: TournamentTeam[] = [];
+  pairings: DisplayPairing[] = [];
   rounds: number[] = [];
   selectedRound = 1;
   loading = true;
@@ -364,8 +365,8 @@ export class PublicTournamentComponent implements OnInit {
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
     this.loadLocalFavorites();
-    this.http.get(`/api/tournaments/${this.id}`).subscribe({
-      next: (t: any) => {
+    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+      next: (t) => {
         this.tournament = t;
         this.loading = false;
         if (t.totalRounds) {
@@ -392,7 +393,7 @@ export class PublicTournamentComponent implements OnInit {
 
   // --- Data loading ---
 
-  onTabChange(event: any): void {
+  onTabChange(event: { index: number }): void {
     this.selectedTabIndex = event.index;
     if (event.index === 1 && this.teams.length === 0) this.loadTeams();
     if (event.index === 2 && this.pairings.length === 0) this.loadPairings();
@@ -400,7 +401,7 @@ export class PublicTournamentComponent implements OnInit {
 
   loadPlayers(): void {
     this.playersLoading = true;
-    this.http.get<any[]>(`/api/tournaments/${this.id}/players`).subscribe({
+    this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; },
       error: () => { this.playersLoading = false; }
     });
@@ -408,7 +409,7 @@ export class PublicTournamentComponent implements OnInit {
 
   loadTeams(): void {
     this.teamsLoading = true;
-    this.http.get<any[]>(`/api/tournaments/${this.id}/teams`).subscribe({
+    this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; },
       error: () => { this.teamsLoading = false; }
     });
@@ -416,11 +417,12 @@ export class PublicTournamentComponent implements OnInit {
 
   loadPairings(): void {
     this.pairingsLoading = true;
+    // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
       next: (p) => {
         if (p.length > 0 && p[0].homeTeam !== undefined) {
           this.hasTeamPairings = true;
-          this.pairings = p.map(item => ({
+          this.pairings = p.map((item): DisplayPairing => ({
             board: item.matchNumber,
             white: item.homeTeam,
             black: item.awayTeam,
@@ -428,7 +430,12 @@ export class PublicTournamentComponent implements OnInit {
           }));
         } else {
           this.hasTeamPairings = false;
-          this.pairings = p.map(item => ({ ...item, board: item.boardNumber }));
+          this.pairings = p.map((item): DisplayPairing => ({
+            board: item.boardNumber,
+            white: item.white,
+            black: item.black,
+            result: item.result ?? ''
+          }));
         }
         this.pairingsLoading = false;
       },
@@ -507,7 +514,7 @@ export class PublicTournamentComponent implements OnInit {
     return names;
   }
 
-  get displayedPlayers(): any[] {
+  get displayedPlayers(): TournamentPlayer[] {
     let data = this.players;
     if (this.showFavoritesOnly) {
       const favTeamNames = this.favoriteTeamNames;
@@ -516,7 +523,7 @@ export class PublicTournamentComponent implements OnInit {
     return this.sortData(data, this.playerSort);
   }
 
-  get displayedTeams(): any[] {
+  get displayedTeams(): TournamentTeam[] {
     let data = this.teams;
     if (this.showFavoritesOnly) {
       const favTeams = this.favoriteTeamNames;
@@ -525,7 +532,7 @@ export class PublicTournamentComponent implements OnInit {
     return this.sortData(data, this.teamSort);
   }
 
-  get displayedPairings(): any[] {
+  get displayedPairings(): DisplayPairing[] {
     let data = this.pairings;
     if (this.showFavoritesOnly) {
       if (this.hasTeamPairings) {
@@ -539,11 +546,11 @@ export class PublicTournamentComponent implements OnInit {
     return this.sortData(data, this.pairingSort);
   }
 
-  isFavorite(player: any): boolean {
+  isFavorite(player: TournamentPlayer): boolean {
     return this.favoriteSnrs.has(player.snr);
   }
 
-  toggleFavorite(player: any): void {
+  toggleFavorite(player: TournamentPlayer): void {
     if (this.favoriteSnrs.has(player.snr)) {
       this.favoriteSnrs.delete(player.snr);
       this.snackBar.open(`${player.name} entfernt`, 'Close', { duration: 1500 });
@@ -555,11 +562,11 @@ export class PublicTournamentComponent implements OnInit {
     this.saveLocalFavorites();
   }
 
-  isTeamFavorite(team: any): boolean {
+  isTeamFavorite(team: TournamentTeam): boolean {
     return this.favoriteTeamSnrs.has(team.snr);
   }
 
-  toggleTeamFavorite(team: any): void {
+  toggleTeamFavorite(team: TournamentTeam): void {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
       this.snackBar.open(`${team.name} entfernt`, 'Close', { duration: 1500 });
@@ -576,7 +583,7 @@ export class PublicTournamentComponent implements OnInit {
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
     if (!team) return;
-    this.http.get<any>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
+    this.http.get<TournamentTeam>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },

@@ -12,6 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
+import { Tournament, Subscription } from '../../core/models';
 
 @Component({
   selector: 'app-tournament-list',
@@ -107,11 +108,11 @@ import { forkJoin } from 'rxjs';
   `]
 })
 export class TournamentListComponent implements OnInit, OnDestroy {
-  tournaments: any[] = [];
-  subscriptions: any[] = [];
+  tournaments: Tournament[] = [];
+  subscriptions: Subscription[] = [];
   loading = true;
   error = false;
-  togglingId: string | null = null;
+  togglingId: number | null = null;
   crawlId = '';
   crawling = false;
   crawlJobId: number | null = null;
@@ -119,7 +120,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
   private hiddenIds: Set<string> = new Set();
   private pollInterval: ReturnType<typeof setInterval> | null = null;
 
-  get visibleTournaments(): any[] {
+  get visibleTournaments(): Tournament[] {
     return this.tournaments.filter(t => !this.hiddenIds.has(t.id?.toString()));
   }
 
@@ -129,8 +130,8 @@ export class TournamentListComponent implements OnInit, OnDestroy {
 
   constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
 
-  formatSubtitle(t: any): string {
-    return [t.location, t.date].filter((v: any) => !!v).join(' | ');
+  formatSubtitle(t: Tournament): string {
+    return [t.location, t.date].filter((v) => !!v).join(' | ');
   }
 
   ngOnInit(): void {
@@ -143,7 +144,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
-  hide(tournament: any): void {
+  hide(tournament: Tournament): void {
     this.hiddenIds.add(tournament.id?.toString());
     localStorage.setItem('hiddenTournaments', JSON.stringify([...this.hiddenIds]));
   }
@@ -157,8 +158,8 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = false;
     forkJoin({
-      tournaments: this.http.get<any[]>('/api/tournaments'),
-      subscriptions: this.http.get<any[]>('/api/subscriptions')
+      tournaments: this.http.get<Tournament[]>('/api/tournaments'),
+      subscriptions: this.http.get<Subscription[]>('/api/subscriptions')
     }).subscribe({
       next: ({ tournaments, subscriptions }) => {
         this.tournaments = tournaments;
@@ -169,19 +170,19 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     });
   }
 
-  isSubscribed(tournament: any): boolean {
+  isSubscribed(tournament: Tournament): boolean {
     const tid = tournament.id?.toString();
     return this.subscriptions.some(s => s.crawlerTournamentId === tid);
   }
 
-  getSubscription(tournament: any): any {
+  getSubscription(tournament: Tournament): Subscription | undefined {
     const tid = tournament.id?.toString();
     return this.subscriptions.find(s => s.crawlerTournamentId === tid);
   }
 
-  subscribe(tournament: any): void {
+  subscribe(tournament: Tournament): void {
     this.togglingId = tournament.id;
-    this.http.post<any>('/api/subscriptions', {
+    this.http.post<Subscription>('/api/subscriptions', {
       crawlerTournamentId: tournament.id?.toString() ?? '',
       tournamentName: tournament.name ?? ''
     }).subscribe({
@@ -248,7 +249,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     }, 2000);
   }
 
-  unsubscribe(tournament: any): void {
+  unsubscribe(tournament: Tournament): void {
     const sub = this.getSubscription(tournament);
     if (!sub) return;
     this.togglingId = tournament.id;

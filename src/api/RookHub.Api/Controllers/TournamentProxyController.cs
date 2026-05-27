@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Services;
+using RookHub.Api.Validation;
 
 namespace RookHub.Api.Controllers;
 
@@ -13,6 +14,9 @@ public class TournamentProxyController : ControllerBase
     private readonly CrawlerProxyService _proxy;
 
     public TournamentProxyController(CrawlerProxyService proxy) => _proxy = proxy;
+
+    private IActionResult? ValidateId(string id)
+        => TournamentIdValidator.IsValid(id) ? null : BadRequest(new { message = "Invalid tournament ID." });
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -32,6 +36,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var result = await _proxy.GetAsync($"/api/tournaments/{id}");
@@ -47,6 +52,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/players")]
     public async Task<IActionResult> GetPlayers(string id, [FromQuery] string? team, [FromQuery] string? sortBy)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var query = $"/api/tournaments/{id}/players";
@@ -68,6 +74,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/teams")]
     public async Task<IActionResult> GetTeams(string id)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams");
@@ -83,6 +90,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/teams/{snr}")]
     public async Task<IActionResult> GetTeamDetail(string id, int snr)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams/{snr}");
@@ -98,6 +106,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/pairings")]
     public async Task<IActionResult> GetPairings(string id, [FromQuery] int? round)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var query = $"/api/tournaments/{id}/pairings";
@@ -116,6 +125,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/players/{snr:int}/results")]
     public async Task<IActionResult> GetPlayerResults(string id, int snr)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/players/{snr}/results");
@@ -130,6 +140,7 @@ public class TournamentProxyController : ControllerBase
     [HttpGet("{id}/rounds/check")]
     public async Task<IActionResult> CheckRounds(string id)
     {
+        if (ValidateId(id) is { } err) return err;
         try
         {
             var result = await _proxy.GetAsync($"/api/tournaments/{id}/rounds/check");

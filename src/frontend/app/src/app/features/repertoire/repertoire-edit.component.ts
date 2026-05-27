@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { RepertoireFile } from '../../core/models';
 
 @Component({
   selector: 'app-repertoire-edit',
@@ -57,7 +58,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 })
 export class RepertoireEditComponent {
   @Input() repertoireId!: number;
-  @Input() files: any[] = [];
+  @Input() files: RepertoireFile[] = [];
 
   @Output() fileUploaded = new EventEmitter<void>();
   @Output() fileDeleted = new EventEmitter<void>();

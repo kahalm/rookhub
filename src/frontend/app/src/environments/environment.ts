@@ -1,7 +1,19 @@
 export const environment = {
   production: false,
-  version: '0.15.9',
+  version: '0.16.1',
   changelog: [
+    { version: '0.16.1', date: '2026-05-27', changes: [
+      'Security: Tournament-ID-Validierung gegen SSRF in Proxy- und Monitor-Controllern',
+      'Security: .gitignore fuer Test-Artifacts (auth-state, playwright-report)',
+      'Refactor: Fire-and-forget Task.Run ersetzt durch Channel+BackgroundService',
+      'Refactor: TypeScript-Interfaces statt any fuer alle API-Responses',
+      'Crawler: EnsureCreated durch EF Core Migrations ersetzt',
+    ]},
+    { version: '0.16.0', date: '2026-05-27', changes: [
+      'Endless Mode: Puzzle-Review auf Game-Over-Screen zeigt alle gespielten Puzzles',
+      'Endless Mode: Klick auf Puzzle im Review navigiert zu /puzzles/:id',
+      'Endless Mode: Fehlgeschlagene Puzzles rot hervorgehoben',
+    ]},
     { version: '0.15.9', date: '2026-05-27', changes: [
       'E2E Teststack: Isolierter Docker-Stack (compose.e2e.yml) mit eigenem DB, API, Frontend',
       'E2E Teststack: scripts/e2e.sh startet Stack, seedet Puzzles, fuehrt Tests aus, raeumt auf',

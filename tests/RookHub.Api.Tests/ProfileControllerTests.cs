@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -25,12 +24,7 @@ public class ProfileControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
 
-        // ProfileService needs IServiceScopeFactory and ILogger, mock them minimally
-        var serviceCollection = new ServiceCollection();
-        serviceCollection.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(Guid.NewGuid().ToString()));
-        var scopeFactory = serviceCollection.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
-
-        _profileService = new ProfileService(_db, scopeFactory, NullLogger<ProfileService>.Instance);
+        _profileService = new ProfileService(_db, new NoOpTaskQueue(), NullLogger<ProfileService>.Instance);
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
         // For controller tests, we pass a null-ish PlayerSearchService only for non-search tests

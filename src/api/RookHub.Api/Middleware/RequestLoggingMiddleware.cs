@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Claims;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Middleware;
 
@@ -16,7 +17,7 @@ public class RequestLoggingMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, IServiceScopeFactory scopeFactory)
+    public async Task InvokeAsync(HttpContext context, IBackgroundTaskQueue taskQueue)
     {
         var path = context.Request.Path.Value ?? string.Empty;
 
@@ -45,19 +46,11 @@ public class RequestLoggingMiddleware
             DurationMs = stopwatch.ElapsedMilliseconds
         };
 
-        _ = Task.Run(async () =>
+        await taskQueue.EnqueueAsync(async (sp, ct) =>
         {
-            try
-            {
-                using var scope = scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                db.RequestLogs.Add(log);
-                await db.SaveChangesAsync();
-            }
-            catch
-            {
-                // Logging failures must not affect request processing
-            }
+            var db = sp.GetRequiredService<AppDbContext>();
+            db.RequestLogs.Add(log);
+            await db.SaveChangesAsync(ct);
         });
     }
 

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Validation;
 
 namespace RookHub.Api.Controllers;
 
@@ -27,6 +28,9 @@ public class TournamentMonitorController : ControllerBase
     [HttpPost("{tournamentId}")]
     public async Task<IActionResult> Activate(string tournamentId)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament ID." });
+
         var monitor = await _db.TournamentMonitors
             .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
 
@@ -94,6 +98,9 @@ public class TournamentMonitorController : ControllerBase
     [HttpGet("{tournamentId}")]
     public async Task<IActionResult> GetStatus(string tournamentId)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament ID." });
+
         var monitor = await _db.TournamentMonitors
             .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
 
@@ -120,6 +127,9 @@ public class TournamentMonitorController : ControllerBase
     [HttpDelete("{tournamentId}")]
     public async Task<IActionResult> Deactivate(string tournamentId)
     {
+        if (!TournamentIdValidator.IsValid(tournamentId))
+            return BadRequest(new { message = "Invalid tournament ID." });
+
         var monitor = await _db.TournamentMonitors
             .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
 

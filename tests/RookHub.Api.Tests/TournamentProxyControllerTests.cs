@@ -65,6 +65,37 @@ public class TournamentProxyControllerTests : IDisposable
         Assert.Equal(502, result.StatusCode);
     }
 
+    // ---- ID Validation ----
+
+    [Theory]
+    [InlineData("../admin")]
+    [InlineData("../../etc/passwd")]
+    [InlineData("123/../../other")]
+    [InlineData("")]
+    [InlineData("a-b-c")]
+    [InlineData("id with spaces")]
+    [InlineData("123456789012345678901")] // 21 chars
+    public async Task GetById_ReturnsBadRequest_ForInvalidId(string id)
+    {
+        var result = await _controller.GetById(id) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(400, result.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("abc123")]
+    [InlineData("12345678901234567890")] // 20 chars = max
+    public async Task GetById_AcceptsValidId(string id)
+    {
+        SetupResponse("{\"id\":1,\"name\":\"Test\"}");
+
+        var result = await _controller.GetById(id) as OkObjectResult;
+
+        Assert.NotNull(result);
+    }
+
     // ---- GetById ----
 
     [Fact]

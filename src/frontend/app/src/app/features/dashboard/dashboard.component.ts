@@ -9,6 +9,7 @@ import { MatListModule } from '@angular/material/list';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
+import { Subscription } from '../../core/models';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -90,14 +91,14 @@ export class DashboardComponent implements OnInit {
   friendCount = 0;
   puzzleSolved = 0;
   puzzleAccuracy = 0;
-  subscriptions: any[] = [];
+  subscriptions: Subscription[] = [];
 
   constructor(public auth: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
     forkJoin({
       repertoires: this.http.get<any[]>('/api/repertoires').pipe(catchError(() => of([]))),
-      subscriptions: this.http.get<any[]>('/api/subscriptions').pipe(catchError(() => of([]))),
+      subscriptions: this.http.get<Subscription[]>('/api/subscriptions').pipe(catchError(() => of([]))),
       friends: this.http.get<any[]>('/api/friends').pipe(catchError(() => of([]))),
       puzzleStats: this.http.get<any>('/api/puzzles/stats').pipe(catchError(() => of({ solved: 0, accuracy: 0 })))
     }).subscribe(({ repertoires, subscriptions, friends, puzzleStats }) => {

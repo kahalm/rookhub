@@ -24,6 +24,11 @@ dist/
 ## Docker
 rookhub-db-data/
 
+## Test artifacts
+playwright-report/
+test-results/
+.auth-state.json
+
 ## OS
 Thumbs.db
 .DS_Store

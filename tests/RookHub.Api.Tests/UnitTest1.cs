@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
@@ -107,10 +106,8 @@ public class ProfileServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        var serviceCollection = new ServiceCollection();
-        var scopeFactory = serviceCollection.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
         var logger = NullLogger<ProfileService>.Instance;
-        _profileService = new ProfileService(_db, scopeFactory, logger);
+        _profileService = new ProfileService(_db, new NoOpTaskQueue(), logger);
     }
 
     public void Dispose() => _db.Dispose();

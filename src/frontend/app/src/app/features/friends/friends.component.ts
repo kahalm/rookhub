@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 
 @Component({
   selector: 'app-friends',
@@ -100,9 +101,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   `]
 })
 export class FriendsComponent implements OnInit {
-  friends: any[] = [];
-  requests: any[] = [];
-  searchResults: any[] = [];
+  friends: Friend[] = [];
+  requests: FriendRequest[] = [];
+  searchResults: UserSearchResult[] = [];
   searchQuery = '';
   loading = true;
 
@@ -114,13 +115,13 @@ export class FriendsComponent implements OnInit {
 
   loadData(): void {
     this.loading = true;
-    this.http.get<any[]>('/api/friends').subscribe(f => { this.friends = f; this.loading = false; });
-    this.http.get<any[]>('/api/friends/requests').subscribe(r => this.requests = r);
+    this.http.get<Friend[]>('/api/friends').subscribe(f => { this.friends = f; this.loading = false; });
+    this.http.get<FriendRequest[]>('/api/friends/requests').subscribe(r => this.requests = r);
   }
 
   search(): void {
     if (this.searchQuery.length < 2) return;
-    this.http.get<any[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
+    this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
       .subscribe(r => this.searchResults = r);
   }
 
@@ -143,7 +144,7 @@ export class FriendsComponent implements OnInit {
     this.http.delete(`/api/friends/${id}`).subscribe(() => this.loadData());
   }
 
-  getChessIdentities(user: any): string {
+  getChessIdentities(user: UserSearchResult | Friend): string {
     const parts: string[] = [];
     if (user.chessComUsername) parts.push(`chess.com: ${user.chessComUsername}`);
     if (user.lichessUsername) parts.push(`lichess: ${user.lichessUsername}`);

@@ -8,13 +8,13 @@ namespace RookHub.Api.Services;
 public class ProfileService
 {
     private readonly AppDbContext _db;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ProfileService> _logger;
 
-    public ProfileService(AppDbContext db, IServiceScopeFactory scopeFactory, ILogger<ProfileService> logger)
+    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger)
     {
         _db = db;
-        _scopeFactory = scopeFactory;
+        _taskQueue = taskQueue;
         _logger = logger;
     }
 
@@ -65,26 +65,16 @@ public class ProfileService
         // Trigger auto-subscription if ChessResultsId is set and LastName is available
         if (!string.IsNullOrWhiteSpace(profile.ChessResultsId) && !string.IsNullOrWhiteSpace(profile.LastName))
         {
-            _ = Task.Run(() => TriggerAutoSubscriptionAsync(userId));
+            await _taskQueue.EnqueueAsync(async (sp, ct) =>
+            {
+                var db = sp.GetRequiredService<AppDbContext>();
+                var proxy = sp.GetRequiredService<CrawlerProxyService>();
+                var autoSub = sp.GetRequiredService<AutoSubscriptionService>();
+                await autoSub.CheckUserAsync(db, proxy, userId, ct);
+            });
         }
 
         return MapToDto(user);
-    }
-
-    private async Task TriggerAutoSubscriptionAsync(int userId)
-    {
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
-            var autoSub = scope.ServiceProvider.GetRequiredService<AutoSubscriptionService>();
-            await autoSub.CheckUserAsync(db, proxy, userId, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Auto-subscription trigger failed for user {UserId}", userId);
-        }
     }
 
     private static ProfileDto MapToDto(AppUser user) => new()

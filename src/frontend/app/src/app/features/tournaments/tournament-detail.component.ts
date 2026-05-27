@@ -18,6 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription, TournamentFavorite } from '../../core/models';
 
 @Component({
   selector: 'app-team-players-dialog',
@@ -61,7 +62,7 @@ import { ShareTournamentDialogComponent } from './share-tournament-dialog.compon
 })
 export class TeamPlayersDialogComponent {
   columns = ['boardNumber', 'title', 'name', 'elo'];
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: any[] }) {}
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: TournamentPlayer[] }) {}
 }
 
 @Component({
@@ -412,10 +413,10 @@ export class TeamPlayersDialogComponent {
   `]
 })
 export class TournamentDetailComponent implements OnInit, OnDestroy {
-  tournament: any = null;
-  players: any[] = [];
-  teams: any[] = [];
-  pairings: any[] = [];
+  tournament: Tournament | null = null;
+  players: TournamentPlayer[] = [];
+  teams: TournamentTeam[] = [];
+  pairings: DisplayPairing[] = [];
   rounds: number[] = [];
   selectedRound = 1;
   loading = true;
@@ -437,7 +438,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   teamSort: Sort = { active: '', direction: '' };
   pairingSort: Sort = { active: '', direction: '' };
 
-  subscription: any = null;
+  subscription: Subscription | null = null;
   toggling = false;
   refreshing = false;
   monitoring = false;
@@ -462,8 +463,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
     if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
     this.loadFavorites();
-    this.http.get(`/api/tournaments/${this.id}`).subscribe({
-      next: (t: any) => {
+    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+      next: (t) => {
         this.tournament = t;
         this.loading = false;
         if (t.totalRounds) {
@@ -485,7 +486,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   loadSubscription(): void {
-    this.http.get<any[]>('/api/subscriptions').subscribe({
+    this.http.get<Subscription[]>('/api/subscriptions').subscribe({
       next: (subs) => {
         this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
       }
@@ -494,7 +495,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   subscribe(): void {
     this.toggling = true;
-    this.http.post<any>('/api/subscriptions', {
+    this.http.post<Subscription>('/api/subscriptions', {
       crawlerTournamentId: this.id,
       tournamentName: this.tournament?.name ?? ''
     }).subscribe({
@@ -667,8 +668,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   private reloadAll(): void {
-    this.http.get(`/api/tournaments/${this.id}`).subscribe({
-      next: (t: any) => {
+    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+      next: (t) => {
         this.tournament = t;
         if (t.totalRounds) {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
@@ -680,7 +681,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.pairings = [];
   }
 
-  onTabChange(event: any): void {
+  onTabChange(event: { index: number }): void {
     this.selectedTabIndex = event.index;
     const tabName = TournamentDetailComponent.TAB_NAMES[event.index];
     this.router.navigate([], { queryParams: { tab: tabName }, queryParamsHandling: 'merge', replaceUrl: true });
@@ -690,7 +691,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadPlayers(): void {
     this.playersLoading = true;
-    this.http.get<any[]>(`/api/tournaments/${this.id}/players`).subscribe({
+    this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; },
       error: () => { this.playersLoading = false; }
     });
@@ -698,7 +699,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadTeams(): void {
     this.teamsLoading = true;
-    this.http.get<any[]>(`/api/tournaments/${this.id}/teams`).subscribe({
+    this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; },
       error: () => { this.teamsLoading = false; }
     });
@@ -706,12 +707,13 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadPairings(): void {
     this.pairingsLoading = true;
+    // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
       next: (p) => {
         // Detect team vs individual pairings based on data format
         if (p.length > 0 && p[0].homeTeam !== undefined) {
           this.hasTeamPairings = true;
-          this.pairings = p.map(item => ({
+          this.pairings = p.map((item): DisplayPairing => ({
             board: item.matchNumber,
             white: item.homeTeam,
             black: item.awayTeam,
@@ -719,7 +721,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           }));
         } else {
           this.hasTeamPairings = false;
-          this.pairings = p.map(item => ({ ...item, board: item.boardNumber }));
+          this.pairings = p.map((item): DisplayPairing => ({
+            board: item.boardNumber,
+            white: item.white,
+            black: item.black,
+            result: item.result ?? ''
+          }));
         }
         this.pairingsLoading = false;
       },
@@ -744,16 +751,16 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   // --- Favorites (server-side) ---
 
   private loadFavorites(): void {
-    this.http.get<any[]>(`/api/tournament-favorites?tournamentId=${this.id}`).subscribe({
+    this.http.get<TournamentFavorite[]>(`/api/tournament-favorites?tournamentId=${this.id}`).subscribe({
       next: (favs) => {
-        this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr));
-        this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr));
-        this.favoriteIdMap = new Map(favs.filter(f => f.playerSnr).map(f => [f.playerSnr, f.id]));
-        this.teamFavoriteIdMap = new Map(favs.filter(f => f.teamSnr).map(f => [f.teamSnr, f.id]));
+        this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr!));
+        this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
+        this.favoriteIdMap = new Map(favs.filter(f => f.playerSnr).map(f => [f.playerSnr!, f.id]));
+        this.teamFavoriteIdMap = new Map(favs.filter(f => f.teamSnr).map(f => [f.teamSnr!, f.id]));
       },
       error: () => {}
     });
-    this.http.get<any>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
+    this.http.get<{ showFavoritesOnly: boolean }>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
       next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; },
       error: () => {}
     });
@@ -798,7 +805,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return names;
   }
 
-  get displayedPlayers(): any[] {
+  get displayedPlayers(): TournamentPlayer[] {
     let data = this.players;
     if (this.showFavoritesOnly) {
       const favTeamNames = this.favoriteTeamNames;
@@ -807,7 +814,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return this.sortData(data, this.playerSort);
   }
 
-  get displayedTeams(): any[] {
+  get displayedTeams(): TournamentTeam[] {
     let data = this.teams;
     if (this.showFavoritesOnly) {
       const favTeams = this.favoriteTeamNames;
@@ -816,7 +823,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return this.sortData(data, this.teamSort);
   }
 
-  get displayedPairings(): any[] {
+  get displayedPairings(): DisplayPairing[] {
     let data = this.pairings;
     if (this.showFavoritesOnly) {
       if (this.hasTeamPairings) {
@@ -830,11 +837,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return this.sortData(data, this.pairingSort);
   }
 
-  isFavorite(player: any): boolean {
+  isFavorite(player: TournamentPlayer): boolean {
     return this.favoriteSnrs.has(player.snr);
   }
 
-  toggleFavorite(player: any): void {
+  toggleFavorite(player: TournamentPlayer): void {
     if (this.favoriteSnrs.has(player.snr)) {
       // Remove favorite
       this.favoriteSnrs.delete(player.snr);
@@ -849,7 +856,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs.add(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
-      this.http.post<any>('/api/tournament-favorites', {
+      this.http.post<TournamentFavorite>('/api/tournament-favorites', {
         crawlerTournamentId: this.id,
         playerSnr: player.snr
       }).subscribe({
@@ -859,11 +866,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  isTeamFavorite(team: any): boolean {
+  isTeamFavorite(team: TournamentTeam): boolean {
     return this.favoriteTeamSnrs.has(team.snr);
   }
 
-  toggleTeamFavorite(team: any): void {
+  toggleTeamFavorite(team: TournamentTeam): void {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
@@ -876,7 +883,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs.add(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.snackBar.open(`${team.name} added to favorites`, 'Close', { duration: 1500 });
-      this.http.post<any>('/api/tournament-favorites/team', {
+      this.http.post<TournamentFavorite>('/api/tournament-favorites/team', {
         crawlerTournamentId: this.id,
         teamSnr: team.snr
       }).subscribe({
@@ -900,7 +907,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
     if (!team) return;
-    this.http.get<any>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
+    this.http.get<TournamentTeam>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },

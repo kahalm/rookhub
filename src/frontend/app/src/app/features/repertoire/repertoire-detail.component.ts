@@ -13,6 +13,7 @@ import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
 import { RepertoireViewerService } from './repertoire-viewer.service';
 import { MoveTreeService } from './move-tree.service';
+import { RepertoireDetail } from '../../core/models';
 
 type ViewMode = 'lines' | 'tree' | 'edit';
 
@@ -162,7 +163,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
   `]
 })
 export class RepertoireDetailComponent implements OnInit {
-  repertoire: any = null;
+  repertoire: RepertoireDetail | null = null;
   loading = true;
   mode: ViewMode = 'lines';
   id!: number;
@@ -224,7 +225,7 @@ export class RepertoireDetailComponent implements OnInit {
 
   private loadRepertoire(): void {
     this.loading = true;
-    this.http.get(`/api/repertoires/${this.id}`).subscribe({
+    this.http.get<RepertoireDetail>(`/api/repertoires/${this.id}`).subscribe({
       next: (r) => {
         this.repertoire = r;
         this.loading = false;
