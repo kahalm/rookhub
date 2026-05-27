@@ -1251,7 +1251,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
-    const interactive = this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING';
+    const interactive = (this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING') && this.turnColor === this.orientation;
     this.dests = interactive ? this.calcDests() : new Map();
   }
 

@@ -94,7 +94,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       coordinates: true,
       movable: {
         free: false,
-        color: this.viewOnly ? undefined : (this.premovable ? this.orientation : this.turnColor),
+        color: this.viewOnly ? undefined : this.orientation,
         dests: this.viewOnly ? undefined : this.dests,
         showDests: true
       },
@@ -141,7 +141,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       lastMove: this.lastMove as Key[] | undefined,
       movable: {
         free: false,
-        color: this.viewOnly ? undefined : (this.premovable ? this.orientation : this.turnColor),
+        color: this.viewOnly ? undefined : this.orientation,
         dests: this.viewOnly ? undefined : this.dests,
         showDests: true
       },

@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.15.7',
+  version: '0.15.8',
   changelog: [
+    { version: '0.15.8', date: '2026-05-27', changes: [
+      'Fix: User-Seite bleibt fest — movable.color immer auf orientation statt turnColor',
+      'Fix: Dests nur wenn User am Zug (verhindert Stockfish-Figuren ziehen nach Premove+Wrong Move)',
+    ]},
     { version: '0.15.7', date: '2026-05-27', changes: [
       'Share-Puzzle: QR-Code + Link zum Teilen von Puzzles (Normal + Endless Mode)',
       'Direkt-Link /puzzles/:id laedt ein bestimmtes Puzzle',
