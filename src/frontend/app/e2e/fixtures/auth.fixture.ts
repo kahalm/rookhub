@@ -2,7 +2,9 @@ import { test as base, expect, Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
-const API_URL = 'http://localhost:8085/api';
+const API_URL = process.env.E2E_API_URL
+  ? `${process.env.E2E_API_URL}/api`
+  : 'http://localhost:8085/api';
 const STATE_FILE = path.join(__dirname, '..', '.auth-state.json');
 
 function uniqueUser() {

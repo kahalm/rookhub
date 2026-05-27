@@ -1,0 +1,79 @@
+###############################################################################
+# RookHub E2E Test Stack (isoliert, kein Crawler, kein VPN)
+#
+#   docker compose -f compose.e2e.yml --env-file .env.e2e -p rookhub-e2e up --build -d
+#   docker compose -f compose.e2e.yml -p rookhub-e2e down -v
+###############################################################################
+
+services:
+
+  # ── MariaDB (anonymous volume → down -v loescht alles) ──────────────────
+  mariadb:
+    image: mariadb:11
+    container_name: e2e-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
+      CRAWLER_DB_USER: ${CRAWLER_DB_USER}
+      CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
+      ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME}
+      ROOKHUB_DB_USER: ${ROOKHUB_DB_USER}
+      ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD}
+    ports:
+      - "${DB_EXTERNAL_PORT}:3306"
+    volumes:
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e
+
+  # ── RookHub API (kein Crawler) ──────────────────────────────────────────
+  api:
+    build:
+      context: ./src/api/RookHub.Api
+      dockerfile: Dockerfile
+    container_name: e2e-api
+    ports:
+      - "${API_PORT}:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Crawler__BaseUrl: http://localhost:9999
+      Crawler__ApiKey: dummy
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ASPNETCORE_ENVIRONMENT: Development
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - e2e
+
+  # ── Frontend (Angular + nginx) ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: e2e-frontend
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - e2e
+
+networks:
+  e2e:

@@ -1,0 +1,11 @@
+PuzzleId,FEN,Moves,Rating,RatingDeviation,Popularity,NbPlays,Themes,GameUrl,OpeningTags
+e2e001,r6k/pp2r2p/4Rp1P/2p5/1pP2q2/1P1b2P1/P4P2/2R1Q1K1 b - - 1 1,f4f2 e1e3 e7e6 e3e6,722,80,92,10000,endgame short,https://lichess.org/test/black#1,
+e2e002,5rk1/pp4pp/2p2p2/2b1n3/4N3/1P1B4/P4PPP/3R2K1 w - - 0 1,e4f6 g7f6 d3h7 g8h7,900,75,90,8500,advantage sacrifice,https://lichess.org/test/white#1,
+e2e003,r1bq1rk1/ppp2ppp/2n2n2/3pp3/2B1P3/3P1N2/PPP2PPP/RNBQ1RK1 w - - 0 1,c4d5 f6d5 d1b3 d5a5,1050,78,88,7200,opening advantage,https://lichess.org/test/white#1,
+e2e004,2r3k1/p4ppp/1p6/3p4/3Pn3/2P1P3/P3BPPP/2R3K1 b - - 0 1,e4f2 g1f2 c8c3 e2d3,1100,70,85,6000,endgame fork,https://lichess.org/test/black#1,
+e2e005,r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4,h5f7 e8f7,1200,65,95,15000,short mateIn1,https://lichess.org/test/white#7,
+e2e006,r2qkb1r/ppp2ppp/2n1bn2/3pp3/4P3/1B3N2/PPPP1PPP/RNBQ1RK1 w kq - 4 5,e4d5 e6d5 f1e1 f8e7,1300,72,80,5500,opening advantage,https://lichess.org/test/white#9,
+e2e007,6k1/5ppp/p7/1p6/2p1P3/2P2P2/PP4PP/4R1K1 w - - 0 1,e1e8 g8f7 e8a8 f7e6,1400,68,82,4800,endgame advantage,https://lichess.org/test/white#1,
+e2e008,r1b1k2r/ppppqppp/2n2n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 5 5,c3d5 f6d5 c4d5 c6d4,1500,74,78,4200,middlegame advantage,https://lichess.org/test/white#9,
+e2e009,r1bqr1k1/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 6 7,c3a4 c5e7 a4c5 d6c5,1600,70,75,3800,middlegame advantage,https://lichess.org/test/white#13,
+e2e010,r2qk2r/ppp1bppp/2n1bn2/3pp3/4P3/1BNP1N2/PPP2PPP/R1BQK2R w KQkq - 4 6,e4d5 e6d5 d1e2 d5d4,1685,66,70,3200,opening advantage,https://lichess.org/test/white#11,

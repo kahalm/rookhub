@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.15.8',
+  version: '0.15.9',
   changelog: [
+    { version: '0.15.9', date: '2026-05-27', changes: [
+      'E2E Teststack: Isolierter Docker-Stack (compose.e2e.yml) mit eigenem DB, API, Frontend',
+      'E2E Teststack: scripts/e2e.sh startet Stack, seedet Puzzles, fuehrt Tests aus, raeumt auf',
+      'E2E: API_URL konfigurierbar in global-setup.ts und auth.fixture.ts',
+    ]},
     { version: '0.15.8', date: '2026-05-27', changes: [
       'Fix: User-Seite bleibt fest — movable.color immer auf orientation statt turnColor',
       'Fix: Dests nur wenn User am Zug (verhindert Stockfish-Figuren ziehen nach Premove+Wrong Move)',
