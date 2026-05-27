@@ -41,7 +41,7 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
             [turnColor]="turnColor"
             [dests]="dests"
             [lastMove]="lastMove"
-            [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING'"
+            [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
             (moveMade)="onMoveMade($event)"

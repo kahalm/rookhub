@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.15.0',
+  version: '0.15.1',
   changelog: [
+    { version: '0.15.1', date: '2026-05-27', changes: [
+      'Fix: Premoves im normalen Puzzle Mode funktionieren jetzt',
+    ]},
     { version: '0.15.0', date: '2026-05-27', changes: [
       'Puzzle Mode: Stockfish übernimmt bei falschem Zug (wie im Endless Mode)',
       'Puzzle Mode: Schachmatt gegen Stockfish zählt als alternative Lösung',
