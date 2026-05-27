@@ -9,7 +9,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PuzzleBoardComponent } from './puzzle-board.component';
+import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -53,7 +55,7 @@ const FASTTRACK_SESSION_COUNT = 10;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    PuzzleBoardComponent
+    MatDialogModule, PuzzleBoardComponent
   ],
   template: `
     <div class="endless-page">
@@ -391,6 +393,9 @@ const FASTTRACK_SESSION_COUNT = 10;
                   <mat-card-content>
                     <div class="puzzle-info">
                       <span class="rating-badge">Puzzle Rating: {{ puzzle.rating }}</span>
+                      <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
+                        <mat-icon>share</mat-icon>
+                      </button>
                       <span class="level-badge">Level {{ level }} ({{ currentMinRating }}–{{ currentMaxRating }})</span>
                       @if (puzzle.themes) {
                         <span class="themes-toggle" (click)="showThemes = !showThemes">
@@ -613,8 +618,9 @@ const FASTTRACK_SESSION_COUNT = 10;
       text-align: center; font-size: 0.8em; color: rgba(0,0,0,0.5);
       margin-top: 0.25rem; font-style: italic;
     }
-    .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; }
+    .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
+    .share-btn { position: absolute; top: -8px; right: -8px; }
     .level-badge { font-size: 0.9em; color: rgba(0,0,0,0.6); }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .theme-chip {
@@ -732,7 +738,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {
     this.loadConfig();
     this.loadHighscore();
@@ -784,6 +791,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   // --- Game lifecycle ---
+
+  sharePuzzle(): void {
+    if (!this.puzzle) return;
+    const url = `${window.location.origin}/puzzles/${this.puzzle.id}`;
+    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+  }
 
   startGame(): void {
     this.clampConfig();
@@ -934,14 +947,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
         this.advanceAfterCorrectMove();
       } else {
         // Wrong — leave solution path
-        this.playFreeMove(event.orig, event.dest);
+        if (!this.playFreeMove(event.orig, event.dest)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
       }
     } else {
       // Off-path: accept any legal move
-      this.playFreeMove(event.orig, event.dest);
+      if (!this.playFreeMove(event.orig, event.dest)) return;
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.opponentRespond();
     }
@@ -1220,7 +1233,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
-  private playFreeMove(orig: Key, dest: Key): void {
+  private playFreeMove(orig: Key, dest: Key): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
     const moves = this.chess.moves({ verbose: true });
@@ -1228,9 +1241,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
     if (match) {
       this.chess.move(match);
     } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
     }
     this.lastMove = [orig, dest];
+    return true;
   }
 
   private updateBoard(): void {

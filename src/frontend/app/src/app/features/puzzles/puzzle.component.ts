@@ -10,8 +10,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatInputModule } from '@angular/material/input';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PuzzleBoardComponent } from './puzzle-board.component';
+import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -29,7 +31,7 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
-    MatChipsModule, MatSlideToggleModule, PuzzleBoardComponent
+    MatChipsModule, MatSlideToggleModule, MatDialogModule, PuzzleBoardComponent
   ],
   template: `
     <div class="puzzle-page">
@@ -165,6 +167,9 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
               <mat-card-content>
                 <div class="puzzle-info">
                   <span class="rating-badge">Rating: {{ puzzle.rating }}</span>
+                  <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
+                    <mat-icon>share</mat-icon>
+                  </button>
                   @if (puzzle.themes) {
                     <div class="themes">
                       @for (theme of puzzle.themes.split(' '); track theme) {
@@ -264,8 +269,9 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
     .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
     .eval-arrow { color: rgba(0,0,0,0.4); }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
-    .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; }
+    .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
+    .share-btn { position: absolute; top: -8px; right: -8px; }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .theme-chip {
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
@@ -326,11 +332,15 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   currentEval = '';
   private initialFen = '';
 
+  private routePuzzleId: number | null = null;
+
   constructor(
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private dialog: MatDialog
   ) {
     this.loadConfig();
     this.stockfish.init().catch(() => {});
@@ -342,7 +352,17 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.router.navigate(['/puzzles/endless']);
   }
 
+  sharePuzzle(): void {
+    if (!this.puzzle) return;
+    const url = `${window.location.origin}/puzzles/${this.puzzle.id}`;
+    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+  }
+
   ngOnInit(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.routePuzzleId = Number(idParam);
+    }
     this.loadNext();
     if (this.isLoggedIn) {
       this.puzzleService.getStats().subscribe(s => this.stats = s);
@@ -365,10 +385,17 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.initialEval = '';
     this.currentEval = '';
 
-    const source$ = this.nextPuzzle
-      ? of(this.nextPuzzle)
-      : this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved);
-    this.nextPuzzle = null;
+    let source$;
+    if (this.routePuzzleId) {
+      const id = this.routePuzzleId;
+      this.routePuzzleId = null;
+      source$ = this.puzzleService.getById(id);
+    } else if (this.nextPuzzle) {
+      source$ = of(this.nextPuzzle);
+      this.nextPuzzle = null;
+    } else {
+      source$ = this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved);
+    }
 
     source$.subscribe({
         next: puzzle => {
@@ -458,7 +485,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
         }
       } else {
         // Wrong move — leave solution path, play against Stockfish
-        this.playFreeMove(event.orig, event.dest);
+        if (!this.playFreeMove(event.orig, event.dest)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
@@ -469,7 +496,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   private handleOffPathMove(event: { orig: Key; dest: Key }): void {
-    this.playFreeMove(event.orig, event.dest);
+    if (!this.playFreeMove(event.orig, event.dest)) return;
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
@@ -592,7 +619,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
-  private playFreeMove(orig: Key, dest: Key): void {
+  private playFreeMove(orig: Key, dest: Key): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
     const moves = this.chess.moves({ verbose: true });
@@ -600,9 +627,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     if (match) {
       this.chess.move(match);
     } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
     }
     this.lastMove = [orig, dest];
+    return true;
   }
 
   private updateBoard(): void {

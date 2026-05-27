@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.15.5',
+  version: '0.15.7',
   changelog: [
+    { version: '0.15.7', date: '2026-05-27', changes: [
+      'Share-Puzzle: QR-Code + Link zum Teilen von Puzzles (Normal + Endless Mode)',
+      'Direkt-Link /puzzles/:id laedt ein bestimmtes Puzzle',
+    ]},
+    { version: '0.15.6', date: '2026-05-27', changes: [
+      'Fix: Premove-Orientierungsbug — illegale Premoves werden ignoriert statt Seitenwechsel auszulösen',
+    ]},
     { version: '0.15.5', date: '2026-05-27', changes: [
       'E2E Tests: Falscher Zug + Premove in Puzzle Mode und Endless Mode',
     ]},
