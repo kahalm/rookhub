@@ -51,8 +51,8 @@ services:
       SERVER_COUNTRIES: ${SERVER_COUNTRIES}
       FIREWALL_VPN_INPUT_PORTS: ${FIREWALL_VPN_INPUT_PORTS}
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000 || wget -q --spider https://ipinfo.io || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9999 || exit 1"]
+      interval: 30s
       timeout: 5s
       retries: 10
       start_period: 30s
@@ -89,8 +89,6 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-      crawler:
-        condition: service_started
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}

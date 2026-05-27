@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<RequestLog> RequestLogs => Set<RequestLog>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
+    public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -129,6 +130,12 @@ public class AppDbContext : DbContext
 
             e.HasIndex(a => new { a.UserId, a.PuzzleId });
             e.HasIndex(a => a.AttemptedAt).IsDescending();
+        });
+
+        modelBuilder.Entity<BookPuzzle>(e =>
+        {
+            e.HasIndex(bp => bp.LineId).IsUnique();
+            e.HasIndex(bp => bp.BookFileName);
         });
     }
 }

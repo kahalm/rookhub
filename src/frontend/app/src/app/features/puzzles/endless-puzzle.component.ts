@@ -43,6 +43,15 @@ interface EndlessSession {
   mistakeAtRatings: number[];
 }
 
+interface EndlessPuzzleAttempt {
+  puzzleNumber: number;
+  puzzleId: number;
+  lichessId: string;
+  rating: number;
+  solved: boolean;
+  themes?: string;
+}
+
 const CONFIG_KEY = 'rookhub_endless_config';
 const HIGHSCORE_KEY = 'rookhub_endless_highscore';
 const HISTORY_KEY = 'rookhub_endless_history';
@@ -451,6 +460,22 @@ const FASTTRACK_SESSION_COUNT = 10;
                     <span class="go-label">Time</span>
                   </div>
                 </div>
+                @if (currentSessionPuzzles.length > 0) {
+                  <div class="puzzle-review">
+                    <h4 class="review-title">Puzzle Review</h4>
+                    <div class="review-list">
+                      @for (attempt of currentSessionPuzzles; track attempt.puzzleNumber) {
+                        <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle(attempt.puzzleId)">
+                          <span class="review-number">#{{ attempt.puzzleNumber }}</span>
+                          <span class="review-rating">{{ attempt.rating }}</span>
+                          <mat-icon [class]="attempt.solved ? 'review-icon solved' : 'review-icon failed'">
+                            {{ attempt.solved ? 'check_circle' : 'cancel' }}
+                          </mat-icon>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
                 @if (isNewHighscore) {
                   <div class="new-highscore">
                     <mat-icon>emoji_events</mat-icon>
@@ -505,6 +530,22 @@ const FASTTRACK_SESSION_COUNT = 10;
                   <div class="mistake-ratings">
                     <mat-icon>heart_broken</mat-icon>
                     <span>Lives lost at: {{ currentSessionMistakes.join(', ') }}</span>
+                  </div>
+                }
+                @if (currentSessionPuzzles.length > 0) {
+                  <div class="puzzle-review">
+                    <h4 class="review-title">Puzzle Review</h4>
+                    <div class="review-list">
+                      @for (attempt of currentSessionPuzzles; track attempt.puzzleNumber) {
+                        <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle(attempt.puzzleId)">
+                          <span class="review-number">#{{ attempt.puzzleNumber }}</span>
+                          <span class="review-rating">{{ attempt.rating }}</span>
+                          <mat-icon [class]="attempt.solved ? 'review-icon solved' : 'review-icon failed'">
+                            {{ attempt.solved ? 'check_circle' : 'cancel' }}
+                          </mat-icon>
+                        </div>
+                      }
+                    </div>
                   </div>
                 }
                 @if (isNewHighscore) {
@@ -652,6 +693,27 @@ const FASTTRACK_SESSION_COUNT = 10;
     .stockfish-fish { font-size: 4rem; }
     .stockfish-text { font-size: 1.3em; font-weight: bold; color: #1976d2; margin: 0; }
 
+    .puzzle-review { margin: 1rem 0; text-align: left; }
+    .review-title { margin: 0 0 0.5rem; font-size: 0.95em; color: rgba(0,0,0,0.6); }
+    .review-list {
+      max-height: 240px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 8px;
+    }
+    .review-item {
+      display: flex; align-items: center; gap: 0.75rem; padding: 8px 12px;
+      cursor: pointer; transition: background 0.15s;
+      font-variant-numeric: tabular-nums;
+    }
+    .review-item:hover { background: rgba(0,0,0,0.04); }
+    .review-item:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .review-failed { background: rgba(244,67,54,0.06); }
+    .review-failed:hover { background: rgba(244,67,54,0.12); }
+    .review-number { font-weight: 500; min-width: 32px; color: rgba(0,0,0,0.6); }
+    .review-rating { flex: 1; font-weight: bold; }
+    .review-icon { font-size: 20px; width: 20px; height: 20px; }
+    .review-icon.solved { color: #4caf50; }
+    .review-icon.failed { color: #f44336; }
+
     @media (max-width: 768px) {
       .play-screen { flex-direction: column; }
       .board-section { width: 100%; }
@@ -699,6 +761,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // Session history
   sessionHistory: EndlessSession[] = [];
   currentSessionMistakes: number[] = [];
+  currentSessionPuzzles: EndlessPuzzleAttempt[] = [];
   showThemes = false;
 
   // Fasttrack
@@ -810,6 +873,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.prefetchedPuzzle = null;
     this.sessionSeconds = 0;
     this.currentSessionMistakes = [];
+    this.currentSessionPuzzles = [];
     if (this.config.fasttrack) this.computeFasttrackSteps();
     this.startSessionTimer();
     this.loadPuzzle();
@@ -821,6 +885,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   backToPuzzles(): void { this.router.navigate(['/puzzles']); }
+
+  openPuzzle(id: number): void {
+    this.router.navigate(['/puzzles', id]);
+  }
 
   // --- Loading ---
 
@@ -1028,6 +1096,16 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.alternativeSolve = alternative;
     this.state = 'CORRECT';
     this.solved++;
+    if (this.puzzle) {
+      this.currentSessionPuzzles.push({
+        puzzleNumber: this.currentSessionPuzzles.length + 1,
+        puzzleId: this.puzzle.id,
+        lichessId: this.puzzle.lichessId,
+        rating: this.puzzle.rating,
+        solved: true,
+        themes: this.puzzle.themes
+      });
+    }
     this.recordAttempt(true);
     this.updateBoard();
 
@@ -1074,6 +1152,16 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   private loseLife(): void {
     this.currentSessionMistakes.push(this._currentMinRating);
+    if (this.puzzle) {
+      this.currentSessionPuzzles.push({
+        puzzleNumber: this.currentSessionPuzzles.length + 1,
+        puzzleId: this.puzzle.id,
+        lichessId: this.puzzle.lichessId,
+        rating: this.puzzle.rating,
+        solved: false,
+        themes: this.puzzle.themes
+      });
+    }
     this.lives--;
     this.recordAttempt(false);
     this.state = 'WRONG';

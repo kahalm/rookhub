@@ -35,6 +35,29 @@ export interface PuzzleAttemptDto {
   attemptedAt: string;
 }
 
+export interface BookPuzzleDto {
+  id: number;
+  lineId: string;
+  bookFileName: string;
+  round: string;
+  fen: string;
+  moves: string;
+  title?: string;
+  chapter?: string;
+  comment?: string;
+  difficulty?: string;
+  bookRating?: number;
+  tags?: string;
+}
+
+export interface BookInfoDto {
+  bookFileName: string;
+  difficulty?: string;
+  bookRating?: number;
+  tags?: string;
+  puzzleCount: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PuzzleService {
   constructor(private http: HttpClient) {}
@@ -68,5 +91,13 @@ export class PuzzleService {
     return this.http.get<PuzzleAttemptDto[]>('/api/puzzles/history', {
       params: new HttpParams().set('page', page).set('pageSize', pageSize)
     });
+  }
+
+  getBookPuzzleById(id: number): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
+  }
+
+  getBookList(): Observable<BookInfoDto[]> {
+    return this.http.get<BookInfoDto[]>('/api/book-puzzles/books');
   }
 }

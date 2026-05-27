@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.16.1',
+  version: '0.16.2',
   changelog: [
+    { version: '0.16.2', date: '2026-05-27', changes: [
+      'Crawler: Migration-Upgrade-Doku fuer bestehende DBs (EnsureCreated → Migrate)',
+      'Deploy: Crawler-Fix fuer leere __EFMigrationsHistory bei Bestandsdatenbanken',
+    ]},
     { version: '0.16.1', date: '2026-05-27', changes: [
       'Security: Tournament-ID-Validierung gegen SSRF in Proxy- und Monitor-Controllern',
       'Security: .gitignore fuer Test-Artifacts (auth-state, playwright-report)',
