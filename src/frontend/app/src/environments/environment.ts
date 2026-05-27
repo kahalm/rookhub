@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.15.2',
+  version: '0.15.3',
   changelog: [
+    { version: '0.15.3', date: '2026-05-27', changes: [
+      'E2E Tests mit Playwright (Auth, Dashboard, Puzzles)',
+    ]},
     { version: '0.15.2', date: '2026-05-27', changes: [
       'Tests: 110 neue Tests (122 → 232), alle Controller vollständig getestet',
       'Tests: TournamentProxyController, PuzzleController, AuthController, ProfileController, FriendController, RepertoireController, ExtensionController, RequestLogController, RoundMonitorService',
