@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.13.5',
+  version: '0.13.6',
   changelog: [
+    { version: '0.13.6', date: '2026-05-27', changes: [
+      'Endless Mode: Puzzle Reset kostet ein Leben',
+    ]},
     { version: '0.13.5', date: '2026-05-27', changes: [
       'Endless Mode: Alternative Loesung pausiert, Continue/Show Solution Buttons',
       'Endless Mode: Show Solution spielt die beabsichtigte Zugfolge animiert ab',

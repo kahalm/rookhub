@@ -998,6 +998,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.currentEval = '';
     this.initialEval = '';
     this.showEval = false;
+    // Reset costs a life
+    this.lives--;
+    if (this.lives <= 0) {
+      this.autoAdvanceTimer = setTimeout(() => this.endGame(), 400);
+      return;
+    }
     this.setupPuzzle(this.puzzle);
   }
 
