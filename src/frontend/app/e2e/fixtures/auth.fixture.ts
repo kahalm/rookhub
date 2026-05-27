@@ -1,6 +1,9 @@
 import { test as base, expect, Page } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
 const API_URL = 'http://localhost:8085/api';
+const STATE_FILE = path.join(__dirname, '..', '.auth-state.json');
 
 function uniqueUser() {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -18,8 +21,24 @@ export interface AuthResponse {
   isAdmin: boolean;
 }
 
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, init: RequestInit, retries = 5): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    const res = await fetch(url, init);
+    if (res.status === 429) {
+      await sleep(6_000 * (i + 1));
+      continue;
+    }
+    return res;
+  }
+  return fetch(url, init);
+}
+
 async function registerViaApi(user: { username: string; email: string; password: string }): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/register`, {
+  const res = await fetchWithRetry(`${API_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(user),
@@ -30,13 +49,17 @@ async function registerViaApi(user: { username: string; email: string; password:
   return res.json();
 }
 
+function loadSharedAuth(): { auth: AuthResponse; username: string; password: string } {
+  return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+}
+
 async function injectAuth(page: Page, auth: AuthResponse): Promise<void> {
   await page.addInitScript((authData) => {
     localStorage.setItem('rookhub_user', JSON.stringify(authData));
   }, auth);
 }
 
-/** Fixture that provides a pre-authenticated page */
+/** Fixture that provides a pre-authenticated page using the shared user from global setup */
 export const test = base.extend<{ authedPage: Page; testUser: { username: string; password: string } }>({
   testUser: async ({}, use) => {
     const user = uniqueUser();
@@ -44,15 +67,9 @@ export const test = base.extend<{ authedPage: Page; testUser: { username: string
     await use({ username: user.username, password: user.password });
   },
 
-  authedPage: async ({ page, testUser }, use) => {
-    // Login via API and inject token
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: testUser.username, password: testUser.password }),
-    });
-    if (!res.ok) throw new Error(`Login failed: ${res.status}`);
-    const auth: AuthResponse = await res.json();
+  authedPage: async ({ page }, use) => {
+    // Use the shared user from global setup (no extra API calls = no rate limiting)
+    const { auth } = loadSharedAuth();
     await injectAuth(page, auth);
     await use(page);
   },

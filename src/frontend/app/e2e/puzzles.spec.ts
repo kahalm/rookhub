@@ -14,15 +14,15 @@ test.describe('Puzzles', () => {
     await page.goto('/puzzles');
 
     // Board rendered by app-puzzle-board / chessground
-    const board = page.locator('app-puzzle-board, cg-board, .cg-wrap');
-    await expect(board.first()).toBeVisible({ timeout: 15_000 });
+    const board = page.locator('app-puzzle-board, cg-board, .cg-wrap').first();
+    await expect(board).toBeVisible({ timeout: 15_000 });
   });
 
   test('endless mode config screen is displayed', async ({ page }) => {
     await page.goto('/puzzles/endless');
 
     // Config screen with "Endless Puzzle Mode" title
-    await expect(page.locator('.config-screen, .config-card')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.config-screen')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('body')).toContainText('Endless Puzzle Mode');
   });
 
@@ -30,7 +30,7 @@ test.describe('Puzzles', () => {
     await page.goto('/puzzles/endless');
 
     // Wait for config screen
-    await expect(page.locator('.config-screen, .config-card')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.config-screen')).toBeVisible({ timeout: 10_000 });
 
     // Click start button
     const startBtn = page.getByRole('button', { name: /start/i });
@@ -38,7 +38,7 @@ test.describe('Puzzles', () => {
     await startBtn.click();
 
     // After start, game screen should show (board visible, config gone)
-    const board = page.locator('app-puzzle-board, cg-board, .cg-wrap');
-    await expect(board.first()).toBeVisible({ timeout: 15_000 });
+    const board = page.locator('app-puzzle-board, cg-board, .cg-wrap').first();
+    await expect(board).toBeVisible({ timeout: 15_000 });
   });
 });

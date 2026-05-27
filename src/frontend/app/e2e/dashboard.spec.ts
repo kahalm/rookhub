@@ -1,57 +1,52 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect, Page } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+const STATE_FILE = path.join(__dirname, '.auth-state.json');
+
+function loadSharedAuth() {
+  return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+}
+
+async function loginPage(page: Page) {
+  const { auth } = loadSharedAuth();
+  await page.addInitScript((authData) => {
+    localStorage.setItem('rookhub_user', JSON.stringify(authData));
+  }, auth);
+  await page.goto('/dashboard');
+  await page.waitForURL('**/dashboard', { timeout: 15_000 });
+}
 
 test.describe('Dashboard', () => {
-  test('shows welcome message', async ({ authedPage, testUser }) => {
-    await authedPage.goto('/dashboard');
-    await authedPage.waitForURL('**/dashboard', { timeout: 10_000 });
-
-    await expect(authedPage.locator('h1')).toContainText(`Welcome, ${testUser.username}`, { timeout: 10_000 });
+  test('shows welcome message', async ({ page }) => {
+    const { username } = loadSharedAuth();
+    await loginPage(page);
+    await expect(page.locator('h1')).toContainText(`Welcome, ${username}`, { timeout: 10_000 });
   });
 
-  test('shows dashboard cards (Repertoires, Tournaments, Friends, Puzzles)', async ({ authedPage }) => {
-    await authedPage.goto('/dashboard');
-    await authedPage.waitForURL('**/dashboard', { timeout: 10_000 });
+  test('shows dashboard cards (Repertoires, Tournaments, Friends, Puzzles)', async ({ page }) => {
+    await loginPage(page);
+    await expect(page.locator('mat-card').first()).toBeVisible({ timeout: 10_000 });
 
-    // Dashboard has mat-cards with icons
-    const cards = authedPage.locator('.dashboard-card, mat-card');
-    await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-
-    // Check for the key icons or card text
-    const pageText = await authedPage.locator('body').textContent();
-    expect(pageText).toMatch(/repertoire/i);
-    expect(pageText).toMatch(/friend/i);
-    expect(pageText).toMatch(/puzzle/i);
+    const pageText = await page.locator('body').textContent();
+    expect(pageText).toMatch(/Repertoires/i);
+    expect(pageText).toMatch(/Friends/i);
+    expect(pageText).toMatch(/Puzzles/i);
   });
 
-  test('navigation to /puzzles works', async ({ authedPage }) => {
-    await authedPage.goto('/dashboard');
-    await authedPage.waitForURL('**/dashboard', { timeout: 10_000 });
+  test('navigation to /puzzles works', async ({ page }) => {
+    await loginPage(page);
 
-    // Click puzzles link in navbar or dashboard card
-    const puzzleLink = authedPage.locator('a[href="/puzzles"], a[routerLink="/puzzles"]').first();
-    if (await puzzleLink.isVisible()) {
-      await puzzleLink.click();
-    } else {
-      // Try navbar text link
-      await authedPage.getByRole('link', { name: /puzzle/i }).first().click();
-    }
-
-    await authedPage.waitForURL('**/puzzles', { timeout: 10_000 });
-    await expect(authedPage).toHaveURL(/\/puzzles/);
+    await page.getByRole('button', { name: /Solve Puzzles/i }).click();
+    await page.waitForURL('**/puzzles', { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/puzzles/);
   });
 
-  test('navigation to /friends works', async ({ authedPage }) => {
-    await authedPage.goto('/dashboard');
-    await authedPage.waitForURL('**/dashboard', { timeout: 10_000 });
+  test('navigation to /friends works', async ({ page }) => {
+    await loginPage(page);
 
-    const friendsLink = authedPage.locator('a[href="/friends"], a[routerLink="/friends"]').first();
-    if (await friendsLink.isVisible()) {
-      await friendsLink.click();
-    } else {
-      await authedPage.getByRole('link', { name: /friend/i }).first().click();
-    }
-
-    await authedPage.waitForURL('**/friends', { timeout: 10_000 });
-    await expect(authedPage).toHaveURL(/\/friends/);
+    await page.getByRole('button', { name: /Manage Friends/i }).click();
+    await page.waitForURL('**/friends', { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/friends/);
   });
 });

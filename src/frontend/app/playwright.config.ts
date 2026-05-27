@@ -2,11 +2,12 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30_000,
+  globalSetup: './e2e/global-setup.ts',
+  timeout: 60_000,
   expect: { timeout: 5_000 },
-  fullyParallel: true,
+  fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: 'html',
 
   use: {
@@ -19,7 +20,14 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'chromium',
+      name: 'no-auth',
+      testMatch: ['puzzles.spec.ts', 'dashboard.spec.ts'],
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'auth',
+      testMatch: ['auth.spec.ts'],
+      dependencies: ['no-auth'],
       use: { browserName: 'chromium' },
     },
   ],
