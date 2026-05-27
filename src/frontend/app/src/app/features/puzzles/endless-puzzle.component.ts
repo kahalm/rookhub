@@ -28,6 +28,8 @@ interface EndlessConfig {
   rangeWidth: number;
   themes: string;
   fasttrack: boolean;
+  fasttrackThreshold1?: number;
+  fasttrackThreshold2?: number;
 }
 
 interface EndlessSession {
@@ -95,7 +97,27 @@ const MIN_FASTTRACK_SESSIONS = 3;
 
                 <div class="level-preview">
                   @if (config.fasttrack && fasttrackPhase1Step > 0) {
-                    <h4>Fasttrack Preview</h4>
+                    <p class="threshold-explain">Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.</p>
+                    <div class="threshold-fields">
+                      <div class="threshold-field-wrap">
+                        <mat-form-field appearance="outline">
+                          <mat-label>1st Mistake Rating</mat-label>
+                          <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" min="100" max="3000" step="50">
+                        </mat-form-field>
+                        @if (fasttrackAvgFirst !== fasttrackAutoFirst) {
+                          <span class="auto-hint" (click)="resetThreshold(1)">Auto: {{ fasttrackAutoFirst }}</span>
+                        }
+                      </div>
+                      <div class="threshold-field-wrap">
+                        <mat-form-field appearance="outline">
+                          <mat-label>2nd Mistake Rating</mat-label>
+                          <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" min="100" max="3000" step="50">
+                        </mat-form-field>
+                        @if (fasttrackAvgSecond !== fasttrackAutoSecond) {
+                          <span class="auto-hint" (click)="resetThreshold(2)">Auto: {{ fasttrackAutoSecond }}</span>
+                        }
+                      </div>
+                    </div>
                     <div class="fasttrack-preview">
                       <div class="fasttrack-phase">
                         <span class="phase-label">Phase 1 (Lv 1–5)</span>
@@ -380,6 +402,15 @@ const MIN_FASTTRACK_SESSIONS = 3;
     .config-fields mat-form-field:last-child { grid-column: 1 / -1; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .fasttrack-hint { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0; }
+    .threshold-explain { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0 0 0.5rem; }
+    .threshold-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+    .threshold-field-wrap { position: relative; }
+    .auto-hint {
+      display: inline-block; font-size: 0.75em; color: #1976d2; cursor: pointer;
+      margin-top: -0.75rem; margin-bottom: 0.25rem; padding: 2px 8px;
+      border-radius: 8px; background: rgba(25,118,210,0.08);
+    }
+    .auto-hint:hover { background: rgba(25,118,210,0.16); }
     .fasttrack-preview { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
     .fasttrack-phase { display: flex; justify-content: space-between; font-size: 0.85em; }
     .phase-label { font-weight: 500; }
@@ -503,6 +534,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
   fasttrackPhase2Step = 0;
   fasttrackAvgFirst = 0;
   fasttrackAvgSecond = 0;
+  fasttrackAutoFirst = 0;
+  fasttrackAutoSecond = 0;
 
   // Dynamic rating
   _currentMinRating = 0;
@@ -873,15 +906,43 @@ export class EndlessPuzzleComponent implements OnDestroy {
       return;
     }
 
-    this.fasttrackAvgFirst = Math.round(
+    // Auto-calculate from history
+    this.fasttrackAutoFirst = Math.round(
       withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
     );
-
     const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
-    this.fasttrackAvgSecond = withSecond.length > 0
+    this.fasttrackAutoSecond = withSecond.length > 0
       ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
-      : this.fasttrackAvgFirst + 100;
+      : this.fasttrackAutoFirst + 100;
 
+    // Apply manual overrides from config, or use auto values
+    this.fasttrackAvgFirst = this.config.fasttrackThreshold1 ?? this.fasttrackAutoFirst;
+    this.fasttrackAvgSecond = this.config.fasttrackThreshold2 ?? this.fasttrackAutoSecond;
+
+    this.recalcStepsFromThresholds();
+  }
+
+  onThresholdChange(): void {
+    // Persist manual overrides
+    this.config.fasttrackThreshold1 = this.fasttrackAvgFirst !== this.fasttrackAutoFirst
+      ? this.fasttrackAvgFirst : undefined;
+    this.config.fasttrackThreshold2 = this.fasttrackAvgSecond !== this.fasttrackAutoSecond
+      ? this.fasttrackAvgSecond : undefined;
+    this.recalcStepsFromThresholds();
+  }
+
+  resetThreshold(which: number): void {
+    if (which === 1) {
+      this.fasttrackAvgFirst = this.fasttrackAutoFirst;
+      this.config.fasttrackThreshold1 = undefined;
+    } else {
+      this.fasttrackAvgSecond = this.fasttrackAutoSecond;
+      this.config.fasttrackThreshold2 = undefined;
+    }
+    this.recalcStepsFromThresholds();
+  }
+
+  private recalcStepsFromThresholds(): void {
     this.fasttrackPhase1Step = Math.max(10, Math.round((this.fasttrackAvgFirst - this.config.startElo) / 5));
     this.fasttrackPhase2Step = Math.max(10, Math.round((this.fasttrackAvgSecond - this.fasttrackAvgFirst) / 5));
   }

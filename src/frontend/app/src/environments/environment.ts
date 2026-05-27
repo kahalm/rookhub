@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.13.0',
+  version: '0.13.1',
   changelog: [
+    { version: '0.13.1', date: '2026-05-27', changes: [
+      'Fasttrack: Thresholds (1./2. Fehler-Rating) editierbar mit Auto-Wert-Anzeige',
+      'Fasttrack: Manuelle Overrides werden in Config persistiert',
+      'Fasttrack: Klick auf Auto-Wert setzt einzelnen Threshold zurueck',
+    ]},
     { version: '0.13.0', date: '2026-05-27', changes: [
       'Endless Mode: Session-History trackt alle Spieldurchlaeufe (max 50, localStorage)',
       'Endless Mode: Fasttrack-Option ueberspringt leichte Puzzles basierend auf vergangenen Sessions',
