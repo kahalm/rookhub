@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.18.0',
+  version: '0.18.1',
   changelog: [
+    { version: '0.18.1', date: '2026-05-27', changes: [
+      'Endless Mode: Stockfish Depth waehrend laufender Serie per Slider anpassbar',
+    ]},
     { version: '0.18.0', date: '2026-05-27', changes: [
       'Security: CrawlerProxyService Error-Details durchreichen (CrawlerRequestException + ExceptionFilter)',
       'Security: JWT Key Minimum 32 Bytes fuer HMAC-SHA256',

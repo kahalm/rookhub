@@ -394,6 +394,11 @@ const FASTTRACK_SESSION_COUNT = 10;
                   @if (config.fasttrack) {
                     <div class="phase-indicator">{{ currentPhaseLabel }}</div>
                   }
+                  <div class="depth-control">
+                    <mat-icon>psychology</mat-icon>
+                    <input type="range" [min]="1" [max]="24" [(ngModel)]="config.stockfishDepth" (change)="onDepthChange()">
+                    <span class="depth-value">{{ config.stockfishDepth }}</span>
+                  </div>
                 </mat-card-content>
               </mat-card>
 
@@ -659,6 +664,13 @@ const FASTTRACK_SESSION_COUNT = 10;
       text-align: center; font-size: 0.8em; color: rgba(0,0,0,0.5);
       margin-top: 0.25rem; font-style: italic;
     }
+    .depth-control {
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      margin-top: 0.5rem; font-size: 0.85em; color: rgba(0,0,0,0.6);
+    }
+    .depth-control mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .depth-control input[type="range"] { width: 100px; cursor: pointer; }
+    .depth-value { font-weight: bold; min-width: 1.5em; text-align: center; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-btn { position: absolute; top: -8px; right: -8px; }
@@ -1193,6 +1205,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.config.stockfishDepth);
     } catch {}
     this.evalLoading = false;
+  }
+
+  onDepthChange(): void {
+    if (this.config.stockfishDepth < 1) this.config.stockfishDepth = 1;
+    if (this.config.stockfishDepth > 24) this.config.stockfishDepth = 24;
+    this.saveConfig();
   }
 
   resetPuzzle(): void {
