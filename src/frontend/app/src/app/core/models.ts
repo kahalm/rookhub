@@ -129,6 +129,16 @@ export interface RepertoireFile {
   uploadedAt: string;
 }
 
+// ── Puzzle Stats ────────────────────────────────────────────────────────
+
+export interface PuzzleStatsDto {
+  totalAttempts: number;
+  solved: number;
+  accuracy: number;
+  currentStreak: number;
+  bestStreak: number;
+}
+
 // ── Tournament Favorites ────────────────────────────────────────────────
 
 export interface TournamentFavorite {

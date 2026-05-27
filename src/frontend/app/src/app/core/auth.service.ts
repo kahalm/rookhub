@@ -56,20 +56,19 @@ export class AuthService {
   }
 
   private getStoredUser(): AuthResponse | null {
-    const stored = localStorage.getItem('rookhub_user');
-    if (!stored) return null;
-    const user: AuthResponse = JSON.parse(stored);
-    // H-2: Check JWT expiration
     try {
+      const stored = localStorage.getItem('rookhub_user');
+      if (!stored) return null;
+      const user: AuthResponse = JSON.parse(stored);
       const payload = JSON.parse(atob(user.token.split('.')[1]));
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         localStorage.removeItem('rookhub_user');
         return null;
       }
+      return user;
     } catch {
-      localStorage.removeItem('rookhub_user');
+      try { localStorage.removeItem('rookhub_user'); } catch { }
       return null;
     }
-    return user;
   }
 }

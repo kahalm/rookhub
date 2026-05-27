@@ -277,6 +277,46 @@ public class AutoSubscriptionServiceTests : IDisposable
         Assert.Empty(favs);
     }
 
+    [Fact]
+    public async Task CheckUserAsync_ProxyError_DoesNotThrow()
+    {
+        var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
+        var proxy = CreateMockProxy("", HttpStatusCode.InternalServerError);
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        // Should not throw — errors are caught and logged
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.Empty(subs);
+    }
+
+    [Fact]
+    public async Task CheckUserAsync_EmptyArray_DoesNothing()
+    {
+        var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
+        var proxy = CreateMockProxy("[]");
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.Empty(subs);
+    }
+
+    [Fact]
+    public async Task CheckUserAsync_NonArrayResponse_DoesNothing()
+    {
+        var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
+        var proxy = CreateMockProxy("""{"error":"not found"}""");
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.Empty(subs);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly string _response;

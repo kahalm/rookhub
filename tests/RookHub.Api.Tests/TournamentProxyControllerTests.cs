@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Controllers;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -41,6 +42,14 @@ public class TournamentProxyControllerTests : IDisposable
         _handler.ThrowOnSend = true;
     }
 
+    private void SetupCrawlerError(HttpStatusCode status, string body = "{\"error\":\"test\"}")
+    {
+        _handler.ResponseMessage = new HttpResponseMessage(status)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+    }
+
     // ---- GetAll ----
 
     [Fact]
@@ -55,14 +64,42 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAll_Returns502_WhenCrawlerUnavailable()
+    public async Task GetAll_PassesPaginationParams()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetAll(page: 2, pageSize: 25);
+
+        Assert.Contains("page=2", _handler.LastRequestUri!);
+        Assert.Contains("pageSize=25", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetAll_ClampsPageSize()
+    {
+        SetupResponse("[]");
+
+        await _controller.GetAll(page: 0, pageSize: 999);
+
+        Assert.Contains("page=1", _handler.LastRequestUri!);
+        Assert.Contains("pageSize=200", _handler.LastRequestUri!);
+    }
+
+    [Fact]
+    public async Task GetAll_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetAll() as ObjectResult;
+        // Without the CrawlerExceptionFilter, the exception propagates
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetAll());
+    }
 
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+    [Fact]
+    public async Task GetAll_ThrowsCrawlerRequestException_On4xx()
+    {
+        SetupCrawlerError(HttpStatusCode.BadRequest);
+
+        await Assert.ThrowsAsync<CrawlerRequestException>(() => _controller.GetAll());
     }
 
     // ---- ID Validation ----
@@ -110,14 +147,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetById_Returns502_WhenCrawlerUnavailable()
+    public async Task GetById_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetById("123") as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetById("123"));
     }
 
     // ---- GetPlayers ----
@@ -145,14 +179,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPlayers_Returns502_WhenCrawlerUnavailable()
+    public async Task GetPlayers_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetPlayers("123", null, null) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPlayers("123", null, null));
     }
 
     // ---- GetTeams ----
@@ -168,14 +199,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTeams_Returns502_WhenCrawlerUnavailable()
+    public async Task GetTeams_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetTeams("123") as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetTeams("123"));
     }
 
     // ---- GetTeamDetail ----
@@ -191,14 +219,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTeamDetail_Returns502_WhenCrawlerUnavailable()
+    public async Task GetTeamDetail_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetTeamDetail("123", 1) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetTeamDetail("123", 1));
     }
 
     // ---- GetPairings ----
@@ -224,14 +249,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPairings_Returns502_WhenCrawlerUnavailable()
+    public async Task GetPairings_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetPairings("123", null) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPairings("123", null));
     }
 
     // ---- GetPlayerResults ----
@@ -247,14 +269,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPlayerResults_Returns502_WhenCrawlerUnavailable()
+    public async Task GetPlayerResults_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetPlayerResults("123", 5) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetPlayerResults("123", 5));
     }
 
     // ---- CheckRounds ----
@@ -270,14 +289,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckRounds_Returns502_WhenCrawlerUnavailable()
+    public async Task CheckRounds_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.CheckRounds("123") as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.CheckRounds("123"));
     }
 
     // ---- Crawl ----
@@ -304,15 +320,12 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Crawl_Returns502_WhenCrawlerUnavailable()
+    public async Task Crawl_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
         var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\"}");
 
-        var result = await _controller.Crawl(body) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.Crawl(body));
     }
 
     // ---- CrawlPlayerDetails ----
@@ -349,15 +362,12 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CrawlPlayerDetails_Returns502_WhenCrawlerUnavailable()
+    public async Task CrawlPlayerDetails_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
         var body = JsonSerializer.Deserialize<JsonElement>("{\"chessResultsId\":\"100\",\"playerSnrs\":[1]}");
 
-        var result = await _controller.CrawlPlayerDetails(body) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.CrawlPlayerDetails(body));
     }
 
     // ---- GetCrawlStatus ----
@@ -373,14 +383,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCrawlStatus_Returns502_WhenCrawlerUnavailable()
+    public async Task GetCrawlStatus_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetCrawlStatus(1) as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlStatus(1));
     }
 
     // ---- GetCrawlerIp ----
@@ -396,14 +403,11 @@ public class TournamentProxyControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCrawlerIp_Returns502_WhenCrawlerUnavailable()
+    public async Task GetCrawlerIp_ThrowsHttpRequestException_WhenCrawlerUnavailable()
     {
         SetupFailure();
 
-        var result = await _controller.GetCrawlerIp() as ObjectResult;
-
-        Assert.NotNull(result);
-        Assert.Equal(502, result.StatusCode);
+        await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlerIp());
     }
 }
 

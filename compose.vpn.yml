@@ -89,6 +89,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      gluetun:
+        condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}

@@ -23,12 +23,28 @@ public class TournamentMonitorTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    private async Task<int> CreateUserAsync(string username = "testuser")
+    {
+        var user = new AppUser
+        {
+            Username = username,
+            Email = $"{username}@example.com",
+            PasswordHash = "hash",
+            Profile = new UserProfile()
+        };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user.Id;
+    }
+
     [Fact]
     public async Task Activate_ReExtendsExistingMonitor()
     {
+        var userId = await CreateUserAsync();
         var originalUntil = DateTime.UtcNow.AddMinutes(10);
         _db.TournamentMonitors.Add(new TournamentMonitor
         {
+            UserId = userId,
             CrawlerTournamentId = "100",
             CrawlerTournamentDbId = 1,
             ActiveUntil = originalUntil,
@@ -38,21 +54,23 @@ public class TournamentMonitorTests : IDisposable
 
         // Simulate re-extend logic from controller
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100" && m.UserId == userId);
 
         Assert.NotNull(monitor);
         monitor!.ActiveUntil = DateTime.UtcNow.AddHours(1);
         await _db.SaveChangesAsync();
 
-        var updated = await _db.TournamentMonitors.FirstAsync(m => m.CrawlerTournamentId == "100");
+        var updated = await _db.TournamentMonitors.FirstAsync(m => m.CrawlerTournamentId == "100" && m.UserId == userId);
         Assert.True(updated.ActiveUntil > originalUntil);
     }
 
     [Fact]
     public async Task GetStatus_Active_ReturnsActive()
     {
+        var userId = await CreateUserAsync();
         _db.TournamentMonitors.Add(new TournamentMonitor
         {
+            UserId = userId,
             CrawlerTournamentId = "100",
             CrawlerTournamentDbId = 1,
             ActiveUntil = DateTime.UtcNow.AddHours(1),
@@ -61,7 +79,7 @@ public class TournamentMonitorTests : IDisposable
         await _db.SaveChangesAsync();
 
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100" && m.UserId == userId);
 
         Assert.NotNull(monitor);
         Assert.True(monitor!.ActiveUntil > DateTime.UtcNow);
@@ -71,8 +89,10 @@ public class TournamentMonitorTests : IDisposable
     [Fact]
     public async Task GetStatus_Expired_ReturnsInactive()
     {
+        var userId = await CreateUserAsync();
         _db.TournamentMonitors.Add(new TournamentMonitor
         {
+            UserId = userId,
             CrawlerTournamentId = "100",
             CrawlerTournamentDbId = 1,
             ActiveUntil = DateTime.UtcNow.AddHours(-1), // expired
@@ -81,7 +101,7 @@ public class TournamentMonitorTests : IDisposable
         await _db.SaveChangesAsync();
 
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100" && m.UserId == userId);
 
         Assert.NotNull(monitor);
         Assert.True(monitor!.ActiveUntil < DateTime.UtcNow);
@@ -90,8 +110,9 @@ public class TournamentMonitorTests : IDisposable
     [Fact]
     public async Task GetStatus_NotFound_ReturnsInactive()
     {
+        var userId = await CreateUserAsync();
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "999");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "999" && m.UserId == userId);
 
         Assert.Null(monitor);
     }
@@ -99,8 +120,10 @@ public class TournamentMonitorTests : IDisposable
     [Fact]
     public async Task Deactivate_RemovesMonitor()
     {
+        var userId = await CreateUserAsync();
         _db.TournamentMonitors.Add(new TournamentMonitor
         {
+            UserId = userId,
             CrawlerTournamentId = "100",
             CrawlerTournamentDbId = 1,
             ActiveUntil = DateTime.UtcNow.AddHours(1)
@@ -108,7 +131,7 @@ public class TournamentMonitorTests : IDisposable
         await _db.SaveChangesAsync();
 
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "100" && m.UserId == userId);
         Assert.NotNull(monitor);
 
         _db.TournamentMonitors.Remove(monitor!);
@@ -120,11 +143,10 @@ public class TournamentMonitorTests : IDisposable
     [Fact]
     public async Task Deactivate_NotFound_NoError()
     {
+        var userId = await CreateUserAsync();
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "999");
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "999" && m.UserId == userId);
 
-        // Controller does: if (monitor is not null) { remove }; return NoContent
-        // This should not throw
         if (monitor is not null)
         {
             _db.TournamentMonitors.Remove(monitor);
@@ -135,11 +157,76 @@ public class TournamentMonitorTests : IDisposable
     }
 
     [Fact]
+    public async Task Activate_SetsUserId()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = userId,
+            CrawlerTournamentId = "200",
+            CrawlerTournamentDbId = 2,
+            ActiveUntil = DateTime.UtcNow.AddHours(1),
+            LastKnownRounds = 3
+        });
+        await _db.SaveChangesAsync();
+
+        var monitor = await _db.TournamentMonitors.FirstAsync(m => m.CrawlerTournamentId == "200");
+        Assert.Equal(userId, monitor.UserId);
+    }
+
+    [Fact]
+    public async Task GetStatus_OtherUser_ReturnsNull()
+    {
+        var user1 = await CreateUserAsync("user1");
+        var user2 = await CreateUserAsync("user2");
+
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = user1,
+            CrawlerTournamentId = "300",
+            CrawlerTournamentDbId = 3,
+            ActiveUntil = DateTime.UtcNow.AddHours(1),
+            LastKnownRounds = 5
+        });
+        await _db.SaveChangesAsync();
+
+        // User2 queries for the same tournament — should not find user1's monitor
+        var monitor = await _db.TournamentMonitors
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "300" && m.UserId == user2);
+
+        Assert.Null(monitor);
+    }
+
+    [Fact]
+    public async Task Delete_OtherUser_MonitorRemains()
+    {
+        var user1 = await CreateUserAsync("user1a");
+        var user2 = await CreateUserAsync("user2a");
+
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = user1,
+            CrawlerTournamentId = "400",
+            CrawlerTournamentDbId = 4,
+            ActiveUntil = DateTime.UtcNow.AddHours(1)
+        });
+        await _db.SaveChangesAsync();
+
+        // User2 tries to delete — should find nothing
+        var monitor = await _db.TournamentMonitors
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == "400" && m.UserId == user2);
+        Assert.Null(monitor);
+
+        // User1's monitor should still exist
+        Assert.Single(await _db.TournamentMonitors.ToListAsync());
+    }
+
+    [Fact]
     public async Task FavoritedSnrs_AggregatesDistinctPlayerSnrs()
     {
         // Create users
-        var user1 = new AppUser { Username = "user1", Email = "u1@test.com", PasswordHash = "hash" };
-        var user2 = new AppUser { Username = "user2", Email = "u2@test.com", PasswordHash = "hash" };
+        var user1 = new AppUser { Username = "userfav1", Email = "uf1@test.com", PasswordHash = "hash" };
+        var user2 = new AppUser { Username = "userfav2", Email = "uf2@test.com", PasswordHash = "hash" };
         _db.AppUsers.AddRange(user1, user2);
         await _db.SaveChangesAsync();
 

@@ -23,7 +23,10 @@ public class PuzzleService
         {
             var themeList = themes.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (var theme in themeList)
-                query = query.Where(p => p.Themes != null && p.Themes.Contains(theme));
+            {
+                var sanitized = SanitizeLikeInput(theme);
+                query = query.Where(p => p.Themes != null && EF.Functions.Like(p.Themes, $"%{sanitized}%"));
+            }
         }
         if (excludeSolved && userId.HasValue)
         {
@@ -36,7 +39,7 @@ public class PuzzleService
 
         // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
-        // ID-range picks a random point in the PK space and seeks forward – O(1).
+        // ID-range picks a random point in the PK space and seeks forward - O(1).
         var minId = await _db.Puzzles.MinAsync(p => (int?)p.Id);
         var maxId = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
         if (minId == null || maxId == null) return null;
@@ -100,21 +103,23 @@ public class PuzzleService
 
     public async Task<PuzzleStatsDto> GetStatsAsync(int userId)
     {
-        var attempts = await _db.PuzzleAttempts
+        var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
+        if (totalAttempts == 0)
+            return new PuzzleStatsDto();
+
+        var solved = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.Solved);
+        var accuracy = (double)solved / totalAttempts * 100;
+
+        // Calculate streaks from most recent 1000 attempts
+        var recentResults = await _db.PuzzleAttempts
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.AttemptedAt)
+            .Take(1000)
             .Select(a => a.Solved)
             .ToListAsync();
 
-        if (attempts.Count == 0)
-            return new PuzzleStatsDto();
-
-        var solved = attempts.Count(a => a);
-        var accuracy = (double)solved / attempts.Count * 100;
-
-        // Calculate streaks
         var currentStreak = 0;
-        foreach (var s in attempts)
+        foreach (var s in recentResults)
         {
             if (s) currentStreak++;
             else break;
@@ -122,7 +127,7 @@ public class PuzzleService
 
         var bestStreak = 0;
         var streak = 0;
-        foreach (var s in attempts)
+        foreach (var s in recentResults)
         {
             if (s) { streak++; bestStreak = Math.Max(bestStreak, streak); }
             else streak = 0;
@@ -130,7 +135,7 @@ public class PuzzleService
 
         return new PuzzleStatsDto
         {
-            TotalAttempts = attempts.Count,
+            TotalAttempts = totalAttempts,
             Solved = solved,
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
@@ -163,15 +168,17 @@ public class PuzzleService
             .ToListAsync();
     }
 
-    public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount)
+    public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
-        var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync();
+        var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);
         var imported = 0;
         var batch = new List<Puzzle>();
 
         using var reader = new StreamReader(csvStream);
-        while (await reader.ReadLineAsync() is { } line)
+        while (await reader.ReadLineAsync(ct) is { } line)
         {
+            ct.ThrowIfCancellationRequested();
+
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             var parts = line.Split(',');
@@ -208,7 +215,7 @@ public class PuzzleService
             if (batch.Count >= 1000)
             {
                 _db.Puzzles.AddRange(batch);
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync(ct);
                 _db.ChangeTracker.Clear();
                 batch.Clear();
             }
@@ -217,11 +224,14 @@ public class PuzzleService
         if (batch.Count > 0)
         {
             _db.Puzzles.AddRange(batch);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(ct);
         }
 
         return imported;
     }
+
+    private static string SanitizeLikeInput(string input)
+        => input.Replace("%", "\\%").Replace("_", "\\_");
 
     private static PuzzleDto MapToDto(Puzzle p) => new()
     {

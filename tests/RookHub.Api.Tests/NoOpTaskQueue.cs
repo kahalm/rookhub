@@ -14,3 +14,17 @@ public class NoOpTaskQueue : IBackgroundTaskQueue
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("NoOpTaskQueue does not support dequeue");
 }
+
+/// <summary>
+/// Executes work items synchronously for tests that need to verify background logic.
+/// </summary>
+public class ImmediateTaskQueue : IBackgroundTaskQueue
+{
+    public async ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+    {
+        await workItem(null!, CancellationToken.None);
+    }
+
+    public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+        => throw new NotImplementedException("ImmediateTaskQueue does not support dequeue");
+}

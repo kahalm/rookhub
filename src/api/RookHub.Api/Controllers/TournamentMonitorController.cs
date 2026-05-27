@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Validation;
@@ -12,7 +12,8 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/tournament-monitors")]
 [Authorize]
-public class TournamentMonitorController : ControllerBase
+[TypeFilter(typeof(CrawlerExceptionFilter))]
+public class TournamentMonitorController : BaseApiController
 {
     private readonly AppDbContext _db;
     private readonly CrawlerProxyService _proxy;
@@ -31,8 +32,10 @@ public class TournamentMonitorController : ControllerBase
         if (!TournamentIdValidator.IsValid(tournamentId))
             return BadRequest(new { message = "Invalid tournament ID." });
 
+        var userId = GetUserId();
+
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId && m.UserId == userId);
 
         if (monitor is not null)
         {
@@ -50,18 +53,11 @@ public class TournamentMonitorController : ControllerBase
         // Fetch current round count from crawler
         int knownRounds = 0;
         int dbId = 0;
-        try
-        {
-            var result = await _proxy.GetAsync($"/api/tournaments/{tournamentId}");
-            if (result.TryGetProperty("totalRounds", out var totalRoundsProp))
-                knownRounds = totalRoundsProp.GetInt32();
-            if (result.TryGetProperty("id", out var idProp))
-                dbId = idProp.GetInt32();
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(502, new { message = "Crawler service unavailable." });
-        }
+        var result = await _proxy.GetAsync($"/api/tournaments/{tournamentId}");
+        if (result.TryGetProperty("totalRounds", out var totalRoundsProp))
+            knownRounds = totalRoundsProp.GetInt32();
+        if (result.TryGetProperty("id", out var idProp))
+            dbId = idProp.GetInt32();
 
         // Get actual known rounds from rounds/check
         try
@@ -77,6 +73,7 @@ public class TournamentMonitorController : ControllerBase
 
         monitor = new TournamentMonitor
         {
+            UserId = userId,
             CrawlerTournamentId = tournamentId,
             CrawlerTournamentDbId = dbId,
             ActiveUntil = DateTime.UtcNow.AddHours(1),
@@ -101,8 +98,10 @@ public class TournamentMonitorController : ControllerBase
         if (!TournamentIdValidator.IsValid(tournamentId))
             return BadRequest(new { message = "Invalid tournament ID." });
 
+        var userId = GetUserId();
+
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId && m.UserId == userId);
 
         if (monitor is null || monitor.ActiveUntil < DateTime.UtcNow)
         {
@@ -130,8 +129,10 @@ public class TournamentMonitorController : ControllerBase
         if (!TournamentIdValidator.IsValid(tournamentId))
             return BadRequest(new { message = "Invalid tournament ID." });
 
+        var userId = GetUserId();
+
         var monitor = await _db.TournamentMonitors
-            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId);
+            .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId && m.UserId == userId);
 
         if (monitor is not null)
         {

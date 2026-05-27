@@ -106,17 +106,22 @@ public class AdminController : BaseApiController
     }
 
     [HttpPost("puzzles/import")]
+    [RequestSizeLimit(500 * 1024 * 1024)]
     public async Task<IActionResult> ImportPuzzles(
         IFormFile file,
         [FromQuery] int? minRating,
         [FromQuery] int? maxRating,
-        [FromQuery] int? maxCount)
+        [FromQuery] int? maxCount,
+        CancellationToken ct)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file provided." });
 
+        if (file.Length > 500 * 1024 * 1024)
+            return BadRequest(new { message = "File exceeds 500 MB limit." });
+
         using var stream = file.OpenReadStream();
-        var imported = await _puzzleService.ImportFromCsvAsync(stream, minRating, maxRating, maxCount);
+        var imported = await _puzzleService.ImportFromCsvAsync(stream, minRating, maxRating, maxCount, ct);
         return Ok(new { imported });
     }
 

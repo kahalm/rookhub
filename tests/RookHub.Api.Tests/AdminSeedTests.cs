@@ -81,4 +81,47 @@ public class AdminSeedTests : IDisposable
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
         Assert.True(user!.IsAdmin);
     }
+
+    [Fact]
+    public async Task SeedAsync_UnchangedPassword_NoReHash()
+    {
+        var originalHash = BCrypt.Net.BCrypt.HashPassword("samepass");
+        _db.AppUsers.Add(new AppUser
+        {
+            Username = "admin",
+            Email = "admin@rookhub.local",
+            PasswordHash = originalHash,
+            IsAdmin = true
+        });
+        await _db.SaveChangesAsync();
+
+        var config = BuildConfig("admin", "samepass");
+        await AdminSeeder.SeedAsync(_db, config);
+
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
+        // Hash should remain the same since password didn't change
+        Assert.Equal(originalHash, user!.PasswordHash);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ChangedPassword_NewHash()
+    {
+        var originalHash = BCrypt.Net.BCrypt.HashPassword("oldpass");
+        _db.AppUsers.Add(new AppUser
+        {
+            Username = "admin",
+            Email = "admin@rookhub.local",
+            PasswordHash = originalHash,
+            IsAdmin = true
+        });
+        await _db.SaveChangesAsync();
+
+        var config = BuildConfig("admin", "newpass");
+        await AdminSeeder.SeedAsync(_db, config);
+
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
+        // Hash should be different since password changed
+        Assert.NotEqual(originalHash, user!.PasswordHash);
+        Assert.True(BCrypt.Net.BCrypt.Verify("newpass", user.PasswordHash));
+    }
 }

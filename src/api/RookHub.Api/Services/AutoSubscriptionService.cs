@@ -147,8 +147,17 @@ public class AutoSubscriptionService : BackgroundService
 
         if (newSubscriptions > 0)
         {
-            await db.SaveChangesAsync(ct);
-            _logger.LogInformation("AutoSubscription: Created {Count} new subscriptions for user {UserId}", newSubscriptions, userId);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                _logger.LogInformation("AutoSubscription: Created {Count} new subscriptions for user {UserId}", newSubscriptions, userId);
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogWarning(ex, "Constraint violation saving subscriptions for user {UserId}, detaching added entities", userId);
+                foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == Microsoft.EntityFrameworkCore.EntityState.Added))
+                    entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            }
         }
 
         // Auto-favorite players for subscriptions that don't have favorites yet
@@ -266,9 +275,18 @@ public class AutoSubscriptionService : BackgroundService
 
         if (newFavorites > 0)
         {
-            await db.SaveChangesAsync(ct);
-            _logger.LogInformation("AutoFavorite: Created {Count} favorites for user {UserId} in tournament {TournamentId}",
-                newFavorites, userId, crawlerTournamentId);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                _logger.LogInformation("AutoFavorite: Created {Count} favorites for user {UserId} in tournament {TournamentId}",
+                    newFavorites, userId, crawlerTournamentId);
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogWarning(ex, "Constraint violation saving favorites for user {UserId}, tournament {TournamentId}", userId, crawlerTournamentId);
+                foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == Microsoft.EntityFrameworkCore.EntityState.Added))
+                    entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            }
         }
     }
 }

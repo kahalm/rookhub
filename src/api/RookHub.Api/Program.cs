@@ -19,6 +19,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT key not configured");
+if (Encoding.UTF8.GetBytes(jwtKey).Length < 32)
+    throw new InvalidOperationException("JWT key must be at least 32 bytes for HMAC-SHA256");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

@@ -31,7 +31,8 @@ import { AuthService } from '../../core/auth.service';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="3">
+              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}">
+              <mat-hint>Min. 8 characters, uppercase, lowercase, number</mat-hint>
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
               {{ loading ? 'Registering...' : 'Register' }}

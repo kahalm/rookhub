@@ -30,7 +30,8 @@ public static class AdminSeeder
         }
         else
         {
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
             user.IsAdmin = true;
         }
 

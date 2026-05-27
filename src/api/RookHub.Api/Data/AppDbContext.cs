@@ -107,7 +107,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<TournamentMonitor>(e =>
         {
-            e.HasIndex(m => m.CrawlerTournamentId).IsUnique();
+            e.HasOne(m => m.User)
+             .WithMany()
+             .HasForeignKey(m => m.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(m => new { m.UserId, m.CrawlerTournamentId }).IsUnique();
         });
 
         modelBuilder.Entity<Puzzle>(e =>

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using RookHub.Api.Exceptions;
 
 namespace RookHub.Api.Services;
 
@@ -14,7 +15,7 @@ public class CrawlerProxyService
     public async Task<JsonElement> GetAsync(string path)
     {
         var response = await _httpClient.GetAsync(path);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessOrThrowAsync(response);
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<JsonElement>(json);
     }
@@ -26,7 +27,7 @@ public class CrawlerProxyService
             : null;
 
         var response = await _httpClient.PostAsync(path, content);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessOrThrowAsync(response);
         var json = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<JsonElement>(json);
     }
@@ -37,8 +38,17 @@ public class CrawlerProxyService
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync(path, content);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessOrThrowAsync(response);
         var responseJson = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<JsonElement>(responseJson);
+    }
+
+    private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response)
+    {
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new CrawlerRequestException(response.StatusCode, body);
+        }
     }
 }
