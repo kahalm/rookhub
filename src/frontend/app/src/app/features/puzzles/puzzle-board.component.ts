@@ -27,6 +27,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() lastMove?: [Key, Key];
   @Input() viewOnly = false;
   @Input() check = false;
+  @Input() premovable = false;
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key }>();
 
@@ -96,6 +97,14 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         dests: this.viewOnly ? undefined : this.dests,
         showDests: true
       },
+      premovable: {
+        enabled: this.premovable,
+        showDests: true,
+        events: {
+          set: (orig: Key, dest: Key) => {},
+          unset: () => {}
+        }
+      },
       events: {
         move: (orig: Key, dest: Key) => {
           this.moveMade.emit({ orig, dest });
@@ -131,8 +140,23 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         color: this.viewOnly ? undefined : this.turnColor,
         dests: this.viewOnly ? undefined : this.dests,
         showDests: true
+      },
+      premovable: {
+        enabled: this.premovable
       }
     });
+    // Execute pending premove when it becomes the user's turn
+    if (this.premovable && !this.viewOnly && this.ground.state.premovable.current) {
+      setTimeout(() => {
+        if (this.ground?.state.premovable.current) {
+          const [o, d] = this.ground.state.premovable.current;
+          // playPremove triggers the move event if legal, cancels if not
+          if (!this.ground.playPremove()) {
+            // Premove was illegal — just cancel it
+          }
+        }
+      }, 50);
+    }
   }
 
   ngOnDestroy(): void {

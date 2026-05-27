@@ -221,7 +221,8 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [turnColor]="turnColor"
                 [dests]="dests"
                 [lastMove]="lastMove"
-                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING'"
+                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
+                [premovable]="state === 'THINKING'"
                 [check]="isCheck"
                 (moveMade)="onMoveMade($event)"
               />

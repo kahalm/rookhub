@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.14.1',
+  version: '0.14.2',
   changelog: [
+    { version: '0.14.2', date: '2026-05-27', changes: [
+      'Endless Mode: Premoves waehrend Gegner denkt (Zug vorausplanen wie auf Lichess/Chess.com)',
+    ]},
     { version: '0.14.1', date: '2026-05-27', changes: [
       'Endless Mode: Hilfe-Overlay erklaert Spielablauf, Stockfish, Buttons und Einstellungen',
     ]},
