@@ -258,6 +258,14 @@ const FASTTRACK_SESSION_COUNT = 10;
                         @if (alternativeSolve) {
                           <p class="status-text">Checkmate!</p>
                           <p class="alt-hint">Alternative solution — the puzzle had a different intended line.</p>
+                          <div class="alt-actions">
+                            <button mat-raised-button color="primary" (click)="continueAfterSolve()">
+                              <mat-icon>arrow_forward</mat-icon> Continue
+                            </button>
+                            <button mat-button (click)="showIntendedSolution()">
+                              <mat-icon>visibility</mat-icon> Show Solution
+                            </button>
+                          </div>
                         } @else {
                           <p class="status-text">Correct!</p>
                         }
@@ -491,6 +499,7 @@ const FASTTRACK_SESSION_COUNT = 10;
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .eval-compare {
       display: flex; align-items: center; gap: 0.5rem;
       padding: 6px 14px; border-radius: 8px; background: rgba(0,0,0,0.04);
@@ -906,11 +915,45 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.recordAttempt(true);
     this.updateBoard();
 
+    if (alternative) {
+      // Don't auto-advance — let user choose Continue or Show Solution
+      return;
+    }
+
     this.autoAdvanceTimer = setTimeout(() => {
       this._currentMinRating += this.getCurrentStep();
       this.level++;
       this.loadPuzzle();
-    }, alternative ? 1500 : 800);
+    }, 800);
+  }
+
+  continueAfterSolve(): void {
+    this._currentMinRating += this.getCurrentStep();
+    this.level++;
+    this.loadPuzzle();
+  }
+
+  showIntendedSolution(): void {
+    if (!this.puzzle) return;
+    // Reset board to puzzle start and play through intended solution
+    this.solutionMoves = this.puzzle.moves.split(' ');
+    this.chess = new Chess(this.puzzle.fen);
+    this.state = 'CORRECT';
+
+    // Play setup move immediately
+    this.playMove(this.solutionMoves[0]);
+    this.updateBoard();
+
+    // Animate remaining moves
+    let i = 1;
+    const playNext = () => {
+      if (i >= this.solutionMoves.length) return;
+      this.playMove(this.solutionMoves[i]);
+      i++;
+      this.updateBoard();
+      this.autoAdvanceTimer = setTimeout(playNext, 600);
+    };
+    this.autoAdvanceTimer = setTimeout(playNext, 400);
   }
 
   private loseLife(): void {

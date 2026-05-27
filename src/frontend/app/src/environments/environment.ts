@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.13.4',
+  version: '0.13.5',
   changelog: [
+    { version: '0.13.5', date: '2026-05-27', changes: [
+      'Endless Mode: Alternative Loesung pausiert, Continue/Show Solution Buttons',
+      'Endless Mode: Show Solution spielt die beabsichtigte Zugfolge animiert ab',
+    ]},
     { version: '0.13.4', date: '2026-05-27', changes: [
       'Fasttrack: Auto-Thresholds mindestens startElo+400/+800 (keine sinnlosen niedrigen Werte mehr)',
       'Fasttrack: Step Size auf 10–200 geclampt',
