@@ -1,7 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.11.3',
+  version: '0.12.0',
   changelog: [
+    { version: '0.12.0', date: '2026-05-27', changes: [
+      'Endless Puzzle Mode: Progressive Schwierigkeit mit konfigurierbarem Start-Rating, Step-Size und Range',
+      'Endless Mode: 3 Leben, bei 0 Game Over mit Highscore-Tracking',
+      'Endless Mode: Prefetch fuer schnelles Laden, Session-Timer, Level-Anzeige',
+      'Endless Mode: Config wird in localStorage gespeichert, Highscore persistent',
+    ]},
     { version: '0.11.3', date: '2026-05-26', changes: [
       'Performance: Puzzle-Loading von 10+ Sekunden auf unter 1 Sekunde optimiert',
       'Backend: ID-Range-Ansatz statt COUNT+SKIP auf 5.3M Rows',

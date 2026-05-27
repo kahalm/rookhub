@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatInputModule } from '@angular/material/input';
+import { Router } from '@angular/router';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
 import { AuthService } from '../../core/auth.service';
@@ -155,6 +156,11 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
               </div>
             </mat-card-content>
           </mat-card>
+
+          <button mat-stroked-button color="accent" class="endless-btn" (click)="goEndless()">
+            <mat-icon>all_inclusive</mat-icon>
+            Endless Mode
+          </button>
         </div>
       </div>
     </div>
@@ -185,6 +191,8 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
     .filter-row { display: flex; gap: 0.5rem; }
     .filter-field { flex: 1; }
     .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .endless-btn { width: 100%; height: 44px; font-size: 1em; }
+    .endless-btn mat-icon { margin-right: 0.25rem; }
 
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
@@ -219,9 +227,13 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
 
-  constructor(private puzzleService: PuzzleService, private authService: AuthService) {}
+  constructor(private puzzleService: PuzzleService, private authService: AuthService, private router: Router) {}
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
+
+  goEndless(): void {
+    this.router.navigate(['/puzzles/endless']);
+  }
 
   ngOnInit(): void {
     this.loadNext();
