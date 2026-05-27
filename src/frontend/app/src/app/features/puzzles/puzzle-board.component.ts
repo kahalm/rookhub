@@ -36,6 +36,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
   private initAttempts = 0;
+  private pendingPremove?: { orig: Key; dest: Key };
 
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
@@ -99,11 +100,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       },
       premovable: {
         enabled: this.premovable,
-        showDests: true,
-        events: {
-          set: (orig: Key, dest: Key) => {},
-          unset: () => {}
-        }
+        showDests: true
       },
       events: {
         move: (orig: Key, dest: Key) => {
@@ -129,6 +126,13 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
+
+    // Check for pending premove before updating the board
+    // When transitioning from premovable to interactive (user's turn), execute premove
+    const wasPremovable = changes['premovable']?.previousValue;
+    const isNowInteractive = !this.viewOnly && !this.premovable;
+    const hasPremove = this.ground.state.premovable.current;
+
     this.ground.set({
       fen: this.fen,
       orientation: this.orientation,
@@ -145,16 +149,14 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         enabled: this.premovable
       }
     });
-    // Execute pending premove when it becomes the user's turn
-    if (this.premovable && !this.viewOnly && this.ground.state.premovable.current) {
+
+    // Execute pending premove when transitioning from THINKING to PLAYING
+    if (wasPremovable && isNowInteractive && hasPremove) {
+      const [orig, dest] = hasPremove;
+      // Cancel the premove visual, then emit the move
+      this.ground.cancelPremove();
       setTimeout(() => {
-        if (this.ground?.state.premovable.current) {
-          const [o, d] = this.ground.state.premovable.current;
-          // playPremove triggers the move event if legal, cancels if not
-          if (!this.ground.playPremove()) {
-            // Premove was illegal — just cancel it
-          }
-        }
+        this.moveMade.emit({ orig, dest });
       }, 50);
     }
   }

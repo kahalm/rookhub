@@ -66,23 +66,23 @@ const FASTTRACK_SESSION_COUNT = 10;
             </div>
             <div class="help-body">
               <h3>Spielablauf</h3>
-              <p>Du loest Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Jedes geloeste Puzzle erhoeht das Rating um die Step Size.</p>
+              <p>Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Jedes gelöste Puzzle erhöht das Rating um die Step Size.</p>
               <p>Du hast <strong>3 Leben</strong>. Bei 0 Leben ist das Spiel vorbei.</p>
 
-              <h3>Zuege & Stockfish</h3>
-              <p>Jedes Puzzle hat eine <strong>beabsichtigte Loesung</strong> (eine Zugfolge). Solange du die richtigen Zuege spielst, folgst du diesem Loesungsweg.</p>
-              <p>Spielst du einen <strong>falschen Zug</strong>, uebernimmt <strong>Stockfish</strong> (eine Schach-Engine, ~2400 Elo) die Gegenseite. Du spielst dann frei gegen Stockfish weiter.</p>
+              <h3>Züge & Stockfish</h3>
+              <p>Jedes Puzzle hat eine <strong>beabsichtigte Lösung</strong> (eine Zugfolge). Solange du die richtigen Züge spielst, folgst du diesem Lösungsweg.</p>
+              <p>Spielst du einen <strong>falschen Zug</strong>, übernimmt <strong>Stockfish</strong> (eine Schach-Engine) die Gegenseite. Du spielst dann frei gegen Stockfish weiter. Die Stärke ist über die Stockfish Depth einstellbar.</p>
               <ul>
-                <li><strong>Schachmatt gegen Stockfish</strong> zaehlt als alternative Loesung — kein Lebensverlust!</li>
+                <li><strong>Schachmatt gegen Stockfish</strong> zählt als alternative Lösung — kein Lebensverlust!</li>
                 <li><strong>Stockfish setzt dich matt</strong> — du verlierst ein Leben</li>
                 <li>Das Spiel gegen Stockfish geht endlos weiter bis Matt oder Give Up</li>
               </ul>
 
-              <h3>Buttons waehrend des Spiels</h3>
+              <h3>Buttons während des Spiels</h3>
               <ul>
                 <li><strong>Show Eval</strong> — Zeigt die Stockfish-Bewertung (Start vs. Aktuell)</li>
-                <li><strong>Reset</strong> — Setzt das Puzzle zurueck, kostet aber ein Leben</li>
-                <li><strong>Mouseslip</strong> — Macht den letzten falschen Zug rueckgaengig (einmal pro Puzzle, gratis)</li>
+                <li><strong>Reset</strong> — Setzt das Puzzle zurück, kostet aber ein Leben</li>
+                <li><strong>Mouseslip</strong> — Macht den letzten falschen Zug rückgängig (einmal pro Puzzle, gratis)</li>
                 <li><strong>Give Up</strong> — Aufgeben, kostet ein Leben</li>
               </ul>
 
@@ -90,18 +90,19 @@ const FASTTRACK_SESSION_COUNT = 10;
               <ul>
                 <li><strong>Start Rating</strong> — Ab welchem Puzzle-Rating du beginnst</li>
                 <li><strong>Step Size</strong> — Um wieviel das Rating pro Puzzle steigt (im Normalmodus)</li>
+                <li><strong>Stockfish Depth</strong> — Stärke der Engine (1 = sehr schwach, 24 = maximale Stärke)</li>
                 <li><strong>Themes</strong> — Optional: nur bestimmte Taktik-Themen (z.B. "fork pin")</li>
               </ul>
 
               <h3>Fasttrack</h3>
-              <p>Ueberspringt leichte Puzzles basierend auf deiner bisherigen Performance.</p>
+              <p>Überspringt leichte Puzzles basierend auf deiner bisherigen Performance.</p>
               <p>Analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.</p>
               <ul>
                 <li><strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. typischen Fehler-Rating</li>
                 <li><strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Fehler-Rating</li>
                 <li><strong>Phase 3 (ab Puzzle 11)</strong> — Konstanter Step von 20</li>
               </ul>
-              <p>Die Threshold-Werte (1st/2nd Mistake Rating) werden automatisch berechnet, koennen aber manuell angepasst werden. Klick auf "Auto: ..." setzt den Wert zurueck.</p>
+              <p>Die Threshold-Werte (1st/2nd Mistake Rating) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf "Auto: ..." setzt den Wert zurück.</p>
             </div>
           </div>
         </div>
@@ -549,7 +550,7 @@ const FASTTRACK_SESSION_COUNT = 10;
 
     .config-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .config-card { max-width: 500px; width: 100%; }
-    .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; margin-top: 1rem; }
+    .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
     .config-fields mat-form-field:last-child { grid-column: 1 / -1; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .threshold-explain { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0 0 0.5rem; }
