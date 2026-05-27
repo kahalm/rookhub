@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.12.0',
+  version: '0.12.1',
   changelog: [
+    { version: '0.12.1', date: '2026-05-27', changes: [
+      'Endless Mode: Standard Step-Size und Range auf 40 erhoeht',
+    ]},
     { version: '0.12.0', date: '2026-05-27', changes: [
       'Endless Puzzle Mode: Progressive Schwierigkeit mit konfigurierbarem Start-Rating, Step-Size und Range',
       'Endless Mode: 3 Leben, bei 0 Game Over mit Highscore-Tracking',
