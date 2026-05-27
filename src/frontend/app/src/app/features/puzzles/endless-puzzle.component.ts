@@ -875,7 +875,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.updateBoard();
 
     try {
-      const result = await this.stockfish.getBestMove(this.chess.fen(), 12);
+      const result = await this.stockfish.getBestMove(this.chess.fen(), 16);
       if (this.aborted) return;
       this.currentEval = result.eval;
       this.playMove(result.move);
@@ -984,9 +984,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.evalLoading = true;
     try {
       if (!this.initialEval && this.initialFen) {
-        this.initialEval = await this.stockfish.getEval(this.initialFen, 12);
+        this.initialEval = await this.stockfish.getEval(this.initialFen, 16);
       }
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), 12);
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), 16);
     } catch {}
     this.evalLoading = false;
   }

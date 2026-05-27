@@ -44,14 +44,14 @@ export class StockfishService implements OnDestroy {
     return this.initPromise;
   }
 
-  async getBestMove(fen: string, depth = 12): Promise<StockfishResult> {
+  async getBestMove(fen: string, depth = 16): Promise<StockfishResult> {
     await this.init();
     const task = this.pending.then(() => this.runSearch(fen, depth));
     this.pending = task.catch(() => {});
     return task;
   }
 
-  async getEval(fen: string, depth = 12): Promise<string> {
+  async getEval(fen: string, depth = 16): Promise<string> {
     const result = await this.getBestMove(fen, depth);
     return result.eval;
   }

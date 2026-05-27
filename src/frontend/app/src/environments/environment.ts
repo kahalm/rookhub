@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.13.6',
+  version: '0.13.7',
   changelog: [
+    { version: '0.13.7', date: '2026-05-27', changes: [
+      'Stockfish Suchtiefe von 12 auf 16 erhoeht (~2400 Elo)',
+    ]},
     { version: '0.13.6', date: '2026-05-27', changes: [
       'Endless Mode: Puzzle Reset kostet ein Leben',
     ]},
