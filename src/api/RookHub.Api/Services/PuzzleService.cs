@@ -56,6 +56,14 @@ public class PuzzleService
         return fallback == null ? null : MapToDto(fallback);
     }
 
+    public async Task<(int Min, int Max)?> GetRatingRangeAsync()
+    {
+        var min = await _db.Puzzles.MinAsync(p => (int?)p.Rating);
+        var max = await _db.Puzzles.MaxAsync(p => (int?)p.Rating);
+        if (min == null || max == null) return null;
+        return (min.Value, max.Value);
+    }
+
     public async Task<PuzzleDto?> GetByIdAsync(int id)
     {
         var puzzle = await _db.Puzzles.FindAsync(id);

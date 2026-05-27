@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.13.2',
+  version: '0.13.3',
   changelog: [
+    { version: '0.13.3', date: '2026-05-27', changes: [
+      'Endless Mode: Rating-Range aus DB geladen, alle Inputs validiert gegen tatsaechliche Puzzle-Range',
+      'Endless Mode: Leere Rating-Bereiche werden automatisch uebersprungen',
+      'Endless Mode: "Ausgespielt" Screen mit Stockfisch-Frage wenn Max-Rating ueberschritten',
+      'Endless Mode: Step-Size Migration von altem Default 20 auf 40',
+      'Endless Mode: Stale Fasttrack-Thresholds werden beim Laden bereinigt',
+      'API: Neuer Endpoint GET /api/puzzles/rating-range',
+    ]},
     { version: '0.13.2', date: '2026-05-27', changes: [
       'Fasttrack: Immer verfuegbar, Fallback startElo+400/+800 wenn keine History',
       'Fasttrack: Thresholds editierbar mit Auto-Wert-Anzeige und Klick-Reset',

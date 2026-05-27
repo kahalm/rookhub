@@ -16,6 +16,16 @@ public class PuzzleController : BaseApiController
     public PuzzleController(PuzzleService puzzleService) => _puzzleService = puzzleService;
 
     [AllowAnonymous]
+    [HttpGet("rating-range")]
+    public async Task<IActionResult> GetRatingRange()
+    {
+        var range = await _puzzleService.GetRatingRangeAsync();
+        if (range == null)
+            return NotFound(new { message = "No puzzles in database." });
+        return Ok(new { min = range.Value.Min, max = range.Value.Max });
+    }
+
+    [AllowAnonymous]
     [HttpGet("random")]
     public async Task<IActionResult> GetRandom(
         [FromQuery] int? minRating,

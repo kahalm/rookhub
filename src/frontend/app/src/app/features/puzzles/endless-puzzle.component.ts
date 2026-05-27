@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { PuzzleService, PuzzleDto } from './puzzle.service';
+import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
@@ -20,7 +20,7 @@ import { Color, Key } from 'chessground/types';
 // THINKING = opponent responding (buttons visible, board locked)
 // PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
-  | 'THINKING' | 'PLAYING' | 'CORRECT' | 'WRONG' | 'GAME_OVER';
+  | 'THINKING' | 'PLAYING' | 'CORRECT' | 'WRONG' | 'GAME_OVER' | 'EXHAUSTED';
 
 interface EndlessConfig {
   startElo: number;
@@ -68,11 +68,12 @@ const FASTTRACK_SESSION_COUNT = 10;
                 <div class="config-fields">
                   <mat-form-field appearance="outline">
                     <mat-label>Start Rating</mat-label>
-                    <input matInput type="number" [(ngModel)]="config.startElo" min="100" max="3000" step="50">
+                    <input matInput type="number" [(ngModel)]="config.startElo" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
+                    <mat-hint>{{ puzzleRange.min }}–{{ puzzleRange.max }}</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Step Size</mat-label>
-                    <input matInput type="number" [(ngModel)]="config.step" min="5" max="200" step="5">
+                    <input matInput type="number" [(ngModel)]="config.step" min="10" max="200" step="5">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Themes (optional)</mat-label>
@@ -93,7 +94,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
                           <mat-label>1st Mistake Rating</mat-label>
-                          <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" min="100" max="3000" step="50">
+                          <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgFirst !== fasttrackAutoFirst) {
                           <span class="auto-hint" (click)="resetThreshold(1)">Auto: {{ fasttrackAutoFirst }}</span>
@@ -102,7 +103,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
                           <mat-label>2nd Mistake Rating</mat-label>
-                          <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" min="100" max="3000" step="50">
+                          <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgSecond !== fasttrackAutoSecond) {
                           <span class="auto-hint" (click)="resetThreshold(2)">Auto: {{ fasttrackAutoSecond }}</span>
@@ -331,6 +332,61 @@ const FASTTRACK_SESSION_COUNT = 10;
           </div>
         }
 
+        @case ('exhausted') {
+          <div class="gameover-screen">
+            <mat-card class="gameover-card exhausted-card">
+              <mat-card-header>
+                <mat-card-title>Ausgespielt!</mat-card-title>
+                <mat-card-subtitle>Du hast alle Puzzle-Rating-Bereiche durchgespielt.</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stockfish-question">
+                  <span class="stockfish-fish">&#x1F41F;</span>
+                  <p class="stockfish-text">Bist du ein Stockfisch?</p>
+                </div>
+                <div class="gameover-stats">
+                  <div class="gameover-stat">
+                    <mat-icon>trending_up</mat-icon>
+                    <span class="go-value">{{ maxRatingReached }}</span>
+                    <span class="go-label">Max Rating</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>extension</mat-icon>
+                    <span class="go-value">{{ solved }}</span>
+                    <span class="go-label">Puzzles Solved</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>favorite</mat-icon>
+                    <span class="go-value">{{ lives }}</span>
+                    <span class="go-label">Lives Left</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>timer</mat-icon>
+                    <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
+                    <span class="go-label">Time</span>
+                  </div>
+                </div>
+                @if (isNewHighscore) {
+                  <div class="new-highscore">
+                    <mat-icon>emoji_events</mat-icon>
+                    New Highscore!
+                  </div>
+                }
+                <div class="gameover-actions">
+                  <button mat-raised-button color="primary" (click)="playAgain()">
+                    <mat-icon>replay</mat-icon>
+                    Play Again
+                  </button>
+                  <button mat-button (click)="backToPuzzles()">
+                    <mat-icon>arrow_back</mat-icon>
+                    Back to Puzzles
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        }
+
         @case ('gameover') {
           <div class="gameover-screen">
             <mat-card class="gameover-card">
@@ -485,6 +541,9 @@ const FASTTRACK_SESSION_COUNT = 10;
       color: #ff9800; font-size: 1.2em; font-weight: bold; margin-bottom: 1rem;
     }
     .gameover-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+    .stockfish-question { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 1.5rem 0; }
+    .stockfish-fish { font-size: 4rem; }
+    .stockfish-text { font-size: 1.3em; font-weight: bold; color: #1976d2; margin: 0; }
 
     @media (max-width: 768px) {
       .play-screen { flex-direction: column; }
@@ -495,7 +554,8 @@ const FASTTRACK_SESSION_COUNT = 10;
   `]
 })
 export class EndlessPuzzleComponent implements OnDestroy {
-  get screen(): 'config' | 'play' | 'gameover' {
+  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' {
+    if (this.state === 'EXHAUSTED') return 'exhausted';
     if (this.state === 'GAME_OVER') return 'gameover';
     if (this.state === 'CONFIG') return 'config';
     return 'play';
@@ -539,6 +599,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // Dynamic rating
   _currentMinRating = 0;
 
+  // Puzzle DB range
+  puzzleRange: PuzzleRatingRange = { min: 100, max: 3000 };
+
   // Board
   puzzle: PuzzleDto | null = null;
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -568,6 +631,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.loadHighscore();
     this.loadSessionHistory();
     if (this.config.fasttrack) this.computeFasttrackSteps();
+    this.puzzleService.getRatingRange().subscribe({
+      next: r => { this.puzzleRange = r; this.clampConfig(); },
+      error: () => {}
+    });
     this.stockfish.init().catch(() => {});
   }
 
@@ -599,6 +666,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
     return 'Phase 3 (step 20)';
   }
 
+  private clampConfig(): void {
+    this.config.startElo = Math.max(this.puzzleRange.min, Math.min(this.puzzleRange.max, this.config.startElo));
+  }
+
   onFasttrackToggle(): void {
     if (this.config.fasttrack) {
       this.computeFasttrackSteps();
@@ -608,6 +679,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // --- Game lifecycle ---
 
   startGame(): void {
+    this.clampConfig();
     this.saveConfig();
     this.lives = 3;
     this.level = 0;
@@ -639,6 +711,16 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.showThemes = false;
     this.initialEval = '';
     this.currentEval = '';
+
+    // Check if we exceeded the max puzzle rating
+    if (this._currentMinRating > this.puzzleRange.max) {
+      this.stopSessionTimer();
+      this.checkHighscore();
+      this.recordSession();
+      this.state = 'EXHAUSTED';
+      return;
+    }
+
     const min = this._currentMinRating;
     const max = this._currentMinRating + this.config.step;
 
@@ -655,8 +737,23 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
       next: p => this.onPuzzleLoaded(p),
-      error: () => this.endGame()
+      error: () => this.onPuzzleLoadError()
     });
+  }
+
+  private onPuzzleLoadError(): void {
+    // No puzzles in this range — skip to next range
+    this._currentMinRating += this.getCurrentStep();
+    this.level++;
+    // Check if we've gone beyond the max
+    if (this._currentMinRating > this.puzzleRange.max) {
+      this.stopSessionTimer();
+      this.checkHighscore();
+      this.recordSession();
+      this.state = 'EXHAUSTED';
+      return;
+    }
+    this.loadPuzzle();
   }
 
   private onPuzzleLoaded(puzzle: PuzzleDto): void {
@@ -1019,8 +1116,22 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private loadConfig(): void {
     try {
       const raw = localStorage.getItem(CONFIG_KEY);
-      if (raw) this.config = { ...this.config, ...JSON.parse(raw) };
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // Remove deprecated rangeWidth from old configs
+        delete saved.rangeWidth;
+        this.config = { ...this.config, ...saved };
+      }
     } catch {}
+    // Migrate old defaults
+    if (this.config.step < 40) this.config.step = 40;
+    // Clear stale thresholds that are at or below startElo
+    if (this.config.fasttrackThreshold1 != null && this.config.fasttrackThreshold1 <= this.config.startElo) {
+      this.config.fasttrackThreshold1 = undefined;
+    }
+    if (this.config.fasttrackThreshold2 != null && this.config.fasttrackThreshold2 <= this.config.startElo) {
+      this.config.fasttrackThreshold2 = undefined;
+    }
   }
 
   private saveConfig(): void {

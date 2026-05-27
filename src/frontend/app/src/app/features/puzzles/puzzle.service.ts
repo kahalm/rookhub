@@ -12,6 +12,11 @@ export interface PuzzleDto {
   gameUrl?: string;
 }
 
+export interface PuzzleRatingRange {
+  min: number;
+  max: number;
+}
+
 export interface PuzzleStatsDto {
   totalAttempts: number;
   solved: number;
@@ -33,6 +38,10 @@ export interface PuzzleAttemptDto {
 @Injectable({ providedIn: 'root' })
 export class PuzzleService {
   constructor(private http: HttpClient) {}
+
+  getRatingRange(): Observable<PuzzleRatingRange> {
+    return this.http.get<PuzzleRatingRange>('/api/puzzles/rating-range');
+  }
 
   getRandom(minRating?: number, maxRating?: number, themes?: string, excludeSolved = false): Observable<PuzzleDto> {
     let params = new HttpParams();
