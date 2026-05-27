@@ -29,6 +29,7 @@ interface EndlessConfig {
   fasttrack: boolean;
   fasttrackThreshold1?: number;
   fasttrackThreshold2?: number;
+  stockfishDepth: number;
 }
 
 interface EndlessSession {
@@ -126,6 +127,11 @@ const FASTTRACK_SESSION_COUNT = 10;
                   <mat-form-field appearance="outline">
                     <mat-label>Step Size</mat-label>
                     <input matInput type="number" [(ngModel)]="config.step" min="10" max="200" step="5">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Stockfish Depth</mat-label>
+                    <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
+                    <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Themes (optional)</mat-label>
@@ -656,7 +662,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   state: EndlessState = 'CONFIG';
-  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: true };
+  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: true, stockfishDepth: 16 };
 
   lives = 3;
   level = 0;
@@ -967,7 +973,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.updateBoard();
 
     try {
-      const result = await this.stockfish.getBestMove(this.chess.fen(), 16);
+      const result = await this.stockfish.getBestMove(this.chess.fen(), this.config.stockfishDepth);
       if (this.aborted) return;
       this.currentEval = result.eval;
       this.playMove(result.move);
@@ -1076,9 +1082,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.evalLoading = true;
     try {
       if (!this.initialEval && this.initialFen) {
-        this.initialEval = await this.stockfish.getEval(this.initialFen, 16);
+        this.initialEval = await this.stockfish.getEval(this.initialFen, this.config.stockfishDepth);
       }
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), 16);
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.config.stockfishDepth);
     } catch {}
     this.evalLoading = false;
   }
@@ -1289,6 +1295,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
     // Clamp step size
     if (this.config.step < 10) this.config.step = 10;
     if (this.config.step > 200) this.config.step = 200;
+    // Clamp stockfish depth
+    if (!this.config.stockfishDepth || this.config.stockfishDepth < 1) this.config.stockfishDepth = 16;
+    if (this.config.stockfishDepth > 24) this.config.stockfishDepth = 24;
     // Clear stale thresholds that are at or below startElo
     if (this.config.fasttrackThreshold1 != null && this.config.fasttrackThreshold1 <= this.config.startElo) {
       this.config.fasttrackThreshold1 = undefined;

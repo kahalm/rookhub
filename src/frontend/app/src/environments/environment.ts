@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.14.2',
+  version: '0.14.3',
   changelog: [
+    { version: '0.14.3', date: '2026-05-27', changes: [
+      'Endless Mode: Stockfish-Tiefe konfigurierbar (1–24, Standard 16)',
+    ]},
     { version: '0.14.2', date: '2026-05-27', changes: [
       'Endless Mode: Premoves waehrend Gegner denkt (Zug vorausplanen wie auf Lichess/Chess.com)',
     ]},
