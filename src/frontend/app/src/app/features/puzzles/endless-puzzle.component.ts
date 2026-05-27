@@ -25,7 +25,6 @@ type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
 interface EndlessConfig {
   startElo: number;
   step: number;
-  rangeWidth: number;
   themes: string;
   fasttrack: boolean;
   fasttrackThreshold1?: number;
@@ -46,7 +45,6 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
 const HISTORY_KEY = 'rookhub_endless_history';
 const MAX_HISTORY_SESSIONS = 50;
 const FASTTRACK_SESSION_COUNT = 10;
-const MIN_FASTTRACK_SESSIONS = 3;
 
 @Component({
   selector: 'app-endless-puzzle',
@@ -77,22 +75,15 @@ const MIN_FASTTRACK_SESSIONS = 3;
                     <input matInput type="number" [(ngModel)]="config.step" min="5" max="200" step="5">
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Range Width</mat-label>
-                    <input matInput type="number" [(ngModel)]="config.rangeWidth" min="5" max="500" step="5">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
                     <mat-label>Themes (optional)</mat-label>
                     <input matInput [(ngModel)]="config.themes" placeholder="e.g. fork pin">
                   </mat-form-field>
                 </div>
 
                 <div class="fasttrack-section">
-                  <mat-slide-toggle [(ngModel)]="config.fasttrack" [disabled]="!canFasttrack" (change)="onFasttrackToggle()">
+                  <mat-slide-toggle [(ngModel)]="config.fasttrack" (change)="onFasttrackToggle()">
                     Fasttrack
                   </mat-slide-toggle>
-                  @if (!canFasttrack) {
-                    <p class="fasttrack-hint">Min. {{ MIN_FASTTRACK_SESSIONS }} sessions with mistakes needed ({{ sessionsWithMistakesCount }} so far)</p>
-                  }
                 </div>
 
                 <div class="level-preview">
@@ -321,11 +312,16 @@ const MIN_FASTTRACK_SESSIONS = 3;
                       <span class="rating-badge">Puzzle Rating: {{ puzzle.rating }}</span>
                       <span class="level-badge">Level {{ level }} ({{ currentMinRating }}–{{ currentMaxRating }})</span>
                       @if (puzzle.themes) {
-                        <div class="themes">
-                          @for (theme of puzzle.themes.split(' '); track theme) {
-                            <span class="theme-chip">{{ theme }}</span>
-                          }
-                        </div>
+                        <span class="themes-toggle" (click)="showThemes = !showThemes">
+                          {{ showThemes ? 'Hide tags' : 'Show tags' }}
+                        </span>
+                        @if (showThemes) {
+                          <div class="themes">
+                            @for (theme of puzzle.themes.split(' '); track theme) {
+                              <span class="theme-chip">{{ theme }}</span>
+                            }
+                          </div>
+                        }
                       }
                     </div>
                   </mat-card-content>
@@ -401,7 +397,6 @@ const MIN_FASTTRACK_SESSIONS = 3;
     .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; margin-top: 1rem; }
     .config-fields mat-form-field:last-child { grid-column: 1 / -1; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-    .fasttrack-hint { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0; }
     .threshold-explain { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0 0 0.5rem; }
     .threshold-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
     .threshold-field-wrap { position: relative; }
@@ -469,6 +464,10 @@ const MIN_FASTTRACK_SESSIONS = 3;
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
       font-size: 0.85em; white-space: nowrap;
     }
+    .themes-toggle {
+      font-size: 0.8em; color: #1976d2; cursor: pointer;
+    }
+    .themes-toggle:hover { text-decoration: underline; }
 
     .gameover-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .gameover-card { max-width: 500px; width: 100%; text-align: center; }
@@ -503,7 +502,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   state: EndlessState = 'CONFIG';
-  config: EndlessConfig = { startElo: 700, step: 40, rangeWidth: 40, themes: '', fasttrack: false };
+  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: false };
 
   lives = 3;
   level = 0;
@@ -527,7 +526,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // Session history
   sessionHistory: EndlessSession[] = [];
   currentSessionMistakes: number[] = [];
-  readonly MIN_FASTTRACK_SESSIONS = MIN_FASTTRACK_SESSIONS;
+  showThemes = false;
 
   // Fasttrack
   fasttrackPhase1Step = 0;
@@ -584,22 +583,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const levels = [];
     for (let i = 0; i < 3; i++) {
       const min = this.config.startElo + i * this.config.step;
-      levels.push({ level: i, min, max: min + this.config.rangeWidth });
+      levels.push({ level: i, min, max: min + this.config.step });
     }
     return levels;
   }
 
   get currentMinRating(): number { return this._currentMinRating; }
-  get currentMaxRating(): number { return this._currentMinRating + this.config.rangeWidth; }
+  get currentMaxRating(): number { return this._currentMinRating + this.config.step; }
   get currentRating(): number { return this._currentMinRating; }
-
-  get canFasttrack(): boolean {
-    return this.sessionsWithMistakesCount >= MIN_FASTTRACK_SESSIONS;
-  }
-
-  get sessionsWithMistakesCount(): number {
-    return this.sessionHistory.filter(s => s.mistakeAtRatings.length > 0).length;
-  }
 
   get currentPhaseLabel(): string {
     if (!this.config.fasttrack) return '';
@@ -645,10 +636,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.state = 'LOADING';
     this.alternativeSolve = false;
     this.showEval = false;
+    this.showThemes = false;
     this.initialEval = '';
     this.currentEval = '';
     const min = this._currentMinRating;
-    const max = this._currentMinRating + this.config.rangeWidth;
+    const max = this._currentMinRating + this.config.step;
 
     if (this.prefetchedPuzzle &&
         this.prefetchedPuzzle.rating >= min &&
@@ -678,7 +670,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     const nextSolved = this.solved + 1;
     const nextStep = this.getStepForSolved(nextSolved);
     const min = this._currentMinRating + nextStep;
-    const max = min + this.config.rangeWidth;
+    const max = min + this.config.step;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
       next: p => this.prefetchedPuzzle = p,
@@ -901,19 +893,19 @@ export class EndlessPuzzleComponent implements OnDestroy {
       .filter(s => s.mistakeAtRatings.length > 0)
       .slice(-FASTTRACK_SESSION_COUNT);
 
-    if (withMistakes.length < MIN_FASTTRACK_SESSIONS) {
-      this.config.fasttrack = false;
-      return;
+    // Auto-calculate from history, fallback to startElo+400/+800
+    if (withMistakes.length > 0) {
+      this.fasttrackAutoFirst = Math.round(
+        withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
+      );
+      const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
+      this.fasttrackAutoSecond = withSecond.length > 0
+        ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
+        : this.fasttrackAutoFirst + 100;
+    } else {
+      this.fasttrackAutoFirst = this.config.startElo + 400;
+      this.fasttrackAutoSecond = this.config.startElo + 800;
     }
-
-    // Auto-calculate from history
-    this.fasttrackAutoFirst = Math.round(
-      withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
-    );
-    const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
-    this.fasttrackAutoSecond = withSecond.length > 0
-      ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
-      : this.fasttrackAutoFirst + 100;
 
     // Apply manual overrides from config, or use auto values
     this.fasttrackAvgFirst = this.config.fasttrackThreshold1 ?? this.fasttrackAutoFirst;

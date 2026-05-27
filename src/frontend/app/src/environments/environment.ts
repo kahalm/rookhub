@@ -1,11 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.13.1',
+  version: '0.13.2',
   changelog: [
-    { version: '0.13.1', date: '2026-05-27', changes: [
-      'Fasttrack: Thresholds (1./2. Fehler-Rating) editierbar mit Auto-Wert-Anzeige',
-      'Fasttrack: Manuelle Overrides werden in Config persistiert',
-      'Fasttrack: Klick auf Auto-Wert setzt einzelnen Threshold zurueck',
+    { version: '0.13.2', date: '2026-05-27', changes: [
+      'Fasttrack: Immer verfuegbar, Fallback startElo+400/+800 wenn keine History',
+      'Fasttrack: Thresholds editierbar mit Auto-Wert-Anzeige und Klick-Reset',
+      'Fasttrack: Manuelle Overrides werden persistiert',
+      'Endless Mode: Range Width entfernt, ergibt sich aus Step Size',
+      'Endless Mode: Puzzle-Tags standardmaessig ausgeblendet (Show/Hide toggle)',
     ]},
     { version: '0.13.0', date: '2026-05-27', changes: [
       'Endless Mode: Session-History trackt alle Spieldurchlaeufe (max 50, localStorage)',
