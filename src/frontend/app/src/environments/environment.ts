@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.14.5',
+  version: '0.15.0',
   changelog: [
+    { version: '0.15.0', date: '2026-05-27', changes: [
+      'Puzzle Mode: Stockfish übernimmt bei falschem Zug (wie im Endless Mode)',
+      'Puzzle Mode: Schachmatt gegen Stockfish zählt als alternative Lösung',
+      'Puzzle Mode: Mouseslip-Button (einmal pro Puzzle)',
+      'Puzzle Mode: Stockfish Depth Einstellung (1–24, persistiert)',
+      'Puzzle Mode: Premoves während Stockfish denkt',
+    ]},
     { version: '0.14.5', date: '2026-05-27', changes: [
       'Fix: Premove funktioniert jetzt (Figuren während Gegnerzug anklickbar)',
     ]},

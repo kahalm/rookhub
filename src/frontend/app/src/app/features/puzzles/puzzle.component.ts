@@ -13,12 +13,15 @@ import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
+import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { of } from 'rxjs';
 
-type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAILED';
+type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
+
+const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
 
 @Component({
   selector: 'app-puzzle',
@@ -38,7 +41,8 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
             [turnColor]="turnColor"
             [dests]="dests"
             [lastMove]="lastMove"
-            [viewOnly]="state !== 'AWAITING_USER_MOVE'"
+            [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING'"
+            [premovable]="state === 'THINKING'"
             [check]="isCheck"
             (moveMade)="onMoveMade($event)"
           />
@@ -65,10 +69,44 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                   </div>
                 }
+                @case ('THINKING') {
+                  <div class="status-center">
+                    <mat-spinner diameter="24"></mat-spinner>
+                    <p class="status-text">Stockfish denkt...</p>
+                    <div class="play-actions">
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        Give Up
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('PLAYING') {
+                  <div class="status-center">
+                    <p class="status-text">Dein Zug gegen Stockfish...</p>
+                    <div class="play-actions">
+                      @if (!mouseslipUsed && !onSolutionPath) {
+                        <button mat-button (click)="mouseslip()">
+                          <mat-icon>mouse</mat-icon>
+                          Mouseslip
+                        </button>
+                      }
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        Give Up
+                      </button>
+                    </div>
+                  </div>
+                }
                 @case ('SOLVED') {
                   <div class="status-center solved">
                     <mat-icon class="result-icon">check_circle</mat-icon>
-                    <p class="status-text">Correct!</p>
+                    @if (alternativeSolve) {
+                      <p class="status-text">Schachmatt!</p>
+                      <p class="alt-hint">Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.</p>
+                    } @else {
+                      <p class="status-text">Correct!</p>
+                    }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
                   </div>
@@ -148,6 +186,13 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
                   <input matInput type="number" [(ngModel)]="maxRating" placeholder="3000">
                 </mat-form-field>
               </div>
+              <div class="filter-row">
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>Stockfish Depth</mat-label>
+                  <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
+                  <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
+                </mat-form-field>
+              </div>
               <div class="filter-actions">
                 @if (isLoggedIn) {
                   <mat-slide-toggle [(ngModel)]="excludeSolved">Skip solved</mat-slide-toggle>
@@ -178,6 +223,8 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'SOLVED' | 'FAIL
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
+    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
@@ -216,6 +263,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   minRating?: number;
   maxRating?: number;
   excludeSolved = false;
+  stockfishDepth = 16;
 
   elapsedSeconds = 0;
   private timerInterval?: ReturnType<typeof setInterval>;
@@ -226,8 +274,21 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private moveIndex = 0;
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
+  private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
+  private aborted = false;
+  onSolutionPath = true;
+  alternativeSolve = false;
+  mouseslipUsed = false;
 
-  constructor(private puzzleService: PuzzleService, private authService: AuthService, private router: Router) {}
+  constructor(
+    private puzzleService: PuzzleService,
+    private stockfish: StockfishService,
+    private authService: AuthService,
+    private router: Router
+  ) {
+    this.loadConfig();
+    this.stockfish.init().catch(() => {});
+  }
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
 
@@ -244,6 +305,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimer();
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.stockfish.destroy();
   }
 
   loadNext(): void {
@@ -251,6 +314,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.attemptRecorded = false;
     this.stopTimer();
     this.elapsedSeconds = 0;
+    this.alternativeSolve = false;
 
     const source$ = this.nextPuzzle
       ? of(this.nextPuzzle)
@@ -279,8 +343,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.solutionMoves = puzzle.moves.split(' ');
     this.moveIndex = 0;
     this.chess = new Chess(puzzle.fen);
+    this.onSolutionPath = true;
+    this.aborted = false;
+    this.mouseslipUsed = false;
 
-    // Determine orientation: user plays OPPOSITE color of the setup move
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
     const piece = this.chess.get(setupFrom);
@@ -289,8 +355,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.updateBoard();
     this.state = 'SETUP';
 
-    // Auto-play the setup move after delay
     setTimeout(() => {
+      if (this.state !== 'SETUP') return;
       this.playMove(this.solutionMoves[0]);
       this.moveIndex = 1;
       this.state = 'AWAITING_USER_MOVE';
@@ -300,77 +366,165 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   onMoveMade(event: { orig: Key; dest: Key }): void {
+    if (this.state === 'PLAYING') {
+      this.handleOffPathMove(event);
+      return;
+    }
     if (this.state !== 'AWAITING_USER_MOVE') return;
 
-    const expectedUci = this.solutionMoves[this.moveIndex];
-    const userUci = event.orig + event.dest;
+    if (this.onSolutionPath) {
+      const expectedUci = this.solutionMoves[this.moveIndex];
+      const userUci = event.orig + event.dest;
 
-    // Check for promotion
-    const expectedFrom = expectedUci.substring(0, 2) as Square;
-    const expectedTo = expectedUci.substring(2, 4) as Square;
-    const expectedPromo = expectedUci.length > 4 ? expectedUci[4] : undefined;
+      if (userUci === expectedUci.substring(0, 4)) {
+        // Correct move
+        this.playMove(expectedUci);
+        this.moveIndex++;
 
-    if (userUci === expectedUci.substring(0, 4)) {
-      // Correct move
-      this.playMove(expectedUci);
-      this.moveIndex++;
+        if (this.moveIndex >= this.solutionMoves.length) {
+          this.state = 'SOLVED';
+          this.stopTimer();
+          this.updateBoard();
+          this.recordAttempt(true);
+        } else {
+          // Play opponent response
+          this.state = 'THINKING';
+          this.updateBoard();
+          this.autoAdvanceTimer = setTimeout(() => {
+            if (this.aborted) return;
+            this.playMove(this.solutionMoves[this.moveIndex]);
+            this.moveIndex++;
+            this.updateBoard();
 
-      if (this.moveIndex >= this.solutionMoves.length) {
-        // Puzzle solved
+            if (this.moveIndex >= this.solutionMoves.length) {
+              this.state = 'SOLVED';
+              this.stopTimer();
+              this.recordAttempt(true);
+            } else {
+              this.state = 'AWAITING_USER_MOVE';
+              this.updateBoard();
+            }
+          }, 400);
+        }
+      } else {
+        // Wrong move — leave solution path, play against Stockfish
+        this.playFreeMove(event.orig, event.dest);
+        this.onSolutionPath = false;
+        if (this.chess.isGameOver()) { this.handleGameOver(); return; }
+        this.opponentRespond();
+      }
+    } else {
+      this.handleOffPathMove(event);
+    }
+  }
+
+  private handleOffPathMove(event: { orig: Key; dest: Key }): void {
+    this.playFreeMove(event.orig, event.dest);
+    if (this.chess.isGameOver()) { this.handleGameOver(); return; }
+    this.opponentRespond();
+  }
+
+  private async opponentRespond(): Promise<void> {
+    this.state = 'THINKING';
+    this.updateBoard();
+
+    try {
+      const result = await this.stockfish.getBestMove(this.chess.fen(), this.stockfishDepth);
+      if (this.aborted) return;
+      this.playMove(result.move);
+      this.updateBoard();
+
+      if (this.chess.isGameOver()) {
+        this.handleGameOver();
+        return;
+      }
+
+      this.autoAdvanceTimer = setTimeout(() => {
+        if (this.aborted) return;
+        this.state = 'PLAYING';
+        this.updateBoard();
+      }, 400);
+    } catch {
+      if (!this.aborted) {
+        this.state = 'FAILED';
+        this.stopTimer();
+        this.recordAttempt(false);
+      }
+    }
+  }
+
+  private handleGameOver(): void {
+    if (this.chess.isCheckmate()) {
+      const loserColor = this.chess.turn();
+      const userColor = this.orientation === 'white' ? 'w' : 'b';
+      if (loserColor !== userColor) {
+        // User checkmated Stockfish — alternative solve
+        this.alternativeSolve = true;
         this.state = 'SOLVED';
         this.stopTimer();
         this.updateBoard();
         this.recordAttempt(true);
-      } else {
-        // Play opponent response
-        this.updateBoard();
-        setTimeout(() => {
-          this.playMove(this.solutionMoves[this.moveIndex]);
-          this.moveIndex++;
-          this.updateBoard();
-
-          if (this.moveIndex >= this.solutionMoves.length) {
-            this.state = 'SOLVED';
-            this.stopTimer();
-            this.recordAttempt(true);
-          } else {
-            this.state = 'AWAITING_USER_MOVE';
-          }
-        }, 400);
+        return;
       }
-    } else {
-      // Wrong move - reset to position before user's move
-      this.state = 'FAILED';
-      this.stopTimer();
-      this.updateBoard();
-      this.recordAttempt(false);
     }
+    // Stockfish checkmated user or draw
+    this.state = 'FAILED';
+    this.stopTimer();
+    this.updateBoard();
+    this.recordAttempt(false);
+  }
+
+  mouseslip(): void {
+    if (this.mouseslipUsed || this.onSolutionPath) return;
+    this.mouseslipUsed = true;
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    if (this.state === 'PLAYING') {
+      this.chess.undo(); // Stockfish response
+      this.chess.undo(); // User's wrong move
+    } else {
+      this.chess.undo();
+    }
+    this.aborted = false;
+    this.state = 'PLAYING';
+    this.updateBoard();
+  }
+
+  giveUp(): void {
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.state = 'FAILED';
+    this.stopTimer();
+    this.updateBoard();
+    this.recordAttempt(false);
   }
 
   retry(): void {
     if (!this.puzzle) return;
+    this.attemptRecorded = false;
     this.setupPuzzle(this.puzzle);
   }
 
   showSolution(): void {
     if (!this.puzzle) return;
 
-    // Replay from current position
-    const remaining = this.solutionMoves.slice(this.moveIndex);
-    let i = 0;
+    // Reset to puzzle start and replay full solution
+    this.solutionMoves = this.puzzle.moves.split(' ');
+    this.chess = new Chess(this.puzzle.fen);
+    this.playMove(this.solutionMoves[0]);
+    this.updateBoard();
+
+    let i = 1;
     const playNext = () => {
-      if (i >= remaining.length) {
-        this.state = 'FAILED';
-        return;
-      }
-      this.playMove(remaining[i]);
+      if (i >= this.solutionMoves.length) return;
+      this.playMove(this.solutionMoves[i]);
       i++;
       this.updateBoard();
-      if (i < remaining.length) {
-        setTimeout(playNext, 600);
+      if (i < this.solutionMoves.length) {
+        this.autoAdvanceTimer = setTimeout(playNext, 600);
       }
     };
-    playNext();
+    this.autoAdvanceTimer = setTimeout(playNext, 400);
   }
 
   formatTime(seconds: number): string {
@@ -387,16 +541,25 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
+  private playFreeMove(orig: Key, dest: Key): void {
+    const from = orig as string as Square;
+    const to = dest as string as Square;
+    const moves = this.chess.moves({ verbose: true });
+    const match = moves.find(m => m.from === from && m.to === to);
+    if (match) {
+      this.chess.move(match);
+    } else {
+      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return; }
+    }
+    this.lastMove = [orig, dest];
+  }
+
   private updateBoard(): void {
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
-
-    if (this.state === 'AWAITING_USER_MOVE') {
-      this.dests = this.calcDests();
-    } else {
-      this.dests = new Map();
-    }
+    const interactive = this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING';
+    this.dests = interactive ? this.calcDests() : new Map();
   }
 
   private calcDests(): Map<Key, Key[]> {
@@ -431,5 +594,25 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
       this.puzzleService.getStats().subscribe(s => this.stats = s);
     });
+  }
+
+  // --- Config persistence ---
+
+  private loadConfig(): void {
+    try {
+      const raw = localStorage.getItem(PUZZLE_CONFIG_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.stockfishDepth) this.stockfishDepth = saved.stockfishDepth;
+      }
+    } catch {}
+    if (this.stockfishDepth < 1) this.stockfishDepth = 16;
+    if (this.stockfishDepth > 24) this.stockfishDepth = 24;
+  }
+
+  saveConfig(): void {
+    try {
+      localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth }));
+    } catch {}
   }
 }
