@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.13.9',
+  version: '0.14.0',
   changelog: [
+    { version: '0.14.0', date: '2026-05-27', changes: [
+      'Endless Mode: Mouseslip-Button macht letzten Zug gratis rueckgaengig (einmal pro Puzzle)',
+    ]},
     { version: '0.13.9', date: '2026-05-27', changes: [
       'Endless Mode: Fasttrack standardmaessig aktiviert',
     ]},

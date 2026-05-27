@@ -215,6 +215,12 @@ const FASTTRACK_SESSION_COUNT = 10;
                             <mat-icon>replay</mat-icon>
                             Reset
                           </button>
+                          @if (!mouseslipUsed && !onSolutionPath) {
+                            <button mat-button (click)="mouseslip()">
+                              <mat-icon>mouse</mat-icon>
+                              Mouseslip
+                            </button>
+                          }
                           <button mat-button color="warn" (click)="giveUp()">
                             <mat-icon>flag</mat-icon>
                             Give Up
@@ -245,6 +251,12 @@ const FASTTRACK_SESSION_COUNT = 10;
                             <mat-icon>replay</mat-icon>
                             Reset
                           </button>
+                          @if (!mouseslipUsed && !onSolutionPath) {
+                            <button mat-button (click)="mouseslip()">
+                              <mat-icon>mouse</mat-icon>
+                              Mouseslip
+                            </button>
+                          }
                           <button mat-button color="warn" (click)="giveUp()">
                             <mat-icon>flag</mat-icon>
                             Give Up
@@ -581,6 +593,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
   highscore = 0;
   alternativeSolve = false;
 
+  // Mouseslip
+  mouseslipUsed = false;
+
   // Eval
   showEval = false;
   evalLoading = false;
@@ -624,7 +639,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private chess = new Chess();
   private solutionMoves: string[] = [];
   private moveIndex = 0;
-  private onSolutionPath = true;
+  onSolutionPath = true;
   private initialFen = '';
   private prefetchedPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
@@ -792,6 +807,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.chess = new Chess(puzzle.fen);
     this.onSolutionPath = true;
     this.aborted = false;
+    this.mouseslipUsed = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -1005,6 +1021,24 @@ export class EndlessPuzzleComponent implements OnDestroy {
       return;
     }
     this.setupPuzzle(this.puzzle);
+  }
+
+  mouseslip(): void {
+    if (this.mouseslipUsed || this.onSolutionPath) return;
+    this.mouseslipUsed = true;
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    // Undo Stockfish response (if already played) + user's wrong move
+    if (this.state === 'PLAYING') {
+      this.chess.undo(); // Stockfish response
+      this.chess.undo(); // User's wrong move
+    } else {
+      // THINKING state — Stockfish hasn't responded yet, only undo user move
+      this.chess.undo();
+    }
+    this.aborted = false;
+    this.state = 'PLAYING';
+    this.updateBoard();
   }
 
   giveUp(): void {
