@@ -109,6 +109,14 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | POST | `/api/subscriptions` | Turnier abonnieren |
 | DELETE | `/api/subscriptions/{id}` | Abo entfernen |
 
+### Book-Puzzles (offen + Admin)
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/book-puzzles/{id}` | AllowAnonymous | Puzzle by ID |
+| GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup fuer schach-bot |
+| GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
+| POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
+
 ## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
 
 | Tabelle | Zweck | Wichtige Felder / Constraints |
@@ -119,6 +127,7 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | Repertoires | PGN-Sammlungen | UserId, Name, Description, IsPublic, CreatedAt, UpdatedAt |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
+| BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags |
 
 Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions; Repertoire -> Files.
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
@@ -229,7 +238,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.16.2`
+- **Aktuelle Version**: `0.17.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

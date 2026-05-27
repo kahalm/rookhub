@@ -9,13 +9,13 @@ namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/book-puzzles")]
-[AllowAnonymous]
 public class BookPuzzleController : BaseApiController
 {
     private readonly AppDbContext _db;
 
     public BookPuzzleController(AppDbContext db) => _db = db;
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -25,6 +25,7 @@ public class BookPuzzleController : BaseApiController
         return Ok(MapToDto(puzzle));
     }
 
+    [AllowAnonymous]
     [HttpGet("by-line-id")]
     public async Task<IActionResult> GetByLineId([FromQuery] string lineId)
     {
@@ -44,6 +45,7 @@ public class BookPuzzleController : BaseApiController
         return Ok(new { id = puzzle.Id });
     }
 
+    [AllowAnonymous]
     [HttpGet("books")]
     public async Task<IActionResult> GetBooks()
     {

@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.16.2',
+  version: '0.17.0',
   changelog: [
+    { version: '0.17.0', date: '2026-05-27', changes: [
+      'Book-Puzzles: Import von Puzzle-Buechern aus schach-bot (12 Buecher, 5000+ Puzzles)',
+      'Book-Puzzles: Eigene Route /puzzles/book/:id mit Board, Zugloesung und Buch-Metadaten',
+      'Book-Puzzles: Lookup-API GET /api/book-puzzles/by-line-id fuer schach-bot Integration',
+      'Book-Puzzles: Admin-Import-Endpoint POST /api/admin/book-puzzles/import',
+      'Book-Puzzles: Buch-Liste mit Puzzle-Counts GET /api/book-puzzles/books',
+      'Book-Puzzles: Python-Import-Script scripts/import_books.py',
+    ]},
     { version: '0.16.2', date: '2026-05-27', changes: [
       'Crawler: Migration-Upgrade-Doku fuer bestehende DBs (EnsureCreated → Migrate)',
       'Deploy: Crawler-Fix fuer leere __EFMigrationsHistory bei Bestandsdatenbanken',
