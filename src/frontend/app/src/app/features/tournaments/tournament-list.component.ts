@@ -158,11 +158,11 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = false;
     forkJoin({
-      tournaments: this.http.get<Tournament[]>('/api/tournaments'),
+      tournamentResponse: this.http.get<{ items: Tournament[]; totalCount: number }>('/api/tournaments?pageSize=200'),
       subscriptions: this.http.get<Subscription[]>('/api/subscriptions')
     }).subscribe({
-      next: ({ tournaments, subscriptions }) => {
-        this.tournaments = tournaments;
+      next: ({ tournamentResponse, subscriptions }) => {
+        this.tournaments = tournamentResponse.items ?? [];
         this.subscriptions = subscriptions;
         this.loading = false;
       },

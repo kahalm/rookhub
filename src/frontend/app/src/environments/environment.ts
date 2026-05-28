@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.19.2',
+  version: '0.19.3',
   changelog: [
+    { version: '0.19.3', date: '2026-05-28', changes: [
+      'Code-Review: Crawler GetAllTournaments mit Pagination (page/pageSize) statt unbegrenzter Liste',
+      'Code-Review: LogRetentionService fuer RookHub API und Crawler — loescht Request-Logs aelter als 30 Tage',
+      'Code-Review: Frontend Tournament-Liste nutzt paginierte API-Response',
+    ]},
     { version: '0.19.2', date: '2026-05-28', changes: [
       'Fix: E2E Test puzzle-moves.spec.ts erwartete deutschen Text statt englischem UI-Text',
     ]},

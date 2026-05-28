@@ -48,6 +48,7 @@ builder.Services.AddHostedService<BackgroundTaskWorker>();
 builder.Services.AddSingleton<AutoSubscriptionService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
 builder.Services.AddHostedService<RoundMonitorService>();
+builder.Services.AddHostedService<LogRetentionService>();
 
 // Crawler Proxy HttpClient
 var crawlerBaseUrl = builder.Configuration["Crawler:BaseUrl"] ?? "http://host.docker.internal:8080";
