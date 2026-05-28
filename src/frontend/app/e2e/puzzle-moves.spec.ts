@@ -19,37 +19,47 @@ const FOUR_MOVE_PUZZLE = {
   fen: PUZZLE_FEN, moves: 'e7e5 d1h5 g8f6 h5e5', rating: 1000, themes: 'test',
 };
 
+// Complex position for Stockfish timeout test: Sicilian Najdorf, white to move
+const COMPLEX_PUZZLE = {
+  id: 99003, lichessId: 'e2eTimeout',
+  fen: 'r1bqkb1r/pp3ppp/2nppn2/6B1/3NP3/2N5/PPP2PPP/R2QKB1R w KQkq - 0 6',
+  moves: 'd4c6 b7c6', rating: 1500, themes: 'test',
+};
+
 // ─── Helpers ────────────────────────────────────────────────────────────
 
-/** Pixel center of a board square (white orientation: a1 = bottom-left). */
-function squareCenter(boardWidth: number, square: string) {
+/** Pixel center of a board square. orientation='white': a1=bottom-left; 'black': a8=bottom-right. */
+function squareCenter(boardWidth: number, square: string, orientation: 'white' | 'black' = 'white') {
   const sq = boardWidth / 8;
   const file = square.charCodeAt(0) - 97;
   const rank = parseInt(square[1]) - 1;
-  return { x: (file + 0.5) * sq, y: (7 - rank + 0.5) * sq };
+  if (orientation === 'white') {
+    return { x: (file + 0.5) * sq, y: (7 - rank + 0.5) * sq };
+  }
+  return { x: (7 - file + 0.5) * sq, y: (rank + 0.5) * sq };
 }
 
 /** Click on a specific board square. */
-async function clickSquare(page: Page, board: Locator, square: string) {
+async function clickSquare(page: Page, board: Locator, square: string, orientation: 'white' | 'black' = 'white') {
   const box = await board.boundingBox();
   if (!box) throw new Error('Board bounding box not available');
-  const pos = squareCenter(box.width, square);
+  const pos = squareCenter(box.width, square, orientation);
   await page.mouse.click(box.x + pos.x, box.y + pos.y);
 }
 
 /** Click-click move: select piece on `from`, then click `to`. */
-async function makeMove(page: Page, board: Locator, from: string, to: string) {
-  await clickSquare(page, board, from);
+async function makeMove(page: Page, board: Locator, from: string, to: string, orientation: 'white' | 'black' = 'white') {
+  await clickSquare(page, board, from, orientation);
   await page.waitForTimeout(150);
-  await clickSquare(page, board, to);
+  await clickSquare(page, board, to, orientation);
 }
 
 /** Drag-based premove (more reliable than click-click for premovable state). */
-async function dragMove(page: Page, board: Locator, from: string, to: string) {
+async function dragMove(page: Page, board: Locator, from: string, to: string, orientation: 'white' | 'black' = 'white') {
   const box = await board.boundingBox();
   if (!box) throw new Error('Board bounding box not available');
-  const f = squareCenter(box.width, from);
-  const t = squareCenter(box.width, to);
+  const f = squareCenter(box.width, from, orientation);
+  const t = squareCenter(box.width, to, orientation);
   await page.mouse.move(box.x + f.x, box.y + f.y);
   await page.mouse.down();
   await page.mouse.move(box.x + t.x, box.y + t.y, { steps: 5 });
@@ -102,6 +112,34 @@ test.describe('Puzzle Moves', () => {
       await expect(page.getByRole('button', { name: /Reset/ })).toBeVisible();
       await expect(page.getByRole('button', { name: /Mouseslip/ })).toBeVisible();
       await expect(page.getByRole('button', { name: /Give Up/ })).toBeVisible();
+    });
+
+    test('wrong move with Stockfish timeout keeps PLAYING (no instant Incorrect)', async ({ page }) => {
+      // Use a complex middlegame position where Stockfish WASM Lite (single-thread)
+      // at depth 24 exceeds the 10s timeout in runSearch, triggering the catch block.
+      await mockPuzzleApi(page, COMPLEX_PUZZLE);
+      await page.addInitScript(() => {
+        localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 24 }));
+      });
+
+      await page.goto('/puzzles');
+      const board = page.locator('cg-board');
+      await expect(board).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+
+      // Wrong move: a7→a5 (correct would be b7xc6). User is black (orientation=black).
+      await makeMove(page, board, 'a7', 'a5', 'black');
+
+      // After wrong move, Stockfish (white) should be thinking
+      await expect(page.locator('.status-text')).toContainText('Stockfish denkt', { timeout: 5_000 });
+
+      // Wait for Stockfish 10s timeout to fire → state changes away from THINKING
+      await expect(page.locator('.status-text')).not.toContainText('Stockfish denkt', { timeout: 15_000 });
+
+      // BUG: catch block sets state='FAILED' showing 'Incorrect' instead of letting user continue
+      // This assertion should FAIL with the current buggy code
+      await expect(page.locator('.status-text')).not.toContainText('Incorrect');
+      await expect(page.getByRole('button', { name: /Reset/ })).toBeVisible({ timeout: 5_000 });
     });
 
     test('premove during THINKING solves the puzzle', async ({ page }) => {

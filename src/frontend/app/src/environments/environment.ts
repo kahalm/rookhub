@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.20.0',
+  version: '0.20.1',
   changelog: [
+    { version: '0.20.1', date: '2026-05-28', changes: [
+      'Fix: Stockfish-Timeout bei hoher Suchtiefe zeigt nicht mehr sofort "Incorrect" — User kann weiterspielen',
+      'E2E Test: Neuer Testfall fuer Stockfish-Timeout-Szenario mit komplexer Stellung',
+      'E2E: squareCenter/makeMove/dragMove unterstuetzen jetzt Black-Orientation',
+    ]},
     { version: '0.20.0', date: '2026-05-28', changes: [
       'Feature: Server-Side Endless Puzzle Progress Sync — Config, Highscore und Active Game werden serverseitig gespeichert',
       'Feature: Endless Session History wird auf dem Server persistiert (max 50 Sessions)',

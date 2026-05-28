@@ -580,9 +580,9 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       }, 400);
     } catch {
       if (!this.aborted) {
-        this.state = 'FAILED';
-        this.stopTimer();
-        this.recordAttempt(false);
+        // Stockfish error (e.g. timeout at high depth) — let user continue playing
+        this.state = 'PLAYING';
+        this.updateBoard();
       }
     }
   }
