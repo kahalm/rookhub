@@ -95,7 +95,7 @@ test.describe('Puzzle Moves', () => {
       await makeMove(page, board, 'a2', 'a3');
 
       // Stockfish responds (THINKING) → 400ms delay → PLAYING
-      await expect(page.locator('.status-text')).toContainText('Dein Zug gegen Stockfish', { timeout: 15_000 });
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 15_000 });
 
       // All PLAYING-state action buttons visible
       await expect(page.getByRole('button', { name: /Show Eval/ })).toBeVisible();

@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.19.1',
+  version: '0.19.2',
   changelog: [
+    { version: '0.19.2', date: '2026-05-28', changes: [
+      'Fix: E2E Test puzzle-moves.spec.ts erwartete deutschen Text statt englischem UI-Text',
+    ]},
     { version: '0.19.1', date: '2026-05-28', changes: [
       'Crawler: Outgoing Request Logging — alle HTTP-Calls zu chess-results.com werden in DB persistiert (CrawlRequestLog)',
       'Crawler: Neuer Endpoint GET /api/crawl-request-logs mit Filter (URL, Status, Zeitraum, Success) und Pagination',
