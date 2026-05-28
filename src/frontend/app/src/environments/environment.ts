@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.18.2',
+  version: '0.18.3',
   changelog: [
+    { version: '0.18.3', date: '2026-05-27', changes: [
+      'Puzzle Mode: Einheitliche Controls in allen Zustaenden (kein UI-Hinweis ob am Loesungsweg)',
+      'Puzzle Mode: Auto-Advance nach 3s bei geloestem Puzzle, Show Solution Button',
+      'Puzzle Mode: Review-Button fuer letztes geloestes Puzzle',
+    ]},
     { version: '0.18.2', date: '2026-05-27', changes: [
       'Endless Mode: Bei falschem Puzzle kein Auto-Advance, stattdessen Show Solution + Continue Buttons',
     ]},

@@ -67,8 +67,35 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                 }
                 @case ('AWAITING_USER_MOVE') {
                   <div class="status-center">
-                    <p class="status-text">Your turn! Find the best move.</p>
+                    <p class="status-text">Your turn!</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                        <span class="eval-arrow">→</span>
+                        <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                      </div>
+                    }
+                    <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                      </button>
+                      <button mat-button (click)="resetPuzzle()">
+                        <mat-icon>replay</mat-icon>
+                        Reset
+                      </button>
+                      @if (!mouseslipUsed) {
+                        <button mat-button (click)="mouseslip()">
+                          <mat-icon>mouse</mat-icon>
+                          Mouseslip
+                        </button>
+                      }
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        Give Up
+                      </button>
+                    </div>
                   </div>
                 }
                 @case ('THINKING') {
@@ -100,7 +127,8 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                 }
                 @case ('PLAYING') {
                   <div class="status-center">
-                    <p class="status-text">Dein Zug gegen Stockfish...</p>
+                    <p class="status-text">Your turn!</p>
+                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     @if (showEval) {
                       <div class="eval-compare">
                         @if (evalLoading) {
@@ -121,7 +149,7 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                         <mat-icon>replay</mat-icon>
                         Reset
                       </button>
-                      @if (!mouseslipUsed && !onSolutionPath) {
+                      @if (!mouseslipUsed) {
                         <button mat-button (click)="mouseslip()">
                           <mat-icon>mouse</mat-icon>
                           Mouseslip
@@ -144,7 +172,14 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                       <p class="status-text">Correct!</p>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
+                    <div class="solved-actions">
+                      <button mat-raised-button color="primary" (click)="loadNext()">
+                        Next Puzzle @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
+                      </button>
+                      <button mat-button (click)="showSolution()">
+                        <mat-icon>visibility</mat-icon> Show Solution
+                      </button>
+                    </div>
                   </div>
                 }
                 @case ('FAILED') {
@@ -241,6 +276,13 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
             </mat-card-content>
           </mat-card>
 
+          @if (lastSolvedPuzzleId) {
+            <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
+              <mat-icon>history</mat-icon>
+              Review last puzzle
+            </button>
+          }
+
           <button mat-stroked-button color="accent" class="endless-btn" (click)="goEndless()">
             <mat-icon>all_inclusive</mat-icon>
             Endless Mode
@@ -283,6 +325,9 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
     .filter-row { display: flex; gap: 0.5rem; }
     .filter-field { flex: 1; }
     .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .review-btn { width: 100%; height: 40px; font-size: 0.9em; }
+    .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .endless-btn { width: 100%; height: 44px; font-size: 1em; }
     .endless-btn mat-icon { margin-right: 0.25rem; }
 
@@ -333,6 +378,9 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private initialFen = '';
 
   private routePuzzleId: number | null = null;
+  lastSolvedPuzzleId: number | null = null;
+  solvedCountdown = 0;
+  private countdownInterval?: ReturnType<typeof setInterval>;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -371,6 +419,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimer();
+    this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.stockfish.destroy();
   }
@@ -379,6 +428,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.state = 'LOADING';
     this.attemptRecorded = false;
     this.stopTimer();
+    this.stopCountdown();
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
     this.showEval = false;
@@ -463,6 +513,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
           this.stopTimer();
           this.updateBoard();
           this.recordAttempt(true);
+          this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+          this.startSolvedCountdown();
         } else {
           // Play opponent response
           this.state = 'THINKING';
@@ -477,6 +529,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
               this.state = 'SOLVED';
               this.stopTimer();
               this.recordAttempt(true);
+              this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+              this.startSolvedCountdown();
             } else {
               this.state = 'AWAITING_USER_MOVE';
               this.updateBoard();
@@ -542,6 +596,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
         this.stopTimer();
         this.updateBoard();
         this.recordAttempt(true);
+        this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+        this.startSolvedCountdown();
         return;
       }
     }
@@ -585,6 +641,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   showSolution(): void {
     if (!this.puzzle) return;
+    this.stopCountdown();
 
     // Reset to puzzle start and replay full solution
     this.solutionMoves = this.puzzle.moves.split(' ');
@@ -603,6 +660,31 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       }
     };
     this.autoAdvanceTimer = setTimeout(playNext, 400);
+  }
+
+  private startSolvedCountdown(): void {
+    this.solvedCountdown = 3;
+    this.countdownInterval = setInterval(() => {
+      this.solvedCountdown--;
+      if (this.solvedCountdown <= 0) {
+        this.stopCountdown();
+        this.loadNext();
+      }
+    }, 1000);
+  }
+
+  private stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = undefined;
+    }
+    this.solvedCountdown = 0;
+  }
+
+  reviewLastPuzzle(): void {
+    if (this.lastSolvedPuzzleId) {
+      this.router.navigate(['/puzzles', this.lastSolvedPuzzleId]);
+    }
   }
 
   formatTime(seconds: number): string {
@@ -677,7 +759,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && this.state === 'PLAYING') {
+    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
       this.refreshEval();
     }
   }
