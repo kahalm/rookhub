@@ -15,7 +15,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { TeamPlayersDialogComponent } from './tournament-detail.component';
+import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
 
