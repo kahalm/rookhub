@@ -14,6 +14,7 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
+import { EndlessStorageService } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
@@ -52,10 +53,6 @@ interface EndlessPuzzleAttempt {
   themes?: string;
 }
 
-const CONFIG_KEY = 'rookhub_endless_config';
-const HIGHSCORE_KEY = 'rookhub_endless_highscore';
-const HISTORY_KEY = 'rookhub_endless_history';
-const MAX_HISTORY_SESSIONS = 50;
 const FASTTRACK_SESSION_COUNT = 10;
 
 @Component({
@@ -830,13 +827,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
   constructor(
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
+    private storage: EndlessStorageService,
     private authService: AuthService,
     private router: Router,
     private dialog: MatDialog
   ) {
-    this.loadConfig();
-    this.loadHighscore();
-    this.loadSessionHistory();
+    this.config = this.storage.loadConfig(this.config);
+    this.highscore = this.storage.loadHighscore();
+    this.sessionHistory = this.storage.loadSessionHistory();
     if (this.config.fasttrack) this.computeFasttrackSteps();
     this.puzzleService.getRatingRange().subscribe({
       next: r => { this.puzzleRange = r; this.clampConfig(); },
@@ -1446,61 +1444,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   // --- localStorage ---
 
-  private loadConfig(): void {
-    try {
-      const raw = localStorage.getItem(CONFIG_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        // Remove deprecated rangeWidth from old configs
-        delete saved.rangeWidth;
-        this.config = { ...this.config, ...saved };
-      }
-    } catch {}
-    // Clamp step size
-    if (this.config.step < 10) this.config.step = 10;
-    if (this.config.step > 200) this.config.step = 200;
-    // Clamp stockfish depth
-    if (!this.config.stockfishDepth || this.config.stockfishDepth < 1) this.config.stockfishDepth = 16;
-    if (this.config.stockfishDepth > 24) this.config.stockfishDepth = 24;
-    // Clear stale thresholds that are at or below startElo
-    if (this.config.fasttrackThreshold1 != null && this.config.fasttrackThreshold1 <= this.config.startElo) {
-      this.config.fasttrackThreshold1 = undefined;
-    }
-    if (this.config.fasttrackThreshold2 != null && this.config.fasttrackThreshold2 <= this.config.startElo) {
-      this.config.fasttrackThreshold2 = undefined;
-    }
-  }
-
   private saveConfig(): void {
-    try { localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config)); } catch {}
-  }
-
-  private loadHighscore(): void {
-    try {
-      const raw = localStorage.getItem(HIGHSCORE_KEY);
-      if (raw) this.highscore = parseInt(raw, 10) || 0;
-    } catch {}
+    this.storage.saveConfig(this.config);
   }
 
   private checkHighscore(): void {
-    if (this.maxRatingReached > this.highscore) {
-      this.highscore = this.maxRatingReached;
-      this.isNewHighscore = true;
-      try { localStorage.setItem(HIGHSCORE_KEY, String(this.highscore)); } catch {}
-    }
-  }
-
-  // --- Session History ---
-
-  private loadSessionHistory(): void {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (raw) this.sessionHistory = JSON.parse(raw) || [];
-    } catch { this.sessionHistory = []; }
-  }
-
-  private saveSessionHistory(): void {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(this.sessionHistory)); } catch {}
+    const result = this.storage.checkHighscore(this.maxRatingReached, this.highscore);
+    this.highscore = result.highscore;
+    if (result.isNew) this.isNewHighscore = true;
   }
 
   private recordSession(): void {
@@ -1512,10 +1463,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
       durationSeconds: this.sessionSeconds,
       mistakeAtRatings: [...this.currentSessionMistakes]
     };
-    this.sessionHistory.push(session);
-    if (this.sessionHistory.length > MAX_HISTORY_SESSIONS) {
-      this.sessionHistory = this.sessionHistory.slice(-MAX_HISTORY_SESSIONS);
-    }
-    this.saveSessionHistory();
+    this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
   }
 }

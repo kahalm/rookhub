@@ -1,7 +1,17 @@
 export const environment = {
   production: false,
-  version: '0.19.3',
+  version: '0.19.4',
   changelog: [
+    { version: '0.19.4', date: '2026-05-28', changes: [
+      'Refactor: UnitTest1.cs aufgeteilt in AuthServiceTests, ProfileServiceTests, FriendServiceTests, RepertoireServiceTests',
+      'Refactor: TeamPlayersDialogComponent in eigene Datei extrahiert',
+      'Refactor: Endless-Puzzle localStorage-Logik in EndlessStorageService ausgelagert',
+      'Feature: Retry-Interceptor fuer 502/503/0 Fehler (1x Retry nach 1s)',
+      'Feature: environment.prod.ts + Angular fileReplacements (kein sed im Dockerfile mehr)',
+      'Crawler: RoundDetectionService mit IMemoryCache (60s pro Tournament)',
+      'Crawler: CancellationToken durch alle Crawl-Methoden durchgereicht',
+      'CI: Neuer Test-Workflow (.github/workflows/test.yml) fuer dotnet test + ng build',
+    ]},
     { version: '0.19.3', date: '2026-05-28', changes: [
       'Code-Review: Crawler GetAllTournaments mit Pagination (page/pageSize) statt unbegrenzter Liste',
       'Code-Review: LogRetentionService fuer RookHub API und Crawler — loescht Request-Logs aelter als 30 Tage',

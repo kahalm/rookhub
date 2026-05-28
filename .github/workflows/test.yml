@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test-rookhub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet test tests/RookHub.Api.Tests --verbosity normal
+
+  test-crawler:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ../chessresults_crawler
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: rookhub
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/chessresults_crawler
+          path: chessresults_crawler
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet test tests/ChessResultsCrawler.Tests --verbosity normal
+        working-directory: chessresults_crawler
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/app/package-lock.json
+      - run: npm ci
+        working-directory: src/frontend/app
+      - run: npx ng build --configuration=production
+        working-directory: src/frontend/app
