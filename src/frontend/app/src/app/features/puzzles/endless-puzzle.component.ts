@@ -1247,7 +1247,18 @@ export class EndlessPuzzleComponent implements OnDestroy {
     // Reset costs a life
     this.lives--;
     if (this.lives <= 0) {
-      this.autoAdvanceTimer = setTimeout(() => this.endGame(), 400);
+      this.currentSessionMistakes.push(this._currentMinRating);
+      this.currentSessionPuzzles.push({
+        puzzleNumber: this.currentSessionPuzzles.length + 1,
+        puzzleId: this.puzzle.id,
+        lichessId: this.puzzle.lichessId,
+        rating: this.puzzle.rating,
+        solved: false,
+        themes: this.puzzle.themes
+      });
+      this.recordAttempt(false);
+      this.state = 'WRONG';
+      this.updateBoard();
       return;
     }
     this.setupPuzzle(this.puzzle);

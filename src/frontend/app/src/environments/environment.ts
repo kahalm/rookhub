@@ -1,8 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.18.3',
+  version: '0.18.4',
   changelog: [
-    { version: '0.18.3', date: '2026-05-27', changes: [
+    { version: '0.18.4', date: '2026-05-28', changes: [
+      'Fix: Endless Mode letztes Puzzle erscheint jetzt in der Zusammenfassung (Reset auf letztem Leben)',
+    ]},
+    { version: '0.18.3', date: '2026-05-28', changes: [
       'Puzzle Mode: Einheitliche Controls in allen Zustaenden (kein UI-Hinweis ob am Loesungsweg)',
       'Puzzle Mode: Auto-Advance nach 3s bei geloestem Puzzle, Show Solution Button',
       'Puzzle Mode: Review-Button fuer letztes geloestes Puzzle',
