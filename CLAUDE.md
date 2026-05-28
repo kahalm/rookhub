@@ -234,11 +234,12 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 ## Arbeitsweise
 
 - **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein grosser Sammel-Commit. So bleibt die History nachvollziehbar und Rollbacks sind einfach.
+- **Tags NUR auf Zuruf** – NIEMALS automatisch Git-Tags erstellen. Der User muss vorher testen und explizit nach einem Tag fragen. Tags werden ausschliesslich manuell/auf Anweisung gesetzt.
 - **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build noetig.
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.18.5`
+- **Aktuelle Version**: `0.19.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

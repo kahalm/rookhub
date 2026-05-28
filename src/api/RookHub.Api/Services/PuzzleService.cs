@@ -106,6 +106,92 @@ public class PuzzleService
         };
     }
 
+    public async Task<PuzzleAttemptDto> RecordAnonymousAttemptAsync(string sessionId, int puzzleId, RecordPuzzleAttemptDto dto)
+    {
+        var puzzle = await _db.Puzzles.FindAsync(puzzleId)
+            ?? throw new KeyNotFoundException("Puzzle not found.");
+
+        var attempt = new PuzzleAttempt
+        {
+            UserId = null,
+            AnonymousSessionId = sessionId,
+            PuzzleId = puzzleId,
+            Solved = dto.Solved,
+            TimeSpentSeconds = dto.TimeSpentSeconds
+        };
+
+        _db.PuzzleAttempts.Add(attempt);
+        await _db.SaveChangesAsync();
+
+        return new PuzzleAttemptDto
+        {
+            Id = attempt.Id,
+            PuzzleId = attempt.PuzzleId,
+            LichessId = puzzle.LichessId,
+            PuzzleRating = puzzle.Rating,
+            Solved = attempt.Solved,
+            TimeSpentSeconds = attempt.TimeSpentSeconds,
+            AttemptedAt = attempt.AttemptedAt
+        };
+    }
+
+    public async Task<PuzzleStatsDto> GetAnonymousStatsAsync(string sessionId)
+    {
+        var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId);
+        if (totalAttempts == 0)
+            return new PuzzleStatsDto();
+
+        var solved = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId && a.Solved);
+        var accuracy = (double)solved / totalAttempts * 100;
+
+        var recentResults = await _db.PuzzleAttempts
+            .Where(a => a.AnonymousSessionId == sessionId)
+            .OrderByDescending(a => a.AttemptedAt)
+            .Take(1000)
+            .Select(a => a.Solved)
+            .ToListAsync();
+
+        var currentStreak = 0;
+        foreach (var s in recentResults)
+        {
+            if (s) currentStreak++;
+            else break;
+        }
+
+        var bestStreak = 0;
+        var streak = 0;
+        foreach (var s in recentResults)
+        {
+            if (s) { streak++; bestStreak = Math.Max(bestStreak, streak); }
+            else streak = 0;
+        }
+
+        return new PuzzleStatsDto
+        {
+            TotalAttempts = totalAttempts,
+            Solved = solved,
+            Accuracy = Math.Round(accuracy, 1),
+            CurrentStreak = currentStreak,
+            BestStreak = bestStreak
+        };
+    }
+
+    public async Task<int> ClaimSessionAsync(int userId, string sessionId)
+    {
+        var attempts = await _db.PuzzleAttempts
+            .Where(a => a.AnonymousSessionId == sessionId && a.UserId == null)
+            .ToListAsync();
+
+        foreach (var attempt in attempts)
+        {
+            attempt.UserId = userId;
+            attempt.AnonymousSessionId = null;
+        }
+
+        await _db.SaveChangesAsync();
+        return attempts.Count;
+    }
+
     public async Task<PuzzleStatsDto> GetStatsAsync(int userId)
     {
         var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);

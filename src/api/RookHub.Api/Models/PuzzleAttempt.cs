@@ -4,8 +4,10 @@ public class PuzzleAttempt
 {
     public int Id { get; set; }
 
-    public int UserId { get; set; }
-    public AppUser User { get; set; } = null!;
+    public int? UserId { get; set; }
+    public AppUser? User { get; set; }
+
+    public string? AnonymousSessionId { get; set; }
 
     public int PuzzleId { get; set; }
     public Puzzle Puzzle { get; set; } = null!;

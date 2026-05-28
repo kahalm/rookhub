@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -16,7 +16,7 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<AuthResponse | null>(this.getStoredUser());
   currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private injector: Injector) {}
 
   get isLoggedIn(): boolean {
     return !!this.currentUserSubject.value;
@@ -53,6 +53,17 @@ export class AuthService {
   private storeUser(user: AuthResponse): void {
     localStorage.setItem('rookhub_user', JSON.stringify(user));
     this.currentUserSubject.next(user);
+    this.claimAnonymousPuzzleSession();
+  }
+
+  private claimAnonymousPuzzleSession(): void {
+    const sessionId = localStorage.getItem('rookhub_puzzle_session');
+    if (!sessionId) return;
+    // Lazy import to avoid circular dependency
+    import('../features/puzzles/puzzle.service').then(m => {
+      const puzzleService = this.injector.get(m.PuzzleService);
+      puzzleService.claimSession().subscribe();
+    });
   }
 
   private getStoredUser(): AuthResponse | null {

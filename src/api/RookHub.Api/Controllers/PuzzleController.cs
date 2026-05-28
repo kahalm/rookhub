@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -77,4 +79,50 @@ public class PuzzleController : BaseApiController
     {
         return Ok(await _puzzleService.GetHistoryAsync(GetUserId(), page, pageSize));
     }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [HttpPost("{id}/attempt/anonymous")]
+    public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] AnonymousAttemptDto dto)
+    {
+        if (!IsValidSessionId(dto.SessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        try
+        {
+            var result = await _puzzleService.RecordAnonymousAttemptAsync(dto.SessionId, id,
+                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds });
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    [HttpGet("stats/anonymous")]
+    public async Task<IActionResult> GetAnonymousStats([FromQuery] string sessionId)
+    {
+        if (!IsValidSessionId(sessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        return Ok(await _puzzleService.GetAnonymousStatsAsync(sessionId));
+    }
+
+    [HttpPost("claim-session")]
+    public async Task<IActionResult> ClaimSession([FromBody] ClaimSessionDto dto)
+    {
+        if (!IsValidSessionId(dto.SessionId))
+            return BadRequest(new { message = "Invalid session ID." });
+
+        var claimed = await _puzzleService.ClaimSessionAsync(GetUserId(), dto.SessionId);
+        return Ok(new { claimed });
+    }
+
+    private static readonly Regex SessionIdPattern = new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
+
+    private static bool IsValidSessionId(string? sessionId)
+        => !string.IsNullOrEmpty(sessionId) && sessionId.Length <= 36 && SessionIdPattern.IsMatch(sessionId);
 }

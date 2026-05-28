@@ -1436,8 +1436,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   private recordAttempt(solved: boolean): void {
-    if (!this.puzzle || !this.authService.isLoggedIn) return;
-    this.puzzleService.recordAttempt(this.puzzle.id, solved, 0).subscribe();
+    if (!this.puzzle) return;
+    if (this.authService.isLoggedIn) {
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, 0).subscribe();
+    } else {
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, 0).subscribe();
+    }
   }
 
   // --- localStorage ---

@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.18.5',
+  version: '0.19.0',
   changelog: [
+    { version: '0.19.0', date: '2026-05-28', changes: [
+      'Anonyme Puzzle-Stats: Puzzle-Attempts werden auch ohne Login getrackt (localStorage SessionId)',
+      'Anonyme Stats: Accuracy, Streak und Best Streak fuer nicht eingeloggte User',
+      'Session-Claim: Bei Login/Register werden anonyme Puzzle-Daten automatisch auf den Account uebertragen',
+      'Rate-Limiting: Eigene Policy fuer anonyme Puzzle-Endpoints (30 Requests/Minute)',
+      'API: Neue Endpoints POST /api/puzzles/{id}/attempt/anonymous, GET /api/puzzles/stats/anonymous, POST /api/puzzles/claim-session',
+    ]},
     { version: '0.18.5', date: '2026-05-28', changes: [
       'Code-Review: FriendService Suche mit determinisitscher Sortierung (OrderBy)',
       'Code-Review: AdminController ClearPuzzles in Transaktion gewrappt',

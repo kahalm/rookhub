@@ -30,6 +30,23 @@ public class PuzzleStatsDto
     public int BestStreak { get; set; }
 }
 
+public class AnonymousAttemptDto
+{
+    [Required, MaxLength(36)]
+    public string SessionId { get; set; } = string.Empty;
+
+    public bool Solved { get; set; }
+
+    [Range(0, 3600)]
+    public int TimeSpentSeconds { get; set; }
+}
+
+public class ClaimSessionDto
+{
+    [Required, MaxLength(36)]
+    public string SessionId { get; set; } = string.Empty;
+}
+
 public class PuzzleAttemptDto
 {
     public int Id { get; set; }

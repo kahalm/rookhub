@@ -414,6 +414,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.loadNext();
     if (this.isLoggedIn) {
       this.puzzleService.getStats().subscribe(s => this.stats = s);
+    } else {
+      this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
     }
   }
 
@@ -750,11 +752,17 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   private recordAttempt(solved: boolean): void {
-    if (!this.puzzle || this.attemptRecorded || !this.isLoggedIn) return;
+    if (!this.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
-    this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
-      this.puzzleService.getStats().subscribe(s => this.stats = s);
-    });
+    if (this.isLoggedIn) {
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
+        this.puzzleService.getStats().subscribe(s => this.stats = s);
+      });
+    } else {
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
+        this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
+      });
+    }
   }
 
   toggleEval(): void {

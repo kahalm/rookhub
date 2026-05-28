@@ -93,6 +93,35 @@ export class PuzzleService {
     });
   }
 
+  private getOrCreateSessionId(): string {
+    const key = 'rookhub_puzzle_session';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }
+
+  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number): Observable<PuzzleAttemptDto> {
+    return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
+      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds
+    });
+  }
+
+  getAnonymousStats(): Observable<PuzzleStatsDto> {
+    const sessionId = this.getOrCreateSessionId();
+    return this.http.get<PuzzleStatsDto>(`/api/puzzles/stats/anonymous`, {
+      params: new HttpParams().set('sessionId', sessionId)
+    });
+  }
+
+  claimSession(): Observable<{ claimed: number }> {
+    return this.http.post<{ claimed: number }>('/api/puzzles/claim-session', {
+      sessionId: this.getOrCreateSessionId()
+    });
+  }
+
   getBookPuzzleById(id: number): Observable<BookPuzzleDto> {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
   }

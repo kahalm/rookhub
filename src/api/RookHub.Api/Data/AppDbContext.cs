@@ -127,6 +127,7 @@ public class AppDbContext : DbContext
             e.HasOne(a => a.User)
              .WithMany()
              .HasForeignKey(a => a.UserId)
+             .IsRequired(false)
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(a => a.Puzzle)
@@ -134,7 +135,9 @@ public class AppDbContext : DbContext
              .HasForeignKey(a => a.PuzzleId)
              .OnDelete(DeleteBehavior.Cascade);
 
+            e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
             e.HasIndex(a => new { a.UserId, a.PuzzleId });
+            e.HasIndex(a => a.AnonymousSessionId);
             e.HasIndex(a => a.AttemptedAt).IsDescending();
         });
 
