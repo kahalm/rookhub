@@ -1,7 +1,17 @@
 export const environment = {
   production: false,
-  version: '0.19.4',
+  version: '0.20.0',
   changelog: [
+    { version: '0.20.0', date: '2026-05-28', changes: [
+      'Feature: Server-Side Endless Puzzle Progress Sync — Config, Highscore und Active Game werden serverseitig gespeichert',
+      'Feature: Endless Session History wird auf dem Server persistiert (max 50 Sessions)',
+      'Feature: Anonyme und eingeloggte User koennen nahtlos auf anderen Geraeten weiterspielen',
+      'Feature: Claim-Session uebertraegt anonyme Endless-Daten bei Login auf den Account',
+      'Feature: Bulk-Import fuer localStorage-Migration (einmalig beim ersten Server-Sync)',
+      'API: Neue Endpoints GET/PUT /api/endless/progress, POST /api/endless/sessions, POST /api/endless/claim-session',
+      'API: Anonyme Varianten mit Rate-Limiting (anonymous-puzzle Policy)',
+      'Tests: 19 neue Tests fuer EndlessProgressService (Progress, Sessions, Claim, BulkImport)',
+    ]},
     { version: '0.19.4', date: '2026-05-28', changes: [
       'Refactor: UnitTest1.cs aufgeteilt in AuthServiceTests, ProfileServiceTests, FriendServiceTests, RepertoireServiceTests',
       'Refactor: TeamPlayersDialogComponent in eigene Datei extrahiert',

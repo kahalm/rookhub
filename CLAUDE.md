@@ -117,6 +117,19 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
 
+### Endless Puzzle Sync (auth + anon)
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/endless/progress` | Auth | Progress + Sessions laden (single call) |
+| PUT | `/api/endless/progress` | Auth | Config + Highscore + Active Game upsert |
+| GET | `/api/endless/progress/anonymous?sessionId=` | Anon+RL | Anonymer Progress |
+| PUT | `/api/endless/progress/anonymous` | Anon+RL | Anonymer Progress speichern |
+| POST | `/api/endless/sessions` | Auth | Session aufzeichnen |
+| POST | `/api/endless/sessions/anonymous` | Anon+RL | Anonyme Session aufzeichnen |
+| POST | `/api/endless/sessions/bulk` | Auth | Bulk-Import (localStorage-Migration) |
+| POST | `/api/endless/sessions/bulk/anonymous` | Anon+RL | Bulk-Import anonym |
+| POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User uebertragen |
+
 ## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
 
 | Tabelle | Zweck | Wichtige Felder / Constraints |
@@ -128,8 +141,10 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags |
+| EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Step, Themes, Fasttrack, Highscore, ActiveGameState (LONGTEXT) |
+| EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
 
-Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions; Repertoire -> Files.
+Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions; Repertoire -> Files.
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur
@@ -239,7 +254,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.19.4`
+- **Aktuelle Version**: `0.20.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

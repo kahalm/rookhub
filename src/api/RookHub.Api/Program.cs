@@ -43,6 +43,7 @@ builder.Services.AddScoped<FriendService>();
 builder.Services.AddScoped<RepertoireService>();
 builder.Services.AddScoped<PlayerSearchService>();
 builder.Services.AddScoped<PuzzleService>();
+builder.Services.AddScoped<EndlessProgressService>();
 builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 builder.Services.AddHostedService<BackgroundTaskWorker>();
 builder.Services.AddSingleton<AutoSubscriptionService>();

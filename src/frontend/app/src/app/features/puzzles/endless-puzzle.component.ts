@@ -14,7 +14,7 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
-import { EndlessStorageService } from './endless-storage.service';
+import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
@@ -24,25 +24,6 @@ import { Color, Key } from 'chessground/types';
 // PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
   | 'THINKING' | 'PLAYING' | 'CORRECT' | 'WRONG' | 'GAME_OVER' | 'EXHAUSTED';
-
-interface EndlessConfig {
-  startElo: number;
-  step: number;
-  themes: string;
-  fasttrack: boolean;
-  fasttrackThreshold1?: number;
-  fasttrackThreshold2?: number;
-  stockfishDepth: number;
-}
-
-interface EndlessSession {
-  timestamp: number;
-  config: EndlessConfig;
-  totalSolved: number;
-  maxRating: number;
-  durationSeconds: number;
-  mistakeAtRatings: number[];
-}
 
 interface EndlessPuzzleAttempt {
   puzzleNumber: number;
@@ -832,10 +813,30 @@ export class EndlessPuzzleComponent implements OnDestroy {
     private router: Router,
     private dialog: MatDialog
   ) {
+    // 1. Load from localStorage immediately (no latency)
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
     this.sessionHistory = this.storage.loadSessionHistory();
     if (this.config.fasttrack) this.computeFasttrackSteps();
+
+    // 2. Load from server (async) and merge
+    this.storage.loadFromServer().subscribe(serverData => {
+      if (serverData) {
+        if (serverData.progress || serverData.sessions.length > 0) {
+          const merged = this.storage.mergeServerData(
+            this.config, this.highscore, this.sessionHistory, serverData
+          );
+          this.config = this.storage.loadConfig(merged.config);
+          this.highscore = merged.highscore;
+          this.sessionHistory = merged.history;
+          if (this.config.fasttrack) this.computeFasttrackSteps();
+        } else {
+          // Server empty: migrate localStorage data up (one-time)
+          this.storage.migrateLocalToServer(this.config, this.highscore, this.sessionHistory);
+        }
+      }
+    });
+
     this.puzzleService.getRatingRange().subscribe({
       next: r => { this.puzzleRange = r; this.clampConfig(); },
       error: () => {}
@@ -904,6 +905,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.currentSessionPuzzles = [];
     if (this.config.fasttrack) this.computeFasttrackSteps();
     this.startSessionTimer();
+    this.syncActiveGameToServer();
     this.loadPuzzle();
   }
 
@@ -933,6 +935,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.stopSessionTimer();
       this.checkHighscore();
       this.recordSession();
+      this.storage.saveActiveGameLocal(null);
+      this.storage.saveProgressImmediate(this.config, this.highscore, null);
       this.state = 'EXHAUSTED';
       return;
     }
@@ -966,6 +970,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.stopSessionTimer();
       this.checkHighscore();
       this.recordSession();
+      this.storage.saveActiveGameLocal(null);
+      this.storage.saveProgressImmediate(this.config, this.highscore, null);
       this.state = 'EXHAUSTED';
       return;
     }
@@ -1136,6 +1142,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
       });
     }
     this.recordAttempt(true);
+    this.syncActiveGameToServer();
     this.updateBoard();
 
     if (alternative) {
@@ -1205,6 +1212,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     }
     this.lives--;
     this.recordAttempt(false);
+    this.syncActiveGameToServer();
     this.state = 'WRONG';
     this.updateBoard();
   }
@@ -1290,6 +1298,9 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.stopSessionTimer();
     this.checkHighscore();
     this.recordSession();
+    // Clear active game and sync final state to server
+    this.storage.saveActiveGameLocal(null);
+    this.storage.saveProgressImmediate(this.config, this.highscore, null);
     this.state = 'GAME_OVER';
   }
 
@@ -1446,12 +1457,27 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   private saveConfig(): void {
     this.storage.saveConfig(this.config);
+    this.storage.saveProgressToServer(this.config, this.highscore, null);
   }
 
   private checkHighscore(): void {
     const result = this.storage.checkHighscore(this.maxRatingReached, this.highscore);
     this.highscore = result.highscore;
     if (result.isNew) this.isNewHighscore = true;
+  }
+
+  private syncActiveGameToServer(): void {
+    const gameState = {
+      lives: this.lives,
+      solved: this.solved,
+      level: this.level,
+      currentMinRating: this._currentMinRating,
+      maxRatingReached: this.maxRatingReached,
+      sessionSeconds: this.sessionSeconds,
+      mistakes: this.currentSessionMistakes
+    };
+    this.storage.saveActiveGameLocal(gameState);
+    this.storage.saveProgressToServer(this.config, this.highscore, gameState);
   }
 
   private recordSession(): void {
@@ -1464,5 +1490,6 @@ export class EndlessPuzzleComponent implements OnDestroy {
       mistakeAtRatings: [...this.currentSessionMistakes]
     };
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
+    this.storage.recordSessionToServer(session);
   }
 }

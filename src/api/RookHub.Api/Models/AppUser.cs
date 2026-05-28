@@ -24,4 +24,6 @@ public class AppUser
     public ICollection<TournamentSubscription> TournamentSubscriptions { get; set; } = new List<TournamentSubscription>();
     public ICollection<TournamentFavorite> TournamentFavorites { get; set; } = new List<TournamentFavorite>();
     public ICollection<TournamentUserSetting> TournamentUserSettings { get; set; } = new List<TournamentUserSetting>();
+    public ICollection<EndlessProgress> EndlessProgresses { get; set; } = new List<EndlessProgress>();
+    public ICollection<EndlessSession> EndlessSessions { get; set; } = new List<EndlessSession>();
 }

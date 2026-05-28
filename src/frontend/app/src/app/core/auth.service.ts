@@ -64,6 +64,11 @@ export class AuthService {
       const puzzleService = this.injector.get(m.PuzzleService);
       puzzleService.claimSession().subscribe();
     });
+    // Also claim endless puzzle progress
+    import('../features/puzzles/endless-storage.service').then(m => {
+      const endlessStorage = this.injector.get(m.EndlessStorageService);
+      endlessStorage.claimEndlessSession().subscribe();
+    });
   }
 
   private getStoredUser(): AuthResponse | null {

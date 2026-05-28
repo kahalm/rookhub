@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
+    public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
+    public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -145,6 +147,32 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(bp => bp.LineId).IsUnique();
             e.HasIndex(bp => bp.BookFileName);
+        });
+
+        modelBuilder.Entity<EndlessProgress>(e =>
+        {
+            e.HasOne(ep => ep.User)
+             .WithMany(u => u.EndlessProgresses)
+             .HasForeignKey(ep => ep.UserId)
+             .IsRequired(false)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(ep => ep.UserId).IsUnique();
+            e.HasIndex(ep => ep.AnonymousSessionId);
+            e.Property(ep => ep.AnonymousSessionId).HasMaxLength(36);
+        });
+
+        modelBuilder.Entity<EndlessSession>(e =>
+        {
+            e.HasOne(es => es.User)
+             .WithMany(u => u.EndlessSessions)
+             .HasForeignKey(es => es.UserId)
+             .IsRequired(false)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(es => new { es.UserId, es.Timestamp });
+            e.HasIndex(es => es.AnonymousSessionId);
+            e.Property(es => es.AnonymousSessionId).HasMaxLength(36);
         });
     }
 }
