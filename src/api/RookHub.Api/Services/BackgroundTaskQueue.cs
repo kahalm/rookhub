@@ -11,16 +11,22 @@ public interface IBackgroundTaskQueue
 public class BackgroundTaskQueue : IBackgroundTaskQueue
 {
     private readonly Channel<Func<IServiceProvider, CancellationToken, Task>> _queue;
+    private readonly ILogger<BackgroundTaskQueue>? _logger;
 
-    public BackgroundTaskQueue(int capacity = 100)
+    public BackgroundTaskQueue(int capacity = 100, ILogger<BackgroundTaskQueue>? logger = null)
     {
+        _logger = logger;
         _queue = Channel.CreateBounded<Func<IServiceProvider, CancellationToken, Task>>(
-            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait });
+            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.DropOldest });
     }
 
     public async ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
     {
-        await _queue.Writer.WriteAsync(workItem);
+        if (!_queue.Writer.TryWrite(workItem))
+        {
+            _logger?.LogWarning("Background task queue is full, dropping oldest item");
+            await _queue.Writer.WriteAsync(workItem);
+        }
     }
 
     public async ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)

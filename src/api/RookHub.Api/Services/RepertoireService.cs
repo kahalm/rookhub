@@ -9,7 +9,7 @@ namespace RookHub.Api.Services;
 public class RepertoireService
 {
     private readonly AppDbContext _db;
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+    public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
 
     public RepertoireService(AppDbContext db) => _db = db;
 

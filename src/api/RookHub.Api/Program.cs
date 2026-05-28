@@ -116,6 +116,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+builder.Services.AddMemoryCache();
 builder.Services.AddResponseCompression();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -183,7 +184,18 @@ app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+app.MapGet("/health", async (AppDbContext db) =>
+{
+    try
+    {
+        await db.Database.CanConnectAsync();
+        return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+    }
+    catch
+    {
+        return Results.Json(new { status = "unhealthy", timestamp = DateTime.UtcNow }, statusCode: 503);
+    }
+});
 
 await app.RunAsync();
 

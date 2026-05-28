@@ -135,8 +135,10 @@ public class AdminController : BaseApiController
     [HttpDelete("puzzles")]
     public async Task<IActionResult> ClearPuzzles()
     {
+        await using var tx = await _db.Database.BeginTransactionAsync();
         await _db.PuzzleAttempts.ExecuteDeleteAsync();
         await _db.Puzzles.ExecuteDeleteAsync();
+        await tx.CommitAsync();
         return NoContent();
     }
 }

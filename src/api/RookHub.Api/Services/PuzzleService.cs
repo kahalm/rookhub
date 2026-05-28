@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -8,8 +9,13 @@ namespace RookHub.Api.Services;
 public class PuzzleService
 {
     private readonly AppDbContext _db;
+    private readonly IMemoryCache _cache;
 
-    public PuzzleService(AppDbContext db) => _db = db;
+    public PuzzleService(AppDbContext db, IMemoryCache cache)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved)
     {
@@ -40,8 +46,7 @@ public class PuzzleService
         // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
         // ID-range picks a random point in the PK space and seeks forward - O(1).
-        var minId = await _db.Puzzles.MinAsync(p => (int?)p.Id);
-        var maxId = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
+        var (minId, maxId) = await GetCachedIdRangeAsync();
         if (minId == null || maxId == null) return null;
 
         for (int attempt = 0; attempt < 5; attempt++)
@@ -228,6 +233,19 @@ public class PuzzleService
         }
 
         return imported;
+    }
+
+    private async Task<(int? Min, int? Max)> GetCachedIdRangeAsync()
+    {
+        const string cacheKey = "PuzzleIdRange";
+        if (_cache.TryGetValue<(int?, int?)>(cacheKey, out var cached))
+            return cached;
+
+        var min = await _db.Puzzles.MinAsync(p => (int?)p.Id);
+        var max = await _db.Puzzles.MaxAsync(p => (int?)p.Id);
+        var result = (min, max);
+        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+        return result;
     }
 
     private static string SanitizeLikeInput(string input)

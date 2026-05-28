@@ -1,7 +1,19 @@
 export const environment = {
   production: false,
-  version: '0.18.4',
+  version: '0.18.5',
   changelog: [
+    { version: '0.18.5', date: '2026-05-28', changes: [
+      'Code-Review: FriendService Suche mit determinisitscher Sortierung (OrderBy)',
+      'Code-Review: AdminController ClearPuzzles in Transaktion gewrappt',
+      'Code-Review: MaxFileSize Konstante dedupliziert (RepertoireService als Single Source)',
+      'Code-Review: BackgroundTaskQueue DropOldest statt Wait (verhindert Request-Blockierung)',
+      'Code-Review: Health-Endpoint prueft DB-Konnektivitaet (503 bei Fehler)',
+      'Code-Review: PuzzleService Min/Max ID-Range mit MemoryCache (5min TTL)',
+      'Code-Review: DB-Index auf TournamentSubscription.CrawlerTournamentId',
+      'Code-Review: Dashboard takeUntilDestroyed fuer Subscription-Cleanup',
+      'Crawler: ApiKey-Vergleich timing-safe (CryptographicOperations.FixedTimeEquals)',
+      'Crawler: CrawlJob ErrorMessage Null-Check',
+    ]},
     { version: '0.18.4', date: '2026-05-28', changes: [
       'Fix: Endless Mode letztes Puzzle erscheint jetzt in der Zusammenfassung (Reset auf letztem Leben)',
     ]},

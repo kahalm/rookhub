@@ -20,7 +20,7 @@ public class AdminControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new AdminController(_db, new PuzzleService(_db));
+        _controller = new AdminController(_db, new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())));
         SetUser(99);
     }
 

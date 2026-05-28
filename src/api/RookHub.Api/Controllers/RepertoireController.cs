@@ -67,8 +67,6 @@ public class RepertoireController : BaseApiController
         }
     }
 
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
-
     [HttpPost("{id}/files")]
     public async Task<ActionResult<RepertoireFileDto>> UploadFile(int id, IFormFile file)
     {
@@ -78,8 +76,8 @@ public class RepertoireController : BaseApiController
         if (!Path.GetExtension(file.FileName).Equals(".pgn", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { message = "Only .pgn files are allowed." });
 
-        if (file.Length > MaxFileSize)
-            return BadRequest(new { message = $"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB." });
+        if (file.Length > RepertoireService.MaxFileSize)
+            return BadRequest(new { message = $"File size exceeds maximum of {RepertoireService.MaxFileSize / 1024 / 1024} MB." });
 
         try
         {

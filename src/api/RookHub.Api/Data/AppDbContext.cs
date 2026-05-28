@@ -76,6 +76,7 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(ts => new { ts.UserId, ts.CrawlerTournamentId }).IsUnique();
+            e.HasIndex(ts => ts.CrawlerTournamentId);
         });
 
         modelBuilder.Entity<TournamentFavorite>(e =>

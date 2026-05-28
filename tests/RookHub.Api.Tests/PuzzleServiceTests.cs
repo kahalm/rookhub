@@ -22,7 +22,7 @@ public class PuzzleServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new PuzzleService(_db);
+        _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
     }
 
     public void Dispose() => _db.Dispose();

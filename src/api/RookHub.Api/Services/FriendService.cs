@@ -140,6 +140,7 @@ public class FriendService
                             (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(query)) ||
                             (u.Profile.FideId != null && u.Profile.FideId.Contains(query))
                         ))))
+            .OrderBy(u => u.Username)
             .Take(20)
             .Select(u => new UserSearchResultDto
             {

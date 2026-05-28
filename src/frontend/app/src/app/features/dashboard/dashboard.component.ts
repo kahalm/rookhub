@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/models';
 @Component({
@@ -86,6 +87,8 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
   `]
 })
 export class DashboardComponent implements OnInit {
+  private destroyRef = inject(DestroyRef);
+
   repertoireCount = 0;
   subscriptionCount = 0;
   friendCount = 0;
@@ -103,7 +106,9 @@ export class DashboardComponent implements OnInit {
       puzzleStats: this.http.get<PuzzleStatsDto>('/api/puzzles/stats').pipe(
         catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0 }))
       )
-    }).subscribe(({ repertoires, subscriptions, friends, puzzleStats }) => {
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(({ repertoires, subscriptions, friends, puzzleStats }) => {
       this.repertoireCount = repertoires.length;
       this.subscriptions = subscriptions;
       this.subscriptionCount = subscriptions.length;
