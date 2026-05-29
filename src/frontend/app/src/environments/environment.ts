@@ -1,7 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.22.9',
+  version: '0.23.0',
   changelog: [
+    { version: '0.23.0', date: '2026-05-29', changes: [
+      'Security: SessionId-Validierung per Regex in EndlessController + DTOs (wie PuzzleController)',
+      'Security: Repertoire-Limits — max 50 pro User, max 100 Files pro Repertoire',
+      'Security: nginx laeuft als non-root User (Port 8080 intern)',
+      'Security: init-db.sh — GRANT ALL durch spezifische Privileges ersetzt',
+    ]},
     { version: '0.22.9', date: '2026-05-29', changes: [
       'Perf: TournamentDetail — Template-Getter durch gecachte Properties ersetzt (kein Array-Rebuild pro Change Detection)',
     ]},

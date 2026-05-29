@@ -205,4 +205,43 @@ public class RepertoireServiceExtendedTests : IDisposable
     }
 
     #endregion
+
+    #region Limits
+
+    [Fact]
+    public async Task CreateRepertoire_ExceedsMaxPerUser_Throws()
+    {
+        var userId = await CreateUserAsync();
+        for (var i = 0; i < RepertoireService.MaxRepertoiresPerUser; i++)
+        {
+            await _service.CreateAsync(userId, new CreateRepertoireDto { Name = $"Rep{i}" });
+        }
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.CreateAsync(userId, new CreateRepertoireDto { Name = "One Too Many" }));
+        Assert.Contains("Maximum", ex.Message);
+    }
+
+    [Fact]
+    public async Task UploadFile_ExceedsMaxPerRepertoire_Throws()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _service.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
+
+        for (var i = 0; i < RepertoireService.MaxFilesPerRepertoire; i++)
+        {
+            var pgn = $"[Event \"Game {i}\"]\n1. e4 e5 *";
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(pgn));
+            await _service.UploadFileAsync(rep.Id, userId, $"game{i}.pgn", stream);
+        }
+
+        var extraPgn = "[Event \"Extra\"]\n1. d4 d5 *";
+        using var extraStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(extraPgn));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.UploadFileAsync(rep.Id, userId, "extra.pgn", extraStream));
+        Assert.Contains("Maximum", ex.Message);
+    }
+
+    #endregion
 }

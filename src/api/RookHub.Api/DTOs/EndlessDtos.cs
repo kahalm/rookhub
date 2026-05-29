@@ -64,7 +64,7 @@ public class SaveEndlessProgressDto
 
 public class SaveAnonymousProgressDto : SaveEndlessProgressDto
 {
-    [Required, MaxLength(36)]
+    [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string SessionId { get; set; } = string.Empty;
 }
 
@@ -90,7 +90,7 @@ public class RecordEndlessSessionDto
 
 public class RecordAnonymousSessionDto : RecordEndlessSessionDto
 {
-    [Required, MaxLength(36)]
+    [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string SessionId { get; set; } = string.Empty;
 }
 
@@ -101,7 +101,7 @@ public class BulkImportSessionDto
 
 public class BulkImportAnonymousSessionDto
 {
-    [Required, MaxLength(36)]
+    [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string SessionId { get; set; } = string.Empty;
 
     public List<RecordEndlessSessionDto> Sessions { get; set; } = new();
@@ -109,6 +109,6 @@ public class BulkImportAnonymousSessionDto
 
 public class ClaimEndlessSessionDto
 {
-    [Required, MaxLength(36)]
+    [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string AnonymousSessionId { get; set; } = string.Empty;
 }

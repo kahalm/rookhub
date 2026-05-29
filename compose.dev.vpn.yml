@@ -1,15 +1,13 @@
 ###############################################################################
-# RookHub full-stack deployment mit Gluetun VPN (WireGuard)
+# RookHub full-stack deployment mit Gluetun VPN (WireGuard) – Dev-Variante
 #
-# 1. Clone:           git clone https://github.com/kahalm/rookhub.git && cd rookhub
-# 2. Copy this file:  cp compose.vpn.example compose.vpn.yml
-# 3. Create .env (see below) and adjust values
-# 4. Start:           docker compose -f compose.vpn.yml up -d
+# Nutzt pre-built Images (ghcr.io) statt lokalem Build.
+#
+# 1. Create .env.dev.vpn (see below) and adjust values
+# 2. Start:  docker compose -f compose.dev.vpn.yml --env-file .env.dev.vpn up -d
 #
 # Required .env variables (no defaults – all must be set explicitly):
 #   MARIADB_ROOT_PASSWORD=
-#   DB_HOST=
-#   DB_PORT=
 #   DB_EXTERNAL_PORT=
 #   CRAWLER_DB_NAME=
 #   CRAWLER_DB_USER=
@@ -24,6 +22,11 @@
 #   API_PORT=
 #   DB_DATA_PATH=
 #   INIT_DB_PATH=
+#   ES_DATA_PATH=
+#   CRAWLER_API_KEY=
+#   ADMIN_USERNAME=
+#   ADMIN_PASSWORD=
+#   ASPNETCORE_ENVIRONMENT=
 #   VPN_SERVICE_PROVIDER=
 #   VPN_TYPE=
 #   WIREGUARD_PRIVATE_KEY=
@@ -33,7 +36,7 @@
 #   FIREWALL_VPN_INPUT_PORTS=
 #
 # Ports:
-#   ${FRONTEND_PORT}    -> Frontend (nginx)
+#   ${FRONTEND_PORT}     -> Frontend (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 ###############################################################################
@@ -46,7 +49,7 @@ services:
     container_name: rookhub-mariadb-dev
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD must be set}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
       CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
       CRAWLER_DB_USER: ${CRAWLER_DB_USER}
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
@@ -79,9 +82,9 @@ services:
     environment:
       VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER}
       VPN_TYPE: ${VPN_TYPE}
-      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?WIREGUARD_PRIVATE_KEY must be set}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY}
       WIREGUARD_PRESHARED_KEY: ${WIREGUARD_PRESHARED_KEY}
-      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:?WIREGUARD_ADDRESSES must be set}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES}
       SERVER_COUNTRIES: ${SERVER_COUNTRIES}
       FIREWALL_VPN_INPUT_PORTS: ${FIREWALL_VPN_INPUT_PORTS}
     healthcheck:
@@ -95,7 +98,7 @@ services:
 
   # ── ChessResults Crawler (via Gluetun VPN) ────────────────────────────────
   crawler:
-    image: ghcr.io/kahalm/rookhub-crawler:latest
+    image: ghcr.io/kahalm/rookhub-crawler:dev
     container_name: rookhub-crawler-dev
     restart: unless-stopped
     network_mode: "service:gluetun"
@@ -105,14 +108,14 @@ services:
       gluetun:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
+      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
       API_KEY: ${CRAWLER_API_KEY}
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
 
   # ── RookHub API ────────────────────────────────────────────────────────────
   api:
-    image: ghcr.io/kahalm/rookhub-api:latest
+    image: ghcr.io/kahalm/rookhub-api:dev
     container_name: rookhub-api-dev
     restart: unless-stopped
     ports:
@@ -120,20 +123,18 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-      crawler:
-        condition: service_started
       elasticsearch:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
-      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
+      ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
+      Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080
       Crawler__ApiKey: ${CRAWLER_API_KEY}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
     networks:
       - rookhub-dev
@@ -149,10 +150,12 @@ services:
       - xpack.security.http.ssl.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - cluster.name=rookhub-logs
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - index.number_of_replicas=0
     ports:
       - "${ES_PORT:-9200}:9200"
     volumes:
-      - es-data:/usr/share/elasticsearch/data
+      - ${ES_DATA_PATH}:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
       interval: 10s
@@ -200,11 +203,11 @@ services:
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
   frontend:
-    image: ghcr.io/kahalm/rookhub-frontend:latest
+    image: ghcr.io/kahalm/rookhub-frontend:dev
     container_name: rookhub-frontend-dev
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT}:80"
+      - "${FRONTEND_PORT}:8080"
     depends_on:
       - api
     networks:
@@ -213,6 +216,4 @@ services:
 networks:
   rookhub-dev:
 
-volumes:
-  mariadb-data:
-  es-data:
+volumes: {}

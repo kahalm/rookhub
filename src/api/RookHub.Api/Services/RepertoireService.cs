@@ -10,6 +10,8 @@ public class RepertoireService
 {
     private readonly AppDbContext _db;
     public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+    public const int MaxRepertoiresPerUser = 50;
+    public const int MaxFilesPerRepertoire = 100;
 
     public RepertoireService(AppDbContext db) => _db = db;
 
@@ -57,6 +59,10 @@ public class RepertoireService
 
     public async Task<RepertoireDto> CreateAsync(int userId, CreateRepertoireDto dto)
     {
+        var count = await _db.Repertoires.CountAsync(r => r.UserId == userId);
+        if (count >= MaxRepertoiresPerUser)
+            throw new InvalidOperationException($"Maximum of {MaxRepertoiresPerUser} repertoires per user reached.");
+
         var rep = new Repertoire
         {
             UserId = userId,
@@ -117,8 +123,13 @@ public class RepertoireService
 
     public async Task<RepertoireFileDto> UploadFileAsync(int repertoireId, int userId, string fileName, Stream fileStream)
     {
-        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId)
+        var rep = await _db.Repertoires
+            .Include(r => r.Files)
+            .FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
+
+        if (rep.Files.Count >= MaxFilesPerRepertoire)
+            throw new InvalidOperationException($"Maximum of {MaxFilesPerRepertoire} files per repertoire reached.");
 
         if (fileStream.CanSeek && fileStream.Length > MaxFileSize)
             throw new InvalidOperationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");

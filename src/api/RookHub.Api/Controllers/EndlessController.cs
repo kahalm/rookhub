@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -10,6 +11,7 @@ namespace RookHub.Api.Controllers;
 [Route("api/endless")]
 public class EndlessController : BaseApiController
 {
+    private static readonly Regex SessionIdPattern = new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
     private readonly EndlessProgressService _service;
 
     public EndlessController(EndlessProgressService service) => _service = service;
@@ -66,7 +68,7 @@ public class EndlessController : BaseApiController
     [EnableRateLimiting("anonymous-puzzle")]
     public async Task<ActionResult<EndlessSyncResponseDto>> GetAnonymousProgress([FromQuery] string sessionId)
     {
-        if (string.IsNullOrWhiteSpace(sessionId) || sessionId.Length > 36)
+        if (string.IsNullOrWhiteSpace(sessionId) || !SessionIdPattern.IsMatch(sessionId))
             return BadRequest(new { message = "Invalid session ID." });
 
         var data = await _service.GetAnonymousSyncDataAsync(sessionId);

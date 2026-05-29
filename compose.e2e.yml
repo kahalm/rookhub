@@ -68,7 +68,7 @@ services:
       dockerfile: Dockerfile
     container_name: e2e-frontend
     ports:
-      - "${FRONTEND_PORT}:80"
+      - "${FRONTEND_PORT}:8080"
     depends_on:
       api:
         condition: service_healthy
