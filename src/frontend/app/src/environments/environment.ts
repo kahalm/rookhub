@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.8',
+  version: '0.22.9',
   changelog: [
+    { version: '0.22.9', date: '2026-05-29', changes: [
+      'Perf: TournamentDetail — Template-Getter durch gecachte Properties ersetzt (kein Array-Rebuild pro Change Detection)',
+    ]},
     { version: '0.22.8', date: '2026-05-29', changes: [
       'Fix: Fehlende Error-Handler auf HTTP-Calls in RepertoireList, TournamentDetail — SnackBar-Feedback bei Fehlern',
     ]},

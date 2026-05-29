@@ -81,7 +81,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
               }
               <!-- Desktop: full table -->
               <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="playerSort = $event" class="full-width">
+                <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="onPlayerSort($event)" class="full-width">
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let p">
@@ -167,7 +167,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                 </div>
               }
               <div class="table-scroll">
-                <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort = $event" class="full-width">
+                <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="onTeamSort($event)" class="full-width">
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let t">
@@ -216,7 +216,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
             } @else {
               <!-- Desktop: full table -->
               <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
+                <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="onPairingSort($event)" class="full-width">
                   <ng-container matColumnDef="board">
                     <th mat-header-cell *matHeaderCellDef mat-sort-header>Board</th>
                     <td mat-cell *matCellDef="let p">{{ p.board }}</td>
@@ -388,6 +388,13 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   favoriteTeamSnrs: Set<number> = new Set();
   selectedTabIndex = 0;
   hasTeamPairings = false;
+
+  // Cached display data (refreshed via refreshDisplayed* methods)
+  displayedPlayers: TournamentPlayer[] = [];
+  displayedTeams: TournamentTeam[] = [];
+  displayedPairings: DisplayPairing[] = [];
+  private _favoriteTeamNames = new Set<string>();
+  private _favoriteNames = new Set<string>();
 
   // Sort states
   playerSort: Sort = { active: '', direction: '' };
@@ -650,7 +657,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   loadPlayers(): void {
     this.playersLoading = true;
     this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
-      next: (p) => { this.players = p; this.playersLoading = false; },
+      next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
       error: () => { this.playersLoading = false; this.snackBar.open('Failed to load players', 'Close', { duration: 3000 }); }
     });
   }
@@ -658,7 +665,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   loadTeams(): void {
     this.teamsLoading = true;
     this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
-      next: (t) => { this.teams = t; this.teamsLoading = false; },
+      next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedTeams(); },
       error: () => { this.teamsLoading = false; this.snackBar.open('Failed to load teams', 'Close', { duration: 3000 }); }
     });
   }
@@ -687,6 +694,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           }));
         }
         this.pairingsLoading = false;
+        this.refreshDisplayedPairings();
       },
       error: () => { this.pairingsLoading = false; this.snackBar.open('Failed to load pairings', 'Close', { duration: 3000 }); }
     });
@@ -715,17 +723,19 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
         this.favoriteIdMap = new Map(favs.filter(f => f.playerSnr).map(f => [f.playerSnr!, f.id]));
         this.teamFavoriteIdMap = new Map(favs.filter(f => f.teamSnr).map(f => [f.teamSnr!, f.id]));
+        this.refreshAllDisplayed();
       },
       error: () => {}
     });
     this.http.get<{ showFavoritesOnly: boolean }>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
-      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; },
+      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; this.refreshAllDisplayed(); },
       error: () => {}
     });
   }
 
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
+    this.refreshAllDisplayed();
     this.http.put(`/api/tournament-favorites/settings/${this.id}`, { showFavoritesOnly: checked }).subscribe({
       error: () => {}
     });
@@ -739,60 +749,73 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     return [this.tournament?.location, this.tournament?.date].filter(Boolean).join(' | ');
   }
 
-  get favoriteNames(): Set<string> {
-    const names = new Set<string>();
-    const favTeamNames = this.favoriteTeamNames;
+  onPlayerSort(sort: Sort): void {
+    this.playerSort = sort;
+    this.refreshDisplayedPlayers();
+  }
+
+  onTeamSort(sort: Sort): void {
+    this.teamSort = sort;
+    this.refreshDisplayedTeams();
+  }
+
+  onPairingSort(sort: Sort): void {
+    this.pairingSort = sort;
+    this.refreshDisplayedPairings();
+  }
+
+  private refreshFavoriteHelpers(): void {
+    const teamNames = new Set<string>();
+    for (const t of this.teams) {
+      if (this.favoriteTeamSnrs.has(t.snr)) teamNames.add(t.name);
+    }
     for (const p of this.players) {
-      if (this.favoriteSnrs.has(p.snr) || (p.teamName && favTeamNames.has(p.teamName))) {
+      if (this.favoriteSnrs.has(p.snr) && p.teamName) teamNames.add(p.teamName);
+    }
+    this._favoriteTeamNames = teamNames;
+
+    const names = new Set<string>();
+    for (const p of this.players) {
+      if (this.favoriteSnrs.has(p.snr) || (p.teamName && teamNames.has(p.teamName))) {
         names.add(p.name);
       }
     }
-    return names;
+    this._favoriteNames = names;
   }
 
-  get favoriteTeamNames(): Set<string> {
-    const names = new Set<string>();
-    // Directly favorited teams (by SNR → Name)
-    for (const t of this.teams) {
-      if (this.favoriteTeamSnrs.has(t.snr)) names.add(t.name);
-    }
-    // Teams with favorited players
-    for (const p of this.players) {
-      if (this.favoriteSnrs.has(p.snr) && p.teamName) names.add(p.teamName);
-    }
-    return names;
-  }
-
-  get displayedPlayers(): TournamentPlayer[] {
+  private refreshDisplayedPlayers(): void {
     let data = this.players;
     if (this.showFavoritesOnly) {
-      const favTeamNames = this.favoriteTeamNames;
-      data = data.filter(p => this.favoriteSnrs.has(p.snr) || (p.teamName && favTeamNames.has(p.teamName)));
+      data = data.filter(p => this.favoriteSnrs.has(p.snr) || (p.teamName && this._favoriteTeamNames.has(p.teamName)));
     }
-    return this.sortData(data, this.playerSort);
+    this.displayedPlayers = this.sortData(data, this.playerSort);
   }
 
-  get displayedTeams(): TournamentTeam[] {
+  private refreshDisplayedTeams(): void {
     let data = this.teams;
     if (this.showFavoritesOnly) {
-      const favTeams = this.favoriteTeamNames;
-      data = data.filter(t => favTeams.has(t.name));
+      data = data.filter(t => this._favoriteTeamNames.has(t.name));
     }
-    return this.sortData(data, this.teamSort);
+    this.displayedTeams = this.sortData(data, this.teamSort);
   }
 
-  get displayedPairings(): DisplayPairing[] {
+  private refreshDisplayedPairings(): void {
     let data = this.pairings;
     if (this.showFavoritesOnly) {
       if (this.hasTeamPairings) {
-        const favTeams = this.favoriteTeamNames;
-        data = data.filter(p => favTeams.has(p.white) || favTeams.has(p.black));
+        data = data.filter(p => this._favoriteTeamNames.has(p.white) || this._favoriteTeamNames.has(p.black));
       } else {
-        const names = this.favoriteNames;
-        data = data.filter(p => names.has(p.white) || names.has(p.black));
+        data = data.filter(p => this._favoriteNames.has(p.white) || this._favoriteNames.has(p.black));
       }
     }
-    return this.sortData(data, this.pairingSort);
+    this.displayedPairings = this.sortData(data, this.pairingSort);
+  }
+
+  private refreshAllDisplayed(): void {
+    this.refreshFavoriteHelpers();
+    this.refreshDisplayedPlayers();
+    this.refreshDisplayedTeams();
+    this.refreshDisplayedPairings();
   }
 
   isFavorite(player: TournamentPlayer): boolean {
@@ -801,18 +824,18 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   toggleFavorite(player: TournamentPlayer): void {
     if (this.favoriteSnrs.has(player.snr)) {
-      // Remove favorite
       this.favoriteSnrs.delete(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
+      this.refreshAllDisplayed();
       this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
       this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
         next: () => { this.favoriteIdMap.delete(player.snr); },
         error: () => {}
       });
     } else {
-      // Add favorite
       this.favoriteSnrs.add(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
+      this.refreshAllDisplayed();
       this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
       this.http.post<TournamentFavorite>('/api/tournament-favorites', {
         crawlerTournamentId: this.id,
@@ -832,6 +855,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
+      this.refreshAllDisplayed();
       this.snackBar.open(`${team.name} removed from favorites`, 'Close', { duration: 1500 });
       this.http.delete(`/api/tournament-favorites/by-team/${this.id}/${team.snr}`).subscribe({
         next: () => { this.teamFavoriteIdMap.delete(team.snr); },
@@ -840,6 +864,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     } else {
       this.favoriteTeamSnrs.add(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
+      this.refreshAllDisplayed();
       this.snackBar.open(`${team.name} added to favorites`, 'Close', { duration: 1500 });
       this.http.post<TournamentFavorite>('/api/tournament-favorites/team', {
         crawlerTournamentId: this.id,
