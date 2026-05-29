@@ -43,10 +43,13 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
       API_KEY: ${CRAWLER_API_KEY}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      Elasticsearch__Url: http://elasticsearch:9200
     networks:
       - rookhub
 
@@ -64,6 +67,8 @@ services:
         condition: service_healthy
       crawler:
         condition: service_started
+      elasticsearch:
+        condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
       Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
@@ -74,6 +79,7 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      Elasticsearch__Url: http://elasticsearch:9200
     networks:
       - rookhub
 
@@ -91,8 +97,49 @@ services:
     networks:
       - rookhub
 
+  # ── Elasticsearch ──────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: rookhub-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=rookhub-logs
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - rookhub
+
+  # ── Kibana ────────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: rookhub-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - rookhub
+
 networks:
   rookhub:
 
 volumes:
   mariadb-data:
+  es-data:

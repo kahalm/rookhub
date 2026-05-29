@@ -107,6 +107,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
       ASPNETCORE_ENVIRONMENT: Production
+      Elasticsearch__Url: http://elasticsearch:9200
 
   # ── RookHub API ────────────────────────────────────────────────────────────
   api:
@@ -120,6 +121,8 @@ services:
         condition: service_healthy
       crawler:
         condition: service_started
+      elasticsearch:
+        condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
       Jwt__Key: ${JWT_KEY}
@@ -127,6 +130,47 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080
       ASPNETCORE_ENVIRONMENT: Production
+      Elasticsearch__Url: http://elasticsearch:9200
+    networks:
+      - rookhub-dev
+
+  # ── Elasticsearch ──────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: rookhub-elasticsearch-dev
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=rookhub-logs
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - rookhub-dev
+
+  # ── Kibana ────────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: rookhub-kibana-dev
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     networks:
       - rookhub-dev
 
@@ -147,3 +191,4 @@ networks:
 
 volumes:
   mariadb-data:
+  es-data:

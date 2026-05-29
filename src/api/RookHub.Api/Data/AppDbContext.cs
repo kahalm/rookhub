@@ -16,7 +16,6 @@ public class AppDbContext : DbContext
     public DbSet<TournamentFavorite> TournamentFavorites => Set<TournamentFavorite>();
     public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
-    public DbSet<RequestLog> RequestLogs => Set<RequestLog>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
@@ -100,12 +99,6 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(s => new { s.UserId, s.CrawlerTournamentId }).IsUnique();
-        });
-
-        modelBuilder.Entity<RequestLog>(e =>
-        {
-            e.HasIndex(r => r.Timestamp).IsDescending();
-            e.HasIndex(r => r.Path);
         });
 
         modelBuilder.Entity<TournamentMonitor>(e =>

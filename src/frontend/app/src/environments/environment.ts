@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.20.1',
+  version: '0.21.0',
   changelog: [
+    { version: '0.21.0', date: '2026-05-29', changes: [
+      'Logging: Elasticsearch + Kibana fuer zentrales Log-Management (ersetzt DB-Logging)',
+      'Logging: Serilog mit Elasticsearch-Sink fuer strukturiertes Logging in beiden Projekten',
+      'Cleanup: RequestLog DB-Tabellen, Middleware und Controller entfernt (RookHub + Crawler)',
+      'Cleanup: LogRetentionService und CrawlRequestLog im Crawler entfernt',
+      'Infra: ES 8.17 + Kibana 8.17 in allen Docker-Compose-Files',
+    ]},
     { version: '0.20.1', date: '2026-05-28', changes: [
       'Fix: Stockfish-Timeout bei hoher Suchtiefe zeigt nicht mehr sofort "Incorrect" — User kann weiterspielen',
       'E2E Test: Neuer Testfall fuer Stockfish-Timeout-Szenario mit komplexer Stellung',

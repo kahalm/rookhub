@@ -11,6 +11,10 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
     |                                                   |
     v                                                   v
   rookhub DB (MariaDB)                            chessresults DB (MariaDB)
+    \                                                 /
+     '------> Elasticsearch :9200 <------------------'
+                    |
+              Kibana :5601
 ```
 
 - **chessresults_crawler**: Backend-Crawler der Turnierdaten von chess-results.com extrahiert. Reine REST-API, kein Frontend. Eigene MariaDB-Datenbank `chessresults`.
@@ -35,6 +39,9 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Frontend | Angular | 19.2 |
 | UI Library | Angular Material | 19.2.19 |
 | Frontend Webserver | nginx (alpine) | latest |
+| Logging | Serilog + Elasticsearch Sink | 9.0.0 / 10.0.0 |
+| Log-Speicher | Elasticsearch | 8.17.0 |
+| Log-Visualisierung | Kibana | 8.17.0 |
 | Tests | xUnit + InMemory DB | - |
 
 **Hinweis**: RookHub nutzt Swashbuckle 6.9.0 (nicht 10.x) wegen Kompatibilitaet mit .NET 9's OpenAPI-Namespace.
@@ -192,6 +199,8 @@ docker compose -f compose.vpn.yml --env-file .env.vpn up --build
 | 5001 | RookHub API | http://localhost:5001/swagger |
 | 8080 | Crawler API | http://localhost:8080/swagger/ui/index.html |
 | 3306 | MariaDB | Host: localhost, DBs: `chessresults` + `rookhub` |
+| 9200 | Elasticsearch | http://localhost:9200 |
+| 5601 | Kibana | http://localhost:5601 |
 
 ### Angular standalone (ohne Docker)
 ```bash
@@ -212,7 +221,7 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 107 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, RequestLog)
+dotnet test     # 238 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles)
 ```
 
 ### Test-Pattern
@@ -221,7 +230,7 @@ dotnet test     # 107 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, 
 - **xUnit `[Fact]`** Attribute
 - **Namenskonvention**: `MethodName_Scenario_ExpectedResult`
 - **Service-Tests** (FriendService, RepertoireService, AuthService, ProfileService) testen direkt gegen InMemory-DB
-- **Controller mit Inline-DB-Logik** (Subscription, Favorites, Monitor, RequestLog) werden direkt als Controller-Instanz getestet
+- **Controller mit Inline-DB-Logik** (Subscription, Favorites, Monitor) werden direkt als Controller-Instanz getestet
 - **BaseApiController.GetUserId()** wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
 - **Helper-Methode** `CreateUserAsync()` fuer Test-Daten in jeder Testklasse
 
@@ -234,7 +243,6 @@ tests/RookHub.Api.Tests/
   TournamentMonitorTests.cs        TournamentMonitor DB-Logik
   FriendServiceExtendedTests.cs    Erweiterte FriendService-Tests
   RepertoireServiceExtendedTests.cs Erweiterte RepertoireService-Tests
-  RequestLogQueryTests.cs          RequestLog-Query/Filter-Tests
 ```
 
 ## EF Core Migrations
@@ -254,7 +262,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.20.1`
+- **Aktuelle Version**: `0.21.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
