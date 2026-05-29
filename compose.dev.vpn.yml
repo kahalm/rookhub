@@ -85,8 +85,8 @@ services:
       SERVER_COUNTRIES: ${SERVER_COUNTRIES}
       FIREWALL_VPN_INPUT_PORTS: ${FIREWALL_VPN_INPUT_PORTS}
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000 || wget -q --spider https://ipinfo.io || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9999 || exit 1"]
+      interval: 30s
       timeout: 5s
       retries: 10
       start_period: 30s
@@ -106,6 +106,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${CRAWLER_DB_NAME};User=${CRAWLER_DB_USER};Password=${CRAWLER_DB_PASSWORD};"
+      API_KEY: ${CRAWLER_API_KEY}
       ASPNETCORE_ENVIRONMENT: Production
       Elasticsearch__Url: http://elasticsearch:9200
 
@@ -129,6 +130,9 @@ services:
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080
+      Crawler__ApiKey: ${CRAWLER_API_KEY}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: Production
       Elasticsearch__Url: http://elasticsearch:9200
     networks:
