@@ -61,7 +61,13 @@ export class RegisterComponent {
   returnUrl: string;
 
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar) {
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    this.returnUrl = this.sanitizeReturnUrl(raw);
+  }
+
+  private sanitizeReturnUrl(url: string): string {
+    if (!url.startsWith('/') || url.startsWith('//') || url.includes('://')) return '/dashboard';
+    return url;
   }
 
   onSubmit(): void {

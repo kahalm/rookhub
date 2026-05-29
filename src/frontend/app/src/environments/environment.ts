@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.0',
+  version: '0.22.1',
   changelog: [
+    { version: '0.22.1', date: '2026-05-29', changes: [
+      'Security: Open Redirect in Login/Register behoben — returnUrl wird gegen Whitelist validiert',
+    ]},
     { version: '0.22.0', date: '2026-05-29', changes: [
       'Endless Mode: Give Up zeigt "Gave Up" mit Flag-Icon statt "Wrong" (orange statt rot)',
       'Endless Mode: Show Eval und Give Up vor dem ersten Zug verfuegbar',
