@@ -132,7 +132,6 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
-    [AllowAnonymous]
     [HttpGet("crawler/ip")]
     public async Task<IActionResult> GetCrawlerIp()
     {

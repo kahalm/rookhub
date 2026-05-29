@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.22.5',
+  version: '0.22.6',
   changelog: [
+    { version: '0.22.6', date: '2026-05-29', changes: [
+      'Security: GetCrawlerIp erfordert jetzt Authentifizierung (kein AllowAnonymous mehr)',
+      'Security: ES+Kibana Ports in Production-Compose nicht mehr exponiert',
+      'Cleanup: Irrelevanter CORS-Kommentar zu chrome-extension entfernt',
+    ]},
     { version: '0.22.5', date: '2026-05-29', changes: [
       'Fix: CrawlerExceptionFilter faengt TaskCanceledException — Timeout ergibt 504 statt 500',
       'Fix: CrawlerProxyService — leere Response-Body sicher behandelt, CancellationToken durchgereicht',

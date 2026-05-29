@@ -114,7 +114,6 @@ try
         {
             policy.WithOrigins(
                     "https://www.chess.com")
-                // Add specific chrome-extension://YOUR_EXTENSION_ID origins here
                 .WithMethods("GET", "POST")
                 .WithHeaders("Authorization", "Content-Type")
                 .AllowCredentials();
