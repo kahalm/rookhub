@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.6',
+  version: '0.22.7',
   changelog: [
+    { version: '0.22.7', date: '2026-05-29', changes: [
+      'Fix: Puzzle-Laden zeigt ERROR-State mit Retry-Button statt endlosem Spinner',
+    ]},
     { version: '0.22.6', date: '2026-05-29', changes: [
       'Security: GetCrawlerIp erfordert jetzt Authentifizierung (kein AllowAnonymous mehr)',
       'Security: ES+Kibana Ports in Production-Compose nicht mehr exponiert',

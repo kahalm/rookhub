@@ -21,7 +21,7 @@ import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { of } from 'rxjs';
 
-type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
+type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
 const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
 
@@ -58,6 +58,15 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
                   <div class="status-center">
                     <mat-spinner diameter="40"></mat-spinner>
                     <p>Loading puzzle...</p>
+                  </div>
+                }
+                @case ('ERROR') {
+                  <div class="status-center failed">
+                    <mat-icon class="result-icon">error_outline</mat-icon>
+                    <p class="status-text">Failed to load puzzle</p>
+                    <button mat-raised-button color="primary" (click)="loadNext()">
+                      <mat-icon>refresh</mat-icon> Retry
+                    </button>
                   </div>
                 }
                 @case ('SETUP') {
@@ -456,7 +465,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
           this.prefetchNext();
         },
         error: () => {
-          this.state = 'LOADING';
+          this.state = 'ERROR';
           this.puzzle = null;
         }
       });
