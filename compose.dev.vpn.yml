@@ -46,7 +46,7 @@ services:
     container_name: rookhub-mariadb-dev
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD must be set}
       CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
       CRAWLER_DB_USER: ${CRAWLER_DB_USER}
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
@@ -79,9 +79,9 @@ services:
     environment:
       VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER}
       VPN_TYPE: ${VPN_TYPE}
-      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY}
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:?WIREGUARD_PRIVATE_KEY must be set}
       WIREGUARD_PRESHARED_KEY: ${WIREGUARD_PRESHARED_KEY}
-      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:?WIREGUARD_ADDRESSES must be set}
       SERVER_COUNTRIES: ${SERVER_COUNTRIES}
       FIREWALL_VPN_INPUT_PORTS: ${FIREWALL_VPN_INPUT_PORTS}
     healthcheck:
@@ -126,7 +126,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: "Server=${DB_HOST};Port=${DB_PORT};Database=${ROOKHUB_DB_NAME};User=${ROOKHUB_DB_USER};Password=${ROOKHUB_DB_PASSWORD};"
-      Jwt__Key: ${JWT_KEY}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY must be set}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://gluetun:8080

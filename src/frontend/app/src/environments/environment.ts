@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.1',
+  version: '0.22.2',
   changelog: [
+    { version: '0.22.2', date: '2026-05-29', changes: [
+      'Security: compose.dev.vpn.yml — Required-Variable-Checks fuer kritische Secrets',
+    ]},
     { version: '0.22.1', date: '2026-05-29', changes: [
       'Security: Open Redirect in Login/Register behoben — returnUrl wird gegen Whitelist validiert',
     ]},
