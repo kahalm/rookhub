@@ -59,11 +59,9 @@ public class FriendService
 
         if (existing != null)
         {
-            // M-12: Allow re-request after decline by removing the old record
             if (existing.Status == FriendshipStatus.Declined)
             {
                 _db.Friendships.Remove(existing);
-                await _db.SaveChangesAsync();
             }
             else
             {
@@ -81,7 +79,16 @@ public class FriendService
         };
 
         _db.Friendships.Add(friendship);
-        await _db.SaveChangesAsync();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("A friendship or request already exists.");
+        }
+
         return friendship;
     }
 

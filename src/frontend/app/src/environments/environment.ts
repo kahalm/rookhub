@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.2',
+  version: '0.22.3',
   changelog: [
+    { version: '0.22.3', date: '2026-05-29', changes: [
+      'Fix: FriendService Race Condition — Single SaveChanges + DbUpdateException Handling bei Re-Request nach Decline',
+    ]},
     { version: '0.22.2', date: '2026-05-29', changes: [
       'Security: compose.dev.vpn.yml — Required-Variable-Checks fuer kritische Secrets',
     ]},
