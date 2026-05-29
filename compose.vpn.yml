@@ -120,7 +120,6 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - cluster.name=rookhub-logs
       - cluster.routing.allocation.disk.threshold_enabled=false
-      - index.number_of_replicas=0
     volumes:
       - es-data:/usr/share/elasticsearch/data
     healthcheck:

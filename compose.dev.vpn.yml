@@ -151,7 +151,6 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - cluster.name=rookhub-logs
       - cluster.routing.allocation.disk.threshold_enabled=false
-      - index.number_of_replicas=0
     ports:
       - "${ES_PORT:-9200}:9200"
     volumes:
