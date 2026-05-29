@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.23.0',
+  version: '0.23.1',
   changelog: [
+    { version: '0.23.1', date: '2026-05-29', changes: [
+      'Fix: FriendController Search-Minimum von 3 auf 2 Zeichen (Frontend/API-Konsistenz)',
+      'Fix: Email wird bei Registrierung normalisiert (lowercase, getrimmt)',
+      'Fix: LIKE-Wildcards (%, _) in Friend-Suche bereinigt',
+      'Fix: JWT base64url-Dekodierung in AuthService korrigiert',
+      'Perf: RepertoireService.UpdateAsync — unnoetige Include(Files) durch CountAsync ersetzt',
+    ]},
     { version: '0.23.0', date: '2026-05-29', changes: [
       'Security: SessionId-Validierung per Regex in EndlessController + DTOs (wie PuzzleController)',
       'Security: Repertoire-Limits — max 50 pro User, max 100 Files pro Repertoire',

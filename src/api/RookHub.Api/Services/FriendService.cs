@@ -136,16 +136,17 @@ public class FriendService
 
     public async Task<List<UserSearchResultDto>> SearchUsersAsync(string query, int currentUserId)
     {
+        var q = query.Replace("%", "").Replace("_", "");
         return await _db.AppUsers
             .Include(u => u.Profile)
             .Where(u => u.Id != currentUserId &&
-                       (u.Username.Contains(query) ||
+                       (u.Username.Contains(q) ||
                         (u.Profile != null && (
-                            (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(query)) ||
-                            (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.Contains(query)) ||
-                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.Contains(query)) ||
-                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(query)) ||
-                            (u.Profile.FideId != null && u.Profile.FideId.Contains(query))
+                            (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(q)) ||
+                            (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.Contains(q)) ||
+                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.Contains(q)) ||
+                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(q)) ||
+                            (u.Profile.FideId != null && u.Profile.FideId.Contains(q))
                         ))))
             .OrderBy(u => u.Username)
             .Take(20)

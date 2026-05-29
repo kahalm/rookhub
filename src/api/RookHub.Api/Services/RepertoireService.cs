@@ -89,7 +89,6 @@ public class RepertoireService
     public async Task<RepertoireDto> UpdateAsync(int id, int userId, UpdateRepertoireDto dto)
     {
         var rep = await _db.Repertoires
-            .Include(r => r.Files)
             .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
 
@@ -100,6 +99,8 @@ public class RepertoireService
 
         await _db.SaveChangesAsync();
 
+        var fileCount = await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == id);
+
         return new RepertoireDto
         {
             Id = rep.Id,
@@ -108,7 +109,7 @@ public class RepertoireService
             IsPublic = rep.IsPublic,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
-            FileCount = rep.Files.Count
+            FileCount = fileCount
         };
     }
 

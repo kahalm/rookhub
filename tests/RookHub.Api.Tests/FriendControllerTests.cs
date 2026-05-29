@@ -271,7 +271,7 @@ public class FriendControllerTests : IDisposable
         var user = await CreateUserAsync("user1");
         SetUser(user.Id);
 
-        var result = await _controller.Search("ab");
+        var result = await _controller.Search("a");
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }

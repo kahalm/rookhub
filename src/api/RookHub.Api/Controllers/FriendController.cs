@@ -87,8 +87,8 @@ public class FriendController : BaseApiController
     [EnableRateLimiting("auth")]
     public async Task<ActionResult<List<UserSearchResultDto>>> Search([FromQuery] string q)
     {
-        if (string.IsNullOrWhiteSpace(q) || q.Length < 3)
-            return BadRequest(new { message = "Query must be at least 3 characters." });
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return BadRequest(new { message = "Query must be at least 2 characters." });
 
         if (q.Length > 50) q = q[..50];
 

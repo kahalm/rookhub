@@ -25,13 +25,15 @@ public class AuthService
         if (await _db.AppUsers.AnyAsync(u => u.Username == dto.Username))
             throw new InvalidOperationException("Username already exists.");
 
-        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
+        var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+
+        if (await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
             throw new InvalidOperationException("Email already exists.");
 
         var user = new AppUser
         {
             Username = dto.Username,
-            Email = dto.Email,
+            Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Profile = new UserProfile()
         };

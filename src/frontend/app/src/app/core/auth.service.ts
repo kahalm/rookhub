@@ -76,7 +76,9 @@ export class AuthService {
       const stored = localStorage.getItem('rookhub_user');
       if (!stored) return null;
       const user: AuthResponse = JSON.parse(stored);
-      const payload = JSON.parse(atob(user.token.split('.')[1]));
+      const base64Url = user.token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         localStorage.removeItem('rookhub_user');
         return null;
