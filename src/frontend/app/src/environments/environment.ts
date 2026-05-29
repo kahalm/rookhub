@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.21.2',
+  version: '0.22.0',
   changelog: [
+    { version: '0.22.0', date: '2026-05-29', changes: [
+      'Endless Mode: Give Up zeigt "Gave Up" mit Flag-Icon statt "Wrong" (orange statt rot)',
+      'Endless Mode: Show Eval und Give Up vor dem ersten Zug verfuegbar',
+      'Infra: Kibana Logging-Dashboard wird automatisch erstellt (6 Panels: Volume, Levels, Apps, Errors, Timeline, Log-Tabelle)',
+    ]},
     { version: '0.21.2', date: '2026-05-29', changes: [
       'Infra: Kibana Data Views werden beim Start automatisch erstellt (rookhub-logs, crawler-logs, alle-logs)',
       'Infra: kibana-init One-Shot-Container in beiden Docker-Compose-Files',

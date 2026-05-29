@@ -242,6 +242,27 @@ const FASTTRACK_SESSION_COUNT = 10;
                     @case ('AWAITING_USER_MOVE') {
                       <div class="status-center">
                         <p class="status-text">Your turn! Find the best move.</p>
+                        @if (showEval) {
+                          <div class="eval-compare">
+                            @if (evalLoading) {
+                              <mat-spinner diameter="16"></mat-spinner>
+                            } @else {
+                              <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                              <span class="eval-arrow">→</span>
+                              <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                            }
+                          </div>
+                        }
+                        <div class="play-actions">
+                          <button mat-button (click)="toggleEval()">
+                            <mat-icon>analytics</mat-icon>
+                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                          </button>
+                          <button mat-button color="warn" (click)="giveUp()">
+                            <mat-icon>flag</mat-icon>
+                            Give Up
+                          </button>
+                        </div>
                       </div>
                     }
                     @case ('THINKING') {
@@ -341,8 +362,13 @@ const FASTTRACK_SESSION_COUNT = 10;
                     }
                     @case ('WRONG') {
                       <div class="status-center failed">
-                        <mat-icon class="result-icon">cancel</mat-icon>
-                        <p class="status-text">Wrong!</p>
+                        @if (gaveUp) {
+                          <mat-icon class="result-icon gave-up-icon">flag</mat-icon>
+                          <p class="status-text">Gave Up</p>
+                        } @else {
+                          <mat-icon class="result-icon">cancel</mat-icon>
+                          <p class="status-text">Wrong!</p>
+                        }
                         <div class="wrong-actions">
                           <button mat-button (click)="showIntendedSolution()">
                             <mat-icon>visibility</mat-icon> Show Solution
@@ -634,6 +660,7 @@ const FASTTRACK_SESSION_COUNT = 10;
     .result-icon { font-size: 48px; width: 48px; height: 48px; }
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
+    .failed .gave-up-icon { color: #ff9800; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
@@ -804,6 +831,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   private aborted = false;
   reviewingWrongPuzzle = false;
+  gaveUp = false;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -1007,6 +1035,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.aborted = false;
     this.mouseslipUsed = false;
     this.reviewingWrongPuzzle = false;
+    this.gaveUp = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -1221,7 +1250,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && this.state === 'PLAYING') {
+    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
       this.refreshEval();
     }
   }
@@ -1290,6 +1319,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   giveUp(): void {
     this.aborted = true;
+    this.gaveUp = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.loseLife();
   }
