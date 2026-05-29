@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.23.1',
+  version: '0.23.2',
   changelog: [
+    { version: '0.23.2', date: '2026-05-29', changes: [
+      'Fix: nginx PID-Pfad auf /tmp/nginx.pid geaendert (non-root Container Fix)',
+    ]},
     { version: '0.23.1', date: '2026-05-29', changes: [
       'Fix: FriendController Search-Minimum von 3 auf 2 Zeichen (Frontend/API-Konsistenz)',
       'Fix: Email wird bei Registrierung normalisiert (lowercase, getrimmt)',
