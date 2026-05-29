@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.21.0',
+  version: '0.21.1',
   changelog: [
+    { version: '0.21.1', date: '2026-05-29', changes: [
+      'Fix: Migration DropRequestLogs bereinigt — duplizierte Schema-Operationen entfernt die API-Start verhinderten',
+    ]},
     { version: '0.21.0', date: '2026-05-29', changes: [
       'Logging: Elasticsearch + Kibana fuer zentrales Log-Management (ersetzt DB-Logging)',
       'Logging: Serilog mit Elasticsearch-Sink fuer strukturiertes Logging in beiden Projekten',
