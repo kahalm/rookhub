@@ -12,8 +12,7 @@ namespace RookHub.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "RequestLogs");
+            migrationBuilder.Sql("DROP TABLE IF EXISTS `RequestLogs`;");
 
             migrationBuilder.DropIndex(
                 name: "IX_TournamentMonitors_CrawlerTournamentId",
