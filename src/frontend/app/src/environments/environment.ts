@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.22.4',
+  version: '0.22.5',
   changelog: [
+    { version: '0.22.5', date: '2026-05-29', changes: [
+      'Fix: CrawlerExceptionFilter faengt TaskCanceledException — Timeout ergibt 504 statt 500',
+      'Fix: CrawlerProxyService — leere Response-Body sicher behandelt, CancellationToken durchgereicht',
+    ]},
     { version: '0.22.4', date: '2026-05-29', changes: [
       'Security: ActiveGameState MaxLength 1MB im DTO (verhindert unbegrenztes Schreiben)',
       'Security: BookPuzzle Import — RequestSizeLimit 50MB + max 10000 Puzzles pro Import',
