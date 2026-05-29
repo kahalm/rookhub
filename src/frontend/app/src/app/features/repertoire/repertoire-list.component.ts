@@ -69,7 +69,7 @@ export class RepertoireListComponent implements OnInit {
     this.loading = true;
     this.http.get<Repertoire[]>('/api/repertoires').subscribe({
       next: (r) => { this.repertoires = r; this.loading = false; },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.snackBar.open('Failed to load repertoires', 'Close', { duration: 3000 }); }
     });
   }
 
@@ -77,14 +77,20 @@ export class RepertoireListComponent implements OnInit {
     const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px' });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.http.post('/api/repertoires', result).subscribe(() => this.loadRepertoires());
+        this.http.post('/api/repertoires', result).subscribe({
+          next: () => this.loadRepertoires(),
+          error: () => this.snackBar.open('Failed to create repertoire', 'Close', { duration: 3000 })
+        });
       }
     });
   }
 
   deleteRepertoire(id: number): void {
     if (confirm('Delete this repertoire?')) {
-      this.http.delete(`/api/repertoires/${id}`).subscribe(() => this.loadRepertoires());
+      this.http.delete(`/api/repertoires/${id}`).subscribe({
+        next: () => this.loadRepertoires(),
+        error: () => this.snackBar.open('Failed to delete repertoire', 'Close', { duration: 3000 })
+      });
     }
   }
 }

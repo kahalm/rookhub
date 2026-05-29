@@ -115,14 +115,23 @@ export class FriendsComponent implements OnInit {
 
   loadData(): void {
     this.loading = true;
-    this.http.get<Friend[]>('/api/friends').subscribe(f => { this.friends = f; this.loading = false; });
-    this.http.get<FriendRequest[]>('/api/friends/requests').subscribe(r => this.requests = r);
+    this.http.get<Friend[]>('/api/friends').subscribe({
+      next: f => { this.friends = f; this.loading = false; },
+      error: () => { this.loading = false; this.snackBar.open('Failed to load friends', 'Close', { duration: 3000 }); }
+    });
+    this.http.get<FriendRequest[]>('/api/friends/requests').subscribe({
+      next: r => this.requests = r,
+      error: () => this.snackBar.open('Failed to load requests', 'Close', { duration: 3000 })
+    });
   }
 
   search(): void {
     if (this.searchQuery.length < 2) return;
     this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
-      .subscribe(r => this.searchResults = r);
+      .subscribe({
+        next: r => this.searchResults = r,
+        error: () => this.snackBar.open('Search failed', 'Close', { duration: 3000 })
+      });
   }
 
   sendRequest(userId: number): void {
@@ -133,15 +142,24 @@ export class FriendsComponent implements OnInit {
   }
 
   acceptRequest(id: number): void {
-    this.http.post(`/api/friends/accept/${id}`, {}).subscribe(() => this.loadData());
+    this.http.post(`/api/friends/accept/${id}`, {}).subscribe({
+      next: () => this.loadData(),
+      error: () => this.snackBar.open('Failed to accept request', 'Close', { duration: 3000 })
+    });
   }
 
   declineRequest(id: number): void {
-    this.http.post(`/api/friends/decline/${id}`, {}).subscribe(() => this.loadData());
+    this.http.post(`/api/friends/decline/${id}`, {}).subscribe({
+      next: () => this.loadData(),
+      error: () => this.snackBar.open('Failed to decline request', 'Close', { duration: 3000 })
+    });
   }
 
   removeFriend(id: number): void {
-    this.http.delete(`/api/friends/${id}`).subscribe(() => this.loadData());
+    this.http.delete(`/api/friends/${id}`).subscribe({
+      next: () => this.loadData(),
+      error: () => this.snackBar.open('Failed to remove friend', 'Close', { duration: 3000 })
+    });
   }
 
   getChessIdentities(user: UserSearchResult | Friend): string {

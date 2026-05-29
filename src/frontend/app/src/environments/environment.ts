@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.22.7',
+  version: '0.22.8',
   changelog: [
+    { version: '0.22.8', date: '2026-05-29', changes: [
+      'Fix: Fehlende Error-Handler auf HTTP-Calls in RepertoireList, TournamentDetail — SnackBar-Feedback bei Fehlern',
+    ]},
     { version: '0.22.7', date: '2026-05-29', changes: [
       'Fix: Puzzle-Laden zeigt ERROR-State mit Retry-Button statt endlosem Spinner',
     ]},

@@ -430,7 +430,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.loadTeams();
         if (this.selectedTabIndex === 2) this.loadPairings();
       },
-      error: () => { this.loading = false; }
+      error: () => { this.loading = false; this.snackBar.open('Failed to load tournament', 'Close', { duration: 3000 }); }
     });
     this.loadSubscription();
     this.loadMonitorStatus();
@@ -445,7 +445,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.http.get<Subscription[]>('/api/subscriptions').subscribe({
       next: (subs) => {
         this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
-      }
+      },
+      error: () => this.snackBar.open('Failed to load subscription status', 'Close', { duration: 3000 })
     });
   }
 
@@ -630,7 +631,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         if (t.totalRounds) {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
-      }
+      },
+      error: () => this.snackBar.open('Failed to reload tournament', 'Close', { duration: 3000 })
     });
     this.loadPlayers();
     this.teams = [];
@@ -649,7 +651,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.playersLoading = true;
     this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; },
-      error: () => { this.playersLoading = false; }
+      error: () => { this.playersLoading = false; this.snackBar.open('Failed to load players', 'Close', { duration: 3000 }); }
     });
   }
 
@@ -657,7 +659,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.teamsLoading = true;
     this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; },
-      error: () => { this.teamsLoading = false; }
+      error: () => { this.teamsLoading = false; this.snackBar.open('Failed to load teams', 'Close', { duration: 3000 }); }
     });
   }
 
@@ -686,7 +688,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         }
         this.pairingsLoading = false;
       },
-      error: () => { this.pairingsLoading = false; }
+      error: () => { this.pairingsLoading = false; this.snackBar.open('Failed to load pairings', 'Close', { duration: 3000 }); }
     });
   }
 
