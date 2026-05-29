@@ -58,6 +58,7 @@ public class SaveEndlessProgressDto
     [Range(0, 100000)]
     public int Highscore { get; set; }
 
+    [MaxLength(1_000_000)]
     public string? ActiveGameState { get; set; }
 }
 

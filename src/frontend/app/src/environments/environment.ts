@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.22.3',
+  version: '0.22.4',
   changelog: [
+    { version: '0.22.4', date: '2026-05-29', changes: [
+      'Security: ActiveGameState MaxLength 1MB im DTO (verhindert unbegrenztes Schreiben)',
+      'Security: BookPuzzle Import — RequestSizeLimit 50MB + max 10000 Puzzles pro Import',
+    ]},
     { version: '0.22.3', date: '2026-05-29', changes: [
       'Fix: FriendService Race Condition — Single SaveChanges + DbUpdateException Handling bei Re-Request nach Decline',
     ]},

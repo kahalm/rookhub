@@ -67,10 +67,14 @@ public class BookPuzzleController : BaseApiController
 
     [HttpPost("/api/admin/book-puzzles/import")]
     [Authorize(Roles = "Admin")]
+    [RequestSizeLimit(50 * 1024 * 1024)]
     public async Task<IActionResult> Import([FromBody] List<BookPuzzleImportDto> puzzles)
     {
         if (puzzles == null || puzzles.Count == 0)
             return BadRequest(new { message = "No puzzles provided." });
+
+        if (puzzles.Count > 10_000)
+            return BadRequest(new { message = "Maximum 10000 puzzles per import." });
 
         var existingLineIds = await _db.BookPuzzles
             .Select(bp => bp.LineId)
