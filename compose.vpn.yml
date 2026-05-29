@@ -145,6 +145,26 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - rookhub
+
+  # ── Kibana Data Views Init (one-shot) ────────────────────────────────────
+  kibana-init:
+    image: curlimages/curl:latest
+    container_name: rookhub-kibana-init
+    restart: "no"
+    depends_on:
+      kibana:
+        condition: service_healthy
+    volumes:
+      - ./init-kibana.sh:/init-kibana.sh:ro
+    entrypoint: ["/bin/sh", "/init-kibana.sh"]
     networks:
       - rookhub
 

@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.21.1',
+  version: '0.21.2',
   changelog: [
+    { version: '0.21.2', date: '2026-05-29', changes: [
+      'Infra: Kibana Data Views werden beim Start automatisch erstellt (rookhub-logs, crawler-logs, alle-logs)',
+      'Infra: kibana-init One-Shot-Container in beiden Docker-Compose-Files',
+    ]},
     { version: '0.21.1', date: '2026-05-29', changes: [
       'Fix: Migration DropRequestLogs bereinigt — duplizierte Schema-Operationen entfernt die API-Start verhinderten',
     ]},
