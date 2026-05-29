@@ -6,6 +6,8 @@ export const environment = {
       'Endless Mode: Give Up zeigt "Gave Up" mit Flag-Icon statt "Wrong" (orange statt rot)',
       'Endless Mode: Show Eval und Give Up vor dem ersten Zug verfuegbar',
       'Infra: Kibana Logging-Dashboard wird automatisch erstellt (6 Panels: Volume, Levels, Apps, Errors, Timeline, Log-Tabelle)',
+      'Fix: compose.dev.vpn.yml — kibana-init + Healthcheck + Service-Name korrigiert',
+      'Fix: CRAWLER_API_KEY in .env.dev ergaenzt',
     ]},
     { version: '0.21.2', date: '2026-05-29', changes: [
       'Infra: Kibana Data Views werden beim Start automatisch erstellt (rookhub-logs, crawler-logs, alle-logs)',
