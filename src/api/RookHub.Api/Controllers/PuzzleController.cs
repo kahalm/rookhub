@@ -91,7 +91,7 @@ public class PuzzleController : BaseApiController
         try
         {
             var result = await _puzzleService.RecordAnonymousAttemptAsync(dto.SessionId, id,
-                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds });
+                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog });
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

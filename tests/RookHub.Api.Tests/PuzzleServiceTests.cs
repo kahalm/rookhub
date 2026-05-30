@@ -341,4 +341,63 @@ public class PuzzleServiceTests : IDisposable
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
             _service.ImportFromCsvAsync(stream, null, null, null, cts.Token));
     }
+
+    [Fact]
+    public async Task RecordAttempt_WithMoveLog_StoresJson()
+    {
+        var userId = await CreateUserAsync("movelog_user");
+        var puzzle = await CreatePuzzleAsync(lichessId: "movelog1");
+        var moveLog = "[{\"i\":0,\"uci\":\"e2e4\",\"exp\":\"e2e4\",\"ms\":3400,\"ok\":true}]";
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true,
+            TimeSpentSeconds = 10,
+            MoveLog = moveLog
+        });
+
+        Assert.Equal(moveLog, result.MoveLog);
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.Equal(moveLog, attempt.MoveLog);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_WithoutMoveLog_AcceptsNull()
+    {
+        var userId = await CreateUserAsync("nomovelog_user");
+        var puzzle = await CreatePuzzleAsync(lichessId: "nomovelog1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true,
+            TimeSpentSeconds = 15
+        });
+
+        Assert.Null(result.MoveLog);
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.Null(attempt.MoveLog);
+    }
+
+    [Fact]
+    public async Task GetHistory_IncludesMoveLog()
+    {
+        var userId = await CreateUserAsync("history_movelog");
+        var puzzle = await CreatePuzzleAsync(lichessId: "hist_ml1");
+        var moveLog = "[{\"i\":0,\"uci\":\"d2d4\",\"exp\":\"e2e4\",\"ms\":5000,\"ok\":false}]";
+
+        _db.PuzzleAttempts.Add(new PuzzleAttempt
+        {
+            UserId = userId,
+            PuzzleId = puzzle.Id,
+            Solved = false,
+            TimeSpentSeconds = 20,
+            MoveLog = moveLog
+        });
+        await _db.SaveChangesAsync();
+
+        var history = await _service.GetHistoryAsync(userId, 1, 10);
+
+        Assert.Single(history);
+        Assert.Equal(moveLog, history[0].MoveLog);
+    }
 }

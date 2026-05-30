@@ -88,7 +88,8 @@ public class PuzzleService
             UserId = userId,
             PuzzleId = puzzleId,
             Solved = dto.Solved,
-            TimeSpentSeconds = dto.TimeSpentSeconds
+            TimeSpentSeconds = dto.TimeSpentSeconds,
+            MoveLog = dto.MoveLog
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -102,7 +103,8 @@ public class PuzzleService
             PuzzleRating = puzzle.Rating,
             Solved = attempt.Solved,
             TimeSpentSeconds = attempt.TimeSpentSeconds,
-            AttemptedAt = attempt.AttemptedAt
+            AttemptedAt = attempt.AttemptedAt,
+            MoveLog = attempt.MoveLog
         };
     }
 
@@ -117,7 +119,8 @@ public class PuzzleService
             AnonymousSessionId = sessionId,
             PuzzleId = puzzleId,
             Solved = dto.Solved,
-            TimeSpentSeconds = dto.TimeSpentSeconds
+            TimeSpentSeconds = dto.TimeSpentSeconds,
+            MoveLog = dto.MoveLog
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -131,7 +134,8 @@ public class PuzzleService
             PuzzleRating = puzzle.Rating,
             Solved = attempt.Solved,
             TimeSpentSeconds = attempt.TimeSpentSeconds,
-            AttemptedAt = attempt.AttemptedAt
+            AttemptedAt = attempt.AttemptedAt,
+            MoveLog = attempt.MoveLog
         };
     }
 
@@ -254,7 +258,8 @@ public class PuzzleService
                 PuzzleRating = a.Puzzle.Rating,
                 Solved = a.Solved,
                 TimeSpentSeconds = a.TimeSpentSeconds,
-                AttemptedAt = a.AttemptedAt
+                AttemptedAt = a.AttemptedAt,
+                MoveLog = a.MoveLog
             })
             .ToListAsync();
     }

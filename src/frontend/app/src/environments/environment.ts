@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.23.3',
+  version: '0.24.0',
   changelog: [
+    { version: '0.24.0', date: '2026-05-30', changes: [
+      'Feature: Puzzle MoveLog — gespielte Zuege, erwartete Zuege und Denkzeit pro Zug werden getrackt',
+      'Feature: Endless Mode sendet jetzt korrekte Puzzle-Dauer (timeSpentSeconds) statt 0',
+      'API: MoveLog-Feld (JSON) auf PuzzleAttempt, in RecordAttempt und History-Endpoints',
+    ]},
     { version: '0.23.3', date: '2026-05-30', changes: [
       'Fix: init-kibana.sh legt Data Views mit allowNoIndex:true an — Erstellung jetzt timing-unabhaengig (funktioniert auch, wenn der Log-Index beim init-Lauf noch nicht existiert). Behebt leeres Kibana (keine Data Views/Dashboard) bei frischem Stack-Start.',
       'Fix: kibana-init als Idle-Sidecar (restart: unless-stopped, idlet nach dem Init) statt One-Shot — Stack zeigt in Arcane/Portainer nicht mehr "partially running". Init laeuft idempotent bei jedem Stack-Start.',

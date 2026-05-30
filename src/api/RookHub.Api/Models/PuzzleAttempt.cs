@@ -15,4 +15,6 @@ public class PuzzleAttempt
     public bool Solved { get; set; }
     public int TimeSpentSeconds { get; set; }
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
+
+    public string? MoveLog { get; set; }
 }

@@ -19,6 +19,9 @@ public class RecordPuzzleAttemptDto
 
     [Range(0, 3600)]
     public int TimeSpentSeconds { get; set; }
+
+    [MaxLength(10000)]
+    public string? MoveLog { get; set; }
 }
 
 public class PuzzleStatsDto
@@ -39,6 +42,9 @@ public class AnonymousAttemptDto
 
     [Range(0, 3600)]
     public int TimeSpentSeconds { get; set; }
+
+    [MaxLength(10000)]
+    public string? MoveLog { get; set; }
 }
 
 public class ClaimSessionDto
@@ -56,4 +62,5 @@ public class PuzzleAttemptDto
     public bool Solved { get; set; }
     public int TimeSpentSeconds { get; set; }
     public DateTime AttemptedAt { get; set; }
+    public string? MoveLog { get; set; }
 }

@@ -213,4 +213,20 @@ public class AnonymousPuzzleTests : IDisposable
         Assert.Equal(2, stats.TotalAttempts);
         Assert.Equal(2, stats.Solved);
     }
+
+    [Fact]
+    public async Task RecordAnonymousAttempt_WithMoveLog_StoresJson()
+    {
+        var puzzle = await CreatePuzzleAsync(lichessId: "anon_ml1");
+        var sessionId = "movelog-session";
+        var moveLog = "[{\"i\":2,\"uci\":\"Bc4\",\"exp\":\"d4d5\",\"ms\":5600,\"ok\":false}]";
+
+        var result = await _service.RecordAnonymousAttemptAsync(sessionId, puzzle.Id,
+            new RecordPuzzleAttemptDto { Solved = false, TimeSpentSeconds = 20, MoveLog = moveLog });
+
+        Assert.Equal(moveLog, result.MoveLog);
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.Equal(moveLog, attempt.MoveLog);
+        Assert.Equal(sessionId, attempt.AnonymousSessionId);
+    }
 }

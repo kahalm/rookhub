@@ -833,6 +833,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
   reviewingWrongPuzzle = false;
   gaveUp = false;
 
+  // Move tracking
+  private moveLog: Array<{i: number, uci: string, exp: string, ms: number, ok: boolean}> = [];
+  private moveStartTime = 0;
+  private puzzleStartTime = 0;
+
   constructor(
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
@@ -1036,6 +1041,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.mouseslipUsed = false;
     this.reviewingWrongPuzzle = false;
     this.gaveUp = false;
+    this.moveLog = [];
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -1052,6 +1058,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.state = 'AWAITING_USER_MOVE';
       this.initialFen = this.chess.fen();
       this.updateBoard();
+      this.moveStartTime = Date.now();
+      this.puzzleStartTime = Date.now();
     }, 600);
   }
 
@@ -1071,14 +1079,17 @@ export class EndlessPuzzleComponent implements OnDestroy {
     if (this.onSolutionPath) {
       const expectedUci = this.solutionMoves[this.moveIndex];
       const userUci = event.orig + event.dest;
+      const thinkMs = Date.now() - this.moveStartTime;
 
       if (userUci === expectedUci.substring(0, 4)) {
         // Correct — follow solution
+        this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
         this.playMove(expectedUci);
         this.moveIndex++;
         this.advanceAfterCorrectMove();
       } else {
         // Wrong — leave solution path
+        this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         if (!this.playFreeMove(event.orig, event.dest)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
@@ -1110,6 +1121,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
         return;
       }
       this.state = 'PLAYING';
+      this.moveStartTime = Date.now();
       this.updateBoard();
     }, 400);
   }
@@ -1476,10 +1488,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   private recordAttempt(solved: boolean): void {
     if (!this.puzzle) return;
+    const timeSpent = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
+    const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     if (this.authService.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, 0).subscribe();
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, timeSpent, log).subscribe();
     } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, 0).subscribe();
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, timeSpent, log).subscribe();
     }
   }
 

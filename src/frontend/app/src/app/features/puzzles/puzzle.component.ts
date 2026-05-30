@@ -379,6 +379,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   alternativeSolve = false;
   mouseslipUsed = false;
 
+  // Move tracking
+  private moveLog: Array<{i: number, uci: string, exp: string, ms: number, ok: boolean}> = [];
+  private moveStartTime = 0;
+
   // Eval
   showEval = false;
   evalLoading = false;
@@ -491,6 +495,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
     this.updateBoard();
     this.state = 'SETUP';
+    this.moveLog = [];
 
     setTimeout(() => {
       if (this.state !== 'SETUP') return;
@@ -500,6 +505,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       this.initialFen = this.chess.fen();
       this.updateBoard();
       this.startTimer();
+      this.moveStartTime = Date.now();
     }, 600);
   }
 
@@ -513,9 +519,11 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     if (this.onSolutionPath) {
       const expectedUci = this.solutionMoves[this.moveIndex];
       const userUci = event.orig + event.dest;
+      const thinkMs = Date.now() - this.moveStartTime;
 
       if (userUci === expectedUci.substring(0, 4)) {
         // Correct move
+        this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
         this.playMove(expectedUci);
         this.moveIndex++;
 
@@ -544,12 +552,14 @@ export class PuzzleComponent implements OnInit, OnDestroy {
               this.startSolvedCountdown();
             } else {
               this.state = 'AWAITING_USER_MOVE';
+              this.moveStartTime = Date.now();
               this.updateBoard();
             }
           }, 400);
         }
       } else {
         // Wrong move — leave solution path, play against Stockfish
+        this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         if (!this.playFreeMove(event.orig, event.dest)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
@@ -763,12 +773,13 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private recordAttempt(solved: boolean): void {
     if (!this.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
+    const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(() => {
         this.puzzleService.getStats().subscribe(s => this.stats = s);
       });
     } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe(() => {
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(() => {
         this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
       });
     }
