@@ -34,6 +34,14 @@ public class EndlessController : BaseApiController
         return Ok(result);
     }
 
+    [HttpGet("history")]
+    [Authorize]
+    public async Task<ActionResult<EndlessHistoryResponseDto>> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var result = await _service.GetSessionHistoryAsync(GetUserId(), page, pageSize);
+        return Ok(result);
+    }
+
     [HttpPost("sessions")]
     [Authorize]
     public async Task<ActionResult<EndlessSessionDto>> RecordSession([FromBody] RecordEndlessSessionDto dto)

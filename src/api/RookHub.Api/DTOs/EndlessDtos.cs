@@ -112,3 +112,11 @@ public class ClaimEndlessSessionDto
     [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string AnonymousSessionId { get; set; } = string.Empty;
 }
+
+public class EndlessHistoryResponseDto
+{
+    public List<EndlessSessionDto> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+}

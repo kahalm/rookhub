@@ -196,7 +196,14 @@ const FASTTRACK_SESSION_COUNT = 10;
                 }
 
                 @if (sessionHistory.length > 0) {
-                  <p class="session-count">{{ sessionHistory.length }} sessions played</p>
+                  <p class="session-count">
+                    {{ sessionHistory.length }} sessions played
+                    @if (authService.isLoggedIn) {
+                      <button mat-button class="history-link" (click)="router.navigate(['/puzzles/endless/history'])">
+                        <mat-icon>history</mat-icon> View History
+                      </button>
+                    }
+                  </p>
                 }
 
                 <button mat-raised-button color="primary" class="start-btn" (click)="startGame()">
@@ -648,7 +655,9 @@ const FASTTRACK_SESSION_COUNT = 10;
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-weight: 500; margin-bottom: 1rem;
     }
-    .session-count { text-align: center; font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0 0 1rem; }
+    .session-count { text-align: center; font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+    .history-link { font-size: 0.85em; min-height: 0; padding: 0 8px; line-height: 28px; }
+    .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
 
     .play-screen { display: flex; gap: 1.5rem; align-items: flex-start; }
@@ -842,8 +851,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
     private storage: EndlessStorageService,
-    private authService: AuthService,
-    private router: Router,
+    public authService: AuthService,
+    public router: Router,
     private dialog: MatDialog
   ) {
     // 1. Load from localStorage immediately (no latency)

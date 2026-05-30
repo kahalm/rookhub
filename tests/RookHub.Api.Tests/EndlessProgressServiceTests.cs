@@ -137,7 +137,7 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RecordSession_TrimsToMax50()
+    public async Task RecordSession_DoesNotTrimForAuthenticatedUsers()
     {
         var userId = await CreateUserAsync();
         for (int i = 0; i < 52; i++)
@@ -146,7 +146,7 @@ public class EndlessProgressServiceTests : IDisposable
         }
 
         var count = await _db.EndlessSessions.CountAsync(s => s.UserId == userId);
-        Assert.Equal(50, count);
+        Assert.Equal(52, count);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BulkImport_TrimsToMax50()
+    public async Task BulkImport_DoesNotTrimForAuthenticatedUsers()
     {
         var userId = await CreateUserAsync();
         var sessions = Enumerable.Range(0, 55)
@@ -312,6 +312,81 @@ public class EndlessProgressServiceTests : IDisposable
 
         await _service.BulkImportSessionsAsync(userId, sessions);
 
-        Assert.Equal(50, await _db.EndlessSessions.CountAsync(s => s.UserId == userId));
+        Assert.Equal(55, await _db.EndlessSessions.CountAsync(s => s.UserId == userId));
+    }
+
+    [Fact]
+    public async Task RecordAnonymousSession_StillTrimsToMax50()
+    {
+        for (int i = 0; i < 52; i++)
+        {
+            await _service.RecordAnonymousSessionAsync("anon-trim", MakeSessionDto(timestamp: i));
+        }
+
+        var count = await _db.EndlessSessions.CountAsync(s => s.AnonymousSessionId == "anon-trim");
+        Assert.Equal(50, count);
+    }
+
+    // --- History Tests ---
+
+    [Fact]
+    public async Task GetSessionHistory_ReturnsEmpty_WhenNoSessions()
+    {
+        var userId = await CreateUserAsync();
+        var result = await _service.GetSessionHistoryAsync(userId, 1, 20);
+
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.TotalCount);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(20, result.PageSize);
+    }
+
+    [Fact]
+    public async Task GetSessionHistory_ReturnsPaginatedResults()
+    {
+        var userId = await CreateUserAsync();
+        for (int i = 0; i < 25; i++)
+        {
+            await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: i, maxRating: 1000 + i));
+        }
+
+        // Page 1 with pageSize 10
+        var page1 = await _service.GetSessionHistoryAsync(userId, 1, 10);
+        Assert.Equal(10, page1.Items.Count);
+        Assert.Equal(25, page1.TotalCount);
+        Assert.Equal(1, page1.Page);
+        Assert.Equal(10, page1.PageSize);
+        // Ordered desc by timestamp — first item should be timestamp 24
+        Assert.Equal(24, page1.Items[0].Timestamp);
+
+        // Page 3 with pageSize 10 — only 5 items left
+        var page3 = await _service.GetSessionHistoryAsync(userId, 3, 10);
+        Assert.Equal(5, page3.Items.Count);
+        Assert.Equal(25, page3.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetSessionHistory_ClampsPageSize()
+    {
+        var userId = await CreateUserAsync();
+        await _service.RecordSessionAsync(userId, MakeSessionDto());
+
+        var result = await _service.GetSessionHistoryAsync(userId, 1, 200);
+
+        Assert.Equal(100, result.PageSize);
+    }
+
+    [Fact]
+    public async Task GetSessionHistory_DoesNotReturnOtherUsersData()
+    {
+        var userId1 = await CreateUserAsync("user1");
+        var userId2 = await CreateUserAsync("user2");
+        await _service.RecordSessionAsync(userId1, MakeSessionDto(timestamp: 100));
+        await _service.RecordSessionAsync(userId2, MakeSessionDto(timestamp: 200));
+
+        var result = await _service.GetSessionHistoryAsync(userId1, 1, 20);
+
+        Assert.Single(result.Items);
+        Assert.Equal(100, result.Items[0].Timestamp);
     }
 }

@@ -128,6 +128,7 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/endless/progress` | Auth | Progress + Sessions laden (single call) |
+| GET | `/api/endless/history?page=&pageSize=` | Auth | Paginierte Session-History |
 | PUT | `/api/endless/progress` | Auth | Config + Highscore + Active Game upsert |
 | GET | `/api/endless/progress/anonymous?sessionId=` | Anon+RL | Anonymer Progress |
 | PUT | `/api/endless/progress/anonymous` | Anon+RL | Anonymer Progress speichern |
@@ -221,7 +222,7 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 238 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles)
+dotnet test     # 304 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless)
 ```
 
 ### Test-Pattern
@@ -262,7 +263,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.24.1`
+- **Aktuelle Version**: `0.25.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

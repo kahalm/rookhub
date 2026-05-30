@@ -1,7 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.24.1',
+  version: '0.25.0',
   changelog: [
+    { version: '0.25.0', date: '2026-05-30', changes: [
+      'Feature: Endless Puzzle History — paginierte Uebersicht aller vergangenen Sessions',
+      'Feature: Authentifizierte User haben kein 50-Session-Limit mehr (unbegrenzte History)',
+      'API: Neuer Endpoint GET /api/endless/history mit Pagination (page, pageSize)',
+      'Tests: 5 neue Tests fuer History-Pagination und Trim-Verhalten',
+    ]},
     { version: '0.24.1', date: '2026-05-30', changes: [
       'Observability: Puzzle-Attempts als strukturierte Serilog-Events nach Elasticsearch',
       'Kibana: 2 neue Dashboard-Panels (Puzzles Solved 24h, Puzzles per User)',

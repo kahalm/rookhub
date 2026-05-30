@@ -236,17 +236,44 @@ public class EndlessProgressService
         return transferred;
     }
 
+    // --- History ---
+
+    public async Task<EndlessHistoryResponseDto> GetSessionHistoryAsync(int userId, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = _db.EndlessSessions.Where(s => s.UserId == userId);
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(s => s.Timestamp)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(s => MapSessionDto(s))
+            .ToListAsync();
+
+        return new EndlessHistoryResponseDto
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
     // --- Helpers ---
 
     private async Task TrimSessionsAsync(int? userId = null, string? anonymousSessionId = null)
     {
-        IQueryable<EndlessSession> query;
+        // Authenticated users have unlimited sessions — only trim anonymous
         if (userId.HasValue)
-            query = _db.EndlessSessions.Where(s => s.UserId == userId.Value);
-        else if (anonymousSessionId != null)
-            query = _db.EndlessSessions.Where(s => s.AnonymousSessionId == anonymousSessionId);
-        else
             return;
+
+        if (anonymousSessionId == null)
+            return;
+
+        var query = _db.EndlessSessions.Where(s => s.AnonymousSessionId == anonymousSessionId);
 
         var count = await query.CountAsync();
         if (count <= MaxSessions) return;
