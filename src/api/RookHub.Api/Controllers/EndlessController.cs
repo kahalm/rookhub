@@ -36,10 +36,23 @@ public class EndlessController : BaseApiController
 
     [HttpGet("history")]
     [Authorize]
-    public async Task<ActionResult<EndlessHistoryResponseDto>> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<EndlessHistoryResponseDto>> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool? archived = null)
     {
-        var result = await _service.GetSessionHistoryAsync(GetUserId(), page, pageSize);
+        var result = await _service.GetSessionHistoryAsync(GetUserId(), page, pageSize, archived);
         return Ok(result);
+    }
+
+    [HttpPost("archive")]
+    [Authorize]
+    public async Task<ActionResult<object>> ArchiveSessions([FromBody] ArchiveSessionsDto dto)
+    {
+        if (dto.SessionIds.Count == 0)
+            return BadRequest(new { message = "No session IDs provided." });
+        if (dto.SessionIds.Count > 100)
+            return BadRequest(new { message = "Maximum 100 sessions per request." });
+
+        var count = await _service.ArchiveSessionsAsync(GetUserId(), dto.SessionIds, dto.Archive);
+        return Ok(new { updated = count });
     }
 
     [HttpPost("sessions")]

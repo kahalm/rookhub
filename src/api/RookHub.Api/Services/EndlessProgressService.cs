@@ -20,7 +20,7 @@ public class EndlessProgressService
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
         var sessions = await _db.EndlessSessions
-            .Where(s => s.UserId == userId)
+            .Where(s => s.UserId == userId && !s.IsArchived)
             .OrderByDescending(s => s.Timestamp)
             .Take(MaxSessions)
             .Select(s => MapSessionDto(s))
@@ -238,12 +238,14 @@ public class EndlessProgressService
 
     // --- History ---
 
-    public async Task<EndlessHistoryResponseDto> GetSessionHistoryAsync(int userId, int page, int pageSize)
+    public async Task<EndlessHistoryResponseDto> GetSessionHistoryAsync(int userId, int page, int pageSize, bool? archived = null)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
         var query = _db.EndlessSessions.Where(s => s.UserId == userId);
+        if (archived.HasValue)
+            query = query.Where(s => s.IsArchived == archived.Value);
         var totalCount = await query.CountAsync();
 
         var items = await query
@@ -260,6 +262,21 @@ public class EndlessProgressService
             Page = page,
             PageSize = pageSize
         };
+    }
+
+    // --- Archive ---
+
+    public async Task<int> ArchiveSessionsAsync(int userId, List<int> sessionIds, bool archive)
+    {
+        var sessions = await _db.EndlessSessions
+            .Where(s => s.UserId == userId && sessionIds.Contains(s.Id))
+            .ToListAsync();
+
+        foreach (var session in sessions)
+            session.IsArchived = archive;
+
+        await _db.SaveChangesAsync();
+        return sessions.Count;
     }
 
     // --- Helpers ---
@@ -323,6 +340,7 @@ public class EndlessProgressService
         MaxRating = s.MaxRating,
         DurationSeconds = s.DurationSeconds,
         ConfigJson = s.ConfigJson,
-        MistakeAtRatings = s.MistakeAtRatings
+        MistakeAtRatings = s.MistakeAtRatings,
+        IsArchived = s.IsArchived
     };
 }

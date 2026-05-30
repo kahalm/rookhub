@@ -389,4 +389,95 @@ public class EndlessProgressServiceTests : IDisposable
         Assert.Single(result.Items);
         Assert.Equal(100, result.Items[0].Timestamp);
     }
+
+    // --- Archive Tests ---
+
+    [Fact]
+    public async Task ArchiveSessions_SetsFlag()
+    {
+        var userId = await CreateUserAsync();
+        var s1 = await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 100));
+        var s2 = await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 200));
+
+        var updated = await _service.ArchiveSessionsAsync(userId, new List<int> { s1.Id, s2.Id }, true);
+
+        Assert.Equal(2, updated);
+        var sessions = await _db.EndlessSessions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.All(sessions, s => Assert.True(s.IsArchived));
+    }
+
+    [Fact]
+    public async Task ArchiveSessions_DoesNotAffectOtherUsers()
+    {
+        var userId1 = await CreateUserAsync("user1");
+        var userId2 = await CreateUserAsync("user2");
+        var s1 = await _service.RecordSessionAsync(userId1, MakeSessionDto(timestamp: 100));
+        var s2 = await _service.RecordSessionAsync(userId2, MakeSessionDto(timestamp: 200));
+
+        var updated = await _service.ArchiveSessionsAsync(userId1, new List<int> { s1.Id, s2.Id }, true);
+
+        Assert.Equal(1, updated);
+        var otherSession = await _db.EndlessSessions.FirstAsync(s => s.UserId == userId2);
+        Assert.False(otherSession.IsArchived);
+    }
+
+    [Fact]
+    public async Task GetSyncData_ExcludesArchivedSessions()
+    {
+        var userId = await CreateUserAsync();
+        var s1 = await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 100));
+        await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 200));
+        await _service.ArchiveSessionsAsync(userId, new List<int> { s1.Id }, true);
+
+        var result = await _service.GetSyncDataAsync(userId);
+
+        Assert.Single(result.Sessions);
+        Assert.Equal(200, result.Sessions[0].Timestamp);
+    }
+
+    [Fact]
+    public async Task GetSessionHistory_FiltersByArchived()
+    {
+        var userId = await CreateUserAsync();
+        var s1 = await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 100));
+        await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 200));
+        await _service.ArchiveSessionsAsync(userId, new List<int> { s1.Id }, true);
+
+        // All sessions (no filter)
+        var all = await _service.GetSessionHistoryAsync(userId, 1, 20);
+        Assert.Equal(2, all.TotalCount);
+
+        // Only active
+        var active = await _service.GetSessionHistoryAsync(userId, 1, 20, archived: false);
+        Assert.Single(active.Items);
+        Assert.Equal(200, active.Items[0].Timestamp);
+
+        // Only archived
+        var archived = await _service.GetSessionHistoryAsync(userId, 1, 20, archived: true);
+        Assert.Single(archived.Items);
+        Assert.Equal(100, archived.Items[0].Timestamp);
+        Assert.True(archived.Items[0].IsArchived);
+    }
+
+    [Fact]
+    public async Task UnarchiveSessions_ClearsFlag()
+    {
+        var userId = await CreateUserAsync();
+        var s1 = await _service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 100));
+        await _service.ArchiveSessionsAsync(userId, new List<int> { s1.Id }, true);
+
+        // Verify archived
+        var session = await _db.EndlessSessions.FirstAsync(s => s.Id == s1.Id);
+        Assert.True(session.IsArchived);
+
+        // Unarchive
+        await _service.ArchiveSessionsAsync(userId, new List<int> { s1.Id }, false);
+
+        session = await _db.EndlessSessions.FirstAsync(s => s.Id == s1.Id);
+        Assert.False(session.IsArchived);
+
+        // Should appear in sync data again
+        var syncData = await _service.GetSyncDataAsync(userId);
+        Assert.Single(syncData.Sessions);
+    }
 }

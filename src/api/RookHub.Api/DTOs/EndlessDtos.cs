@@ -33,6 +33,7 @@ public class EndlessSessionDto
     public int DurationSeconds { get; set; }
     public string ConfigJson { get; set; } = string.Empty;
     public string MistakeAtRatings { get; set; } = string.Empty;
+    public bool IsArchived { get; set; }
 }
 
 // --- Request DTOs ---
@@ -111,6 +112,14 @@ public class ClaimEndlessSessionDto
 {
     [Required, MaxLength(36), RegularExpression(@"^[a-fA-F0-9\-]{1,36}$")]
     public string AnonymousSessionId { get; set; } = string.Empty;
+}
+
+public class ArchiveSessionsDto
+{
+    [Required]
+    public List<int> SessionIds { get; set; } = new();
+
+    public bool Archive { get; set; } = true;
 }
 
 public class EndlessHistoryResponseDto

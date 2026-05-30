@@ -1,7 +1,16 @@
 export const environment = {
   production: false,
-  version: '0.25.0',
+  version: '0.25.1',
   changelog: [
+    { version: '0.25.1', date: '2026-05-30', changes: [
+      'Feature: Endless Session Archivierung — Sessions koennen archiviert/unarchiviert werden',
+      'Feature: Archivierte Sessions fliessen nicht mehr in Sync-Response (Fasttrack/Session-Count)',
+      'Feature: History-Filter: Alle / Aktive / Archivierte Sessions',
+      'Feature: Mehrfachauswahl mit Checkboxen in der History-Tabelle',
+      'API: Neuer Endpoint POST /api/endless/archive mit Bulk-Archivierung',
+      'API: GET /api/endless/history unterstuetzt neuen Query-Parameter archived (bool)',
+      'Tests: 5 neue Tests fuer Archive/Unarchive/Filter/Sync-Exclusion',
+    ]},
     { version: '0.25.0', date: '2026-05-30', changes: [
       'Feature: Endless Puzzle History — paginierte Uebersicht aller vergangenen Sessions',
       'Feature: Authentifizierte User haben kein 50-Session-Limit mehr (unbegrenzte History)',

@@ -24,5 +24,7 @@ public class EndlessSession
     [MaxLength(100)]
     public string MistakeAtRatings { get; set; } = string.Empty;
 
+    public bool IsArchived { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
