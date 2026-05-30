@@ -1,7 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.25.2',
+  version: '0.25.3',
   changelog: [
+    { version: '0.25.3', date: '2026-05-30', changes: [
+      'Fix: Data Protection persistiert Keys auf gemountetes Volume (/keys, eigenes dataprotection-keys-Volume) statt In-Memory — keine "No XML encryptor / ephemeral key"-Warnings mehr beim API-Start.',
+      'Fix: compose.dev.vpn.yml — API wartet auf gluetun (service_healthy); ES/Kibana Host-Port-Defaults 9201/5602 statt 9200/5601 (keine Kollision mit Prod-Stack auf demselben Host).',
+      'Fix: .env.dev.vpn.example neu + .gitignore — dev-eigene Ports und getrennte Bind-Pfade (verhindert geteiltes ES-Datenverzeichnis/node.lock).',
+      'Fix: Crawler-Dockerfile — redundantes ASPNETCORE_URLS entfernt (Bindung via Base-Image HTTP_PORTS=8080); entfernt "Overriding HTTP_PORTS"-Warning.',
+    ]},
     { version: '0.25.2', date: '2026-05-30', changes: [
       'UI: Puzzle History im User-Menue (Profilbild oben rechts) verlinkt',
     ]},

@@ -34,11 +34,22 @@
 #   WIREGUARD_ADDRESSES=
 #   SERVER_COUNTRIES=
 #   FIREWALL_VPN_INPUT_PORTS=
+# Optional (Default in Klammern):
+#   ES_PORT=      (9201)
+#   KIBANA_PORT=  (5602)
+#
+# WICHTIG bei parallelem Betrieb mit dem Prod-Stack (compose.vpn.yml) auf demselben
+# Host: ALLE Host-Ports UND alle Bind-Pfade muessen sich vom Prod-Stack unterscheiden,
+# sonst kollidieren Ports bzw. das ES-Datenverzeichnis (node.lock). Dev-Konvention:
+# Ports 5002/8087/3309/9201/5602, Bind-Pfade unter /srv/config/rookhub-dev/.
+# Siehe .env.dev.vpn.example.
 #
 # Ports:
 #   ${FRONTEND_PORT}     -> Frontend (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
+#   ${ES_PORT:-9201}     -> Elasticsearch
+#   ${KIBANA_PORT:-5602} -> Kibana
 ###############################################################################
 
 services:
@@ -123,6 +134,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      gluetun:
+        condition: service_healthy
       elasticsearch:
         condition: service_healthy
     environment:
@@ -136,6 +149,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
+    volumes:
+      - dataprotection-keys:/keys
     networks:
       - rookhub-dev
 
@@ -152,7 +167,7 @@ services:
       - cluster.name=rookhub-logs
       - cluster.routing.allocation.disk.threshold_enabled=false
     ports:
-      - "${ES_PORT:-9200}:9200"
+      - "${ES_PORT:-9201}:9200"
     volumes:
       - ${ES_DATA_PATH}:/usr/share/elasticsearch/data
     healthcheck:
@@ -173,7 +188,7 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - xpack.security.enabled=false
     ports:
-      - "${KIBANA_PORT:-5601}:5601"
+      - "${KIBANA_PORT:-5602}:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -216,4 +231,5 @@ services:
 networks:
   rookhub-dev:
 
-volumes: {}
+volumes:
+  dataprotection-keys:

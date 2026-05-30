@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -105,6 +106,11 @@ try
         client.BaseAddress = new Uri("https://api.chesstools.org");
         client.Timeout = TimeSpan.FromSeconds(15);
     });
+
+    // Data Protection — Keys auf gemountetes Volume persistieren, damit sie Neustarts
+    // ueberleben (sonst ephemere In-Memory-Keys + "No XML encryptor"-Warnings bei jedem Boot).
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo("/keys"));
 
     // CORS policies
     builder.Services.AddCors(options =>

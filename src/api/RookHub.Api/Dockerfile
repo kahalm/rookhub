@@ -13,5 +13,9 @@ WORKDIR /app
 COPY --from=build /app .
 EXPOSE 8080
 
+# DataProtection-Keyring auf gemountetem Volume (/keys) ablegen; Verzeichnis muss
+# dem non-root appuser gehoeren, damit die Keys schreibbar sind.
+RUN mkdir -p /keys && chown appuser /keys
+
 USER appuser
 ENTRYPOINT ["dotnet", "RookHub.Api.dll"]

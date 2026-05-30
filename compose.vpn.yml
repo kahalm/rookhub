@@ -105,6 +105,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
+    volumes:
+      - dataprotection-keys:/keys
     networks:
       - rookhub
 
@@ -188,3 +190,4 @@ networks:
 volumes:
   mariadb-data:
   es-data:
+  dataprotection-keys:
