@@ -20,7 +20,7 @@ create_data_view() {
     -X POST "$KIBANA_URL/api/data_views/data_view" \
     -H "kbn-xsrf: true" \
     -H "Content-Type: application/json" \
-    -d "{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$name\",\"timeFieldName\":\"@timestamp\"}}")
+    -d "{\"data_view\":{\"id\":\"$id\",\"title\":\"$pattern\",\"name\":\"$name\",\"timeFieldName\":\"@timestamp\",\"allowNoIndex\":true}}")
 
   if [ "$status" = "200" ]; then
     echo "  -> Created."

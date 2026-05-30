@@ -153,17 +153,18 @@ services:
     networks:
       - rookhub
 
-  # ── Kibana Data Views Init (one-shot) ────────────────────────────────────
+  # ── Kibana Data Views Init (idle sidecar — bleibt running fuer Arcane) ────
   kibana-init:
     image: curlimages/curl:latest
     container_name: rookhub-kibana-init
-    restart: "no"
+    restart: unless-stopped
     depends_on:
       kibana:
         condition: service_healthy
     volumes:
       - ./init-kibana.sh:/init-kibana.sh:ro
-    entrypoint: ["/bin/sh", "/init-kibana.sh"]
+    # Init laeuft bei jedem Start (idempotent), danach idle -> Container bleibt "running"
+    entrypoint: ["/bin/sh", "-c", "/init-kibana.sh; echo 'init done, idling'; exec tail -f /dev/null"]
     networks:
       - rookhub
 

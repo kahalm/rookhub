@@ -95,6 +95,8 @@ docker compose -f compose.vpn.yml --env-file .env.vpn up --build
 |--------|-----|
 | Frontend | http://localhost:8085 |
 | RookHub API + Swagger | http://localhost:5001/swagger |
+| Kibana (Logs-Dashboard) | http://localhost:5601 |
+| Elasticsearch | http://localhost:9200 |
 | MariaDB | `localhost:3307` (User/Passwoerter siehe `.env`-Datei) |
 
 ## Compose-Konfiguration
@@ -143,6 +145,41 @@ Internet  <--WireGuard-->  Gluetun  <--shared network-->  Crawler  -->  chess-re
 ```bash
 # Zeigt die oeffentliche IP des Crawlers (sollte VPN-IP sein, nicht eigene)
 curl http://localhost:5001/api/health/ip
+```
+
+## Logging & Monitoring (Elasticsearch + Kibana)
+
+Beide Backends loggen ueber **Serilog** strukturiert nach **Elasticsearch**:
+
+| App | Index-Muster |
+|-----|--------------|
+| RookHub API | `rookhub-logs-YYYY.MM` |
+| ChessResults Crawler | `crawler-logs-YYYY.MM` |
+
+Visualisierung in **Kibana** (Dashboard *"RookHub Logging Dashboard"*; Data Views `RookHub Logs`, `Crawler Logs`, `Alle Logs`).
+
+| Dienst | URL | Auth |
+|--------|-----|------|
+| Kibana | http://localhost:5601 | keine (`xpack.security` deaktiviert) |
+| Elasticsearch | http://localhost:9200 | keine |
+
+**Log-Zugriff ohne Docker:** Da ES/Kibana auf die Host-Ports `9200`/`5601` gemappt sind, lassen sich die Logs direkt per HTTP abfragen — kein `docker logs` / Docker-Socket noetig:
+
+```bash
+# Welche Log-Indizes gibt es (inkl. Doc-Count)?
+curl -s 'http://localhost:9200/_cat/indices/*-logs-*?v'
+# Letzte Fehler/Warnungen
+curl -s 'http://localhost:9200/rookhub-logs-*/_search?q=level:Error&size=5&sort=@timestamp:desc'
+# Kibana Data Views
+curl -s 'http://localhost:5601/api/data_views' -H 'kbn-xsrf: true'
+```
+
+**Kibana-Init (`init-kibana.sh`):** Ein One-Shot-Container (`kibana-init`) legt beim `up` die Data Views + das Dashboard an. Seit v0.23.3 mit `allowNoIndex:true` — die Data Views entstehen auch dann, wenn beim init-Lauf noch kein Log-Index existiert (frischer Stack). Falls Kibana doch leer ist, init manuell nachziehen:
+
+```bash
+docker start -a rookhub-kibana-init
+# oder ohne Docker-Zugriff, direkt gegen den Host-Port:
+sed 's#http://kibana:5601#http://localhost:5601#g' init-kibana.sh | sh
 ```
 
 ## API-Uebersicht
