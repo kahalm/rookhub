@@ -1,7 +1,13 @@
 export const environment = {
   production: false,
-  version: '0.25.3',
+  version: '0.25.4',
   changelog: [
+    { version: '0.25.4', date: '2026-05-30', changes: [
+      'Feature: Endless Run Resume — bei Seiten-Refresh wird ein laufender Run mit Continue-Button angeboten',
+      'Feature: Archive & New Game — laufenden Run archivieren und neu starten',
+      'Feature: Archive-Button auf Game-Over/Exhausted-Screen fuer sofortige Archivierung',
+      'API: recordSessionToServer gibt jetzt Session-ID zurueck',
+    ]},
     { version: '0.25.3', date: '2026-05-30', changes: [
       'Fix: Data Protection persistiert Keys auf gemountetes Volume (/keys, eigenes dataprotection-keys-Volume) statt In-Memory — keine "No XML encryptor / ephemeral key"-Warnings mehr beim API-Start.',
       'Fix: compose.dev.vpn.yml — API wartet auf gluetun (service_healthy); ES/Kibana Host-Port-Defaults 9201/5602 statt 9200/5601 (keine Kollision mit Prod-Stack auf demselben Host).',

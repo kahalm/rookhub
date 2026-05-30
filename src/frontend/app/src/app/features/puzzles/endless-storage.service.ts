@@ -213,7 +213,7 @@ export class EndlessStorageService {
     this.doSaveProgress(config, highscore, activeGameState);
   }
 
-  recordSessionToServer(session: EndlessSession): void {
+  recordSessionToServer(session: EndlessSession): Observable<number | null> {
     const body: any = {
       timestamp: session.timestamp,
       totalSolved: session.totalSolved,
@@ -224,14 +224,26 @@ export class EndlessStorageService {
     };
 
     if (this.authService.isLoggedIn) {
-      this.http.post(`${this.apiUrl}/sessions`, body).pipe(catchError(() => of(null))).subscribe();
+      return this.http.post<any>(`${this.apiUrl}/sessions`, body).pipe(
+        map(res => res?.id ?? null),
+        catchError(() => of(null))
+      );
     } else {
       const sessionId = this.getSessionId();
       if (sessionId) {
-        this.http.post(`${this.apiUrl}/sessions/anonymous`, { ...body, sessionId })
-          .pipe(catchError(() => of(null))).subscribe();
+        return this.http.post<any>(`${this.apiUrl}/sessions/anonymous`, { ...body, sessionId }).pipe(
+          map(res => res?.id ?? null),
+          catchError(() => of(null))
+        );
       }
+      return of(null);
     }
+  }
+
+  archiveSession(sessionId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/archive`, { sessionIds: [sessionId], archive: true }).pipe(
+      catchError(() => of(null))
+    );
   }
 
   bulkImportSessionsToServer(sessions: EndlessSession[]): void {

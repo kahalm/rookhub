@@ -206,9 +206,28 @@ const FASTTRACK_SESSION_COUNT = 10;
                   </p>
                 }
 
+                @if (activeGameState) {
+                  <div class="resume-banner">
+                    <div class="resume-info">
+                      <mat-icon>pause_circle</mat-icon>
+                      <span>Unfinished run: Lv {{ activeGameState.level + 1 }} | {{ activeGameState.solved }} solved | {{ activeGameState.lives }} lives | {{ activeGameState.maxRatingReached }} max</span>
+                    </div>
+                    <div class="resume-actions">
+                      <button mat-raised-button color="primary" class="start-btn" (click)="resumeGame()">
+                        <mat-icon>play_arrow</mat-icon>
+                        Continue
+                      </button>
+                      <button mat-stroked-button color="warn" (click)="archiveAndStartNew()">
+                        <mat-icon>archive</mat-icon>
+                        Archive &amp; New Game
+                      </button>
+                    </div>
+                  </div>
+                }
+
                 <button mat-raised-button color="primary" class="start-btn" (click)="startGame()">
                   <mat-icon>play_arrow</mat-icon>
-                  Start
+                  {{ activeGameState ? 'New Game' : 'Start' }}
                 </button>
               </mat-card-content>
             </mat-card>
@@ -513,6 +532,17 @@ const FASTTRACK_SESSION_COUNT = 10;
                     New Highscore!
                   </div>
                 }
+                @if (authService.isLoggedIn && lastSessionId && !lastSessionArchived) {
+                  <button mat-stroked-button color="warn" class="archive-btn" (click)="archiveLastSession()" [disabled]="archiving">
+                    <mat-icon>archive</mat-icon>
+                    {{ archiving ? 'Archiving...' : 'Archive this Run' }}
+                  </button>
+                }
+                @if (lastSessionArchived) {
+                  <div class="archived-hint">
+                    <mat-icon>check</mat-icon> Archived
+                  </div>
+                }
                 <div class="gameover-actions">
                   <button mat-raised-button color="primary" (click)="playAgain()">
                     <mat-icon>replay</mat-icon>
@@ -583,6 +613,17 @@ const FASTTRACK_SESSION_COUNT = 10;
                   <div class="new-highscore">
                     <mat-icon>emoji_events</mat-icon>
                     New Highscore!
+                  </div>
+                }
+                @if (authService.isLoggedIn && lastSessionId && !lastSessionArchived) {
+                  <button mat-stroked-button color="warn" class="archive-btn" (click)="archiveLastSession()" [disabled]="archiving">
+                    <mat-icon>archive</mat-icon>
+                    {{ archiving ? 'Archiving...' : 'Archive this Run' }}
+                  </button>
+                }
+                @if (lastSessionArchived) {
+                  <div class="archived-hint">
+                    <mat-icon>check</mat-icon> Archived
                   </div>
                 }
                 <div class="gameover-actions">
@@ -659,6 +700,21 @@ const FASTTRACK_SESSION_COUNT = 10;
     .history-link { font-size: 0.85em; min-height: 0; padding: 0 8px; line-height: 28px; }
     .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
+    .resume-banner {
+      background: rgba(25,118,210,0.06); border: 1px solid rgba(25,118,210,0.2);
+      border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .resume-info {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
+      font-size: 0.9em; color: rgba(0,0,0,0.7);
+    }
+    .resume-info mat-icon { color: #1976d2; }
+    .resume-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .archive-btn { margin-bottom: 0.5rem; }
+    .archived-hint {
+      display: flex; align-items: center; gap: 0.25rem; justify-content: center;
+      color: #4caf50; font-size: 0.9em; margin-bottom: 0.5rem;
+    }
 
     .play-screen { display: flex; gap: 1.5rem; align-items: flex-start; }
     .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
@@ -818,6 +874,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // Dynamic rating
   _currentMinRating = 0;
 
+  // Resume
+  activeGameState: any = null;
+
+  // Archive
+  lastSessionId: number | null = null;
+  lastSessionArchived = false;
+  archiving = false;
+
   // Puzzle DB range
   puzzleRange: PuzzleRatingRange = { min: 100, max: 3000 };
 
@@ -861,6 +925,10 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.sessionHistory = this.storage.loadSessionHistory();
     if (this.config.fasttrack) this.computeFasttrackSteps();
 
+    // Load local active game state for immediate display
+    const localGame = this.storage.loadActiveGameLocal();
+    if (localGame) this.activeGameState = localGame;
+
     // 2. Load from server (async) and merge
     this.storage.loadFromServer().subscribe(serverData => {
       if (serverData) {
@@ -872,6 +940,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
           this.highscore = merged.highscore;
           this.sessionHistory = merged.history;
           if (this.config.fasttrack) this.computeFasttrackSteps();
+
+          // Server active game state takes priority
+          if (serverData.progress?.activeGameState) {
+            try { this.activeGameState = JSON.parse(serverData.progress.activeGameState); } catch {}
+          }
         } else {
           // Server empty: migrate localStorage data up (one-time)
           this.storage.migrateLocalToServer(this.config, this.highscore, this.sessionHistory);
@@ -945,14 +1018,75 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.sessionSeconds = 0;
     this.currentSessionMistakes = [];
     this.currentSessionPuzzles = [];
+    this.activeGameState = null;
+    this.lastSessionId = null;
+    this.lastSessionArchived = false;
     if (this.config.fasttrack) this.computeFasttrackSteps();
     this.startSessionTimer();
     this.syncActiveGameToServer();
     this.loadPuzzle();
   }
 
+  resumeGame(): void {
+    if (!this.activeGameState) return;
+    const g = this.activeGameState;
+    this.lives = g.lives ?? 3;
+    this.solved = g.solved ?? 0;
+    this.level = g.level ?? 0;
+    this._currentMinRating = g.currentMinRating ?? this.config.startElo;
+    this.maxRatingReached = g.maxRatingReached ?? this._currentMinRating;
+    this.sessionSeconds = g.sessionSeconds ?? 0;
+    this.currentSessionMistakes = g.mistakes ?? [];
+    this.currentSessionPuzzles = [];
+    this.isNewHighscore = false;
+    this.prefetchedPuzzle = null;
+    this.lastSessionId = null;
+    this.lastSessionArchived = false;
+    if (this.config.fasttrack) this.computeFasttrackSteps();
+    // Resume timer from where it left off
+    this.sessionStart = Date.now() - this.sessionSeconds * 1000;
+    this.sessionInterval = setInterval(() => {
+      this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
+    }, 1000);
+    this.loadPuzzle();
+  }
+
+  archiveAndStartNew(): void {
+    if (!this.activeGameState) { this.startGame(); return; }
+    const g = this.activeGameState;
+    const session: EndlessSession = {
+      timestamp: Date.now(),
+      config: { ...this.config },
+      totalSolved: g.solved ?? 0,
+      maxRating: g.maxRatingReached ?? 0,
+      durationSeconds: g.sessionSeconds ?? 0,
+      mistakeAtRatings: g.mistakes ?? []
+    };
+    this.storage.recordSessionToServer(session).subscribe(id => {
+      if (id && this.authService.isLoggedIn) {
+        this.storage.archiveSession(id).subscribe();
+      }
+      this.activeGameState = null;
+      this.storage.saveActiveGameLocal(null);
+      this.storage.saveProgressImmediate(this.config, this.highscore, null);
+      this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
+      this.startGame();
+    });
+  }
+
+  archiveLastSession(): void {
+    if (!this.lastSessionId || this.archiving) return;
+    this.archiving = true;
+    this.storage.archiveSession(this.lastSessionId).subscribe(() => {
+      this.lastSessionArchived = true;
+      this.archiving = false;
+    });
+  }
+
   playAgain(): void {
     this.state = 'CONFIG';
+    this.lastSessionId = null;
+    this.lastSessionArchived = false;
     if (this.config.fasttrack) this.computeFasttrackSteps();
   }
 
@@ -1543,6 +1677,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
       mistakeAtRatings: [...this.currentSessionMistakes]
     };
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
-    this.storage.recordSessionToServer(session);
+    this.storage.recordSessionToServer(session).subscribe(id => {
+      if (id) this.lastSessionId = id;
+    });
   }
 }

@@ -137,6 +137,20 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordSession_ReturnsSessionWithId()
+    {
+        var userId = await CreateUserAsync();
+        var dto = MakeSessionDto();
+
+        var result = await _service.RecordSessionAsync(userId, dto);
+
+        Assert.True(result.Id > 0);
+        var dbSession = await _db.EndlessSessions.FindAsync(result.Id);
+        Assert.NotNull(dbSession);
+        Assert.Equal(dto.TotalSolved, dbSession.TotalSolved);
+    }
+
+    [Fact]
     public async Task RecordSession_DoesNotTrimForAuthenticatedUsers()
     {
         var userId = await CreateUserAsync();
