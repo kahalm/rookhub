@@ -104,6 +104,9 @@ import { Tournament, Subscription } from '../../core/models';
     .tournament-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
     @media (max-width: 768px) {
       .tournament-container { padding: 0.75rem; }
+      h1 { font-size: 1.4rem; }
+      .crawl-card { margin-bottom: 1rem; }
+      .crawl-form mat-form-field { max-width: none; }
     }
   `]
 })

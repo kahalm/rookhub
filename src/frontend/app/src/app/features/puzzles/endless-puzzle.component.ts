@@ -814,10 +814,17 @@ const FASTTRACK_SESSION_COUNT = 10;
     .review-icon.failed { color: #f44336; }
 
     @media (max-width: 768px) {
+      .endless-page { padding: 0.5rem; }
       .play-screen { flex-direction: column; }
       .board-section { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .config-fields { grid-template-columns: 1fr; }
+      .config-screen { padding-top: 0.5rem; }
+      .gameover-stats { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+      .gameover-card { text-align: center; }
+      .help-overlay { padding: 0.5rem; }
+      .help-content { border-radius: 8px; }
+      .threshold-fields { grid-template-columns: 1fr; }
     }
   `]
 })

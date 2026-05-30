@@ -22,6 +22,12 @@ public class RecordPuzzleAttemptDto
 
     [MaxLength(10000)]
     public string? MoveLog { get; set; }
+
+    [Range(0, 10000)]
+    public int? ScreenWidth { get; set; }
+
+    [Range(0, 10000)]
+    public int? ScreenHeight { get; set; }
 }
 
 public class PuzzleStatsDto
@@ -45,6 +51,12 @@ public class AnonymousAttemptDto
 
     [MaxLength(10000)]
     public string? MoveLog { get; set; }
+
+    [Range(0, 10000)]
+    public int? ScreenWidth { get; set; }
+
+    [Range(0, 10000)]
+    public int? ScreenHeight { get; set; }
 }
 
 public class ClaimSessionDto

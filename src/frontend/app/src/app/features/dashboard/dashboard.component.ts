@@ -80,10 +80,14 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
   `,
   styles: [`
     .dashboard { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
     .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
     .tournament-link:hover { background: rgba(0,0,0,0.04); }
+    @media (max-width: 768px) {
+      .dashboard { padding: 0.75rem; }
+      h1 { font-size: 1.4rem; }
+    }
   `]
 })
 export class DashboardComponent implements OnInit {

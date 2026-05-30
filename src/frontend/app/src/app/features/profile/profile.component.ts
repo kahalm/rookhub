@@ -176,6 +176,12 @@ interface PlayerSearchItem {
     .id { color: #bdbdbd; font-size: 12px; }
     .select-icon { color: #90caf9; margin-left: auto; }
     .no-results { color: #bdbdbd; font-style: italic; text-align: center; padding: 1rem 0; }
+    @media (max-width: 768px) {
+      .profile-container { padding: 0.75rem; }
+      .name-row mat-form-field { min-width: 0; flex-basis: 100%; }
+      .search-btn { width: 100%; justify-content: center; }
+      .search-results { max-height: 300px; }
+    }
   `]
 })
 export class ProfileComponent implements OnInit {

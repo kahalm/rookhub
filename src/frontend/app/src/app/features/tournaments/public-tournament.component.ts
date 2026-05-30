@@ -325,6 +325,8 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
       :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
+      .player-details { padding-left: 1.5rem; }
+      .pairing-team { white-space: normal; }
     }
   `]
 })

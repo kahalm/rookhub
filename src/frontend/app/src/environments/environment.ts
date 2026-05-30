@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.25.4',
+  version: '0.25.5',
   changelog: [
+    { version: '0.25.5', date: '2026-05-30', changes: [
+      'UI: Mobile-Optimierung — Padding, Wrapping und Layout fuer alle Views angepasst',
+      'UI: Endless History — Card-Layout statt Tabelle auf Mobilgeraeten',
+      'UI: Friends — Suchfeld und Button stacken korrekt auf Mobile',
+      'UI: Profile — Formularfelder stacken auf Mobile, Suchbutton volle Breite',
+      'UI: Endless Puzzle — Config/GameOver/Help-Overlay mobile-optimiert',
+      'Logging: Bildschirmaufloesung (ScreenWidth/ScreenHeight) wird bei Puzzle-Attempts nach Elasticsearch geloggt',
+    ]},
     { version: '0.25.4', date: '2026-05-30', changes: [
       'Feature: Endless Run Resume — bei Seiten-Refresh wird ein laufender Run mit Continue-Button angeboten',
       'Feature: Archive & New Game — laufenden Run archivieren und neu starten',

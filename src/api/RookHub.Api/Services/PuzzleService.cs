@@ -99,8 +99,8 @@ public class PuzzleService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
-            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds);
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
 
         return new PuzzleAttemptDto
         {
@@ -134,8 +134,8 @@ public class PuzzleService
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
-            "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s",
-            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds);
+            "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
+            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
 
         return new PuzzleAttemptDto
         {

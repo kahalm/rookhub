@@ -80,7 +80,10 @@ export class PuzzleService {
   }
 
   recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string): Observable<PuzzleAttemptDto> {
-    return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, { solved, timeSpentSeconds, moveLog });
+    return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, {
+      solved, timeSpentSeconds, moveLog,
+      screenWidth: window.innerWidth, screenHeight: window.innerHeight
+    });
   }
 
   getStats(): Observable<PuzzleStatsDto> {
@@ -105,7 +108,8 @@ export class PuzzleService {
 
   recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
-      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog
+      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog,
+      screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }
 

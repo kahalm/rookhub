@@ -88,51 +88,98 @@ interface EndlessHistoryResponse {
                 <p>No {{ archiveFilter === true ? 'archived' : 'active' }} sessions.</p>
               </div>
             } @else {
-              <table mat-table [dataSource]="sessions" class="history-table">
-                <ng-container matColumnDef="select">
-                  <th mat-header-cell *matHeaderCellDef>
-                    <mat-checkbox
-                      (change)="$event ? toggleAllRows() : null"
-                      [checked]="selection.hasValue() && isAllSelected()"
-                      [indeterminate]="selection.hasValue() && !isAllSelected()">
-                    </mat-checkbox>
-                  </th>
-                  <td mat-cell *matCellDef="let s">
-                    <mat-checkbox
-                      (click)="$event.stopPropagation()"
-                      (change)="$event ? selection.toggle(s) : null"
-                      [checked]="selection.isSelected(s)">
-                    </mat-checkbox>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>Date</th>
-                  <td mat-cell *matCellDef="let s">{{ formatDate(s.timestamp) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="maxRating">
-                  <th mat-header-cell *matHeaderCellDef>Max Rating</th>
-                  <td mat-cell *matCellDef="let s">{{ s.maxRating }}</td>
-                </ng-container>
-                <ng-container matColumnDef="solved">
-                  <th mat-header-cell *matHeaderCellDef>Solved</th>
-                  <td mat-cell *matCellDef="let s">{{ s.totalSolved }}</td>
-                </ng-container>
-                <ng-container matColumnDef="duration">
-                  <th mat-header-cell *matHeaderCellDef>Duration</th>
-                  <td mat-cell *matCellDef="let s">{{ formatDuration(s.durationSeconds) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="config">
-                  <th mat-header-cell *matHeaderCellDef>Config</th>
-                  <td mat-cell *matCellDef="let s">{{ formatConfig(s.configJson) }}</td>
-                </ng-container>
-                <ng-container matColumnDef="mistakes">
-                  <th mat-header-cell *matHeaderCellDef>Mistakes</th>
-                  <td mat-cell *matCellDef="let s">{{ formatMistakes(s.mistakeAtRatings) }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-                    [class.archived-row]="row.isArchived"></tr>
-              </table>
+              <!-- Desktop table -->
+              <div class="desktop-only">
+                <table mat-table [dataSource]="sessions" class="history-table">
+                  <ng-container matColumnDef="select">
+                    <th mat-header-cell *matHeaderCellDef>
+                      <mat-checkbox
+                        (change)="$event ? toggleAllRows() : null"
+                        [checked]="selection.hasValue() && isAllSelected()"
+                        [indeterminate]="selection.hasValue() && !isAllSelected()">
+                      </mat-checkbox>
+                    </th>
+                    <td mat-cell *matCellDef="let s">
+                      <mat-checkbox
+                        (click)="$event.stopPropagation()"
+                        (change)="$event ? selection.toggle(s) : null"
+                        [checked]="selection.isSelected(s)">
+                      </mat-checkbox>
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="date">
+                    <th mat-header-cell *matHeaderCellDef>Date</th>
+                    <td mat-cell *matCellDef="let s">{{ formatDate(s.timestamp) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="maxRating">
+                    <th mat-header-cell *matHeaderCellDef>Max Rating</th>
+                    <td mat-cell *matCellDef="let s">{{ s.maxRating }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="solved">
+                    <th mat-header-cell *matHeaderCellDef>Solved</th>
+                    <td mat-cell *matCellDef="let s">{{ s.totalSolved }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="duration">
+                    <th mat-header-cell *matHeaderCellDef>Duration</th>
+                    <td mat-cell *matCellDef="let s">{{ formatDuration(s.durationSeconds) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="config">
+                    <th mat-header-cell *matHeaderCellDef>Config</th>
+                    <td mat-cell *matCellDef="let s">{{ formatConfig(s.configJson) }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="mistakes">
+                    <th mat-header-cell *matHeaderCellDef>Mistakes</th>
+                    <td mat-cell *matCellDef="let s">{{ formatMistakes(s.mistakeAtRatings) }}</td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                      [class.archived-row]="row.isArchived"></tr>
+                </table>
+              </div>
+
+              <!-- Mobile cards -->
+              <div class="mobile-only">
+                @for (s of sessions; track s.id) {
+                  <div class="session-card" [class.archived-row]="s.isArchived">
+                    <div class="session-card-header">
+                      <mat-checkbox
+                        (click)="$event.stopPropagation()"
+                        (change)="$event ? selection.toggle(s) : null"
+                        [checked]="selection.isSelected(s)">
+                      </mat-checkbox>
+                      <span class="session-date">{{ formatDate(s.timestamp) }}</span>
+                      @if (s.isArchived) {
+                        <mat-icon class="archived-icon">archive</mat-icon>
+                      }
+                    </div>
+                    <div class="session-card-stats">
+                      <div class="session-stat">
+                        <span class="session-stat-value">{{ s.maxRating }}</span>
+                        <span class="session-stat-label">Max Rating</span>
+                      </div>
+                      <div class="session-stat">
+                        <span class="session-stat-value">{{ s.totalSolved }}</span>
+                        <span class="session-stat-label">Solved</span>
+                      </div>
+                      <div class="session-stat">
+                        <span class="session-stat-value">{{ formatDuration(s.durationSeconds) }}</span>
+                        <span class="session-stat-label">Duration</span>
+                      </div>
+                      <div class="session-stat">
+                        <span class="session-stat-value">{{ formatConfig(s.configJson) }}</span>
+                        <span class="session-stat-label">Config</span>
+                      </div>
+                    </div>
+                    @if (formatMistakes(s.mistakeAtRatings) !== '-') {
+                      <div class="session-mistakes">
+                        <mat-icon>heart_broken</mat-icon>
+                        <span>{{ formatMistakes(s.mistakeAtRatings) }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
               <mat-paginator
                 [length]="totalCount"
                 [pageSize]="pageSize"
@@ -164,9 +211,36 @@ interface EndlessHistoryResponse {
     .back-link { margin-top: 1rem; }
     th.mat-mdc-header-cell { font-weight: 600; }
     .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .bulk-actions { display: flex; align-items: center; gap: 0.5rem; }
+    .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .selection-count { font-size: 0.875rem; color: rgba(0,0,0,0.6); }
     .archived-row { opacity: 0.5; }
+
+    .mobile-only { display: none; }
+    .session-card {
+      padding: 0.75rem; border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .session-card-header {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+    }
+    .session-date { font-weight: 500; font-size: 0.9rem; }
+    .archived-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(0,0,0,0.4); }
+    .session-card-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; text-align: center;
+    }
+    .session-stat-value { font-weight: 600; font-size: 0.95rem; display: block; }
+    .session-stat-label { font-size: 0.7rem; color: rgba(0,0,0,0.5); }
+    .session-mistakes {
+      display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem;
+      font-size: 0.8rem; color: #f44336;
+    }
+    .session-mistakes mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    @media (max-width: 768px) {
+      .history-container { margin: 0.75rem auto; }
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+      .session-card-stats { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    }
   `]
 })
 export class EndlessHistoryComponent implements OnInit {
