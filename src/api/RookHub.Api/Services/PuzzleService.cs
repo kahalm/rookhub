@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -10,11 +11,13 @@ public class PuzzleService
 {
     private readonly AppDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<PuzzleService> _logger;
 
-    public PuzzleService(AppDbContext db, IMemoryCache cache)
+    public PuzzleService(AppDbContext db, IMemoryCache cache, ILogger<PuzzleService> logger)
     {
         _db = db;
         _cache = cache;
+        _logger = logger;
     }
 
     public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved)
@@ -95,6 +98,10 @@ public class PuzzleService
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation(
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds);
+
         return new PuzzleAttemptDto
         {
             Id = attempt.Id,
@@ -125,6 +132,10 @@ public class PuzzleService
 
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s",
+            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds);
 
         return new PuzzleAttemptDto
         {

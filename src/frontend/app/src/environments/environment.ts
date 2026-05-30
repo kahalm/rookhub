@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.24.0',
+  version: '0.24.1',
   changelog: [
+    { version: '0.24.1', date: '2026-05-30', changes: [
+      'Observability: Puzzle-Attempts als strukturierte Serilog-Events nach Elasticsearch',
+      'Kibana: 2 neue Dashboard-Panels (Puzzles Solved 24h, Puzzles per User)',
+    ]},
     { version: '0.24.0', date: '2026-05-30', changes: [
       'Feature: Puzzle MoveLog — gespielte Zuege, erwartete Zuege und Denkzeit pro Zug werden getrackt',
       'Feature: Endless Mode sendet jetzt korrekte Puzzle-Dauer (timeSpentSeconds) statt 0',
