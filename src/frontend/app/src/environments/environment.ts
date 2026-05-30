@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.25.1',
+  version: '0.25.2',
   changelog: [
+    { version: '0.25.2', date: '2026-05-30', changes: [
+      'UI: Puzzle History im User-Menue (Profilbild oben rechts) verlinkt',
+    ]},
     { version: '0.25.1', date: '2026-05-30', changes: [
       'Feature: Endless Session Archivierung — Sessions koennen archiviert/unarchiviert werden',
       'Feature: Archivierte Sessions fliessen nicht mehr in Sync-Response (Fasttrack/Session-Count)',
