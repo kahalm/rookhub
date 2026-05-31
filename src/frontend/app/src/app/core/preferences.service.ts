@@ -10,6 +10,7 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
 const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
 const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
 const THEME_MODE_KEY = 'rookhub_theme_mode';
+const VISUALIZATION_KEY = 'rookhub_visualization';
 
 interface ProfilePreferences {
   boardTheme: string | null;
@@ -27,6 +28,8 @@ export class PreferencesService {
   puzzleDifficulty = 'normal';
   bookStockfishDepth = 16;
   themeMode: ThemeMode = 'fixed';
+  /** Visualisierungs-/Blindfold-Modus (nur lokal, geräteabhängig — kein Server-Sync). */
+  visualization = false;
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -55,6 +58,12 @@ export class PreferencesService {
         if (saved.stockfishDepth) this.bookStockfishDepth = this.clampDepth(saved.stockfishDepth);
       }
     } catch {}
+    try { this.visualization = localStorage.getItem(VISUALIZATION_KEY) === '1'; } catch {}
+  }
+
+  setVisualization(on: boolean): void {
+    this.visualization = on;
+    try { localStorage.setItem(VISUALIZATION_KEY, on ? '1' : '0'); } catch {}
   }
 
   /** Fetch preferences from server profile and overwrite localStorage. Called after login. */

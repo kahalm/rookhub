@@ -42,6 +42,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             [check]="isCheck"
             [boardTheme]="boardTheme"
             [pieceSet]="pieceSet"
+            [visualization]="visualizationMode && state !== 'SOLVED' && state !== 'FAILED'"
             (moveMade)="onMoveMade($event)"
           />
         </div>
@@ -154,6 +155,16 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             </mat-card-content>
           </mat-card>
 
+          @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
+            <mat-card class="viz-card">
+              <mat-card-content>
+                <div class="viz-title"><mat-icon>visibility_off</mat-icon> Visualisierung</div>
+                <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
+                <div class="viz-hint">Brett zeigt die Startstellung. Deine Klick-Züge werden nicht gezeigt; die Antwort steht oben in der Zugliste.</div>
+              </mat-card-content>
+            </mat-card>
+          }
+
           @if (puzzle) {
             <mat-card class="info-card">
               <mat-card-content>
@@ -196,6 +207,10 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
           <mat-card class="config-card" #settingsPanel>
             <mat-card-content>
               @if (showSettings) {
+              <label class="viz-toggle">
+                <input type="checkbox" [checked]="visualizationMode" (change)="toggleVisualization()">
+                <span>Visualisierung (Blindfold) — Brett bleibt auf Startstellung, Züge als Text</span>
+              </label>
               <mat-form-field appearance="outline" class="depth-field">
                 <mat-label>Stockfish Depth</mat-label>
                 <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
@@ -286,6 +301,14 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .full-game-btn { margin-top: 0.5rem; align-self: flex-start; }
     .review-nav { display: flex; align-items: center; gap: 0.5rem; }
     .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
+    .viz-toggle { display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; margin-bottom: 0.75rem; font-size: 0.9em; }
+    .viz-toggle input { margin-top: 2px; }
+    .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .viz-card .viz-moves {
+      font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5;
+      background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word;
+    }
+    .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }
@@ -352,6 +375,13 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   reviewMode = false;
   reviewIndex = 0;
   solutionReview = false;
+
+  // Visualisierungs-/Blindfold-Modus: Brett auf Startstellung eingefroren, Züge als SAN-Text.
+  visualizationMode = false;
+  private frozenFen = '';
+  vizMoves: string[] = [];
+  private vizStartWhite = true;
+  private vizStartNum = 1;
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -428,8 +458,9 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
       // FEN ist die Trainingsstellung selbst → kein Setup, sofort lösen.
       this.moveIndex = 0;
       this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
-      this.updateBoard();
+      this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
+      this.updateBoard();
       this.startTimer();
       return;
     }
@@ -446,6 +477,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
       if (this.state !== 'SETUP') return;
       this.playMove(this.solutionMoves[this.startPly]);
       this.moveIndex = this.startPly + 1;
+      this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
       this.updateBoard();
       this.startTimer();
@@ -708,29 +740,40 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     const from = uci.substring(0, 2) as Square;
     const to = uci.substring(2, 4) as Square;
     const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
-    this.chess.move({ from, to, promotion });
+    const mv = this.chess.move({ from, to, promotion });
     this.lastMove = [from as Key, to as Key];
+    if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
   }
 
   private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
+    let mv;
     if (promotion) {
-      try { this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
+      try { mv = this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
     } else {
       const moves = this.chess.moves({ verbose: true });
       const match = moves.find(m => m.from === from && m.to === to);
       if (match) {
-        this.chess.move(match);
+        mv = this.chess.move(match);
       } else {
-        try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+        try { mv = this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
       }
     }
     this.lastMove = [orig, dest];
+    if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
     return true;
   }
 
   private updateBoard(): void {
+    // Visualisierungs-Modus: Brett auf der eingefrorenen Startstellung halten (außer am Ende, da aufdecken).
+    if (this.visualizationMode && this.state !== 'SOLVED' && this.state !== 'FAILED') {
+      this.boardFen = this.frozenFen || this.chess.fen();
+      this.turnColor = this.orientation;
+      this.isCheck = false;
+      this.dests = new Map();
+      return;
+    }
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
@@ -769,6 +812,42 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.pieceSet = this.prefs.pieceSet;
     this.themeMode = this.prefs.themeMode;
     this.stockfishDepth = this.prefs.bookStockfishDepth;
+    this.visualizationMode = this.prefs.visualization;
+  }
+
+  toggleVisualization(): void {
+    this.visualizationMode = !this.visualizationMode;
+    this.prefs.setVisualization(this.visualizationMode);
+    if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
+  }
+
+  /** Solving beginnt: Brett auf aktuelle Stellung einfrieren, SAN-Zugliste zurücksetzen. */
+  private beginSolving(): void {
+    this.frozenFen = this.chess.fen();
+    const f = this.frozenFen.split(' ');
+    this.vizStartWhite = f[1] !== 'b';
+    this.vizStartNum = parseInt(f[5], 10) || 1;
+    this.vizMoves = [];
+  }
+
+  private get isSolving(): boolean {
+    return this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING' || this.state === 'PLAYING';
+  }
+
+  /** SAN-Zugliste mit korrekten Zugnummern formatiert (ab der eingefrorenen Stellung). */
+  get vizMoveText(): string {
+    if (!this.vizMoves.length) return '';
+    const parts: string[] = [];
+    let num = this.vizStartNum;
+    let white = this.vizStartWhite;
+    let first = true;
+    for (const san of this.vizMoves) {
+      if (white) { parts.push(`${num}.`, san); }
+      else { if (first) parts.push(`${num}...`); parts.push(san); num++; }
+      white = !white;
+      first = false;
+    }
+    return parts.join(' ');
   }
 
   saveConfig(): void {

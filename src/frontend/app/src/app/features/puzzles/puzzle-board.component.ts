@@ -81,6 +81,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() premovable = false;
   @Input() boardTheme = 'brown';
   @Input() pieceSet = 'cburnett';
+  /** Visualisierungs-/Blindfold-Modus: Brett bleibt eingefroren, Klicks (Von→Nach) werden
+   *  als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
+  @Input() visualization = false;
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -90,6 +93,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private resizeObserver?: ResizeObserver;
   private initAttempts = 0;
   private pendingPremove?: { orig: Key; dest: Key };
+  private vizFrom?: Key;
 
   // Promotion overlay state
   showPromotionOverlay = false;
@@ -107,7 +111,43 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
     this.initBoard();
+    // Eigener Capture-Listener für den Visualisierungs-Modus: erfasst jeden Klick als
+    // Brett-Koordinate (unabhängig davon, welche Figur auf dem eingefrorenen Brett steht).
+    this.boardEl.nativeElement.addEventListener('pointerdown', this.onVizPointer, true);
   }
+
+  private onVizPointer = (ev: PointerEvent): void => {
+    if (!this.visualization || !this.ground) return;
+    ev.preventDefault();
+    ev.stopPropagation();              // verhindert, dass Chessground den Klick (Figur wählen) verarbeitet
+    const rect = this.boardEl.nativeElement.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    let col = Math.floor(x / (rect.width / 8));   // 0..7 von links
+    let row = Math.floor(y / (rect.height / 8));  // 0..7 von oben
+    col = Math.max(0, Math.min(7, col));
+    row = Math.max(0, Math.min(7, row));
+    const fileIdx = this.orientation === 'white' ? col : 7 - col;
+    const rankIdx = this.orientation === 'white' ? 7 - row : row;
+    const key = (String.fromCharCode(97 + fileIdx) + (rankIdx + 1)) as Key;
+
+    if (!this.vizFrom) {
+      this.vizFrom = key;
+      this.ground.setShapes([{ orig: key, brush: 'green' }]);
+      return;
+    }
+    if (key === this.vizFrom) {                    // gleiches Feld → Auswahl aufheben
+      this.vizFrom = undefined;
+      this.ground.setShapes([]);
+      return;
+    }
+    const orig = this.vizFrom;
+    this.vizFrom = undefined;
+    this.ground.setShapes([]);
+    this.moveMade.emit({ orig, dest: key });
+  };
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
@@ -312,6 +352,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy(): void {
+    this.boardEl?.nativeElement?.removeEventListener('pointerdown', this.onVizPointer, true);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }
