@@ -89,11 +89,13 @@ public class PuzzleService
         var user = await _db.AppUsers.FindAsync(userId)
             ?? throw new KeyNotFoundException("User not found.");
 
-        var attemptCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
+        var vizLevel = Math.Clamp(dto.VisualizationLevel, 0, 4);
+        var currentElo = GetEloForLevel(user, vizLevel);
+        var attemptCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == vizLevel);
         var kFactor = attemptCount < 30 ? 40 : 20;
-        var (newRating, change) = CalculateElo(user.PuzzleElo, puzzle.Rating, dto.Solved, kFactor);
+        var (newRating, change) = CalculateElo(currentElo, puzzle.Rating, dto.Solved, kFactor);
 
-        user.PuzzleElo = newRating;
+        SetEloForLevel(user, vizLevel, newRating);
 
         var attempt = new PuzzleAttempt
         {
@@ -103,15 +105,16 @@ public class PuzzleService
             TimeSpentSeconds = dto.TimeSpentSeconds,
             MoveLog = dto.MoveLog,
             EloAfter = newRating,
-            EloChange = change
+            EloChange = change,
+            VisualizationLevel = vizLevel
         };
 
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
-            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} Elo={EloAfter} ({EloChange:+#;-#;0})",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, newRating, change);
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0})",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change);
 
         return new PuzzleAttemptDto
         {
@@ -124,7 +127,8 @@ public class PuzzleService
             AttemptedAt = attempt.AttemptedAt,
             MoveLog = attempt.MoveLog,
             EloAfter = attempt.EloAfter,
-            EloChange = attempt.EloChange
+            EloChange = attempt.EloChange,
+            VisualizationLevel = attempt.VisualizationLevel
         };
     }
 
@@ -133,6 +137,7 @@ public class PuzzleService
         var puzzle = await _db.Puzzles.FindAsync(puzzleId)
             ?? throw new KeyNotFoundException("Puzzle not found.");
 
+        var vizLevel = Math.Clamp(dto.VisualizationLevel, 0, 4);
         var attempt = new PuzzleAttempt
         {
             UserId = null,
@@ -140,7 +145,8 @@ public class PuzzleService
             PuzzleId = puzzleId,
             Solved = dto.Solved,
             TimeSpentSeconds = dto.TimeSpentSeconds,
-            MoveLog = dto.MoveLog
+            MoveLog = dto.MoveLog,
+            VisualizationLevel = vizLevel
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -161,7 +167,8 @@ public class PuzzleService
             AttemptedAt = attempt.AttemptedAt,
             MoveLog = attempt.MoveLog,
             EloAfter = null,
-            EloChange = null
+            EloChange = null,
+            VisualizationLevel = attempt.VisualizationLevel
         };
     }
 
@@ -222,13 +229,17 @@ public class PuzzleService
         return attempts.Count;
     }
 
-    public async Task<PuzzleStatsDto> GetStatsAsync(int userId)
+    public async Task<PuzzleStatsDto> GetStatsAsync(int userId, int vizLevel = 0)
     {
         var user = await _db.AppUsers.FindAsync(userId);
 
         var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
         if (totalAttempts == 0)
-            return new PuzzleStatsDto { PuzzleElo = user?.PuzzleElo ?? 1500 };
+            return new PuzzleStatsDto
+            {
+                PuzzleElo = user != null ? GetEloForLevel(user, vizLevel) : GetDefaultElo(vizLevel),
+                PuzzleEloPerLevel = user != null ? BuildEloDict(user) : null
+            };
 
         var solved = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.Solved);
         var accuracy = (double)solved / totalAttempts * 100;
@@ -263,7 +274,8 @@ public class PuzzleService
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
-            PuzzleElo = user?.PuzzleElo ?? 1500
+            PuzzleElo = user != null ? GetEloForLevel(user, vizLevel) : GetDefaultElo(vizLevel),
+            PuzzleEloPerLevel = user != null ? BuildEloDict(user) : null
         };
     }
 
@@ -290,7 +302,8 @@ public class PuzzleService
                 AttemptedAt = a.AttemptedAt,
                 MoveLog = a.MoveLog,
                 EloAfter = a.EloAfter,
-                EloChange = a.EloChange
+                EloChange = a.EloChange,
+                VisualizationLevel = a.VisualizationLevel
             })
             .ToListAsync();
     }
@@ -372,6 +385,39 @@ public class PuzzleService
 
     private static string SanitizeLikeInput(string input)
         => input.Replace("%", "\\%").Replace("_", "\\_");
+
+    public static int GetDefaultElo(int level) => Math.Max(100, 1500 - 100 * level);
+
+    internal static int GetEloForLevel(AppUser user, int level) => level switch
+    {
+        0 => user.PuzzleElo,
+        1 => user.PuzzleEloViz1 ?? GetDefaultElo(1),
+        2 => user.PuzzleEloViz2 ?? GetDefaultElo(2),
+        3 => user.PuzzleEloViz3 ?? GetDefaultElo(3),
+        4 => user.PuzzleEloViz4 ?? GetDefaultElo(4),
+        _ => user.PuzzleElo
+    };
+
+    internal static void SetEloForLevel(AppUser user, int level, int elo)
+    {
+        switch (level)
+        {
+            case 0: user.PuzzleElo = elo; break;
+            case 1: user.PuzzleEloViz1 = elo; break;
+            case 2: user.PuzzleEloViz2 = elo; break;
+            case 3: user.PuzzleEloViz3 = elo; break;
+            case 4: user.PuzzleEloViz4 = elo; break;
+        }
+    }
+
+    private static Dictionary<int, int> BuildEloDict(AppUser user) => new()
+    {
+        [0] = user.PuzzleElo,
+        [1] = user.PuzzleEloViz1 ?? GetDefaultElo(1),
+        [2] = user.PuzzleEloViz2 ?? GetDefaultElo(2),
+        [3] = user.PuzzleEloViz3 ?? GetDefaultElo(3),
+        [4] = user.PuzzleEloViz4 ?? GetDefaultElo(4),
+    };
 
     internal static (int newRating, int change) CalculateElo(int userRating, int puzzleRating, bool solved, int kFactor)
     {

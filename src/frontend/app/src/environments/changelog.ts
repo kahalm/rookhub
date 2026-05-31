@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.39.2';
+export const APP_VERSION = '0.40.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.0', date: '2026-05-31', changes: [
+    'Feature: Per-Visualisierungslevel Elo-Ratings — jede Stufe (0-4) hat eigenes Puzzle-Elo. Default: 1500/1400/1300/1200/1100. Level-Wechsel im Slider laedt Stats fuer das gewaehlte Level.',
+  ]},
   { version: '0.39.2', date: '2026-05-31', changes: [
     'UI: Countdown 3s statt 5s bei Level 2-4. Show-Button zeigt Figuren fuer 3 Sekunden (Klick statt Halten).',
   ]},

@@ -67,9 +67,9 @@ public class PuzzleController : BaseApiController
     }
 
     [HttpGet("stats")]
-    public async Task<ActionResult<PuzzleStatsDto>> GetStats()
+    public async Task<ActionResult<PuzzleStatsDto>> GetStats([FromQuery] int? vizLevel)
     {
-        return Ok(await _puzzleService.GetStatsAsync(GetUserId()));
+        return Ok(await _puzzleService.GetStatsAsync(GetUserId(), vizLevel ?? 0));
     }
 
     [HttpGet("history")]
@@ -91,7 +91,7 @@ public class PuzzleController : BaseApiController
         try
         {
             var result = await _puzzleService.RecordAnonymousAttemptAsync(dto.SessionId, id,
-                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog, ScreenWidth = dto.ScreenWidth, ScreenHeight = dto.ScreenHeight });
+                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog, ScreenWidth = dto.ScreenWidth, ScreenHeight = dto.ScreenHeight, VisualizationLevel = dto.VisualizationLevel });
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

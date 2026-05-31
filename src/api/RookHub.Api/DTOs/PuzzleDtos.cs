@@ -28,6 +28,9 @@ public class RecordPuzzleAttemptDto
 
     [Range(0, 10000)]
     public int? ScreenHeight { get; set; }
+
+    [Range(0, 4)]
+    public int VisualizationLevel { get; set; } = 0;
 }
 
 public class PuzzleStatsDto
@@ -38,6 +41,7 @@ public class PuzzleStatsDto
     public int CurrentStreak { get; set; }
     public int BestStreak { get; set; }
     public int PuzzleElo { get; set; } = 1500;
+    public Dictionary<int, int>? PuzzleEloPerLevel { get; set; }
 }
 
 public class AnonymousAttemptDto
@@ -58,6 +62,9 @@ public class AnonymousAttemptDto
 
     [Range(0, 10000)]
     public int? ScreenHeight { get; set; }
+
+    [Range(0, 4)]
+    public int VisualizationLevel { get; set; } = 0;
 }
 
 public class ClaimSessionDto
@@ -78,4 +85,5 @@ public class PuzzleAttemptDto
     public string? MoveLog { get; set; }
     public int? EloAfter { get; set; }
     public int? EloChange { get; set; }
+    public int VisualizationLevel { get; set; }
 }

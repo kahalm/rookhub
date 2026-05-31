@@ -553,4 +553,170 @@ public class PuzzleServiceTests : IDisposable
         Assert.NotNull(history[0].EloChange);
         Assert.True(history[0].EloChange > 0);
     }
+
+    // ── Per-Level Elo Tests ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task RecordAttempt_VizLevel0_UsesExistingPuzzleElo()
+    {
+        var userId = await CreateUserAsync("viz0_compat");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "viz0_c1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 0
+        });
+
+        Assert.True(result.EloAfter > 1500);
+        var user = await _db.AppUsers.FindAsync(userId);
+        Assert.Equal(result.EloAfter, user!.PuzzleElo);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VizLevel2_UsesViz2Elo()
+    {
+        var userId = await CreateUserAsync("viz2_user");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleEloViz2 = 1300;
+        await _db.SaveChangesAsync();
+
+        var puzzle = await CreatePuzzleAsync(rating: 1300, lichessId: "viz2_1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 2
+        });
+
+        Assert.True(result.EloAfter > 1300);
+        user = await _db.AppUsers.FindAsync(userId);
+        Assert.Equal(result.EloAfter, user!.PuzzleEloViz2);
+        // Level 0 should be unaffected
+        Assert.Equal(1500, user.PuzzleElo);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VizLevel2_FirstAttempt_UsesDefaultElo()
+    {
+        var userId = await CreateUserAsync("viz2_default");
+        var puzzle = await CreatePuzzleAsync(rating: 1300, lichessId: "viz2_d1");
+
+        // PuzzleEloViz2 is null → should use default 1300
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 2
+        });
+
+        // Equal rating, K=40, solved → change = +20
+        Assert.Equal(20, result.EloChange);
+        Assert.Equal(1320, result.EloAfter);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VizLevel1_ProvisionalKFactor_PerLevel()
+    {
+        var userId = await CreateUserAsync("viz1_kfactor");
+        var puzzle = await CreatePuzzleAsync(rating: 1400, lichessId: "viz1_k1");
+
+        // Create 30 attempts on Level 0 → should NOT affect Level 1 K-factor
+        for (int i = 0; i < 30; i++)
+        {
+            _db.PuzzleAttempts.Add(new PuzzleAttempt
+            {
+                UserId = userId, PuzzleId = puzzle.Id, Solved = true, TimeSpentSeconds = 5,
+                AttemptedAt = DateTime.UtcNow.AddMinutes(-30 + i), VisualizationLevel = 0
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        // Level 1 has 0 attempts → K=40 (provisional)
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 1
+        });
+
+        // Default Elo for L1 = 1400, puzzle = 1400 → equal rating → K=40 → change = 20
+        Assert.Equal(20, result.EloChange);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VizLevel0_DoesNotAffectOtherLevels()
+    {
+        var userId = await CreateUserAsync("viz_isolate");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleEloViz1 = 1400;
+        user.PuzzleEloViz2 = 1300;
+        await _db.SaveChangesAsync();
+
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "viz_iso1");
+
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 0
+        });
+
+        user = await _db.AppUsers.FindAsync(userId);
+        Assert.True(user!.PuzzleElo > 1500); // Level 0 changed
+        Assert.Equal(1400, user.PuzzleEloViz1); // Level 1 unchanged
+        Assert.Equal(1300, user.PuzzleEloViz2); // Level 2 unchanged
+    }
+
+    [Fact]
+    public async Task GetStats_ReturnsEloForRequestedLevel()
+    {
+        var userId = await CreateUserAsync("stats_level");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleEloViz3 = 1200;
+        await _db.SaveChangesAsync();
+
+        var stats = await _service.GetStatsAsync(userId, vizLevel: 3);
+
+        Assert.Equal(1200, stats.PuzzleElo);
+    }
+
+    [Fact]
+    public async Task GetStats_ReturnsEloPerLevelDictionary()
+    {
+        var userId = await CreateUserAsync("stats_dict");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleEloViz1 = 1450;
+        user.PuzzleEloViz3 = 1250;
+        await _db.SaveChangesAsync();
+
+        var stats = await _service.GetStatsAsync(userId);
+
+        Assert.NotNull(stats.PuzzleEloPerLevel);
+        Assert.Equal(1500, stats.PuzzleEloPerLevel![0]); // PuzzleElo default
+        Assert.Equal(1450, stats.PuzzleEloPerLevel[1]);  // explicit
+        Assert.Equal(1300, stats.PuzzleEloPerLevel[2]);  // default for L2
+        Assert.Equal(1250, stats.PuzzleEloPerLevel[3]);  // explicit
+        Assert.Equal(1100, stats.PuzzleEloPerLevel[4]);  // default for L4
+    }
+
+    [Fact]
+    public async Task RecordAttempt_StoresVisualizationLevel()
+    {
+        var userId = await CreateUserAsync("viz_store");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "viz_st1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 3
+        });
+
+        Assert.Equal(3, result.VisualizationLevel);
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.Equal(3, attempt.VisualizationLevel);
+    }
+
+    [Theory]
+    [InlineData(0, 1500)]
+    [InlineData(1, 1400)]
+    [InlineData(2, 1300)]
+    [InlineData(3, 1200)]
+    [InlineData(4, 1100)]
+    [InlineData(14, 100)]  // clamped to min 100
+    public void GetDefaultElo_ReturnsCorrectValues(int level, int expected)
+    {
+        Assert.Equal(expected, PuzzleService.GetDefaultElo(level));
+    }
 }

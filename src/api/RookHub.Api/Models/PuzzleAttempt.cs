@@ -20,4 +20,6 @@ public class PuzzleAttempt
 
     public int? EloAfter { get; set; }
     public int? EloChange { get; set; }
+
+    public int VisualizationLevel { get; set; } = 0;
 }

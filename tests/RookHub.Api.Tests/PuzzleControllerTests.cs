@@ -205,7 +205,7 @@ public class PuzzleControllerTests : IDisposable
         var userId = await CreateUserAsync();
         SetUser(userId);
 
-        var result = await _controller.GetStats();
+        var result = await _controller.GetStats(null);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var stats = okResult.Value as PuzzleStatsDto;

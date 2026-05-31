@@ -601,7 +601,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     }
 
     const stats$ = this.isLoggedIn
-      ? this.puzzleService.getStats()
+      ? this.puzzleService.getStats(this.visualizationMode)
       : this.puzzleService.getAnonymousStats();
 
     if (this.routePuzzleId) {
@@ -814,12 +814,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.attemptRecorded = true;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(res => {
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe(res => {
         if (res.eloChange != null) this.lastEloChange = res.eloChange;
-        this.puzzleService.getStats().subscribe(s => this.stats = s);
+        this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
       });
     } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(() => {
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe(() => {
         this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
       });
     }
@@ -868,6 +868,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
+    if (this.isLoggedIn) {
+      this.puzzleService.getStats(level).subscribe(s => this.stats = s);
+    }
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
   }
 

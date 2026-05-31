@@ -135,6 +135,7 @@ public class AppDbContext : DbContext
 
             e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
             e.HasIndex(a => new { a.UserId, a.PuzzleId });
+            e.HasIndex(a => new { a.UserId, a.VisualizationLevel });
             e.HasIndex(a => a.AnonymousSessionId);
             e.HasIndex(a => a.AttemptedAt).IsDescending();
         });

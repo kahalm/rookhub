@@ -21,6 +21,11 @@ public class AppUser
 
     public int PuzzleElo { get; set; } = 1500;
 
+    public int? PuzzleEloViz1 { get; set; }  // Level 1 (Default: 1400)
+    public int? PuzzleEloViz2 { get; set; }  // Level 2 (Default: 1300)
+    public int? PuzzleEloViz3 { get; set; }  // Level 3 (Default: 1200)
+    public int? PuzzleEloViz4 { get; set; }  // Level 4 (Default: 1100)
+
     public UserProfile? Profile { get; set; }
     public ICollection<Repertoire> Repertoires { get; set; } = new List<Repertoire>();
     public ICollection<TournamentSubscription> TournamentSubscriptions { get; set; } = new List<TournamentSubscription>();

@@ -24,6 +24,7 @@ export interface PuzzleStatsDto {
   currentStreak: number;
   bestStreak: number;
   puzzleElo: number;
+  puzzleEloPerLevel?: Record<number, number>;
 }
 
 export interface PuzzleAttemptDto {
@@ -36,6 +37,7 @@ export interface PuzzleAttemptDto {
   attemptedAt: string;
   eloAfter?: number;
   eloChange?: number;
+  visualizationLevel?: number;
 }
 
 export interface BookPuzzleDto {
@@ -84,15 +86,17 @@ export class PuzzleService {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }
 
-  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string): Observable<PuzzleAttemptDto> {
+  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, {
-      solved, timeSpentSeconds, moveLog,
+      solved, timeSpentSeconds, moveLog, visualizationLevel,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }
 
-  getStats(): Observable<PuzzleStatsDto> {
-    return this.http.get<PuzzleStatsDto>('/api/puzzles/stats');
+  getStats(vizLevel?: number): Observable<PuzzleStatsDto> {
+    let params = new HttpParams();
+    if (vizLevel != null) params = params.set('vizLevel', vizLevel);
+    return this.http.get<PuzzleStatsDto>('/api/puzzles/stats', { params });
   }
 
   getHistory(page = 1, pageSize = 20): Observable<PuzzleAttemptDto[]> {
@@ -111,9 +115,9 @@ export class PuzzleService {
     return id;
   }
 
-  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string): Observable<PuzzleAttemptDto> {
+  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
-      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog,
+      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }

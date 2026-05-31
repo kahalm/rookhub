@@ -1642,9 +1642,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const timeSpent = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     if (this.authService.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, timeSpent, log).subscribe();
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, timeSpent, log, this.visualizationMode).subscribe();
     } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, timeSpent, log).subscribe();
+      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, timeSpent, log, this.visualizationMode).subscribe();
     }
   }
 
