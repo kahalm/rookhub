@@ -56,7 +56,7 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
           <mat-card-header>
             <mat-icon mat-card-avatar>extension</mat-icon>
             <mat-card-title>Puzzles</mat-card-title>
-            <mat-card-subtitle>{{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
+            <mat-card-subtitle>Elo {{ puzzleElo }} | {{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
             <button mat-button routerLink="/puzzles">Solve Puzzles</button>
@@ -98,6 +98,7 @@ export class DashboardComponent implements OnInit {
   friendCount = 0;
   puzzleSolved = 0;
   puzzleAccuracy = 0;
+  puzzleElo = 1500;
   subscriptions: Subscription[] = [];
 
   constructor(public auth: AuthService, private http: HttpClient) {}
@@ -108,7 +109,7 @@ export class DashboardComponent implements OnInit {
       subscriptions: this.http.get<Subscription[]>('/api/subscriptions').pipe(catchError(() => of([]))),
       friends: this.http.get<Friend[]>('/api/friends').pipe(catchError(() => of([]))),
       puzzleStats: this.http.get<PuzzleStatsDto>('/api/puzzles/stats').pipe(
-        catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0 }))
+        catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0, puzzleElo: 1500 }))
       )
     }).pipe(
       takeUntilDestroyed(this.destroyRef)
@@ -119,6 +120,7 @@ export class DashboardComponent implements OnInit {
       this.friendCount = friends.length;
       this.puzzleSolved = puzzleStats.solved || 0;
       this.puzzleAccuracy = puzzleStats.accuracy || 0;
+      this.puzzleElo = puzzleStats.puzzleElo || 1500;
     });
   }
 }

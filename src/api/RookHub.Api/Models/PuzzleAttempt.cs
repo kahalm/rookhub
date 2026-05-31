@@ -17,4 +17,7 @@ public class PuzzleAttempt
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 
     public string? MoveLog { get; set; }
+
+    public int? EloAfter { get; set; }
+    public int? EloChange { get; set; }
 }

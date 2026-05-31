@@ -86,21 +86,32 @@ public class PuzzleService
         var puzzle = await _db.Puzzles.FindAsync(puzzleId)
             ?? throw new KeyNotFoundException("Puzzle not found.");
 
+        var user = await _db.AppUsers.FindAsync(userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        var attemptCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
+        var kFactor = attemptCount < 30 ? 40 : 20;
+        var (newRating, change) = CalculateElo(user.PuzzleElo, puzzle.Rating, dto.Solved, kFactor);
+
+        user.PuzzleElo = newRating;
+
         var attempt = new PuzzleAttempt
         {
             UserId = userId,
             PuzzleId = puzzleId,
             Solved = dto.Solved,
             TimeSpentSeconds = dto.TimeSpentSeconds,
-            MoveLog = dto.MoveLog
+            MoveLog = dto.MoveLog,
+            EloAfter = newRating,
+            EloChange = change
         };
 
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
 
         _logger.LogInformation(
-            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} Elo={EloAfter} ({EloChange:+#;-#;0})",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, newRating, change);
 
         return new PuzzleAttemptDto
         {
@@ -111,7 +122,9 @@ public class PuzzleService
             Solved = attempt.Solved,
             TimeSpentSeconds = attempt.TimeSpentSeconds,
             AttemptedAt = attempt.AttemptedAt,
-            MoveLog = attempt.MoveLog
+            MoveLog = attempt.MoveLog,
+            EloAfter = attempt.EloAfter,
+            EloChange = attempt.EloChange
         };
     }
 
@@ -146,7 +159,9 @@ public class PuzzleService
             Solved = attempt.Solved,
             TimeSpentSeconds = attempt.TimeSpentSeconds,
             AttemptedAt = attempt.AttemptedAt,
-            MoveLog = attempt.MoveLog
+            MoveLog = attempt.MoveLog,
+            EloAfter = null,
+            EloChange = null
         };
     }
 
@@ -209,9 +224,11 @@ public class PuzzleService
 
     public async Task<PuzzleStatsDto> GetStatsAsync(int userId)
     {
+        var user = await _db.AppUsers.FindAsync(userId);
+
         var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
         if (totalAttempts == 0)
-            return new PuzzleStatsDto();
+            return new PuzzleStatsDto { PuzzleElo = user?.PuzzleElo ?? 1500 };
 
         var solved = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.Solved);
         var accuracy = (double)solved / totalAttempts * 100;
@@ -245,7 +262,8 @@ public class PuzzleService
             Solved = solved,
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
-            BestStreak = bestStreak
+            BestStreak = bestStreak,
+            PuzzleElo = user?.PuzzleElo ?? 1500
         };
     }
 
@@ -270,7 +288,9 @@ public class PuzzleService
                 Solved = a.Solved,
                 TimeSpentSeconds = a.TimeSpentSeconds,
                 AttemptedAt = a.AttemptedAt,
-                MoveLog = a.MoveLog
+                MoveLog = a.MoveLog,
+                EloAfter = a.EloAfter,
+                EloChange = a.EloChange
             })
             .ToListAsync();
     }
@@ -352,6 +372,15 @@ public class PuzzleService
 
     private static string SanitizeLikeInput(string input)
         => input.Replace("%", "\\%").Replace("_", "\\_");
+
+    internal static (int newRating, int change) CalculateElo(int userRating, int puzzleRating, bool solved, int kFactor)
+    {
+        double expected = 1.0 / (1.0 + Math.Pow(10.0, (puzzleRating - userRating) / 400.0));
+        double actual = solved ? 1.0 : 0.0;
+        int change = (int)Math.Round(kFactor * (actual - expected));
+        int newRating = Math.Max(100, userRating + change);
+        return (newRating, newRating - userRating);
+    }
 
     private static PuzzleDto MapToDto(Puzzle p) => new()
     {

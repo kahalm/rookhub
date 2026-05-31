@@ -19,6 +19,8 @@ public class AppUser
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public int PuzzleElo { get; set; } = 1500;
+
     public UserProfile? Profile { get; set; }
     public ICollection<Repertoire> Repertoires { get; set; } = new List<Repertoire>();
     public ICollection<TournamentSubscription> TournamentSubscriptions { get; set; } = new List<TournamentSubscription>();

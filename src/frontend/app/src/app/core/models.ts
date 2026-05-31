@@ -137,6 +137,7 @@ export interface PuzzleStatsDto {
   accuracy: number;
   currentStreak: number;
   bestStreak: number;
+  puzzleElo: number;
 }
 
 // ── Tournament Favorites ────────────────────────────────────────────────

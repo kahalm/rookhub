@@ -182,6 +182,9 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
                     } @else {
                       <p class="status-text">Correct!</p>
                     }
+                    @if (lastEloChange != null) {
+                      <span class="elo-change elo-up">+{{ lastEloChange }}</span>
+                    }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     <div class="solved-actions">
                       <button mat-raised-button color="primary" (click)="loadNext()">
@@ -197,6 +200,9 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
                   <div class="status-center failed">
                     <mat-icon class="result-icon">cancel</mat-icon>
                     <p class="status-text">Incorrect</p>
+                    @if (lastEloChange != null) {
+                      <span class="elo-change elo-down">{{ lastEloChange }}</span>
+                    }
                     <div class="fail-actions">
                       <button mat-button (click)="retry()">Retry</button>
                       <button mat-button (click)="showSolution()">Show Solution</button>
@@ -235,6 +241,10 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
               </mat-card-header>
               <mat-card-content>
                 <div class="stats-grid">
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.puzzleElo }}</span>
+                    <span class="stat-label">Elo</span>
+                  </div>
                   <div class="stat">
                     <span class="stat-value">{{ stats.solved }}/{{ stats.totalAttempts }}</span>
                     <span class="stat-label">Solved</span>
@@ -339,6 +349,9 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
     .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
     .eval-arrow { color: rgba(0,0,0,0.4); }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .elo-change { font-size: 1.2em; font-weight: bold; }
+    .elo-up { color: #4caf50; }
+    .elo-down { color: #f44336; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-btn { position: absolute; top: -8px; right: -8px; }
@@ -347,7 +360,7 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
       font-size: 0.85em; white-space: nowrap;
     }
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; }
+    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
     .filter-row { display: flex; gap: 0.5rem; }
@@ -408,6 +421,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private nextPuzzle: PuzzleDto | null = null;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   private aborted = false;
+  lastEloChange: number | null = null;
   onSolutionPath = true;
   alternativeSolve = false;
   mouseslipUsed = false;
@@ -487,6 +501,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopCountdown();
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
+    this.lastEloChange = null;
     this.showEval = false;
     this.initialEval = '';
     this.currentEval = '';
@@ -820,7 +835,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.attemptRecorded = true;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(() => {
+      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log).subscribe(res => {
+        if (res.eloChange != null) this.lastEloChange = res.eloChange;
         this.puzzleService.getStats().subscribe(s => this.stats = s);
       });
     } else {

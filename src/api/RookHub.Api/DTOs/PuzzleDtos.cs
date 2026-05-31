@@ -37,6 +37,7 @@ public class PuzzleStatsDto
     public double Accuracy { get; set; }
     public int CurrentStreak { get; set; }
     public int BestStreak { get; set; }
+    public int PuzzleElo { get; set; } = 1500;
 }
 
 public class AnonymousAttemptDto
@@ -75,4 +76,6 @@ public class PuzzleAttemptDto
     public int TimeSpentSeconds { get; set; }
     public DateTime AttemptedAt { get; set; }
     public string? MoveLog { get; set; }
+    public int? EloAfter { get; set; }
+    public int? EloChange { get; set; }
 }

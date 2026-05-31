@@ -23,6 +23,7 @@ export interface PuzzleStatsDto {
   accuracy: number;
   currentStreak: number;
   bestStreak: number;
+  puzzleElo: number;
 }
 
 export interface PuzzleAttemptDto {
@@ -33,6 +34,8 @@ export interface PuzzleAttemptDto {
   solved: boolean;
   timeSpentSeconds: number;
   attemptedAt: string;
+  eloAfter?: number;
+  eloChange?: number;
 }
 
 export interface BookPuzzleDto {

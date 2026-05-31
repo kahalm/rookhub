@@ -402,4 +402,155 @@ public class PuzzleServiceTests : IDisposable
         Assert.Single(history);
         Assert.Equal(moveLog, history[0].MoveLog);
     }
+
+    // ── Elo Rating Tests ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RecordAttempt_SolvedPuzzle_IncreasesElo()
+    {
+        var userId = await CreateUserAsync("elo_win");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_w1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.NotNull(result.EloAfter);
+        Assert.NotNull(result.EloChange);
+        Assert.True(result.EloChange > 0);
+        Assert.True(result.EloAfter > 1500);
+        var user = await _db.AppUsers.FindAsync(userId);
+        Assert.Equal(result.EloAfter, user!.PuzzleElo);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_FailedPuzzle_DecreasesElo()
+    {
+        var userId = await CreateUserAsync("elo_lose");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_l1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = false, TimeSpentSeconds = 10 });
+
+        Assert.NotNull(result.EloChange);
+        Assert.True(result.EloChange < 0);
+        Assert.True(result.EloAfter < 1500);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_ProvisionalKFactor_LargerSwings()
+    {
+        var userId = await CreateUserAsync("elo_prov");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_p1");
+
+        // K=40, equal rating → expected ~0.5 → change ~20
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.Equal(20, result.EloChange);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_EstablishedKFactor_SmallerSwings()
+    {
+        var userId = await CreateUserAsync("elo_est");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_e1");
+
+        // Create 30 prior attempts to switch to K=20
+        for (int i = 0; i < 30; i++)
+        {
+            _db.PuzzleAttempts.Add(new PuzzleAttempt
+            {
+                UserId = userId, PuzzleId = puzzle.Id, Solved = true, TimeSpentSeconds = 5,
+                AttemptedAt = DateTime.UtcNow.AddMinutes(-30 + i)
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        // Reset user Elo to 1500 for clean test
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleElo = 1500;
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        // K=20, equal rating → change ~10
+        Assert.Equal(10, result.EloChange);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VeryHighPuzzle_SmallLoss()
+    {
+        var userId = await CreateUserAsync("elo_high");
+        var puzzle = await CreatePuzzleAsync(rating: 2800, lichessId: "elo_h1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = false, TimeSpentSeconds = 10 });
+
+        // Failing a 2800 puzzle at 1500 Elo should cost almost nothing
+        Assert.True(result.EloChange >= -5);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_EloFloorAt100()
+    {
+        var userId = await CreateUserAsync("elo_floor");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleElo = 100;
+        await _db.SaveChangesAsync();
+
+        var puzzle = await CreatePuzzleAsync(rating: 100, lichessId: "elo_f1");
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = false, TimeSpentSeconds = 10 });
+
+        Assert.True(result.EloAfter >= 100);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_MultipleAttempts_EloProgresses()
+    {
+        var userId = await CreateUserAsync("elo_multi");
+
+        for (int i = 0; i < 5; i++)
+        {
+            var p = await CreatePuzzleAsync(rating: 1500, lichessId: $"elo_m{i}");
+            await _service.RecordAttemptAsync(userId, p.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+        }
+
+        var user = await _db.AppUsers.FindAsync(userId);
+        Assert.True(user!.PuzzleElo > 1500);
+    }
+
+    [Fact]
+    public async Task GetStats_IncludesPuzzleElo()
+    {
+        var userId = await CreateUserAsync("elo_stats");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_s1");
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        var stats = await _service.GetStatsAsync(userId);
+
+        Assert.True(stats.PuzzleElo > 1500);
+    }
+
+    [Fact]
+    public async Task RecordAnonymousAttempt_NoEloCalculation()
+    {
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_anon1");
+
+        var result = await _service.RecordAnonymousAttemptAsync("anon-session-123", puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.Null(result.EloAfter);
+        Assert.Null(result.EloChange);
+    }
+
+    [Fact]
+    public async Task GetHistory_IncludesEloFields()
+    {
+        var userId = await CreateUserAsync("elo_hist");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_hist1");
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        var history = await _service.GetHistoryAsync(userId, 1, 10);
+
+        Assert.Single(history);
+        Assert.NotNull(history[0].EloAfter);
+        Assert.NotNull(history[0].EloChange);
+        Assert.True(history[0].EloChange > 0);
+    }
 }

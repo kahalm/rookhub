@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.26.2',
+  version: '0.27.0',
   changelog: [
+    { version: '0.27.0', date: '2026-05-31', changes: [
+      'Feature: Puzzle Elo Rating System — dynamische Elo-Zahl basierend auf Puzzle-Schwierigkeit',
+      'Feature: K-Faktor 40 fuer erste 30 Versuche (provisorisch), danach K=20',
+      'Feature: Elo-Aenderung (+N gruen / -N rot) nach jedem Puzzle angezeigt',
+      'Feature: Elo in Stats-Grid und Dashboard-Card sichtbar',
+      'API: PuzzleElo auf AppUser, EloAfter/EloChange auf PuzzleAttempt',
+      'Tests: 10 neue Tests fuer Elo-Berechnung, K-Faktor, Floor, Stats, History',
+    ]},
     { version: '0.26.2', date: '2026-05-31', changes: [
       'Fix: Swagger-UI immer aktiv (nicht mehr nur in Development) — die API ist nur im internen Netz erreichbar.',
     ]},
