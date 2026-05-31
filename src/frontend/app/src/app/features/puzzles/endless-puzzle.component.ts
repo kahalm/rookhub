@@ -182,11 +182,11 @@ const FASTTRACK_SESSION_COUNT = 10;
                   }
                 </div>
 
-                <button mat-stroked-button class="settings-toggle" (click)="showSettings = !showSettings">
-                  <mat-icon>settings</mat-icon>
-                  Einstellungen
-                  <mat-icon class="settings-caret">{{ showSettings ? 'expand_less' : 'expand_more' }}</mat-icon>
-                </button>
+                <div class="settings-bar">
+                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" title="Einstellungen">
+                    <mat-icon>settings</mat-icon>
+                  </button>
+                </div>
                 @if (showSettings) {
                 <div class="theme-section">
                   <div class="theme-label">Board Theme</div>
@@ -741,8 +741,8 @@ const FASTTRACK_SESSION_COUNT = 10;
     .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
-    .settings-toggle { width: 100%; justify-content: flex-start; gap: 0.4rem; }
-    .settings-caret { margin-left: auto; }
+    .settings-bar { display: flex; justify-content: flex-end; }
+    .settings-gear.active { color: #1976d2; }
     .tp-light, .tp-dark { flex: 1; }
     .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
     .config-lives { justify-content: center; margin: 1rem 0; }

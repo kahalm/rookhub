@@ -61,6 +61,11 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
         </div>
 
         <div class="info-section">
+          <div class="settings-bar">
+            <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" title="Einstellungen">
+              <mat-icon>settings</mat-icon>
+            </button>
+          </div>
           <mat-card class="status-card">
             <mat-card-content>
               @switch (state) {
@@ -274,11 +279,6 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
             </mat-card>
           }
 
-          <button mat-stroked-button class="settings-toggle" (click)="showSettings = !showSettings">
-            <mat-icon>settings</mat-icon>
-            Einstellungen
-            <mat-icon class="settings-caret">{{ showSettings ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
           @if (showSettings) {
           <mat-card class="filter-card">
             <mat-card-header>
@@ -406,8 +406,8 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
     .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
-    .settings-toggle { width: 100%; justify-content: flex-start; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .settings-caret { margin-left: auto; }
+    .settings-bar { display: flex; justify-content: flex-end; margin-bottom: -0.5rem; }
+    .settings-gear.active { color: #1976d2; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;

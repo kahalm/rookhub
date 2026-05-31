@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.31.1',
+  version: '0.31.2',
   changelog: [
+    { version: '0.31.2', date: '2026-05-31', changes: [
+      'UI: Einstellungen-Zahnrad als kompaktes Icon oben rechts im Info-Panel (statt Button-Zeile).',
+    ]},
     { version: '0.31.1', date: '2026-05-31', changes: [
       'Fix: Filter-Felder Abstand — Hint-Text ueberlappt nicht mehr mit dem naechsten Feld',
     ]},
