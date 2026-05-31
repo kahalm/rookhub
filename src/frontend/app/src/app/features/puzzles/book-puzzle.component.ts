@@ -128,39 +128,25 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                       <p class="status-text">Correct!</p>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    @if (solutionReview) {
-                      <div class="review-nav">
-                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                      </div>
-                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
-                    } @else {
-                      <div class="solved-actions">
-                        <button mat-button (click)="showSolution()">
-                          <mat-icon>visibility</mat-icon> Show Solution
-                        </button>
-                      </div>
-                    }
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
                   </div>
                 }
                 @case ('FAILED') {
                   <div class="status-center failed">
                     <mat-icon class="result-icon">cancel</mat-icon>
                     <p class="status-text">Incorrect</p>
-                    @if (solutionReview) {
-                      <div class="review-nav">
-                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                      </div>
-                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
-                    } @else {
-                      <div class="fail-actions">
-                        <button mat-button (click)="retry()">Retry</button>
-                        <button mat-button (click)="showSolution()">Show Solution</button>
-                      </div>
-                    }
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                    <div class="fail-actions">
+                      <button mat-button (click)="retry()">Retry</button>
+                    </div>
                   </div>
                 }
               }
@@ -197,7 +183,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                       }
                     </div>
                   }
-                  @if (!reviewMode) {
+                  @if ((state === 'SOLVED' || state === 'FAILED') && !(reviewMode && !solutionReview)) {
                     <button mat-stroked-button class="full-game-btn" (click)="enterReview()">
                       <mat-icon>history_edu</mat-icon> Ganze Partie ansehen
                     </button>
@@ -493,6 +479,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
           this.state = 'SOLVED';
           this.stopTimer();
           this.updateBoard();
+          this.enterSolutionReview();
         } else {
           this.state = 'THINKING';
           this.updateBoard();
@@ -505,6 +492,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
             if (this.moveIndex >= this.solutionMoves.length) {
               this.state = 'SOLVED';
               this.stopTimer();
+              this.enterSolutionReview();
             } else {
               this.state = 'AWAITING_USER_MOVE';
               this.updateBoard();
@@ -552,6 +540,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
       if (!this.aborted) {
         this.state = 'FAILED';
         this.stopTimer();
+        this.enterSolutionReview();
       }
     }
   }
@@ -565,12 +554,14 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
         this.state = 'SOLVED';
         this.stopTimer();
         this.updateBoard();
+        this.enterSolutionReview();
         return;
       }
     }
     this.state = 'FAILED';
     this.stopTimer();
     this.updateBoard();
+    this.enterSolutionReview();
   }
 
   mouseslip(): void {
@@ -595,6 +586,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.state = 'FAILED';
     this.stopTimer();
     this.updateBoard();
+    this.enterSolutionReview();
   }
 
   retry(): void {
@@ -635,6 +627,12 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.dests = new Map();
   }
 
+  private enterSolutionReview(): void {
+    this.solutionReview = true;
+    this.reviewMode = true;
+    this.reviewIndex = this.reviewTotal;
+  }
+
   // ---- „Ganze Partie" Review ---------------------------------------------
   /** Zeigt die komplette Partie zum Durchklicken (◀/▶), unabhängig vom Trainingsstart. */
   enterReview(): void {
@@ -642,6 +640,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.stopTimer();
+    this.solutionReview = false;
     this.reviewMode = true;
     this.reviewGoTo(0);
   }
@@ -687,7 +686,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    if (!this.reviewMode) return;
+    if (this.state !== 'SOLVED' && this.state !== 'FAILED' && !this.reviewMode) return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }

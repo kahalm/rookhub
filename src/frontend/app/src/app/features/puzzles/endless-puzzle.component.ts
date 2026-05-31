@@ -416,38 +416,28 @@ const FASTTRACK_SESSION_COUNT = 10;
                     @case ('CORRECT') {
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
-                        @if (reviewMode) {
-                          <p class="status-text solution-review">Solution</p>
-                          <div class="review-nav">
-                            <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                            <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                            <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                          </div>
-                          <div class="alt-actions">
-                            @if (reviewingWrongPuzzle) {
-                              <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                                <mat-icon>skip_next</mat-icon> Continue
-                              </button>
-                            } @else {
-                              <button mat-raised-button color="primary" (click)="continueAfterSolve()">
-                                <mat-icon>arrow_forward</mat-icon> Continue
-                              </button>
-                            }
-                          </div>
-                        } @else if (alternativeSolve) {
+                        @if (alternativeSolve) {
                           <p class="status-text">Checkmate!</p>
                           <p class="alt-hint">Alternative solution — the puzzle had a different intended line.</p>
-                          <div class="alt-actions">
-                            <button mat-raised-button color="primary" (click)="continueAfterSolve()">
-                              <mat-icon>arrow_forward</mat-icon> Continue
-                            </button>
-                            <button mat-button (click)="showIntendedSolution()">
-                              <mat-icon>visibility</mat-icon> Show Solution
-                            </button>
-                          </div>
                         } @else {
                           <p class="status-text">Correct!</p>
                         }
+                        <div class="review-nav">
+                          <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                          <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                          <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                        </div>
+                        <div class="alt-actions">
+                          @if (reviewingWrongPuzzle) {
+                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                              <mat-icon>skip_next</mat-icon> Continue
+                            </button>
+                          } @else {
+                            <button mat-raised-button color="primary" (click)="continueAfterSolve()">
+                              <mat-icon>arrow_forward</mat-icon> Continue
+                            </button>
+                          }
+                        </div>
                       </div>
                     }
                     @case ('WRONG') {
@@ -459,27 +449,16 @@ const FASTTRACK_SESSION_COUNT = 10;
                           <mat-icon class="result-icon">cancel</mat-icon>
                           <p class="status-text">Wrong!</p>
                         }
-                        @if (reviewMode) {
-                          <div class="review-nav">
-                            <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                            <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                            <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                          </div>
-                          <div class="wrong-actions">
-                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                              <mat-icon>skip_next</mat-icon> Continue
-                            </button>
-                          </div>
-                        } @else {
-                          <div class="wrong-actions">
-                            <button mat-button (click)="showIntendedSolution()">
-                              <mat-icon>visibility</mat-icon> Show Solution
-                            </button>
-                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                              <mat-icon>skip_next</mat-icon> Continue
-                            </button>
-                          </div>
-                        }
+                        <div class="review-nav">
+                          <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                          <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                          <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                        </div>
+                        <div class="wrong-actions">
+                          <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                            <mat-icon>skip_next</mat-icon> Continue
+                          </button>
+                        </div>
                       </div>
                     }
                   }
@@ -1471,6 +1450,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.recordAttempt(true);
     this.syncActiveGameToServer();
     this.updateBoard();
+    this.enterSolutionReview();
 
     if (alternative) {
       // Don't auto-advance — let user choose Continue or Show Solution
@@ -1503,6 +1483,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
     }
   }
 
+  private enterSolutionReview(): void {
+    this.reviewMode = true;
+    this.reviewIndex = this.reviewTotal;
+  }
+
   showIntendedSolution(): void {
     if (!this.puzzle) return;
     if (this.state === 'WRONG') this.reviewingWrongPuzzle = true;
@@ -1515,8 +1500,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+  reviewNext(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
 
   private reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -1550,7 +1535,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    if (!this.reviewMode) return;
+    if (this.state !== 'CORRECT' && this.state !== 'WRONG') return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }
@@ -1572,6 +1557,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.syncActiveGameToServer();
     this.state = 'WRONG';
     this.updateBoard();
+    this.enterSolutionReview();
   }
 
   // --- Buttons ---
@@ -1622,6 +1608,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
       this.recordAttempt(false);
       this.state = 'WRONG';
       this.updateBoard();
+      this.enterSolutionReview();
       return;
     }
     this.setupPuzzle(this.puzzle);

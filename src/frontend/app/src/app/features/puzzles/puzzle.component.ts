@@ -195,23 +195,16 @@ const RATING_WINDOW = 100;
                       <span class="elo-change elo-up">+{{ lastEloChange }}</span>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    @if (reviewMode) {
-                      <div class="review-nav">
-                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                      </div>
-                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
-                    } @else {
-                      <div class="solved-actions">
-                        <button mat-raised-button color="primary" (click)="loadNext()">
-                          Next Puzzle @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
-                        </button>
-                        <button mat-button (click)="showSolution()">
-                          <mat-icon>visibility</mat-icon> Show Solution
-                        </button>
-                      </div>
-                    }
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                    <div class="solved-actions">
+                      <button mat-raised-button color="primary" (click)="loadNext()">
+                        Next Puzzle @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
+                      </button>
+                    </div>
                   </div>
                 }
                 @case ('FAILED') {
@@ -221,20 +214,15 @@ const RATING_WINDOW = 100;
                     @if (lastEloChange != null) {
                       <span class="elo-change elo-down">{{ lastEloChange }}</span>
                     }
-                    @if (reviewMode) {
-                      <div class="review-nav">
-                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                      </div>
-                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
-                    } @else {
-                      <div class="fail-actions">
-                        <button mat-button (click)="retry()">Retry</button>
-                        <button mat-button (click)="showSolution()">Show Solution</button>
-                        <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
-                      </div>
-                    }
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                    <div class="fail-actions">
+                      <button mat-button (click)="retry()">Retry</button>
+                      <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
+                    </div>
                   </div>
                 }
               }
@@ -657,6 +645,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.aborted = false;
     this.mouseslipUsed = false;
     this.alternativeSolve = false;
+    this.reviewMode = false;
+    this.reviewIndex = 0;
 
     const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
     this.boardTheme = applied.boardTheme;
@@ -707,6 +697,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
           this.updateBoard();
           this.recordAttempt(true);
           this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+          this.enterSolutionReview();
           this.startSolvedCountdown();
         } else {
           // Play opponent response
@@ -723,6 +714,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
               this.stopTimer();
               this.recordAttempt(true);
               this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+              this.enterSolutionReview();
               this.startSolvedCountdown();
             } else {
               this.state = 'AWAITING_USER_MOVE';
@@ -792,6 +784,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
         this.updateBoard();
         this.recordAttempt(true);
         this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+        this.enterSolutionReview();
         this.startSolvedCountdown();
         return;
       }
@@ -801,6 +794,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.updateBoard();
     this.recordAttempt(false);
+    this.enterSolutionReview();
   }
 
   mouseslip(): void {
@@ -826,6 +820,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.updateBoard();
     this.recordAttempt(false);
+    this.enterSolutionReview();
   }
 
   retry(): void {
@@ -834,19 +829,17 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.setupPuzzle(this.puzzle);
   }
 
-  showSolution(): void {
-    if (!this.puzzle) return;
-    this.stopCountdown();
+  private enterSolutionReview(): void {
     this.reviewMode = true;
-    this.reviewGoTo(0);
+    this.reviewIndex = this.reviewTotal;
   }
 
   get reviewTotal(): number {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+  reviewNext(): void { this.stopCountdown(); this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.stopCountdown(); this.reviewGoTo(this.reviewIndex - 1); }
 
   private reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -880,7 +873,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    if (!this.reviewMode) return;
+    if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }
