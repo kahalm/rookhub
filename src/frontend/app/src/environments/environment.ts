@@ -1,7 +1,15 @@
 export const environment = {
   production: false,
-  version: '0.25.5',
+  version: '0.26.0',
   changelog: [
+    { version: '0.26.0', date: '2026-05-30', changes: [
+      'Feature: Buch-Puzzles als RookHub-Feature — Admin lädt PGN-Dateien als "Bücher" hoch (serverseitiges Parsing, SAN→UCI via Gera.Chess).',
+      'Feature: Admin-Tab "Bücher" — Liste aller importierten Bücher mit Puzzle-Count und Pool-Schaltern Daily/Random/Blind pro Buch.',
+      'API: GET /api/book-puzzles/random?pool=daily|random|blind&exclude=… — zufälliges Buch-Puzzle aus dem Pool; daily ist deterministisch pro UTC-Tag (gemeinsames Tagespuzzle).',
+      'API: POST /api/admin/books/import (PGN-Upload), GET/PUT/DELETE /api/admin/books — Buch-Verwaltung inkl. Pool-Flags.',
+      'DB: Neue Book-Entität (Flags ForDaily/ForRandom/ForBlind + Metadaten), BookPuzzle.BookId; Migration mit Backfill für Altbestand.',
+      'Tests: 27 neue Tests (PGN-Parser inkl. Promotion/Rochade/Varianten/Skip-Regeln, random-Pool-Auswahl, Buch-Verwaltung).',
+    ]},
     { version: '0.25.5', date: '2026-05-30', changes: [
       'UI: Mobile-Optimierung — Padding, Wrapping und Layout fuer alle Views angepasst',
       'UI: Endless History — Card-Layout statt Tabelle auf Mobilgeraeten',

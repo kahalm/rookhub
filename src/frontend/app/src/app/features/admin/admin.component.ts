@@ -13,7 +13,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { AdminService, AdminUser, RequestLog } from '../../core/admin.service';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { AdminService, AdminUser, RequestLog, Book } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -22,7 +23,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, LoadingSpinnerComponent
+    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, LoadingSpinnerComponent
   ],
   template: `
     <div class="admin-container">
@@ -91,6 +92,71 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                 (page)="onUsersPageChange($event)"
                 showFirstLastButtons>
               </mat-paginator>
+            }
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Bücher">
+          <div class="tab-content">
+            <div class="book-upload">
+              <input #pgnInput type="file" accept=".pgn" multiple hidden (change)="onBookFilesSelected($event)">
+              <button mat-raised-button color="primary" (click)="pgnInput.click()" [disabled]="booksUploading">
+                <mat-icon>upload_file</mat-icon> PGN(s) hochladen
+              </button>
+              @if (booksUploading) { <span class="upload-hint">Import läuft…</span> }
+              <span class="book-hint">Pro Buch festlegen, in welchen Pools die Puzzles erscheinen.</span>
+            </div>
+
+            @if (booksLoading) {
+              <app-loading-spinner />
+            } @else if (books.length === 0) {
+              <p class="empty-hint">Noch keine Bücher importiert.</p>
+            } @else {
+              <table mat-table [dataSource]="books" class="full-width">
+                <ng-container matColumnDef="displayName">
+                  <th mat-header-cell *matHeaderCellDef>Buch</th>
+                  <td mat-cell *matCellDef="let b">{{ b.displayName }}</td>
+                </ng-container>
+                <ng-container matColumnDef="puzzleCount">
+                  <th mat-header-cell *matHeaderCellDef>Puzzles</th>
+                  <td mat-cell *matCellDef="let b">{{ b.puzzleCount }}</td>
+                </ng-container>
+                <ng-container matColumnDef="difficulty">
+                  <th mat-header-cell *matHeaderCellDef>Schwierigkeit</th>
+                  <td mat-cell *matCellDef="let b">
+                    {{ b.difficulty || '–' }}@if (b.rating) { <span> · {{ b.rating }}/10</span> }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="forDaily">
+                  <th mat-header-cell *matHeaderCellDef>Daily</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.forDaily" (change)="saveBook(b)"></mat-slide-toggle>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="forRandom">
+                  <th mat-header-cell *matHeaderCellDef>Random</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.forRandom" (change)="saveBook(b)"></mat-slide-toggle>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="forBlind">
+                  <th mat-header-cell *matHeaderCellDef>Blind</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                  <td mat-cell *matCellDef="let b">
+                    <button mat-icon-button color="warn" (click)="deleteBook(b)" title="Buch löschen">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="bookColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: bookColumns;"></tr>
+              </table>
             }
           </div>
         </mat-tab>
@@ -216,6 +282,13 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .admin-badge { color: #ff9800; font-size: 20px; }
     .table-responsive { overflow-x: auto; }
 
+    .book-upload {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px;
+    }
+    .upload-hint { color: #1976d2; font-weight: 500; }
+    .book-hint { color: #666; font-size: 0.85rem; }
+    .empty-hint { color: #666; font-style: italic; padding: 16px 0; }
+
     .log-filters {
       display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
       margin-bottom: 8px; padding: 12px; background: #fafafa; border-radius: 8px;
@@ -270,11 +343,17 @@ export class AdminComponent implements OnInit {
   logFilterStatus = '';
   logFilterUser = '';
 
+  books: Book[] = [];
+  booksLoading = false;
+  booksUploading = false;
+  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'forDaily', 'forRandom', 'forBlind', 'actions'];
+
   constructor(private adminService: AdminService, private snackBar: MatSnackBar) {}
 
   ngOnInit(): void {
     this.loadUsers();
     this.loadLogs();
+    this.loadBooks();
   }
 
   loadUsers(): void {
@@ -375,6 +454,68 @@ export class AdminComponent implements OnInit {
       },
       error: err => {
         this.snackBar.open(err.error?.message || 'Failed to delete user', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  // --- Bücher -----------------------------------------------------------
+  loadBooks(): void {
+    this.booksLoading = true;
+    this.adminService.getBooks().subscribe({
+      next: books => {
+        this.books = books;
+        this.booksLoading = false;
+      },
+      error: () => {
+        this.snackBar.open('Bücher konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.booksLoading = false;
+      }
+    });
+  }
+
+  onBookFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    this.booksUploading = true;
+    this.adminService.importBooks(input.files).subscribe({
+      next: res => {
+        this.snackBar.open(`${res.totalImported} Puzzle(s) importiert, ${res.totalSkipped} übersprungen`, 'OK', { duration: 4000 });
+        this.booksUploading = false;
+        input.value = '';
+        this.loadBooks();
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Import fehlgeschlagen', 'OK', { duration: 4000 });
+        this.booksUploading = false;
+        input.value = '';
+      }
+    });
+  }
+
+  saveBook(book: Book): void {
+    this.adminService.updateBook(book.id, {
+      forDaily: book.forDaily,
+      forRandom: book.forRandom,
+      forBlind: book.forBlind
+    }).subscribe({
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });
+        this.loadBooks(); // Stand zurücksetzen
+      }
+    });
+  }
+
+  deleteBook(book: Book): void {
+    if (!confirm(`Buch "${book.displayName}" mit ${book.puzzleCount} Puzzle(s) löschen?`)) return;
+
+    this.adminService.deleteBook(book.id).subscribe({
+      next: () => {
+        this.snackBar.open(`Buch "${book.displayName}" gelöscht`, 'OK', { duration: 3000 });
+        this.loadBooks();
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Löschen fehlgeschlagen', 'OK', { duration: 3000 });
       }
     });
   }

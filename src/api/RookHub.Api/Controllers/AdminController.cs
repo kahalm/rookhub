@@ -1,8 +1,10 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -14,11 +16,13 @@ public class AdminController : BaseApiController
 {
     private readonly AppDbContext _db;
     private readonly PuzzleService _puzzleService;
+    private readonly PgnImportService _pgnImportService;
 
-    public AdminController(AppDbContext db, PuzzleService puzzleService)
+    public AdminController(AppDbContext db, PuzzleService puzzleService, PgnImportService pgnImportService)
     {
         _db = db;
         _puzzleService = puzzleService;
+        _pgnImportService = pgnImportService;
     }
 
     [HttpGet("users")]
@@ -139,6 +143,109 @@ public class AdminController : BaseApiController
         await _db.PuzzleAttempts.ExecuteDeleteAsync();
         await _db.Puzzles.ExecuteDeleteAsync();
         await tx.CommitAsync();
+        return NoContent();
+    }
+
+    // ---- Buch-Puzzles: Upload + Verwaltung -------------------------------
+
+    /// <summary>Lädt eine oder mehrere PGN-Dateien als Bücher hoch (serverseitiges Parsing).</summary>
+    [HttpPost("books/import")]
+    [RequestSizeLimit(200 * 1024 * 1024)]
+    public async Task<IActionResult> ImportBooks([FromForm] List<IFormFile> files, CancellationToken ct)
+    {
+        if (files == null || files.Count == 0)
+            return BadRequest(new { message = "No files provided." });
+
+        var result = new BookImportResultDto();
+        foreach (var file in files)
+        {
+            if (file.Length == 0) continue;
+            string text;
+            using (var reader = new StreamReader(file.OpenReadStream(), Encoding.UTF8))
+                text = await reader.ReadToEndAsync(ct);
+
+            var item = await _pgnImportService.ImportFileAsync(file.FileName, text, ct);
+            result.Books.Add(item);
+            result.TotalImported += item.Imported;
+            result.TotalSkipped += item.Skipped;
+        }
+        return Ok(result);
+    }
+
+    [HttpGet("books")]
+    public async Task<IActionResult> GetBooks()
+    {
+        var books = await _db.Books
+            .OrderBy(b => b.DisplayName)
+            .Select(b => new BookDto
+            {
+                Id = b.Id,
+                FileName = b.FileName,
+                DisplayName = b.DisplayName,
+                Difficulty = b.Difficulty,
+                Rating = b.Rating,
+                Tags = b.Tags,
+                Description = b.Description,
+                ForDaily = b.ForDaily,
+                ForRandom = b.ForRandom,
+                ForBlind = b.ForBlind,
+                PuzzleCount = b.Puzzles.Count(),
+                CreatedAt = b.CreatedAt,
+                UpdatedAt = b.UpdatedAt,
+            })
+            .ToListAsync();
+        return Ok(books);
+    }
+
+    [HttpPut("books/{id}")]
+    public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto dto)
+    {
+        var book = await _db.Books.FindAsync(id);
+        if (book == null)
+            return NotFound(new { message = "Book not found." });
+
+        if (dto.DisplayName != null) book.DisplayName = dto.DisplayName;
+        if (dto.Difficulty != null) book.Difficulty = dto.Difficulty;
+        if (dto.Rating.HasValue) book.Rating = dto.Rating;
+        if (dto.Tags != null) book.Tags = dto.Tags;
+        if (dto.Description != null) book.Description = dto.Description;
+        if (dto.ForDaily.HasValue) book.ForDaily = dto.ForDaily.Value;
+        if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
+        if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
+        book.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var count = await _db.BookPuzzles.CountAsync(bp => bp.BookId == id);
+        return Ok(new BookDto
+        {
+            Id = book.Id,
+            FileName = book.FileName,
+            DisplayName = book.DisplayName,
+            Difficulty = book.Difficulty,
+            Rating = book.Rating,
+            Tags = book.Tags,
+            Description = book.Description,
+            ForDaily = book.ForDaily,
+            ForRandom = book.ForRandom,
+            ForBlind = book.ForBlind,
+            PuzzleCount = count,
+            CreatedAt = book.CreatedAt,
+            UpdatedAt = book.UpdatedAt,
+        });
+    }
+
+    [HttpDelete("books/{id}")]
+    public async Task<IActionResult> DeleteBook(int id)
+    {
+        var book = await _db.Books.FindAsync(id);
+        if (book == null)
+            return NotFound(new { message = "Book not found." });
+
+        // Zugehörige Puzzles explizit entfernen (FK-Cascade greift bei InMemory nicht).
+        var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
+        _db.BookPuzzles.RemoveRange(puzzles);
+        _db.Books.Remove(book);
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 }

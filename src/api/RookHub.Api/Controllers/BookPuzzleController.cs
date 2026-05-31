@@ -19,9 +19,61 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var puzzle = await _db.BookPuzzles.FindAsync(id);
+        var puzzle = await _db.BookPuzzles
+            .Include(bp => bp.Book)
+            .FirstOrDefaultAsync(bp => bp.Id == id);
         if (puzzle == null)
             return NotFound(new { message = "Book puzzle not found." });
+        return Ok(MapToDto(puzzle));
+    }
+
+    /// <summary>
+    /// Liefert ein zufälliges Buch-Puzzle aus dem gewünschten Pool.
+    /// pool=random|blind → echtes Zufallspuzzle; pool=daily → deterministisch pro UTC-Tag
+    /// (alle bekommen am selben Tag dasselbe Puzzle). exclude=id,id schließt IDs aus.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("random")]
+    public async Task<IActionResult> GetRandom([FromQuery] string pool = "random", [FromQuery] string? exclude = null)
+    {
+        pool = (pool ?? "random").Trim().ToLowerInvariant();
+        if (pool != "random" && pool != "daily" && pool != "blind")
+            return BadRequest(new { message = "pool must be one of: random, daily, blind." });
+
+        var query = _db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Book != null);
+        query = pool switch
+        {
+            "daily" => query.Where(bp => bp.Book!.ForDaily),
+            "blind" => query.Where(bp => bp.Book!.ForBlind),
+            _ => query.Where(bp => bp.Book!.ForRandom),
+        };
+
+        if (!string.IsNullOrWhiteSpace(exclude))
+        {
+            var excludeIds = exclude.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var v) ? v : (int?)null)
+                .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            if (excludeIds.Count > 0)
+                query = query.Where(bp => !excludeIds.Contains(bp.Id));
+        }
+
+        var count = await query.CountAsync();
+        if (count == 0)
+            return NotFound(new { message = $"No book puzzle available for pool '{pool}'." });
+
+        int index;
+        if (pool == "daily")
+        {
+            // Deterministisch: Tagesnummer (UTC) modulo Pool-Größe → gemeinsames Tagespuzzle.
+            var dayNumber = (long)(DateTime.UtcNow.Date - DateTime.UnixEpoch).TotalDays;
+            index = (int)(((dayNumber % count) + count) % count);
+        }
+        else
+        {
+            index = Random.Shared.Next(count);
+        }
+
+        var puzzle = await query.OrderBy(bp => bp.Id).Skip(index).FirstAsync();
         return Ok(MapToDto(puzzle));
     }
 
@@ -128,8 +180,9 @@ public class BookPuzzleController : BaseApiController
         Title = bp.Title,
         Chapter = bp.Chapter,
         Comment = bp.Comment,
-        Difficulty = bp.Difficulty,
-        BookRating = bp.BookRating,
-        Tags = bp.Tags
+        // Metadaten bevorzugt vom Buch (admin-gepflegt), sonst vom Puzzle.
+        Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
+        BookRating = bp.Book?.Rating ?? bp.BookRating,
+        Tags = bp.Book?.Tags ?? bp.Tags
     };
 }

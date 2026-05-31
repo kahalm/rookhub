@@ -80,6 +80,7 @@ try
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleService>();
+    builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();

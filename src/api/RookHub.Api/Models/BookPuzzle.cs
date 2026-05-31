@@ -12,6 +12,10 @@ public class BookPuzzle
     [Required, MaxLength(200)]
     public string BookFileName { get; set; } = string.Empty;
 
+    /// <summary>FK auf <see cref="Models.Book"/>. Nullable für Altbestand (Backfill via Migration).</summary>
+    public int? BookId { get; set; }
+    public Book? Book { get; set; }
+
     [Required, MaxLength(20)]
     public string Round { get; set; } = string.Empty;
 

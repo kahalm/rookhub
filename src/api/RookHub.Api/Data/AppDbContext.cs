@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
+    public DbSet<Book> Books => Set<Book>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
 
@@ -136,10 +137,21 @@ public class AppDbContext : DbContext
             e.HasIndex(a => a.AttemptedAt).IsDescending();
         });
 
+        modelBuilder.Entity<Book>(e =>
+        {
+            e.HasIndex(b => b.FileName).IsUnique();
+        });
+
         modelBuilder.Entity<BookPuzzle>(e =>
         {
             e.HasIndex(bp => bp.LineId).IsUnique();
             e.HasIndex(bp => bp.BookFileName);
+            e.HasIndex(bp => bp.BookId);
+
+            e.HasOne(bp => bp.Book)
+             .WithMany(b => b.Puzzles)
+             .HasForeignKey(bp => bp.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<EndlessProgress>(e =>

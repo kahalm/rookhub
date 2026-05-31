@@ -29,6 +29,39 @@ export interface RequestLog {
   ipAddress: string | null;
 }
 
+export interface Book {
+  id: number;
+  fileName: string;
+  displayName: string;
+  difficulty: string | null;
+  rating: number | null;
+  tags: string | null;
+  description: string | null;
+  forDaily: boolean;
+  forRandom: boolean;
+  forBlind: boolean;
+  puzzleCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateBook {
+  displayName?: string;
+  difficulty?: string | null;
+  rating?: number | null;
+  tags?: string | null;
+  description?: string | null;
+  forDaily?: boolean;
+  forRandom?: boolean;
+  forBlind?: boolean;
+}
+
+export interface BookImportResult {
+  books: { bookId: number; fileName: string; imported: number; skipped: number }[];
+  totalImported: number;
+  totalSkipped: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private http: HttpClient) {}
@@ -49,5 +82,24 @@ export class AdminService {
 
   getRequestLogs(params: Record<string, string> = {}): Observable<PagedResult<RequestLog>> {
     return this.http.get<PagedResult<RequestLog>>('/api/request-logs', { params });
+  }
+
+  // --- Buch-Puzzles -----------------------------------------------------
+  getBooks(): Observable<Book[]> {
+    return this.http.get<Book[]>('/api/admin/books');
+  }
+
+  updateBook(id: number, dto: UpdateBook): Observable<Book> {
+    return this.http.put<Book>(`/api/admin/books/${id}`, dto);
+  }
+
+  deleteBook(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/books/${id}`);
+  }
+
+  importBooks(files: FileList | File[]): Observable<BookImportResult> {
+    const form = new FormData();
+    for (const f of Array.from(files)) form.append('files', f, f.name);
+    return this.http.post<BookImportResult>('/api/admin/books/import', form);
   }
 }

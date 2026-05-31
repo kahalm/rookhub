@@ -21,7 +21,10 @@ public class AdminControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new AdminController(_db, new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance));
+        _controller = new AdminController(
+            _db,
+            new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PgnImportService(_db));
         SetUser(99);
     }
 
@@ -155,5 +158,119 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.ToggleAdmin(9999);
 
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    // ---- Book management -------------------------------------------------
+
+    private static Microsoft.AspNetCore.Http.IFormFile MakePgnFile(string name, string content)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var stream = new MemoryStream(bytes);
+        return new FormFile(stream, 0, bytes.Length, "files", name)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/x-chess-pgn"
+        };
+    }
+
+    private const string SamplePgn = @"
+[Event ""Sample""]
+[Round ""1.1""]
+[White ""Mate idea""]
+[Black ""Chapter 1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""hint""] Entwickle. } 2. Nf3 Nc6 3. Bb5 a6 *
+";
+
+    [Fact]
+    public async Task ImportBooks_CreatesBookAndPuzzles()
+    {
+        var file = MakePgnFile("sample.pgn", SamplePgn);
+
+        var result = await _controller.ImportBooks(new List<Microsoft.AspNetCore.Http.IFormFile> { file }, default) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var dto = Assert.IsType<RookHub.Api.DTOs.BookImportResultDto>(result.Value);
+        Assert.Equal(1, dto.TotalImported);
+        Assert.Single(dto.Books);
+        Assert.Equal(1, await _db.Books.CountAsync());
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync());
+        var book = await _db.Books.FirstAsync();
+        Assert.Equal("sample.pgn", book.FileName);
+        Assert.Equal("sample", book.DisplayName);
+    }
+
+    [Fact]
+    public async Task ImportBooks_NoFiles_ReturnsBadRequest()
+    {
+        var result = await _controller.ImportBooks(new List<Microsoft.AspNetCore.Http.IFormFile>(), default);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetBooks_ReturnsBooksWithCounts()
+    {
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        _db.BookPuzzles.AddRange(
+            new BookPuzzle { LineId = "b.pgn:1", BookFileName = "b.pgn", BookId = book.Id, Round = "1", Fen = "f", Moves = "e2e4" },
+            new BookPuzzle { LineId = "b.pgn:2", BookFileName = "b.pgn", BookId = book.Id, Round = "2", Fen = "f", Moves = "e2e4" });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.GetBooks() as OkObjectResult;
+
+        Assert.NotNull(result);
+        var books = Assert.IsType<List<RookHub.Api.DTOs.BookDto>>(result.Value);
+        var dto = Assert.Single(books);
+        Assert.Equal(2, dto.PuzzleCount);
+    }
+
+    [Fact]
+    public async Task UpdateBook_TogglesFlags()
+    {
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto
+        {
+            ForDaily = true,
+            ForRandom = true,
+            Rating = 5
+        }) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var updated = await _db.Books.FindAsync(book.Id);
+        Assert.True(updated!.ForDaily);
+        Assert.True(updated.ForRandom);
+        Assert.False(updated.ForBlind);
+        Assert.Equal(5, updated.Rating);
+    }
+
+    [Fact]
+    public async Task UpdateBook_NotFound()
+    {
+        var result = await _controller.UpdateBook(9999, new RookHub.Api.DTOs.UpdateBookDto { ForDaily = true });
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task DeleteBook_RemovesBookAndPuzzles()
+    {
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        _db.BookPuzzles.Add(new BookPuzzle { LineId = "b.pgn:1", BookFileName = "b.pgn", BookId = book.Id, Round = "1", Fen = "f", Moves = "e2e4" });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.DeleteBook(book.Id);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Null(await _db.Books.FindAsync(book.Id));
+        Assert.Equal(0, await _db.BookPuzzles.CountAsync());
     }
 }

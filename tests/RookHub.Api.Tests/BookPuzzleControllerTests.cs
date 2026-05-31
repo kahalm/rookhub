@@ -245,6 +245,132 @@ public class BookPuzzleControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    // ---- GetRandom (pool=daily|random|blind) -----------------------------
+
+    private async Task<(Book book, BookPuzzle puzzle)> CreateBookWithPuzzleAsync(
+        string fileName, string lineId,
+        bool forDaily = false, bool forRandom = false, bool forBlind = false,
+        string? difficulty = null, int? rating = null, string? tags = null)
+    {
+        var book = new Book
+        {
+            FileName = fileName,
+            DisplayName = fileName,
+            ForDaily = forDaily,
+            ForRandom = forRandom,
+            ForBlind = forBlind,
+            Difficulty = difficulty,
+            Rating = rating,
+            Tags = tags,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        var puzzle = new BookPuzzle
+        {
+            LineId = lineId,
+            BookFileName = fileName,
+            BookId = book.Id,
+            Round = "1",
+            Fen = "8/8/8/8/8/8/8/4K3 w - - 0 1",
+            Moves = "e1e2",
+        };
+        _db.BookPuzzles.Add(puzzle);
+        await _db.SaveChangesAsync();
+        return (book, puzzle);
+    }
+
+    [Fact]
+    public async Task GetRandom_Random_OnlyFromForRandomBooks()
+    {
+        await CreateBookWithPuzzleAsync("rand.pgn", "rand.pgn:1", forRandom: true);
+        await CreateBookWithPuzzleAsync("daily.pgn", "daily.pgn:1", forDaily: true); // not forRandom
+
+        for (int i = 0; i < 10; i++)
+        {
+            var result = await _controller.GetRandom("random", null) as OkObjectResult;
+            Assert.NotNull(result);
+            var dto = Assert.IsType<BookPuzzleDto>(result!.Value);
+            Assert.Equal("rand.pgn:1", dto.LineId);
+        }
+    }
+
+    [Fact]
+    public async Task GetRandom_Blind_OnlyFromForBlindBooks()
+    {
+        await CreateBookWithPuzzleAsync("blind.pgn", "blind.pgn:1", forBlind: true);
+        await CreateBookWithPuzzleAsync("rand.pgn", "rand.pgn:1", forRandom: true);
+
+        var result = await _controller.GetRandom("blind", null) as OkObjectResult;
+        Assert.NotNull(result);
+        var dto = Assert.IsType<BookPuzzleDto>(result!.Value);
+        Assert.Equal("blind.pgn:1", dto.LineId);
+    }
+
+    [Fact]
+    public async Task GetRandom_Daily_IsDeterministicForSameDay()
+    {
+        await CreateBookWithPuzzleAsync("d1.pgn", "d1.pgn:1", forDaily: true);
+        await CreateBookWithPuzzleAsync("d2.pgn", "d2.pgn:1", forDaily: true);
+        await CreateBookWithPuzzleAsync("d3.pgn", "d3.pgn:1", forDaily: true);
+
+        var first = await _controller.GetRandom("daily", null) as OkObjectResult;
+        var firstDto = Assert.IsType<BookPuzzleDto>(first!.Value);
+        for (int i = 0; i < 5; i++)
+        {
+            var again = await _controller.GetRandom("daily", null) as OkObjectResult;
+            var dto = Assert.IsType<BookPuzzleDto>(again!.Value);
+            Assert.Equal(firstDto.LineId, dto.LineId);
+        }
+    }
+
+    [Fact]
+    public async Task GetRandom_EnrichesMetadataFromBook()
+    {
+        await CreateBookWithPuzzleAsync("m.pgn", "m.pgn:1", forRandom: true,
+            difficulty: "Meister", rating: 7, tags: "Taktik");
+
+        var result = await _controller.GetRandom("random", null) as OkObjectResult;
+        var dto = Assert.IsType<BookPuzzleDto>(result!.Value);
+        Assert.Equal("Meister", dto.Difficulty);
+        Assert.Equal(7, dto.BookRating);
+        Assert.Equal("Taktik", dto.Tags);
+    }
+
+    [Fact]
+    public async Task GetRandom_ExcludeFiltersIds()
+    {
+        var (_, p1) = await CreateBookWithPuzzleAsync("e.pgn", "e.pgn:1", forRandom: true);
+        await CreateBookWithPuzzleAsync("e2.pgn", "e2.pgn:1", forRandom: true);
+
+        for (int i = 0; i < 10; i++)
+        {
+            var result = await _controller.GetRandom("random", p1.Id.ToString()) as OkObjectResult;
+            var dto = Assert.IsType<BookPuzzleDto>(result!.Value);
+            Assert.NotEqual(p1.Id, dto.Id);
+        }
+    }
+
+    [Fact]
+    public async Task GetRandom_EmptyPool_ReturnsNotFound()
+    {
+        await CreateBookWithPuzzleAsync("rand.pgn", "rand.pgn:1", forRandom: true);
+
+        var result = await _controller.GetRandom("daily", null);
+
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetRandom_InvalidPool_ReturnsBadRequest()
+    {
+        var result = await _controller.GetRandom("bogus", null);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
     [Fact]
     public async Task GetById_ReturnsAllFields()
     {
