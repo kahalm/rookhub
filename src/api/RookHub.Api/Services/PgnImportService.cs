@@ -36,7 +36,7 @@ public partial class PgnImportService
 
     /// <summary>Ein aus der PGN extrahiertes Puzzle (DB-frei, daher gut testbar).</summary>
     public record ParsedPuzzle(
-        string LineId, string Round, string Fen, string Moves,
+        string LineId, string Round, string Fen, string Moves, int StartPly,
         string? Title, string? Chapter, string? Comment);
 
     /// <summary>Entfernt PGN-Suffixe für den Anzeigenamen (wie schach-bot _clean_book_name).</summary>
@@ -68,6 +68,13 @@ public partial class PgnImportService
             var uci = TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0) continue;
 
+            // Trainingsstart aus ChessBase-[%tqu] bestimmen. Die ganze Partie (fen+moves)
+            // bleibt erhalten; StartPly markiert nur den Setup-Zug der Trainingsstellung.
+            // null = kein Marker → 0 (klassisch). -1 = Wurzel → lösen ab moves[0].
+            // Gültig nur, wenn danach noch mindestens ein Lösungszug folgt (Index <= count-2).
+            var tquIndex = FindTquMoveIndex(moveText);
+            var startPly = (tquIndex.HasValue && tquIndex.Value <= uci.Count - 2) ? tquIndex.Value : 0;
+
             var white = headers.GetValueOrDefault("White", "").Trim();
             var black = headers.GetValueOrDefault("Black", "").Trim();
 
@@ -76,6 +83,7 @@ public partial class PgnImportService
                 Round: Truncate(round, 20),
                 Fen: fen,
                 Moves: string.Join(' ', uci),
+                StartPly: startPly,
                 Title: string.IsNullOrEmpty(white) ? null : Truncate(white, 300),
                 Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
                 Comment: comment));
@@ -185,6 +193,67 @@ public partial class PgnImportService
         return u;
     }
 
+    // ---- Trainingsstart ([%tqu]) finden -----------------------------------
+    /// <summary>
+    /// Liefert den 0-basierten Index des Hauptlinien-Zugs, an dessen Folgekommentar das erste
+    /// ChessBase-[%tqu] hängt (= Setup-Zug der Trainingsstellung). Sonderfälle:
+    /// <list type="bullet">
+    /// <item><c>null</c> = kein [%tqu] in der Hauptlinie (klassisches Verhalten).</item>
+    /// <item><c>-1</c> = [%tqu] steht vor dem ersten Zug (Wurzel) → FEN ist bereits die
+    /// Trainingsstellung, gelöst wird ab moves[0] ohne Setup-Zug.</item>
+    /// </list>
+    /// Varianten (…) und Kommentar-Inhalte werden übersprungen, sodass der Index exakt zur
+    /// SAN-/UCI-Hauptliniensequenz von <see cref="TryExtractUciMainline"/> passt.
+    /// </summary>
+    private static int? FindTquMoveIndex(string moveText)
+    {
+        int depth = 0;       // Variantentiefe
+        int sanCount = 0;    // gezählte Hauptlinien-Züge
+        int i = 0, n = moveText.Length;
+        var cur = new StringBuilder();
+
+        void Flush()
+        {
+            if (cur.Length == 0) return;
+            if (IsSanMove(cur.ToString())) sanCount++;
+            cur.Clear();
+        }
+
+        while (i < n)
+        {
+            char c = moveText[i];
+            if (c == '{')
+            {
+                Flush();
+                int j = moveText.IndexOf('}', i + 1);
+                if (j < 0) j = n;
+                if (depth == 0)
+                {
+                    var content = moveText.Substring(i + 1, Math.Min(j, n) - (i + 1));
+                    if (content.Contains("[%tqu", StringComparison.OrdinalIgnoreCase))
+                        return sanCount - 1; // Kommentar gehört zum zuletzt gezählten Zug (-1 = Wurzel)
+                }
+                i = (j < n) ? j + 1 : n;
+            }
+            else if (c == '(') { Flush(); depth++; i++; }
+            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
+            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
+            else { if (depth == 0) cur.Append(c); i++; }
+        }
+        Flush();
+        return null;
+    }
+
+    /// <summary>Ist das Token ein SAN-Zug (kein Zugnummern-, NAG- oder Ergebnis-Token)?</summary>
+    private static bool IsSanMove(string token)
+    {
+        var t = MoveNumberRegex().Replace(token.Trim(), ""); // führende "12." / "12..." entfernen
+        if (t.Length == 0 || t.StartsWith('$')) return false; // leer oder NAG
+        t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
+        if (t.Length == 0 || ResultTokens.Contains(t)) return false;
+        return true;
+    }
+
     private static string RemoveVariations(string s)
     {
         var sb = new StringBuilder(s.Length);
@@ -237,6 +306,7 @@ public partial class PgnImportService
                 Round = p.Round,
                 Fen = p.Fen,
                 Moves = p.Moves,
+                StartPly = p.StartPly,
                 Title = p.Title,
                 Chapter = p.Chapter,
                 Comment = p.Comment,

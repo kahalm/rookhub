@@ -45,6 +45,8 @@ export interface BookPuzzleDto {
   round: string;
   fen: string;
   moves: string;
+  /** Halbzug-Index des Trainingsstarts; lösen ab moves[startPly+1]. -1 = lösen ab moves[0] (FEN=Trainingsstellung), 0 = klassisch (moves[0] Setup). */
+  startPly?: number;
   title?: string;
   chapter?: string;
   comment?: string;

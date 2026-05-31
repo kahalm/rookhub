@@ -36,7 +36,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             [turnColor]="turnColor"
             [dests]="dests"
             [lastMove]="lastMove"
-            [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
+            [viewOnly]="reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
             [boardTheme]="boardTheme"
@@ -51,6 +51,17 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
               <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" title="Einstellungen">
                 <mat-icon>settings</mat-icon>
               </button>
+              @if (reviewMode) {
+                <div class="status-center">
+                  <p class="status-text">Ganze Partie</p>
+                  <div class="review-nav">
+                    <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                    <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                    <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                  </div>
+                  <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurück zum Puzzle</button>
+                </div>
+              } @else {
               @switch (state) {
                 @case ('LOADING') {
                   <div class="status-center">
@@ -129,6 +140,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                   </div>
                 }
               }
+              }
             </mat-card-content>
           </mat-card>
 
@@ -160,6 +172,11 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                         <span class="tag-chip">{{ tag }}</span>
                       }
                     </div>
+                  }
+                  @if (!reviewMode) {
+                    <button mat-stroked-button class="full-game-btn" (click)="enterReview()">
+                      <mat-icon>history_edu</mat-icon> Ganze Partie ansehen
+                    </button>
                   }
                 </div>
               </mat-card-content>
@@ -241,6 +258,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
       font-size: 0.85em; white-space: nowrap;
     }
+    .full-game-btn { margin-top: 0.5rem; align-self: flex-start; }
+    .review-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }
@@ -315,11 +335,16 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   private chess = new Chess();
   private solutionMoves: string[] = [];
   private moveIndex = 0;
+  private startPly = 0;
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   private aborted = false;
   onSolutionPath = true;
   alternativeSolve = false;
   mouseslipUsed = false;
+
+  // Review-Modus „Ganze Partie": Schritt-für-Schritt durch die komplette Partie.
+  reviewMode = false;
+  reviewIndex = 0;
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -369,13 +394,34 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   private setupPuzzle(puzzle: BookPuzzleDto): void {
     this.solutionMoves = puzzle.moves.split(' ');
+    // StartPly markiert den Setup-Zug des Trainingsstarts. fen+moves = ganze Partie.
+    // -1 = FEN ist bereits die Trainingsstellung (lösen ab moves[0], kein Setup).
+    //  0 = klassisch (moves[0] Setup, lösen ab moves[1]).  k = Vorspiel bis moves[k].
+    this.startPly = puzzle.startPly ?? 0;
+    if (this.startPly > this.solutionMoves.length - 2) this.startPly = 0; // muss Lösungszug haben
+    if (this.startPly < -1) this.startPly = -1;
     this.moveIndex = 0;
     this.chess = new Chess(puzzle.fen);
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.reviewMode = false;
 
-    const setupMove = this.solutionMoves[0];
+    // Vorspiel (Partie bis vor den Setup-Zug) still aufs Brett bringen.
+    for (let i = 0; i < this.startPly; i++) this.applyUci(this.solutionMoves[i]);
+    this.lastMove = undefined;
+
+    if (this.startPly < 0) {
+      // FEN ist die Trainingsstellung selbst → kein Setup, sofort lösen.
+      this.moveIndex = 0;
+      this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
+      this.updateBoard();
+      this.state = 'AWAITING_USER_MOVE';
+      this.startTimer();
+      return;
+    }
+
+    const setupMove = this.solutionMoves[this.startPly];
     const setupFrom = setupMove.substring(0, 2) as Square;
     const piece = this.chess.get(setupFrom);
     this.orientation = piece?.color === 'w' ? 'black' : 'white';
@@ -385,12 +431,20 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
     setTimeout(() => {
       if (this.state !== 'SETUP') return;
-      this.playMove(this.solutionMoves[0]);
-      this.moveIndex = 1;
+      this.playMove(this.solutionMoves[this.startPly]);
+      this.moveIndex = this.startPly + 1;
       this.state = 'AWAITING_USER_MOVE';
       this.updateBoard();
       this.startTimer();
     }, 600);
+  }
+
+  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Vorspiel/Review-Aufbau). */
+  private applyUci(uci: string): void {
+    const from = uci.substring(0, 2) as Square;
+    const to = uci.substring(2, 4) as Square;
+    const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
+    this.chess.move({ from, to, promotion });
   }
 
   onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
@@ -523,12 +577,19 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   showSolution(): void {
     if (!this.puzzle) return;
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.aborted = false;
     this.solutionMoves = this.puzzle.moves.split(' ');
     this.chess = new Chess(this.puzzle.fen);
-    this.playMove(this.solutionMoves[0]);
+
+    // Vorspiel still aufs Brett (bis zum Setup-Zug), dann ab Trainingsstart animiert.
+    const start = Math.max(0, this.startPly);
+    for (let i = 0; i < start; i++) this.applyUci(this.solutionMoves[i]);
+    this.lastMove = undefined;
     this.updateBoard();
 
-    let i = 1;
+    let i = start;
     const playNext = () => {
       if (i >= this.solutionMoves.length) return;
       this.playMove(this.solutionMoves[i]);
@@ -539,6 +600,47 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
       }
     };
     this.autoAdvanceTimer = setTimeout(playNext, 400);
+  }
+
+  // ---- „Ganze Partie" Review ---------------------------------------------
+  /** Zeigt die komplette Partie zum Durchklicken (◀/▶), unabhängig vom Trainingsstart. */
+  enterReview(): void {
+    if (!this.puzzle) return;
+    this.aborted = true;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.stopTimer();
+    this.reviewMode = true;
+    this.reviewGoTo(0);
+  }
+
+  get reviewTotal(): number {
+    return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
+  }
+
+  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+
+  private reviewGoTo(index: number): void {
+    if (!this.puzzle) return;
+    const moves = this.puzzle.moves.split(' ').filter(m => m);
+    index = Math.max(0, Math.min(index, moves.length));
+    this.reviewIndex = index;
+    this.chess = new Chess(this.puzzle.fen);
+    let last: [Key, Key] | undefined;
+    for (let i = 0; i < index; i++) {
+      this.applyUci(moves[i]);
+      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
+    }
+    this.lastMove = last;
+    this.boardFen = this.chess.fen();
+    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = this.chess.isCheck();
+    this.dests = new Map();
+  }
+
+  exitReview(): void {
+    this.reviewMode = false;
+    if (this.puzzle) this.setupPuzzle(this.puzzle);
   }
 
   formatTime(seconds: number): string {

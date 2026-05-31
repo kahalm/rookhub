@@ -237,7 +237,7 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 350 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless, Books, Groups)
+dotnet test     # 353 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless, Books, Groups)
 ```
 
 ### Test-Pattern
@@ -278,7 +278,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.35.0`
+- **Aktuelle Version**: `0.35.1`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

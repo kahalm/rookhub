@@ -8,6 +8,8 @@ public class BookPuzzleDto
     public string Round { get; set; } = string.Empty;
     public string Fen { get; set; } = string.Empty;
     public string Moves { get; set; } = string.Empty;
+    /// <summary>Halbzug-Index des Trainingsstarts; lösen ab moves[StartPly+1] (siehe BookPuzzle).</summary>
+    public int StartPly { get; set; }
     public string? Title { get; set; }
     public string? Chapter { get; set; }
     public string? Comment { get; set; }

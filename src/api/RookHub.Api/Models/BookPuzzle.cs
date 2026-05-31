@@ -25,6 +25,14 @@ public class BookPuzzle
     [Required]
     public string Moves { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Halbzug-Index, ab dem das Training startet (der per ChessBase-[%tqu] markierte Zug).
+    /// <see cref="Fen"/> + <see cref="Moves"/> enthalten die KOMPLETTE Partie; beim Lösen wird
+    /// bis <c>moves[StartPly]</c> (Setup) vorgespult, gelöst wird ab <c>moves[StartPly+1]</c>.
+    /// 0 = kein Trainingsmarker (klassisch: moves[0] Setup, lösen ab moves[1]).
+    /// </summary>
+    public int StartPly { get; set; }
+
     [MaxLength(300)]
     public string? Title { get; set; }
 

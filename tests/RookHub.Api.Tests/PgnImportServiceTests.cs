@@ -134,6 +134,55 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParsePgn_MidlineTqu_SetsStartPly_AndKeepsFullGame()
+    {
+        // [%tqu] hängt an 2...Nc6 (Index 3) → Setup-Zug, gelöst wird ab moves[4] (Bb5).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e5 2. Nf3 Nc6 {[%tqu ""En"",""find"","""","""",""f1b5"","""",10]} 3. Bb5 a6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        // Ganze Partie bleibt erhalten:
+        Assert.Equal("e2e4 e7e5 g1f3 b8c6 f1b5 a7a6", p.Moves);
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);
+        // Trainingsstart bei Index 3 (der [%tqu]-Zug Nc6); Lösung ab moves[4] = f1b5:
+        Assert.Equal(3, p.StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_RootTqu_StartPlyMinusOne()
+    {
+        // [%tqu] vor dem ersten Zug → FEN ist bereits die Trainingsstellung, lösen ab moves[0].
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1""]
+
+{[%tqu ""En"",""find"",""""]} 1. Ng5 d5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        Assert.Equal("f3g5 d7d5", p.Moves);
+        Assert.Equal(-1, p.StartPly);
+    }
+
+    [Fact]
+    public void ParsePgn_NoTqu_StartPlyZero()
+    {
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 e5 2. Nf3 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        Assert.Equal(0, p.StartPly);
+    }
+
+    [Fact]
     public void CleanDisplayName_StripsSuffixes()
     {
         Assert.Equal("My Book", PgnImportService.CleanDisplayName("My Book_firstkey.pgn"));

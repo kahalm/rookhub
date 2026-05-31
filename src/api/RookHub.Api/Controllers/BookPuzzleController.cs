@@ -210,6 +210,7 @@ public class BookPuzzleController : BaseApiController
         Round = bp.Round,
         Fen = bp.Fen,
         Moves = bp.Moves,
+        StartPly = bp.StartPly,
         Title = bp.Title,
         Chapter = bp.Chapter,
         Comment = bp.Comment,
