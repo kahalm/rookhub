@@ -1,7 +1,12 @@
 export const environment = {
   production: false,
-  version: '0.28.2',
+  version: '0.29.0',
   changelog: [
+    { version: '0.29.0', date: '2026-05-31', changes: [
+      'Feature: Figuren-Sets wählbar — Classic (cburnett), Merida, Fantasy, Spatial (lokal gevendort, MIT/GPL).',
+      'Feature: Neue Brett-Texturen — Holz, Wasser, Marmor, Metall (echte Lichess-Texturen).',
+      'Auswahl für Figuren + Brett in allen Puzzle-Modi (Normal, Endless, Buch), in localStorage gemerkt.',
+    ]},
     { version: '0.28.2', date: '2026-05-31', changes: [
       'Fix: Buch-Puzzle-Import (Legacy-JSON) kürzt BookFileName auf 200 Zeichen und überspringt leere Dateinamen — verhindert DB-Fehler + Geister-Bücher (Code-Review).',
       'Fix: Schwierigkeits-Dropdown — erstes Puzzle erst nach Laden der Elo (nicht mehr Default 1500); Rating-Fenster wird auf den echten DB-Rating-Bereich geklemmt (keine leeren Ergebnisse/Retry-Schleife); ungültiger localStorage-Wert wird ignoriert (Code-Review).',

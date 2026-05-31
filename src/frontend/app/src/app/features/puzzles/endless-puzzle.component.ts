@@ -195,6 +195,14 @@ const FASTTRACK_SESSION_COUNT = 10;
                       </div>
                     }
                   </div>
+                  <div class="theme-label" style="margin-top: 0.75rem;">Figuren</div>
+                  <div class="theme-chips">
+                    @for (p of pieceSets; track p.key) {
+                      <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
+                        <span class="theme-name">{{ p.name }}</span>
+                      </div>
+                    }
+                  </div>
                 </div>
 
                 <div class="lives-display config-lives">
@@ -262,6 +270,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [premovable]="state === 'THINKING'"
                 [check]="isCheck"
                 [boardTheme]="boardTheme"
+                [pieceSet]="pieceSet"
                 (moveMade)="onMoveMade($event)"
               />
             </div>
@@ -884,6 +893,18 @@ export class EndlessPuzzleComponent implements OnDestroy {
     { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
     { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
     { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
+    { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33' },
+    { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78' },
+    { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a' },
+    { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a' },
+  ];
+
+  pieceSet = 'cburnett';
+  readonly pieceSets = [
+    { key: 'cburnett', name: 'Classic' },
+    { key: 'merida', name: 'Merida' },
+    { key: 'fantasy', name: 'Fantasy' },
+    { key: 'spatial', name: 'Spatial' },
   ];
 
   // Help
@@ -967,6 +988,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   ) {
     // Load board theme
     try { this.boardTheme = localStorage.getItem('rookhub_board_theme') || 'brown'; } catch {}
+    try { this.pieceSet = localStorage.getItem('rookhub_piece_set') || 'cburnett'; } catch {}
     // 1. Load from localStorage immediately (no latency)
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
@@ -1042,6 +1064,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
     try { localStorage.setItem('rookhub_board_theme', theme); } catch {}
+  }
+
+  setPieceSet(set: string): void {
+    this.pieceSet = set;
+    try { localStorage.setItem('rookhub_piece_set', set); } catch {}
   }
 
   onFasttrackToggle(): void {

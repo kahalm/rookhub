@@ -82,6 +82,32 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .board-theme-wood .orientation-black .ranks :nth-child(odd),
 .board-theme-wood .orientation-black .files :nth-child(even) { color: rgba(230, 209, 160, 0.9); }
 
+/* === Figuren-Sets (lokal gevendort: public/piece/<set>/, Lichess) ========= */
+/* Default = cburnett (chessground.cburnett.css). Andere Sets via Wrapper-Klasse
+   .piece-set-<name>; höhere Spezifität als die cburnett-Regeln (.cg-wrap piece…). */
+$rh-piece-sets: merida, fantasy, spatial;
+$rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K');
+@each $set in $rh-piece-sets {
+  @each $role, $code in $rh-piece-roles {
+    .piece-set-#{$set} cg-board piece.#{$role}.white { background-image: url('/piece/#{$set}/w#{$code}.svg'); }
+    .piece-set-#{$set} cg-board piece.#{$role}.black { background-image: url('/piece/#{$set}/b#{$code}.svg'); }
+  }
+}
+
+/* === Brett-Texturen (lokal gevendort: public/board/, Lichess AGPL) ========= */
+.board-theme-realwood cg-board { background-image: url('/board/wood4.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #b58863; }
+.board-theme-water    cg-board { background-image: url('/board/blue3.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #6f93b8; }
+.board-theme-marble   cg-board { background-image: url('/board/marble.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #c9c9c9; }
+.board-theme-metal    cg-board { background-image: url('/board/metal.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #8a8a8a; }
+/* Koordinaten auf Textur-Brettern: hell mit Schatten (auf jedem Feld lesbar) */
+.board-theme-realwood .ranks :nth-child(n), .board-theme-realwood .files :nth-child(n),
+.board-theme-water .ranks :nth-child(n), .board-theme-water .files :nth-child(n),
+.board-theme-marble .ranks :nth-child(n), .board-theme-marble .files :nth-child(n),
+.board-theme-metal .ranks :nth-child(n), .board-theme-metal .files :nth-child(n) {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
 /* PGN Viewer dialog: no padding */
 .pgn-viewer-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
   padding: 0;

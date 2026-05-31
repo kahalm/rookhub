@@ -14,7 +14,7 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="board-wrapper" [class]="'board-theme-' + boardTheme">
+    <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
       <div #boardEl class="cg-wrap"></div>
       @if (showPromotionOverlay) {
         <div class="promotion-backdrop" (click)="cancelPromotion()"></div>
@@ -80,6 +80,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() check = false;
   @Input() premovable = false;
   @Input() boardTheme = 'brown';
+  @Input() pieceSet = 'cburnett';
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -307,7 +308,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   getPieceImage(piece: PromotionPiece): string {
     const name = PuzzleBoardComponent.PIECE_NAMES[this.promotionColor][piece];
-    return `url('${PuzzleBoardComponent.PIECE_SVG_BASE}${name}.svg')`;
+    // Lokal gevendorte Sets liegen unter /piece/<set>/; Default cburnett von Lichess.
+    const base = this.pieceSet && this.pieceSet !== 'cburnett'
+      ? `/piece/${this.pieceSet}/`
+      : PuzzleBoardComponent.PIECE_SVG_BASE;
+    return `url('${base}${name}.svg')`;
   }
 
   ngOnDestroy(): void {

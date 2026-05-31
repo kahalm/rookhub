@@ -31,6 +31,7 @@ const DIFFICULTY_OFFSET: Record<string, number> = {
 };
 const RATING_WINDOW = 100;
 const BOARD_THEME_KEY = 'rookhub_board_theme';
+const PIECE_SET_KEY = 'rookhub_piece_set';
 
 @Component({
   selector: 'app-puzzle',
@@ -54,6 +55,7 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
             [boardTheme]="boardTheme"
+            [pieceSet]="pieceSet"
             (moveMade)="onMoveMade($event)"
           />
         </div>
@@ -320,6 +322,14 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
                   </div>
                 }
               </div>
+              <div class="theme-label" style="margin-top: 0.75rem;">Figuren</div>
+              <div class="theme-chips">
+                @for (p of pieceSets; track p.key) {
+                  <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
+                    <span class="theme-name">{{ p.name }}</span>
+                  </div>
+                }
+              </div>
             </mat-card-content>
           </mat-card>
 
@@ -469,6 +479,18 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
     { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
     { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
+    { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33' },
+    { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78' },
+    { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a' },
+    { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a' },
+  ];
+
+  pieceSet = 'cburnett';
+  readonly pieceSets = [
+    { key: 'cburnett', name: 'Classic' },
+    { key: 'merida', name: 'Merida' },
+    { key: 'fantasy', name: 'Fantasy' },
+    { key: 'spatial', name: 'Spatial' },
   ];
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
@@ -939,6 +961,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     if (this.stockfishDepth > 24) this.stockfishDepth = 24;
     try {
       this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown';
+      this.pieceSet = localStorage.getItem(PIECE_SET_KEY) || 'cburnett';
     } catch {}
   }
 
@@ -951,5 +974,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
     try { localStorage.setItem(BOARD_THEME_KEY, theme); } catch {}
+  }
+
+  setPieceSet(set: string): void {
+    this.pieceSet = set;
+    try { localStorage.setItem(PIECE_SET_KEY, set); } catch {}
   }
 }
