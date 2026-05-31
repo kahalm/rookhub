@@ -504,7 +504,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   showSettings = false;
   @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = [
-    { key: 'cburnett', name: 'Classic', preview: 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg' },
+    { key: 'cburnett', name: 'Classic', preview: '/piece/cburnett/wN.svg' },
     { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
     { key: 'fantasy', name: 'Fantasy', preview: '/piece/fantasy/wN.svg' },
     { key: 'spatial', name: 'Spatial', preview: '/piece/spatial/wN.svg' },
