@@ -12,14 +12,11 @@ import { ActivatedRoute } from '@angular/router';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
-
-const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
-const BOARD_THEME_KEY = 'rookhub_board_theme';
-const PIECE_SET_KEY = 'rookhub_piece_set';
 
 @Component({
   selector: 'app-book-puzzle',
@@ -332,6 +329,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   constructor(
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
+    private prefs: PreferencesService,
     private route: ActivatedRoute
   ) {
     this.loadConfig();
@@ -617,33 +615,23 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   }
 
   private loadConfig(): void {
-    try {
-      const raw = localStorage.getItem(BOOK_PUZZLE_CONFIG_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved.stockfishDepth) this.stockfishDepth = saved.stockfishDepth;
-      }
-    } catch {}
-    if (this.stockfishDepth < 1) this.stockfishDepth = 16;
-    if (this.stockfishDepth > 24) this.stockfishDepth = 24;
-    try { this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown'; } catch {}
-    try { this.pieceSet = localStorage.getItem(PIECE_SET_KEY) || 'cburnett'; } catch {}
+    this.boardTheme = this.prefs.boardTheme;
+    this.pieceSet = this.prefs.pieceSet;
+    this.stockfishDepth = this.prefs.bookStockfishDepth;
   }
 
   saveConfig(): void {
-    try {
-      localStorage.setItem(BOOK_PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth }));
-    } catch {}
+    this.prefs.setBookStockfishDepth(this.stockfishDepth);
   }
 
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
-    try { localStorage.setItem(BOARD_THEME_KEY, theme); } catch {}
+    this.prefs.setBoardTheme(theme);
   }
 
   setPieceSet(set: string): void {
     this.pieceSet = set;
-    try { localStorage.setItem(PIECE_SET_KEY, set); } catch {}
+    this.prefs.setPieceSet(set);
   }
 
   toggleSettings(): void {

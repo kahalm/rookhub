@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.34.1';
+export const APP_VERSION = '0.35.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.35.0', date: '2026-05-31', changes: [
+    'Feature: User-Preferences Server-Sync — Board Theme, Piece Set, Stockfish Depth, Schwierigkeit und Book Stockfish Depth werden serverseitig gespeichert und geraeteuebergreifend synchronisiert.',
+    'Feature: Neuer PreferencesService — zentraler Service fuer alle Puzzle-Einstellungen mit localStorage + Server-Persistierung.',
+    'API: GET/PUT /api/profile liefert/akzeptiert jetzt 5 neue Preference-Felder (boardTheme, pieceSet, stockfishDepth, puzzleDifficulty, bookStockfishDepth).',
+    'Sync: Nach Login werden Server-Preferences automatisch geladen und ueberschreiben lokale Werte.',
+    'Fix: cburnett-Figurenvorschau lokal gevendort — kein externer GitHub-Request mehr.',
+  ]},
   { version: '0.34.1', date: '2026-05-31', changes: [
     'Fix: Version + Changelog aus gemeinsamer Quelle (changelog.ts) — der Production-Build zeigt jetzt die korrekte Version/Changelog (environment.prod.ts war seit v0.26.0 auf 0.26.1 eingefroren).',
   ]},

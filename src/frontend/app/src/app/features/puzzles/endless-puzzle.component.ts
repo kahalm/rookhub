@@ -16,6 +16,7 @@ import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
@@ -1005,12 +1006,13 @@ export class EndlessPuzzleComponent implements OnDestroy {
     private stockfish: StockfishService,
     private storage: EndlessStorageService,
     public authService: AuthService,
+    private prefs: PreferencesService,
     public router: Router,
     private dialog: MatDialog
   ) {
-    // Load board theme
-    try { this.boardTheme = localStorage.getItem('rookhub_board_theme') || 'brown'; } catch {}
-    try { this.pieceSet = localStorage.getItem('rookhub_piece_set') || 'cburnett'; } catch {}
+    // Load board theme from preferences service
+    this.boardTheme = this.prefs.boardTheme;
+    this.pieceSet = this.prefs.pieceSet;
     // 1. Load from localStorage immediately (no latency)
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
@@ -1085,12 +1087,12 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
-    try { localStorage.setItem('rookhub_board_theme', theme); } catch {}
+    this.prefs.setBoardTheme(theme);
   }
 
   setPieceSet(set: string): void {
     this.pieceSet = set;
-    try { localStorage.setItem('rookhub_piece_set', set); } catch {}
+    this.prefs.setPieceSet(set);
   }
 
   onFasttrackToggle(): void {

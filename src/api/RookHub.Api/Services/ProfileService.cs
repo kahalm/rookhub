@@ -59,6 +59,11 @@ public class ProfileService
         if (dto.ChessResultsId != null) profile.ChessResultsId = dto.ChessResultsId;
         if (dto.ChessComUsername != null) profile.ChessComUsername = dto.ChessComUsername;
         if (dto.LichessUsername != null) profile.LichessUsername = dto.LichessUsername;
+        if (dto.BoardTheme != null) profile.BoardTheme = dto.BoardTheme;
+        if (dto.PieceSet != null) profile.PieceSet = dto.PieceSet;
+        if (dto.StockfishDepth != null) profile.StockfishDepth = Math.Clamp(dto.StockfishDepth.Value, 1, 24);
+        if (dto.PuzzleDifficulty != null) profile.PuzzleDifficulty = dto.PuzzleDifficulty;
+        if (dto.BookStockfishDepth != null) profile.BookStockfishDepth = Math.Clamp(dto.BookStockfishDepth.Value, 1, 24);
 
         await _db.SaveChangesAsync();
 
@@ -87,6 +92,11 @@ public class ProfileService
         FideId = user.Profile?.FideId,
         ChessResultsId = user.Profile?.ChessResultsId,
         ChessComUsername = user.Profile?.ChessComUsername,
-        LichessUsername = user.Profile?.LichessUsername
+        LichessUsername = user.Profile?.LichessUsername,
+        BoardTheme = user.Profile?.BoardTheme,
+        PieceSet = user.Profile?.PieceSet,
+        StockfishDepth = user.Profile?.StockfishDepth,
+        PuzzleDifficulty = user.Profile?.PuzzleDifficulty,
+        BookStockfishDepth = user.Profile?.BookStockfishDepth
     };
 }

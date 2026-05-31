@@ -54,6 +54,10 @@ export class AuthService {
     localStorage.setItem('rookhub_user', JSON.stringify(user));
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();
+    // Sync user preferences from server (overwrites localStorage)
+    import('./preferences.service').then(m => {
+      this.injector.get(m.PreferencesService).loadFromServer();
+    });
   }
 
   private claimAnonymousPuzzleSession(): void {

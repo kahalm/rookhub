@@ -17,21 +17,18 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
-const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
-
 // Schwierigkeit → Elo-Offset des Fenster-Zentrums; Fenster ±RATING_WINDOW um (Elo + Offset).
 const DIFFICULTY_OFFSET: Record<string, number> = {
   sehr_leicht: -600, leicht: -300, normal: 0, schwer: 300, sehr_schwer: 600,
 };
 const RATING_WINDOW = 100;
-const BOARD_THEME_KEY = 'rookhub_board_theme';
-const PIECE_SET_KEY = 'rookhub_piece_set';
 
 @Component({
   selector: 'app-puzzle',
@@ -480,6 +477,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     private puzzleService: PuzzleService,
     private stockfish: StockfishService,
     private authService: AuthService,
+    private prefs: PreferencesService,
     private router: Router,
     private route: ActivatedRoute,
     private dialog: MatDialog
@@ -971,36 +969,26 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   // --- Config persistence ---
 
   private loadConfig(): void {
-    try {
-      const raw = localStorage.getItem(PUZZLE_CONFIG_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved.stockfishDepth) this.stockfishDepth = saved.stockfishDepth;
-        if (saved.difficulty && saved.difficulty in DIFFICULTY_OFFSET) this.difficulty = saved.difficulty;
-      }
-    } catch {}
-    if (this.stockfishDepth < 1) this.stockfishDepth = 16;
-    if (this.stockfishDepth > 24) this.stockfishDepth = 24;
-    try {
-      this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown';
-      this.pieceSet = localStorage.getItem(PIECE_SET_KEY) || 'cburnett';
-    } catch {}
+    this.boardTheme = this.prefs.boardTheme;
+    this.pieceSet = this.prefs.pieceSet;
+    this.stockfishDepth = this.prefs.stockfishDepth;
+    const d = this.prefs.puzzleDifficulty;
+    if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
   }
 
   saveConfig(): void {
-    try {
-      localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth, difficulty: this.difficulty }));
-    } catch {}
+    this.prefs.setStockfishDepth(this.stockfishDepth);
+    this.prefs.setPuzzleDifficulty(this.difficulty);
   }
 
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
-    try { localStorage.setItem(BOARD_THEME_KEY, theme); } catch {}
+    this.prefs.setBoardTheme(theme);
   }
 
   setPieceSet(set: string): void {
     this.pieceSet = set;
-    try { localStorage.setItem(PIECE_SET_KEY, set); } catch {}
+    this.prefs.setPieceSet(set);
   }
 
   toggleSettings(): void {

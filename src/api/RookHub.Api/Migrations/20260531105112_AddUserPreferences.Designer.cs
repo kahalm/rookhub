@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260531105112_AddUserPreferences")]
+    partial class AddUserPreferences
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,12 +104,6 @@ namespace RookHub.Api.Migrations
 
                     b.Property<bool>("ForRandom")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<int?>("MaxElo")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MinElo")
-                        .HasColumnType("int");
 
                     b.Property<int?>("Rating")
                         .HasColumnType("int");
@@ -334,34 +331,6 @@ namespace RookHub.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Friendships");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.Group", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Groups");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Puzzle", b =>
@@ -674,21 +643,6 @@ namespace RookHub.Api.Migrations
                     b.ToTable("TournamentUserSettings");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.UserGroup", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("GroupId")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId", "GroupId");
-
-                    b.HasIndex("GroupId");
-
-                    b.ToTable("UserGroups");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.UserProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -887,25 +841,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.UserGroup", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.Group", "Group")
-                        .WithMany("Members")
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany("Groups")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Group");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.UserProfile", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -923,8 +858,6 @@ namespace RookHub.Api.Migrations
 
                     b.Navigation("EndlessSessions");
 
-                    b.Navigation("Groups");
-
                     b.Navigation("Profile");
 
                     b.Navigation("Repertoires");
@@ -939,11 +872,6 @@ namespace RookHub.Api.Migrations
             modelBuilder.Entity("RookHub.Api.Models.Book", b =>
                 {
                     b.Navigation("Puzzles");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.Group", b =>
-                {
-                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Repertoire", b =>

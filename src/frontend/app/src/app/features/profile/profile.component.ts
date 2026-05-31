@@ -23,6 +23,11 @@ interface Profile {
   chessResultsId: string | null;
   chessComUsername: string | null;
   lichessUsername: string | null;
+  boardTheme: string | null;
+  pieceSet: string | null;
+  stockfishDepth: number | null;
+  puzzleDifficulty: string | null;
+  bookStockfishDepth: number | null;
 }
 
 interface PlayerSearchResult {

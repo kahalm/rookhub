@@ -13,6 +13,13 @@ public class ProfileDto
     public string? ChessResultsId { get; set; }
     public string? ChessComUsername { get; set; }
     public string? LichessUsername { get; set; }
+
+    // User Preferences
+    public string? BoardTheme { get; set; }
+    public string? PieceSet { get; set; }
+    public int? StockfishDepth { get; set; }
+    public string? PuzzleDifficulty { get; set; }
+    public int? BookStockfishDepth { get; set; }
 }
 
 public class UpdateProfileDto
@@ -37,4 +44,20 @@ public class UpdateProfileDto
 
     [MaxLength(50), RegularExpression(@"^[a-zA-Z0-9_-]*$", ErrorMessage = "LichessUsername may only contain letters, digits, hyphens and underscores.")]
     public string? LichessUsername { get; set; }
+
+    // User Preferences
+    [MaxLength(20)]
+    public string? BoardTheme { get; set; }
+
+    [MaxLength(20)]
+    public string? PieceSet { get; set; }
+
+    [Range(1, 24)]
+    public int? StockfishDepth { get; set; }
+
+    [MaxLength(20)]
+    public string? PuzzleDifficulty { get; set; }
+
+    [Range(1, 24)]
+    public int? BookStockfishDepth { get; set; }
 }

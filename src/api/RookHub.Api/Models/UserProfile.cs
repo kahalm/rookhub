@@ -29,4 +29,18 @@ public class UserProfile
 
     [MaxLength(50)]
     public string? LichessUsername { get; set; }
+
+    // User Preferences (synced across devices)
+    [MaxLength(20)]
+    public string? BoardTheme { get; set; }
+
+    [MaxLength(20)]
+    public string? PieceSet { get; set; }
+
+    public int? StockfishDepth { get; set; }
+
+    [MaxLength(20)]
+    public string? PuzzleDifficulty { get; set; }
+
+    public int? BookStockfishDepth { get; set; }
 }
