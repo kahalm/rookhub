@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -279,7 +279,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [turnColor]="turnColor"
                 [dests]="dests"
                 [lastMove]="lastMove"
-                [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
+                [viewOnly]="reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
                 [premovable]="state === 'THINKING'"
                 [check]="isCheck"
                 [boardTheme]="boardTheme"
@@ -401,7 +401,25 @@ const FASTTRACK_SESSION_COUNT = 10;
                     @case ('CORRECT') {
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
-                        @if (alternativeSolve) {
+                        @if (reviewMode) {
+                          <p class="status-text solution-review">Solution</p>
+                          <div class="review-nav">
+                            <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                            <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                            <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                          </div>
+                          <div class="alt-actions">
+                            @if (reviewingWrongPuzzle) {
+                              <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                                <mat-icon>skip_next</mat-icon> Continue
+                              </button>
+                            } @else {
+                              <button mat-raised-button color="primary" (click)="continueAfterSolve()">
+                                <mat-icon>arrow_forward</mat-icon> Continue
+                              </button>
+                            }
+                          </div>
+                        } @else if (alternativeSolve) {
                           <p class="status-text">Checkmate!</p>
                           <p class="alt-hint">Alternative solution — the puzzle had a different intended line.</p>
                           <div class="alt-actions">
@@ -410,13 +428,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                             </button>
                             <button mat-button (click)="showIntendedSolution()">
                               <mat-icon>visibility</mat-icon> Show Solution
-                            </button>
-                          </div>
-                        } @else if (reviewingWrongPuzzle) {
-                          <p class="status-text solution-review">Solution</p>
-                          <div class="alt-actions">
-                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                              <mat-icon>skip_next</mat-icon> Continue
                             </button>
                           </div>
                         } @else {
@@ -433,14 +444,27 @@ const FASTTRACK_SESSION_COUNT = 10;
                           <mat-icon class="result-icon">cancel</mat-icon>
                           <p class="status-text">Wrong!</p>
                         }
-                        <div class="wrong-actions">
-                          <button mat-button (click)="showIntendedSolution()">
-                            <mat-icon>visibility</mat-icon> Show Solution
-                          </button>
-                          <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                            <mat-icon>skip_next</mat-icon> Continue
-                          </button>
-                        </div>
+                        @if (reviewMode) {
+                          <div class="review-nav">
+                            <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                            <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                            <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                          </div>
+                          <div class="wrong-actions">
+                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                              <mat-icon>skip_next</mat-icon> Continue
+                            </button>
+                          </div>
+                        } @else {
+                          <div class="wrong-actions">
+                            <button mat-button (click)="showIntendedSolution()">
+                              <mat-icon>visibility</mat-icon> Show Solution
+                            </button>
+                            <button mat-raised-button color="primary" (click)="continueAfterWrong()">
+                              <mat-icon>skip_next</mat-icon> Continue
+                            </button>
+                          </div>
+                        }
                       </div>
                     }
                   }
@@ -784,6 +808,8 @@ const FASTTRACK_SESSION_COUNT = 10;
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .review-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
     .solution-review { color: rgba(0,0,0,0.6); }
     .eval-compare {
       display: flex; align-items: center; gap: 0.5rem;
@@ -994,6 +1020,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
   private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   private aborted = false;
   reviewingWrongPuzzle = false;
+  reviewMode = false;
+  reviewIndex = 0;
   gaveUp = false;
 
   // Move tracking
@@ -1447,12 +1475,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   continueAfterSolve(): void {
+    this.reviewMode = false;
     this._currentMinRating += this.getCurrentStep();
     this.level++;
     this.loadPuzzle();
   }
 
   continueAfterWrong(): void {
+    this.reviewMode = false;
     this.reviewingWrongPuzzle = false;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     if (this.lives <= 0) {
@@ -1466,25 +1496,53 @@ export class EndlessPuzzleComponent implements OnDestroy {
   showIntendedSolution(): void {
     if (!this.puzzle) return;
     if (this.state === 'WRONG') this.reviewingWrongPuzzle = true;
-    // Reset board to puzzle start and play through intended solution
-    this.solutionMoves = this.puzzle.moves.split(' ');
-    this.chess = new Chess(this.puzzle.fen);
     this.state = 'CORRECT';
+    this.reviewMode = true;
+    this.reviewGoTo(0);
+  }
 
-    // Play setup move immediately
-    this.playMove(this.solutionMoves[0]);
-    this.updateBoard();
+  get reviewTotal(): number {
+    return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
+  }
 
-    // Animate remaining moves
-    let i = 1;
-    const playNext = () => {
-      if (i >= this.solutionMoves.length) return;
-      this.playMove(this.solutionMoves[i]);
-      i++;
-      this.updateBoard();
-      this.autoAdvanceTimer = setTimeout(playNext, 600);
-    };
-    this.autoAdvanceTimer = setTimeout(playNext, 400);
+  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+
+  private reviewGoTo(index: number): void {
+    if (!this.puzzle) return;
+    const moves = this.puzzle.moves.split(' ').filter(m => m);
+    index = Math.max(0, Math.min(index, moves.length));
+    this.reviewIndex = index;
+    this.chess = new Chess(this.puzzle.fen);
+    let last: [Key, Key] | undefined;
+    for (let i = 0; i < index; i++) {
+      this.applyUci(moves[i]);
+      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
+    }
+    this.lastMove = last;
+    this.boardFen = this.chess.fen();
+    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = this.chess.isCheck();
+    this.dests = new Map();
+  }
+
+  exitReview(): void {
+    this.reviewMode = false;
+  }
+
+  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
+  private applyUci(uci: string): void {
+    const from = uci.substring(0, 2) as Square;
+    const to = uci.substring(2, 4) as Square;
+    const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
+    this.chess.move({ from, to, promotion });
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent): void {
+    if (!this.reviewMode) return;
+    if (e.key === 'ArrowLeft') this.reviewPrev();
+    if (e.key === 'ArrowRight') this.reviewNext();
   }
 
   private loseLife(): void {

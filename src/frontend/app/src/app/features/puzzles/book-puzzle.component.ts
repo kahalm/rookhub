@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -51,7 +51,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
               <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" title="Einstellungen">
                 <mat-icon>settings</mat-icon>
               </button>
-              @if (reviewMode) {
+              @if (reviewMode && !solutionReview) {
                 <div class="status-center">
                   <p class="status-text">Ganze Partie</p>
                   <div class="review-nav">
@@ -127,16 +127,39 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                       <p class="status-text">Correct!</p>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    @if (solutionReview) {
+                      <div class="review-nav">
+                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                      </div>
+                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
+                    } @else {
+                      <div class="solved-actions">
+                        <button mat-button (click)="showSolution()">
+                          <mat-icon>visibility</mat-icon> Show Solution
+                        </button>
+                      </div>
+                    }
                   </div>
                 }
                 @case ('FAILED') {
                   <div class="status-center failed">
                     <mat-icon class="result-icon">cancel</mat-icon>
                     <p class="status-text">Incorrect</p>
-                    <div class="fail-actions">
-                      <button mat-button (click)="retry()">Retry</button>
-                      <button mat-button (click)="showSolution()">Show Solution</button>
-                    </div>
+                    @if (solutionReview) {
+                      <div class="review-nav">
+                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                      </div>
+                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
+                    } @else {
+                      <div class="fail-actions">
+                        <button mat-button (click)="retry()">Retry</button>
+                        <button mat-button (click)="showSolution()">Show Solution</button>
+                      </div>
+                    }
                   </div>
                 }
               }
@@ -238,6 +261,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -345,6 +369,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   // Review-Modus „Ganze Partie": Schritt-für-Schritt durch die komplette Partie.
   reviewMode = false;
   reviewIndex = 0;
+  solutionReview = false;
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -581,26 +606,32 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.aborted = false;
-    this.solutionMoves = this.puzzle.moves.split(' ');
-    this.chess = new Chess(this.puzzle.fen);
+    this.solutionReview = true;
+    this.reviewMode = true;
+    this.solutionReviewGoTo(0);
+  }
 
-    // Vorspiel still aufs Brett (bis zum Setup-Zug), dann ab Trainingsstart animiert.
+  private solutionReviewGoTo(index: number): void {
+    if (!this.puzzle) return;
+    const allMoves = this.puzzle.moves.split(' ').filter(m => m);
     const start = Math.max(0, this.startPly);
-    for (let i = 0; i < start; i++) this.applyUci(this.solutionMoves[i]);
-    this.lastMove = undefined;
-    this.updateBoard();
-
-    let i = start;
-    const playNext = () => {
-      if (i >= this.solutionMoves.length) return;
-      this.playMove(this.solutionMoves[i]);
-      i++;
-      this.updateBoard();
-      if (i < this.solutionMoves.length) {
-        this.autoAdvanceTimer = setTimeout(playNext, 600);
-      }
-    };
-    this.autoAdvanceTimer = setTimeout(playNext, 400);
+    const solutionMoves = allMoves.slice(start);
+    index = Math.max(0, Math.min(index, solutionMoves.length));
+    this.reviewIndex = index;
+    this.chess = new Chess(this.puzzle.fen);
+    // Vorspiel still aufs Brett
+    for (let i = 0; i < start; i++) this.applyUci(allMoves[i]);
+    // Loesungszuege bis index
+    let last: [Key, Key] | undefined;
+    for (let i = 0; i < index; i++) {
+      this.applyUci(solutionMoves[i]);
+      last = [solutionMoves[i].substring(0, 2) as Key, solutionMoves[i].substring(2, 4) as Key];
+    }
+    this.lastMove = last;
+    this.boardFen = this.chess.fen();
+    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = this.chess.isCheck();
+    this.dests = new Map();
   }
 
   // ---- „Ganze Partie" Review ---------------------------------------------
@@ -615,11 +646,19 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   }
 
   get reviewTotal(): number {
-    return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
+    if (!this.puzzle) return 0;
+    const allMoves = this.puzzle.moves.split(' ').filter(m => m);
+    return this.solutionReview ? allMoves.length - Math.max(0, this.startPly) : allMoves.length;
   }
 
-  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+  reviewNext(): void {
+    if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex + 1);
+    else this.reviewGoTo(this.reviewIndex + 1);
+  }
+  reviewPrev(): void {
+    if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex - 1);
+    else this.reviewGoTo(this.reviewIndex - 1);
+  }
 
   private reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -641,7 +680,15 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   exitReview(): void {
     this.reviewMode = false;
+    this.solutionReview = false;
     if (this.puzzle) this.setupPuzzle(this.puzzle);
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent): void {
+    if (!this.reviewMode) return;
+    if (e.key === 'ArrowLeft') this.reviewPrev();
+    if (e.key === 'ArrowRight') this.reviewNext();
   }
 
   formatTime(seconds: number): string {

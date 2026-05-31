@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -48,7 +48,7 @@ const RATING_WINDOW = 100;
             [turnColor]="turnColor"
             [dests]="dests"
             [lastMove]="lastMove"
-            [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
+            [viewOnly]="reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
             [boardTheme]="boardTheme"
@@ -194,14 +194,23 @@ const RATING_WINDOW = 100;
                       <span class="elo-change elo-up">+{{ lastEloChange }}</span>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <div class="solved-actions">
-                      <button mat-raised-button color="primary" (click)="loadNext()">
-                        Next Puzzle @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
-                      </button>
-                      <button mat-button (click)="showSolution()">
-                        <mat-icon>visibility</mat-icon> Show Solution
-                      </button>
-                    </div>
+                    @if (reviewMode) {
+                      <div class="review-nav">
+                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                      </div>
+                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
+                    } @else {
+                      <div class="solved-actions">
+                        <button mat-raised-button color="primary" (click)="loadNext()">
+                          Next Puzzle @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
+                        </button>
+                        <button mat-button (click)="showSolution()">
+                          <mat-icon>visibility</mat-icon> Show Solution
+                        </button>
+                      </div>
+                    }
                   </div>
                 }
                 @case ('FAILED') {
@@ -211,11 +220,20 @@ const RATING_WINDOW = 100;
                     @if (lastEloChange != null) {
                       <span class="elo-change elo-down">{{ lastEloChange }}</span>
                     }
-                    <div class="fail-actions">
-                      <button mat-button (click)="retry()">Retry</button>
-                      <button mat-button (click)="showSolution()">Show Solution</button>
-                      <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
-                    </div>
+                    @if (reviewMode) {
+                      <div class="review-nav">
+                        <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                        <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                        <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                      </div>
+                      <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurueck</button>
+                    } @else {
+                      <div class="fail-actions">
+                        <button mat-button (click)="retry()">Retry</button>
+                        <button mat-button (click)="showSolution()">Show Solution</button>
+                        <button mat-raised-button color="primary" (click)="loadNext()">Next Puzzle</button>
+                      </div>
+                    }
                   </div>
                 }
               }
@@ -393,6 +411,8 @@ const RATING_WINDOW = 100;
     .filter-field { flex: 1; }
     .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .review-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
     .review-btn { width: 100%; height: 40px; font-size: 0.9em; }
     .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .endless-btn { width: 100%; height: 44px; font-size: 1em; }
@@ -456,6 +476,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   onSolutionPath = true;
   alternativeSolve = false;
   mouseslipUsed = false;
+
+  // Review mode
+  reviewMode = false;
+  reviewIndex = 0;
 
   // Move tracking
   private moveLog: Array<{i: number, uci: string, exp: string, ms: number, ok: boolean}> = [];
@@ -812,24 +836,52 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   showSolution(): void {
     if (!this.puzzle) return;
     this.stopCountdown();
+    this.reviewMode = true;
+    this.reviewGoTo(0);
+  }
 
-    // Reset to puzzle start and replay full solution
-    this.solutionMoves = this.puzzle.moves.split(' ');
+  get reviewTotal(): number {
+    return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
+  }
+
+  reviewNext(): void { this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.reviewGoTo(this.reviewIndex - 1); }
+
+  private reviewGoTo(index: number): void {
+    if (!this.puzzle) return;
+    const moves = this.puzzle.moves.split(' ').filter(m => m);
+    index = Math.max(0, Math.min(index, moves.length));
+    this.reviewIndex = index;
     this.chess = new Chess(this.puzzle.fen);
-    this.playMove(this.solutionMoves[0]);
-    this.updateBoard();
+    let last: [Key, Key] | undefined;
+    for (let i = 0; i < index; i++) {
+      this.applyUci(moves[i]);
+      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
+    }
+    this.lastMove = last;
+    this.boardFen = this.chess.fen();
+    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = this.chess.isCheck();
+    this.dests = new Map();
+  }
 
-    let i = 1;
-    const playNext = () => {
-      if (i >= this.solutionMoves.length) return;
-      this.playMove(this.solutionMoves[i]);
-      i++;
-      this.updateBoard();
-      if (i < this.solutionMoves.length) {
-        this.autoAdvanceTimer = setTimeout(playNext, 600);
-      }
-    };
-    this.autoAdvanceTimer = setTimeout(playNext, 400);
+  exitReview(): void {
+    this.reviewMode = false;
+  }
+
+  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
+  private applyUci(uci: string): void {
+    const from = uci.substring(0, 2) as Square;
+    const to = uci.substring(2, 4) as Square;
+    const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
+    this.chess.move({ from, to, promotion });
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent): void {
+    if (!this.reviewMode) return;
+    if (e.key === 'ArrowLeft') this.reviewPrev();
+    if (e.key === 'ArrowRight') this.reviewNext();
   }
 
   private startSolvedCountdown(): void {

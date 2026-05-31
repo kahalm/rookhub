@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.35.3';
+export const APP_VERSION = '0.36.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.36.0', date: '2026-05-31', changes: [
+    'Feature: Loesungs-Review nach Puzzle-Ende — "Show Solution" oeffnet Step-Through statt Auto-Play in allen 3 Puzzle-Modi (Normal, Endless, Buch).',
+    'Feature: Pfeil-Buttons und Pfeiltasten (links/rechts) zum manuellen Durchsteppen der Loesung.',
+    'Feature: Buch-Puzzle unterscheidet "Show Solution" (nur Loesungszuege ab Trainingsstart) und "Ganze Partie ansehen" (alle Zuege).',
+  ]},
   { version: '0.35.3', date: '2026-05-31', changes: [
     'Fix: Buch-Puzzles mit FEN = Puzzle-Stellung (z.B. „1001 Chess Exercises") starten jetzt korrekt beim ersten Lösungszug (StartPly=-1) statt den ersten Zug als „Setup" wegzuspielen.',
     'Fix: Ganze-Partie-Einträge ohne Trainingsmarker (FEN = Grundstellung, kein [%tqu]) werden beim Import übersprungen (kein scheinbares Puzzle ab Eröffnung).',
