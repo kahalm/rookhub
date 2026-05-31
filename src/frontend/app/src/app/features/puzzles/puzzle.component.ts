@@ -19,9 +19,10 @@ import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles } from './board-theme.util';
-import { Chess, Square } from 'chess.js';
-import { Color, Key } from 'chessground/types';
-import { applyUci, tryFreeMove, calcDests, formatSanList } from './puzzle-move.util';
+import { Chess } from 'chess.js';
+import { Key } from 'chessground/types';
+import { applyUci } from './puzzle-move.util';
+import { BasePuzzleSolver } from './base-puzzle-solver';
 import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
@@ -469,18 +470,13 @@ const RATING_WINDOW = 100;
     }
   `]
 })
-export class PuzzleComponent implements OnInit, OnDestroy {
-  state: PuzzleState = 'LOADING';
+export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
+  // state, boardFen, orientation, turnColor, dests, lastMove, isCheck, onSolutionPath,
+  // alternativeSolve, mouseslipUsed, currentEval, visualizationMode, vizMoves, chess,
+  // solutionMoves, moveIndex, autoAdvanceTimer, aborted, moveLog, moveStartTime → BasePuzzleSolver
   puzzle: PuzzleDto | null = null;
   stats: PuzzleStatsDto | null = null;
   private ratingRangeBounds: PuzzleRatingRange | null = null;
-
-  boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-  orientation: Color = 'white';
-  turnColor: Color = 'white';
-  dests: Map<Key, Key[]> = new Map();
-  lastMove?: [Key, Key];
-  isCheck = false;
 
   boardTheme = 'brown';
 
@@ -492,38 +488,18 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private timerInterval?: ReturnType<typeof setInterval>;
   private startTime = 0;
 
-  private chess = new Chess();
-  private solutionMoves: string[] = [];
-  private moveIndex = 0;
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
-  private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
-  private aborted = false;
   lastEloChange: number | null = null;
-  onSolutionPath = true;
-  alternativeSolve = false;
-  mouseslipUsed = false;
 
   // Review mode (Lösungs-Step-Through)
   reviewMode = false;
   reviewIndex = 0;
 
-  // Visualisierungs-/Blindfold-Modus: Brett auf Startstellung eingefroren, Züge als SAN-Text.
-  visualizationMode = false;
-  private frozenFen = '';
-  vizMoves: string[] = [];
-  private vizStartWhite = true;
-  private vizStartNum = 1;
-
-  // Move tracking
-  private moveLog: Array<{i: number, uci: string, exp: string, ms: number, ok: boolean}> = [];
-  private moveStartTime = 0;
-
   // Eval
   showEval = false;
   evalLoading = false;
   initialEval = '';
-  currentEval = '';
   private initialFen = '';
 
   private routePuzzleId: number | null = null;
@@ -533,15 +509,49 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   constructor(
     private puzzleService: PuzzleService,
-    private stockfish: StockfishService,
+    stockfish: StockfishService,
     private authService: AuthService,
     private prefs: PreferencesService,
     private router: Router,
     private route: ActivatedRoute,
     private dialog: MatDialog
   ) {
+    super(stockfish);
     this.loadConfig();
     this.stockfish.init().catch(() => {});
+  }
+
+  // ===== Hooks für BasePuzzleSolver =====
+  protected override get depth(): number { return this.stockfishDepth; }
+
+  protected override onSetupStart(): void {
+    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
+    this.boardTheme = applied.boardTheme;
+    this.pieceSet = applied.pieceSet;
+  }
+
+  protected override onSolvingBegins(): void {
+    this.initialFen = this.chess.fen();
+    this.startTimer();
+    this.moveStartTime = Date.now();
+  }
+
+  protected override handleSolved(): void {
+    this.state = 'SOLVED';
+    this.stopTimer();
+    this.updateBoard();
+    this.recordAttempt(true);
+    this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+    this.enterSolutionReview();
+    this.startSolvedCountdown();
+  }
+
+  protected override handleFailed(): void {
+    this.state = 'FAILED';
+    this.stopTimer();
+    this.updateBoard();
+    this.recordAttempt(false);
+    this.enterSolutionReview();
   }
 
   readonly boardThemes = BOARD_THEMES;
@@ -669,190 +679,15 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   private setupPuzzle(puzzle: PuzzleDto): void {
-    this.solutionMoves = puzzle.moves.split(' ');
-    this.moveIndex = 0;
-    this.chess = new Chess(puzzle.fen);
-    this.onSolutionPath = true;
-    this.aborted = false;
-    this.mouseslipUsed = false;
-    this.alternativeSolve = false;
     this.reviewMode = false;
     this.reviewIndex = 0;
-
-    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-
-    const setupMove = this.solutionMoves[0];
-    const setupFrom = setupMove.substring(0, 2) as Square;
-    const piece = this.chess.get(setupFrom);
-    this.orientation = piece?.color === 'w' ? 'black' : 'white';
-
-    this.updateBoard();
-    this.state = 'SETUP';
-    this.moveLog = [];
-
-    setTimeout(() => {
-      if (this.state !== 'SETUP') return;
-      this.playMove(this.solutionMoves[0]);
-      this.moveIndex = 1;
-      this.beginSolving();
-      this.state = 'AWAITING_USER_MOVE';
-      this.initialFen = this.chess.fen();
-      this.updateBoard();
-      this.startTimer();
-      this.moveStartTime = Date.now();
-    }, 600);
-  }
-
-  onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
-    if (this.state === 'PLAYING') {
-      this.handleOffPathMove(event);
-      return;
-    }
-    if (this.state !== 'AWAITING_USER_MOVE') return;
-
-    if (this.onSolutionPath) {
-      const expectedUci = this.solutionMoves[this.moveIndex];
-      const userUci = event.orig + event.dest + (event.promotion || '');
-      const thinkMs = Date.now() - this.moveStartTime;
-
-      if (userUci === expectedUci.substring(0, userUci.length)) {
-        // Correct move
-        this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
-        this.playMove(expectedUci);
-        this.moveIndex++;
-
-        if (this.moveIndex >= this.solutionMoves.length) {
-          this.state = 'SOLVED';
-          this.stopTimer();
-          this.updateBoard();
-          this.recordAttempt(true);
-          this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
-          this.enterSolutionReview();
-          this.startSolvedCountdown();
-        } else {
-          // Play opponent response
-          this.state = 'THINKING';
-          this.updateBoard();
-          this.autoAdvanceTimer = setTimeout(() => {
-            if (this.aborted) return;
-            this.playMove(this.solutionMoves[this.moveIndex]);
-            this.moveIndex++;
-            this.updateBoard();
-
-            if (this.moveIndex >= this.solutionMoves.length) {
-              this.state = 'SOLVED';
-              this.stopTimer();
-              this.recordAttempt(true);
-              this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
-              this.enterSolutionReview();
-              this.startSolvedCountdown();
-            } else {
-              this.state = 'AWAITING_USER_MOVE';
-              this.moveStartTime = Date.now();
-              this.updateBoard();
-            }
-          }, 400);
-        }
-      } else {
-        // Wrong move — leave solution path, play against Stockfish
-        this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
-        if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-        this.onSolutionPath = false;
-        if (this.chess.isGameOver()) { this.handleGameOver(); return; }
-        this.opponentRespond();
-      }
-    } else {
-      this.handleOffPathMove(event);
-    }
-  }
-
-  private handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
-    if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-    if (this.chess.isGameOver()) { this.handleGameOver(); return; }
-    this.opponentRespond();
-  }
-
-  private async opponentRespond(): Promise<void> {
-    this.state = 'THINKING';
-    this.updateBoard();
-
-    try {
-      const result = await this.stockfish.getBestMove(this.chess.fen(), this.stockfishDepth);
-      if (this.aborted) return;
-      this.currentEval = result.eval;
-      this.playMove(result.move);
-      this.updateBoard();
-
-      if (this.chess.isGameOver()) {
-        this.handleGameOver();
-        return;
-      }
-
-      this.autoAdvanceTimer = setTimeout(() => {
-        if (this.aborted) return;
-        this.state = 'PLAYING';
-        this.updateBoard();
-      }, 400);
-    } catch {
-      if (!this.aborted) {
-        // Stockfish error (e.g. timeout at high depth) — let user continue playing
-        this.state = 'PLAYING';
-        this.updateBoard();
-      }
-    }
-  }
-
-  private handleGameOver(): void {
-    if (this.chess.isCheckmate()) {
-      const loserColor = this.chess.turn();
-      const userColor = this.orientation === 'white' ? 'w' : 'b';
-      if (loserColor !== userColor) {
-        // User checkmated Stockfish — alternative solve
-        this.alternativeSolve = true;
-        this.state = 'SOLVED';
-        this.stopTimer();
-        this.updateBoard();
-        this.recordAttempt(true);
-        this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
-        this.enterSolutionReview();
-        this.startSolvedCountdown();
-        return;
-      }
-    }
-    // Stockfish checkmated user or draw
-    this.state = 'FAILED';
-    this.stopTimer();
-    this.updateBoard();
-    this.recordAttempt(false);
-    this.enterSolutionReview();
-  }
-
-  mouseslip(): void {
-    if (this.mouseslipUsed || this.onSolutionPath) return;
-    this.mouseslipUsed = true;
-    this.aborted = true;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    if (this.state === 'PLAYING') {
-      this.chess.undo(); // Stockfish response
-      this.chess.undo(); // User's wrong move
-    } else {
-      this.chess.undo();
-    }
-    this.aborted = false;
-    this.state = 'PLAYING';
-    this.updateBoard();
+    // Lös-Automat (Setup, Zug-Handling, Stockfish, Viz) kommt aus BasePuzzleSolver.
+    this.setupSolver(puzzle.fen, puzzle.moves, 0);
   }
 
   giveUp(): void {
-    this.aborted = true;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    this.state = 'FAILED';
-    this.stopTimer();
-    this.updateBoard();
-    this.recordAttempt(false);
-    this.enterSolutionReview();
+    this.abortSolver();
+    this.handleFailed();
   }
 
   retry(): void {
@@ -938,40 +773,6 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
   }
 
-  private playMove(uci: string): void {
-    const mv = applyUci(this.chess, uci);
-    this.lastMove = [uci.substring(0, 2) as Key, uci.substring(2, 4) as Key];
-    if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
-  }
-
-  private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
-    const mv = tryFreeMove(this.chess, orig, dest, promotion);
-    if (!mv) return false;
-    this.lastMove = [orig, dest];
-    if (this.visualizationMode && this.isSolving) this.vizMoves.push(mv.san);
-    return true;
-  }
-
-  private updateBoard(): void {
-    // Visualisierungs-Modus: Brett auf der eingefrorenen Startstellung halten (außer am Ende, da aufdecken).
-    if (this.visualizationMode && this.state !== 'SOLVED' && this.state !== 'FAILED') {
-      this.boardFen = this.frozenFen || this.chess.fen();
-      this.turnColor = this.orientation;
-      this.isCheck = false;
-      this.dests = new Map();
-      return;
-    }
-    this.boardFen = this.chess.fen();
-    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = this.chess.isCheck();
-    const interactive = (this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING') && this.turnColor === this.orientation;
-    this.dests = interactive ? this.calcDests() : new Map();
-  }
-
-  private calcDests(): Map<Key, Key[]> {
-    return calcDests(this.chess);
-  }
-
   private startTimer(): void {
     this.startTime = Date.now();
     this.elapsedSeconds = 0;
@@ -1047,24 +848,6 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.visualizationMode = !this.visualizationMode;
     this.prefs.setVisualization(this.visualizationMode);
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
-  }
-
-  /** Solving beginnt: Brett auf aktuelle Stellung einfrieren, SAN-Zugliste zurücksetzen. */
-  private beginSolving(): void {
-    this.frozenFen = this.chess.fen();
-    const f = this.frozenFen.split(' ');
-    this.vizStartWhite = f[1] !== 'b';
-    this.vizStartNum = parseInt(f[5], 10) || 1;
-    this.vizMoves = [];
-  }
-
-  private get isSolving(): boolean {
-    return this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING' || this.state === 'PLAYING';
-  }
-
-  /** SAN-Zugliste mit korrekten Zugnummern formatiert (ab der eingefrorenen Stellung). */
-  get vizMoveText(): string {
-    return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }
 
   saveConfig(): void {

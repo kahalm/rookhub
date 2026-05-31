@@ -14,9 +14,10 @@ import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles } from './board-theme.util';
-import { Chess, Square } from 'chess.js';
-import { Color, Key } from 'chessground/types';
-import { applyUci, tryFreeMove, calcDests, formatSanList } from './puzzle-move.util';
+import { Chess } from 'chess.js';
+import { Key } from 'chessground/types';
+import { applyUci } from './puzzle-move.util';
+import { BasePuzzleSolver } from './base-puzzle-solver';
 
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
 
@@ -337,16 +338,11 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     }
   `]
 })
-export class BookPuzzleComponent implements OnInit, OnDestroy {
-  state: BookPuzzleState = 'LOADING';
+export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
+  // state, boardFen, orientation, turnColor, dests, lastMove, isCheck, chess, solutionMoves,
+  // moveIndex, startPly, autoAdvanceTimer, aborted, onSolutionPath, alternativeSolve,
+  // mouseslipUsed, visualizationMode, vizMoves → BasePuzzleSolver
   puzzle: BookPuzzleDto | null = null;
-
-  boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-  orientation: Color = 'white';
-  turnColor: Color = 'white';
-  dests: Map<Key, Key[]> = new Map();
-  lastMove?: [Key, Key];
-  isCheck = false;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -362,27 +358,10 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   private timerInterval?: ReturnType<typeof setInterval>;
   private startTime = 0;
 
-  private chess = new Chess();
-  private solutionMoves: string[] = [];
-  private moveIndex = 0;
-  private startPly = 0;
-  private autoAdvanceTimer?: ReturnType<typeof setTimeout>;
-  private aborted = false;
-  onSolutionPath = true;
-  alternativeSolve = false;
-  mouseslipUsed = false;
-
-  // Review-Modus „Ganze Partie": Schritt-für-Schritt durch die komplette Partie.
+  // Review-Modus „Ganze Partie" / Lösungs-Step-Through (komponentenspezifisch).
   reviewMode = false;
   reviewIndex = 0;
   solutionReview = false;
-
-  // Visualisierungs-/Blindfold-Modus: Brett auf Startstellung eingefroren, Züge als SAN-Text.
-  visualizationMode = false;
-  private frozenFen = '';
-  vizMoves: string[] = [];
-  private vizStartWhite = true;
-  private vizStartNum = 1;
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -391,12 +370,41 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   constructor(
     private puzzleService: PuzzleService,
-    private stockfish: StockfishService,
+    stockfish: StockfishService,
     private prefs: PreferencesService,
     private route: ActivatedRoute
   ) {
+    super(stockfish);
     this.loadConfig();
     this.stockfish.init().catch(() => {});
+  }
+
+  // ===== Hooks für BasePuzzleSolver =====
+  protected override get depth(): number { return this.stockfishDepth; }
+  protected override get stockfishErrorContinues(): boolean { return false; }  // Buch: Fehlzug → verloren
+
+  protected override onSetupStart(): void {
+    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
+    this.boardTheme = applied.boardTheme;
+    this.pieceSet = applied.pieceSet;
+  }
+
+  protected override onSolvingBegins(): void {
+    this.startTimer();
+  }
+
+  protected override handleSolved(): void {
+    this.state = 'SOLVED';
+    this.stopTimer();
+    this.updateBoard();
+    this.enterSolutionReview();
+  }
+
+  protected override handleFailed(): void {
+    this.state = 'FAILED';
+    this.stopTimer();
+    this.updateBoard();
+    this.enterSolutionReview();
   }
 
   ngOnInit(): void {
@@ -432,57 +440,10 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   }
 
   private setupPuzzle(puzzle: BookPuzzleDto): void {
-    this.solutionMoves = puzzle.moves.split(' ');
-    // StartPly markiert den Setup-Zug des Trainingsstarts. fen+moves = ganze Partie.
-    // -1 = FEN ist bereits die Trainingsstellung (lösen ab moves[0], kein Setup).
-    //  0 = klassisch (moves[0] Setup, lösen ab moves[1]).  k = Vorspiel bis moves[k].
-    this.startPly = puzzle.startPly ?? 0;
-    if (this.startPly > this.solutionMoves.length - 2) this.startPly = 0; // muss Lösungszug haben
-    if (this.startPly < -1) this.startPly = -1;
-    this.moveIndex = 0;
-    this.chess = new Chess(puzzle.fen);
-    this.onSolutionPath = true;
-    this.aborted = false;
-    this.mouseslipUsed = false;
-    this.alternativeSolve = false;
     this.reviewMode = false;
-
-    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-
-    // Vorspiel (Partie bis vor den Setup-Zug) still aufs Brett bringen.
-    for (let i = 0; i < this.startPly; i++) this.applyUci(this.solutionMoves[i]);
-    this.lastMove = undefined;
-
-    if (this.startPly < 0) {
-      // FEN ist die Trainingsstellung selbst → kein Setup, sofort lösen.
-      this.moveIndex = 0;
-      this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
-      this.beginSolving();
-      this.state = 'AWAITING_USER_MOVE';
-      this.updateBoard();
-      this.startTimer();
-      return;
-    }
-
-    const setupMove = this.solutionMoves[this.startPly];
-    const setupFrom = setupMove.substring(0, 2) as Square;
-    const piece = this.chess.get(setupFrom);
-    this.orientation = piece?.color === 'w' ? 'black' : 'white';
-
-    this.updateBoard();
-    this.state = 'SETUP';
-
-    setTimeout(() => {
-      if (this.state !== 'SETUP') return;
-      this.playMove(this.solutionMoves[this.startPly]);
-      this.moveIndex = this.startPly + 1;
-      this.beginSolving();
-      this.state = 'AWAITING_USER_MOVE';
-      this.updateBoard();
-      this.startTimer();
-    }, 600);
+    this.solutionReview = false;
+    // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
+    this.setupSolver(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
   }
 
   /** Zug aufs Brett anwenden ohne lastMove-Highlight (Vorspiel/Review-Aufbau). */
@@ -490,133 +451,9 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     applyUci(this.chess, uci);
   }
 
-  onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
-    if (this.state === 'PLAYING') {
-      this.handleOffPathMove(event);
-      return;
-    }
-    if (this.state !== 'AWAITING_USER_MOVE') return;
-
-    if (this.onSolutionPath) {
-      const expectedUci = this.solutionMoves[this.moveIndex];
-      const userUci = event.orig + event.dest + (event.promotion || '');
-
-      if (userUci === expectedUci.substring(0, userUci.length)) {
-        this.playMove(expectedUci);
-        this.moveIndex++;
-
-        if (this.moveIndex >= this.solutionMoves.length) {
-          this.state = 'SOLVED';
-          this.stopTimer();
-          this.updateBoard();
-          this.enterSolutionReview();
-        } else {
-          this.state = 'THINKING';
-          this.updateBoard();
-          this.autoAdvanceTimer = setTimeout(() => {
-            if (this.aborted) return;
-            this.playMove(this.solutionMoves[this.moveIndex]);
-            this.moveIndex++;
-            this.updateBoard();
-
-            if (this.moveIndex >= this.solutionMoves.length) {
-              this.state = 'SOLVED';
-              this.stopTimer();
-              this.enterSolutionReview();
-            } else {
-              this.state = 'AWAITING_USER_MOVE';
-              this.updateBoard();
-            }
-          }, 400);
-        }
-      } else {
-        if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-        this.onSolutionPath = false;
-        if (this.chess.isGameOver()) { this.handleGameOver(); return; }
-        this.opponentRespond();
-      }
-    } else {
-      this.handleOffPathMove(event);
-    }
-  }
-
-  private handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
-    if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-    if (this.chess.isGameOver()) { this.handleGameOver(); return; }
-    this.opponentRespond();
-  }
-
-  private async opponentRespond(): Promise<void> {
-    this.state = 'THINKING';
-    this.updateBoard();
-
-    try {
-      const result = await this.stockfish.getBestMove(this.chess.fen(), this.stockfishDepth);
-      if (this.aborted) return;
-      this.playMove(result.move);
-      this.updateBoard();
-
-      if (this.chess.isGameOver()) {
-        this.handleGameOver();
-        return;
-      }
-
-      this.autoAdvanceTimer = setTimeout(() => {
-        if (this.aborted) return;
-        this.state = 'PLAYING';
-        this.updateBoard();
-      }, 400);
-    } catch {
-      if (!this.aborted) {
-        this.state = 'FAILED';
-        this.stopTimer();
-        this.enterSolutionReview();
-      }
-    }
-  }
-
-  private handleGameOver(): void {
-    if (this.chess.isCheckmate()) {
-      const loserColor = this.chess.turn();
-      const userColor = this.orientation === 'white' ? 'w' : 'b';
-      if (loserColor !== userColor) {
-        this.alternativeSolve = true;
-        this.state = 'SOLVED';
-        this.stopTimer();
-        this.updateBoard();
-        this.enterSolutionReview();
-        return;
-      }
-    }
-    this.state = 'FAILED';
-    this.stopTimer();
-    this.updateBoard();
-    this.enterSolutionReview();
-  }
-
-  mouseslip(): void {
-    if (this.mouseslipUsed || this.onSolutionPath) return;
-    this.mouseslipUsed = true;
-    this.aborted = true;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    if (this.state === 'PLAYING') {
-      this.chess.undo();
-      this.chess.undo();
-    } else {
-      this.chess.undo();
-    }
-    this.aborted = false;
-    this.state = 'PLAYING';
-    this.updateBoard();
-  }
-
   giveUp(): void {
-    this.aborted = true;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    this.state = 'FAILED';
-    this.stopTimer();
-    this.updateBoard();
-    this.enterSolutionReview();
+    this.abortSolver();
+    this.handleFailed();
   }
 
   retry(): void {
@@ -734,40 +571,6 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.setupPuzzle(this.puzzle);
   }
 
-  private playMove(uci: string): void {
-    const mv = applyUci(this.chess, uci);
-    this.lastMove = [uci.substring(0, 2) as Key, uci.substring(2, 4) as Key];
-    if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
-  }
-
-  private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
-    const mv = tryFreeMove(this.chess, orig, dest, promotion);
-    if (!mv) return false;
-    this.lastMove = [orig, dest];
-    if (this.visualizationMode && this.isSolving) this.vizMoves.push(mv.san);
-    return true;
-  }
-
-  private updateBoard(): void {
-    // Visualisierungs-Modus: Brett auf der eingefrorenen Startstellung halten (außer am Ende, da aufdecken).
-    if (this.visualizationMode && this.state !== 'SOLVED' && this.state !== 'FAILED') {
-      this.boardFen = this.frozenFen || this.chess.fen();
-      this.turnColor = this.orientation;
-      this.isCheck = false;
-      this.dests = new Map();
-      return;
-    }
-    this.boardFen = this.chess.fen();
-    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = this.chess.isCheck();
-    const interactive = (this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING') && this.turnColor === this.orientation;
-    this.dests = interactive ? this.calcDests() : new Map();
-  }
-
-  private calcDests(): Map<Key, Key[]> {
-    return calcDests(this.chess);
-  }
-
   private startTimer(): void {
     this.startTime = Date.now();
     this.elapsedSeconds = 0;
@@ -795,24 +598,6 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.visualizationMode = !this.visualizationMode;
     this.prefs.setVisualization(this.visualizationMode);
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
-  }
-
-  /** Solving beginnt: Brett auf aktuelle Stellung einfrieren, SAN-Zugliste zurücksetzen. */
-  private beginSolving(): void {
-    this.frozenFen = this.chess.fen();
-    const f = this.frozenFen.split(' ');
-    this.vizStartWhite = f[1] !== 'b';
-    this.vizStartNum = parseInt(f[5], 10) || 1;
-    this.vizMoves = [];
-  }
-
-  private get isSolving(): boolean {
-    return this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING' || this.state === 'PLAYING';
-  }
-
-  /** SAN-Zugliste mit korrekten Zugnummern formatiert (ab der eingefrorenen Stellung). */
-  get vizMoveText(): string {
-    return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }
 
   saveConfig(): void {
