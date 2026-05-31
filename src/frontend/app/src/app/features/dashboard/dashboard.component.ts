@@ -21,12 +21,13 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
       <div class="dashboard-grid">
         <mat-card>
           <mat-card-header>
-            <mat-icon mat-card-avatar>library_books</mat-icon>
-            <mat-card-title>Repertoires</mat-card-title>
-            <mat-card-subtitle>{{ repertoireCount }} repertoires</mat-card-subtitle>
+            <mat-icon mat-card-avatar>extension</mat-icon>
+            <mat-card-title>Puzzles</mat-card-title>
+            <mat-card-subtitle>Elo {{ puzzleElo }} | {{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/repertoires">View All</button>
+            <button mat-button routerLink="/puzzles">Solve Puzzles</button>
+            <button mat-button routerLink="/puzzles/endless">Endless</button>
           </mat-card-actions>
         </mat-card>
 
@@ -54,12 +55,12 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
 
         <mat-card>
           <mat-card-header>
-            <mat-icon mat-card-avatar>extension</mat-icon>
-            <mat-card-title>Puzzles</mat-card-title>
-            <mat-card-subtitle>Elo {{ puzzleElo }} | {{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
+            <mat-icon mat-card-avatar>library_books</mat-icon>
+            <mat-card-title>Repertoires</mat-card-title>
+            <mat-card-subtitle>{{ repertoireCount }} repertoires</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/puzzles">Solve Puzzles</button>
+            <button mat-button routerLink="/repertoires">View All</button>
           </mat-card-actions>
         </mat-card>
       </div>
