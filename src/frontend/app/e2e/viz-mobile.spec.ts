@@ -88,11 +88,11 @@ test.describe('Visualization Mobile', () => {
     // Wait for puzzle to start (AWAITING_USER_MOVE)
     await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
 
-    // viz-card should be inside the board-section (not info-section)
-    const vizCard = page.locator('.board-section .viz-card');
+    // viz-card is in info-section (first child), which on mobile stacks below the board
+    const vizCard = page.locator('.info-section .viz-card');
     await expect(vizCard).toBeVisible({ timeout: 5_000 });
 
-    // viz-card should be below the board, above the info-section
+    // On mobile (single column), viz-card should be below the board
     const boardBox = await board.boundingBox();
     const vizCardBox = await vizCard.boundingBox();
     expect(boardBox).toBeTruthy();

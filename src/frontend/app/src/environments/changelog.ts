@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.39.0';
+export const APP_VERSION = '0.39.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.39.1', date: '2026-05-31', changes: [
+    'UI: Viz-Card im Desktop-Modus rechts neben dem Brett (info-section), auf Mobile darunter (einspaltiges Layout).',
+  ]},
   { version: '0.39.0', date: '2026-05-31', changes: [
     'Feature: Visualisierung 5-Stufen-Slider (Level 0-4) — Normal, Blindfold, Checker (farbige Spielsteine), Dark Checker (schwarze Steine), Invisible (komplett unsichtbar). Bei Level 2-4 verschwinden Figuren nach 5s Countdown; Show-Button blendet sie temporaer ein. Nach Puzzle-Ende werden Figuren normal angezeigt.',
     'UI: Viz-Card (Zugliste + Show-Button + Countdown) direkt unter dem Brett fuer bessere Mobile-Ansicht.',

@@ -311,6 +311,9 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [visualization]="(state !== 'CORRECT' && state !== 'WRONG') ? visualizationMode : 0"
                 (moveMade)="onMoveMade($event)"
               />
+            </div>
+
+            <div class="info-section">
               @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
                 <mat-card class="viz-card">
                   <mat-card-content>
@@ -330,9 +333,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                   </mat-card-content>
                 </mat-card>
               }
-            </div>
-
-            <div class="info-section">
               <mat-card class="status-card">
                 <mat-card-content>
                   @switch (state) {
@@ -782,7 +782,7 @@ const FASTTRACK_SESSION_COUNT = 10;
     .viz-slider label { font-size: 0.9em; font-weight: 500; }
     .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
     .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
-    .viz-card { margin-top: 0.5rem; }
+    .viz-card {}
     .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
     .viz-card .viz-moves { font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5; background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word; }
     .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }

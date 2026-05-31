@@ -47,6 +47,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             [visualization]="(state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             (moveMade)="onMoveMade($event)"
           />
+        </div>
+
+        <div class="info-section">
           @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
             <mat-card class="viz-card">
               <mat-card-content>
@@ -66,9 +69,6 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
               </mat-card-content>
             </mat-card>
           }
-        </div>
-
-        <div class="info-section">
           <mat-card class="status-card">
             <mat-card-content>
               <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" title="Einstellungen">
@@ -319,7 +319,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .viz-slider label { font-size: 0.9em; font-weight: 500; }
     .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
     .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
-    .viz-card { margin-top: 0.5rem; }
+    .viz-card {}
     .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
     .viz-card .viz-moves {
       font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5;
