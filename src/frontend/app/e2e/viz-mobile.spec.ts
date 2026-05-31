@@ -117,8 +117,8 @@ test.describe('Visualization Mobile', () => {
     await expect(countdown).toBeVisible({ timeout: 3_000 });
     await expect(countdown).toContainText('Figuren verschwinden in');
 
-    // Wait for countdown to finish (5s + buffer)
-    await expect(countdown).not.toBeVisible({ timeout: 8_000 });
+    // Wait for countdown to finish (3s + buffer)
+    await expect(countdown).not.toBeVisible({ timeout: 6_000 });
 
     // board-section should have viz-hidden class
     const boardSection = page.locator('.board-section');
@@ -140,8 +140,8 @@ test.describe('Visualization Mobile', () => {
     await expect(board).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
 
-    // Wait for countdown to finish
-    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 8_000 });
+    // Wait for countdown to finish (3s + buffer)
+    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 6_000 });
 
     // viz-hide-css style element should exist with opacity: 0
     const vizCss = await page.evaluate(() => {
@@ -167,7 +167,7 @@ test.describe('Visualization Mobile', () => {
     await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
 
     // Wait for countdown to finish so pieces are hidden
-    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('.viz-countdown')).not.toBeVisible({ timeout: 6_000 });
     await expect(page.locator('.board-section')).toHaveClass(/viz-hidden/, { timeout: 2_000 });
 
     // Solve the puzzle: correct move Qd1→h5 (visualization mode = click squares)

@@ -59,10 +59,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                 }
                 <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
                 @if (vizPiecesHidden) {
-                  <button class="viz-show-btn"
-                    (pointerdown)="onVizShow(true)" (pointerup)="onVizShow(false)"
-                    (pointerleave)="onVizShow(false)" (pointercancel)="onVizShow(false)">
-                    Show
+                  <button class="viz-show-btn" (click)="onVizShow()">
+                    {{ vizShowPressed ? 'Showing...' : 'Show' }}
                   </button>
                 }
                 <div class="viz-hint">{{ vizLevelDescription }}</div>

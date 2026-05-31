@@ -41,11 +41,12 @@ export abstract class BasePuzzleSolver {
   protected vizStartNum = 1;
   /** Level 2-4: Figuren versteckt (nach Countdown). */
   vizPiecesHidden = false;
-  /** Show-Button gedrückt (zeigt Figuren/Steine temporär). */
+  /** Show-Button aktiv (zeigt Figuren/Steine für 3s). */
   vizShowPressed = false;
   /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
   vizCountdownSeconds = 0;
   protected vizCountdownInterval?: ReturnType<typeof setInterval>;
+  private vizShowTimer?: ReturnType<typeof setTimeout>;
 
   // ---- intern ----
   protected chess = new Chess();
@@ -293,7 +294,7 @@ export abstract class BasePuzzleSolver {
     this.clearVizCountdown();
     this.vizPiecesHidden = false;
     this.vizShowPressed = false;
-    this.vizCountdownSeconds = 5;
+    this.vizCountdownSeconds = 3;
     this.vizCountdownInterval = setInterval(() => {
       this.vizCountdownSeconds--;
       if (this.vizCountdownSeconds <= 0) {
@@ -312,12 +313,18 @@ export abstract class BasePuzzleSolver {
     this.vizCountdownSeconds = 0;
   }
 
-  onVizShow(pressed: boolean): void {
-    this.vizShowPressed = pressed;
+  onVizShow(): void {
+    if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
+    this.vizShowPressed = true;
+    this.vizShowTimer = setTimeout(() => {
+      this.vizShowPressed = false;
+      this.vizShowTimer = undefined;
+    }, 3000);
   }
 
   protected endVisualizationHide(): void {
     this.clearVizCountdown();
+    if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
     this.vizPiecesHidden = false;
     this.vizShowPressed = false;
     clearVisualizationHide();
@@ -327,9 +334,9 @@ export abstract class BasePuzzleSolver {
     switch (this.visualizationMode) {
       case 0: return 'Normal — Drag & Drop';
       case 1: return 'Blindfold — Brett eingefroren, Züge als Text';
-      case 2: return 'Checker — Figuren werden nach 5s durch Spielsteine ersetzt';
-      case 3: return 'Dark — Figuren werden nach 5s durch schwarze Steine ersetzt';
-      case 4: return 'Invisible — Figuren verschwinden nach 5s komplett';
+      case 2: return 'Checker — Figuren werden nach 3s durch Spielsteine ersetzt';
+      case 3: return 'Dark — Figuren werden nach 3s durch schwarze Steine ersetzt';
+      case 4: return 'Invisible — Figuren verschwinden nach 3s komplett';
       default: return '';
     }
   }
