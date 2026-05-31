@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.28.1',
+  version: '0.28.2',
   changelog: [
+    { version: '0.28.2', date: '2026-05-31', changes: [
+      'Fix: Buch-Puzzle-Import (Legacy-JSON) kürzt BookFileName auf 200 Zeichen und überspringt leere Dateinamen — verhindert DB-Fehler + Geister-Bücher (Code-Review).',
+      'Fix: Schwierigkeits-Dropdown — erstes Puzzle erst nach Laden der Elo (nicht mehr Default 1500); Rating-Fenster wird auf den echten DB-Rating-Bereich geklemmt (keine leeren Ergebnisse/Retry-Schleife); ungültiger localStorage-Wert wird ignoriert (Code-Review).',
+    ]},
     { version: '0.28.1', date: '2026-05-31', changes: [
       'Fix: Board Themes — Schachbrett korrekt als 8x8 statt 4 Quadranten gerendert (background-size: 25%)',
       'Fix: Board Theme Kontrast erhoeht — Blue, Green, Gray, Wood mit deutlich unterscheidbaren Feldfarben',

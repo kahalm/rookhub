@@ -170,11 +170,15 @@ public class BookPuzzleController : BaseApiController
                 continue;
             }
 
-            var bookId = await EnsureBookAsync(dto.BookFileName);
+            var fileName = (dto.BookFileName ?? string.Empty).Trim();
+            if (fileName.Length == 0) { skipped++; continue; }     // kein leerer BookFileName
+            if (fileName.Length > 200) fileName = fileName[..200];  // FileName/BookFileName sind varchar(200)
+
+            var bookId = await EnsureBookAsync(fileName);
             toAdd.Add(new BookPuzzle
             {
                 LineId = dto.LineId,
-                BookFileName = dto.BookFileName,
+                BookFileName = fileName,
                 BookId = bookId,
                 Round = dto.Round,
                 Fen = dto.Fen,

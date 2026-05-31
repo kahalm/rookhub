@@ -14,7 +14,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
-import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
+import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { Chess, Square } from 'chess.js';
@@ -404,6 +404,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   state: PuzzleState = 'LOADING';
   puzzle: PuzzleDto | null = null;
   stats: PuzzleStatsDto | null = null;
+  private ratingRangeBounds: PuzzleRatingRange | null = null;
 
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   orientation: Color = 'white';
@@ -487,12 +488,33 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     if (idParam) {
       this.routePuzzleId = Number(idParam);
     }
-    this.loadNext();
-    if (this.isLoggedIn) {
-      this.puzzleService.getStats().subscribe(s => this.stats = s);
-    } else {
-      this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
+
+    const stats$ = this.isLoggedIn
+      ? this.puzzleService.getStats()
+      : this.puzzleService.getAnonymousStats();
+
+    if (this.routePuzzleId) {
+      // Deep-Link auf ein konkretes Puzzle → sofort laden; Stats/Range nebenher.
+      this.loadNext();
+      stats$.subscribe({ next: s => this.stats = s, error: () => {} });
+      this.puzzleService.getRatingRange().subscribe({ next: r => this.ratingRangeBounds = r, error: () => {} });
+      return;
     }
+
+    // Sonst erst Elo (stats) + DB-Rating-Bereich laden, DANN das erste Zufallspuzzle –
+    // sonst würde es mit Default-Elo 1500 / ungeklemmtem Fenster gezogen.
+    const loadFirst = () => {
+      this.puzzleService.getRatingRange().subscribe({
+        next: r => this.ratingRangeBounds = r,
+        error: () => this.loadNext(),
+        complete: () => this.loadNext(),
+      });
+    };
+    stats$.subscribe({
+      next: s => this.stats = s,
+      error: () => loadFirst(),
+      complete: () => loadFirst(),
+    });
   }
 
   ngOnDestroy(): void {
@@ -549,7 +571,13 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
   private ratingRange(): { min: number; max: number } {
     const elo = this.stats?.puzzleElo ?? 1500;
-    const center = elo + (DIFFICULTY_OFFSET[this.difficulty] ?? 0);
+    let center = elo + (DIFFICULTY_OFFSET[this.difficulty] ?? 0);
+    const b = this.ratingRangeBounds;
+    if (b && b.max > b.min) {
+      // Zentrum so verschieben, dass das ±Fenster im echten DB-Rating-Bereich bleibt
+      // (sonst leeres Ergebnis → 404 → ERROR/Retry-Schleife bei extremen Offsets).
+      center = Math.min(Math.max(center, b.min + RATING_WINDOW), b.max - RATING_WINDOW);
+    }
     return { min: Math.max(0, center - RATING_WINDOW), max: center + RATING_WINDOW };
   }
 
@@ -904,7 +932,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       if (raw) {
         const saved = JSON.parse(raw);
         if (saved.stockfishDepth) this.stockfishDepth = saved.stockfishDepth;
-        if (saved.difficulty) this.difficulty = saved.difficulty;
+        if (saved.difficulty && saved.difficulty in DIFFICULTY_OFFSET) this.difficulty = saved.difficulty;
       }
     } catch {}
     if (this.stockfishDepth < 1) this.stockfishDepth = 16;
