@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.27.1',
+  version: '0.28.0',
   changelog: [
+    { version: '0.28.0', date: '2026-05-31', changes: [
+      'Feature: Schwierigkeits-Dropdown bei den Puzzles — liefert Puzzles rund um die eigene Elo: Normal (±100), Leicht (−300), Sehr leicht (−600), Schwer (+300), Sehr schwer (+600).',
+      'Feature: Rating-Fenster wird aus eigener Puzzle-Elo + Schwierigkeits-Offset berechnet (ersetzt die manuellen Min/Max-Rating-Felder); Auswahl wird in localStorage gemerkt.',
+    ]},
     { version: '0.27.1', date: '2026-05-31', changes: [
       'Fix: Legacy-Buch-Puzzle-Import (POST /api/admin/book-puzzles/import) legt jetzt pro Datei ein Book an und setzt BookId — so erscheinen auch per Skript importierte Puzzles in den Pools (random/daily/blind) und im Admin-Bücher-Tab (Code-Review).',
     ]},

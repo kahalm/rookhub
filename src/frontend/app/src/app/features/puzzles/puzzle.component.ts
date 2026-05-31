@@ -24,6 +24,12 @@ import { of } from 'rxjs';
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
 const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
+
+// Schwierigkeit → Elo-Offset des Fenster-Zentrums; Fenster ±RATING_WINDOW um (Elo + Offset).
+const DIFFICULTY_OFFSET: Record<string, number> = {
+  sehr_leicht: -600, leicht: -300, normal: 0, schwer: 300, sehr_schwer: 600,
+};
+const RATING_WINDOW = 100;
 const BOARD_THEME_KEY = 'rookhub_board_theme';
 
 @Component({
@@ -273,12 +279,15 @@ const BOARD_THEME_KEY = 'rookhub_board_theme';
             <mat-card-content>
               <div class="filter-row">
                 <mat-form-field appearance="outline" class="filter-field">
-                  <mat-label>Min Rating</mat-label>
-                  <input matInput type="number" [(ngModel)]="minRating" placeholder="600">
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="filter-field">
-                  <mat-label>Max Rating</mat-label>
-                  <input matInput type="number" [(ngModel)]="maxRating" placeholder="3000">
+                  <mat-label>Schwierigkeit</mat-label>
+                  <mat-select [(ngModel)]="difficulty" (ngModelChange)="onDifficultyChange()">
+                    <mat-option value="sehr_leicht">Sehr leicht (Elo −600)</mat-option>
+                    <mat-option value="leicht">Leicht (Elo −300)</mat-option>
+                    <mat-option value="normal">Normal (Elo ±100)</mat-option>
+                    <mat-option value="schwer">Schwer (Elo +300)</mat-option>
+                    <mat-option value="sehr_schwer">Sehr schwer (Elo +600)</mat-option>
+                  </mat-select>
+                  <mat-hint>Puzzles rund um deine Elo ({{ stats?.puzzleElo ?? 1500 }})</mat-hint>
                 </mat-form-field>
               </div>
               <div class="filter-row">
@@ -405,8 +414,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   boardTheme = 'brown';
 
-  minRating?: number;
-  maxRating?: number;
+  difficulty: 'sehr_leicht' | 'leicht' | 'normal' | 'schwer' | 'sehr_schwer' = 'normal';
   excludeSolved = false;
   stockfishDepth = 16;
 
@@ -515,7 +523,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       source$ = of(this.nextPuzzle);
       this.nextPuzzle = null;
     } else {
-      source$ = this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved);
+      const r = this.ratingRange();
+      source$ = this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved);
     }
 
     source$.subscribe({
@@ -532,8 +541,21 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   }
 
   private prefetchNext(): void {
-    this.puzzleService.getRandom(this.minRating, this.maxRating, undefined, this.excludeSolved)
+    const r = this.ratingRange();
+    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved)
       .subscribe({ next: p => this.nextPuzzle = p, error: () => {} });
+  }
+
+  /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
+  private ratingRange(): { min: number; max: number } {
+    const elo = this.stats?.puzzleElo ?? 1500;
+    const center = elo + (DIFFICULTY_OFFSET[this.difficulty] ?? 0);
+    return { min: Math.max(0, center - RATING_WINDOW), max: center + RATING_WINDOW };
+  }
+
+  onDifficultyChange(): void {
+    this.nextPuzzle = null;  // vorab geladenes Puzzle hatte die alte Schwierigkeit
+    this.saveConfig();
   }
 
   private setupPuzzle(puzzle: PuzzleDto): void {
@@ -882,6 +904,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       if (raw) {
         const saved = JSON.parse(raw);
         if (saved.stockfishDepth) this.stockfishDepth = saved.stockfishDepth;
+        if (saved.difficulty) this.difficulty = saved.difficulty;
       }
     } catch {}
     if (this.stockfishDepth < 1) this.stockfishDepth = 16;
@@ -893,7 +916,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
   saveConfig(): void {
     try {
-      localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth }));
+      localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth, difficulty: this.difficulty }));
     } catch {}
   }
 
