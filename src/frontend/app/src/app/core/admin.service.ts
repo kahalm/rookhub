@@ -35,6 +35,8 @@ export interface Book {
   displayName: string;
   difficulty: string | null;
   rating: number | null;
+  minElo: number | null;
+  maxElo: number | null;
   tags: string | null;
   description: string | null;
   forDaily: boolean;
@@ -49,6 +51,8 @@ export interface UpdateBook {
   displayName?: string;
   difficulty?: string | null;
   rating?: number | null;
+  minElo?: number | null;
+  maxElo?: number | null;
   tags?: string | null;
   description?: string | null;
   forDaily?: boolean;

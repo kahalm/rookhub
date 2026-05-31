@@ -239,7 +239,9 @@ public class AdminControllerTests : IDisposable
         {
             ForDaily = true,
             ForRandom = true,
-            Rating = 5
+            Rating = 5,
+            MinElo = 1200,
+            MaxElo = 1600
         }) as OkObjectResult;
 
         Assert.NotNull(result);
@@ -248,6 +250,8 @@ public class AdminControllerTests : IDisposable
         Assert.True(updated.ForRandom);
         Assert.False(updated.ForBlind);
         Assert.Equal(5, updated.Rating);
+        Assert.Equal(1200, updated.MinElo);
+        Assert.Equal(1600, updated.MaxElo);
     }
 
     [Fact]

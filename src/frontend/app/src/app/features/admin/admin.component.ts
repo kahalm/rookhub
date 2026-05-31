@@ -127,6 +127,14 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     {{ b.difficulty || '–' }}@if (b.rating) { <span> · {{ b.rating }}/10</span> }
                   </td>
                 </ng-container>
+                <ng-container matColumnDef="elo">
+                  <th mat-header-cell *matHeaderCellDef>Elo von/bis</th>
+                  <td mat-cell *matCellDef="let b">
+                    <input type="number" class="elo-input" [(ngModel)]="b.minElo" (change)="saveBook(b)" placeholder="von">
+                    <span class="elo-sep">–</span>
+                    <input type="number" class="elo-input" [(ngModel)]="b.maxElo" (change)="saveBook(b)" placeholder="bis">
+                  </td>
+                </ng-container>
                 <ng-container matColumnDef="forDaily">
                   <th mat-header-cell *matHeaderCellDef>Daily</th>
                   <td mat-cell *matCellDef="let b">
@@ -288,6 +296,8 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .upload-hint { color: #1976d2; font-weight: 500; }
     .book-hint { color: #666; font-size: 0.85rem; }
     .empty-hint { color: #666; font-style: italic; padding: 16px 0; }
+    .elo-input { width: 56px; }
+    .elo-sep { margin: 0 2px; color: #999; }
 
     .log-filters {
       display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
@@ -346,7 +356,7 @@ export class AdminComponent implements OnInit {
   books: Book[] = [];
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'forDaily', 'forRandom', 'forBlind', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'actions'];
 
   constructor(private adminService: AdminService, private snackBar: MatSnackBar) {}
 
@@ -497,7 +507,9 @@ export class AdminComponent implements OnInit {
     this.adminService.updateBook(book.id, {
       forDaily: book.forDaily,
       forRandom: book.forRandom,
-      forBlind: book.forBlind
+      forBlind: book.forBlind,
+      minElo: book.minElo,
+      maxElo: book.maxElo
     }).subscribe({
       error: err => {
         this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });

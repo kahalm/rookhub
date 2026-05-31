@@ -24,6 +24,10 @@ public class Book
     /// <summary>Schwierigkeit 1–10 (wie in der schach-bot books.json), optional.</summary>
     public int? Rating { get; set; }
 
+    /// <summary>Empfohlene Elo-Spanne (von/bis) für die Puzzles dieses Buchs, optional.</summary>
+    public int? MinElo { get; set; }
+    public int? MaxElo { get; set; }
+
     [MaxLength(200)]
     public string? Tags { get; set; }
 

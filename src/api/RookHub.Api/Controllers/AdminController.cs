@@ -184,6 +184,8 @@ public class AdminController : BaseApiController
                 DisplayName = b.DisplayName,
                 Difficulty = b.Difficulty,
                 Rating = b.Rating,
+                MinElo = b.MinElo,
+                MaxElo = b.MaxElo,
                 Tags = b.Tags,
                 Description = b.Description,
                 ForDaily = b.ForDaily,
@@ -212,6 +214,8 @@ public class AdminController : BaseApiController
         if (dto.ForDaily.HasValue) book.ForDaily = dto.ForDaily.Value;
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
+        book.MinElo = dto.MinElo;
+        book.MaxElo = dto.MaxElo;
         book.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -223,6 +227,8 @@ public class AdminController : BaseApiController
             DisplayName = book.DisplayName,
             Difficulty = book.Difficulty,
             Rating = book.Rating,
+            MinElo = book.MinElo,
+            MaxElo = book.MaxElo,
             Tags = book.Tags,
             Description = book.Description,
             ForDaily = book.ForDaily,

@@ -10,6 +10,8 @@ public class BookDto
     public string DisplayName { get; set; } = string.Empty;
     public string? Difficulty { get; set; }
     public int? Rating { get; set; }
+    public int? MinElo { get; set; }
+    public int? MaxElo { get; set; }
     public string? Tags { get; set; }
     public string? Description { get; set; }
     public bool ForDaily { get; set; }
@@ -29,6 +31,8 @@ public class UpdateBookDto
     public string? Difficulty { get; set; }
     [Range(1, 10)]
     public int? Rating { get; set; }
+    public int? MinElo { get; set; }
+    public int? MaxElo { get; set; }
     [MaxLength(200)]
     public string? Tags { get; set; }
     [MaxLength(2000)]

@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.32.1',
+  version: '0.33.0',
   changelog: [
+    { version: '0.33.0', date: '2026-05-31', changes: [
+      'Feature: Admin-Bücher — pro Buch eine empfohlene Elo-Spanne (von/bis) angeben (Book.MinElo/MaxElo, Migration, Eingabe im Bücher-Tab).',
+    ]},
     { version: '0.32.1', date: '2026-05-31', changes: [
       'UI: Dashboard — Puzzles-Karte zuerst (mit zusätzlichem Endless-Link), dann Tournaments, Friends, Repertoires.',
     ]},
