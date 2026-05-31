@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.26.1',
+  version: '0.26.2',
   changelog: [
+    { version: '0.26.2', date: '2026-05-31', changes: [
+      'Fix: Swagger-UI immer aktiv (nicht mehr nur in Development) — die API ist nur im internen Netz erreichbar.',
+    ]},
     { version: '0.26.1', date: '2026-05-31', changes: [
       'Feature: Bauernumwandlungs-Dialog — bei Promotion erscheint ein Overlay mit 4 Figuren (Dame, Turm, Laeufer, Springer) statt automatischer Dame-Wahl',
       'Feature: Board Themes — 5 Brett-Farbschemata: Brown (Standard), Blue, Green, Gray, Wood',
