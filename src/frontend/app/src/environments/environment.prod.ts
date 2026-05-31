@@ -1,5 +1,7 @@
+import { APP_VERSION, CHANGELOG } from './changelog';
+
 export const environment = {
   production: true,
-  version: '0.26.1',
-  changelog: [] as { version: string; date: string; changes: string[] }[]
+  version: APP_VERSION,
+  changelog: CHANGELOG,
 };

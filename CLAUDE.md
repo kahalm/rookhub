@@ -278,8 +278,8 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.34.0`
-- Definiert in `src/frontend/app/src/environments/environment.ts`
+- **Aktuelle Version**: `0.34.1`
+- Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
 - **Changelog pflegen**: Jeden Eintrag im `changelog`-Array in `environment.ts` vermerken (Version, Datum, Liste der Aenderungen)
@@ -289,7 +289,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ### Checkliste vor JEDEM Commit (beide Projekte)
 1. [ ] Tests vorhanden fuer die Aenderung?
-2. [ ] `version` und `changelog`-Array in `src/frontend/app/src/environments/environment.ts` aktualisiert?
+2. [ ] `APP_VERSION` + `CHANGELOG`-Eintrag in `src/frontend/app/src/environments/changelog.ts` aktualisiert? (gilt automatisch fuer dev + prod-Build)
 3. [ ] `Aktuelle Version` in diesem Abschnitt angepasst?
 4. [ ] Versionsaenderung committet?
 5. [ ] **Nach jedem Commit dem User die aktuelle Version mitteilen** (z.B. "Version: 0.6.6")
