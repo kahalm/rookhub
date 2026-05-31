@@ -394,7 +394,7 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
     .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
-    .filter-row { display: flex; gap: 0.5rem; }
+    .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     .filter-field { flex: 1; }
     .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }

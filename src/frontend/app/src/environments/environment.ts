@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.31.0',
+  version: '0.31.1',
   changelog: [
+    { version: '0.31.1', date: '2026-05-31', changes: [
+      'Fix: Filter-Felder Abstand — Hint-Text ueberlappt nicht mehr mit dem naechsten Feld',
+    ]},
     { version: '0.31.0', date: '2026-05-31', changes: [
       'UI: Brett-/Figuren-Auswahl-Chips zeigen die echte Textur bzw. Figur als Vorschau.',
       'UI: Filter- und Darstellungs-Einstellungen (Schwierigkeit, Tiefe, Brett, Figuren) hinter ein Zahnrad/„Einstellungen"-Toggle gelegt (Default eingeklappt) — in Normal-, Endless- und Buch-Puzzle.',
