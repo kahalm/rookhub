@@ -245,6 +245,42 @@ public class BookPuzzleControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public async Task Import_CreatesBookAndSetsBookId()
+    {
+        var importData = new List<BookPuzzleImportDto>
+        {
+            new() { LineId = "legacy.pgn:1", BookFileName = "legacy.pgn", Round = "1",
+                    Fen = "8/8/8/8/8/8/8/4K3 w - - 0 1", Moves = "e1e2" },
+        };
+
+        var result = await _controller.Import(importData) as OkObjectResult;
+        Assert.NotNull(result);
+
+        // Book wurde angelegt (DisplayName ohne .pgn) und das Puzzle ist verknüpft.
+        var book = await _db.Books.SingleAsync(b => b.FileName == "legacy.pgn");
+        Assert.Equal("legacy", book.DisplayName);
+        var puzzle = await _db.BookPuzzles.SingleAsync(bp => bp.LineId == "legacy.pgn:1");
+        Assert.Equal(book.Id, puzzle.BookId);
+    }
+
+    [Fact]
+    public async Task Import_ReusesExistingBook()
+    {
+        await _controller.Import(new List<BookPuzzleImportDto>
+        {
+            new() { LineId = "b.pgn:1", BookFileName = "b.pgn", Round = "1", Fen = "f", Moves = "e2e4" }
+        });
+        await _controller.Import(new List<BookPuzzleImportDto>
+        {
+            new() { LineId = "b.pgn:2", BookFileName = "b.pgn", Round = "2", Fen = "f", Moves = "e2e4" }
+        });
+
+        Assert.Equal(1, await _db.Books.CountAsync(b => b.FileName == "b.pgn"));
+        Assert.Equal(2, await _db.BookPuzzles.CountAsync(bp => bp.BookFileName == "b.pgn"));
+        Assert.True(await _db.BookPuzzles.AllAsync(bp => bp.BookId != null));
+    }
+
     // ---- GetRandom (pool=daily|random|blind) -----------------------------
 
     private async Task<(Book book, BookPuzzle puzzle)> CreateBookWithPuzzleAsync(

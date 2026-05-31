@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.27.0',
+  version: '0.27.1',
   changelog: [
+    { version: '0.27.1', date: '2026-05-31', changes: [
+      'Fix: Legacy-Buch-Puzzle-Import (POST /api/admin/book-puzzles/import) legt jetzt pro Datei ein Book an und setzt BookId — so erscheinen auch per Skript importierte Puzzles in den Pools (random/daily/blind) und im Admin-Bücher-Tab (Code-Review).',
+    ]},
     { version: '0.27.0', date: '2026-05-31', changes: [
       'Feature: Puzzle Elo Rating System — dynamische Elo-Zahl basierend auf Puzzle-Schwierigkeit',
       'Feature: K-Faktor 40 fuer erste 30 Versuche (provisorisch), danach K=20',

@@ -132,6 +132,33 @@ public class BookPuzzleController : BaseApiController
             .Select(bp => bp.LineId)
             .ToHashSetAsync();
 
+        // Pro Dateiname ein Book sicherstellen (find-or-create) und BookId setzen, damit
+        // auch via Legacy-JSON-Import angelegte Puzzles in den Pools (GetRandom) und in der
+        // Admin-Bücher-Liste erscheinen.
+        var now = DateTime.UtcNow;
+        var bookIds = new Dictionary<string, int>();
+
+        async Task<int> EnsureBookAsync(string fileName)
+        {
+            if (bookIds.TryGetValue(fileName, out var cached))
+                return cached;
+            var book = await _db.Books.FirstOrDefaultAsync(b => b.FileName == fileName);
+            if (book == null)
+            {
+                book = new Book
+                {
+                    FileName = fileName,
+                    DisplayName = Services.PgnImportService.CleanDisplayName(fileName),
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                };
+                _db.Books.Add(book);
+                await _db.SaveChangesAsync();
+            }
+            bookIds[fileName] = book.Id;
+            return book.Id;
+        }
+
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;
 
@@ -143,10 +170,12 @@ public class BookPuzzleController : BaseApiController
                 continue;
             }
 
+            var bookId = await EnsureBookAsync(dto.BookFileName);
             toAdd.Add(new BookPuzzle
             {
                 LineId = dto.LineId,
                 BookFileName = dto.BookFileName,
+                BookId = bookId,
                 Round = dto.Round,
                 Fen = dto.Fen,
                 Moves = dto.Moves,
