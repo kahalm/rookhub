@@ -18,6 +18,7 @@ import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './p
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles } from './board-theme.util';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { of } from 'rxjs';
@@ -329,7 +330,20 @@ const RATING_WINDOW = 100;
 
           <mat-card class="theme-card">
             <mat-card-content>
-              <div class="theme-label">Board Theme</div>
+              <div class="theme-label">Modus</div>
+              <div class="theme-chips">
+                <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="setThemeMode('fixed')">
+                  <mat-icon>palette</mat-icon><span class="theme-name">Normal</span>
+                </div>
+                <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="setThemeMode('random')">
+                  <mat-icon>shuffle</mat-icon><span class="theme-name">Random</span>
+                </div>
+                <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="setThemeMode('crazy')">
+                  <mat-icon>auto_awesome</mat-icon><span class="theme-name">Crazy</span>
+                </div>
+              </div>
+              @if (themeMode === 'fixed') {
+              <div class="theme-label" style="margin-top: 0.75rem;">Board Theme</div>
               <div class="theme-chips">
                 @for (t of boardThemes; track t.key) {
                   <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
@@ -354,6 +368,7 @@ const RATING_WINDOW = 100;
                   </div>
                 }
               </div>
+              }
             </mat-card-content>
           </mat-card>
           }
@@ -510,32 +525,13 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stockfish.init().catch(() => {});
   }
 
-  readonly boardThemes: { key: string; name: string; light: string; dark: string; img?: string }[] = [
-    { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
-    { key: 'blue', name: 'Blue', light: '#d4e3ed', dark: '#5882a1' },
-    { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
-    { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
-    { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
-    { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33', img: '/board/wood4.jpg' },
-    { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78', img: '/board/blue3.jpg' },
-    { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a', img: '/board/marble.jpg' },
-    { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a', img: '/board/metal.jpg' },
-    { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23', img: '/board/leather.jpg' },
-    { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a', img: '/board/maple.jpg' },
-  ];
+  readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
   showSettings = false;
+  themeMode: ThemeMode = 'fixed';
   @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
-  readonly pieceSets = [
-    { key: 'cburnett', name: 'Classic', preview: '/piece/cburnett/wN.svg' },
-    { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
-    { key: 'fantasy', name: 'Fantasy', preview: '/piece/fantasy/wN.svg' },
-    { key: 'spatial', name: 'Spatial', preview: '/piece/spatial/wN.svg' },
-    { key: 'celtic', name: 'Celtic', preview: '/piece/celtic/wN.svg' },
-    { key: 'chessnut', name: 'Chessnut', preview: '/piece/chessnut/wN.svg' },
-    { key: 'rhosgfx', name: 'RhosGFX', preview: '/piece/rhosgfx/wN.svg' },
-  ];
+  readonly pieceSets = PIECE_SETS;
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
 
@@ -588,6 +584,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.stockfish.destroy();
+    clearCrazyStyles();
   }
 
   loadNext(): void {
@@ -660,6 +657,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.aborted = false;
     this.mouseslipUsed = false;
     this.alternativeSolve = false;
+
+    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
+    this.boardTheme = applied.boardTheme;
+    this.pieceSet = applied.pieceSet;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;
@@ -1024,6 +1025,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   private loadConfig(): void {
     this.boardTheme = this.prefs.boardTheme;
     this.pieceSet = this.prefs.pieceSet;
+    this.themeMode = this.prefs.themeMode;
     this.stockfishDepth = this.prefs.stockfishDepth;
     const d = this.prefs.puzzleDifficulty;
     if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
@@ -1042,6 +1044,14 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   setPieceSet(set: string): void {
     this.pieceSet = set;
     this.prefs.setPieceSet(set);
+  }
+
+  setThemeMode(mode: ThemeMode): void {
+    this.themeMode = mode;
+    this.prefs.setThemeMode(mode);
+    const applied = applyThemeMode(mode, this.prefs.boardTheme, this.prefs.pieceSet);
+    this.boardTheme = applied.boardTheme;
+    this.pieceSet = applied.pieceSet;
   }
 
   toggleSettings(): void {

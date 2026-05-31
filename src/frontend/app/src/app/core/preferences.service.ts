@@ -3,10 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { catchError, of } from 'rxjs';
 
+import { ThemeMode } from '../features/puzzles/board-theme.util';
+
 const BOARD_THEME_KEY = 'rookhub_board_theme';
 const PIECE_SET_KEY = 'rookhub_piece_set';
 const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
 const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
+const THEME_MODE_KEY = 'rookhub_theme_mode';
 
 interface ProfilePreferences {
   boardTheme: string | null;
@@ -23,6 +26,7 @@ export class PreferencesService {
   stockfishDepth = 16;
   puzzleDifficulty = 'normal';
   bookStockfishDepth = 16;
+  themeMode: ThemeMode = 'fixed';
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -32,6 +36,10 @@ export class PreferencesService {
   private loadFromLocalStorage(): void {
     try { this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown'; } catch {}
     try { this.pieceSet = localStorage.getItem(PIECE_SET_KEY) || 'cburnett'; } catch {}
+    try {
+      const tm = localStorage.getItem(THEME_MODE_KEY);
+      if (tm === 'fixed' || tm === 'random' || tm === 'crazy') this.themeMode = tm;
+    } catch {}
     try {
       const raw = localStorage.getItem(PUZZLE_CONFIG_KEY);
       if (raw) {
@@ -89,6 +97,11 @@ export class PreferencesService {
     this.pieceSet = set;
     try { localStorage.setItem(PIECE_SET_KEY, set); } catch {}
     this.saveToServer({ pieceSet: set });
+  }
+
+  setThemeMode(mode: ThemeMode): void {
+    this.themeMode = mode;
+    try { localStorage.setItem(THEME_MODE_KEY, mode); } catch {}
   }
 
   setStockfishDepth(depth: number): void {

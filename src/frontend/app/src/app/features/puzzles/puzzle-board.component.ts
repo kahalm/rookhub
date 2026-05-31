@@ -307,7 +307,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   getPieceImage(piece: PromotionPiece): string {
     const name = PuzzleBoardComponent.PIECE_NAMES[this.promotionColor][piece];
-    return `url('/piece/${this.pieceSet || 'cburnett'}/${name}.svg')`;
+    const set = this.pieceSet === '_crazy' ? 'cburnett' : (this.pieceSet || 'cburnett');
+    return `url('/piece/${set}/${name}.svg')`;
   }
 
   ngOnDestroy(): void {
