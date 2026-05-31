@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.38.2';
+export const APP_VERSION = '0.38.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.38.3', date: '2026-05-31', changes: [
+    'Fix: Mouseslip im Visualisierungs-Modus — zurückgenommene Züge werden jetzt auch aus der SAN-Zugliste entfernt (vorher schien Mouseslip wirkungslos, da das Brett eingefroren bleibt).',
+  ]},
   { version: '0.38.2', date: '2026-05-31', changes: [
     'Refactor: Gemeinsamer Lös-Automat der 3 Puzzle-Modi (Setup, Zug-Handling, Stockfish-Übernahme, Mouseslip, Brett-Präsentation, Visualisierung) in BasePuzzleSolver zusammengefasst — vorher ~3x dupliziert (~750 Zeilen weniger in den Komponenten). Modus-Unterschiede laufen über Hooks. Verhaltensgleich, leichter wartbar.',
   ]},

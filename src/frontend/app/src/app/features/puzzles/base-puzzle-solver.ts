@@ -233,8 +233,12 @@ export abstract class BasePuzzleSolver {
     this.mouseslipUsed = true;
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    if (this.state === 'PLAYING') { this.chess.undo(); this.chess.undo(); }
-    else { this.chess.undo(); }
+    // PLAYING = Stockfish hat schon geantwortet → Fehlzug + Antwort zurück (2); sonst nur Fehlzug (1).
+    const undoCount = this.state === 'PLAYING' ? 2 : 1;
+    for (let i = 0; i < undoCount; i++) this.chess.undo();
+    // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
+    // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.
+    if (this.visualizationMode) this.vizMoves.splice(-undoCount);
     this.aborted = false;
     this.state = 'PLAYING';
     this.updateBoard();
