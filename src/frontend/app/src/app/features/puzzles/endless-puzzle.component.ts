@@ -182,15 +182,25 @@ const FASTTRACK_SESSION_COUNT = 10;
                   }
                 </div>
 
+                <button mat-stroked-button class="settings-toggle" (click)="showSettings = !showSettings">
+                  <mat-icon>settings</mat-icon>
+                  Einstellungen
+                  <mat-icon class="settings-caret">{{ showSettings ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+                @if (showSettings) {
                 <div class="theme-section">
                   <div class="theme-label">Board Theme</div>
                   <div class="theme-chips">
                     @for (t of boardThemes; track t.key) {
                       <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
-                        <div class="theme-preview">
-                          <div class="tp-light" [style.background]="t.light"></div>
-                          <div class="tp-dark" [style.background]="t.dark"></div>
-                        </div>
+                        @if (t.img) {
+                          <div class="theme-img" [style.backgroundImage]="'url(' + t.img + ')'"></div>
+                        } @else {
+                          <div class="theme-preview">
+                            <div class="tp-light" [style.background]="t.light"></div>
+                            <div class="tp-dark" [style.background]="t.dark"></div>
+                          </div>
+                        }
                         <span class="theme-name">{{ t.name }}</span>
                       </div>
                     }
@@ -205,6 +215,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                     }
                   </div>
                 </div>
+                }
 
                 <div class="lives-display config-lives">
                   @for (i of [1,2,3]; track i) {
@@ -729,6 +740,9 @@ const FASTTRACK_SESSION_COUNT = 10;
     .theme-chip:hover { background: rgba(0,0,0,0.04); }
     .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
+    .settings-toggle { width: 100%; justify-content: flex-start; gap: 0.4rem; }
+    .settings-caret { margin-left: auto; }
     .tp-light, .tp-dark { flex: 1; }
     .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
     .config-lives { justify-content: center; margin: 1rem 0; }
@@ -889,21 +903,22 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   // Board theme
   boardTheme = 'brown';
-  readonly boardThemes = [
+  readonly boardThemes: { key: string; name: string; light: string; dark: string; img?: string }[] = [
     { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
     { key: 'blue', name: 'Blue', light: '#d4e3ed', dark: '#5882a1' },
     { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
     { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
     { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
-    { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33' },
-    { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78' },
-    { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a' },
-    { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a' },
-    { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23' },
-    { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a' },
+    { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33', img: '/board/wood4.jpg' },
+    { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78', img: '/board/blue3.jpg' },
+    { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a', img: '/board/marble.jpg' },
+    { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a', img: '/board/metal.jpg' },
+    { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23', img: '/board/leather.jpg' },
+    { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a', img: '/board/maple.jpg' },
   ];
 
   pieceSet = 'cburnett';
+  showSettings = false;
   readonly pieceSets = [
     { key: 'cburnett', name: 'Classic', preview: 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg' },
     { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },

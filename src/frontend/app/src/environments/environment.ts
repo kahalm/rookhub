@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.30.0',
+  version: '0.31.0',
   changelog: [
+    { version: '0.31.0', date: '2026-05-31', changes: [
+      'UI: Brett-/Figuren-Auswahl-Chips zeigen die echte Textur bzw. Figur als Vorschau.',
+      'UI: Filter- und Darstellungs-Einstellungen (Schwierigkeit, Tiefe, Brett, Figuren) hinter ein Zahnrad/„Einstellungen"-Toggle gelegt (Default eingeklappt) — in Normal-, Endless- und Buch-Puzzle.',
+    ]},
     { version: '0.30.0', date: '2026-05-31', changes: [
       'Feature: Figuren-Auswahl mit Mini-Vorschau (Springer) im Chip; zusätzliche Sets Celtic, Chessnut, RhosGFX (MIT/Apache/CC0).',
       'Feature: Zusätzliche Brett-Texturen Leder und Ahorn.',
