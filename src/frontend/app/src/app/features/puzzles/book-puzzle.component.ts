@@ -405,6 +405,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.alternativeSolve = false;
     this.reviewMode = false;
 
     // Vorspiel (Partie bis vor den Setup-Zug) still aufs Brett bringen.

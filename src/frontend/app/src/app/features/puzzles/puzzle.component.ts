@@ -635,6 +635,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.alternativeSolve = false;
 
     const setupMove = this.solutionMoves[0];
     const setupFrom = setupMove.substring(0, 2) as Square;

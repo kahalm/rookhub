@@ -1286,6 +1286,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.alternativeSolve = false;
     this.reviewingWrongPuzzle = false;
     this.gaveUp = false;
     this.moveLog = [];
