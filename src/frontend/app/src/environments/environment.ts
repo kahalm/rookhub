@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.28.0',
+  version: '0.28.1',
   changelog: [
+    { version: '0.28.1', date: '2026-05-31', changes: [
+      'Fix: Board Themes — Schachbrett korrekt als 8x8 statt 4 Quadranten gerendert (background-size: 25%)',
+      'Fix: Board Theme Kontrast erhoeht — Blue, Green, Gray, Wood mit deutlich unterscheidbaren Feldfarben',
+    ]},
     { version: '0.28.0', date: '2026-05-31', changes: [
       'Feature: Schwierigkeits-Dropdown bei den Puzzles — liefert Puzzles rund um die eigene Elo: Normal (±100), Leicht (−300), Sehr leicht (−600), Schwer (+300), Sehr schwer (+600).',
       'Feature: Rating-Fenster wird aus eigener Puzzle-Elo + Schwierigkeits-Offset berechnet (ersetzt die manuellen Min/Max-Rating-Felder); Auswahl wird in localStorage gemerkt.',

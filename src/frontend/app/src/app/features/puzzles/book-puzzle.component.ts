@@ -261,10 +261,10 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   boardTheme = 'brown';
   readonly boardThemes = [
     { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
-    { key: 'blue', name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
-    { key: 'green', name: 'Green', light: '#ffffdd', dark: '#86a666' },
-    { key: 'gray', name: 'Gray', light: '#e8e8e8', dark: '#b0b0b0' },
-    { key: 'wood', name: 'Wood', light: '#e8c98e', dark: '#a67d52' },
+    { key: 'blue', name: 'Blue', light: '#d4e3ed', dark: '#5882a1' },
+    { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
+    { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
+    { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
   ];
 
   elapsedSeconds = 0;
