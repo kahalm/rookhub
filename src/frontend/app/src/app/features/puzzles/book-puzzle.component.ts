@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -49,13 +49,11 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
         </div>
 
         <div class="info-section">
-          <div class="settings-bar">
-            <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" title="Einstellungen">
-              <mat-icon>settings</mat-icon>
-            </button>
-          </div>
           <mat-card class="status-card">
             <mat-card-content>
+              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" title="Einstellungen">
+                <mat-icon>settings</mat-icon>
+              </button>
               @switch (state) {
                 @case ('LOADING') {
                   <div class="status-center">
@@ -171,7 +169,7 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
             </mat-card>
           }
 
-          <mat-card class="config-card">
+          <mat-card class="config-card" #settingsPanel>
             <mat-card-content>
               @if (showSettings) {
               <mat-form-field appearance="outline" class="depth-field">
@@ -253,7 +251,8 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
     .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
-    .settings-bar { display: flex; justify-content: flex-end; }
+    .status-card { position: relative; }
+    .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
     .settings-gear.active { color: #1976d2; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -301,6 +300,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
   pieceSet = 'cburnett';
   showSettings = false;
+  @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = [
     { key: 'cburnett', name: 'Classic', preview: 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg' },
     { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
@@ -644,5 +644,12 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   setPieceSet(set: string): void {
     this.pieceSet = set;
     try { localStorage.setItem(PIECE_SET_KEY, set); } catch {}
+  }
+
+  toggleSettings(): void {
+    this.showSettings = !this.showSettings;
+    if (this.showSettings) {
+      setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
   }
 }

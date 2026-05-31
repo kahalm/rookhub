@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.31.2',
+  version: '0.32.0',
   changelog: [
+    { version: '0.32.0', date: '2026-05-31', changes: [
+      'UI: Einstellungs-Zahnrad sitzt in der Status-Box (oben rechts); beim Öffnen scrollt die Seite (mobil) zum Einstellungsblock.',
+    ]},
     { version: '0.31.2', date: '2026-05-31', changes: [
       'UI: Einstellungen-Zahnrad als kompaktes Icon oben rechts im Info-Panel (statt Button-Zeile).',
     ]},
