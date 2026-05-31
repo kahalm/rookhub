@@ -99,7 +99,6 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   promotionFromBottom = false;
   promotionPieces: PromotionPiece[] = ['q', 'r', 'b', 'n'];
 
-  private static readonly PIECE_SVG_BASE = 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/';
   private static readonly PIECE_NAMES: Record<string, Record<PromotionPiece, string>> = {
     'w': { q: 'wQ', r: 'wR', b: 'wB', n: 'wN' },
     'b': { q: 'bQ', r: 'bR', b: 'bB', n: 'bN' }
@@ -308,11 +307,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   getPieceImage(piece: PromotionPiece): string {
     const name = PuzzleBoardComponent.PIECE_NAMES[this.promotionColor][piece];
-    // Lokal gevendorte Sets liegen unter /piece/<set>/; Default cburnett von Lichess.
-    const base = this.pieceSet && this.pieceSet !== 'cburnett'
-      ? `/piece/${this.pieceSet}/`
-      : PuzzleBoardComponent.PIECE_SVG_BASE;
-    return `url('${base}${name}.svg')`;
+    return `url('/piece/${this.pieceSet || 'cburnett'}/${name}.svg')`;
   }
 
   ngOnDestroy(): void {
