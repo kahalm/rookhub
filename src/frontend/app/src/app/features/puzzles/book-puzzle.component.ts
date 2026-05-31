@@ -18,6 +18,7 @@ import { Color, Key } from 'chessground/types';
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
 
 const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
+const BOARD_THEME_KEY = 'rookhub_board_theme';
 
 @Component({
   selector: 'app-book-puzzle',
@@ -40,6 +41,7 @@ const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
             [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
+            [boardTheme]="boardTheme"
             (moveMade)="onMoveMade($event)"
           />
         </div>
@@ -169,6 +171,20 @@ const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
                 <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
                 <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
               </mat-form-field>
+              <div class="theme-section">
+                <div class="theme-label">Board Theme</div>
+                <div class="theme-chips">
+                  @for (t of boardThemes; track t.key) {
+                    <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
+                      <div class="theme-preview">
+                        <div class="tp-light" [style.background]="t.light"></div>
+                        <div class="tp-dark" [style.background]="t.dark"></div>
+                      </div>
+                      <span class="theme-name">{{ t.name }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
             </mat-card-content>
           </mat-card>
         </div>
@@ -210,6 +226,19 @@ const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
     }
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
+    .theme-section { margin-top: 0.75rem; }
+    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
+    .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .theme-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
+    .tp-light, .tp-dark { flex: 1; }
+    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
 
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
@@ -229,6 +258,14 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
   isCheck = false;
 
   stockfishDepth = 16;
+  boardTheme = 'brown';
+  readonly boardThemes = [
+    { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
+    { key: 'blue', name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
+    { key: 'green', name: 'Green', light: '#ffffdd', dark: '#86a666' },
+    { key: 'gray', name: 'Gray', light: '#e8e8e8', dark: '#b0b0b0' },
+    { key: 'wood', name: 'Wood', light: '#e8c98e', dark: '#a67d52' },
+  ];
 
   elapsedSeconds = 0;
   private timerInterval?: ReturnType<typeof setInterval>;
@@ -314,7 +351,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     }, 600);
   }
 
-  onMoveMade(event: { orig: Key; dest: Key }): void {
+  onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (this.state === 'PLAYING') {
       this.handleOffPathMove(event);
       return;
@@ -323,9 +360,9 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
 
     if (this.onSolutionPath) {
       const expectedUci = this.solutionMoves[this.moveIndex];
-      const userUci = event.orig + event.dest;
+      const userUci = event.orig + event.dest + (event.promotion || '');
 
-      if (userUci === expectedUci.substring(0, 4)) {
+      if (userUci === expectedUci.substring(0, userUci.length)) {
         this.playMove(expectedUci);
         this.moveIndex++;
 
@@ -352,7 +389,7 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
           }, 400);
         }
       } else {
-        if (!this.playFreeMove(event.orig, event.dest)) return;
+        if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
@@ -362,8 +399,8 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     }
   }
 
-  private handleOffPathMove(event: { orig: Key; dest: Key }): void {
-    if (!this.playFreeMove(event.orig, event.dest)) return;
+  private handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
+    if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
@@ -483,15 +520,19 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
-  private playFreeMove(orig: Key, dest: Key): boolean {
+  private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
-    const moves = this.chess.moves({ verbose: true });
-    const match = moves.find(m => m.from === from && m.to === to);
-    if (match) {
-      this.chess.move(match);
+    if (promotion) {
+      try { this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
     } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      const moves = this.chess.moves({ verbose: true });
+      const match = moves.find(m => m.from === from && m.to === to);
+      if (match) {
+        this.chess.move(match);
+      } else {
+        try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      }
     }
     this.lastMove = [orig, dest];
     return true;
@@ -541,11 +582,17 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     } catch {}
     if (this.stockfishDepth < 1) this.stockfishDepth = 16;
     if (this.stockfishDepth > 24) this.stockfishDepth = 24;
+    try { this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown'; } catch {}
   }
 
   saveConfig(): void {
     try {
       localStorage.setItem(BOOK_PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth }));
     } catch {}
+  }
+
+  setBoardTheme(theme: string): void {
+    this.boardTheme = theme;
+    try { localStorage.setItem(BOARD_THEME_KEY, theme); } catch {}
   }
 }

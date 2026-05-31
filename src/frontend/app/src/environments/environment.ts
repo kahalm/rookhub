@@ -1,7 +1,14 @@
 export const environment = {
   production: false,
-  version: '0.26.0',
+  version: '0.26.1',
   changelog: [
+    { version: '0.26.1', date: '2026-05-31', changes: [
+      'Feature: Bauernumwandlungs-Dialog — bei Promotion erscheint ein Overlay mit 4 Figuren (Dame, Turm, Laeufer, Springer) statt automatischer Dame-Wahl',
+      'Feature: Board Themes — 5 Brett-Farbschemata: Brown (Standard), Blue, Green, Gray, Wood',
+      'Feature: Theme-Auswahl in allen Puzzle-Modi (Normal, Endless, Book) mit Farbvorschau-Chips',
+      'Feature: Board-Theme wird in localStorage gespeichert und bleibt nach Refresh erhalten',
+      'Fix: Promotion-Zuege werden korrekt mit UCI-Notation verglichen (inkl. Promotion-Buchstabe)',
+    ]},
     { version: '0.26.0', date: '2026-05-30', changes: [
       'Feature: Buch-Puzzles als RookHub-Feature — Admin lädt PGN-Dateien als "Bücher" hoch (serverseitiges Parsing, SAN→UCI via Gera.Chess).',
       'Feature: Admin-Tab "Bücher" — Liste aller importierten Bücher mit Puzzle-Count und Pool-Schaltern Daily/Random/Blind pro Buch.',

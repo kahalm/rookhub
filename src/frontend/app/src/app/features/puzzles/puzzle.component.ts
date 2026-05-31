@@ -24,6 +24,7 @@ import { of } from 'rxjs';
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
 const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
+const BOARD_THEME_KEY = 'rookhub_board_theme';
 
 @Component({
   selector: 'app-puzzle',
@@ -46,6 +47,7 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
             [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
             [premovable]="state === 'THINKING'"
             [check]="isCheck"
+            [boardTheme]="boardTheme"
             (moveMade)="onMoveMade($event)"
           />
         </div>
@@ -285,6 +287,23 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
             </mat-card-content>
           </mat-card>
 
+          <mat-card class="theme-card">
+            <mat-card-content>
+              <div class="theme-label">Board Theme</div>
+              <div class="theme-chips">
+                @for (t of boardThemes; track t.key) {
+                  <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
+                    <div class="theme-preview">
+                      <div class="tp-light" [style.background]="t.light"></div>
+                      <div class="tp-dark" [style.background]="t.dark"></div>
+                    </div>
+                    <span class="theme-name">{{ t.name }}</span>
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+
           @if (lastSolvedPuzzleId) {
             <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
               <mat-icon>history</mat-icon>
@@ -339,6 +358,18 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
     .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .endless-btn { width: 100%; height: 44px; font-size: 1em; }
     .endless-btn mat-icon { margin-right: 0.25rem; }
+    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
+    .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .theme-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
+    .tp-light, .tp-dark { flex: 1; }
+    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
 
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
@@ -358,6 +389,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
   dests: Map<Key, Key[]> = new Map();
   lastMove?: [Key, Key];
   isCheck = false;
+
+  boardTheme = 'brown';
 
   minRating?: number;
   maxRating?: number;
@@ -406,6 +439,14 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.loadConfig();
     this.stockfish.init().catch(() => {});
   }
+
+  readonly boardThemes = [
+    { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
+    { key: 'blue', name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
+    { key: 'green', name: 'Green', light: '#ffffdd', dark: '#86a666' },
+    { key: 'gray', name: 'Gray', light: '#e8e8e8', dark: '#b0b0b0' },
+    { key: 'wood', name: 'Wood', light: '#e8c98e', dark: '#a67d52' },
+  ];
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
 
@@ -509,7 +550,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     }, 600);
   }
 
-  onMoveMade(event: { orig: Key; dest: Key }): void {
+  onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (this.state === 'PLAYING') {
       this.handleOffPathMove(event);
       return;
@@ -518,10 +559,10 @@ export class PuzzleComponent implements OnInit, OnDestroy {
 
     if (this.onSolutionPath) {
       const expectedUci = this.solutionMoves[this.moveIndex];
-      const userUci = event.orig + event.dest;
+      const userUci = event.orig + event.dest + (event.promotion || '');
       const thinkMs = Date.now() - this.moveStartTime;
 
-      if (userUci === expectedUci.substring(0, 4)) {
+      if (userUci === expectedUci.substring(0, userUci.length)) {
         // Correct move
         this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
         this.playMove(expectedUci);
@@ -560,7 +601,7 @@ export class PuzzleComponent implements OnInit, OnDestroy {
       } else {
         // Wrong move — leave solution path, play against Stockfish
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
-        if (!this.playFreeMove(event.orig, event.dest)) return;
+        if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
@@ -570,8 +611,8 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     }
   }
 
-  private handleOffPathMove(event: { orig: Key; dest: Key }): void {
-    if (!this.playFreeMove(event.orig, event.dest)) return;
+  private handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
+    if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
@@ -722,15 +763,19 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
-  private playFreeMove(orig: Key, dest: Key): boolean {
+  private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
-    const moves = this.chess.moves({ verbose: true });
-    const match = moves.find(m => m.from === from && m.to === to);
-    if (match) {
-      this.chess.move(match);
+    if (promotion) {
+      try { this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
     } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      const moves = this.chess.moves({ verbose: true });
+      const match = moves.find(m => m.from === from && m.to === to);
+      if (match) {
+        this.chess.move(match);
+      } else {
+        try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      }
     }
     this.lastMove = [orig, dest];
     return true;
@@ -825,11 +870,19 @@ export class PuzzleComponent implements OnInit, OnDestroy {
     } catch {}
     if (this.stockfishDepth < 1) this.stockfishDepth = 16;
     if (this.stockfishDepth > 24) this.stockfishDepth = 24;
+    try {
+      this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown';
+    } catch {}
   }
 
   saveConfig(): void {
     try {
       localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({ stockfishDepth: this.stockfishDepth }));
     } catch {}
+  }
+
+  setBoardTheme(theme: string): void {
+    this.boardTheme = theme;
+    try { localStorage.setItem(BOARD_THEME_KEY, theme); } catch {}
   }
 }

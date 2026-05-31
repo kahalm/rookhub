@@ -182,6 +182,21 @@ const FASTTRACK_SESSION_COUNT = 10;
                   }
                 </div>
 
+                <div class="theme-section">
+                  <div class="theme-label">Board Theme</div>
+                  <div class="theme-chips">
+                    @for (t of boardThemes; track t.key) {
+                      <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
+                        <div class="theme-preview">
+                          <div class="tp-light" [style.background]="t.light"></div>
+                          <div class="tp-dark" [style.background]="t.dark"></div>
+                        </div>
+                        <span class="theme-name">{{ t.name }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+
                 <div class="lives-display config-lives">
                   @for (i of [1,2,3]; track i) {
                     <mat-icon class="heart full">favorite</mat-icon>
@@ -246,6 +261,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [viewOnly]="state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING'"
                 [premovable]="state === 'THINKING'"
                 [check]="isCheck"
+                [boardTheme]="boardTheme"
                 (moveMade)="onMoveMade($event)"
               />
             </div>
@@ -691,6 +707,19 @@ const FASTTRACK_SESSION_COUNT = 10;
       background: rgba(0,0,0,0.06); border-radius: 12px; padding: 4px 12px;
       font-size: 0.85em; font-variant-numeric: tabular-nums;
     }
+    .theme-section { margin-bottom: 1rem; }
+    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
+    .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .theme-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
+    .tp-light, .tp-dark { flex: 1; }
+    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
     .config-lives { justify-content: center; margin: 1rem 0; }
     .highscore-badge {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
@@ -847,6 +876,16 @@ export class EndlessPuzzleComponent implements OnDestroy {
   highscore = 0;
   alternativeSolve = false;
 
+  // Board theme
+  boardTheme = 'brown';
+  readonly boardThemes = [
+    { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
+    { key: 'blue', name: 'Blue', light: '#dee3e6', dark: '#8ca2ad' },
+    { key: 'green', name: 'Green', light: '#ffffdd', dark: '#86a666' },
+    { key: 'gray', name: 'Gray', light: '#e8e8e8', dark: '#b0b0b0' },
+    { key: 'wood', name: 'Wood', light: '#e8c98e', dark: '#a67d52' },
+  ];
+
   // Help
   showHelp = false;
 
@@ -926,6 +965,8 @@ export class EndlessPuzzleComponent implements OnDestroy {
     public router: Router,
     private dialog: MatDialog
   ) {
+    // Load board theme
+    try { this.boardTheme = localStorage.getItem('rookhub_board_theme') || 'brown'; } catch {}
     // 1. Load from localStorage immediately (no latency)
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
@@ -996,6 +1037,11 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   private clampConfig(): void {
     this.config.startElo = Math.max(this.puzzleRange.min, Math.min(this.puzzleRange.max, this.config.startElo));
+  }
+
+  setBoardTheme(theme: string): void {
+    this.boardTheme = theme;
+    try { localStorage.setItem('rookhub_board_theme', theme); } catch {}
   }
 
   onFasttrackToggle(): void {
@@ -1215,7 +1261,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   // --- Move handling (unified for all states after first move) ---
 
-  onMoveMade(event: { orig: Key; dest: Key }): void {
+  onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (this.state === 'PLAYING') {
       this.handleMove(event);
       return;
@@ -1225,13 +1271,13 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.handleMove(event);
   }
 
-  private handleMove(event: { orig: Key; dest: Key }): void {
+  private handleMove(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (this.onSolutionPath) {
       const expectedUci = this.solutionMoves[this.moveIndex];
-      const userUci = event.orig + event.dest;
+      const userUci = event.orig + event.dest + (event.promotion || '');
       const thinkMs = Date.now() - this.moveStartTime;
 
-      if (userUci === expectedUci.substring(0, 4)) {
+      if (userUci === expectedUci.substring(0, userUci.length)) {
         // Correct — follow solution
         this.moveLog.push({ i: this.moveIndex, uci: expectedUci, exp: expectedUci, ms: thinkMs, ok: true });
         this.playMove(expectedUci);
@@ -1240,14 +1286,14 @@ export class EndlessPuzzleComponent implements OnDestroy {
       } else {
         // Wrong — leave solution path
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
-        if (!this.playFreeMove(event.orig, event.dest)) return;
+        if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
       }
     } else {
       // Off-path: accept any legal move
-      if (!this.playFreeMove(event.orig, event.dest)) return;
+      if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.opponentRespond();
     }
@@ -1575,15 +1621,19 @@ export class EndlessPuzzleComponent implements OnDestroy {
     this.lastMove = [from as Key, to as Key];
   }
 
-  private playFreeMove(orig: Key, dest: Key): boolean {
+  private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
     const from = orig as string as Square;
     const to = dest as string as Square;
-    const moves = this.chess.moves({ verbose: true });
-    const match = moves.find(m => m.from === from && m.to === to);
-    if (match) {
-      this.chess.move(match);
+    if (promotion) {
+      try { this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
     } else {
-      try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      const moves = this.chess.moves({ verbose: true });
+      const match = moves.find(m => m.from === from && m.to === to);
+      if (match) {
+        this.chess.move(match);
+      } else {
+        try { this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
+      }
     }
     this.lastMove = [orig, dest];
     return true;

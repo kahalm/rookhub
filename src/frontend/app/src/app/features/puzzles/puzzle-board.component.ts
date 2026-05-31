@@ -1,21 +1,72 @@
 import {
-  Component, ElementRef, EventEmitter, Input, OnChanges,
+  Component, ElementRef, EventEmitter, HostListener, Input, OnChanges,
   OnDestroy, AfterViewInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
 
+type PromotionPiece = 'q' | 'r' | 'b' | 'n';
+
 @Component({
   selector: 'app-puzzle-board',
   standalone: true,
-  template: `<div #boardEl class="cg-wrap"></div>`,
+  imports: [CommonModule],
+  template: `
+    <div class="board-wrapper" [class]="'board-theme-' + boardTheme">
+      <div #boardEl class="cg-wrap"></div>
+      @if (showPromotionOverlay) {
+        <div class="promotion-backdrop" (click)="cancelPromotion()"></div>
+        <div class="promotion-choices" [style.left.%]="promotionFilePercent"
+             [class.from-bottom]="promotionFromBottom">
+          @for (piece of promotionPieces; track piece) {
+            <div class="promotion-piece" (click)="selectPromotion(piece)">
+              <div class="piece-icon" [style.backgroundImage]="getPieceImage(piece)"></div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  `,
   styles: [`
     :host { display: block; width: 100%; }
+    .board-wrapper { position: relative; }
     .cg-wrap {
       position: relative;
       display: block;
       overflow: hidden;
+    }
+    .promotion-backdrop {
+      position: absolute; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.35);
+    }
+    .promotion-choices {
+      position: absolute; z-index: 101;
+      top: 0; width: 12.5%;
+      display: flex; flex-direction: column;
+    }
+    .promotion-choices.from-bottom {
+      top: auto; bottom: 0;
+      flex-direction: column-reverse;
+    }
+    .promotion-piece {
+      width: 100%; aspect-ratio: 1;
+      background: rgba(255,255,255,0.9);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s;
+    }
+    .promotion-piece:first-child { border-radius: 4px 4px 0 0; }
+    .promotion-piece:last-child { border-radius: 0 0 4px 4px; }
+    .promotion-choices.from-bottom .promotion-piece:first-child { border-radius: 0 0 4px 4px; }
+    .promotion-choices.from-bottom .promotion-piece:last-child { border-radius: 4px 4px 0 0; }
+    .promotion-piece:hover { background: rgba(200,220,255,0.95); }
+    .piece-icon {
+      width: 85%; height: 85%;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
   `]
 })
@@ -28,8 +79,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() viewOnly = false;
   @Input() check = false;
   @Input() premovable = false;
+  @Input() boardTheme = 'brown';
 
-  @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key }>();
+  @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
 
@@ -38,9 +90,30 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private initAttempts = 0;
   private pendingPremove?: { orig: Key; dest: Key };
 
+  // Promotion overlay state
+  showPromotionOverlay = false;
+  private pendingPromotion: { orig: Key; dest: Key } | null = null;
+  private promotionColor: 'w' | 'b' = 'w';
+  promotionFilePercent = 0;
+  promotionFromBottom = false;
+  promotionPieces: PromotionPiece[] = ['q', 'r', 'b', 'n'];
+
+  private static readonly PIECE_SVG_BASE = 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/';
+  private static readonly PIECE_NAMES: Record<string, Record<PromotionPiece, string>> = {
+    'w': { q: 'wQ', r: 'wR', b: 'wB', n: 'wN' },
+    'b': { q: 'bQ', r: 'bR', b: 'bB', n: 'bN' }
+  };
+
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
     this.initBoard();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showPromotionOverlay) {
+      this.cancelPromotion();
+    }
   }
 
   /**
@@ -104,7 +177,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       },
       events: {
         move: (orig: Key, dest: Key) => {
-          this.moveMade.emit({ orig, dest });
+          if (this.isPromotion(orig, dest)) {
+            this.showPromotionDialog(orig, dest);
+          } else {
+            this.moveMade.emit({ orig, dest });
+          }
         }
       }
     });
@@ -156,9 +233,81 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       // Cancel the premove visual, then emit the move
       this.ground.cancelPremove();
       setTimeout(() => {
-        this.moveMade.emit({ orig, dest });
+        if (this.isPromotion(orig, dest)) {
+          this.showPromotionDialog(orig, dest);
+        } else {
+          this.moveMade.emit({ orig, dest });
+        }
       }, 50);
     }
+  }
+
+  // --- Promotion logic ---
+
+  private isPromotion(orig: Key, dest: Key): boolean {
+    if (!this.ground) return false;
+    // Check piece at the origin square (before the move was applied by chessground)
+    // After chessground applies the move, the piece is at dest
+    const piece = this.ground.state.pieces.get(dest);
+    if (!piece || piece.role !== 'pawn') return false;
+    const destRank = dest[1];
+    return destRank === '1' || destRank === '8';
+  }
+
+  private showPromotionDialog(orig: Key, dest: Key): void {
+    this.pendingPromotion = { orig, dest };
+    const piece = this.ground?.state.pieces.get(dest);
+    this.promotionColor = piece?.color === 'white' ? 'w' : 'b';
+
+    // Calculate file position (0-7 mapped to percentage)
+    const fileChar = dest[0];
+    const fileIndex = fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
+    // If board is flipped, reverse the file
+    const adjustedFile = this.orientation === 'white' ? fileIndex : 7 - fileIndex;
+    this.promotionFilePercent = adjustedFile * 12.5;
+
+    // Show from top if promoting to rank 8 (white's side when white orientation)
+    // Show from bottom if promoting to rank 1
+    const destRank = dest[1];
+    this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
+                                (this.orientation === 'black' && destRank === '8');
+
+    this.showPromotionOverlay = true;
+  }
+
+  selectPromotion(piece: PromotionPiece): void {
+    if (!this.pendingPromotion) return;
+    const { orig, dest } = this.pendingPromotion;
+    this.showPromotionOverlay = false;
+    this.pendingPromotion = null;
+    this.moveMade.emit({ orig, dest, promotion: piece });
+  }
+
+  cancelPromotion(): void {
+    if (!this.pendingPromotion) return;
+    // Reset the board to undo the visual move chessground already made
+    this.showPromotionOverlay = false;
+    this.pendingPromotion = null;
+    // Restore previous position
+    if (this.ground) {
+      this.ground.set({
+        fen: this.fen,
+        lastMove: this.lastMove as Key[] | undefined,
+        turnColor: this.turnColor,
+        check: this.check,
+        movable: {
+          free: false,
+          color: this.viewOnly ? undefined : this.orientation,
+          dests: this.viewOnly ? undefined : this.dests,
+          showDests: true
+        }
+      });
+    }
+  }
+
+  getPieceImage(piece: PromotionPiece): string {
+    const name = PuzzleBoardComponent.PIECE_NAMES[this.promotionColor][piece];
+    return `url('${PuzzleBoardComponent.PIECE_SVG_BASE}${name}.svg')`;
   }
 
   ngOnDestroy(): void {
