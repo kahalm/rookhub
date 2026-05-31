@@ -21,7 +21,7 @@ export default defineConfig({
   projects: [
     {
       name: 'no-auth',
-      testMatch: ['puzzles.spec.ts', 'puzzle-moves.spec.ts', 'dashboard.spec.ts'],
+      testMatch: ['puzzles.spec.ts', 'puzzle-moves.spec.ts', 'dashboard.spec.ts', 'viz-mobile.spec.ts'],
       use: { browserName: 'chromium' },
     },
     {

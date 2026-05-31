@@ -17,7 +17,7 @@ import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { Chess } from 'chess.js';
@@ -192,10 +192,13 @@ const FASTTRACK_SESSION_COUNT = 10;
                   </button>
                 </div>
                 @if (showSettings) {
-                <label class="viz-toggle">
-                  <input type="checkbox" [checked]="visualizationMode" (change)="toggleVisualization()">
-                  <span>Visualisierung (Blindfold) — Brett bleibt auf Startstellung, Züge als Text</span>
-                </label>
+                <div class="viz-slider">
+                  <label>Visualisierung: Level {{ visualizationMode }}</label>
+                  <input type="range" min="0" max="4" step="1"
+                         [value]="visualizationMode"
+                         (input)="setVisualizationLevel(+$any($event.target).value)">
+                  <div class="viz-level-desc">{{ vizLevelDescription }}</div>
+                </div>
                 <div class="theme-section">
                   <div class="theme-label">Modus</div>
                   <div class="theme-chips">
@@ -293,7 +296,7 @@ const FASTTRACK_SESSION_COUNT = 10;
 
         @case ('play') {
           <div class="play-screen">
-            <div class="board-section">
+            <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
               <app-puzzle-board
                 [fen]="boardFen"
                 [orientation]="orientation"
@@ -305,9 +308,28 @@ const FASTTRACK_SESSION_COUNT = 10;
                 [check]="isCheck"
                 [boardTheme]="boardTheme"
                 [pieceSet]="pieceSet"
-                [visualization]="visualizationMode && state !== 'CORRECT' && state !== 'WRONG'"
+                [visualization]="(state !== 'CORRECT' && state !== 'WRONG') ? visualizationMode : 0"
                 (moveMade)="onMoveMade($event)"
               />
+              @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
+                <mat-card class="viz-card">
+                  <mat-card-content>
+                    <div class="viz-title"><mat-icon>visibility_off</mat-icon> Visualisierung (Level {{ visualizationMode }})</div>
+                    @if (vizCountdownSeconds > 0) {
+                      <div class="viz-countdown">Figuren verschwinden in {{ vizCountdownSeconds }}s...</div>
+                    }
+                    <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
+                    @if (vizPiecesHidden) {
+                      <button class="viz-show-btn"
+                        (pointerdown)="onVizShow(true)" (pointerup)="onVizShow(false)"
+                        (pointerleave)="onVizShow(false)" (pointercancel)="onVizShow(false)">
+                        Show
+                      </button>
+                    }
+                    <div class="viz-hint">{{ vizLevelDescription }}</div>
+                  </mat-card-content>
+                </mat-card>
+              }
             </div>
 
             <div class="info-section">
@@ -471,16 +493,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                   }
                 </mat-card-content>
               </mat-card>
-
-              @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
-                <mat-card class="viz-card">
-                  <mat-card-content>
-                    <div class="viz-title"><mat-icon>visibility_off</mat-icon> Visualisierung</div>
-                    <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
-                    <div class="viz-hint">Brett zeigt die Startstellung. Deine Klick-Züge werden nicht gezeigt; die Antwort steht oben in der Zugliste.</div>
-                  </mat-card-content>
-                </mat-card>
-              }
 
               <mat-card class="stats-card">
                 <mat-card-content>
@@ -766,11 +778,21 @@ const FASTTRACK_SESSION_COUNT = 10;
     }
     .theme-section { margin-bottom: 1rem; }
     .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
-    .viz-toggle { display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; margin-bottom: 0.75rem; font-size: 0.9em; }
-    .viz-toggle input { margin-top: 2px; }
+    .viz-slider { margin-bottom: 0.75rem; }
+    .viz-slider label { font-size: 0.9em; font-weight: 500; }
+    .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
+    .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-card { margin-top: 0.5rem; }
     .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
     .viz-card .viz-moves { font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5; background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word; }
     .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }
+    .viz-countdown { font-size: 0.9em; color: #e65100; font-weight: 500; margin-bottom: 0.25rem; }
+    .viz-show-btn {
+      margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500;
+      user-select: none; touch-action: manipulation;
+    }
+    .viz-show-btn:active { background: #e3f2fd; }
     .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -1060,9 +1082,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   ngOnDestroy(): void {
     this.stopSessionTimer();
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.abortSolver();
     this.stockfish.destroy();
     clearCrazyStyles();
+    clearVisualizationHide();
   }
 
   // --- Config ---
@@ -1109,9 +1132,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.pieceSet = applied.pieceSet;
   }
 
-  toggleVisualization(): void {
-    this.visualizationMode = !this.visualizationMode;
-    this.prefs.setVisualization(this.visualizationMode);
+  setVisualizationLevel(level: number): void {
+    this.visualizationMode = level;
+    this.prefs.setVisualization(level);
     if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);  // laufendes Puzzle neu starten
   }
 

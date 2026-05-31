@@ -2,6 +2,7 @@ import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList } from './puzzle-move.util';
+import { applyVisualizationHide, clearVisualizationHide } from './board-theme.util';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
@@ -32,12 +33,19 @@ export abstract class BasePuzzleSolver {
   mouseslipUsed = false;
   currentEval = '';
 
-  // ---- Visualisierungs-/Blindfold-Modus ----
-  visualizationMode = false;
+  // ---- Visualisierungs-/Blindfold-Modus (0 = aus, 1-4 = aktiv) ----
+  visualizationMode = 0;
   vizMoves: string[] = [];
   protected frozenFen = '';
   protected vizStartWhite = true;
   protected vizStartNum = 1;
+  /** Level 2-4: Figuren versteckt (nach Countdown). */
+  vizPiecesHidden = false;
+  /** Show-Button gedrückt (zeigt Figuren/Steine temporär). */
+  vizShowPressed = false;
+  /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
+  vizCountdownSeconds = 0;
+  protected vizCountdownInterval?: ReturnType<typeof setInterval>;
 
   // ---- intern ----
   protected chess = new Chess();
@@ -95,6 +103,7 @@ export abstract class BasePuzzleSolver {
     this.moveLog = [];
     this.frozenFen = fen;
     this.vizMoves = [];
+    this.endVisualizationHide();
     this.onSetupStart();
 
     for (let i = 0; i < this.startPly; i++) applyUci(this.chess, this.solutionMoves[i]);
@@ -135,6 +144,7 @@ export abstract class BasePuzzleSolver {
     this.vizStartWhite = f[1] !== 'b';
     this.vizStartNum = parseInt(f[5], 10) || 1;
     this.vizMoves = [];
+    if (this.visualizationMode >= 2) this.startVizCountdown();
   }
 
   // ===== Zug-Handling =====
@@ -269,6 +279,8 @@ export abstract class BasePuzzleSolver {
       this.dests = new Map();
       return;
     }
+    // Endzustand → Figuren wieder einblenden
+    if (this.vizPiecesHidden) this.endVisualizationHide();
     this.boardFen = this.chess.fen();
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
@@ -276,9 +288,56 @@ export abstract class BasePuzzleSolver {
     this.dests = interactive ? calcDests(this.chess) : new Map();
   }
 
+  // ===== Visualization Level 2-4: Countdown + Hide =====
+  protected startVizCountdown(): void {
+    this.clearVizCountdown();
+    this.vizPiecesHidden = false;
+    this.vizShowPressed = false;
+    this.vizCountdownSeconds = 5;
+    this.vizCountdownInterval = setInterval(() => {
+      this.vizCountdownSeconds--;
+      if (this.vizCountdownSeconds <= 0) {
+        this.clearVizCountdown();
+        this.vizPiecesHidden = true;
+        applyVisualizationHide(this.visualizationMode);
+      }
+    }, 1000);
+  }
+
+  protected clearVizCountdown(): void {
+    if (this.vizCountdownInterval) {
+      clearInterval(this.vizCountdownInterval);
+      this.vizCountdownInterval = undefined;
+    }
+    this.vizCountdownSeconds = 0;
+  }
+
+  onVizShow(pressed: boolean): void {
+    this.vizShowPressed = pressed;
+  }
+
+  protected endVisualizationHide(): void {
+    this.clearVizCountdown();
+    this.vizPiecesHidden = false;
+    this.vizShowPressed = false;
+    clearVisualizationHide();
+  }
+
+  get vizLevelDescription(): string {
+    switch (this.visualizationMode) {
+      case 0: return 'Normal — Drag & Drop';
+      case 1: return 'Blindfold — Brett eingefroren, Züge als Text';
+      case 2: return 'Checker — Figuren werden nach 5s durch Spielsteine ersetzt';
+      case 3: return 'Dark — Figuren werden nach 5s durch schwarze Steine ersetzt';
+      case 4: return 'Invisible — Figuren verschwinden nach 5s komplett';
+      default: return '';
+    }
+  }
+
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */
   protected abortSolver(): void {
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.clearVizCountdown();
   }
 }

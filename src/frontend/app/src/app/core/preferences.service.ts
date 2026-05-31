@@ -28,8 +28,8 @@ export class PreferencesService {
   puzzleDifficulty = 'normal';
   bookStockfishDepth = 16;
   themeMode: ThemeMode = 'fixed';
-  /** Visualisierungs-/Blindfold-Modus (nur lokal, geräteabhängig — kein Server-Sync). */
-  visualization = false;
+  /** Visualisierungs-Level 0-4 (nur lokal, geräteabhängig — kein Server-Sync). */
+  visualization = 1;
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -58,12 +58,19 @@ export class PreferencesService {
         if (saved.stockfishDepth) this.bookStockfishDepth = this.clampDepth(saved.stockfishDepth);
       }
     } catch {}
-    try { this.visualization = localStorage.getItem(VISUALIZATION_KEY) === '1'; } catch {}
+    try {
+      const viz = localStorage.getItem(VISUALIZATION_KEY);
+      if (viz !== null) {
+        // Backward-compat: '0'→0, '1'→1, other→parseInt clamped 0-4
+        const n = parseInt(viz, 10);
+        this.visualization = isNaN(n) ? 1 : Math.max(0, Math.min(4, n));
+      }
+    } catch {}
   }
 
-  setVisualization(on: boolean): void {
-    this.visualization = on;
-    try { localStorage.setItem(VISUALIZATION_KEY, on ? '1' : '0'); } catch {}
+  setVisualization(level: number): void {
+    this.visualization = Math.max(0, Math.min(4, level));
+    try { localStorage.setItem(VISUALIZATION_KEY, String(this.visualization)); } catch {}
   }
 
   /** Fetch preferences from server profile and overwrite localStorage. Called after login. */

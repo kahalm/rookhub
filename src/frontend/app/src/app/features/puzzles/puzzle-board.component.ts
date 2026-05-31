@@ -81,9 +81,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() premovable = false;
   @Input() boardTheme = 'brown';
   @Input() pieceSet = 'cburnett';
-  /** Visualisierungs-/Blindfold-Modus: Brett bleibt eingefroren, Klicks (Von→Nach) werden
-   *  als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
-  @Input() visualization = false;
+  /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
+   *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
+  @Input() visualization = 0;
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 

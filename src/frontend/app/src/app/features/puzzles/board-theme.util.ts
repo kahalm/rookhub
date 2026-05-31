@@ -100,6 +100,42 @@ export function clearCrazyStyles(): void {
   document.getElementById('crazy-piece-css')?.remove();
 }
 
+// --- Visualization Hide (Level 2–4) ---
+
+function checkerSvg(fill: string, stroke: string): string {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='${fill}' stroke='${stroke}' stroke-width='4'/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+const WHITE_CHECKER = checkerSvg('#e8e8e8', '#999');
+const BLACK_CHECKER = checkerSvg('#333', '#111');
+
+/**
+ * Inject/update a <style> tag that hides or replaces pieces when .viz-hidden is set.
+ * Level 2: colored checkers (white/black).  Level 3: all-black checkers.  Level 4: invisible.
+ */
+export function applyVisualizationHide(level: number): void {
+  let style = document.getElementById('viz-hide-css') as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'viz-hide-css';
+    document.head.appendChild(style);
+  }
+  let css = '';
+  if (level === 2) {
+    css = `.viz-hidden cg-board piece.white { background-image: url("${WHITE_CHECKER}") !important; }\n`
+        + `.viz-hidden cg-board piece.black { background-image: url("${BLACK_CHECKER}") !important; }\n`;
+  } else if (level === 3) {
+    css = `.viz-hidden cg-board piece { background-image: url("${BLACK_CHECKER}") !important; }\n`;
+  } else if (level >= 4) {
+    css = `.viz-hidden cg-board piece { opacity: 0 !important; }\n`;
+  }
+  style.textContent = css;
+}
+
+export function clearVisualizationHide(): void {
+  document.getElementById('viz-hide-css')?.remove();
+}
+
 /**
  * Apply a theme mode and return the boardTheme + pieceSet to use.
  * - fixed: uses the provided saved values, clears crazy styles
