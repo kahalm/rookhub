@@ -114,23 +114,25 @@ public class PgnImportServiceTests : IDisposable
     [Fact]
     public void ParsePgn_MultipleGames()
     {
+        // Nicht-Grundstellung (FEN = Puzzle-Stellung) → beide werden behalten (StartPly=-1).
         var pgn = @"
 [Event ""A""]
 [Round ""1""]
-[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[FEN ""7k/8/8/8/8/8/6PP/7K w - - 0 1""]
 
-1. e4 e5 *
+1. g4 *
 
 [Event ""A""]
 [Round ""2""]
-[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[FEN ""k7/8/8/8/8/8/PP6/K7 w - - 0 1""]
 
-1. d4 d5 *
+1. a4 *
 ";
         var puzzles = PgnImportService.ParsePgn("multi.pgn", pgn);
         Assert.Equal(2, puzzles.Count);
-        Assert.Equal("e2e4 e7e5", puzzles[0].Moves);
-        Assert.Equal("d2d4 d7d5", puzzles[1].Moves);
+        Assert.Equal("g2g4", puzzles[0].Moves);
+        Assert.Equal("a2a4", puzzles[1].Moves);
+        Assert.Equal(-1, puzzles[0].StartPly);
     }
 
     [Fact]
@@ -169,8 +171,25 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
-    public void ParsePgn_NoTqu_StartPlyZero()
+    public void ParsePgn_NoTqu_NonStartFen_SolvesFromMove0()
     {
+        // FEN ist die Puzzle-Stellung (kein Marker) → StartPly=-1, lösen ab moves[0].
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+1. Bxa7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        Assert.Equal(-1, p.StartPly);
+        Assert.Equal("e3a7", p.Moves);
+    }
+
+    [Fact]
+    public void ParsePgn_StartFenWithoutMarker_Skipped()
+    {
+        // Grundstellung ohne Trainingsmarker = ganze Partie ohne Puzzle → übersprungen.
         var pgn = @"
 [Event ""T""]
 [Round ""1""]
@@ -178,8 +197,7 @@ public class PgnImportServiceTests : IDisposable
 
 1. e4 e5 2. Nf3 *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
-        Assert.Equal(0, p.StartPly);
+        Assert.Empty(PgnImportService.ParsePgn("t.pgn", pgn));
     }
 
     [Fact]

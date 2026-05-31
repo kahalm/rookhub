@@ -68,12 +68,24 @@ public partial class PgnImportService
             var uci = TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0) continue;
 
-            // Trainingsstart aus ChessBase-[%tqu] bestimmen. Die ganze Partie (fen+moves)
-            // bleibt erhalten; StartPly markiert nur den Setup-Zug der Trainingsstellung.
-            // null = kein Marker → 0 (klassisch). -1 = Wurzel → lösen ab moves[0].
-            // Gültig nur, wenn danach noch mindestens ein Lösungszug folgt (Index <= count-2).
+            // Trainingsstart bestimmen. Zwei Buch-Typen kommen vor:
+            //  (a) Mid-line-[%tqu]: ganze Partie ab Grundstellung, der Marker hängt an Zug k
+            //      → StartPly = k, fen+moves bleiben die KOMPLETTE Partie, gelöst ab moves[k+1].
+            //  (b) FEN ist bereits die Puzzle-Stellung (kein/Wurzel-Marker) → gelöst ab moves[0]
+            //      → StartPly = -1.
+            // Ausnahme: FEN = Grundstellung OHNE Mid-line-Marker = ganze Partie ohne definierten
+            // Trainingsstart → kein Puzzle, überspringen (wie der Bot non-[%tqu]-Partien filtert).
             var tquIndex = FindTquMoveIndex(moveText);
-            var startPly = (tquIndex.HasValue && tquIndex.Value <= uci.Count - 2) ? tquIndex.Value : 0;
+            int startPly;
+            if (tquIndex is int k && k >= 0 && k <= uci.Count - 2)
+            {
+                startPly = k;
+            }
+            else
+            {
+                if (IsStartPosition(fen)) continue;
+                startPly = -1;
+            }
 
             var white = headers.GetValueOrDefault("White", "").Trim();
             var black = headers.GetValueOrDefault("Black", "").Trim();
@@ -243,6 +255,10 @@ public partial class PgnImportService
         Flush();
         return null;
     }
+
+    /// <summary>Ist die FEN die Standard-Grundstellung (nur Brettfeld verglichen, ohne Zähler)?</summary>
+    private static bool IsStartPosition(string fen)
+        => fen.Split(' ', 2)[0] == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
     /// <summary>Ist das Token ein SAN-Zug (kein Zugnummern-, NAG- oder Ergebnis-Token)?</summary>
     private static bool IsSanMove(string token)

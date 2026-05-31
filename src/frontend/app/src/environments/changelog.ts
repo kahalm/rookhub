@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.35.2';
+export const APP_VERSION = '0.35.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.35.3', date: '2026-05-31', changes: [
+    'Fix: Buch-Puzzles mit FEN = Puzzle-Stellung (z.B. „1001 Chess Exercises") starten jetzt korrekt beim ersten Lösungszug (StartPly=-1) statt den ersten Zug als „Setup" wegzuspielen.',
+    'Fix: Ganze-Partie-Einträge ohne Trainingsmarker (FEN = Grundstellung, kein [%tqu]) werden beim Import übersprungen (kein scheinbares Puzzle ab Eröffnung).',
+  ]},
   { version: '0.35.2', date: '2026-05-31', changes: [
     'Fix: Nach Retry/Reset/Mouseslip wurde faelschlicherweise "Alternative Loesung" angezeigt — alternativeSolve wird jetzt in setupPuzzle zurueckgesetzt (alle 3 Puzzle-Modi).',
   ]},
