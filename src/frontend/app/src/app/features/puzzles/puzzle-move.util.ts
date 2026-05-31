@@ -1,0 +1,71 @@
+import { Chess, Move, Square } from 'chess.js';
+import { Key } from 'chessground/types';
+
+/**
+ * Gemeinsame, reine Schach-/Brett-Helfer für die Puzzle-Modi (Normal, Endless, Buch).
+ * Vorher in allen 3 Komponenten identisch dupliziert — hier zentral, leichter pflegbar/testbar.
+ */
+
+type Promo = 'q' | 'r' | 'b' | 'n';
+
+/** UCI-String (z.B. "e7e8q") in From/To/Promotion zerlegen. */
+export function parseUci(uci: string): { from: Square; to: Square; promotion?: Promo } {
+  return {
+    from: uci.substring(0, 2) as Square,
+    to: uci.substring(2, 4) as Square,
+    promotion: uci.length > 4 ? (uci[4] as Promo) : undefined,
+  };
+}
+
+/** UCI-Zug auf das Brett anwenden; gibt den chess.js-Move zurück (für SAN etc.). */
+export function applyUci(chess: Chess, uci: string): Move {
+  return chess.move(parseUci(uci));
+}
+
+/**
+ * Freien (vom User gewählten) Zug von orig→dest anwenden. Promotion default Dame.
+ * Gibt den Move zurück oder null, wenn illegal (Aufrufer überspringt dann).
+ */
+export function tryFreeMove(chess: Chess, orig: Key, dest: Key, promotion?: string): Move | null {
+  const from = orig as string as Square;
+  const to = dest as string as Square;
+  try {
+    if (promotion) {
+      return chess.move({ from, to, promotion: promotion as Promo });
+    }
+    const match = chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
+    return match ? chess.move(match) : chess.move({ from, to, promotion: 'q' });
+  } catch {
+    return null;
+  }
+}
+
+/** Legale Züge der aktuellen Stellung als chessground-dests-Map (from → [to,...]). */
+export function calcDests(chess: Chess): Map<Key, Key[]> {
+  const dests = new Map<Key, Key[]>();
+  for (const m of chess.moves({ verbose: true })) {
+    const from = m.from as Key;
+    if (!dests.has(from)) dests.set(from, []);
+    dests.get(from)!.push(m.to as Key);
+  }
+  return dests;
+}
+
+/**
+ * SAN-Zugliste mit korrekten Zugnummern formatieren (für den Visualisierungs-Modus),
+ * ab einer Startstellung (Farbe am Zug + Vollzug-Nummer). Beispiel: "10... O-O 11. Qh5".
+ */
+export function formatSanList(moves: string[], startWhite: boolean, startNum: number): string {
+  if (!moves.length) return '';
+  const parts: string[] = [];
+  let num = startNum;
+  let white = startWhite;
+  let first = true;
+  for (const san of moves) {
+    if (white) { parts.push(`${num}.`, san); }
+    else { if (first) parts.push(`${num}...`); parts.push(san); num++; }
+    white = !white;
+    first = false;
+  }
+  return parts.join(' ');
+}

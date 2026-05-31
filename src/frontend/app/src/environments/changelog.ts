@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.38.0';
+export const APP_VERSION = '0.38.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.38.1', date: '2026-05-31', changes: [
+    'Refactor: Gemeinsame Schach-/Brett-Helfer (parseUci, applyUci, tryFreeMove, calcDests, SAN-Zugliste) aus den 3 Puzzle-Modi in puzzle-move.util.ts ausgelagert (vorher byte-gleich 3x dupliziert) — leichter wartbar.',
+  ]},
   { version: '0.38.0', date: '2026-05-31', changes: [
     'Feature: Visualisierungs-Modus (Blindfold) in allen 3 Puzzle-Modi (Normal, Endless, Buch) — als Schalter in den Einstellungen. Das Brett bleibt auf der Startstellung; eigene Züge werden per Klick (Von-Feld → Ziel-Feld) eingegeben, aber nicht angezeigt; Gegner-/Lösungszug erscheint als SAN-Text. Trainiert das Rechnen/Visualisieren im Kopf.',
   ]},

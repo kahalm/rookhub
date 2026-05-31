@@ -18,6 +18,7 @@ import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles } from './board-theme.util';
+import { applyUci, tryFreeMove, calcDests, formatSanList } from './puzzle-move.util';
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 
@@ -1157,18 +1158,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   /** SAN-Zugliste mit korrekten Zugnummern formatiert (ab der eingefrorenen Stellung). */
   get vizMoveText(): string {
-    if (!this.vizMoves.length) return '';
-    const parts: string[] = [];
-    let num = this.vizStartNum;
-    let white = this.vizStartWhite;
-    let first = true;
-    for (const san of this.vizMoves) {
-      if (white) { parts.push(`${num}.`, san); }
-      else { if (first) parts.push(`${num}...`); parts.push(san); num++; }
-      white = !white;
-      first = false;
-    }
-    return parts.join(' ');
+    return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }
 
   onFasttrackToggle(): void {
@@ -1593,10 +1583,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
 
   /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
   private applyUci(uci: string): void {
-    const from = uci.substring(0, 2) as Square;
-    const to = uci.substring(2, 4) as Square;
-    const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
-    this.chess.move({ from, to, promotion });
+    applyUci(this.chess, uci);
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -1787,31 +1774,16 @@ export class EndlessPuzzleComponent implements OnDestroy {
   // --- Board helpers ---
 
   private playMove(uci: string): void {
-    const from = uci.substring(0, 2) as Square;
-    const to = uci.substring(2, 4) as Square;
-    const promotion = uci.length > 4 ? uci[4] as 'q' | 'r' | 'b' | 'n' : undefined;
-    const mv = this.chess.move({ from, to, promotion });
-    this.lastMove = [from as Key, to as Key];
+    const mv = applyUci(this.chess, uci);
+    this.lastMove = [uci.substring(0, 2) as Key, uci.substring(2, 4) as Key];
     if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
   }
 
   private playFreeMove(orig: Key, dest: Key, promotion?: string): boolean {
-    const from = orig as string as Square;
-    const to = dest as string as Square;
-    let mv;
-    if (promotion) {
-      try { mv = this.chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' }); } catch { return false; }
-    } else {
-      const moves = this.chess.moves({ verbose: true });
-      const match = moves.find(m => m.from === from && m.to === to);
-      if (match) {
-        mv = this.chess.move(match);
-      } else {
-        try { mv = this.chess.move({ from, to, promotion: 'q' }); } catch { return false; }
-      }
-    }
+    const mv = tryFreeMove(this.chess, orig, dest, promotion);
+    if (!mv) return false;
     this.lastMove = [orig, dest];
-    if (this.visualizationMode && mv && this.isSolving) this.vizMoves.push(mv.san);
+    if (this.visualizationMode && this.isSolving) this.vizMoves.push(mv.san);
     return true;
   }
 
@@ -1832,13 +1804,7 @@ export class EndlessPuzzleComponent implements OnDestroy {
   }
 
   private calcDests(): Map<Key, Key[]> {
-    const dests = new Map<Key, Key[]>();
-    for (const m of this.chess.moves({ verbose: true })) {
-      const from = m.from as Key;
-      if (!dests.has(from)) dests.set(from, []);
-      dests.get(from)!.push(m.to as Key);
-    }
-    return dests;
+    return calcDests(this.chess);
   }
 
   // --- Timer ---
