@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.37.1';
+export const APP_VERSION = '0.37.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.37.2', date: '2026-05-31', changes: [
+    'Feature (Schach-Bot): /puzzle zeigt standardmaessig nur Link (kein Brettbild/Loesung). Jeder User kann mit /puzzle option:showBoard bzw. hideBoard umschalten.',
+  ]},
   { version: '0.37.1', date: '2026-05-31', changes: [
     'Feature: Loesungs-Review sofort nach Puzzle-Ende — Pfeiltasten (links/rechts) und GUI-Buttons zum Durchklicken der Loesung ohne vorheriges "Show Solution".',
     'Feature: "Ganze Partie ansehen" erst sichtbar wenn Puzzle fertig (SOLVED/FAILED).',
