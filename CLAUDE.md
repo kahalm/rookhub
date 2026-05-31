@@ -124,6 +124,18 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
 
+### Gruppen (Admin + auth)
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/admin/groups` | Admin | Alle Gruppen inkl. MemberCount |
+| POST | `/api/admin/groups` | Admin | Gruppe anlegen (name, description) |
+| PUT | `/api/admin/groups/{id}` | Admin | Gruppe umbenennen / Beschreibung |
+| DELETE | `/api/admin/groups/{id}` | Admin | Gruppe + Mitgliedschaften loeschen |
+| GET | `/api/admin/groups/{id}/members` | Admin | Mitglieder einer Gruppe |
+| POST | `/api/admin/groups/{id}/members/{userId}` | Admin | User zur Gruppe hinzufuegen (idempotent) |
+| DELETE | `/api/admin/groups/{id}/members/{userId}` | Admin | User aus Gruppe entfernen |
+| GET | `/api/my-groups` | Auth | Gruppen-Namen des eingeloggten Users (gruppenabhaengige Anzeige) |
+
 ### Endless Puzzle Sync (auth + anon)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -150,10 +162,12 @@ CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags |
+| Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
+| UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
 | EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Step, Themes, Fasttrack, Highscore, ActiveGameState (LONGTEXT) |
 | EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
 
-Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions; Repertoire -> Files.
+Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups; Repertoire -> Files; Group -> UserGroups.
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur
@@ -223,7 +237,7 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 304 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless)
+dotnet test     # 350 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless, Books, Groups)
 ```
 
 ### Test-Pattern
@@ -264,7 +278,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.33.0`
+- **Aktuelle Version**: `0.34.0`
 - Definiert in `src/frontend/app/src/environments/environment.ts`
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

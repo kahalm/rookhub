@@ -1,7 +1,10 @@
 export const environment = {
   production: false,
-  version: '0.33.0',
+  version: '0.34.0',
   changelog: [
+    { version: '0.34.0', date: '2026-05-31', changes: [
+      'Feature: Gruppensystem — Admin kann Gruppen anlegen/löschen und User zuordnen (Admin-Tab „Gruppen"). Basis für künftige gruppenabhängige Anzeige (GET /api/my-groups).',
+    ]},
     { version: '0.33.0', date: '2026-05-31', changes: [
       'Feature: Admin-Bücher — pro Buch eine empfohlene Elo-Spanne (von/bis) angeben (Book.MinElo/MaxElo, Migration, Eingabe im Bücher-Tab).',
     ]},

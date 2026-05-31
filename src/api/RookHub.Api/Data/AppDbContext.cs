@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
     public DbSet<Book> Books => Set<Book>();
+    public DbSet<Group> Groups => Set<Group>();
+    public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
 
@@ -140,6 +142,24 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Book>(e =>
         {
             e.HasIndex(b => b.FileName).IsUnique();
+        });
+
+        modelBuilder.Entity<Group>(e =>
+        {
+            e.HasIndex(g => g.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<UserGroup>(e =>
+        {
+            e.HasKey(ug => new { ug.UserId, ug.GroupId });
+            e.HasOne(ug => ug.User)
+             .WithMany(u => u.Groups)
+             .HasForeignKey(ug => ug.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ug => ug.Group)
+             .WithMany(g => g.Members)
+             .HasForeignKey(ug => ug.GroupId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BookPuzzle>(e =>

@@ -28,4 +28,5 @@ public class AppUser
     public ICollection<TournamentUserSetting> TournamentUserSettings { get; set; } = new List<TournamentUserSetting>();
     public ICollection<EndlessProgress> EndlessProgresses { get; set; } = new List<EndlessProgress>();
     public ICollection<EndlessSession> EndlessSessions { get; set; } = new List<EndlessSession>();
+    public ICollection<UserGroup> Groups { get; set; } = new List<UserGroup>();
 }

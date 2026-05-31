@@ -66,6 +66,19 @@ export interface BookImportResult {
   totalSkipped: number;
 }
 
+export interface Group {
+  id: number;
+  name: string;
+  description: string | null;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface GroupMember {
+  userId: number;
+  username: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private http: HttpClient) {}
@@ -105,5 +118,30 @@ export class AdminService {
     const form = new FormData();
     for (const f of Array.from(files)) form.append('files', f, f.name);
     return this.http.post<BookImportResult>('/api/admin/books/import', form);
+  }
+
+  // --- Gruppen ----------------------------------------------------------
+  getGroups(): Observable<Group[]> {
+    return this.http.get<Group[]>('/api/admin/groups');
+  }
+
+  createGroup(name: string, description: string | null): Observable<Group> {
+    return this.http.post<Group>('/api/admin/groups', { name, description });
+  }
+
+  deleteGroup(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/groups/${id}`);
+  }
+
+  getGroupMembers(groupId: number): Observable<GroupMember[]> {
+    return this.http.get<GroupMember[]>(`/api/admin/groups/${groupId}/members`);
+  }
+
+  addGroupMember(groupId: number, userId: number): Observable<void> {
+    return this.http.post<void>(`/api/admin/groups/${groupId}/members/${userId}`, {});
+  }
+
+  removeGroupMember(groupId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/groups/${groupId}/members/${userId}`);
   }
 }

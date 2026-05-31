@@ -14,7 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { AdminService, AdminUser, RequestLog, Book } from '../../core/admin.service';
+import { AdminService, AdminUser, RequestLog, Book, Group, GroupMember } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -169,6 +169,99 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
           </div>
         </mat-tab>
 
+        <mat-tab label="Gruppen">
+          <div class="tab-content">
+            <div class="group-create">
+              <mat-form-field appearance="outline" class="group-name-field">
+                <mat-label>Neue Gruppe</mat-label>
+                <input matInput [(ngModel)]="newGroupName" (keyup.enter)="createGroup()" placeholder="Name">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="group-desc-field">
+                <mat-label>Beschreibung (optional)</mat-label>
+                <input matInput [(ngModel)]="newGroupDescription" (keyup.enter)="createGroup()">
+              </mat-form-field>
+              <button mat-raised-button color="primary" (click)="createGroup()" [disabled]="!newGroupName.trim()">
+                <mat-icon>add</mat-icon> Anlegen
+              </button>
+            </div>
+
+            @if (groupsLoading) {
+              <app-loading-spinner />
+            } @else if (groups.length === 0) {
+              <p class="empty-hint">Noch keine Gruppen angelegt.</p>
+            } @else {
+              <div class="group-layout">
+                <table mat-table [dataSource]="groups" class="full-width group-table">
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Gruppe</th>
+                    <td mat-cell *matCellDef="let g">
+                      <strong>{{ g.name }}</strong>
+                      @if (g.description) { <div class="group-desc">{{ g.description }}</div> }
+                    </td>
+                  </ng-container>
+                  <ng-container matColumnDef="memberCount">
+                    <th mat-header-cell *matHeaderCellDef>Mitglieder</th>
+                    <td mat-cell *matCellDef="let g">{{ g.memberCount }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                    <td mat-cell *matCellDef="let g">
+                      <button mat-icon-button (click)="selectGroup(g)" title="Mitglieder verwalten">
+                        <mat-icon>group</mat-icon>
+                      </button>
+                      <button mat-icon-button color="warn" (click)="deleteGroup(g)" title="Gruppe löschen">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="groupColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: groupColumns;"
+                      [class.selected-group]="selectedGroup?.id === row.id"></tr>
+                </table>
+
+                @if (selectedGroup) {
+                  <mat-card class="member-panel">
+                    <mat-card-header>
+                      <mat-card-title>Mitglieder · {{ selectedGroup.name }}</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <div class="member-add">
+                        <mat-form-field appearance="outline" class="member-select">
+                          <mat-label>User hinzufügen</mat-label>
+                          <mat-select [(ngModel)]="addMemberUserId">
+                            @for (u of availableUsers(); track u.id) {
+                              <mat-option [value]="u.id">{{ u.username }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <button mat-raised-button color="primary" (click)="addMember()" [disabled]="!addMemberUserId">
+                          <mat-icon>person_add</mat-icon> Hinzufügen
+                        </button>
+                      </div>
+
+                      @if (membersLoading) {
+                        <app-loading-spinner />
+                      } @else if (groupMembers.length === 0) {
+                        <p class="empty-hint">Keine Mitglieder.</p>
+                      } @else {
+                        <mat-chip-set>
+                          @for (m of groupMembers; track m.userId) {
+                            <mat-chip (removed)="removeMember(m)">
+                              {{ m.username }}
+                              <button matChipRemove [attr.aria-label]="'Entfernen'"><mat-icon>cancel</mat-icon></button>
+                            </mat-chip>
+                          }
+                        </mat-chip-set>
+                      }
+                    </mat-card-content>
+                  </mat-card>
+                }
+              </div>
+            }
+          </div>
+        </mat-tab>
+
         <mat-tab label="Request Logs">
           <div class="tab-content">
             <div class="log-filters">
@@ -299,6 +392,17 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .elo-input { width: 56px; }
     .elo-sep { margin: 0 2px; color: #999; }
 
+    .group-create { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .group-name-field { min-width: 220px; }
+    .group-desc-field { flex: 1; min-width: 220px; }
+    .group-layout { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+    .group-table { flex: 1; min-width: 320px; }
+    .group-desc { color: #666; font-size: 0.8rem; }
+    .selected-group { background: #e3f2fd; }
+    .member-panel { flex: 1; min-width: 300px; }
+    .member-add { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .member-select { min-width: 200px; }
+
     .log-filters {
       display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
       margin-bottom: 8px; padding: 12px; background: #fafafa; border-radius: 8px;
@@ -358,12 +462,25 @@ export class AdminComponent implements OnInit {
   booksUploading = false;
   bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'actions'];
 
+  groups: Group[] = [];
+  groupsLoading = false;
+  groupColumns = ['name', 'memberCount', 'actions'];
+  newGroupName = '';
+  newGroupDescription = '';
+  selectedGroup: Group | null = null;
+  groupMembers: GroupMember[] = [];
+  membersLoading = false;
+  allUsers: AdminUser[] = [];
+  addMemberUserId: number | null = null;
+
   constructor(private adminService: AdminService, private snackBar: MatSnackBar) {}
 
   ngOnInit(): void {
     this.loadUsers();
     this.loadLogs();
     this.loadBooks();
+    this.loadGroups();
+    this.loadAllUsers();
   }
 
   loadUsers(): void {
@@ -528,6 +645,119 @@ export class AdminComponent implements OnInit {
       },
       error: err => {
         this.snackBar.open(err.error?.message || 'Löschen fehlgeschlagen', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  // --- Gruppen ----------------------------------------------------------
+  loadGroups(): void {
+    this.groupsLoading = true;
+    this.adminService.getGroups().subscribe({
+      next: groups => {
+        this.groups = groups;
+        this.groupsLoading = false;
+        // Auswahl aktualisieren, falls die gewählte Gruppe noch existiert
+        if (this.selectedGroup) {
+          this.selectedGroup = groups.find(g => g.id === this.selectedGroup!.id) ?? null;
+        }
+      },
+      error: () => {
+        this.snackBar.open('Gruppen konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.groupsLoading = false;
+      }
+    });
+  }
+
+  loadAllUsers(): void {
+    // User-Liste fuer das Mitglieder-Dropdown (kleiner Nutzerkreis).
+    this.adminService.getUsers('', 1, 500).subscribe({
+      next: res => this.allUsers = res.items
+    });
+  }
+
+  createGroup(): void {
+    const name = this.newGroupName.trim();
+    if (!name) return;
+    this.adminService.createGroup(name, this.newGroupDescription.trim() || null).subscribe({
+      next: () => {
+        this.snackBar.open(`Gruppe "${name}" angelegt`, 'OK', { duration: 3000 });
+        this.newGroupName = '';
+        this.newGroupDescription = '';
+        this.loadGroups();
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Gruppe konnte nicht angelegt werden', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  deleteGroup(group: Group): void {
+    if (!confirm(`Gruppe "${group.name}" löschen?`)) return;
+    this.adminService.deleteGroup(group.id).subscribe({
+      next: () => {
+        this.snackBar.open(`Gruppe "${group.name}" gelöscht`, 'OK', { duration: 3000 });
+        if (this.selectedGroup?.id === group.id) {
+          this.selectedGroup = null;
+          this.groupMembers = [];
+        }
+        this.loadGroups();
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Löschen fehlgeschlagen', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  selectGroup(group: Group): void {
+    this.selectedGroup = group;
+    this.addMemberUserId = null;
+    this.loadMembers(group.id);
+  }
+
+  loadMembers(groupId: number): void {
+    this.membersLoading = true;
+    this.adminService.getGroupMembers(groupId).subscribe({
+      next: members => {
+        this.groupMembers = members;
+        this.membersLoading = false;
+      },
+      error: () => {
+        this.snackBar.open('Mitglieder konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.membersLoading = false;
+      }
+    });
+  }
+
+  availableUsers(): AdminUser[] {
+    const memberIds = new Set(this.groupMembers.map(m => m.userId));
+    return this.allUsers.filter(u => !memberIds.has(u.id));
+  }
+
+  addMember(): void {
+    if (!this.selectedGroup || !this.addMemberUserId) return;
+    const groupId = this.selectedGroup.id;
+    this.adminService.addGroupMember(groupId, this.addMemberUserId).subscribe({
+      next: () => {
+        this.addMemberUserId = null;
+        this.loadMembers(groupId);
+        this.loadGroups(); // Mitgliederzahl aktualisieren
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Hinzufügen fehlgeschlagen', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  removeMember(member: GroupMember): void {
+    if (!this.selectedGroup) return;
+    const groupId = this.selectedGroup.id;
+    this.adminService.removeGroupMember(groupId, member.userId).subscribe({
+      next: () => {
+        this.loadMembers(groupId);
+        this.loadGroups(); // Mitgliederzahl aktualisieren
+      },
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Entfernen fehlgeschlagen', 'OK', { duration: 3000 });
       }
     });
   }
