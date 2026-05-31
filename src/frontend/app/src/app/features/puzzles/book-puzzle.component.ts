@@ -190,6 +190,7 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
                 <div class="theme-chips">
                   @for (p of pieceSets; track p.key) {
                     <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
+                      <div class="piece-preview" [style.backgroundImage]="'url(' + p.preview + ')'"></div>
                       <span class="theme-name">{{ p.name }}</span>
                     </div>
                   }
@@ -239,6 +240,7 @@ const PIECE_SET_KEY = 'rookhub_piece_set';
     .theme-section { margin-top: 0.75rem; }
     .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
     .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
@@ -279,14 +281,19 @@ export class BookPuzzleComponent implements OnInit, OnDestroy {
     { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78' },
     { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a' },
     { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a' },
+    { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23' },
+    { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a' },
   ];
 
   pieceSet = 'cburnett';
   readonly pieceSets = [
-    { key: 'cburnett', name: 'Classic' },
-    { key: 'merida', name: 'Merida' },
-    { key: 'fantasy', name: 'Fantasy' },
-    { key: 'spatial', name: 'Spatial' },
+    { key: 'cburnett', name: 'Classic', preview: 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg' },
+    { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
+    { key: 'fantasy', name: 'Fantasy', preview: '/piece/fantasy/wN.svg' },
+    { key: 'spatial', name: 'Spatial', preview: '/piece/spatial/wN.svg' },
+    { key: 'celtic', name: 'Celtic', preview: '/piece/celtic/wN.svg' },
+    { key: 'chessnut', name: 'Chessnut', preview: '/piece/chessnut/wN.svg' },
+    { key: 'rhosgfx', name: 'RhosGFX', preview: '/piece/rhosgfx/wN.svg' },
   ];
 
   elapsedSeconds = 0;

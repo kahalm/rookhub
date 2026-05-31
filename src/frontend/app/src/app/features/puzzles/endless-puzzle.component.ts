@@ -199,6 +199,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                   <div class="theme-chips">
                     @for (p of pieceSets; track p.key) {
                       <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
+                        <div class="piece-preview" [style.backgroundImage]="'url(' + p.preview + ')'"></div>
                         <span class="theme-name">{{ p.name }}</span>
                       </div>
                     }
@@ -727,6 +728,7 @@ const FASTTRACK_SESSION_COUNT = 10;
     .theme-chip.active { border-color: #1976d2; }
     .theme-chip:hover { background: rgba(0,0,0,0.04); }
     .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
+    .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .tp-light, .tp-dark { flex: 1; }
     .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
     .config-lives { justify-content: center; margin: 1rem 0; }
@@ -897,14 +899,19 @@ export class EndlessPuzzleComponent implements OnDestroy {
     { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78' },
     { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a' },
     { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a' },
+    { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23' },
+    { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a' },
   ];
 
   pieceSet = 'cburnett';
   readonly pieceSets = [
-    { key: 'cburnett', name: 'Classic' },
-    { key: 'merida', name: 'Merida' },
-    { key: 'fantasy', name: 'Fantasy' },
-    { key: 'spatial', name: 'Spatial' },
+    { key: 'cburnett', name: 'Classic', preview: 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/wN.svg' },
+    { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
+    { key: 'fantasy', name: 'Fantasy', preview: '/piece/fantasy/wN.svg' },
+    { key: 'spatial', name: 'Spatial', preview: '/piece/spatial/wN.svg' },
+    { key: 'celtic', name: 'Celtic', preview: '/piece/celtic/wN.svg' },
+    { key: 'chessnut', name: 'Chessnut', preview: '/piece/chessnut/wN.svg' },
+    { key: 'rhosgfx', name: 'RhosGFX', preview: '/piece/rhosgfx/wN.svg' },
   ];
 
   // Help

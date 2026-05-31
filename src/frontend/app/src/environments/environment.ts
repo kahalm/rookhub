@@ -1,7 +1,11 @@
 export const environment = {
   production: false,
-  version: '0.29.0',
+  version: '0.30.0',
   changelog: [
+    { version: '0.30.0', date: '2026-05-31', changes: [
+      'Feature: Figuren-Auswahl mit Mini-Vorschau (Springer) im Chip; zusätzliche Sets Celtic, Chessnut, RhosGFX (MIT/Apache/CC0).',
+      'Feature: Zusätzliche Brett-Texturen Leder und Ahorn.',
+    ]},
     { version: '0.29.0', date: '2026-05-31', changes: [
       'Feature: Figuren-Sets wählbar — Classic (cburnett), Merida, Fantasy, Spatial (lokal gevendort, MIT/GPL).',
       'Feature: Neue Brett-Texturen — Holz, Wasser, Marmor, Metall (echte Lichess-Texturen).',

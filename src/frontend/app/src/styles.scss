@@ -85,7 +85,7 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 /* === Figuren-Sets (lokal gevendort: public/piece/<set>/, Lichess) ========= */
 /* Default = cburnett (chessground.cburnett.css). Andere Sets via Wrapper-Klasse
    .piece-set-<name>; höhere Spezifität als die cburnett-Regeln (.cg-wrap piece…). */
-$rh-piece-sets: merida, fantasy, spatial;
+$rh-piece-sets: merida, fantasy, spatial, celtic, chessnut, rhosgfx;
 $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K');
 @each $set in $rh-piece-sets {
   @each $role, $code in $rh-piece-roles {
@@ -99,11 +99,15 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 .board-theme-water    cg-board { background-image: url('/board/blue3.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #6f93b8; }
 .board-theme-marble   cg-board { background-image: url('/board/marble.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #c9c9c9; }
 .board-theme-metal    cg-board { background-image: url('/board/metal.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #8a8a8a; }
+.board-theme-leather  cg-board { background-image: url('/board/leather.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #6b4f33; }
+.board-theme-maple    cg-board { background-image: url('/board/maple.jpg'); background-size: cover; background-repeat: no-repeat; background-color: #d8b98a; }
 /* Koordinaten auf Textur-Brettern: hell mit Schatten (auf jedem Feld lesbar) */
 .board-theme-realwood .ranks :nth-child(n), .board-theme-realwood .files :nth-child(n),
 .board-theme-water .ranks :nth-child(n), .board-theme-water .files :nth-child(n),
 .board-theme-marble .ranks :nth-child(n), .board-theme-marble .files :nth-child(n),
-.board-theme-metal .ranks :nth-child(n), .board-theme-metal .files :nth-child(n) {
+.board-theme-metal .ranks :nth-child(n), .board-theme-metal .files :nth-child(n),
+.board-theme-leather .ranks :nth-child(n), .board-theme-leather .files :nth-child(n),
+.board-theme-maple .ranks :nth-child(n), .board-theme-maple .files :nth-child(n) {
   color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
