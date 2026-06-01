@@ -92,7 +92,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | GET | `/api/extension/repertoires` | Leichtgewichtige Liste |
 | GET | `/api/extension/repertoires/{id}/pgn` | Kombinierter PGN-Text |
 
-CORS erlaubt: `https://www.chess.com`, `chrome-extension://*`, `http://localhost:4200`
+CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslich `https://www.chess.com` — die Extension laeuft als Content-Script im chess.com-Seitenkontext, daher ist das der Origin. Die Default-CORS-Policy (Frontend) erlaubt `http://localhost:4200` + `http://localhost:8085`. (Frueher stand hier zusaetzlich `chrome-extension://*` / localhost fuer die Extension — das entspricht NICHT dem Code und wuerde mit `AllowCredentials` ein Sicherheits-Downgrade bedeuten.)
 
 ### Turnier-Proxy (auth, leitet an Crawler weiter)
 | Methode | Endpoint | Crawler-Route |
@@ -278,7 +278,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.40.34`
+- **Aktuelle Version**: `0.40.35`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

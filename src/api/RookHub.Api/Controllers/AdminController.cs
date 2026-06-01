@@ -80,7 +80,16 @@ public class AdminController : BaseApiController
         _db.Friendships.RemoveRange(friendships);
 
         _db.AppUsers.Remove(user);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Verbleibende FK-Referenzen mit Restrict (statt Cascade) wuerden sonst als
+            // unbehandelter 500 enden -> klare 409-Antwort.
+            return Conflict(new { message = "Benutzer konnte nicht geloescht werden: es bestehen noch abhaengige Referenzen." });
+        }
 
         return NoContent();
     }
