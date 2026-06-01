@@ -20,6 +20,14 @@ public class RepertoireService
 
     public RepertoireService(AppDbContext db) => _db = db;
 
+    /// <summary>
+    /// S-13-Heuristik: Sieht der Inhalt nach echtem PGN aus (Tag-Pair ODER echter erster Zug)?
+    /// Wiederverwendbar von anderen PGN-Uploads (z. B. Wochenpost), damit die Validierung
+    /// nicht dupliziert wird.
+    /// </summary>
+    public static bool LooksLikePgn(string content) =>
+        PgnTagPair.IsMatch(content) || PgnFirstMove.IsMatch(content);
+
     public async Task<List<RepertoireDto>> GetAllAsync(int userId)
     {
         return await _db.Repertoires
@@ -154,7 +162,7 @@ public class RepertoireService
 
         // S-13: PGN content validation — verlangt ein echtes Tag-Pair ODER einen echten ersten Zug,
         // nicht nur die Teilstrings "[Event" / "1." irgendwo (die auch beliebigen Text durchlassen).
-        if (!PgnTagPair.IsMatch(content) && !PgnFirstMove.IsMatch(content))
+        if (!LooksLikePgn(content))
             throw new InvalidOperationException("File does not appear to be valid PGN content.");
 
         var file = new RepertoireFile

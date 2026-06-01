@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.42.0';
+export const APP_VERSION = '0.43.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.43.0', date: '2026-06-01', changes: [
+    'Neu (Wochenpost): Neuer öffentlicher Menüpunkt „Wochenpost" — bildet die wöchentlichen Schach-Posts auf RookHub ab. Admins laden ein PGN mit Termin (Datum + Uhrzeit) hoch; das Datum wird automatisch auf „letzter Eintrag + 7 Tage" vorbelegt, die Uhrzeit bleibt gleich (Standard 19:00). Jeder Post ist über den PGN-Viewer interaktiv durchklickbar; Liste/Anzeige sind öffentlich (auch ohne Login), Hochladen/Bearbeiten/Löschen nur für Admins. Daten liegen in der DB (neue Tabelle WeeklyPosts). Neue API: GET `/api/weekly-posts`(+`/{id}`), POST/PUT/DELETE `/api/admin/weekly-posts`.',
+  ]},
   { version: '0.42.0', date: '2026-06-01', changes: [
     'Neu (Kurse · Gruppen-Berechtigung): Im Admin-Bereich lässt sich pro Buch festlegen, welche Gruppen es als Kurs sehen dürfen (Spalte „Sichtbar für (Kurse)" in der Bücher-Liste). Das „Kurse"-Menü und die Kurs-Übersicht sind jetzt nicht mehr admin-only: Mitglieder einer freigegebenen Gruppe sehen den Menüpunkt und genau die für sie freigegebenen Bücher (Admins weiterhin alle). Zugriff wird server- und routenseitig erzwungen. Freigaben liegen in der DB (neue Tabelle BookGroupAccess) und werden beim Löschen von Buch oder Gruppe mit aufgeräumt. Neue API: GET/PUT `/api/admin/books/{id}/groups`, GET `/api/courses/access`.',
   ]},

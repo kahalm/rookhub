@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
+    public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -265,6 +266,11 @@ public class AppDbContext : DbContext
              .HasForeignKey(a => a.GroupId)
              .OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(a => a.GroupId);
+        });
+
+        modelBuilder.Entity<WeeklyPost>(e =>
+        {
+            e.HasIndex(w => w.ScheduledAt);
         });
     }
 }

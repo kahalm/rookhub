@@ -23,6 +23,7 @@ import { CourseService } from '../../features/courses/course.service';
           <button mat-button routerLink="/tournaments">Tournaments</button>
           <button mat-button routerLink="/friends">Friends</button>
           <button mat-button routerLink="/puzzles">Puzzles</button>
+          <button mat-button routerLink="/weekly">Wochenpost</button>
           @if (showCourses) {
             <button mat-button routerLink="/courses">Kurse</button>
           }
@@ -39,6 +40,7 @@ import { CourseService } from '../../features/courses/course.service';
           <button mat-menu-item routerLink="/tournaments">Tournaments</button>
           <button mat-menu-item routerLink="/friends">Friends</button>
           <button mat-menu-item routerLink="/puzzles">Puzzles</button>
+          <button mat-menu-item routerLink="/weekly">Wochenpost</button>
           @if (showCourses) {
             <button mat-menu-item routerLink="/courses">Kurse</button>
           }
@@ -57,6 +59,7 @@ import { CourseService } from '../../features/courses/course.service';
         </mat-menu>
       } @else {
         <button mat-button routerLink="/puzzles">Puzzles</button>
+        <button mat-button routerLink="/weekly">Wochenpost</button>
         <button mat-icon-button (click)="quickstartClick.emit()" aria-label="Info">
           <mat-icon>info_outline</mat-icon>
         </button>

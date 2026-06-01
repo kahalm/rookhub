@@ -167,6 +167,16 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 | GET | `/api/admin/books/{id}/groups` | Admin | Gruppen-Ids mit Kurs-Zugriff auf das Buch |
 | PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
 
+### Wochenpost (öffentlich lesbar, Admin verwaltet)
+Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Datum + Uhrzeit). Termin-Vorschlag (letzter + 7 Tage, gleiche Uhrzeit, Standard 19:00) macht das Frontend aus der Liste. PGN-Validierung via `RepertoireService.LooksLikePgn`.
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/weekly-posts` | AllowAnonymous | Liste (ohne PGN), nach Termin absteigend |
+| GET | `/api/weekly-posts/{id}` | AllowAnonymous | Detail inkl. PGN (für den Viewer) |
+| POST | `/api/admin/weekly-posts` | Admin | Upload (multipart: file + scheduledAt + optional title) |
+| PUT | `/api/admin/weekly-posts/{id}` | Admin | Termin/Titel ändern |
+| DELETE | `/api/admin/weekly-posts/{id}` | Admin | Löschen |
+
 ## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
 
 | Tabelle | Zweck | Wichtige Felder / Constraints |
@@ -185,6 +195,7 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 | CourseProgresses | Per-Kurs-Zustand (Buch) | UserId + BookId (unique pair), LastMode ("sequential"/"random"), CreatedAt, UpdatedAt |
 | CoursePuzzleResults | Gelöste Buch-Puzzles im Kurs | UserId + BookPuzzleId (unique pair), BookId (denormalisiert, indexed mit UserId), SolvedAt |
 | BookGroupAccesses | Welche Gruppe darf welches Buch als Kurs sehen | Composite PK (BookId, GroupId), Cascade von Book + Group, Index GroupId |
+| WeeklyPosts | Wochenpost (terminiertes PGN) | Title, FileName, PgnContent (LONGTEXT), FileSize, ScheduledAt (indexed), CreatedAt, UpdatedAt |
 
 Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults; Repertoire -> Files; Group -> UserGroups, BookGroupAccesses; Book -> BookPuzzles, CourseProgresses, CoursePuzzleResults, BookGroupAccesses (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
@@ -297,7 +308,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.42.0`
+- **Aktuelle Version**: `0.43.0`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
