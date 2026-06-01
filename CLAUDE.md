@@ -151,14 +151,21 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | POST | `/api/endless/sessions/bulk/anonymous` | Anon+RL | Bulk-Import anonym |
 | POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User uebertragen |
 
-### Kurse (Admin)
-„Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Fortschritt pro Buch (gelöste Puzzles / gesamt), geteilt über beide Modi; der Modus bestimmt nur die Reihenfolge. Alles user-bezogen in der DB. Aktuell admin-only (Sichtbarkeit später auf Gruppen erweiterbar).
+### Kurse (auth, gruppen-/admin-gated)
+„Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Fortschritt pro Buch (gelöste Puzzles / gesamt), geteilt über beide Modi; der Modus bestimmt nur die Reihenfolge. Alles user-bezogen in der DB. **Sichtbarkeit**: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen via `BookGroupAccess` freigegeben sind. Zugriff wird je Buch in jedem Endpoint erzwungen (kein Zugriff → 404).
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/courses` | Admin | Alle Bücher als Kurse inkl. Fortschritt des Users |
-| GET | `/api/courses/{bookId}/next?mode=sequential\|random&after=&exclude=` | Admin | Nächstes ungelöstes Puzzle (sequential: Buchreihenfolge, `after` = überspringen; random: zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst |
-| POST | `/api/courses/{bookId}/results` | Admin | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
-| POST | `/api/courses/{bookId}/reset` | Admin | Fortschritt des Kurses zurücksetzen |
+| GET | `/api/courses` | Auth | Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle) |
+| GET | `/api/courses/access` | Auth | `{ hasAccess }` — Basis für die Menü-Sichtbarkeit (Admin: true wenn Bücher existieren) |
+| GET | `/api/courses/{bookId}/next?mode=sequential\|random&after=&exclude=` | Auth | Nächstes ungelöstes Puzzle (sequential: Buchreihenfolge, `after` = überspringen; random: zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst |
+| POST | `/api/courses/{bookId}/results` | Auth | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
+| POST | `/api/courses/{bookId}/reset` | Auth | Fortschritt des Kurses zurücksetzen |
+
+Buch↔Gruppe-Freigabe verwaltet der Admin:
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/admin/books/{id}/groups` | Admin | Gruppen-Ids mit Kurs-Zugriff auf das Buch |
+| PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
 
 ## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
 
@@ -177,8 +184,9 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
 | CourseProgresses | Per-Kurs-Zustand (Buch) | UserId + BookId (unique pair), LastMode ("sequential"/"random"), CreatedAt, UpdatedAt |
 | CoursePuzzleResults | Gelöste Buch-Puzzles im Kurs | UserId + BookPuzzleId (unique pair), BookId (denormalisiert, indexed mit UserId), SolvedAt |
+| BookGroupAccesses | Welche Gruppe darf welches Buch als Kurs sehen | Composite PK (BookId, GroupId), Cascade von Book + Group, Index GroupId |
 
-Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults; Repertoire -> Files; Group -> UserGroups; Book -> BookPuzzles, CourseProgresses, CoursePuzzleResults (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden — Admin-DeleteBook räumt Kursdaten explizit ab).
+Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults; Repertoire -> Files; Group -> UserGroups, BookGroupAccesses; Book -> BookPuzzles, CourseProgresses, CoursePuzzleResults, BookGroupAccesses (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur
@@ -289,7 +297,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.41.0`
+- **Aktuelle Version**: `0.42.0`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

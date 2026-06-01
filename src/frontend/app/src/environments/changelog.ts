@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.41.0';
+export const APP_VERSION = '0.42.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.42.0', date: '2026-06-01', changes: [
+    'Neu (Kurse · Gruppen-Berechtigung): Im Admin-Bereich lässt sich pro Buch festlegen, welche Gruppen es als Kurs sehen dürfen (Spalte „Sichtbar für (Kurse)" in der Bücher-Liste). Das „Kurse"-Menü und die Kurs-Übersicht sind jetzt nicht mehr admin-only: Mitglieder einer freigegebenen Gruppe sehen den Menüpunkt und genau die für sie freigegebenen Bücher (Admins weiterhin alle). Zugriff wird server- und routenseitig erzwungen. Freigaben liegen in der DB (neue Tabelle BookGroupAccess) und werden beim Löschen von Buch oder Gruppe mit aufgeräumt. Neue API: GET/PUT `/api/admin/books/{id}/groups`, GET `/api/courses/access`.',
+  ]},
   { version: '0.41.0', date: '2026-06-01', changes: [
     'Neu (Kurse, admin-only): Neuer Menüpunkt „Kurse" zeigt alle als Bücher importierten Sammlungen als Übersicht mit Fortschrittsbalken (gelöste Puzzles / gesamt). Jedes Buch lässt sich in zwei Modi durcharbeiten — sequenziell (Buchreihenfolge, „Überspringen" springt weiter) oder zufällig. Der Fortschritt ist user-bezogen und wird komplett in der DB gespeichert (neue Tabellen CourseProgress + CoursePuzzleResult); ein Buch hat einen geteilten Fortschritt über beide Modi. Reset pro Kurs möglich. Neue API: GET `/api/courses`, GET `/api/courses/{bookId}/next`, POST `/api/courses/{bookId}/results`, POST `/api/courses/{bookId}/reset`.',
   ]},

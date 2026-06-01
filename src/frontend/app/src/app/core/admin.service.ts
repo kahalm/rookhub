@@ -43,6 +43,8 @@ export interface Book {
   forRandom: boolean;
   forBlind: boolean;
   puzzleCount: number;
+  /** Gruppen-Ids, die dieses Buch als Kurs sehen dürfen. */
+  accessGroupIds: number[];
   createdAt: string;
   updatedAt: string;
 }
@@ -112,6 +114,10 @@ export class AdminService {
 
   deleteBook(id: number): Observable<void> {
     return this.http.delete<void>(`/api/admin/books/${id}`);
+  }
+
+  updateBookGroups(id: number, groupIds: number[]): Observable<number[]> {
+    return this.http.put<number[]>(`/api/admin/books/${id}/groups`, { groupIds });
   }
 
   importBooks(files: FileList | File[]): Observable<BookImportResult> {

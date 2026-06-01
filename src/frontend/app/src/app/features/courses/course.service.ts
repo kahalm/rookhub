@@ -43,6 +43,11 @@ export class CourseService {
     return this.http.get<CourseListItem[]>('/api/courses');
   }
 
+  /** Hat der eingeloggte User Zugriff auf mindestens einen Kurs? (Menü-Sichtbarkeit) */
+  checkAccess(): Observable<{ hasAccess: boolean }> {
+    return this.http.get<{ hasAccess: boolean }>('/api/courses/access');
+  }
+
   getNext(bookId: number, mode: CourseMode, after?: number, exclude?: number): Observable<CourseNextPuzzle> {
     let params = new HttpParams().set('mode', mode);
     if (after != null) params = params.set('after', after);

@@ -57,8 +57,8 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/repertoires/:id` | RepertoireDetailComponent | ja |
 | `/tournaments` | TournamentListComponent | ja |
 | `/tournaments/:id` | TournamentDetailComponent | ja |
-| `/courses` | CourseListComponent | Admin |
-| `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | Admin |
+| `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
+| `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
 | `/` | redirect -> `/dashboard` | - |
 | `**` | redirect -> `/dashboard` | - |
 

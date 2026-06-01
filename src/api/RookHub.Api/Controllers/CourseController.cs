@@ -11,11 +11,12 @@ namespace RookHub.Api.Controllers;
 /// „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Pro Buch gibt es einen
 /// (geteilten) Fortschritt = gelöste Puzzles / Gesamtzahl; der Modus (sequential/random) bestimmt
 /// nur die Reihenfolge. Fortschritt ist user-bezogen und liegt komplett in der DB.
-/// Aktuell admin-only — die Sichtbarkeit lässt sich später auf Gruppen erweitern.
+/// Sichtbarkeit: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen
+/// per <see cref="Models.BookGroupAccess"/> freigegeben wurden.
 /// </summary>
 [ApiController]
 [Route("api/courses")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class CourseController : BaseApiController
 {
     private readonly AppDbContext _db;
@@ -28,13 +29,31 @@ public class CourseController : BaseApiController
     private static int Percent(int solved, int total) =>
         total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(solved, total) / total);
 
-    /// <summary>Alle Bücher als Kurse inkl. Fortschritt des aktuellen Users.</summary>
+    private bool IsAdmin => User.IsInRole("Admin");
+
+    /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?</summary>
+    private async Task<bool> CanAccessAsync(int userId, int bookId)
+    {
+        if (!await _db.Books.AnyAsync(b => b.Id == bookId)) return false;
+        if (IsAdmin) return true;
+        return await _db.BookGroupAccesses.AnyAsync(a => a.BookId == bookId &&
+            _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
+    }
+
+    /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
     [HttpGet]
     public async Task<IActionResult> GetCourses()
     {
         var userId = GetUserId();
 
-        var books = await _db.Books
+        IQueryable<Book> booksQuery = _db.Books;
+        if (!IsAdmin)
+        {
+            booksQuery = booksQuery.Where(b => _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
+                _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)));
+        }
+
+        var books = await booksQuery
             .OrderBy(b => b.DisplayName)
             .Select(b => new
             {
@@ -75,6 +94,19 @@ public class CourseController : BaseApiController
         return Ok(result);
     }
 
+    /// <summary>Hat der User Zugriff auf mindestens einen Kurs? (Basis für die Menü-Sichtbarkeit.)</summary>
+    [HttpGet("access")]
+    public async Task<IActionResult> HasAnyAccess()
+    {
+        if (IsAdmin)
+            return Ok(new { hasAccess = await _db.Books.AnyAsync() });
+
+        var userId = GetUserId();
+        var hasAccess = await _db.BookGroupAccesses.AnyAsync(a =>
+            _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
+        return Ok(new { hasAccess });
+    }
+
     /// <summary>
     /// Nächstes ungelöstes Puzzle des Kurses. sequential: Buchreihenfolge (Id), mit <paramref name="after"/>
     /// das nächste danach (für „Überspringen"). random: zufällig, <paramref name="exclude"/> vermeidet direkte
@@ -88,7 +120,7 @@ public class CourseController : BaseApiController
         [FromQuery] int? exclude = null)
     {
         var userId = GetUserId();
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId))
+        if (!await CanAccessAsync(userId, bookId))
             return NotFound(new { message = "Book not found." });
 
         mode = NormalizeMode(mode);
@@ -141,7 +173,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> RecordResult(int bookId, [FromBody] RecordCourseResultDto dto)
     {
         var userId = GetUserId();
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId))
+        if (!await CanAccessAsync(userId, bookId))
             return NotFound(new { message = "Book not found." });
 
         var belongsToBook = await _db.BookPuzzles.AnyAsync(bp => bp.Id == dto.BookPuzzleId && bp.BookId == bookId);
@@ -184,7 +216,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> Reset(int bookId)
     {
         var userId = GetUserId();
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId))
+        if (!await CanAccessAsync(userId, bookId))
             return NotFound(new { message = "Book not found." });
 
         _db.CoursePuzzleResults.RemoveRange(

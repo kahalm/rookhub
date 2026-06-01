@@ -56,4 +56,13 @@ describe('CourseService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ bookId: 3, solvedCount: 0, total: 10, progressPercent: 0, completed: false, lastMode: null });
   });
+
+  it('checks course access', () => {
+    let hasAccess: boolean | undefined;
+    svc.checkAccess().subscribe(r => hasAccess = r.hasAccess);
+    const req = http.expectOne('/api/courses/access');
+    expect(req.request.method).toBe('GET');
+    req.flush({ hasAccess: true });
+    expect(hasAccess).toBeTrue();
+  });
 });

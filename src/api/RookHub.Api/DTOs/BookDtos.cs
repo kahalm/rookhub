@@ -18,8 +18,16 @@ public class BookDto
     public bool ForRandom { get; set; }
     public bool ForBlind { get; set; }
     public int PuzzleCount { get; set; }
+    /// <summary>Gruppen-Ids, die dieses Buch als Kurs sehen dürfen (für die Admin-Zuweisung).</summary>
+    public List<int> AccessGroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>Setzt die vollständige Liste der Gruppen, die ein Buch als Kurs sehen dürfen.</summary>
+public class SetBookGroupsDto
+{
+    public List<int> GroupIds { get; set; } = new();
 }
 
 /// <summary>Editierbare Felder eines Buchs (Pool-Flags + Metadaten).</summary>

@@ -30,16 +30,37 @@ public class CourseControllerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private static void SetUser(ControllerBase controller, int userId)
+    private static void SetUser(ControllerBase controller, int userId, bool isAdmin = true)
     {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (isAdmin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
             {
-                User = new ClaimsPrincipal(new ClaimsIdentity(
-                    new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "Test"))
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
             }
         };
+    }
+
+    private async Task<int> CreateGroupAsync(string name)
+    {
+        var g = new Group { Name = name, CreatedAt = DateTime.UtcNow };
+        _db.Groups.Add(g);
+        await _db.SaveChangesAsync();
+        return g.Id;
+    }
+
+    private async Task AddToGroupAsync(int userId, int groupId)
+    {
+        _db.UserGroups.Add(new UserGroup { UserId = userId, GroupId = groupId });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task GrantAccessAsync(int bookId, int groupId)
+    {
+        _db.BookGroupAccesses.Add(new BookGroupAccess { BookId = bookId, GroupId = groupId });
+        await _db.SaveChangesAsync();
     }
 
     private async Task<int> CreateUserAsync()
@@ -266,5 +287,118 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(0, await _db.CoursePuzzleResults.CountAsync());
         Assert.Equal(0, await _db.CourseProgresses.CountAsync());
         Assert.Equal(0, await _db.BookPuzzles.CountAsync());
+    }
+
+    // ===== Phase 2: Gruppen-Berechtigungen =====
+
+    private AdminController CreateAdminController()
+    {
+        var admin = new AdminController(
+            _db,
+            new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PgnImportService(_db));
+        SetUser(admin, UserId);
+        return admin;
+    }
+
+    [Fact]
+    public async Task GetCourses_NonAdmin_OnlySeesAccessibleBooks()
+    {
+        var (bookA, _) = await SeedBookAsync("Visible", 2);
+        await SeedBookAsync("Hidden", 2);
+        var groupId = await CreateGroupAsync("Trainees");
+        await AddToGroupAsync(2, groupId);
+        await GrantAccessAsync(bookA.Id, groupId);
+
+        SetUser(_controller, 2, isAdmin: false);
+        var list = Unwrap<List<CourseListItemDto>>(await _controller.GetCourses());
+
+        Assert.Equal(bookA.Id, Assert.Single(list).BookId);
+    }
+
+    [Fact]
+    public async Task GetNext_NonAdmin_NoAccess_Returns404_WithAccess_Works()
+    {
+        var (book, _) = await SeedBookAsync("Course", 2);
+
+        SetUser(_controller, 2, isAdmin: false);
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetNext(book.Id, "sequential"));
+
+        // Zugriff gewähren -> funktioniert.
+        var groupId = await CreateGroupAsync("G");
+        await AddToGroupAsync(2, groupId);
+        await GrantAccessAsync(book.Id, groupId);
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.False(next.Completed);
+        Assert.NotNull(next.Puzzle);
+    }
+
+    [Fact]
+    public async Task HasAnyAccess_DependsOnRoleAndGrants()
+    {
+        var (book, _) = await SeedBookAsync("Course", 1);
+
+        // Admin: true sobald irgendein Buch existiert.
+        var adminAccess = Assert.IsType<OkObjectResult>(await _controller.HasAnyAccess()).Value!;
+        Assert.True((bool)adminAccess.GetType().GetProperty("hasAccess")!.GetValue(adminAccess)!);
+
+        // Nicht-Admin ohne Freigabe: false.
+        SetUser(_controller, 2, isAdmin: false);
+        var noAccess = Assert.IsType<OkObjectResult>(await _controller.HasAnyAccess()).Value!;
+        Assert.False((bool)noAccess.GetType().GetProperty("hasAccess")!.GetValue(noAccess)!);
+
+        // Nach Freigabe: true.
+        var groupId = await CreateGroupAsync("G");
+        await AddToGroupAsync(2, groupId);
+        await GrantAccessAsync(book.Id, groupId);
+        var withAccess = Assert.IsType<OkObjectResult>(await _controller.HasAnyAccess()).Value!;
+        Assert.True((bool)withAccess.GetType().GetProperty("hasAccess")!.GetValue(withAccess)!);
+    }
+
+    [Fact]
+    public async Task Admin_SetBookGroups_ReplacesAndIgnoresInvalid()
+    {
+        var admin = CreateAdminController();
+        var g1 = await CreateGroupAsync("G1");
+        var g2 = await CreateGroupAsync("G2");
+        var (book, _) = await SeedBookAsync("B", 1);
+
+        await admin.SetBookGroups(book.Id, new SetBookGroupsDto { GroupIds = new() { g1, g2, 999 } });
+        var ids = Unwrap<List<int>>(await admin.GetBookGroups(book.Id));
+        Assert.Equal(new[] { g1, g2 }.OrderBy(x => x), ids.OrderBy(x => x));   // 999 ignoriert
+
+        // GetBooks liefert die Freigaben mit.
+        var books = Unwrap<List<DTOs.BookDto>>(await admin.GetBooks());
+        Assert.Equal(2, books.Single(b => b.Id == book.Id).AccessGroupIds.Count);
+
+        // Ersetzen auf nur g1.
+        await admin.SetBookGroups(book.Id, new SetBookGroupsDto { GroupIds = new() { g1 } });
+        var ids2 = Unwrap<List<int>>(await admin.GetBookGroups(book.Id));
+        Assert.Equal(g1, Assert.Single(ids2));
+    }
+
+    [Fact]
+    public async Task DeleteBook_RemovesBookGroupAccess()
+    {
+        var admin = CreateAdminController();
+        var groupId = await CreateGroupAsync("G");
+        var (book, _) = await SeedBookAsync("B", 1);
+        await GrantAccessAsync(book.Id, groupId);
+
+        Assert.IsType<NoContentResult>(await admin.DeleteBook(book.Id));
+        Assert.Equal(0, await _db.BookGroupAccesses.CountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteGroup_RemovesBookGroupAccess()
+    {
+        var groupController = new GroupController(_db);
+        SetUser(groupController, UserId);
+        var groupId = await CreateGroupAsync("G");
+        var (book, _) = await SeedBookAsync("B", 1);
+        await GrantAccessAsync(book.Id, groupId);
+
+        Assert.IsType<NoContentResult>(await groupController.Delete(groupId));
+        Assert.Equal(0, await _db.BookGroupAccesses.CountAsync());
     }
 }

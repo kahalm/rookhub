@@ -82,8 +82,9 @@ public class GroupController : BaseApiController
         var group = await _db.Groups.FindAsync(id);
         if (group == null)
             return NotFound(new { message = "Group not found." });
-        // Mitgliedschaften explizit entfernen (FK-Cascade greift bei InMemory nicht).
+        // Mitgliedschaften + Buch-Freigaben explizit entfernen (FK-Cascade greift bei InMemory nicht).
         _db.UserGroups.RemoveRange(_db.UserGroups.Where(ug => ug.GroupId == id));
+        _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.GroupId == id));
         _db.Groups.Remove(group);
         await _db.SaveChangesAsync();
         return NoContent();

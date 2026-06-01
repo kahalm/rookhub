@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
+    public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -250,6 +251,20 @@ public class AppDbContext : DbContext
 
             e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
             e.HasIndex(cr => new { cr.UserId, cr.BookId });
+        });
+
+        modelBuilder.Entity<BookGroupAccess>(e =>
+        {
+            e.HasKey(a => new { a.BookId, a.GroupId });
+            e.HasOne(a => a.Book)
+             .WithMany()
+             .HasForeignKey(a => a.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.Group)
+             .WithMany()
+             .HasForeignKey(a => a.GroupId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(a => a.GroupId);
         });
     }
 }

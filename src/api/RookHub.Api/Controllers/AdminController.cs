@@ -205,7 +205,52 @@ public class AdminController : BaseApiController
                 UpdatedAt = b.UpdatedAt,
             })
             .ToListAsync();
+
+        // Gruppen-Freigaben pro Buch anhängen (eine Abfrage, dann mappen).
+        var accessByBook = await _db.BookGroupAccesses
+            .GroupBy(a => a.BookId)
+            .Select(g => new { BookId = g.Key, GroupIds = g.Select(x => x.GroupId).ToList() })
+            .ToDictionaryAsync(x => x.BookId, x => x.GroupIds);
+        foreach (var dto in books)
+            if (accessByBook.TryGetValue(dto.Id, out var ids))
+                dto.AccessGroupIds = ids;
+
         return Ok(books);
+    }
+
+    /// <summary>Gruppen-Ids, die dieses Buch als Kurs sehen dürfen.</summary>
+    [HttpGet("books/{id}/groups")]
+    public async Task<IActionResult> GetBookGroups(int id)
+    {
+        if (!await _db.Books.AnyAsync(b => b.Id == id))
+            return NotFound(new { message = "Book not found." });
+        var groupIds = await _db.BookGroupAccesses
+            .Where(a => a.BookId == id)
+            .Select(a => a.GroupId)
+            .ToListAsync();
+        return Ok(groupIds);
+    }
+
+    /// <summary>Setzt die vollständige Gruppen-Freigabe eines Buchs (ersetzt bestehende Einträge).</summary>
+    [HttpPut("books/{id}/groups")]
+    public async Task<IActionResult> SetBookGroups(int id, [FromBody] SetBookGroupsDto dto)
+    {
+        if (!await _db.Books.AnyAsync(b => b.Id == id))
+            return NotFound(new { message = "Book not found." });
+
+        var requested = (dto.GroupIds ?? new List<int>()).Distinct().ToList();
+        // Nur existierende Gruppen zulassen (ungültige Ids ignorieren).
+        var validIds = await _db.Groups.Where(g => requested.Contains(g.Id)).Select(g => g.Id).ToListAsync();
+
+        var existing = await _db.BookGroupAccesses.Where(a => a.BookId == id).ToListAsync();
+        var existingIds = existing.Select(a => a.GroupId).ToHashSet();
+
+        _db.BookGroupAccesses.RemoveRange(existing.Where(a => !validIds.Contains(a.GroupId)));
+        foreach (var gid in validIds.Where(gid => !existingIds.Contains(gid)))
+            _db.BookGroupAccesses.Add(new BookGroupAccess { BookId = id, GroupId = gid });
+
+        await _db.SaveChangesAsync();
+        return Ok(validIds);
     }
 
     [HttpPut("books/{id}")]
@@ -262,6 +307,7 @@ public class AdminController : BaseApiController
         // den Principals (BookPuzzle), sodass die Reihenfolge auch real korrekt ist.
         _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
+        _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

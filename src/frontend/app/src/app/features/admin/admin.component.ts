@@ -153,6 +153,19 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
+                <ng-container matColumnDef="groups">
+                  <th mat-header-cell *matHeaderCellDef>Sichtbar für (Kurse)</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-form-field appearance="outline" class="groups-select" subscriptSizing="dynamic">
+                      <mat-select multiple [(ngModel)]="b.accessGroupIds" (selectionChange)="saveBookGroups(b)"
+                                  placeholder="nur Admin">
+                        @for (g of groups; track g.id) {
+                          <mat-option [value]="g.id">{{ g.name }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                </ng-container>
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>Aktionen</th>
                   <td mat-cell *matCellDef="let b">
@@ -391,6 +404,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .empty-hint { color: #666; font-style: italic; padding: 16px 0; }
     .elo-input { width: 56px; }
     .elo-sep { margin: 0 2px; color: #999; }
+    .groups-select { min-width: 150px; max-width: 220px; font-size: 0.85rem; }
 
     .group-create { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
     .group-name-field { min-width: 220px; }
@@ -460,7 +474,7 @@ export class AdminComponent implements OnInit {
   books: Book[] = [];
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'groups', 'actions'];
 
   groups: Group[] = [];
   groupsLoading = false;
@@ -630,6 +644,15 @@ export class AdminComponent implements OnInit {
     }).subscribe({
       error: err => {
         this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });
+        this.loadBooks(); // Stand zurücksetzen
+      }
+    });
+  }
+
+  saveBookGroups(book: Book): void {
+    this.adminService.updateBookGroups(book.id, book.accessGroupIds ?? []).subscribe({
+      error: err => {
+        this.snackBar.open(err.error?.message || 'Gruppen-Freigabe fehlgeschlagen', 'OK', { duration: 3000 });
         this.loadBooks(); // Stand zurücksetzen
       }
     });
