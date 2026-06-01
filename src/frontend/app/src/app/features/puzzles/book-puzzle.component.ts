@@ -100,7 +100,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                 }
                 @case ('AWAITING_USER_MOVE') {
                   <div class="status-center">
-                    <p class="status-text">Your turn! Find the best move.</p>
+                    <p class="status-text">{{ gaveUp ? 'Aufgegeben — spiel die Lösung selbst durch.' : 'Your turn! Find the best move.' }}</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                   </div>
                 }
@@ -385,6 +385,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private timerInterval?: ReturnType<typeof setInterval>;
   private startTime = 0;
 
+  /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
+  gaveUp = false;
+
   // Review-Modus „Ganze Partie" / Lösungs-Step-Through (komponentenspezifisch).
   reviewMode = false;
   reviewIndex = 0;
@@ -461,6 +464,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
+    this.gaveUp = false;
 
     this.puzzleService.getBookPuzzleById(id).subscribe({
       next: puzzle => {
@@ -488,11 +492,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   giveUp(): void {
     this.abortSolver();
-    this.handleFailed();
+    // Puzzle zuruecksetzen, sodass der Spieler die Loesung selber durchspielen kann.
+    this.gaveUp = true;
+    if (this.puzzle) this.setupPuzzle(this.puzzle);
   }
 
   retry(): void {
     if (!this.puzzle) return;
+    this.gaveUp = false;
     this.setupPuzzle(this.puzzle);
   }
 

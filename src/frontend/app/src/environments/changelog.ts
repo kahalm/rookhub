@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.5';
+export const APP_VERSION = '0.40.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.6', date: '2026-06-01', changes: [
+    'UX: Nach Give Up wird das Puzzle wieder von vorne aufgebaut, damit der Spieler die richtige Lösung selbst durchspielen kann (statt nur im Review-Modus durchklicken). Fehlversuch wird vorher als verloren registriert; keine Doppel-Aufzeichnung.',
+    'UX: Brett-Beschriftung — Linien (a–h) jetzt rechtsbündig in der unteren rechten Ecke jeder Spalte (analog zu den Ziffern oben links), nicht mehr zentriert unter dem Brett. Override mit !important gegen die chessground-Defaults.',
+  ]},
   { version: '0.40.5', date: '2026-06-01', changes: [
     'Fix: Share-Puzzle-Button war als absolut positionierter Icon-Button in der Mat-Card praktisch unsichtbar — jetzt ein klar erkennbarer "Puzzle teilen"-Block-Button am Ende der Puzzle-Info in allen 3 Modi.',
     'Fix: Brett-Beschriftung — chessground rendert Default-Coords mit top: -20px (Ränge zu hoch) und left: 24px (Linien zu weit rechts). Custom-Override zieht die Beschriftungen wieder mittig an den Rand der Eck-Squares.',

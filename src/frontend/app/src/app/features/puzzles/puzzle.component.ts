@@ -108,7 +108,7 @@ const RATING_WINDOW = 100;
                 }
                 @case ('AWAITING_USER_MOVE') {
                   <div class="status-center">
-                    <p class="status-text">Your turn!</p>
+                    <p class="status-text">{{ gaveUp ? 'Aufgegeben — spiel die Lösung selbst durch.' : 'Your turn!' }}</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     @if (showEval) {
                       <div class="eval-compare">
@@ -168,7 +168,7 @@ const RATING_WINDOW = 100;
                 }
                 @case ('PLAYING') {
                   <div class="status-center">
-                    <p class="status-text">Your turn!</p>
+                    <p class="status-text">{{ gaveUp ? 'Aufgegeben — spiel die Lösung selbst durch.' : 'Your turn!' }}</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     @if (showEval) {
                       <div class="eval-compare">
@@ -206,7 +206,10 @@ const RATING_WINDOW = 100;
                 @case ('SOLVED') {
                   <div class="status-center solved">
                     <mat-icon class="result-icon">check_circle</mat-icon>
-                    @if (alternativeSolve) {
+                    @if (gaveUp) {
+                      <p class="status-text">Lösung durchgespielt.</p>
+                      <p class="alt-hint">Nächstes Mal vielleicht selbst lösen!</p>
+                    } @else if (alternativeSolve) {
                       <p class="status-text">Schachmatt!</p>
                       <p class="alt-hint">Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.</p>
                     } @else {
@@ -527,6 +530,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   lastSolvedPuzzleId: number | null = null;
   solvedCountdown = 0;
   private countdownInterval?: ReturnType<typeof setInterval>;
+  /** True wenn der User aufgegeben hat. Brett wird zurueckgesetzt damit er die Loesung
+   *  selber durchspielen kann; im AWAITING/PLAYING/THINKING-State zeigt das Status-Panel
+   *  einen Hinweis statt "Your turn!". Reset bei loadNext/retry. */
+  gaveUp = false;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -641,6 +648,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   loadNext(): void {
     this.state = 'LOADING';
     this.attemptRecorded = false;
+    this.gaveUp = false;
     this.stopTimer();
     this.stopCountdown();
     this.elapsedSeconds = 0;
@@ -709,12 +717,19 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   giveUp(): void {
     this.abortSolver();
-    this.handleFailed();
+    // Fehlversuch aufzeichnen (Elo-Loss + Statistik), aber NICHT in den FAILED-Endzustand
+    // gehen — stattdessen das Puzzle ab Setup neu aufbauen, damit der Spieler die richtige
+    // Loesung selber durchspielen kann (kein weiterer recordAttempt, weil attemptRecorded
+    // schon gesetzt ist).
+    if (this.puzzle && !this.attemptRecorded) this.recordAttempt(false);
+    this.gaveUp = true;
+    if (this.puzzle) this.setupPuzzle(this.puzzle);
   }
 
   retry(): void {
     if (!this.puzzle) return;
     this.attemptRecorded = false;
+    this.gaveUp = false;
     this.setupPuzzle(this.puzzle);
   }
 
