@@ -21,6 +21,15 @@ public class TournamentProxyController : ControllerBase
     private IActionResult? ValidateId(string id)
         => TournamentIdValidator.IsValid(id) ? null : BadRequest(new { message = "Invalid tournament ID." });
 
+    // Client-Abbruch (HttpContext.RequestAborted) an ausgehende Crawler-Calls durchreichen,
+    // damit abgebrochene Requests nicht am Crawler weiterlaufen (Ressourcen-/DoS-Schutz).
+    private CancellationToken RequestCt => HttpContext?.RequestAborted ?? default;
+
+    // Vom Proxy akzeptierte Crawl-Job-Typen (CrawlJobType im Crawler) — gegen Injektion
+    // beliebiger Felder/Werte ueber den durchgereichten Roh-Body.
+    private static readonly HashSet<string> _allowedJobTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "Full", "PlayersOnly", "PairingsOnly", "CheckNewRounds", "PlayerDetails" };
+
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
@@ -28,7 +37,7 @@ public class TournamentProxyController : ControllerBase
         if (pageSize < 1) pageSize = 1;
         if (pageSize > 200) pageSize = 200;
 
-        var result = await _proxy.GetAsync($"/api/tournaments?page={page}&pageSize={pageSize}");
+        var result = await _proxy.GetAsync($"/api/tournaments?page={page}&pageSize={pageSize}", RequestCt);
         return Ok(result);
     }
 
@@ -38,7 +47,7 @@ public class TournamentProxyController : ControllerBase
     public async Task<IActionResult> GetById(string id)
     {
         if (ValidateId(id) is { } err) return err;
-        var result = await _proxy.GetAsync($"/api/tournaments/{id}");
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}", RequestCt);
         return Ok(result);
     }
 
@@ -54,7 +63,7 @@ public class TournamentProxyController : ControllerBase
         if (!string.IsNullOrEmpty(sortBy)) queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
         if (queryParams.Count > 0) query += "?" + string.Join("&", queryParams);
 
-        var result = await _proxy.GetAsync(query);
+        var result = await _proxy.GetAsync(query, RequestCt);
         return Ok(result);
     }
 
@@ -64,7 +73,7 @@ public class TournamentProxyController : ControllerBase
     public async Task<IActionResult> GetTeams(string id)
     {
         if (ValidateId(id) is { } err) return err;
-        var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams");
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams", RequestCt);
         return Ok(result);
     }
 
@@ -74,7 +83,7 @@ public class TournamentProxyController : ControllerBase
     public async Task<IActionResult> GetTeamDetail(string id, int snr)
     {
         if (ValidateId(id) is { } err) return err;
-        var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams/{snr}");
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}/teams/{snr}", RequestCt);
         return Ok(result);
     }
 
@@ -87,7 +96,7 @@ public class TournamentProxyController : ControllerBase
         var query = $"/api/tournaments/{id}/pairings";
         if (round.HasValue) query += $"?round={round.Value}";
 
-        var result = await _proxy.GetAsync(query);
+        var result = await _proxy.GetAsync(query, RequestCt);
         return Ok(result);
     }
 
@@ -97,7 +106,7 @@ public class TournamentProxyController : ControllerBase
     public async Task<IActionResult> GetPlayerResults(string id, int snr)
     {
         if (ValidateId(id) is { } err) return err;
-        var result = await _proxy.GetAsync($"/api/tournaments/{id}/players/{snr}/results");
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}/players/{snr}/results", RequestCt);
         return Ok(result);
     }
 
@@ -105,44 +114,69 @@ public class TournamentProxyController : ControllerBase
     public async Task<IActionResult> CheckRounds(string id)
     {
         if (ValidateId(id) is { } err) return err;
-        var result = await _proxy.GetAsync($"/api/tournaments/{id}/rounds/check");
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}/rounds/check", RequestCt);
         return Ok(result);
     }
 
     [HttpPost("crawl")]
     public async Task<IActionResult> Crawl([FromBody] JsonElement body)
     {
-        if (body.ValueKind == JsonValueKind.Undefined ||
-            !body.TryGetProperty("chessResultsId", out _))
+        if (body.ValueKind != JsonValueKind.Object ||
+            !body.TryGetProperty("chessResultsId", out var cidProp))
             return BadRequest(new { message = "Request body must contain chessResultsId." });
 
-        var result = await _proxy.PostAsync("/api/crawl", body);
+        var chessResultsId = cidProp.ValueKind == JsonValueKind.String ? cidProp.GetString() : cidProp.ToString();
+        if (string.IsNullOrWhiteSpace(chessResultsId))
+            return BadRequest(new { message = "chessResultsId must not be empty." });
+
+        // jobType gegen Whitelist pruefen (Default: Full). Nur bekannte Felder weiterreichen
+        // statt den Roh-Body durchzuschleusen — so kann kein beliebiges/zukuenftiges Feld injiziert werden.
+        var jobType = "Full";
+        if (body.TryGetProperty("jobType", out var jtProp))
+        {
+            var jt = jtProp.ValueKind == JsonValueKind.String ? jtProp.GetString() : null;
+            if (string.IsNullOrEmpty(jt) || !_allowedJobTypes.Contains(jt))
+                return BadRequest(new { message = "Invalid jobType." });
+            jobType = jt;
+        }
+
+        var result = await _proxy.PostJsonAsync("/api/crawl", new { chessResultsId, jobType }, RequestCt);
         return Ok(result);
     }
 
     [HttpPost("crawl/player-details")]
     public async Task<IActionResult> CrawlPlayerDetails([FromBody] JsonElement body)
     {
-        if (body.ValueKind == JsonValueKind.Undefined ||
-            !body.TryGetProperty("chessResultsId", out _) ||
-            !body.TryGetProperty("playerSnrs", out _))
+        if (body.ValueKind != JsonValueKind.Object ||
+            !body.TryGetProperty("chessResultsId", out var cidProp) ||
+            !body.TryGetProperty("playerSnrs", out var snrsProp) ||
+            snrsProp.ValueKind != JsonValueKind.Array)
             return BadRequest(new { message = "Request body must contain chessResultsId and playerSnrs." });
 
-        var result = await _proxy.PostAsync("/api/crawl/player-details", body);
+        var chessResultsId = cidProp.ValueKind == JsonValueKind.String ? cidProp.GetString() : cidProp.ToString();
+        if (string.IsNullOrWhiteSpace(chessResultsId))
+            return BadRequest(new { message = "chessResultsId must not be empty." });
+
+        var playerSnrs = new List<int>();
+        foreach (var el in snrsProp.EnumerateArray())
+            if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var snr))
+                playerSnrs.Add(snr);
+
+        var result = await _proxy.PostJsonAsync("/api/crawl/player-details", new { chessResultsId, playerSnrs }, RequestCt);
         return Ok(result);
     }
 
     [HttpGet("crawl/{jobId}")]
     public async Task<IActionResult> GetCrawlStatus(int jobId)
     {
-        var result = await _proxy.GetAsync($"/api/crawl/{jobId}");
+        var result = await _proxy.GetAsync($"/api/crawl/{jobId}", RequestCt);
         return Ok(result);
     }
 
     [HttpGet("crawler/ip")]
     public async Task<IActionResult> GetCrawlerIp()
     {
-        var result = await _proxy.GetAsync("/api/health/ip");
+        var result = await _proxy.GetAsync("/api/health/ip", RequestCt);
         return Ok(result);
     }
 }

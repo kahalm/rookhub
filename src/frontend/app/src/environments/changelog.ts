@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.40';
+export const APP_VERSION = '0.40.41';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.41', date: '2026-06-01', changes: [
+    'Härtung (Crawler-Proxy): (1) `/api/tournaments/crawl` reicht nicht mehr den Roh-Body durch, sondern baut einen validierten Body (chessResultsId + jobType gegen Whitelist) — keine Injektion beliebiger/zukünftiger Felder. (2) Alle Proxy-Aufrufe reichen `HttpContext.RequestAborted` durch, sodass abgebrochene Client-Requests nicht am Crawler weiterlaufen. (3) `GET /api/book-puzzles/random` liefert bei einem Pool-Schrumpf zwischen Count und Skip jetzt 404 statt eines unbehandelten 500. (Code-Audit Findings, Projektübergreifend.)',
+  ]},
   { version: '0.40.40', date: '2026-06-01', changes: [
     'Härtung (Freundschaften): Neuer richtungsunabhängiger Unique-Index auf dem ungeordneten Nutzerpaar (STORED computed columns LEAST/GREATEST). Gleichzeitige A→B- und B→A-Anfragen können jetzt keine zwei Zeilen mehr erzeugen — die Migration dedupliziert vorhandene Duplikate sicher vor dem Index-Aufbau. (Code-Audit Finding, DB-Migration.)',
   ]},

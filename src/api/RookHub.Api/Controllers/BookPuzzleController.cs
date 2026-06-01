@@ -73,7 +73,12 @@ public class BookPuzzleController : BaseApiController
             index = Random.Shared.Next(count);
         }
 
-        var puzzle = await query.OrderBy(bp => bp.Id).Skip(index).FirstAsync();
+        // FirstOrDefault statt First: schrumpft der Pool zwischen CountAsync und hier
+        // (paralleler Import/Delete), zeigt Skip(index) sonst ins Leere -> FirstAsync
+        // wuerfe einen unbehandelten 500 statt eines sauberen 404.
+        var puzzle = await query.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync();
+        if (puzzle == null)
+            return NotFound(new { message = $"No book puzzle available for pool '{pool}'." });
         return Ok(MapToDto(puzzle));
     }
 

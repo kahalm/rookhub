@@ -331,6 +331,34 @@ public class TournamentProxyControllerTests : IDisposable
         await Assert.ThrowsAsync<HttpRequestException>(() => _controller.Crawl(body));
     }
 
+    [Fact]
+    public async Task Crawl_ReturnsBadRequest_ForInvalidJobType()
+    {
+        var body = JsonSerializer.Deserialize<JsonElement>(
+            "{\"chessResultsId\":\"100\",\"jobType\":\"DropAllTables\"}");
+
+        var result = await _controller.Crawl(body) as BadRequestObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(400, result!.StatusCode);
+    }
+
+    [Fact]
+    public async Task Crawl_DropsUnknownFields_AndForwardsOnlyWhitelisted()
+    {
+        SetupResponse("{\"jobId\":1}");
+        var body = JsonSerializer.Deserialize<JsonElement>(
+            "{\"chessResultsId\":\"100\",\"jobType\":\"PairingsOnly\",\"evilField\":\"x\"}");
+
+        var result = await _controller.Crawl(body) as OkObjectResult;
+
+        Assert.NotNull(result);
+        // Nur bekannte Felder werden weitergereicht, nicht der Roh-Body.
+        Assert.DoesNotContain("evilField", _handler.LastRequestContent!);
+        Assert.Contains("PairingsOnly", _handler.LastRequestContent!);
+        Assert.Contains("100", _handler.LastRequestContent!);
+    }
+
     // ---- CrawlPlayerDetails ----
 
     [Fact]
@@ -453,10 +481,12 @@ public class MockHttpMessageHandler : HttpMessageHandler
     public HttpResponseMessage? ResponseMessage { get; set; }
     public bool ThrowOnSend { get; set; }
     public string? LastRequestUri { get; private set; }
+    public string? LastRequestContent { get; private set; }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequestUri = request.RequestUri?.ToString();
+        LastRequestContent = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
 
         if (ThrowOnSend)
             throw new HttpRequestException("Simulated connection failure");
