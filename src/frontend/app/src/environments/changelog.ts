@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.20';
+export const APP_VERSION = '0.40.21';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.21', date: '2026-06-01', changes: [
+    'Security (Crawler, chessresults_crawler-Repo): Die Turnier-Fetches folgten Redirects automatisch ohne den finalen Host zu prüfen (SSRF — nur die erste Anfrage war abgesichert). Jeder Fetch validiert jetzt den End-Host exakt gegen chess-results.com (schließt auch „evilchess-results.com"/„…com.attacker.tld" aus). (Code-Audit Finding, CrawlerServiceSsrfTests.)',
+  ]},
   { version: '0.40.20', date: '2026-06-01', changes: [
     'Fix (Endless-Highscore): Der Highscore-Sync war blindes Last-Writer-Wins — ein lokal niedrigerer Wert konnte einen auf einem anderen Gerät/Tab erreichten höheren Highscore überschreiben. Der Client merkt sich jetzt den höchsten bekannten Highscore (aus loadFromServer + Saves) und sendet nie einen niedrigeren. (Code-Audit Finding, endless-storage.service.spec.ts.)',
   ]},
