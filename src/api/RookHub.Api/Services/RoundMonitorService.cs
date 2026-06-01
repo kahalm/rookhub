@@ -53,8 +53,10 @@ public class RoundMonitorService : BackgroundService
         }
 
         // Check all active monitors
+        // CrawlerTournamentDbId > 0: defensiv gegen Alt-Datensaetze, die sonst
+        // dauerhaft /api/tournaments/0/rounds/check pollen wuerden.
         var monitors = await db.TournamentMonitors
-            .Where(m => m.ActiveUntil >= DateTime.UtcNow)
+            .Where(m => m.ActiveUntil >= DateTime.UtcNow && m.CrawlerTournamentDbId > 0)
             .ToListAsync(ct);
 
         if (monitors.Count == 0) return;
@@ -66,7 +68,7 @@ public class RoundMonitorService : BackgroundService
             try
             {
                 var checkResult = await proxy.GetAsync(
-                    $"/api/tournaments/{monitor.CrawlerTournamentDbId}/rounds/check");
+                    $"/api/tournaments/{monitor.CrawlerTournamentDbId}/rounds/check", ct);
 
                 var hasNewRound = checkResult.TryGetProperty("hasNewRound", out var hnr) && hnr.GetBoolean();
 
@@ -88,7 +90,7 @@ public class RoundMonitorService : BackgroundService
                             jobType = "PairingsOnly"
                         }));
 
-                    await proxy.PostAsync("/api/crawl", crawlBody);
+                    await proxy.PostAsync("/api/crawl", crawlBody, ct);
 
                     // Trigger player detail crawl for favorited players
                     try
@@ -109,7 +111,7 @@ public class RoundMonitorService : BackgroundService
                             {
                                 chessResultsId = monitor.CrawlerTournamentId,
                                 playerSnrs = favSnrs
-                            });
+                            }, ct);
                         }
                     }
                     catch (Exception favEx) when (favEx is not OperationCanceledException)

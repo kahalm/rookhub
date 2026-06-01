@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.33';
+export const APP_VERSION = '0.40.34';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.34', date: '2026-06-01', changes: [
+    'Härtung (Turnier-Monitor): Aktivierung wird abgelehnt (502), wenn der Crawler keine DB-Id liefert — sonst pollte der Hintergrund-Monitor dauerhaft `/api/tournaments/0/rounds/check`. Der Monitor-Loop überspringt zudem defensiv Datensätze mit DbId ≤ 0 und reicht den CancellationToken an alle Crawler-Aufrufe weiter (sauberer Shutdown, kein Sprengen des 30s-Intervalls). (Code-Audit Findings.)',
+  ]},
   { version: '0.40.33', date: '2026-06-01', changes: [
     'Fix (Puzzle-Timer): `abortSolver` räumt jetzt auch den Visualisierungs-Show-Timer auf (sonst feuerte sein Callback nach Teardown/Puzzlewechsel); `continueAfterSolve` (Endless) verwirft einen noch laufenden Auto-Advance-Timer, bevor es fortfährt (kein Doppel-Advance). (Code-Audit Findings.)',
   ]},

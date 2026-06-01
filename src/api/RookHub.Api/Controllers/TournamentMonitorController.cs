@@ -59,6 +59,16 @@ public class TournamentMonitorController : BaseApiController
         if (result.TryGetProperty("id", out var idProp))
             dbId = idProp.GetInt32();
 
+        // Ohne aufloesbare Crawler-DB-Id wuerde der Hintergrund-Monitor dauerhaft
+        // /api/tournaments/0/rounds/check pollen -> erst gar nicht aktivieren.
+        if (dbId <= 0)
+        {
+            _logger.LogWarning(
+                "Could not resolve crawler DB id for tournament {TournamentId}; not activating monitor.",
+                tournamentId);
+            return StatusCode(502, new { message = "Turnier konnte beim Crawler nicht aufgeloest werden; Monitor nicht aktiviert." });
+        }
+
         // Get actual known rounds from rounds/check
         try
         {
