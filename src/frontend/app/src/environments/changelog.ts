@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.0';
+export const APP_VERSION = '0.40.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.1', date: '2026-06-01', changes: [
+    'Fix (Infra): nginx-Frontend stuerzte beim Start ab ("host not found in upstream api"), wenn der api-Container nach einem Reboot noch nicht im DNS war → 502 auf der ganzen Seite. Upstream wird jetzt zur Laufzeit ueber Dockers DNS aufgeloest (resolver + Variable im proxy_pass), nginx startet dadurch zuverlaessig und faengt api-Neustarts (neue IP) automatisch ab.',
+  ]},
   { version: '0.40.0', date: '2026-05-31', changes: [
     'Feature: Per-Visualisierungslevel Elo-Ratings — jede Stufe (0-4) hat eigenes Puzzle-Elo. Default: 1500/1400/1300/1200/1100. Level-Wechsel im Slider laedt Stats fuer das gewaehlte Level.',
   ]},
