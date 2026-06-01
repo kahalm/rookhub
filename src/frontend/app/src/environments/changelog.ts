@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.39';
+export const APP_VERSION = '0.40.40';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.40', date: '2026-06-01', changes: [
+    'Härtung (Freundschaften): Neuer richtungsunabhängiger Unique-Index auf dem ungeordneten Nutzerpaar (STORED computed columns LEAST/GREATEST). Gleichzeitige A→B- und B→A-Anfragen können jetzt keine zwei Zeilen mehr erzeugen — die Migration dedupliziert vorhandene Duplikate sicher vor dem Index-Aufbau. (Code-Audit Finding, DB-Migration.)',
+  ]},
   { version: '0.40.39', date: '2026-06-01', changes: [
     'Fix (Random-Puzzle): Bei gesetzten Filtern (Rating/Themen/„gelöste ausblenden") wird die ID-Range jetzt über die *gefilterte* Treffermenge bestimmt statt global — vorher landete der Zufallspunkt fast immer außerhalb der Treffer, sodass der Fallback stets dasselbe Puzzle lieferte. Zusätzlich Wrap-around-Suche (vorwärts/rückwärts) statt „immer das erste". (Code-Audit Finding.)',
   ]},

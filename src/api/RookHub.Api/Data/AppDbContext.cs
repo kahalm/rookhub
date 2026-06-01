@@ -54,6 +54,16 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             e.HasIndex(f => new { f.RequesterId, f.AddresseeId }).IsUnique();
+
+            // Richtungsunabhaengige Eindeutigkeit: genau eine Zeile pro ungeordnetem Paar.
+            // Der direktionale Index oben verhindert NICHT, dass gleichzeitige A->B und
+            // B->A zwei Zeilen erzeugen. STORED computed columns + Unique-Index loesen das
+            // auf DB-Ebene (MariaDB kennt keine gefilterten/funktionalen Indizes) — analog
+            // zur Crawler-ActiveKey-Loesung. Greift mit dem catch(DbUpdateException) in
+            // FriendService.SendRequestAsync zusammen, das dann sauber 409/Fehler liefert.
+            e.Property<int>("PairLow").HasComputedColumnSql("LEAST(RequesterId, AddresseeId)", stored: true);
+            e.Property<int>("PairHigh").HasComputedColumnSql("GREATEST(RequesterId, AddresseeId)", stored: true);
+            e.HasIndex("PairLow", "PairHigh").IsUnique();
         });
 
         modelBuilder.Entity<Repertoire>(e =>
