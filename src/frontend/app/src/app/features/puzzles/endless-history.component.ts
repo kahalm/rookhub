@@ -346,7 +346,10 @@ export class EndlessHistoryComponent implements OnInit {
   formatConfig(configJson: string): string {
     try {
       const c = JSON.parse(configJson);
-      return `${c.startElo ?? '?'} / +${c.step ?? '?'}`;
+      const parts = [`${c.startElo ?? '?'}`];
+      if (c.fasttrackThreshold1) parts.push(`T1 ${c.fasttrackThreshold1}`);
+      if (c.fasttrackThreshold2) parts.push(`T2 ${c.fasttrackThreshold2}`);
+      return parts.join(' · ');
     } catch {
       return '-';
     }

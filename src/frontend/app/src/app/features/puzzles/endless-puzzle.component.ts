@@ -39,6 +39,8 @@ interface EndlessPuzzleAttempt {
 }
 
 const FASTTRACK_SESSION_COUNT = 10;
+/** Breite des Rating-Fensters bei der Puzzleauswahl (früher = config.step). */
+const RATING_WINDOW = 40;
 
 @Component({
   selector: 'app-endless-puzzle',
@@ -59,7 +61,7 @@ const FASTTRACK_SESSION_COUNT = 10;
             </div>
             <div class="help-body">
               <h3>Spielablauf</h3>
-              <p>Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Jedes gelöste Puzzle erhöht das Rating um die Step Size.</p>
+              <p>Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Das Rating steigt automatisch entlang der Fasttrack-Phasen (siehe unten).</p>
               <p>Du hast <strong>3 Leben</strong>. Bei 0 Leben ist das Spiel vorbei.</p>
 
               <h3>Züge & Stockfish</h3>
@@ -82,20 +84,18 @@ const FASTTRACK_SESSION_COUNT = 10;
               <h3>Einstellungen</h3>
               <ul>
                 <li><strong>Start Rating</strong> — Ab welchem Puzzle-Rating du beginnst</li>
-                <li><strong>Step Size</strong> — Um wieviel das Rating pro Puzzle steigt (im Normalmodus)</li>
                 <li><strong>Stockfish Depth</strong> — Stärke der Engine (1 = sehr schwach, 24 = maximale Stärke)</li>
                 <li><strong>Themes</strong> — Optional: nur bestimmte Taktik-Themen (z.B. "fork pin")</li>
               </ul>
 
-              <h3>Fasttrack</h3>
-              <p>Überspringt leichte Puzzles basierend auf deiner bisherigen Performance.</p>
-              <p>Analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.</p>
+              <h3>Schwierigkeits-Anstieg (Fasttrack)</h3>
+              <p>Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.</p>
               <ul>
-                <li><strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. typischen Fehler-Rating</li>
-                <li><strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Fehler-Rating</li>
+                <li><strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. Threshold</li>
+                <li><strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Threshold</li>
                 <li><strong>Phase 3 (ab Puzzle 11)</strong> — Konstanter Step von 20</li>
               </ul>
-              <p>Die Threshold-Werte (1st/2nd Mistake Rating) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf "Auto: ..." setzt den Wert zurück.</p>
+              <p>Die Threshold-Werte (1st/2nd Threshold) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf "Auto: ..." setzt den Wert zurück.</p>
             </div>
           </div>
         </div>
@@ -119,10 +119,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                     <mat-hint>{{ puzzleRange.min }}–{{ puzzleRange.max }}</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Step Size</mat-label>
-                    <input matInput type="number" [(ngModel)]="config.step" min="10" max="200" step="5">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
                     <mat-label>Stockfish Depth</mat-label>
                     <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
                     <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
@@ -133,19 +129,13 @@ const FASTTRACK_SESSION_COUNT = 10;
                   </mat-form-field>
                 </div>
 
-                <div class="fasttrack-section">
-                  <mat-slide-toggle [(ngModel)]="config.fasttrack" (change)="onFasttrackToggle()">
-                    Fasttrack
-                  </mat-slide-toggle>
-                </div>
-
                 <div class="level-preview">
-                  @if (config.fasttrack && fasttrackPhase1Step > 0) {
+                  @if (fasttrackPhase1Step > 0) {
                     <p class="threshold-explain">Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.</p>
                     <div class="threshold-fields">
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
-                          <mat-label>1st Mistake Rating</mat-label>
+                          <mat-label>1st Threshold</mat-label>
                           <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgFirst !== fasttrackAutoFirst) {
@@ -154,7 +144,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                       </div>
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
-                          <mat-label>2nd Mistake Rating</mat-label>
+                          <mat-label>2nd Threshold</mat-label>
                           <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgSecond !== fasttrackAutoSecond) {
@@ -175,13 +165,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                         <span class="phase-label">Phase 3 (Lv 11+)</span>
                         <span class="phase-detail">Step 20</span>
                       </div>
-                    </div>
-                  } @else {
-                    <h4>Level Preview</h4>
-                    <div class="preview-levels">
-                      @for (lvl of previewLevels; track lvl.level) {
-                        <span class="preview-chip">Lv {{ lvl.level }}: {{ lvl.min }}–{{ lvl.max }}</span>
-                      }
                     </div>
                   }
                 </div>
@@ -546,9 +529,7 @@ const FASTTRACK_SESSION_COUNT = 10;
                       </mat-icon>
                     }
                   </div>
-                  @if (config.fasttrack) {
-                    <div class="phase-indicator">{{ currentPhaseLabel }}</div>
-                  }
+                  <div class="phase-indicator">{{ currentPhaseLabel }}</div>
                   <div class="depth-control">
                     <mat-icon>psychology</mat-icon>
                     <input type="range" [min]="1" [max]="24" [(ngModel)]="config.stockfishDepth" (change)="onDepthChange()">
@@ -954,7 +935,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     return 'play';
   }
 
-  config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: true, stockfishDepth: 16 };
+  config: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
 
   lives = 3;
   level = 0;
@@ -1043,7 +1024,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
     this.sessionHistory = this.storage.loadSessionHistory();
-    if (this.config.fasttrack) this.computeFasttrackSteps();
+    this.computeFasttrackSteps();
 
     // Load local active game state for immediate display
     const localGame = this.storage.loadActiveGameLocal();
@@ -1059,7 +1040,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
           this.config = this.storage.loadConfig(merged.config);
           this.highscore = merged.highscore;
           this.sessionHistory = merged.history;
-          if (this.config.fasttrack) this.computeFasttrackSteps();
+          this.computeFasttrackSteps();
 
           // Server active game state takes priority
           if (serverData.progress?.activeGameState) {
@@ -1088,21 +1069,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // --- Config ---
 
-  get previewLevels(): { level: number; min: number; max: number }[] {
-    const levels = [];
-    for (let i = 0; i < 3; i++) {
-      const min = this.config.startElo + i * this.config.step;
-      levels.push({ level: i, min, max: min + this.config.step });
-    }
-    return levels;
-  }
-
   get currentMinRating(): number { return this._currentMinRating; }
-  get currentMaxRating(): number { return this._currentMinRating + this.config.step; }
+  get currentMaxRating(): number { return this._currentMinRating + RATING_WINDOW; }
   get currentRating(): number { return this._currentMinRating; }
 
   get currentPhaseLabel(): string {
-    if (!this.config.fasttrack) return '';
     if (this.solved < 5) return `Phase 1 (step ${this.fasttrackPhase1Step})`;
     if (this.solved < 10) return `Phase 2 (step ${this.fasttrackPhase2Step})`;
     return 'Phase 3 (step 20)';
@@ -1153,12 +1124,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   protected override handleSolved(alternative: boolean): void { this.puzzleSolved(alternative); }
   protected override handleFailed(): void { this.loseLife(); }
 
-  onFasttrackToggle(): void {
-    if (this.config.fasttrack) {
-      this.computeFasttrackSteps();
-    }
-  }
-
   // --- Game lifecycle ---
 
   sharePuzzle(): void {
@@ -1183,7 +1148,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.activeGameState = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    if (this.config.fasttrack) this.computeFasttrackSteps();
+    this.computeFasttrackSteps();
     this.startSessionTimer();
     this.syncActiveGameToServer();
     this.loadPuzzle();
@@ -1204,7 +1169,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.prefetchedPuzzle = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    if (this.config.fasttrack) this.computeFasttrackSteps();
+    this.computeFasttrackSteps();
     // Resume timer from where it left off
     this.sessionStart = Date.now() - this.sessionSeconds * 1000;
     this.sessionInterval = setInterval(() => {
@@ -1249,7 +1214,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.state = 'CONFIG';
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    if (this.config.fasttrack) this.computeFasttrackSteps();
+    this.computeFasttrackSteps();
   }
 
   backToPuzzles(): void { this.router.navigate(['/puzzles']); }
@@ -1280,7 +1245,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
 
     const min = this._currentMinRating;
-    const max = this._currentMinRating + this.config.step;
+    const max = this._currentMinRating + RATING_WINDOW;
 
     if (this.prefetchedPuzzle &&
         this.prefetchedPuzzle.rating >= min &&
@@ -1327,7 +1292,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const nextSolved = this.solved + 1;
     const nextStep = this.getStepForSolved(nextSolved);
     const min = this._currentMinRating + nextStep;
-    const max = min + this.config.step;
+    const max = min + RATING_WINDOW;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
       next: p => this.prefetchedPuzzle = p,
@@ -1543,12 +1508,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // --- Step calculation ---
 
   private getCurrentStep(): number {
-    if (!this.config.fasttrack) return this.config.step;
     return this.getStepForSolved(this.solved);
   }
 
   private getStepForSolved(solvedCount: number): number {
-    if (!this.config.fasttrack) return this.config.step;
     if (solvedCount <= 5) return this.fasttrackPhase1Step;
     if (solvedCount <= 10) return this.fasttrackPhase2Step;
     return 20;

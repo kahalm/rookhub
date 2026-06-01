@@ -13,9 +13,7 @@ public class EndlessSyncResponseDto
 public class EndlessProgressDto
 {
     public int StartElo { get; set; }
-    public int Step { get; set; }
     public string Themes { get; set; } = string.Empty;
-    public bool Fasttrack { get; set; }
     public int? FasttrackThreshold1 { get; set; }
     public int? FasttrackThreshold2 { get; set; }
     public int StockfishDepth { get; set; }
@@ -43,13 +41,9 @@ public class SaveEndlessProgressDto
     [Range(0, 5000)]
     public int StartElo { get; set; }
 
-    [Range(10, 200)]
-    public int Step { get; set; }
-
     [MaxLength(200)]
     public string Themes { get; set; } = string.Empty;
 
-    public bool Fasttrack { get; set; }
     public int? FasttrackThreshold1 { get; set; }
     public int? FasttrackThreshold2 { get; set; }
 

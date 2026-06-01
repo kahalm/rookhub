@@ -5,9 +5,7 @@ import { Observable, of, catchError, map, tap } from 'rxjs';
 
 export interface EndlessConfig {
   startElo: number;
-  step: number;
   themes: string;
-  fasttrack: boolean;
   fasttrackThreshold1?: number;
   fasttrackThreshold2?: number;
   stockfishDepth: number;
@@ -29,9 +27,7 @@ export interface EndlessSyncResponse {
 
 export interface EndlessProgressDto {
   startElo: number;
-  step: number;
   themes: string;
-  fasttrack: boolean;
   fasttrackThreshold1?: number;
   fasttrackThreshold2?: number;
   stockfishDepth: number;
@@ -80,8 +76,6 @@ export class EndlessStorageService {
         config = { ...config, ...saved };
       }
     } catch {}
-    if (config.step < 10) config.step = 10;
-    if (config.step > 200) config.step = 200;
     if (!config.stockfishDepth || config.stockfishDepth < 1) config.stockfishDepth = 16;
     if (config.stockfishDepth > 24) config.stockfishDepth = 24;
     if (config.fasttrackThreshold1 != null && config.fasttrackThreshold1 <= config.startElo) {
@@ -198,9 +192,7 @@ export class EndlessStorageService {
     this.highestKnownHighscore = safeHighscore;
     const body: any = {
       startElo: config.startElo,
-      step: config.step,
       themes: config.themes || '',
-      fasttrack: config.fasttrack,
       fasttrackThreshold1: config.fasttrackThreshold1 ?? null,
       fasttrackThreshold2: config.fasttrackThreshold2 ?? null,
       stockfishDepth: config.stockfishDepth,
@@ -304,9 +296,7 @@ export class EndlessStorageService {
       // Server wins if it has data
       config = {
         startElo: sp.startElo,
-        step: sp.step,
         themes: sp.themes,
-        fasttrack: sp.fasttrack,
         fasttrackThreshold1: sp.fasttrackThreshold1 ?? undefined,
         fasttrackThreshold2: sp.fasttrackThreshold2 ?? undefined,
         stockfishDepth: sp.stockfishDepth
@@ -361,7 +351,7 @@ export class EndlessStorageService {
   }
 
   private mapServerSession(s: EndlessSessionDto): EndlessSession {
-    let config: EndlessConfig = { startElo: 700, step: 40, themes: '', fasttrack: true, stockfishDepth: 16 };
+    let config: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
     try { config = JSON.parse(s.configJson); } catch {}
     return {
       timestamp: s.timestamp,

@@ -5,7 +5,7 @@ import { EndlessStorageService, EndlessConfig } from './endless-storage.service'
 import { AuthService } from '../../core/auth.service';
 
 const CONFIG: EndlessConfig = {
-  startElo: 1500, step: 25, themes: '', fasttrack: false, stockfishDepth: 8,
+  startElo: 1500, themes: '', stockfishDepth: 8,
 };
 
 describe('EndlessStorageService highscore sync', () => {

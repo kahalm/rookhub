@@ -225,9 +225,7 @@ public class EndlessProgressService
                 {
                     UserId = userId,
                     StartElo = anonProgress.StartElo,
-                    Step = anonProgress.Step,
                     Themes = anonProgress.Themes,
-                    Fasttrack = anonProgress.Fasttrack,
                     FasttrackThreshold1 = anonProgress.FasttrackThreshold1,
                     FasttrackThreshold2 = anonProgress.FasttrackThreshold2,
                     StockfishDepth = anonProgress.StockfishDepth,
@@ -334,9 +332,7 @@ public class EndlessProgressService
     private static void ApplyProgressDto(EndlessProgress progress, SaveEndlessProgressDto dto)
     {
         progress.StartElo = dto.StartElo;
-        progress.Step = dto.Step;
         progress.Themes = dto.Themes;
-        progress.Fasttrack = dto.Fasttrack;
         progress.FasttrackThreshold1 = dto.FasttrackThreshold1;
         progress.FasttrackThreshold2 = dto.FasttrackThreshold2;
         progress.StockfishDepth = dto.StockfishDepth;
@@ -348,9 +344,7 @@ public class EndlessProgressService
     private static EndlessProgressDto MapProgressDto(EndlessProgress p) => new()
     {
         StartElo = p.StartElo,
-        Step = p.Step,
         Themes = p.Themes,
-        Fasttrack = p.Fasttrack,
         FasttrackThreshold1 = p.FasttrackThreshold1,
         FasttrackThreshold2 = p.FasttrackThreshold2,
         StockfishDepth = p.StockfishDepth,

@@ -191,7 +191,7 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
-| EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Step, Themes, Fasttrack, Highscore, ActiveGameState (LONGTEXT) |
+| EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Themes, FasttrackThreshold1/2, StockfishDepth, Highscore, ActiveGameState (LONGTEXT) |
 | EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
 | CourseProgresses | Per-Kurs-Zustand (Buch) | UserId + BookId (unique pair), LastMode ("sequential"/"random"), CreatedAt, UpdatedAt |
 | CoursePuzzleResults | Gelöste Buch-Puzzles im Kurs | UserId + BookPuzzleId (unique pair), BookId (denormalisiert, indexed mit UserId), SolvedAt |
@@ -309,7 +309,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.44.3`
+- **Aktuelle Version**: `0.45.0`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

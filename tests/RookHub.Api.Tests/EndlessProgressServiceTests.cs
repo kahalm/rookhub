@@ -39,9 +39,7 @@ public class EndlessProgressServiceTests : IDisposable
     private SaveEndlessProgressDto MakeProgressDto(int highscore = 0, string? activeGame = null) => new()
     {
         StartElo = 700,
-        Step = 40,
         Themes = "fork pin",
-        Fasttrack = true,
         FasttrackThreshold1 = 1100,
         FasttrackThreshold2 = 1500,
         StockfishDepth = 16,
@@ -79,9 +77,8 @@ public class EndlessProgressServiceTests : IDisposable
         var result = await _service.SaveProgressAsync(userId, dto);
 
         Assert.Equal(700, result.StartElo);
-        Assert.Equal(40, result.Step);
         Assert.Equal("fork pin", result.Themes);
-        Assert.True(result.Fasttrack);
+        Assert.Equal(1100, result.FasttrackThreshold1);
         Assert.Equal(1500, result.Highscore);
         Assert.Single(await _db.EndlessProgresses.ToListAsync());
     }

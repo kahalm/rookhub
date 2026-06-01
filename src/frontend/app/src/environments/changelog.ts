@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.44.3';
+export const APP_VERSION = '0.45.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.45.0', date: '2026-06-01', changes: [
+    'Endlosmodus vereinfacht: Fasttrack ist jetzt der Standard (kein Toggle mehr) — die Schwierigkeit steigt immer entlang der Phasen. Die beiden Schwellen heißen jetzt „1st Threshold" / „2nd Threshold" (vorher „1st/2nd Mistake Rating"). Die „Step Size"-Einstellung ist entfallen; die Breite des Rating-Fensters bei der Puzzleauswahl ist intern fix 40. DB: Spalten Step + Fasttrack aus EndlessProgresses entfernt (Migration); FasttrackThreshold1/2 bleiben. Alte gespeicherte Sessions/Configs laden weiterhin problemlos.',
+  ]},
   { version: '0.44.3', date: '2026-06-01', changes: [
     'Tests/Refactor: Test-Audit der neuen Features. Neue Tests für `courseAccessGuard` (Zugriffs-Gating: Login/Admin/Gruppe/Fehler → 5 Fälle) und die Wochenpost-Termin-Logik (letzter + 7 Tage / gleiche Uhrzeit / Default 19:00, inkl. Monatsübergang) — dafür wurde die Termin-Berechnung in reine, testbare Funktionen (`nextWeeklySlot`, `weeklyDatePart`, `weeklyTimePart`) ausgelagert. Auto-Subscription-Test um FideId-Änderung erweitert. Frontend 115, Backend 424 Tests grün.',
   ]},
