@@ -299,6 +299,7 @@ const FASTTRACK_SESSION_COUNT = 10;
             <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
               <app-puzzle-board
                 [fen]="boardFen"
+                [actualFen]="actualFen"
                 [orientation]="orientation"
                 [turnColor]="turnColor"
                 [dests]="dests"
@@ -492,6 +493,32 @@ const FASTTRACK_SESSION_COUNT = 10;
                 </mat-card-content>
               </mat-card>
 
+              @if (puzzle) {
+                <mat-card class="info-card">
+                  <mat-card-content>
+                    <div class="puzzle-info">
+                      <span class="rating-badge">Puzzle Rating: {{ puzzle.rating }}</span>
+                      <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
+                        <mat-icon>share</mat-icon>
+                      </button>
+                      <span class="level-badge">Level {{ level }} ({{ currentMinRating }}–{{ currentMaxRating }})</span>
+                      @if (puzzle.themes) {
+                        <span class="themes-toggle" (click)="showThemes = !showThemes">
+                          {{ showThemes ? 'Hide tags' : 'Show tags' }}
+                        </span>
+                        @if (showThemes) {
+                          <div class="themes">
+                            @for (theme of puzzle.themes.split(' '); track theme) {
+                              <span class="theme-chip">{{ theme }}</span>
+                            }
+                          </div>
+                        }
+                      }
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+
               <mat-card class="stats-card">
                 <mat-card-content>
                   <div class="stats-grid">
@@ -529,32 +556,6 @@ const FASTTRACK_SESSION_COUNT = 10;
                   </div>
                 </mat-card-content>
               </mat-card>
-
-              @if (puzzle) {
-                <mat-card class="info-card">
-                  <mat-card-content>
-                    <div class="puzzle-info">
-                      <span class="rating-badge">Puzzle Rating: {{ puzzle.rating }}</span>
-                      <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
-                        <mat-icon>share</mat-icon>
-                      </button>
-                      <span class="level-badge">Level {{ level }} ({{ currentMinRating }}–{{ currentMaxRating }})</span>
-                      @if (puzzle.themes) {
-                        <span class="themes-toggle" (click)="showThemes = !showThemes">
-                          {{ showThemes ? 'Hide tags' : 'Show tags' }}
-                        </span>
-                        @if (showThemes) {
-                          <div class="themes">
-                            @for (theme of puzzle.themes.split(' '); track theme) {
-                              <span class="theme-chip">{{ theme }}</span>
-                            }
-                          </div>
-                        }
-                      }
-                    </div>
-                  </mat-card-content>
-                </mat-card>
-              }
             </div>
           </div>
         }
@@ -877,7 +878,7 @@ const FASTTRACK_SESSION_COUNT = 10;
     .depth-value { font-weight: bold; min-width: 1.5em; text-align: center; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
-    .share-btn { position: absolute; top: -8px; right: -8px; }
+    .share-btn { position: absolute; top: 0; right: 0; z-index: 2; }
     .level-badge { font-size: 0.9em; color: rgba(0,0,0,0.6); }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .theme-chip {

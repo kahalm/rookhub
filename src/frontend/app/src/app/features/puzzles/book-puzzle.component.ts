@@ -9,7 +9,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { ActivatedRoute } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PuzzleBoardComponent } from './puzzle-board.component';
+import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -27,7 +29,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    PuzzleBoardComponent
+    MatDialogModule, PuzzleBoardComponent
   ],
   template: `
     <div class="puzzle-page">
@@ -35,6 +37,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
         <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
           <app-puzzle-board
             [fen]="boardFen"
+            [actualFen]="actualFen"
             [orientation]="orientation"
             [turnColor]="turnColor"
             [dests]="dests"
@@ -178,6 +181,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             <mat-card class="info-card">
               <mat-card-content>
                 <div class="puzzle-meta">
+                  <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
+                    <mat-icon>share</mat-icon>
+                  </button>
                   @if (puzzle.title) {
                     <p class="meta-title">{{ puzzle.title }}</p>
                   }
@@ -292,7 +298,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
-    .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; }
+    .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
+    .share-btn { position: absolute; top: 0; right: 0; z-index: 2; }
     .meta-title { font-weight: bold; font-size: 1.1em; margin: 0; }
     .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; }
     .meta-comment { font-style: italic; color: rgba(0,0,0,0.6); margin: 0; font-size: 0.9em; }
@@ -392,11 +399,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
     private prefs: PreferencesService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dialog: MatDialog
   ) {
     super(stockfish);
     this.loadConfig();
     this.stockfish.init().catch(() => {});
+  }
+
+  sharePuzzle(): void {
+    if (!this.puzzle) return;
+    const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}`;
+    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
   }
 
   // ===== Hooks für BasePuzzleSolver =====

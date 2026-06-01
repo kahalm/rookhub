@@ -19,6 +19,12 @@ export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number;
 export abstract class BasePuzzleSolver {
   // ---- Brett-Präsentation (von Templates gelesen) ----
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  /**
+   * Tatsächlicher chess.js-Zustand (im Viz-Modus weicht boardFen ab — dort bleibt das Brett
+   * auf frozenFen). Das Brett-Component nutzt das fürs Erkennen von Promotion-Zügen und
+   * für die Legalitäts-Prüfung im Viz-Klick-Modus.
+   */
+  actualFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   orientation: Color = 'white';
   turnColor: Color = 'white';
   dests: Map<Key, Key[]> = new Map();
@@ -290,10 +296,11 @@ export abstract class BasePuzzleSolver {
   }
 
   protected updateBoard(): void {
+    this.actualFen = this.chess.fen();
     // Visualisierung: Brett auf der eingefrorenen Startstellung halten, solange gelöst wird;
     // am Ende (Endzustand der Komponente) das echte Brett aufdecken.
     if (this.visualizationMode && (this.isSolving || this.state === 'SETUP')) {
-      this.boardFen = this.frozenFen || this.chess.fen();
+      this.boardFen = this.frozenFen || this.actualFen;
       this.turnColor = this.orientation;
       this.isCheck = false;
       this.dests = new Map();
@@ -301,7 +308,7 @@ export abstract class BasePuzzleSolver {
     }
     // Endzustand → Figuren wieder einblenden
     if (this.vizPiecesHidden) this.endVisualizationHide();
-    this.boardFen = this.chess.fen();
+    this.boardFen = this.actualFen;
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
     const interactive = (this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING') && this.turnColor === this.orientation;

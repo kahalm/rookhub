@@ -184,6 +184,37 @@ test.describe('Visualization Mobile', () => {
     expect(vizCssGone).toBe(true);
   });
 
+  test('viz mode: illegal 2nd click becomes new origin (selection not lost)', async ({ page }) => {
+    // Regression: ein illegaler 2. Klick im Viz-Modus liess vizFrom auf undefined
+    // zurück → der naechste Klick startete ohne sichtbares Feedback wieder als orig.
+    // Mit Fix wird der illegale 2. Klick selbst zum neuen Ausgangsfeld.
+    await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
+    await page.addInitScript(() => {
+      localStorage.setItem('rookhub_visualization', '1');
+      localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 1 }));
+    });
+    await page.goto('/puzzles');
+
+    const board = page.locator('cg-board');
+    await expect(board).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+
+    // Click chain d1 → a3 (illegal) → h5 (illegal von a3) → d1 (illegal von h5) → h5 (legal von d1).
+    // Ohne Fix: nach jedem illegalen 2.-Klick verschwindet die Auswahl, die Sequenz löst nichts aus.
+    // Mit Fix: vizFrom wandert d1→a3→h5→d1, dann legaler Qh5 → SOLVED.
+    await clickSquare(page, board, 'd1');
+    await page.waitForTimeout(100);
+    await clickSquare(page, board, 'a3');
+    await page.waitForTimeout(100);
+    await clickSquare(page, board, 'h5');
+    await page.waitForTimeout(100);
+    await clickSquare(page, board, 'd1');
+    await page.waitForTimeout(100);
+    await clickSquare(page, board, 'h5');
+
+    await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
+  });
+
   test('level 0 disables visualization entirely', async ({ page }) => {
     await mockPuzzleApi(page, TWO_MOVE_PUZZLE);
     await page.addInitScript(() => {

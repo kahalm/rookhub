@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.3';
+export const APP_VERSION = '0.40.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.4', date: '2026-06-01', changes: [
+    'Fix (Viz-Modus): Promotion-Dialog fehlte beim Bauern-Umwandlungszug — der Promotion-Check schaute auf das eingefrorene Brett, das nichts vom Bauer auf der 7. Reihe wusste. Erkennung läuft jetzt über die tatsächliche chess.js-Stellung (neuer actualFen-Input).',
+    'Fix (Viz-Modus): Illegaler 2. Klick (z.B. a1 → c3 ohne legalen Zug) verwarf die Auswahl wirkungslos — jetzt wird das geklickte Feld zum neuen Ausgangsfeld, der Spieler verliert die Orientierung nicht mehr.',
+    'Fix: Share-Puzzle-Button war versteckt (CSS top/right -8px wurde durch Material-Card-Clipping abgeschnitten) und im Endless-Modus durch die Stats-Card nach unten verdrängt. Position auf 0/0 korrigiert, im Endless-Modus über die Stats-Card gezogen.',
+    'Feature: Share-Puzzle jetzt auch im Buch-Puzzle-Modus (war bisher nicht vorhanden).',
+  ]},
   { version: '0.40.3', date: '2026-06-01', changes: [
     'Fix: Nach Mouseslip wurde der korrekte Lösungszug nicht mehr erkannt — onSolutionPath blieb auf false und der State auf PLAYING, dadurch landete jeder folgende User-Zug im off-path-Handler. Mouseslip stellt jetzt den Lösungspfad sauber wieder her (state=AWAITING_USER_MOVE, Fehlzug aus dem Move-Log entfernt).',
     'Fix: Race-Condition bei Reset/Mouseslip während Stockfish noch denkt — ein verspätet ankommender Solver-Zug konnte das frisch zurückgesetzte Brett verschmutzen. Eine Solver-Epoch invalidiert jetzt laufende Stockfish-Aufrufe, der späte Zug wird verworfen.',

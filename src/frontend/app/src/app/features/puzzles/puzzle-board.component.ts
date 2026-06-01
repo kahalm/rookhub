@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
+import { Chess, Square } from 'chess.js';
 
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
@@ -84,6 +85,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
   @Input() visualization = 0;
+  /** Tatsaechliche chess.js-FEN (im Viz-Modus weicht `fen` als frozen-Brett davon ab).
+   *  Wird im Viz-Modus für Promotion-Erkennung und Legalitäts-Check beim 2. Klick genutzt. */
+  @Input() actualFen?: string;
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -144,10 +148,70 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       return;
     }
     const orig = this.vizFrom;
+    // Promotion-Erkennung über die tatsächliche chess.js-Stellung (das eingefrorene Brett
+    // weiß nichts vom Bauern auf der 7. Reihe, der durch bisherige Viz-Züge dort hingekommen ist).
+    const promo = this.detectVizPromotion(orig, key);
+    // Legalitäts-Check: ein illegaler 2. Klick wird zum neuen Ausgangsfeld
+    // (sonst verschwindet die Auswahl wirkungslos und der Spieler verliert die Orientierung).
+    if (!this.isVizLegalMove(orig, key, promo)) {
+      this.vizFrom = key;
+      this.ground.setShapes([{ orig: key, brush: 'green' }]);
+      return;
+    }
     this.vizFrom = undefined;
     this.ground.setShapes([]);
+    if (promo) {
+      this.showVizPromotionDialog(orig, key);
+      return;
+    }
     this.moveMade.emit({ orig, dest: key });
   };
+
+  /** Erkennt einen Bauern-Promotion-Zug im Viz-Modus (anhand actualFen, nicht des frozen Bretts). */
+  private detectVizPromotion(orig: Key, dest: Key): boolean {
+    if (!this.actualFen) return false;
+    const destRank = dest[1];
+    if (destRank !== '1' && destRank !== '8') return false;
+    try {
+      const c = new Chess(this.actualFen);
+      const piece = c.get(orig as Square);
+      return piece?.type === 'p';
+    } catch {
+      return false;
+    }
+  }
+
+  /** Prüft ob (orig→dest) ein legaler Zug in der aktuellen chess.js-Stellung ist. */
+  private isVizLegalMove(orig: Key, dest: Key, promotion: boolean): boolean {
+    if (!this.actualFen) return true;          // ohne FEN-Info nicht filtern (Fallback)
+    try {
+      const c = new Chess(this.actualFen);
+      const mv = c.move({ from: orig as Square, to: dest as Square, promotion: promotion ? 'q' : undefined });
+      return mv !== null;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Promotion-Dialog im Viz-Modus — Farbe/Orientierung kommen aus actualFen statt aus dem frozen Brett. */
+  private showVizPromotionDialog(orig: Key, dest: Key): void {
+    this.pendingPromotion = { orig, dest };
+    let color: 'w' | 'b' = this.orientation === 'white' ? 'w' : 'b';
+    if (this.actualFen) {
+      try {
+        const piece = new Chess(this.actualFen).get(orig as Square);
+        if (piece) color = piece.color;
+      } catch { /* fallback to orientation */ }
+    }
+    this.promotionColor = color;
+    const fileIndex = dest.charCodeAt(0) - 'a'.charCodeAt(0);
+    const adjustedFile = this.orientation === 'white' ? fileIndex : 7 - fileIndex;
+    this.promotionFilePercent = adjustedFile * 12.5;
+    const destRank = dest[1];
+    this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
+                                (this.orientation === 'black' && destRank === '8');
+    this.showPromotionOverlay = true;
+  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {

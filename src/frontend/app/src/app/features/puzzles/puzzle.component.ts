@@ -47,6 +47,7 @@ const RATING_WINDOW = 100;
         <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
           <app-puzzle-board
             [fen]="boardFen"
+            [actualFen]="actualFen"
             [orientation]="orientation"
             [turnColor]="turnColor"
             [dests]="dests"
@@ -428,7 +429,7 @@ const RATING_WINDOW = 100;
     .elo-down { color: #f44336; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
-    .share-btn { position: absolute; top: -8px; right: -8px; }
+    .share-btn { position: absolute; top: 0; right: 0; z-index: 2; }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .theme-chip {
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
