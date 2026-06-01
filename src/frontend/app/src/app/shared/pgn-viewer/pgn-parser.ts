@@ -30,10 +30,10 @@ function stripVariations(pgn: string): string {
   for (let i = 0; i < fixed.length; i++) {
     const ch = fixed[i];
     if (ch === '{') {
-      if (depth === 0) result += ch;
+      if (depth === 0 && !inComment) result += ch;  // nur die aeussere oeffnende Klammer emittieren
       inComment = true;
     } else if (ch === '}') {
-      if (depth === 0) result += ch;
+      if (depth === 0 && inComment) result += ch;    // nur schliessen, wenn auch eine offen war (keine Streu-})
       inComment = false;
     } else if (inComment) {
       if (depth === 0) result += ch;
@@ -45,6 +45,10 @@ function stripVariations(pgn: string): string {
       result += ch;
     }
   }
+
+  // Unausgeglichene oeffnende Kommentar-Klammer schliessen, damit chess.js
+  // nicht am offenen { scheitert und das ganze Spiel still verworfen wird.
+  if (inComment) result += '}';
 
   return result;
 }
@@ -150,8 +154,10 @@ export function parsePgnText(pgnText: string): ParsedGame[] {
       }
 
       parsed.push({ headers: gameHeaders, moves, fens, comments });
-    } catch {
-      // Skip unparseable games
+    } catch (err) {
+      // Unparsebares Spiel ueberspringen, aber fuer Diagnose sichtbar machen
+      // statt es voellig stumm zu verwerfen.
+      console.warn('pgn-parser: skipping unparseable game', err);
     }
   }
 

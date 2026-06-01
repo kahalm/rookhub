@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.35';
+export const APP_VERSION = '0.40.36';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.36', date: '2026-06-01', changes: [
+    'Fix (PGN-Parser): `stripVariations` erzeugt jetzt brace-balancierte Ausgabe (keine Streu-`}`, eine unterminierte `{`-Kommentarklammer wird am Ende geschlossen) — ein Spiel mit unbalancierten Klammern wird so geparst statt still verworfen. Der vormals leere `catch{}`-Block loggt übersprungene Spiele jetzt per `console.warn` (Diagnose). (Code-Audit Findings.)',
+  ]},
   { version: '0.40.35', date: '2026-06-01', changes: [
     'Härtung/Doku: Admin-`DeleteUser` fängt eine DbUpdateException (verbliebene FK-Referenzen) ab und liefert 409 statt eines unbehandelten 500. CORS-Doku in der CLAUDE.md an den tatsächlichen Code angeglichen (ExtensionPolicy erlaubt nur chess.com, nicht `chrome-extension://*`/localhost). (Code-Audit Findings.)',
   ]},

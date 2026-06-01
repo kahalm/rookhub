@@ -138,6 +138,16 @@ describe('comments', () => {
     const games = parsePgnText(SINGLE_GAME);
     expect(Object.keys(games[0].comments).length).toBe(0);
   });
+
+  it('parses a game with an unterminated comment brace instead of dropping it', () => {
+    const pgn = `[Event "Test"]
+[Result "*"]
+
+1. e4 e5 {unterminated comment`;
+    const games = parsePgnText(pgn);
+    expect(games.length).toBe(1);
+    expect(games[0].moves.length).toBe(2);
+  });
 });
 
 describe('START_FEN', () => {
