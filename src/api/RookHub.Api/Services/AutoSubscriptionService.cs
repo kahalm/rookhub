@@ -249,13 +249,25 @@ public class AutoSubscriptionService : BackgroundService
                 {
                     matched = true;
                 }
-                // Name match (fallback)
-                else if (name.Contains(profile.LastName, StringComparison.OrdinalIgnoreCase))
+                // Name match (fallback): chess-results liefert "Nachname, Vorname".
+                // Exakter Token-Vergleich statt Substring, sonst matcht z.B. "Ott"
+                // auf "Ottenweller"/"Scott" und favorisiert falsche Spieler.
+                else
                 {
-                    if (!string.IsNullOrWhiteSpace(profile.FirstName))
-                        matched = name.Contains(profile.FirstName, StringComparison.OrdinalIgnoreCase);
-                    else
-                        matched = true;
+                    var comma = name.IndexOf(',');
+                    var lastToken = (comma >= 0 ? name[..comma] : name).Trim();
+                    var firstToken = comma >= 0 ? name[(comma + 1)..].Trim() : string.Empty;
+
+                    if (string.Equals(lastToken, profile.LastName.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!string.IsNullOrWhiteSpace(profile.FirstName))
+                            // Erstes Vornamens-Token vergleichen (CR listet teils mehrere Vornamen).
+                            matched = string.Equals(FirstWord(firstToken), FirstWord(profile.FirstName),
+                                StringComparison.OrdinalIgnoreCase);
+                        else
+                            // Ohne Vorname nur bei ausreichend eindeutigem (laengerem) Nachnamen.
+                            matched = lastToken.Length >= 3;
+                    }
                 }
 
                 if (matched)
@@ -288,5 +300,12 @@ public class AutoSubscriptionService : BackgroundService
                     entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
             }
         }
+    }
+
+    private static string FirstWord(string s)
+    {
+        s = s.Trim();
+        var sp = s.IndexOf(' ');
+        return sp >= 0 ? s[..sp] : s;
     }
 }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.10';
+export const APP_VERSION = '0.40.11';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.11', date: '2026-06-01', changes: [
+    'Fix (Auto-Favoriten): Der Spielerabgleich verglich Nachnamen per Substring (`name.Contains`) und favorisierte dadurch falsche Spieler (z.B. „Ott" → „Ottenweller", „Scott"). Jetzt exakter Token-Vergleich auf das „Nachname, Vorname"-Format (Vorname per erstem Token); reiner Nachnamen-Match nur ab Länge ≥3. (Code-Audit Finding, AutoSubscriptionServiceTests.)',
+  ]},
   { version: '0.40.10', date: '2026-06-01', changes: [
     'Security (Auth): Login führt jetzt immer einen BCrypt-Verify gegen einen Dummy-Hash aus, auch wenn der Username nicht existiert — verhindert Username-Enumeration über den Timing-Seitenkanal. Username-Vergleich bei Login & Registrierung ist jetzt case-insensitiv (passend zur DB-Collation); kollidierende Registrierungen liefern sauber 409 (inkl. DbUpdateException-Absicherung gegen Races) statt 500. (Code-Audit Findings, AuthServiceTests.)',
   ]},

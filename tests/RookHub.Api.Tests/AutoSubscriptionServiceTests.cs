@@ -278,6 +278,49 @@ public class AutoSubscriptionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AutoFavorite_SubstringLastName_NoFalseMatch()
+    {
+        // Regression: "Ott" darf nicht auf "Ottenweller" matchen (vorher Substring).
+        var userId = await CreateUserAsync(lastName: "Ott", firstName: "Hans");
+
+        var proxy = CreateMockProxy(PlayersJson((1, "Ottenweller, Hans-Peter", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF1", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Empty(favs);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_ExactLastFirst_StillMatches()
+    {
+        var userId = await CreateUserAsync(lastName: "Ott", firstName: "Hans");
+
+        // Substring-Treffer (1) darf NICHT matchen, exakter (2) schon.
+        var proxy = CreateMockProxy(PlayersJson((1, "Ottenweller, Hans", null), (2, "Ott, Hans", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF2", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Single(favs);
+        Assert.Equal(2, favs[0].PlayerSnr);
+    }
+
+    [Fact]
+    public async Task AutoFavorite_LastNameOnly_TooShort_NoMatch()
+    {
+        // Ohne Vorname + kurzer Nachname -> kein (mehrdeutiger) Auto-Match.
+        var userId = await CreateUserAsync(lastName: "Li", firstName: null);
+
+        var proxy = CreateMockProxy(PlayersJson((1, "Li, Wei", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF3", CancellationToken.None);
+
+        var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
+        Assert.Empty(favs);
+    }
+
+    [Fact]
     public async Task CheckUserAsync_ProxyError_DoesNotThrow()
     {
         var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
