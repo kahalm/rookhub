@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.13';
+export const APP_VERSION = '0.40.14';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.14', date: '2026-06-01', changes: [
+    'Fix (HTTP-Retry): Der retry-Interceptor wiederholte fehlgeschlagene Requests (Status 0/502/503) für ALLE Methoden — ein automatischer Retry von POST/PUT/DELETE konnte doppelte Seiteneffekte erzeugen (z.B. doppelte Puzzle-Attempts/Anfragen). Es werden jetzt nur noch idempotente Methoden (GET/HEAD) erneut versucht. (Code-Audit Finding, retry.interceptor.spec.ts.)',
+  ]},
   { version: '0.40.13', date: '2026-06-01', changes: [
     'Fix (Spielersuche): Ein einzelner ChessResults-Treffer ohne `name`-Feld ließ `GetProperty("name")` werfen, wodurch im catch die GESAMTE Trefferliste verworfen wurde (leere Suche). Solche Einträge werden jetzt übersprungen (TryGetProperty), der Rest bleibt erhalten. (Code-Audit Finding, PlayerSearchServiceTests.)',
   ]},

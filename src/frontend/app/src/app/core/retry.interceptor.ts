@@ -5,7 +5,10 @@ export const retryInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
       const retryable = err.status === 502 || err.status === 503 || err.status === 0;
-      if (retryable && !req.headers.has('X-Retry')) {
+      // Nur idempotente Methoden erneut versuchen — ein Retry von POST/PUT/DELETE
+      // kann doppelte Seiteneffekte ausloesen (z.B. doppelte Puzzle-Attempts).
+      const idempotent = req.method === 'GET' || req.method === 'HEAD';
+      if (retryable && idempotent && !req.headers.has('X-Retry')) {
         const retryReq = req.clone({ setHeaders: { 'X-Retry': '1' } });
         return timer(1000).pipe(switchMap(() => next(retryReq)));
       }
