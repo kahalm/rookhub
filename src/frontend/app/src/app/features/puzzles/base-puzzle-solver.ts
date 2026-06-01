@@ -72,6 +72,9 @@ export abstract class BasePuzzleSolver {
    */
   protected solverEpoch = 0;
 
+  /** Ob seit dem letzten Fehlzug wirklich ein Gegnerzug gespielt wurde (fuer Mouseslip-Undo). */
+  protected lastOpponentReplied = false;
+
   constructor(protected stockfish: StockfishService) {}
 
   // ===== Hooks (von den Komponenten überschrieben) =====
@@ -217,6 +220,7 @@ export abstract class BasePuzzleSolver {
 
   protected async opponentRespond(): Promise<void> {
     const epoch = this.solverEpoch;
+    this.lastOpponentReplied = false;
     this.state = 'THINKING';
     this.updateBoard();
     try {
@@ -224,6 +228,7 @@ export abstract class BasePuzzleSolver {
       if (this.aborted || epoch !== this.solverEpoch) return;
       this.currentEval = result.eval;
       this.playMove(result.move);
+      this.lastOpponentReplied = true;
       this.updateBoard();
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.autoAdvanceTimer = setTimeout(() => {
@@ -264,8 +269,11 @@ export abstract class BasePuzzleSolver {
     this.aborted = true;
     this.solverEpoch++;                         // verspätete Stockfish-Antwort verwerfen
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    // THINKING = Stockfish denkt noch (Fehlzug schon im Brett), PLAYING = Antwort schon da.
-    const undoCount = this.state === 'PLAYING' ? 2 : 1;
+    // Zurueckzunehmende Plies: Fehlzug + (nur falls Stockfish wirklich geantwortet hat)
+    // der Gegnerzug. Im Stockfish-Fehlerpfad ist state zwar PLAYING, aber es wurde KEIN
+    // Gegnerzug gespielt -> dann nur 1 Ply zuruecknehmen, sonst faellt ein gueltiger
+    // Loesungszug mit weg.
+    const undoCount = (this.state === 'PLAYING' && this.lastOpponentReplied) ? 2 : 1;
     for (let i = 0; i < undoCount; i++) this.chess.undo();
     // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
     // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.

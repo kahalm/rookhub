@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.18';
+export const APP_VERSION = '0.40.19';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.19', date: '2026-06-01', changes: [
+    'Fix (Puzzle/Mouseslip): Im Stockfish-Fehlerpfad ist der Zustand zwar PLAYING, es wurde aber kein Gegnerzug gespielt — Mouseslip nahm trotzdem 2 Halbzüge zurück und löschte so einen gültigen Lösungszug mit. Es wird jetzt nur zurückgenommen, was wirklich gespielt wurde. (Code-Audit Finding, base-puzzle-solver.spec.ts.)',
+  ]},
   { version: '0.40.18', date: '2026-06-01', changes: [
     'Security/UX (Auth): Das JWT-Ablaufdatum wurde nur einmal beim App-Start geprüft — eine abgelaufene Session galt clientseitig bis zum nächsten 401 als eingeloggt. Die Gültigkeit wird jetzt bei jedem Zugriff (isLoggedIn/token/currentUser/isAdmin) erneut geprüft und bei abgelaufenem Token automatisch ausgeloggt. (Code-Audit Finding, auth.service.spec.ts. Hinweis: JWT bleibt in localStorage — Umstieg auf HttpOnly-Cookie ist als größerer Umbau separat offen.)',
   ]},
