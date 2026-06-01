@@ -57,6 +57,14 @@ export abstract class BasePuzzleSolver {
   protected autoAdvanceTimer?: ReturnType<typeof setTimeout>;
   protected moveLog: MoveLogEntry[] = [];
   protected moveStartTime = 0;
+  /**
+   * Jeder Lös-Vorgang hat eine Epoch. Bei setupSolver/mouseslip/abortSolver wird sie inkrementiert.
+   * Laufende Stockfish-Aufrufe ({@link opponentRespond}) merken sich ihre Epoch und brechen ab,
+   * wenn sie verstrichen ist — so kann ein verspätet ankommender Stockfish-Zug das frisch
+   * resettete Brett nicht mehr verschmutzen (`aborted` allein reicht nicht, weil reset/mouseslip
+   * es direkt wieder auf false setzen).
+   */
+  protected solverEpoch = 0;
 
   constructor(protected stockfish: StockfishService) {}
 
@@ -91,6 +99,7 @@ export abstract class BasePuzzleSolver {
    */
   protected setupSolver(fen: string, movesStr: string, startPly = 0): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.solverEpoch++;
     this.solutionMoves = movesStr.split(' ');
     this.startPly = startPly;
     if (this.startPly > this.solutionMoves.length - 2) this.startPly = 0;
@@ -201,23 +210,24 @@ export abstract class BasePuzzleSolver {
   }
 
   protected async opponentRespond(): Promise<void> {
+    const epoch = this.solverEpoch;
     this.state = 'THINKING';
     this.updateBoard();
     try {
       const result = await this.stockfish.getBestMove(this.chess.fen(), this.depth);
-      if (this.aborted) return;
+      if (this.aborted || epoch !== this.solverEpoch) return;
       this.currentEval = result.eval;
       this.playMove(result.move);
       this.updateBoard();
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.autoAdvanceTimer = setTimeout(() => {
-        if (this.aborted) return;
+        if (this.aborted || epoch !== this.solverEpoch) return;
         this.state = 'PLAYING';
         this.moveStartTime = Date.now();
         this.updateBoard();
       }, 400);
     } catch {
-      if (this.aborted) return;
+      if (this.aborted || epoch !== this.solverEpoch) return;
       if (this.stockfishErrorContinues) {
         this.state = 'PLAYING';
         this.moveStartTime = Date.now();
@@ -246,15 +256,21 @@ export abstract class BasePuzzleSolver {
     if (this.mouseslipUsed || this.onSolutionPath) return;
     this.mouseslipUsed = true;
     this.aborted = true;
+    this.solverEpoch++;                         // verspätete Stockfish-Antwort verwerfen
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    // PLAYING = Stockfish hat schon geantwortet → Fehlzug + Antwort zurück (2); sonst nur Fehlzug (1).
+    // THINKING = Stockfish denkt noch (Fehlzug schon im Brett), PLAYING = Antwort schon da.
     const undoCount = this.state === 'PLAYING' ? 2 : 1;
     for (let i = 0; i < undoCount; i++) this.chess.undo();
     // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
     // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.
     if (this.visualizationMode) this.vizMoves.splice(-undoCount);
+    // Fehlzug aus dem Log streichen (war als ok:false eingetragen).
+    if (this.moveLog.length > 0 && !this.moveLog[this.moveLog.length - 1].ok) this.moveLog.pop();
+    // Zurück auf den Lösungspfad — sonst ginge der nächste User-Zug wieder in handleOffPathMove.
+    this.onSolutionPath = true;
     this.aborted = false;
-    this.state = 'PLAYING';
+    this.state = 'AWAITING_USER_MOVE';
+    this.moveStartTime = Date.now();
     this.updateBoard();
   }
 
@@ -347,6 +363,7 @@ export abstract class BasePuzzleSolver {
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */
   protected abortSolver(): void {
     this.aborted = true;
+    this.solverEpoch++;                         // laufende Stockfish-Aufrufe verwerfen
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.clearVizCountdown();
   }

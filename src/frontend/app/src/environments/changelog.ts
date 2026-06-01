@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.2';
+export const APP_VERSION = '0.40.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.3', date: '2026-06-01', changes: [
+    'Fix: Nach Mouseslip wurde der korrekte Lösungszug nicht mehr erkannt — onSolutionPath blieb auf false und der State auf PLAYING, dadurch landete jeder folgende User-Zug im off-path-Handler. Mouseslip stellt jetzt den Lösungspfad sauber wieder her (state=AWAITING_USER_MOVE, Fehlzug aus dem Move-Log entfernt).',
+    'Fix: Race-Condition bei Reset/Mouseslip während Stockfish noch denkt — ein verspätet ankommender Solver-Zug konnte das frisch zurückgesetzte Brett verschmutzen. Eine Solver-Epoch invalidiert jetzt laufende Stockfish-Aufrufe, der späte Zug wird verworfen.',
+  ]},
   { version: '0.40.2', date: '2026-06-01', changes: [
     'Fix: Mehrzügige Puzzles beendeten nach korrekter Lösung nicht mehr — der zweite/letzte Lösungszug wurde fälschlich als off-path-Zug behandelt, weil der Solver nach der Stockfish-Antwort auf PLAYING statt AWAITING_USER_MOVE wechselte (Regression aus dem BasePuzzleSolver-Refactor v0.38.2).',
   ]},

@@ -188,6 +188,35 @@ test.describe('Puzzle Moves', () => {
       // If premove didn't register, the move executes as regular move after AWAITING_USER_MOVE
       await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
     });
+
+    test('mouseslip restores solution path: wrong move undone, correct solution still wins', async ({ page }) => {
+      // Regression: mouseslip ließ onSolutionPath=false und state=PLAYING zurück,
+      // dadurch wurde der danach gespielte korrekte Zug wieder als off-path
+      // behandelt und das Puzzle endete nie.
+      await mockPuzzleApi(page, FOUR_MOVE_PUZZLE);
+      await page.addInitScript(() => {
+        localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 1 }));
+      });
+
+      await page.goto('/puzzles');
+      const board = page.locator('cg-board');
+      await expect(board).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+
+      // Falscher 1. Zug: a2→a3 (statt Qd1→h5)
+      await makeMove(page, board, 'a2', 'a3');
+      // Stockfish antwortet → PLAYING (Mouseslip-Button sichtbar)
+      const mouseslipBtn = page.getByRole('button', { name: /Mouseslip/ });
+      await expect(mouseslipBtn).toBeVisible({ timeout: 15_000 });
+      await mouseslipBtn.click();
+
+      // Nun korrekte Lösung in zwei Zügen
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 5_000 });
+      await makeMove(page, board, 'd1', 'h5');
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+      await makeMove(page, board, 'h5', 'e5');
+      await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
+    });
   });
 
   // ── Endless Mode ────────────────────────────────────────────────────
