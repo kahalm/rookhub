@@ -91,13 +91,22 @@ function extractComments(cleanedMoveText: string): { [moveIndex: number]: string
   return comments;
 }
 
+// Eingabe-Limits, damit ein riesiges/kombiniertes PGN den synchronen
+// Parser-Lauf auf dem UI-Thread nicht einfriert.
+const MAX_PGN_CHARS = 2_000_000;   // ~2 MB pro Viewer-Session
+const MAX_GAMES = 500;
+const MAX_GAME_CHARS = 200_000;    // pathologisch grosse Einzelpartie ueberspringen
+
 export function parsePgnText(pgnText: string): ParsedGame[] {
-  const rawGames = pgnText.split(/\n\n(?=\[Event )/);
+  if (pgnText.length > MAX_PGN_CHARS) {
+    pgnText = pgnText.slice(0, MAX_PGN_CHARS);
+  }
+  const rawGames = pgnText.split(/\n\n(?=\[Event )/).slice(0, MAX_GAMES);
   const parsed: ParsedGame[] = [];
 
   for (const raw of rawGames) {
     const trimmed = raw.trim();
-    if (!trimmed) continue;
+    if (!trimmed || trimmed.length > MAX_GAME_CHARS) continue;
 
     try {
       // Separate headers from move text

@@ -145,3 +145,18 @@ describe('START_FEN', () => {
     expect(START_FEN).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   });
 });
+
+describe('parsePgnText input limits', () => {
+  it('caps the number of parsed games (no unbounded work)', () => {
+    const game = '[Event "G"]\n\n1. e4 e5 *';
+    const many = Array.from({ length: 600 }, () => game).join('\n\n');
+    const games = parsePgnText(many);
+    expect(games.length).toBe(500); // MAX_GAMES
+  });
+
+  it('skips a single pathologically large game instead of freezing', () => {
+    const huge = '[Event "X"]\n\n{' + 'a'.repeat(200_001) + '} 1. e4 *';
+    const games = parsePgnText(huge);
+    expect(games.length).toBe(0);
+  });
+});

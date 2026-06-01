@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.14';
+export const APP_VERSION = '0.40.15';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.15', date: '2026-06-01', changes: [
+    'Fix (PGN-Viewer): Der PGN-Parser lief synchron ohne Größenlimit — ein sehr großes/kombiniertes PGN konnte den Browser-Tab einfrieren. Eingabe ist jetzt gedeckelt (≤2 MB), Anzahl Partien (≤500) und pathologisch große Einzelpartien werden übersprungen. (Code-Audit Finding, pgn-parser.spec.ts.)',
+  ]},
   { version: '0.40.14', date: '2026-06-01', changes: [
     'Fix (HTTP-Retry): Der retry-Interceptor wiederholte fehlgeschlagene Requests (Status 0/502/503) für ALLE Methoden — ein automatischer Retry von POST/PUT/DELETE konnte doppelte Seiteneffekte erzeugen (z.B. doppelte Puzzle-Attempts/Anfragen). Es werden jetzt nur noch idempotente Methoden (GET/HEAD) erneut versucht. (Code-Audit Finding, retry.interceptor.spec.ts.)',
   ]},
