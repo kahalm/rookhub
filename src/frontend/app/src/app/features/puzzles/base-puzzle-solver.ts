@@ -380,6 +380,8 @@ export abstract class BasePuzzleSolver {
     this.aborted = true;
     this.solverEpoch++;                         // laufende Stockfish-Aufrufe verwerfen
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    this.clearVizCountdown();
+    // endVisualizationHide raeumt auch den vizShowTimer auf — sonst feuert dessen
+    // setTimeout-Callback nach Teardown/Puzzlewechsel.
+    this.endVisualizationHide();
   }
 }

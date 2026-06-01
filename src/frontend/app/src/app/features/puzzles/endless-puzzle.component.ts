@@ -1378,6 +1378,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   continueAfterSolve(): void {
     this.reviewMode = false;
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);  // pending Auto-Advance verwerfen
     this._currentMinRating += this.getCurrentStep();
     this.level++;
     this.loadPuzzle();

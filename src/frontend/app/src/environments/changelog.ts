@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.32';
+export const APP_VERSION = '0.40.33';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.33', date: '2026-06-01', changes: [
+    'Fix (Puzzle-Timer): `abortSolver` räumt jetzt auch den Visualisierungs-Show-Timer auf (sonst feuerte sein Callback nach Teardown/Puzzlewechsel); `continueAfterSolve` (Endless) verwirft einen noch laufenden Auto-Advance-Timer, bevor es fortfährt (kein Doppel-Advance). (Code-Audit Findings.)',
+  ]},
   { version: '0.40.32', date: '2026-06-01', changes: [
     'Hardening (API): (1) Gruppen-Anlage fängt jetzt eine DbUpdateException (paralleler Create mit gleichem Namen) ab und liefert 400 statt 500. (2) Passwort-Hashing nutzt einen expliziten BCrypt-Workfactor (12) statt des Library-Defaults (10) — für Registrierung, Admin-Seeder und den Timing-Dummy-Hash. (Code-Audit Findings.)',
   ]},
