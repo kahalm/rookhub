@@ -28,4 +28,22 @@ describe('RepertoireEditComponent batch upload', () => {
     expect(emitCount).toBe(1); // vorher: 2 (ein Emit pro Datei)
     http.verify();
   });
+
+  it('skips non-.pgn files (client-side validation)', () => {
+    TestBed.configureTestingModule({
+      imports: [RepertoireEditComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+    });
+    const component = TestBed.createComponent(RepertoireEditComponent).componentInstance;
+    component.repertoireId = 9;
+
+    const files = [new File(['1. e4 *'], 'ok.pgn'), new File(['nope'], 'evil.txt')];
+    (component as unknown as { uploadFiles: (f: unknown) => void }).uploadFiles(files);
+
+    const http = TestBed.inject(HttpTestingController);
+    const reqs = http.match('/api/repertoires/9/files');
+    expect(reqs.length).toBe(1); // nur ok.pgn wird hochgeladen
+    reqs.forEach(r => r.flush({}));
+    http.verify();
+  });
 });

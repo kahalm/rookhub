@@ -82,17 +82,28 @@ export class RepertoireEditComponent {
     if (input.files) {
       this.uploadFiles(input.files);
     }
+    // Input zuruecksetzen, damit dieselbe Datei erneut ausgewaehlt werden kann.
+    input.value = '';
   }
 
   private uploadFiles(files: FileList): void {
     const list = Array.from(files);
     if (list.length === 0) return;
 
+    // Client-seitige Validierung: der versteckte Input filtert nur per accept=".pgn",
+    // Drag&Drop umgeht das. Nur .pgn-Dateien bis 10 MB hochladen.
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const valid = list.filter(f => f.name.toLowerCase().endsWith('.pgn') && f.size <= MAX_BYTES);
+    const rejected = list.length - valid.length;
+    if (rejected > 0)
+      this.snackBar.open(`${rejected} Datei(en) übersprungen (nur .pgn bis 10 MB)`, 'Close', { duration: 3000 });
+    if (valid.length === 0) return;
+
     // Alle Uploads buendeln und den Reload (fileUploaded) GENAU EINMAL nach Abschluss
     // ausloesen statt nach jedem einzelnen Erfolg (vorher: N Reloads + kombinierter
     // PGN-Reload pro Datei). Teilfehler werden pro Datei abgefangen, damit ein
     // fehlgeschlagener Upload die erfolgreichen nicht verwirft.
-    const uploads = list.map(file => {
+    const uploads = valid.map(file => {
       const formData = new FormData();
       formData.append('file', file);
       return this.http.post(`/api/repertoires/${this.repertoireId}/files`, formData).pipe(
@@ -113,13 +124,16 @@ export class RepertoireEditComponent {
   }
 
   downloadFile(fileId: number, fileName: string): void {
-    this.http.get(`/api/repertoires/${this.repertoireId}/files/${fileId}`, { responseType: 'blob' }).subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      window.URL.revokeObjectURL(url);
+    this.http.get(`/api/repertoires/${this.repertoireId}/files/${fileId}`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.snackBar.open('Download fehlgeschlagen', 'Close', { duration: 3000 }),
     });
   }
 

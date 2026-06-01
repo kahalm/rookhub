@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.30';
+export const APP_VERSION = '0.40.31';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.31', date: '2026-06-01', changes: [
+    'Repertoire-Upload (MEDIUM+LOW-Bündel): (1) Client-seitige Validierung — nur .pgn-Dateien bis 10 MB werden hochgeladen (Drag&Drop umging bisher den accept-Filter). (2) Datei-Input wird nach Auswahl zurückgesetzt, damit dieselbe Datei erneut wählbar ist. (3) Download zeigt bei Fehler eine Snackbar statt still zu scheitern. (Code-Audit Findings, repertoire-edit.component.spec.ts.)',
+  ]},
   { version: '0.40.30', date: '2026-06-01', changes: [
     'Fix (PGN-Zugliste): Die Zugnummerierung nahm fix Weiß-zuerst an — Partien/Linien, die laut FEN mit Schwarz am Zug beginnen, wurden falsch nummeriert/gefärbt. Nummer und Seite werden jetzt pro Zug aus der FEN (`move.before`) abgeleitet; Schwarz-Start wird als „N… Zug" dargestellt. (Code-Audit Finding, move-list.component.spec.ts.)',
   ]},
