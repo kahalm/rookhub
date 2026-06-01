@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 
 @Component({
@@ -84,17 +85,31 @@ export class RepertoireEditComponent {
   }
 
   private uploadFiles(files: FileList): void {
-    for (let i = 0; i < files.length; i++) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    // Alle Uploads buendeln und den Reload (fileUploaded) GENAU EINMAL nach Abschluss
+    // ausloesen statt nach jedem einzelnen Erfolg (vorher: N Reloads + kombinierter
+    // PGN-Reload pro Datei). Teilfehler werden pro Datei abgefangen, damit ein
+    // fehlgeschlagener Upload die erfolgreichen nicht verwirft.
+    const uploads = list.map(file => {
       const formData = new FormData();
-      formData.append('file', files[i]);
-      this.http.post(`/api/repertoires/${this.repertoireId}/files`, formData).subscribe({
-        next: () => {
-          this.snackBar.open(`Uploaded ${files[i].name}`, 'Close', { duration: 2000 });
-          this.fileUploaded.emit();
-        },
-        error: (err) => this.snackBar.open(err.error?.message || 'Upload failed', 'Close', { duration: 3000 })
-      });
-    }
+      formData.append('file', file);
+      return this.http.post(`/api/repertoires/${this.repertoireId}/files`, formData).pipe(
+        map(() => ({ name: file.name, ok: true })),
+        catchError((err) => of({ name: file.name, ok: false, error: err?.error?.message || 'Upload failed' }))
+      );
+    });
+
+    forkJoin(uploads).subscribe(results => {
+      const ok = results.filter(r => r.ok).length;
+      const failed = results.length - ok;
+      const msg = failed === 0
+        ? `${ok} Datei(en) hochgeladen`
+        : `${ok} hochgeladen, ${failed} fehlgeschlagen`;
+      this.snackBar.open(msg, 'Close', { duration: 3000 });
+      this.fileUploaded.emit();
+    });
   }
 
   downloadFile(fileId: number, fileName: string): void {
