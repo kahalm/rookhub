@@ -13,6 +13,10 @@ public class PuzzleService
     private readonly IMemoryCache _cache;
     private readonly ILogger<PuzzleService> _logger;
 
+    // Obergrenze anonymer Versuche pro Session — verhindert unbegrenztes
+    // Anwachsen der PuzzleAttempts-Tabelle durch eine einzelne (anonyme) Session.
+    private const int MaxAnonymousAttemptsPerSession = 200;
+
     public PuzzleService(AppDbContext db, IMemoryCache cache, ILogger<PuzzleService> logger)
     {
         _db = db;
@@ -132,6 +136,19 @@ public class PuzzleService
         };
     }
 
+    private async Task TrimAnonymousAttemptsAsync(string sessionId)
+    {
+        var count = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId);
+        if (count <= MaxAnonymousAttemptsPerSession) return;
+        var stale = await _db.PuzzleAttempts
+            .Where(a => a.AnonymousSessionId == sessionId)
+            .OrderBy(a => a.AttemptedAt)
+            .Take(count - MaxAnonymousAttemptsPerSession)
+            .ToListAsync();
+        _db.PuzzleAttempts.RemoveRange(stale);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task<PuzzleAttemptDto> RecordAnonymousAttemptAsync(string sessionId, int puzzleId, RecordPuzzleAttemptDto dto)
     {
         var puzzle = await _db.Puzzles.FindAsync(puzzleId)
@@ -151,6 +168,8 @@ public class PuzzleService
 
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
+
+        await TrimAnonymousAttemptsAsync(sessionId);
 
         _logger.LogInformation(
             "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",

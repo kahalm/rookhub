@@ -69,6 +69,30 @@ public class AnonymousPuzzleTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAnonymousAttempt_TrimsToCapPerSession()
+    {
+        var puzzle = await CreatePuzzleAsync(lichessId: "trim1");
+        var sessionId = "trim-session";
+        var baseTime = DateTime.UtcNow.AddDays(-1);
+
+        // 205 bestehende anonyme Attempts dieser Session direkt einfuegen.
+        for (var i = 0; i < 205; i++)
+            _db.PuzzleAttempts.Add(new PuzzleAttempt
+            {
+                AnonymousSessionId = sessionId, PuzzleId = puzzle.Id,
+                Solved = true, TimeSpentSeconds = 1, AttemptedAt = baseTime.AddSeconds(i)
+            });
+        await _db.SaveChangesAsync();
+
+        // Ein weiterer Attempt ueber den Service -> Trim greift.
+        await _service.RecordAnonymousAttemptAsync(sessionId, puzzle.Id,
+            new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 1 });
+
+        var count = await _db.PuzzleAttempts.CountAsync(a => a.AnonymousSessionId == sessionId);
+        Assert.Equal(200, count); // auf Cap getrimmt, neueste behalten
+    }
+
+    [Fact]
     public async Task RecordAnonymousAttempt_ThrowsWhenPuzzleNotFound()
     {
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
