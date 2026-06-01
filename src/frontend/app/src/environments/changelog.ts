@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.6';
+export const APP_VERSION = '0.40.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.7', date: '2026-06-01', changes: [
+    'Security (Admin-Seeder): Der Seeder hat das Admin-Passwort bei JEDEM Start auf den ADMIN_PASSWORD-Wert zurückgesetzt und das Konto re-promotet — wer die Env-Config kannte, konnte so ein bestehendes Konto übernehmen/aussperren, und ein selbst geändertes Admin-Passwort wurde bei jedem Neustart überschrieben. Der Seeder legt den Admin jetzt nur noch an, wenn er fehlt, fasst bestehende Konten nicht mehr an und verweigert den Platzhalter „change_me". (Code-Audit Finding #4, AdminSeedTests.)',
+  ]},
   { version: '0.40.6', date: '2026-06-01', changes: [
     'UX: Nach Give Up wird das Puzzle wieder von vorne aufgebaut, damit der Spieler die richtige Lösung selbst durchspielen kann (statt nur im Review-Modus durchklicken). Fehlversuch wird vorher als verloren registriert; keine Doppel-Aufzeichnung.',
     'UX: Brett-Beschriftung — Linien (a–h) jetzt rechtsbündig in der unteren rechten Ecke jeder Spalte (analog zu den Ziffern oben links), nicht mehr zentriert unter dem Brett. Override mit !important gegen die chessground-Defaults.',

@@ -32,7 +32,7 @@ public class AdminSeedTests : IDisposable
     }
 
     [Fact]
-    public async Task SeedAsync_CreatesNewAdmin()
+    public async Task SeedAsync_CreatesNewAdmin_WhenAbsent()
     {
         var config = BuildConfig("admin", "secret");
 
@@ -45,26 +45,31 @@ public class AdminSeedTests : IDisposable
     }
 
     [Fact]
-    public async Task SeedAsync_UpdatesExistingPassword()
+    public async Task SeedAsync_DoesNotResetExistingPassword()
     {
+        // Vom User selbst gewähltes Passwort
+        var originalHash = BCrypt.Net.BCrypt.HashPassword("userchosen");
         _db.AppUsers.Add(new AppUser
         {
             Username = "admin",
             Email = "admin@rookhub.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("old"),
+            PasswordHash = originalHash,
             IsAdmin = true
         });
         await _db.SaveChangesAsync();
 
-        var config = BuildConfig("admin", "newpass");
+        // Re-Seed mit abweichendem Env-Passwort darf NICHT überschreiben.
+        var config = BuildConfig("admin", "envpass");
         await AdminSeeder.SeedAsync(_db, config);
 
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
-        Assert.True(BCrypt.Net.BCrypt.Verify("newpass", user!.PasswordHash));
+        Assert.Equal(originalHash, user!.PasswordHash);
+        Assert.True(BCrypt.Net.BCrypt.Verify("userchosen", user.PasswordHash));
+        Assert.False(BCrypt.Net.BCrypt.Verify("envpass", user.PasswordHash));
     }
 
     [Fact]
-    public async Task SeedAsync_SetsIsAdmin_WhenExistingUserNotAdmin()
+    public async Task SeedAsync_DoesNotPromoteOrModifyExistingUser()
     {
         _db.AppUsers.Add(new AppUser
         {
@@ -78,50 +83,29 @@ public class AdminSeedTests : IDisposable
         var config = BuildConfig("admin", "pass");
         await AdminSeeder.SeedAsync(_db, config);
 
+        // Seeder fasst bestehende Accounts nicht an → kein Re-Promote über Env-Config.
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
-        Assert.True(user!.IsAdmin);
+        Assert.False(user!.IsAdmin);
     }
 
     [Fact]
-    public async Task SeedAsync_UnchangedPassword_NoReHash()
+    public async Task SeedAsync_RefusesWellKnownPlaceholder()
     {
-        var originalHash = BCrypt.Net.BCrypt.HashPassword("samepass");
-        _db.AppUsers.Add(new AppUser
-        {
-            Username = "admin",
-            Email = "admin@rookhub.local",
-            PasswordHash = originalHash,
-            IsAdmin = true
-        });
-        await _db.SaveChangesAsync();
+        var config = BuildConfig("admin", "change_me");
 
-        var config = BuildConfig("admin", "samepass");
         await AdminSeeder.SeedAsync(_db, config);
 
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
-        // Hash should remain the same since password didn't change
-        Assert.Equal(originalHash, user!.PasswordHash);
+        Assert.Null(user);
     }
 
     [Fact]
-    public async Task SeedAsync_ChangedPassword_NewHash()
+    public async Task SeedAsync_NoConfig_NoSeed()
     {
-        var originalHash = BCrypt.Net.BCrypt.HashPassword("oldpass");
-        _db.AppUsers.Add(new AppUser
-        {
-            Username = "admin",
-            Email = "admin@rookhub.local",
-            PasswordHash = originalHash,
-            IsAdmin = true
-        });
-        await _db.SaveChangesAsync();
+        var config = BuildConfig("", "");
 
-        var config = BuildConfig("admin", "newpass");
         await AdminSeeder.SeedAsync(_db, config);
 
-        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
-        // Hash should be different since password changed
-        Assert.NotEqual(originalHash, user!.PasswordHash);
-        Assert.True(BCrypt.Net.BCrypt.Verify("newpass", user.PasswordHash));
+        Assert.Empty(_db.AppUsers);
     }
 }
