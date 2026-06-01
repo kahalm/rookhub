@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.31';
+export const APP_VERSION = '0.40.32';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.32', date: '2026-06-01', changes: [
+    'Hardening (API): (1) Gruppen-Anlage fängt jetzt eine DbUpdateException (paralleler Create mit gleichem Namen) ab und liefert 400 statt 500. (2) Passwort-Hashing nutzt einen expliziten BCrypt-Workfactor (12) statt des Library-Defaults (10) — für Registrierung, Admin-Seeder und den Timing-Dummy-Hash. (Code-Audit Findings.)',
+  ]},
   { version: '0.40.31', date: '2026-06-01', changes: [
     'Repertoire-Upload (MEDIUM+LOW-Bündel): (1) Client-seitige Validierung — nur .pgn-Dateien bis 10 MB werden hochgeladen (Drag&Drop umging bisher den accept-Filter). (2) Datei-Input wird nach Auswahl zurückgesetzt, damit dieselbe Datei erneut wählbar ist. (3) Download zeigt bei Fehler eine Snackbar statt still zu scheitern. (Code-Audit Findings, repertoire-edit.component.spec.ts.)',
   ]},

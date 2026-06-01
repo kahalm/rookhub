@@ -43,7 +43,15 @@ public class GroupController : BaseApiController
 
         var group = new Group { Name = name, Description = dto.Description, CreatedAt = DateTime.UtcNow };
         _db.Groups.Add(group);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Race: paralleler Create mit gleichem Namen -> Unique-Index -> sauberer 400 statt 500.
+            return BadRequest(new { message = "Group name already exists." });
+        }
         return Ok(new GroupDto { Id = group.Id, Name = group.Name, Description = group.Description, MemberCount = 0, CreatedAt = group.CreatedAt });
     }
 

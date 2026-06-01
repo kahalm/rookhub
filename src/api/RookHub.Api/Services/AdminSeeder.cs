@@ -39,7 +39,7 @@ public static class AdminSeeder
         {
             Username = username,
             Email = $"{username}@rookhub.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12),
             IsAdmin = true,
             Profile = new UserProfile()
         });

@@ -16,8 +16,9 @@ public class AuthService
 
     // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
     // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
+    private const int BcryptWorkFactor = 12;  // explizit & versionierbar statt Library-Default (10)
     private static readonly string DummyHash =
-        BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy");
+        BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy", BcryptWorkFactor);
 
     public AuthService(AppDbContext db, IConfiguration config)
     {
@@ -43,7 +44,7 @@ public class AuthService
         {
             Username = dto.Username,
             Email = normalizedEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password, BcryptWorkFactor),
             Profile = new UserProfile()
         };
 
