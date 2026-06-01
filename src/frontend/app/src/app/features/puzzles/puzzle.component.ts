@@ -255,9 +255,6 @@ const RATING_WINDOW = 100;
               <mat-card-content>
                 <div class="puzzle-info">
                   <span class="rating-badge">Rating: {{ puzzle.rating }}</span>
-                  <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
-                    <mat-icon>share</mat-icon>
-                  </button>
                   @if (puzzle.themes) {
                     <div class="themes">
                       @for (theme of puzzle.themes.split(' '); track theme) {
@@ -265,6 +262,9 @@ const RATING_WINDOW = 100;
                       }
                     </div>
                   }
+                  <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
+                    <mat-icon>share</mat-icon> Puzzle teilen
+                  </button>
                 </div>
               </mat-card-content>
             </mat-card>
@@ -429,7 +429,7 @@ const RATING_WINDOW = 100;
     .elo-down { color: #f44336; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
-    .share-btn { position: absolute; top: 0; right: 0; z-index: 2; }
+    .share-puzzle-btn { margin-top: 0.25rem; }
     .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .theme-chip {
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;

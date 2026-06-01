@@ -181,9 +181,6 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             <mat-card class="info-card">
               <mat-card-content>
                 <div class="puzzle-meta">
-                  <button mat-icon-button class="share-btn" (click)="sharePuzzle()" title="Puzzle teilen">
-                    <mat-icon>share</mat-icon>
-                  </button>
                   @if (puzzle.title) {
                     <p class="meta-title">{{ puzzle.title }}</p>
                   }
@@ -214,6 +211,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                       <mat-icon>history_edu</mat-icon> Ganze Partie ansehen
                     </button>
                   }
+                  <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
+                    <mat-icon>share</mat-icon> Puzzle teilen
+                  </button>
                 </div>
               </mat-card-content>
             </mat-card>
@@ -298,8 +298,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
-    .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
-    .share-btn { position: absolute; top: 0; right: 0; z-index: 2; }
+    .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; }
+    .share-puzzle-btn { margin-top: 0.5rem; }
     .meta-title { font-weight: bold; font-size: 1.1em; margin: 0; }
     .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; }
     .meta-comment { font-style: italic; color: rgba(0,0,0,0.6); margin: 0; font-size: 0.9em; }

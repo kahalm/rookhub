@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.4';
+export const APP_VERSION = '0.40.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.5', date: '2026-06-01', changes: [
+    'Fix: Share-Puzzle-Button war als absolut positionierter Icon-Button in der Mat-Card praktisch unsichtbar — jetzt ein klar erkennbarer "Puzzle teilen"-Block-Button am Ende der Puzzle-Info in allen 3 Modi.',
+    'Fix: Brett-Beschriftung — chessground rendert Default-Coords mit top: -20px (Ränge zu hoch) und left: 24px (Linien zu weit rechts). Custom-Override zieht die Beschriftungen wieder mittig an den Rand der Eck-Squares.',
+  ]},
   { version: '0.40.4', date: '2026-06-01', changes: [
     'Fix (Viz-Modus): Promotion-Dialog fehlte beim Bauern-Umwandlungszug — der Promotion-Check schaute auf das eingefrorene Brett, das nichts vom Bauer auf der 7. Reihe wusste. Erkennung läuft jetzt über die tatsächliche chess.js-Stellung (neuer actualFen-Input).',
     'Fix (Viz-Modus): Illegaler 2. Klick (z.B. a1 → c3 ohne legalen Zug) verwarf die Auswahl wirkungslos — jetzt wird das geklickte Feld zum neuen Ausgangsfeld, der Spieler verliert die Orientierung nicht mehr.',

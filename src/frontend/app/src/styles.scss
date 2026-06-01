@@ -23,6 +23,26 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 @import 'chessground/assets/chessground.brown.css';
 @import 'chessground/assets/chessground.cburnett.css';
 
+/* Coord-Positioning override:
+   Default chessground rendert ranks bei top: -20px (Zahlen oberhalb des Bretts) und
+   files bei left: 24px (Buchstaben nach rechts verschoben). Das wirkt wie "Ziffern
+   zu hoch, Buchstaben zu weit rechts". Hier ziehen wir die Beschriftungen in den
+   oberen-linken bzw. unteren-rechten Bereich der jeweiligen Eck-Squares. */
+.cg-wrap coords.ranks {
+  top: 0;
+  left: 2px;
+  width: 14px;
+}
+.cg-wrap coords.ranks coord {
+  transform: translateY(8%);
+}
+.cg-wrap coords.files {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 14px;
+}
+
 /* Board theme overrides — 2x2 checkerboard SVG tiled 4x4 = 8x8 board */
 .board-theme-blue cg-board {
   background-color: #d4e3ed;
