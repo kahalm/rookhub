@@ -306,7 +306,11 @@ public partial class PgnImportService
             await _db.SaveChangesAsync(ct); // Id materialisieren
         }
 
-        var existingLineIds = await _db.BookPuzzles.Select(bp => bp.LineId).ToHashSetAsync(ct);
+        // Dedup nur gegen Linien DIESES Buchs/dieser Datei laden, nicht ALLE BookPuzzles
+        // (LineIds sind dateiprefix-eindeutig -> Cross-Book-Kollisionen gibt es nicht).
+        var existingLineIds = await _db.BookPuzzles
+            .Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
+            .Select(bp => bp.LineId).ToHashSetAsync(ct);
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;
         var seen = new HashSet<string>();

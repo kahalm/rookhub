@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.28';
+export const APP_VERSION = '0.40.29';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.29', date: '2026-06-01', changes: [
+    'Performance (PGN-Import): Beim Buch-Import wurden zur Duplikat-Erkennung ALLE LineIds aller Bücher in den Speicher geladen. Jetzt nur noch die Linien des aktuellen Buchs/der Datei (LineIds sind dateiprefix-eindeutig). Verhaltensgleich, deutlich weniger Speicher/DB-Last bei großem Bestand. (Code-Audit Finding.)',
+  ]},
   { version: '0.40.28', date: '2026-06-01', changes: [
     'Robustness (Crawler, chessresults_crawler-Repo): VPN-Rotation reicht jetzt den CancellationToken durch (Shutdown kann abbrechen) und setzt den Rate-Limiter-Zeitstempel zurück, damit die erste Anfrage über die neue Verbindung den vollen Mindestabstand abwartet. (Code-Audit Finding.)',
   ]},
