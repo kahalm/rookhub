@@ -11,12 +11,14 @@ import { Move } from 'chess.js';
   imports: [CommonModule],
   template: `
     <div class="move-list" #moveListEl>
-      @for (pair of movePairs; track pair.number) {
-        <span class="move-number">{{ pair.number }}.</span>
-        <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
-              (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
-        @if (comments[pair.whiteIndex]) {
-          <span class="comment">{{ comments[pair.whiteIndex] }}</span>
+      @for (pair of movePairs; track $index) {
+        <span class="move-number">{{ pair.number }}.{{ pair.white === undefined ? '..' : '' }}</span>
+        @if (pair.white !== undefined) {
+          <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
+                (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
+          @if (comments[pair.whiteIndex]) {
+            <span class="comment">{{ comments[pair.whiteIndex] }}</span>
+          }
         }
         @if (pair.black) {
           <span class="move" [class.active]="pair.blackIndex === currentMoveIndex"
@@ -68,7 +70,7 @@ export class MoveListComponent implements OnChanges {
 
   @ViewChild('moveListEl') moveListEl!: ElementRef<HTMLElement>;
 
-  movePairs: { number: number; white: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
+  movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['moves']) {
@@ -81,15 +83,34 @@ export class MoveListComponent implements OnChanges {
 
   private buildPairs(): void {
     this.movePairs = [];
-    for (let i = 0; i < this.moves.length; i += 2) {
-      this.movePairs.push({
-        number: Math.floor(i / 2) + 1,
-        white: this.moves[i].san,
-        whiteIndex: i,
-        black: this.moves[i + 1]?.san,
-        blackIndex: i + 1 < this.moves.length ? i + 1 : undefined,
-      });
+    let i = 0;
+    while (i < this.moves.length) {
+      const m = this.moves[i];
+      const num = this.fullMoveNumber(m, i);
+      if (m.color === 'b') {
+        // Segment beginnt mit Schwarz am Zug (FEN mit "b ...") -> "N... <schwarz>"
+        this.movePairs.push({ number: num, white: undefined, whiteIndex: -1, black: m.san, blackIndex: i });
+        i += 1;
+      } else {
+        const black = this.moves[i + 1];
+        const hasBlack = !!black && black.color === 'b';
+        this.movePairs.push({
+          number: num,
+          white: m.san,
+          whiteIndex: i,
+          black: hasBlack ? black!.san : undefined,
+          blackIndex: hasBlack ? i + 1 : undefined,
+        });
+        i += hasBlack ? 2 : 1;
+      }
     }
+  }
+
+  /** Vollzugnummer aus der FEN vor dem Zug (chess.js verbose Move hat `before`). */
+  private fullMoveNumber(m: Move, fallbackIndex: number): number {
+    const before = (m as unknown as { before?: string }).before;
+    const n = before ? parseInt(before.split(' ')[5], 10) : NaN;
+    return Number.isFinite(n) ? n : Math.floor(fallbackIndex / 2) + 1;
   }
 
   private scrollToActive(): void {

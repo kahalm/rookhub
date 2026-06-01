@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.29';
+export const APP_VERSION = '0.40.30';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.30', date: '2026-06-01', changes: [
+    'Fix (PGN-Zugliste): Die Zugnummerierung nahm fix Weiß-zuerst an — Partien/Linien, die laut FEN mit Schwarz am Zug beginnen, wurden falsch nummeriert/gefärbt. Nummer und Seite werden jetzt pro Zug aus der FEN (`move.before`) abgeleitet; Schwarz-Start wird als „N… Zug" dargestellt. (Code-Audit Finding, move-list.component.spec.ts.)',
+  ]},
   { version: '0.40.29', date: '2026-06-01', changes: [
     'Performance (PGN-Import): Beim Buch-Import wurden zur Duplikat-Erkennung ALLE LineIds aller Bücher in den Speicher geladen. Jetzt nur noch die Linien des aktuellen Buchs/der Datei (LineIds sind dateiprefix-eindeutig). Verhaltensgleich, deutlich weniger Speicher/DB-Last bei großem Bestand. (Code-Audit Finding.)',
   ]},
