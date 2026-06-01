@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.44.0';
+export const APP_VERSION = '0.44.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.44.1', date: '2026-06-01', changes: [
+    'Härtung (Logging): Alle Log-Events innerhalb eines Requests tragen jetzt — sofern vorhanden — UserId, UserName und IpAddress (per LogContext-Enrichment in einer Middleware), nicht mehr nur die Request-Summary. Anonyme Requests bleiben ohne UserId/UserName („wenn vorhanden"). Feldnamen unverändert (UserId/UserName/IpAddress) — Kibana-Dashboards bleiben kompatibel.',
+  ]},
   { version: '0.44.0', date: '2026-06-01', changes: [
     'Neu (Wochenpost durchspielen): „Durchspielen" öffnet jetzt eine Spiel-Seite (`/weekly/:id`) statt eines PGN-Dialogs — man löst die Puzzles des Wochenposts der Reihe nach (wie im Endlosmodus, aber ohne Leben und mit beliebig vielen Retrys). Das hochgeladene PGN wird serverseitig on-the-fly in Puzzles geparst (gleiche Logik wie Bücher); neuer öffentlicher Endpoint GET `/api/weekly-posts/{id}/puzzles`. Fortschritt (X/Y) + „Nächstes Puzzle" / „Überspringen" / „Zur Übersicht".',
   ]},

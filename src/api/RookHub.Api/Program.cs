@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using RookHub.Api.Data;
 using RookHub.Api.Services;
 using Serilog;
+using Serilog.Context;
 using Serilog.Events;
 using Serilog.Sinks.Elasticsearch;
 
@@ -235,14 +236,30 @@ try
     app.UseCors();
     app.UseRateLimiter();
     app.UseAuthentication();
+
+    // Reichert JEDES Log-Event innerhalb eines Requests mit UserId/UserName/IpAddress an
+    // (sofern vorhanden) — nicht nur die Request-Summary. Greift via Enrich.FromLogContext().
+    // Nach UseAuthentication, damit HttpContext.User bereits gesetzt ist.
+    app.Use(async (ctx, next) =>
+    {
+        var scopes = new List<IDisposable>(3);
+        var ip = ctx.Connection.RemoteIpAddress?.ToString();
+        if (!string.IsNullOrEmpty(ip))
+            scopes.Add(LogContext.PushProperty("IpAddress", ip));
+        if (ctx.User?.Identity?.IsAuthenticated == true)
+        {
+            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+                scopes.Add(LogContext.PushProperty("UserId", userId));
+            if (!string.IsNullOrEmpty(ctx.User.Identity.Name))
+                scopes.Add(LogContext.PushProperty("UserName", ctx.User.Identity.Name));
+        }
+        try { await next(); }
+        finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
+    });
+
     app.UseSerilogRequestLogging(options =>
     {
-        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-        {
-            diagnosticContext.Set("UserName", httpContext.User?.Identity?.Name ?? "anonymous");
-            diagnosticContext.Set("UserId", httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "");
-            diagnosticContext.Set("IpAddress", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
-        };
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
             var path = httpContext.Request.Path.Value ?? "";
