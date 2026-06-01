@@ -38,15 +38,29 @@ public class EndlessProgressService
         var progress = await _db.EndlessProgresses
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
-        if (progress == null)
+        var isNew = progress == null;
+        if (isNew)
         {
             progress = new EndlessProgress { UserId = userId };
             _db.EndlessProgresses.Add(progress);
         }
 
-        ApplyProgressDto(progress, dto);
-        await _db.SaveChangesAsync();
-        return MapProgressDto(progress);
+        ApplyProgressDto(progress!, dto);
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (isNew)
+        {
+            // Race: ein paralleler Request hat die Zeile zwischen Read und Insert
+            // angelegt (Unique-Index auf UserId). Statt 500/Lost-Update die nun
+            // vorhandene Zeile laden und das Update darauf anwenden.
+            _db.ChangeTracker.Clear();
+            progress = await _db.EndlessProgresses.FirstAsync(p => p.UserId == userId);
+            ApplyProgressDto(progress, dto);
+            await _db.SaveChangesAsync();
+        }
+        return MapProgressDto(progress!);
     }
 
     // --- Anonymous Progress ---
@@ -75,15 +89,28 @@ public class EndlessProgressService
         var progress = await _db.EndlessProgresses
             .FirstOrDefaultAsync(p => p.AnonymousSessionId == sessionId);
 
-        if (progress == null)
+        var isNew = progress == null;
+        if (isNew)
         {
             progress = new EndlessProgress { AnonymousSessionId = sessionId };
             _db.EndlessProgresses.Add(progress);
         }
 
-        ApplyProgressDto(progress, dto);
-        await _db.SaveChangesAsync();
-        return MapProgressDto(progress);
+        ApplyProgressDto(progress!, dto);
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (isNew)
+        {
+            // Race auf dem AnonymousSessionId-Insert: nun vorhandene Zeile laden
+            // und das Update darauf anwenden (statt 500/Lost-Update).
+            _db.ChangeTracker.Clear();
+            progress = await _db.EndlessProgresses.FirstAsync(p => p.AnonymousSessionId == sessionId);
+            ApplyProgressDto(progress, dto);
+            await _db.SaveChangesAsync();
+        }
+        return MapProgressDto(progress!);
     }
 
     // --- Sessions ---
