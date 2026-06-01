@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.21';
+export const APP_VERSION = '0.40.22';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.22', date: '2026-06-01', changes: [
+    'Fix (Crawler, chessresults_crawler-Repo): Der Duplikat-Crawl-Schutz war eine TOCTOU-Race (AnyAsync-Check + Insert nicht atomar). Neue EF-Migration: STORED Computed Column „ActiveKey" (= ChessResultsId nur für aktive Jobs, sonst NULL) mit Unique-Index erzwingt DB-seitig höchstens EINEN aktiven Crawl-Job pro Turnier; die Race wird als 409 abgefangen. (Code-Audit Finding.)',
+  ]},
   { version: '0.40.21', date: '2026-06-01', changes: [
     'Security (Crawler, chessresults_crawler-Repo): Die Turnier-Fetches folgten Redirects automatisch ohne den finalen Host zu prüfen (SSRF — nur die erste Anfrage war abgesichert). Jeder Fetch validiert jetzt den End-Host exakt gegen chess-results.com (schließt auch „evilchess-results.com"/„…com.attacker.tld" aus). (Code-Audit Finding, CrawlerServiceSsrfTests.)',
   ]},
