@@ -14,6 +14,11 @@ public class AuthService
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
 
+    // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
+    // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
+    private static readonly string DummyHash =
+        BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy");
+
     public AuthService(AppDbContext db, IConfiguration config)
     {
         _db = db;
@@ -22,7 +27,11 @@ public class AuthService
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
-        if (await _db.AppUsers.AnyAsync(u => u.Username == dto.Username))
+        var username = dto.Username ?? string.Empty;
+        // Case-insensitiv pruefen (passend zur case-insensitiven DB-Collation):
+        // sonst koennte z.B. "admin" trotz vorhandenem "Admin" die Vorabpruefung
+        // passieren und erst am Unique-Index als 500 statt 409 scheitern.
+        if (await _db.AppUsers.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
             throw new InvalidOperationException("Username already exists.");
 
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
@@ -39,7 +48,16 @@ public class AuthService
         };
 
         _db.AppUsers.Add(user);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Race/Kollision am Unique-Index (gleichzeitige Registrierung oder
+            // Casing-Kollision) -> sauberer Conflict (409) statt unbehandeltem 500.
+            throw new InvalidOperationException("Username or email already exists.");
+        }
 
         return new AuthResponseDto
         {
@@ -52,8 +70,16 @@ public class AuthService
 
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
     {
-        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == dto.Username);
-        if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+        var loginName = dto.Username ?? string.Empty;
+        var user = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Username.ToLower() == loginName.ToLower());
+
+        // Konstante Antwortzeit unabhaengig von der Existenz des Users: immer
+        // einen BCrypt-Verify gegen einen Dummy-Hash ausfuehren, statt ihn per ||
+        // zu ueberspringen (verhindert Username-Enumeration ueber Timing).
+        var hash = user?.PasswordHash ?? DummyHash;
+        var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, hash);
+        if (user == null || !passwordOk)
             throw new UnauthorizedAccessException("Invalid username or password.");
 
         return new AuthResponseDto

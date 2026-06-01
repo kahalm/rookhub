@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.9';
+export const APP_VERSION = '0.40.10';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.10', date: '2026-06-01', changes: [
+    'Security (Auth): Login führt jetzt immer einen BCrypt-Verify gegen einen Dummy-Hash aus, auch wenn der Username nicht existiert — verhindert Username-Enumeration über den Timing-Seitenkanal. Username-Vergleich bei Login & Registrierung ist jetzt case-insensitiv (passend zur DB-Collation); kollidierende Registrierungen liefern sauber 409 (inkl. DbUpdateException-Absicherung gegen Races) statt 500. (Code-Audit Findings, AuthServiceTests.)',
+  ]},
   { version: '0.40.9', date: '2026-06-01', changes: [
     'Fix (Friends): Accept/Decline/Remove gaben bei fehlender Berechtigung `Forbid(message)` zurück — die Meldung wurde als Auth-Scheme interpretiert und führte zu HTTP 500 statt 403. Liefert jetzt sauber 403 mit Fehlermeldung. (Code-Audit Finding, FriendControllerTests.)',
   ]},

@@ -91,4 +91,24 @@ public class AuthServiceTests : IDisposable
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _authService.LoginAsync(new LoginDto { Username = "nobody", Password = "password123" }));
     }
+
+    [Fact]
+    public async Task Login_UsernameIsCaseInsensitive()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "TestUser", Email = "t@example.com", Password = "password123" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+
+        Assert.Equal("TestUser", result.Username);
+        Assert.NotEmpty(result.Token);
+    }
+
+    [Fact]
+    public async Task Register_UsernameCollisionIsCaseInsensitive_Throws()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "Admin", Email = "a@example.com", Password = "password123" });
+
+        var dup = new RegisterDto { Username = "admin", Email = "other@example.com", Password = "password123" };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dup));
+    }
 }
