@@ -40,3 +40,40 @@ describe('EndlessStorageService highscore sync', () => {
     put.flush({});
   });
 });
+
+describe('EndlessStorageService per-identity migration flag', () => {
+  let svc: EndlessStorageService;
+  let http: HttpTestingController;
+  const auth: any = { isLoggedIn: true, currentUser: { userId: 5, username: 'u5' } };
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: AuthService, useValue: auth },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => { http.verify(); localStorage.clear(); });
+
+  it('migrates once per identity and again for a different user on the same browser', () => {
+    // User 5: erste Migration -> ein PUT + identitaetsspezifischer Flag
+    svc.migrateLocalToServer(CONFIG, 100, []);
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
+    expect(localStorage.getItem('rookhub_endless_synced:u5')).toBe('1');
+
+    // User 5 erneut: bereits migriert -> kein weiterer Request
+    svc.migrateLocalToServer(CONFIG, 100, []);
+    http.expectNone(r => r.method === 'PUT' && r.url.endsWith('/progress'));
+
+    // Anderer User (8) im selben Browser: migriert erneut -> ein PUT + eigener Flag
+    auth.currentUser = { userId: 8, username: 'u8' };
+    svc.migrateLocalToServer(CONFIG, 100, []);
+    http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
+    expect(localStorage.getItem('rookhub_endless_synced:u8')).toBe('1');
+  });
+});

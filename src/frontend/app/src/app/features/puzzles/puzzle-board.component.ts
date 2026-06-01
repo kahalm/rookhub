@@ -95,6 +95,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
+  private premoveTimer?: ReturnType<typeof setTimeout>;
+  private destroyed = false;
   private initAttempts = 0;
   private pendingPremove?: { orig: Key; dest: Key };
   private vizFrom?: Key;
@@ -336,7 +338,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       const [orig, dest] = hasPremove;
       // Cancel the premove visual, then emit the move
       this.ground.cancelPremove();
-      setTimeout(() => {
+      if (this.premoveTimer) clearTimeout(this.premoveTimer);
+      this.premoveTimer = setTimeout(() => {
+        this.premoveTimer = undefined;
+        // Guard: Component zwischenzeitlich zerstoert / Board weg -> nicht emittieren.
+        if (this.destroyed || !this.ground) return;
         if (this.isPromotion(orig, dest)) {
           this.showPromotionDialog(orig, dest);
         } else {
@@ -416,6 +422,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    if (this.premoveTimer) clearTimeout(this.premoveTimer);
     this.boardEl?.nativeElement?.removeEventListener('pointerdown', this.onVizPointer, true);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();

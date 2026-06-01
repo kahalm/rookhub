@@ -220,12 +220,17 @@ export class ProfileComponent implements OnInit {
         this.searching = false;
         this.searchResults = results;
 
-        // Auto-fill if exactly one result per source
-        if (results.chessResultsResults.length === 1) {
-          this.selectChessResultsPlayer(results.chessResultsResults[0]);
+        // Auto-fill if exactly one result per source.
+        const crSingle = results.chessResultsResults.length === 1 ? results.chessResultsResults[0] : null;
+        const fideSingle = results.fideResults.length === 1 ? results.fideResults[0] : null;
+        if (crSingle) {
+          this.selectChessResultsPlayer(crSingle);
         }
-        if (results.fideResults.length === 1) {
-          this.selectFidePlayer(results.fideResults[0]);
+        // FIDE-Treffer nur auto-uebernehmen, wenn der CR-Treffer nicht bereits eine
+        // (zum CR-Spieler gehoerende) FIDE-Id geliefert hat — sonst wuerde ein evtl.
+        // fremder Einzel-FIDE-Treffer diese ueberschreiben.
+        if (fideSingle && !(crSingle && crSingle.fideId)) {
+          this.selectFidePlayer(fideSingle);
         }
       },
       error: () => {

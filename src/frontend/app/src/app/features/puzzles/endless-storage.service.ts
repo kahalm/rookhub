@@ -326,10 +326,29 @@ export class EndlessStorageService {
     return { config, highscore, history };
   }
 
+  /** Migrations-Flag pro Identitaet (User-Id bzw. anonyme Session), nicht global. */
+  private syncedKey(): string {
+    if (this.authService.isLoggedIn) {
+      const uid = this.authService.currentUser?.userId;
+      return uid != null ? `${SYNCED_KEY}:u${uid}` : SYNCED_KEY;
+    }
+    const sid = this.getSessionId();
+    return sid ? `${SYNCED_KEY}:a${sid}` : SYNCED_KEY;
+  }
+
   migrateLocalToServer(config: EndlessConfig, highscore: number, history: EndlessSession[]): void {
+    const key = this.syncedKey();
     try {
-      if (localStorage.getItem(SYNCED_KEY)) return;
-      localStorage.setItem(SYNCED_KEY, '1');
+      // Legacy: frueher existierte nur ein globaler Flag. Ist er gesetzt und ein User
+      // eingeloggt, uebernehmen wir ihn fuer DIESE Identitaet (keine Doppel-Migration)
+      // und entfernen den globalen Flag, damit andere Identitaeten kuenftig migrieren.
+      if (key !== SYNCED_KEY && localStorage.getItem(SYNCED_KEY)) {
+        localStorage.setItem(key, '1');
+        localStorage.removeItem(SYNCED_KEY);
+        return;
+      }
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
     } catch {}
 
     // Push config + highscore

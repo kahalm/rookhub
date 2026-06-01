@@ -643,7 +643,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
     this.loadPlayers();
     this.teams = [];
+    this.displayedTeams = [];   // sonst zeigt die Tabelle veraltete Zeilen trotz Count 0
     this.pairings = [];
+    // Aktiven Tab sofort neu laden; inaktive Tabs laden via onTabChange (length === 0) neu.
+    if (this.selectedTabIndex === 1) this.loadTeams();
+    else if (this.selectedTabIndex === 2) this.loadPairings();
   }
 
   onTabChange(event: { index: number }): void {

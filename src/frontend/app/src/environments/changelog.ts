@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.37';
+export const APP_VERSION = '0.40.38';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.38', date: '2026-06-01', changes: [
+    'Fix (Profil-Spielersuche): Bei je genau einem ChessResults- und FIDE-Treffer überschreibt der FIDE-Treffer nicht mehr die zum CR-Spieler gehörende FIDE-Id (Auto-Fill); manuelles Anklicken bleibt unverändert.',
+    'Fix (Endless-Sync): Das „bereits migriert"-Flag ist jetzt pro Identität (User-Id bzw. anonyme Session) statt global — ein zweiter Account/Anon im selben Browser migriert seine lokalen Daten wieder; der alte globale Flag wird sicher übernommen (keine Doppel-Migration).',
+    'Fix (Turnier-Detail): `reloadAll` leert jetzt auch die Anzeige-Arrays und lädt den aktiven Tab neu — die Teams/Paarungen-Tabelle zeigt nach einem Refresh keine veralteten Zeilen mehr, die dem Zähler widersprechen.',
+    'Fix (Puzzle-Brett): Die Premove-Ausführung (setTimeout) wird bei Component-Destroy abgebrochen und emittiert nicht mehr auf eine zerstörte/zurückgesetzte Stellung.',
+    '(Code-Audit Findings.)',
+  ]},
   { version: '0.40.37', date: '2026-06-01', changes: [
     'Härtung (PGN-Upload): Die Inhaltsvalidierung verlangt jetzt ein echtes Tag-Pair (`[Event "…"]`) oder einen echten ersten Zug (`1. e4`/`1. Nf3`/`1. O-O`) statt nur die Teilstrings `[Event`/`1.` irgendwo — reiner Fließtext wie „Chapter 1. Intro" wird abgelehnt (ReDoS-sicheres Regex mit Timeout). (Code-Audit Finding.)',
   ]},
