@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Filters;
 using RookHub.Api.Services;
 using RookHub.Api.Validation;
@@ -32,6 +33,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
@@ -41,6 +43,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}/players")]
     public async Task<IActionResult> GetPlayers(string id, [FromQuery] string? team, [FromQuery] string? sortBy)
     {
@@ -56,6 +59,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}/teams")]
     public async Task<IActionResult> GetTeams(string id)
     {
@@ -65,6 +69,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}/teams/{snr}")]
     public async Task<IActionResult> GetTeamDetail(string id, int snr)
     {
@@ -74,6 +79,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}/pairings")]
     public async Task<IActionResult> GetPairings(string id, [FromQuery] int? round)
     {
@@ -86,6 +92,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-tournament")]
     [HttpGet("{id}/players/{snr:int}/results")]
     public async Task<IActionResult> GetPlayerResults(string id, int snr)
     {

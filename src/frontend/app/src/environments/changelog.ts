@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.7';
+export const APP_VERSION = '0.40.8';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.8', date: '2026-06-01', changes: [
+    'Security (Turnier-Proxy): Die anonym erreichbaren Turnier-GETs (öffentliche Turnierseite/Teilen) bleiben ohne Login nutzbar, sind jetzt aber per dedizierter Rate-Limit-Policy (60/min) gedrosselt — vorher konnten sie unauthentifiziert den dahinterliegenden Crawler (chess-results.com) ungebremst belasten (DoS). (Code-Audit Finding #5, TournamentProxyControllerTests.)',
+  ]},
   { version: '0.40.7', date: '2026-06-01', changes: [
     'Security (Admin-Seeder): Der Seeder hat das Admin-Passwort bei JEDEM Start auf den ADMIN_PASSWORD-Wert zurückgesetzt und das Konto re-promotet — wer die Env-Config kannte, konnte so ein bestehendes Konto übernehmen/aussperren, und ein selbst geändertes Admin-Passwort wurde bei jedem Neustart überschrieben. Der Seeder legt den Admin jetzt nur noch an, wenn er fehlt, fasst bestehende Konten nicht mehr an und verweigert den Platzhalter „change_me". (Code-Audit Finding #4, AdminSeedTests.)',
   ]},

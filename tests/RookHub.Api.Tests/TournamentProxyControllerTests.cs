@@ -1,7 +1,10 @@
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Controllers;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
@@ -408,6 +411,37 @@ public class TournamentProxyControllerTests : IDisposable
         SetupFailure();
 
         await Assert.ThrowsAsync<HttpRequestException>(() => _controller.GetCrawlerIp());
+    }
+
+    // ---- Auth/Rate-Limit-Attribute (Code-Audit Finding #5) ----
+
+    private static MethodInfo M(string name) =>
+        typeof(TournamentProxyController).GetMethod(name)
+        ?? throw new InvalidOperationException($"Methode {name} nicht gefunden");
+
+    [Theory]
+    [InlineData(nameof(TournamentProxyController.GetById))]
+    [InlineData(nameof(TournamentProxyController.GetPlayers))]
+    [InlineData(nameof(TournamentProxyController.GetTeams))]
+    [InlineData(nameof(TournamentProxyController.GetTeamDetail))]
+    [InlineData(nameof(TournamentProxyController.GetPairings))]
+    [InlineData(nameof(TournamentProxyController.GetPlayerResults))]
+    public void AnonymousTournamentGets_StayPublicButRateLimited(string method)
+    {
+        var m = M(method);
+        // Bleibt oeffentlich (oeffentliche Turnierseite / Teilen-Feature) ...
+        Assert.NotNull(m.GetCustomAttribute<AllowAnonymousAttribute>());
+        // ... aber gedrosselt gegen DoS auf den Crawler.
+        var rl = m.GetCustomAttribute<EnableRateLimitingAttribute>();
+        Assert.NotNull(rl);
+        Assert.Equal("anonymous-tournament", rl!.PolicyName);
+    }
+
+    [Fact]
+    public void GetAll_RequiresAuth_NotAnonymous()
+    {
+        Assert.Null(M(nameof(TournamentProxyController.GetAll))
+            .GetCustomAttribute<AllowAnonymousAttribute>());
     }
 }
 

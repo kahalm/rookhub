@@ -162,6 +162,15 @@ try
             limiter.Window = TimeSpan.FromMinutes(1);
             limiter.QueueLimit = 0;
         });
+        // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
+        // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
+        // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
+        options.AddFixedWindowLimiter("anonymous-tournament", limiter =>
+        {
+            limiter.PermitLimit = 60;
+            limiter.Window = TimeSpan.FromMinutes(1);
+            limiter.QueueLimit = 0;
+        });
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
