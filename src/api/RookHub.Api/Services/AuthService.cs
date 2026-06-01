@@ -32,12 +32,12 @@ public class AuthService
         // sonst koennte z.B. "admin" trotz vorhandenem "Admin" die Vorabpruefung
         // passieren und erst am Unique-Index als 500 statt 409 scheitern.
         if (await _db.AppUsers.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
-            throw new InvalidOperationException("Username already exists.");
+            throw new InvalidOperationException("Username or email already in use.");
 
         var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
 
         if (await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
-            throw new InvalidOperationException("Email already exists.");
+            throw new InvalidOperationException("Username or email already in use.");
 
         var user = new AppUser
         {

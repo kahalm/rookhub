@@ -65,6 +65,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("sessions/bulk")]
     [Authorize]
+    [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<ActionResult<object>> BulkImportSessions([FromBody] BulkImportSessionDto dto)
     {
         if (dto.Sessions.Count > 50)
@@ -117,6 +118,7 @@ public class EndlessController : BaseApiController
     [HttpPost("sessions/bulk/anonymous")]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
+    [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<ActionResult<object>> BulkImportAnonymousSessions([FromBody] BulkImportAnonymousSessionDto dto)
     {
         if (dto.Sessions.Count > 50)

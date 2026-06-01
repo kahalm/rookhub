@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.23';
+export const APP_VERSION = '0.40.24';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.24', date: '2026-06-01', changes: [
+    'Hardening (API, MEDIUM-Bündel): (1) PGN-Upload hat jetzt ein RequestSizeLimit (~11 MB) → übergroße Bodies werden abgewiesen, bevor sie gepuffert werden. (2) Endless-Bulk-Import-Endpunkte (auth + anonym) mit RequestSizeLimit (2 MB) → großer Payload wird nicht erst komplett deserialisiert. (3) Registrierung gibt bei Username- UND E-Mail-Kollision dieselbe generische Meldung „Username or email already in use." zurück → kein Enumeration-Oracle mehr. (Code-Audit MEDIUM-Findings, AuthServiceTests.)',
+  ]},
   { version: '0.40.23', date: '2026-06-01', changes: [
     'Fix (Repertoire-Upload): Beim Hochladen mehrerer PGN-Dateien wurde nach JEDEM einzelnen Erfolg ein voller Repertoire- + Kombi-PGN-Reload ausgelöst (N Reloads). Die Uploads werden jetzt gebündelt (forkJoin) und der Reload wird genau einmal nach Abschluss ausgelöst; Teilfehler verwerfen die erfolgreichen Uploads nicht mehr. (Code-Audit Finding, repertoire-edit.component.spec.ts.)',
   ]},

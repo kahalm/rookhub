@@ -68,6 +68,7 @@ public class RepertoireController : BaseApiController
     }
 
     [HttpPost("{id}/files")]
+    [RequestSizeLimit(11 * 1024 * 1024)]  // 10-MB-PGN-Limit + etwas Multipart-Overhead; lehnt zu grosse Bodies ab, bevor sie gepuffert werden
     public async Task<ActionResult<RepertoireFileDto>> UploadFile(int id, IFormFile file)
     {
         if (file == null || file.Length == 0)

@@ -52,7 +52,8 @@ public class AuthServiceTests : IDisposable
         await _authService.RegisterAsync(dto);
 
         var dto2 = new RegisterDto { Username = "testuser", Email = "test2@example.com", Password = "password123" };
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        Assert.Equal("Username or email already in use.", ex.Message); // generisch, kein Enumeration-Oracle
     }
 
     [Fact]
@@ -62,7 +63,8 @@ public class AuthServiceTests : IDisposable
         await _authService.RegisterAsync(dto);
 
         var dto2 = new RegisterDto { Username = "user2", Email = "test@example.com", Password = "password123" };
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dto2));
+        Assert.Equal("Username or email already in use.", ex.Message); // identisch zum Username-Fall -> kein Oracle
     }
 
     [Fact]
