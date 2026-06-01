@@ -63,6 +63,8 @@ export class EndlessStorageService {
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private lastSaveTime = 0;
   private readonly SAVE_DEBOUNCE_MS = 3000;
+  /** Hoechster bekannter Highscore (Server + lokal) — es wird nie ein niedrigerer gesendet. */
+  private highestKnownHighscore = 0;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
@@ -157,16 +159,21 @@ export class EndlessStorageService {
   }
 
   loadFromServer(): Observable<EndlessSyncResponse | null> {
+    // Server-Highscore merken, damit ein spaeterer Save ihn nicht unterbietet.
+    const remember = tap((res: EndlessSyncResponse | null) => {
+      const hs = res?.progress?.highscore;
+      if (typeof hs === 'number') this.highestKnownHighscore = Math.max(this.highestKnownHighscore, hs);
+    });
     if (this.authService.isLoggedIn) {
       return this.http.get<EndlessSyncResponse>(`${this.apiUrl}/progress`).pipe(
-        catchError(() => of(null))
+        remember, catchError(() => of(null))
       );
     }
     const sessionId = this.getSessionId();
     if (sessionId) {
       return this.http.get<EndlessSyncResponse>(`${this.apiUrl}/progress/anonymous`, {
         params: { sessionId }
-      }).pipe(catchError(() => of(null)));
+      }).pipe(remember, catchError(() => of(null)));
     }
     return of(null);
   }
@@ -185,6 +192,10 @@ export class EndlessStorageService {
 
   private doSaveProgress(config: EndlessConfig, highscore: number, activeGameState: object | null): void {
     this.lastSaveTime = Date.now();
+    // Highscore nie absenken: ein parallel (anderes Geraet/Tab) hoeher gemeldeter
+    // Wert darf nicht durch einen lokal niedrigeren ueberschrieben werden.
+    const safeHighscore = Math.max(highscore, this.highestKnownHighscore);
+    this.highestKnownHighscore = safeHighscore;
     const body: any = {
       startElo: config.startElo,
       step: config.step,
@@ -193,7 +204,7 @@ export class EndlessStorageService {
       fasttrackThreshold1: config.fasttrackThreshold1 ?? null,
       fasttrackThreshold2: config.fasttrackThreshold2 ?? null,
       stockfishDepth: config.stockfishDepth,
-      highscore,
+      highscore: safeHighscore,
       activeGameState: activeGameState ? JSON.stringify(activeGameState) : null
     };
 
