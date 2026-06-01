@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.44.1';
+export const APP_VERSION = '0.44.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.44.2', date: '2026-06-01', changes: [
+    'Fix (Auto-Subscription / Crawler-Last): Ein Profil-Update stößt den Turnier-Crawler (`/api/players/tournaments`) jetzt nur noch an, wenn sich die Schach-Identität (ChessResultsId/LastName/FirstName/FideId) tatsächlich ändert. Vorher löste JEDER `PUT /api/profile` den Crawler-Lauf aus — also auch reine Einstellungs-Saves (Brett-Theme, Figuren, Stockfish-Tiefe, Schwierigkeit) aus dem PreferencesService, was zu sehr häufigen `gluetun:8080/api/players/tournaments`-Calls führte.',
+  ]},
   { version: '0.44.1', date: '2026-06-01', changes: [
     'Härtung (Logging): Alle Log-Events innerhalb eines Requests tragen jetzt — sofern vorhanden — UserId, UserName und IpAddress (per LogContext-Enrichment in einer Middleware), nicht mehr nur die Request-Summary. Anonyme Requests bleiben ohne UserId/UserName („wenn vorhanden"). Feldnamen unverändert (UserId/UserName/IpAddress) — Kibana-Dashboards bleiben kompatibel.',
   ]},

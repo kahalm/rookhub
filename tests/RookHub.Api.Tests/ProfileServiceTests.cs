@@ -184,4 +184,40 @@ public class ProfileServiceTests : IDisposable
         });
         Assert.Equal(24, result3.BookStockfishDepth);
     }
+
+    [Fact]
+    public async Task UpdateProfile_PreferenceOnly_DoesNotTriggerAutoSubscription()
+    {
+        var userId = await CreateUserAsync();
+        var queue = new CountingTaskQueue();
+        var service = new ProfileService(_db, queue, NullLogger<ProfileService>.Instance);
+
+        // Identität setzen (ein Trigger erwartet).
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { ChessResultsId = "T1", LastName = "Müller" });
+        Assert.Equal(1, queue.EnqueuedCount);
+
+        // Reine Einstellung (kein Identitäts-Feld) -> KEIN weiterer Trigger.
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { BoardTheme = "blue" });
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { StockfishDepth = 20 });
+        Assert.Equal(1, queue.EnqueuedCount);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_IdentityChange_TriggersAutoSubscription()
+    {
+        var userId = await CreateUserAsync();
+        var queue = new CountingTaskQueue();
+        var service = new ProfileService(_db, queue, NullLogger<ProfileService>.Instance);
+
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { ChessResultsId = "T1", LastName = "Müller" });
+        Assert.Equal(1, queue.EnqueuedCount);
+
+        // Nachname geändert -> erneuter Trigger.
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { LastName = "Meier" });
+        Assert.Equal(2, queue.EnqueuedCount);
+
+        // Gleicher Nachname erneut gesetzt (keine echte Änderung) -> kein Trigger.
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { LastName = "Meier" });
+        Assert.Equal(2, queue.EnqueuedCount);
+    }
 }

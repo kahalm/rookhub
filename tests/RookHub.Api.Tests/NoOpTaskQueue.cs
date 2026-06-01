@@ -16,6 +16,24 @@ public class NoOpTaskQueue : IBackgroundTaskQueue
 }
 
 /// <summary>
+/// Zählt enqueuete Work-Items (führt sie nicht aus) — für Tests, die prüfen, OB ein
+/// Hintergrund-Job angestoßen wurde (z.B. Auto-Subscription nur bei Identitätsänderung).
+/// </summary>
+public class CountingTaskQueue : IBackgroundTaskQueue
+{
+    public int EnqueuedCount { get; private set; }
+
+    public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+    {
+        EnqueuedCount++;
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+        => throw new NotImplementedException("CountingTaskQueue does not support dequeue");
+}
+
+/// <summary>
 /// Executes work items synchronously for tests that need to verify background logic.
 /// </summary>
 public class ImmediateTaskQueue : IBackgroundTaskQueue

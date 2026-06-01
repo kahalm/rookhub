@@ -52,6 +52,14 @@ public class ProfileService
             _db.UserProfiles.Add(profile);
         }
 
+        // Identitäts-Felder VOR dem Überschreiben merken — die Auto-Subscription (Crawler-Call)
+        // darf nur bei einer echten Identitätsänderung feuern, nicht bei jedem Profil-PUT
+        // (z.B. reine Einstellungs-Saves wie Brett-Theme/Stockfish-Tiefe via PreferencesService).
+        var oldChessResultsId = profile.ChessResultsId;
+        var oldLastName = profile.LastName;
+        var oldFirstName = profile.FirstName;
+        var oldFideId = profile.FideId;
+
         if (dto.FirstName != null) profile.FirstName = dto.FirstName;
         if (dto.LastName != null) profile.LastName = dto.LastName;
         if (dto.DisplayName != null) profile.DisplayName = dto.DisplayName;
@@ -67,8 +75,19 @@ public class ProfileService
 
         await _db.SaveChangesAsync();
 
-        // Trigger auto-subscription if ChessResultsId is set and LastName is available
-        if (!string.IsNullOrWhiteSpace(profile.ChessResultsId) && !string.IsNullOrWhiteSpace(profile.LastName))
+        // Trigger auto-subscription nur, wenn sich die Schach-Identität tatsächlich geändert hat
+        // (ChessResultsId/LastName/FirstName/FideId) UND ChessResultsId + LastName gesetzt sind.
+        // Verhindert, dass reine Einstellungs-Updates (Theme/Tiefe/Schwierigkeit) den Crawler
+        // (`/api/players/tournaments`) wiederholt aufrufen.
+        var identityChanged =
+            !string.Equals(oldChessResultsId, profile.ChessResultsId, StringComparison.Ordinal) ||
+            !string.Equals(oldLastName, profile.LastName, StringComparison.Ordinal) ||
+            !string.Equals(oldFirstName, profile.FirstName, StringComparison.Ordinal) ||
+            !string.Equals(oldFideId, profile.FideId, StringComparison.Ordinal);
+
+        if (identityChanged
+            && !string.IsNullOrWhiteSpace(profile.ChessResultsId)
+            && !string.IsNullOrWhiteSpace(profile.LastName))
         {
             await _taskQueue.EnqueueAsync(async (sp, ct) =>
             {
