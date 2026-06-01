@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.8';
+export const APP_VERSION = '0.40.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.9', date: '2026-06-01', changes: [
+    'Fix (Friends): Accept/Decline/Remove gaben bei fehlender Berechtigung `Forbid(message)` zurück — die Meldung wurde als Auth-Scheme interpretiert und führte zu HTTP 500 statt 403. Liefert jetzt sauber 403 mit Fehlermeldung. (Code-Audit Finding, FriendControllerTests.)',
+  ]},
   { version: '0.40.8', date: '2026-06-01', changes: [
     'Security (Turnier-Proxy): Die anonym erreichbaren Turnier-GETs (öffentliche Turnierseite/Teilen) bleiben ohne Login nutzbar, sind jetzt aber per dedizierter Rate-Limit-Policy (60/min) gedrosselt — vorher konnten sie unauthentifiziert den dahinterliegenden Crawler (chess-results.com) ungebremst belasten (DoS). (Code-Audit Finding #5, TournamentProxyControllerTests.)',
   ]},

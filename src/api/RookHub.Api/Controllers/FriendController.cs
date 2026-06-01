@@ -54,7 +54,7 @@ public class FriendController : BaseApiController
             return Ok(new { message = "Friend request accepted." });
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
@@ -67,7 +67,7 @@ public class FriendController : BaseApiController
             return Ok(new { message = "Friend request declined." });
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
@@ -80,7 +80,7 @@ public class FriendController : BaseApiController
             return Ok(new { message = "Friend removed." });
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
     }
 
     [HttpGet("search")]

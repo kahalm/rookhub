@@ -205,6 +205,29 @@ public class FriendControllerTests : IDisposable
         Assert.IsType<NotFoundObjectResult>(result);
     }
 
+    [Fact]
+    public async Task Accept_Returns403_WhenNotAddressee()
+    {
+        // Regression: Controller gab Forbid(ex.Message) zurueck -> Message wurde als
+        // Auth-Scheme interpretiert -> HTTP 500 statt 403.
+        var requester = await CreateUserAsync("user1");
+        var addressee = await CreateUserAsync("user2");
+        var friendship = new Friendship
+        {
+            RequesterId = requester.Id,
+            AddresseeId = addressee.Id,
+            Status = FriendshipStatus.Pending
+        };
+        _db.Friendships.Add(friendship);
+        await _db.SaveChangesAsync();
+        SetUser(requester.Id); // Requester (nicht Addressee) versucht zu akzeptieren
+
+        var result = await _controller.Accept(friendship.Id);
+
+        var obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, obj.StatusCode);
+    }
+
     // ---- Decline ----
 
     [Fact]
