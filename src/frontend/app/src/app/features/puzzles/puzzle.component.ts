@@ -640,7 +640,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.stopTimer();
     this.stopCountdown();
     this.abortSolver();
-    this.stockfish.destroy();
     clearCrazyStyles();
     clearVisualizationHide();
   }

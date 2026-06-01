@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.15';
+export const APP_VERSION = '0.40.16';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.16', date: '2026-06-01', changes: [
+    'Fix (Stockfish): Der gemeinsame (root-weite) Stockfish-Service wurde beim Verlassen jedes Puzzle-Modus terminiert und riss laufende Suchen ab bzw. konnte einen TypeError im Timer auslösen (Zugriff auf den bereits beendeten Worker). Der Worker wird jetzt App-weit wiederverwendet (kein destroy() beim Komponenten-Teardown) und die Suche hält den Worker lokal fest, sodass ein paralleles Beenden keinen Fehler mehr wirft. (Code-Audit Findings.)',
+  ]},
   { version: '0.40.15', date: '2026-06-01', changes: [
     'Fix (PGN-Viewer): Der PGN-Parser lief synchron ohne Größenlimit — ein sehr großes/kombiniertes PGN konnte den Browser-Tab einfrieren. Eingabe ist jetzt gedeckelt (≤2 MB), Anzahl Partien (≤500) und pathologisch große Einzelpartien werden übersprungen. (Code-Audit Finding, pgn-parser.spec.ts.)',
   ]},

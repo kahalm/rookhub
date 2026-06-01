@@ -454,7 +454,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   ngOnDestroy(): void {
     this.stopTimer();
     this.abortSolver();
-    this.stockfish.destroy();
     clearCrazyStyles();
     clearVisualizationHide();
   }

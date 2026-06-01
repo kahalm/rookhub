@@ -58,12 +58,17 @@ export class StockfishService implements OnDestroy {
 
   private runSearch(fen: string, depth: number): Promise<StockfishResult> {
     const sideToMove = fen.split(' ')[1];
+    // Worker lokal festhalten: ein paralleles destroy() setzt this.worker auf
+    // undefined; ueber die lokale Referenz wirft der Timeout/Handler dann keinen
+    // TypeError mehr (removeEventListener auf terminiertem Worker ist no-op).
+    const worker = this.worker;
+    if (!worker) return Promise.reject('Stockfish not initialized');
 
     return new Promise<StockfishResult>((resolve, reject) => {
       let lastEval = '0.0';
 
       const timeout = setTimeout(() => {
-        this.worker!.removeEventListener('message', handler);
+        worker.removeEventListener('message', handler);
         reject('Stockfish timeout');
       }, 10000);
 
@@ -85,7 +90,7 @@ export class StockfishService implements OnDestroy {
 
         if (line.startsWith('bestmove')) {
           clearTimeout(timeout);
-          this.worker!.removeEventListener('message', handler);
+          worker.removeEventListener('message', handler);
           const move = line.split(' ')[1];
           if (move && move !== '(none)') {
             resolve({ move, eval: lastEval });
@@ -94,9 +99,9 @@ export class StockfishService implements OnDestroy {
           }
         }
       };
-      this.worker!.addEventListener('message', handler);
-      this.send(`position fen ${fen}`);
-      this.send(`go depth ${depth}`);
+      worker.addEventListener('message', handler);
+      worker.postMessage(`position fen ${fen}`);
+      worker.postMessage(`go depth ${depth}`);
     });
   }
 

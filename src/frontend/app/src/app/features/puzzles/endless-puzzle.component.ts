@@ -1082,7 +1082,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   ngOnDestroy(): void {
     this.stopSessionTimer();
     this.abortSolver();
-    this.stockfish.destroy();
     clearCrazyStyles();
     clearVisualizationHide();
   }
