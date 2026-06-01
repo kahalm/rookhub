@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { WeeklyService, WeeklyPost } from './weekly.service';
+import { WeeklyService, WeeklyPost, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -150,7 +150,7 @@ export class WeeklyListComponent implements OnInit {
     this.loading = true;
     this.weekly.getAll().subscribe({
       next: posts => {
-        this.rows = posts.map(p => ({ ...p, editDate: this.datePart(p.scheduledAt), editTime: this.timePart(p.scheduledAt) }));
+        this.rows = posts.map(p => ({ ...p, editDate: weeklyDatePart(p.scheduledAt), editTime: weeklyTimePart(p.scheduledAt) }));
         this.suggestNextSlot();
         this.loading = false;
       },
@@ -163,23 +163,10 @@ export class WeeklyListComponent implements OnInit {
 
   /** Prefill für den Upload: letzter Termin + 7 Tage, gleiche Uhrzeit; sonst heute + 19:00. */
   private suggestNextSlot(): void {
-    if (this.rows.length > 0) {
-      const latest = this.rows[0].scheduledAt;   // Liste ist nach Termin absteigend sortiert
-      const d = new Date(this.datePart(latest) + 'T00:00:00');
-      d.setDate(d.getDate() + 7);
-      this.uploadDate = this.toYmd(d);
-      this.uploadTime = this.timePart(latest);
-    } else {
-      this.uploadDate = this.toYmd(new Date());
-      this.uploadTime = '19:00';
-    }
-  }
-
-  private datePart(iso: string): string { return (iso.split('T')[0]) || ''; }
-  private timePart(iso: string): string { return (iso.split('T')[1] || '19:00').slice(0, 5); }
-  private toYmd(d: Date): string {
-    const p = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    // Liste ist nach Termin absteigend sortiert -> rows[0] = letzter Eintrag.
+    const slot = nextWeeklySlot(this.rows.length > 0 ? this.rows[0].scheduledAt : null);
+    this.uploadDate = slot.date;
+    this.uploadTime = slot.time;
   }
 
   onFileSelected(event: Event): void {

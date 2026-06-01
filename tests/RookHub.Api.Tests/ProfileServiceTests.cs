@@ -219,5 +219,9 @@ public class ProfileServiceTests : IDisposable
         // Gleicher Nachname erneut gesetzt (keine echte Änderung) -> kein Trigger.
         await service.UpdateProfileAsync(userId, new UpdateProfileDto { LastName = "Meier" });
         Assert.Equal(2, queue.EnqueuedCount);
+
+        // Auch eine FideId-Änderung zählt als Identitätsänderung -> Trigger.
+        await service.UpdateProfileAsync(userId, new UpdateProfileDto { FideId = "999" });
+        Assert.Equal(3, queue.EnqueuedCount);
     }
 }

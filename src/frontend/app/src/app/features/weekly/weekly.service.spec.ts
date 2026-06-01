@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { WeeklyService } from './weekly.service';
+import { WeeklyService, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 
 describe('WeeklyService', () => {
   let svc: WeeklyService;
@@ -73,5 +73,28 @@ describe('WeeklyService', () => {
     const req = http.expectOne('/api/admin/weekly-posts/3');
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+});
+
+describe('weekly slot helpers', () => {
+  it('weeklyDatePart / weeklyTimePart split ISO; time defaults to 19:00', () => {
+    expect(weeklyDatePart('2026-06-08T20:30:00')).toBe('2026-06-08');
+    expect(weeklyTimePart('2026-06-08T20:30:00')).toBe('20:30');
+    expect(weeklyTimePart('2026-06-08')).toBe('19:00');   // keine Uhrzeit -> Default
+  });
+
+  it('nextWeeklySlot: letzter Termin + 7 Tage, gleiche Uhrzeit', () => {
+    expect(nextWeeklySlot('2026-06-08T19:00:00')).toEqual({ date: '2026-06-15', time: '19:00' });
+    expect(nextWeeklySlot('2026-06-08T20:30:00')).toEqual({ date: '2026-06-15', time: '20:30' });
+    // Monatsübergang korrekt
+    expect(nextWeeklySlot('2026-06-29T19:00:00')).toEqual({ date: '2026-07-06', time: '19:00' });
+  });
+
+  it('nextWeeklySlot: ohne vorherigen Eintrag -> heute um 19:00', () => {
+    const r = nextWeeklySlot(null);
+    expect(r.time).toBe('19:00');
+    const now = new Date();
+    const p = (n: number) => n.toString().padStart(2, '0');
+    expect(r.date).toBe(`${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`);
   });
 });
