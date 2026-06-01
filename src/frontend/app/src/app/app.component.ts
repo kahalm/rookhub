@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { NavbarComponent } from './shared/navbar/navbar.component';
+import { LocaleService } from './core/locale.service';
 import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent],
+  imports: [RouterOutlet, NavbarComponent, TranslateModule],
   template: `
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
@@ -17,7 +19,7 @@ import { environment } from '../environments/environment';
       <div class="changelog-overlay" (click)="showChangelog = false">
         <div class="changelog-content" (click)="$event.stopPropagation()">
           <div class="changelog-header">
-            <h3>Changelog</h3>
+            <h3>{{ 'app.changelogTitle' | translate }}</h3>
             <button (click)="showChangelog = false">&times;</button>
           </div>
           @for (entry of changelog; track entry.version) {
@@ -37,24 +39,24 @@ import { environment } from '../environments/environment';
       <div class="changelog-overlay" (click)="showQuickstart = false">
         <div class="changelog-content quickstart-content" (click)="$event.stopPropagation()">
           <div class="changelog-header">
-            <h3>Quickstart</h3>
+            <h3>{{ 'app.quickstartTitle' | translate }}</h3>
             <button (click)="showQuickstart = false">&times;</button>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x2B50;</span>
-            <div><strong>Subscribe</strong><br><span class="qs-desc">Abonniere Turniere für schnellen Zugriff auf Spieler, Paarungen und Ergebnisse.</span></div>
+            <div><strong>{{ 'app.qs.subscribeTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.subscribeDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x23F0;</span>
-            <div><strong>Monitor</strong><br><span class="qs-desc">Aktiviere den Monitor bei einem Turnier &ndash; neue Runden werden automatisch erkannt und gecrawlt.</span></div>
+            <div><strong>{{ 'app.qs.monitorTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.monitorDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x2764;</span>
-            <div><strong>Favoriten</strong><br><span class="qs-desc">Markiere Spieler oder Teams als Favorit für schnellen Zugriff in der Turnieransicht.</span></div>
+            <div><strong>{{ 'app.qs.favoritesTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.favoritesDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x265E;</span>
-            <div><strong>ChessResults-ID</strong><br><span class="qs-desc">Hinterlege deine ChessResults-ID im Profil &ndash; anstehende Turniere werden automatisch abonniert.</span></div>
+            <div><strong>{{ 'app.qs.chessResultsTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.chessResultsDesc' | translate }}</span></div>
           </div>
         </div>
       </div>
@@ -97,7 +99,9 @@ export class AppComponent implements OnInit {
   showChangelog = false;
   showQuickstart = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, locale: LocaleService) {
+    locale.init();
+  }
 
   ngOnInit(): void {
     this.router.events.subscribe(() => {

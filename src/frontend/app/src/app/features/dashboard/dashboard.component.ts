@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { TranslateModule } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -14,65 +15,65 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, TranslateModule],
   template: `
     <div class="dashboard">
-      <h1>Welcome, {{ auth.currentUser?.username }}!</h1>
+      <h1>{{ 'dashboard.welcome' | translate:{ username: auth.currentUser?.username } }}</h1>
       <div class="dashboard-grid">
         <mat-card>
           <mat-card-header>
             <mat-icon mat-card-avatar>extension</mat-icon>
-            <mat-card-title>Puzzles</mat-card-title>
-            <mat-card-subtitle>Elo {{ puzzleElo }} | {{ puzzleSolved }} solved ({{ puzzleAccuracy }}%)</mat-card-subtitle>
+            <mat-card-title>{{ 'dashboard.puzzles.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'dashboard.puzzles.subtitle' | translate:{ elo: puzzleElo, solved: puzzleSolved, accuracy: puzzleAccuracy } }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/puzzles">Solve Puzzles</button>
-            <button mat-button routerLink="/puzzles/endless">Endless</button>
+            <button mat-button routerLink="/puzzles">{{ 'dashboard.puzzles.solve' | translate }}</button>
+            <button mat-button routerLink="/puzzles/endless">{{ 'dashboard.puzzles.endless' | translate }}</button>
           </mat-card-actions>
         </mat-card>
 
         <mat-card>
           <mat-card-header>
             <mat-icon mat-card-avatar>emoji_events</mat-icon>
-            <mat-card-title>Tournament Subscriptions</mat-card-title>
-            <mat-card-subtitle>{{ subscriptionCount }} subscriptions</mat-card-subtitle>
+            <mat-card-title>{{ 'dashboard.subscriptions.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'dashboard.subscriptions.count' | translate:{ count: subscriptionCount } }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/tournaments">Browse Tournaments</button>
+            <button mat-button routerLink="/tournaments">{{ 'dashboard.subscriptions.browse' | translate }}</button>
           </mat-card-actions>
         </mat-card>
 
         <mat-card>
           <mat-card-header>
             <mat-icon mat-card-avatar>people</mat-icon>
-            <mat-card-title>Friends</mat-card-title>
-            <mat-card-subtitle>{{ friendCount }} friends</mat-card-subtitle>
+            <mat-card-title>{{ 'dashboard.friends.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'dashboard.friends.count' | translate:{ count: friendCount } }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/friends">Manage Friends</button>
+            <button mat-button routerLink="/friends">{{ 'dashboard.friends.manage' | translate }}</button>
           </mat-card-actions>
         </mat-card>
 
         <mat-card>
           <mat-card-header>
             <mat-icon mat-card-avatar>library_books</mat-icon>
-            <mat-card-title>Repertoires</mat-card-title>
-            <mat-card-subtitle>{{ repertoireCount }} repertoires</mat-card-subtitle>
+            <mat-card-title>{{ 'dashboard.repertoires.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'dashboard.repertoires.count' | translate:{ count: repertoireCount } }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions>
-            <button mat-button routerLink="/repertoires">View All</button>
+            <button mat-button routerLink="/repertoires">{{ 'dashboard.repertoires.viewAll' | translate }}</button>
           </mat-card-actions>
         </mat-card>
       </div>
 
       @if (subscriptions.length > 0) {
-        <h2>Subscribed Tournaments</h2>
+        <h2>{{ 'dashboard.subscribedTournaments' | translate }}</h2>
         <mat-list>
           @for (sub of subscriptions; track sub.id) {
             <a mat-list-item [routerLink]="['/tournaments', sub.crawlerTournamentId]" class="tournament-link">
               <mat-icon matListItemIcon>emoji_events</mat-icon>
               <span matListItemTitle>{{ sub.tournamentName }}</span>
-              <span matListItemLine>Subscribed {{ sub.subscribedAt | date }}</span>
+              <span matListItemLine>{{ 'dashboard.subscribedAt' | translate:{ date: (sub.subscribedAt | date) } }}</span>
             </a>
           }
         </mat-list>

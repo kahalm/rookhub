@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
 import { Tournament, Subscription } from '../../core/models';
@@ -17,30 +18,30 @@ import { Tournament, Subscription } from '../../core/models';
 @Component({
   selector: 'app-tournament-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="tournament-container">
-      <h1>Tournaments</h1>
+      <h1>{{ 'tournaments.list.title' | translate }}</h1>
 
       <mat-card class="crawl-card">
         <mat-card-header>
-          <mat-card-title>Import Tournament</mat-card-title>
-          <mat-card-subtitle>Enter a chess-results.com tournament ID to crawl it</mat-card-subtitle>
+          <mat-card-title>{{ 'tournaments.list.importTitle' | translate }}</mat-card-title>
+          <mat-card-subtitle>{{ 'tournaments.list.importSubtitle' | translate }}</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <div class="crawl-form">
             <mat-form-field appearance="outline">
-              <mat-label>Chess-Results ID</mat-label>
-              <input matInput [(ngModel)]="crawlId" placeholder="e.g. 1234567" (keyup.enter)="startCrawl()">
-              <mat-hint>The number from chess-results.com/tnr<strong>1234567</strong>.aspx</mat-hint>
+              <mat-label>{{ 'tournaments.list.chessResultsId' | translate }}</mat-label>
+              <input matInput [(ngModel)]="crawlId" [placeholder]="'tournaments.list.idPlaceholder' | translate" (keyup.enter)="startCrawl()">
+              <mat-hint>{{ 'tournaments.list.idHintPrefix' | translate }}<strong>1234567</strong>{{ 'tournaments.list.idHintSuffix' | translate }}</mat-hint>
             </mat-form-field>
             <button mat-raised-button color="primary" (click)="startCrawl()" [disabled]="crawling || !crawlId.trim()">
-              <mat-icon>download</mat-icon> Crawl
+              <mat-icon>download</mat-icon> {{ 'tournaments.list.crawl' | translate }}
             </button>
           </div>
           @if (crawling) {
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-            <p class="crawl-status">Crawling tournament {{ crawlId }}... Job #{{ crawlJobId }}</p>
+            <p class="crawl-status">{{ 'tournaments.list.crawling' | translate:{ id: crawlId, jobId: crawlJobId } }}</p>
           }
           @if (crawlError) {
             <p class="crawl-error">{{ crawlError }}</p>
@@ -53,8 +54,8 @@ import { Tournament, Subscription } from '../../core/models';
       } @else if (error) {
         <mat-card>
           <mat-card-content>
-            <p>Could not connect to tournament crawler. Make sure the crawler service is running.</p>
-            <button mat-raised-button color="primary" (click)="loadTournaments()">Retry</button>
+            <p>{{ 'tournaments.list.crawlerUnavailable' | translate }}</p>
+            <button mat-raised-button color="primary" (click)="loadTournaments()">{{ 'common.retry' | translate }}</button>
           </mat-card-content>
         </mat-card>
       } @else {
@@ -66,27 +67,27 @@ import { Tournament, Subscription } from '../../core/models';
                 <mat-card-subtitle>{{ formatSubtitle(t) }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-actions>
-                <button mat-button [routerLink]="['/tournaments', t.id]">Details</button>
+                <button mat-button [routerLink]="['/tournaments', t.id]">{{ 'tournaments.list.details' | translate }}</button>
                 @if (isSubscribed(t)) {
                   <button mat-button color="warn" (click)="unsubscribe(t)" [disabled]="togglingId === t.id">
-                    <mat-icon>notifications_off</mat-icon> Unsubscribe
+                    <mat-icon>notifications_off</mat-icon> {{ 'tournaments.actions.unsubscribe' | translate }}
                   </button>
                 } @else {
                   <button mat-button color="primary" (click)="subscribe(t)" [disabled]="togglingId === t.id">
-                    <mat-icon>notifications</mat-icon> Subscribe
+                    <mat-icon>notifications</mat-icon> {{ 'tournaments.actions.subscribe' | translate }}
                   </button>
                 }
                 <button mat-button (click)="hide(t)">
-                  <mat-icon>visibility_off</mat-icon> Hide
+                  <mat-icon>visibility_off</mat-icon> {{ 'tournaments.list.hide' | translate }}
                 </button>
               </mat-card-actions>
             </mat-card>
           } @empty {
-            <p>No tournaments found.</p>
+            <p>{{ 'tournaments.list.empty' | translate }}</p>
           }
           @if (hiddenCount > 0) {
             <button mat-button (click)="showAll()">
-              <mat-icon>visibility</mat-icon> Show {{ hiddenCount }} hidden
+              <mat-icon>visibility</mat-icon> {{ 'tournaments.list.showHidden' | translate:{ count: hiddenCount } }}
             </button>
           }
         </div>
@@ -131,7 +132,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     return this.tournaments.length - this.visibleTournaments.length;
   }
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   formatSubtitle(t: Tournament): string {
     return [t.location, t.date].filter((v) => !!v).join(' | ');
@@ -192,11 +193,11 @@ export class TournamentListComponent implements OnInit, OnDestroy {
       next: (sub) => {
         this.subscriptions.push(sub);
         this.togglingId = null;
-        this.snackBar.open('Subscribed!', 'Close', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.subscribed'), this.translate.instant('common.close'), { duration: 2000 });
       },
       error: (err) => {
         this.togglingId = null;
-        this.snackBar.open(err.error?.message || 'Failed', 'Close', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('tournaments.actions.failed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -219,7 +220,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.crawling = false;
-        this.crawlError = err.error?.message || err.error?.detail || 'Failed to start crawl';
+        this.crawlError = err.error?.message || err.error?.detail || this.translate.instant('tournaments.list.crawlStartFailed');
       }
     });
   }
@@ -233,20 +234,20 @@ export class TournamentListComponent implements OnInit, OnDestroy {
             this.pollInterval = null;
             this.crawling = false;
             this.crawlId = '';
-            this.snackBar.open('Tournament imported!', 'Close', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('tournaments.list.imported'), this.translate.instant('common.close'), { duration: 3000 });
             this.loadTournaments();
           } else if (job.status === 'Failed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
             this.pollInterval = null;
             this.crawling = false;
-            this.crawlError = job.errorMessage || 'Crawl failed';
+            this.crawlError = job.errorMessage || this.translate.instant('tournaments.list.crawlFailed');
           }
         },
         error: () => {
           if (this.pollInterval) clearInterval(this.pollInterval);
           this.pollInterval = null;
           this.crawling = false;
-          this.crawlError = 'Lost connection to crawl job';
+          this.crawlError = this.translate.instant('tournaments.list.crawlConnectionLost');
         }
       });
     }, 2000);
@@ -260,11 +261,11 @@ export class TournamentListComponent implements OnInit, OnDestroy {
       next: () => {
         this.subscriptions = this.subscriptions.filter(s => s.id !== sub.id);
         this.togglingId = null;
-        this.snackBar.open('Unsubscribed', 'Close', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribed'), this.translate.instant('common.close'), { duration: 2000 });
       },
       error: () => {
         this.togglingId = null;
-        this.snackBar.open('Failed to unsubscribe', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribeFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }

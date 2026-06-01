@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { TranslateModule } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
@@ -22,7 +23,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    LoadingSpinnerComponent, ChessBoardComponent,
+    TranslateModule, LoadingSpinnerComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
   ],
   template: `
@@ -33,16 +34,16 @@ type ViewMode = 'lines' | 'tree' | 'edit';
         <div class="detail-header">
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
-            <span class="subtitle">{{ repertoire.description || 'No description' }}</span>
+            <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
           </div>
           <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
-            <mat-button-toggle value="lines">
+            <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">
               <mat-icon>list</mat-icon>
             </mat-button-toggle>
-            <mat-button-toggle value="tree">
+            <mat-button-toggle value="tree" [attr.aria-label]="'repertoire.detail.modeTree' | translate" [attr.title]="'repertoire.detail.modeTree' | translate">
               <mat-icon>account_tree</mat-icon>
             </mat-button-toggle>
-            <mat-button-toggle value="edit">
+            <mat-button-toggle value="edit" [attr.aria-label]="'repertoire.detail.modeEdit' | translate" [attr.title]="'repertoire.detail.modeEdit' | translate">
               <mat-icon>edit</mat-icon>
             </mat-button-toggle>
           </mat-button-toggle-group>

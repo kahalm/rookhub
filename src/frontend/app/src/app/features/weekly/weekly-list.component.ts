@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, WeeklyPost, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -24,40 +25,40 @@ interface WeeklyPostRow extends WeeklyPost {
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatFormFieldModule, MatInputModule, MatSnackBarModule,
-    LoadingSpinnerComponent
+    TranslateModule, LoadingSpinnerComponent
   ],
   template: `
     <div class="weekly-container">
-      <h1>Wochenpost</h1>
-      <p class="intro">Die wöchentlichen Schach-Posts zum Durchklicken. Datum &amp; Uhrzeit geben an, wann der Post geplant ist.</p>
+      <h1>{{ 'weekly.title' | translate }}</h1>
+      <p class="intro">{{ 'weekly.intro' | translate }}</p>
 
       @if (auth.isAdmin) {
         <mat-card class="upload-card">
-          <mat-card-header><mat-card-title>Neuen Wochenpost hochladen</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'weekly.upload.title' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
             <div class="upload-row">
               <input #pgnInput type="file" accept=".pgn" hidden (change)="onFileSelected($event)">
               <button mat-stroked-button (click)="pgnInput.click()">
-                <mat-icon>upload_file</mat-icon> {{ uploadFileName || 'PGN wählen' }}
+                <mat-icon>upload_file</mat-icon> {{ uploadFileName || ('weekly.upload.choosePgn' | translate) }}
               </button>
               <mat-form-field appearance="outline" class="f-date">
-                <mat-label>Datum</mat-label>
+                <mat-label>{{ 'weekly.fields.date' | translate }}</mat-label>
                 <input matInput type="date" [(ngModel)]="uploadDate">
               </mat-form-field>
               <mat-form-field appearance="outline" class="f-time">
-                <mat-label>Uhrzeit</mat-label>
+                <mat-label>{{ 'weekly.fields.time' | translate }}</mat-label>
                 <input matInput type="time" [(ngModel)]="uploadTime">
               </mat-form-field>
               <mat-form-field appearance="outline" class="f-title">
-                <mat-label>Titel (optional)</mat-label>
-                <input matInput [(ngModel)]="uploadTitle" placeholder="aus Dateiname">
+                <mat-label>{{ 'weekly.fields.titleOptional' | translate }}</mat-label>
+                <input matInput [(ngModel)]="uploadTitle" [placeholder]="'weekly.upload.titlePlaceholder' | translate">
               </mat-form-field>
               <button mat-raised-button color="primary"
                       [disabled]="!uploadFile || !uploadDate || !uploadTime || uploading" (click)="upload()">
-                <mat-icon>add</mat-icon> Anlegen
+                <mat-icon>add</mat-icon> {{ 'weekly.upload.create' | translate }}
               </button>
             </div>
-            <p class="upload-hint">Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00).</p>
+            <p class="upload-hint">{{ 'weekly.upload.hint' | translate }}</p>
           </mat-card-content>
         </mat-card>
       }
@@ -65,22 +66,22 @@ interface WeeklyPostRow extends WeeklyPost {
       @if (loading) {
         <app-loading-spinner />
       } @else if (rows.length === 0) {
-        <p class="empty-hint">Noch keine Wochenposts vorhanden.</p>
+        <p class="empty-hint">{{ 'weekly.empty' | translate }}</p>
       } @else {
         <table mat-table [dataSource]="rows" class="full-width">
           <ng-container matColumnDef="scheduled">
-            <th mat-header-cell *matHeaderCellDef>Termin</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.scheduled' | translate }}</th>
             <td mat-cell *matCellDef="let r">
               @if (auth.isAdmin) {
                 <input type="date" class="inline-date" [(ngModel)]="r.editDate" (change)="savePost(r)">
                 <input type="time" class="inline-time" [(ngModel)]="r.editTime" (change)="savePost(r)">
               } @else {
-                {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} Uhr
+                {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
               }
             </td>
           </ng-container>
           <ng-container matColumnDef="title">
-            <th mat-header-cell *matHeaderCellDef>Titel</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.title' | translate }}</th>
             <td mat-cell *matCellDef="let r">
               @if (auth.isAdmin) {
                 <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)">
@@ -90,13 +91,13 @@ interface WeeklyPostRow extends WeeklyPost {
             </td>
           </ng-container>
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.actions' | translate }}</th>
             <td mat-cell *matCellDef="let r">
               <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
-                <mat-icon>play_arrow</mat-icon> Durchspielen
+                <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
               </button>
               @if (auth.isAdmin) {
-                <button mat-icon-button color="warn" (click)="remove(r)" title="Löschen">
+                <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
                   <mat-icon>delete</mat-icon>
                 </button>
               }
@@ -139,7 +140,8 @@ export class WeeklyListComponent implements OnInit {
   constructor(
     public auth: AuthService,
     private weekly: WeeklyService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -155,7 +157,7 @@ export class WeeklyListComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.snackBar.open('Wochenposts konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('weekly.loadFailed'), this.translate.instant('common.ok'), { duration: 3000 });
         this.loading = false;
       }
     });
@@ -181,7 +183,7 @@ export class WeeklyListComponent implements OnInit {
     const scheduledAt = `${this.uploadDate}T${this.uploadTime}:00`;
     this.weekly.create(this.uploadFile, scheduledAt, this.uploadTitle.trim() || undefined).subscribe({
       next: () => {
-        this.snackBar.open('Wochenpost angelegt', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('weekly.created'), this.translate.instant('common.ok'), { duration: 3000 });
         this.uploading = false;
         this.uploadFile = null;
         this.uploadFileName = '';
@@ -189,7 +191,7 @@ export class WeeklyListComponent implements OnInit {
         this.loadPosts();   // lädt neu + setzt nächsten Termin-Vorschlag
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Upload fehlgeschlagen', 'OK', { duration: 4000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('weekly.uploadFailed'), this.translate.instant('common.ok'), { duration: 4000 });
         this.uploading = false;
       }
     });
@@ -201,20 +203,20 @@ export class WeeklyListComponent implements OnInit {
     this.weekly.update(row.id, { title: row.title, scheduledAt }).subscribe({
       next: p => { row.scheduledAt = p.scheduledAt; },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('weekly.saveFailed'), this.translate.instant('common.ok'), { duration: 3000 });
         this.loadPosts();
       }
     });
   }
 
   remove(row: WeeklyPostRow): void {
-    if (!confirm(`Wochenpost „${row.title}" löschen?`)) return;
+    if (!confirm(this.translate.instant('weekly.deleteConfirm', { title: row.title }))) return;
     this.weekly.delete(row.id).subscribe({
       next: () => {
-        this.snackBar.open('Wochenpost gelöscht', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('weekly.deleted'), this.translate.instant('common.ok'), { duration: 3000 });
         this.loadPosts();
       },
-      error: () => this.snackBar.open('Löschen fehlgeschlagen', 'OK', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('weekly.deleteFailed'), this.translate.instant('common.ok'), { duration: 3000 })
     });
   }
 }

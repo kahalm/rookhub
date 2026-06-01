@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule } from '@ngx-translate/core';
 import { Move } from 'chess.js';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { RepertoireLine } from './repertoire-viewer.service';
@@ -10,12 +11,12 @@ import { RepertoireLine } from './repertoire-viewer.service';
 @Component({
   selector: 'app-repertoire-lines',
   standalone: true,
-  imports: [CommonModule, MatListModule, MatIconModule, MatButtonModule, MoveListComponent],
+  imports: [CommonModule, MatListModule, MatIconModule, MatButtonModule, TranslateModule, MoveListComponent],
   template: `
     @if (selectedIndex >= 0) {
       <div class="move-view">
         <button mat-button (click)="lineDeselected.emit()" class="back-btn">
-          <mat-icon>arrow_back</mat-icon> All Lines
+          <mat-icon>arrow_back</mat-icon> {{ 'repertoire.lines.allLines' | translate }}
         </button>
         <div class="line-header">
           <span class="players">{{ lines[selectedIndex].white }} vs {{ lines[selectedIndex].black }}</span>
@@ -43,7 +44,7 @@ import { RepertoireLine } from './repertoire-viewer.service';
             <div class="line-summary">{{ line.summary }}</div>
           </div>
         } @empty {
-          <div class="empty">No lines found in this repertoire.</div>
+          <div class="empty">{{ 'repertoire.lines.empty' | translate }}</div>
         }
       </div>
     }

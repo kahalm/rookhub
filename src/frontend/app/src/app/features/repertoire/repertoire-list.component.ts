@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
@@ -14,13 +15,13 @@ import { Repertoire } from '../../core/models';
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
-        <h1>My Repertoires</h1>
+        <h1>{{ 'repertoire.list.title' | translate }}</h1>
         <button mat-raised-button color="primary" (click)="openCreateDialog()">
-          <mat-icon>add</mat-icon> New Repertoire
+          <mat-icon>add</mat-icon> {{ 'repertoire.list.new' | translate }}
         </button>
       </div>
 
@@ -32,18 +33,18 @@ import { Repertoire } from '../../core/models';
             <mat-card>
               <mat-card-header>
                 <mat-card-title>{{ rep.name }}</mat-card-title>
-                <mat-card-subtitle>{{ rep.fileCount }} files | {{ rep.isPublic ? 'Public' : 'Private' }}</mat-card-subtitle>
+                <mat-card-subtitle>{{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
-                <p>{{ rep.description || 'No description' }}</p>
+                <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
               </mat-card-content>
               <mat-card-actions>
-                <button mat-button [routerLink]="['/repertoires', rep.id]">Open</button>
-                <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">Delete</button>
+                <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+                <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
               </mat-card-actions>
             </mat-card>
           } @empty {
-            <p>No repertoires yet. Create one to get started!</p>
+            <p>{{ 'repertoire.list.empty' | translate }}</p>
           }
         </div>
       }
@@ -59,7 +60,7 @@ export class RepertoireListComponent implements OnInit {
   repertoires: Repertoire[] = [];
   loading = true;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, private snackBar: MatSnackBar) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadRepertoires();
@@ -69,7 +70,7 @@ export class RepertoireListComponent implements OnInit {
     this.loading = true;
     this.http.get<Repertoire[]>('/api/repertoires').subscribe({
       next: (r) => { this.repertoires = r; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open('Failed to load repertoires', 'Close', { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('repertoire.list.loadFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
   }
 
@@ -79,17 +80,17 @@ export class RepertoireListComponent implements OnInit {
       if (result) {
         this.http.post('/api/repertoires', result).subscribe({
           next: () => this.loadRepertoires(),
-          error: () => this.snackBar.open('Failed to create repertoire', 'Close', { duration: 3000 })
+          error: () => this.snackBar.open(this.translate.instant('repertoire.list.createFailed'), this.translate.instant('common.close'), { duration: 3000 })
         });
       }
     });
   }
 
   deleteRepertoire(id: number): void {
-    if (confirm('Delete this repertoire?')) {
+    if (confirm(this.translate.instant('repertoire.list.deleteConfirm'))) {
       this.http.delete(`/api/repertoires/${id}`).subscribe({
         next: () => this.loadRepertoires(),
-        error: () => this.snackBar.open('Failed to delete repertoire', 'Close', { duration: 3000 })
+        error: () => this.snackBar.open(this.translate.instant('repertoire.list.deleteFailed'), this.translate.instant('common.close'), { duration: 3000 })
       });
     }
   }

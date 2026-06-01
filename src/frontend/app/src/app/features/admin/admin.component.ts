@@ -14,6 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, RequestLog, Book, Group, GroupMember } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
@@ -23,17 +24,17 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, LoadingSpinnerComponent
+    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent
   ],
   template: `
     <div class="admin-container">
-      <h1>Admin</h1>
+      <h1>{{ 'admin.title' | translate }}</h1>
 
       <mat-tab-group>
-        <mat-tab label="Users">
+        <mat-tab [label]="'admin.tabs.users' | translate">
           <div class="tab-content">
             <mat-form-field appearance="outline" class="search-field">
-              <mat-label>Search users</mat-label>
+              <mat-label>{{ 'admin.users.searchLabel' | translate }}</mat-label>
               <input matInput [(ngModel)]="userSearch" (keyup.enter)="loadUsers()">
               <button matSuffix mat-icon-button (click)="loadUsers()">
                 <mat-icon>search</mat-icon>
@@ -45,19 +46,19 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             } @else {
               <table mat-table [dataSource]="users" class="full-width">
                 <ng-container matColumnDef="id">
-                  <th mat-header-cell *matHeaderCellDef>ID</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.id' | translate }}</th>
                   <td mat-cell *matCellDef="let u">{{ u.id }}</td>
                 </ng-container>
                 <ng-container matColumnDef="username">
-                  <th mat-header-cell *matHeaderCellDef>Username</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.username' | translate }}</th>
                   <td mat-cell *matCellDef="let u">{{ u.username }}</td>
                 </ng-container>
                 <ng-container matColumnDef="email">
-                  <th mat-header-cell *matHeaderCellDef>Email</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.email' | translate }}</th>
                   <td mat-cell *matCellDef="let u">{{ u.email }}</td>
                 </ng-container>
                 <ng-container matColumnDef="isAdmin">
-                  <th mat-header-cell *matHeaderCellDef>Admin</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.admin' | translate }}</th>
                   <td mat-cell *matCellDef="let u">
                     @if (u.isAdmin) {
                       <mat-icon class="admin-badge">shield</mat-icon>
@@ -65,16 +66,16 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="createdAt">
-                  <th mat-header-cell *matHeaderCellDef>Created</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.created' | translate }}</th>
                   <td mat-cell *matCellDef="let u">{{ u.createdAt | date:'short' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.actions' | translate }}</th>
                   <td mat-cell *matCellDef="let u">
-                    <button mat-icon-button (click)="toggleAdmin(u)" title="Toggle admin">
+                    <button mat-icon-button (click)="toggleAdmin(u)" [attr.title]="'admin.users.toggleAdmin' | translate">
                       <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="deleteUser(u)" title="Delete user">
+                    <button mat-icon-button color="warn" (click)="deleteUser(u)" [attr.title]="'admin.users.deleteUser' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </td>
@@ -96,69 +97,69 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
           </div>
         </mat-tab>
 
-        <mat-tab label="Bücher">
+        <mat-tab [label]="'admin.tabs.books' | translate">
           <div class="tab-content">
             <div class="book-upload">
               <input #pgnInput type="file" accept=".pgn" multiple hidden (change)="onBookFilesSelected($event)">
               <button mat-raised-button color="primary" (click)="pgnInput.click()" [disabled]="booksUploading">
-                <mat-icon>upload_file</mat-icon> PGN(s) hochladen
+                <mat-icon>upload_file</mat-icon> {{ 'admin.books.uploadPgn' | translate }}
               </button>
-              @if (booksUploading) { <span class="upload-hint">Import läuft…</span> }
-              <span class="book-hint">Pro Buch festlegen, in welchen Pools die Puzzles erscheinen.</span>
+              @if (booksUploading) { <span class="upload-hint">{{ 'admin.books.importing' | translate }}</span> }
+              <span class="book-hint">{{ 'admin.books.poolHint' | translate }}</span>
             </div>
 
             @if (booksLoading) {
               <app-loading-spinner />
             } @else if (books.length === 0) {
-              <p class="empty-hint">Noch keine Bücher importiert.</p>
+              <p class="empty-hint">{{ 'admin.books.empty' | translate }}</p>
             } @else {
               <table mat-table [dataSource]="books" class="full-width">
                 <ng-container matColumnDef="displayName">
-                  <th mat-header-cell *matHeaderCellDef>Buch</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.book' | translate }}</th>
                   <td mat-cell *matCellDef="let b">{{ b.displayName }}</td>
                 </ng-container>
                 <ng-container matColumnDef="puzzleCount">
-                  <th mat-header-cell *matHeaderCellDef>Puzzles</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.puzzles' | translate }}</th>
                   <td mat-cell *matCellDef="let b">{{ b.puzzleCount }}</td>
                 </ng-container>
                 <ng-container matColumnDef="difficulty">
-                  <th mat-header-cell *matHeaderCellDef>Schwierigkeit</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.difficulty' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     {{ b.difficulty || '–' }}@if (b.rating) { <span> · {{ b.rating }}/10</span> }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="elo">
-                  <th mat-header-cell *matHeaderCellDef>Elo von/bis</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.elo' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
-                    <input type="number" class="elo-input" [(ngModel)]="b.minElo" (change)="saveBook(b)" placeholder="von">
+                    <input type="number" class="elo-input" [(ngModel)]="b.minElo" (change)="saveBook(b)" [placeholder]="'admin.books.eloFrom' | translate">
                     <span class="elo-sep">–</span>
-                    <input type="number" class="elo-input" [(ngModel)]="b.maxElo" (change)="saveBook(b)" placeholder="bis">
+                    <input type="number" class="elo-input" [(ngModel)]="b.maxElo" (change)="saveBook(b)" [placeholder]="'admin.books.eloTo' | translate">
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forDaily">
-                  <th mat-header-cell *matHeaderCellDef>Daily</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.daily' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.forDaily" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forRandom">
-                  <th mat-header-cell *matHeaderCellDef>Random</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.random' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.forRandom" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forBlind">
-                  <th mat-header-cell *matHeaderCellDef>Blind</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.blind' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="groups">
-                  <th mat-header-cell *matHeaderCellDef>Sichtbar für (Kurse)</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.visibleFor' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <mat-form-field appearance="outline" class="groups-select" subscriptSizing="dynamic">
                       <mat-select multiple [(ngModel)]="b.accessGroupIds" (selectionChange)="saveBookGroups(b)"
-                                  placeholder="nur Admin">
+                                  [placeholder]="'admin.books.adminOnly' | translate">
                         @for (g of groups; track g.id) {
                           <mat-option [value]="g.id">{{ g.name }}</mat-option>
                         }
@@ -167,9 +168,9 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.actions' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
-                    <button mat-icon-button color="warn" (click)="deleteBook(b)" title="Buch löschen">
+                    <button mat-icon-button color="warn" (click)="deleteBook(b)" [attr.title]="'admin.books.deleteBook' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </td>
@@ -182,47 +183,47 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
           </div>
         </mat-tab>
 
-        <mat-tab label="Gruppen">
+        <mat-tab [label]="'admin.tabs.groups' | translate">
           <div class="tab-content">
             <div class="group-create">
               <mat-form-field appearance="outline" class="group-name-field">
-                <mat-label>Neue Gruppe</mat-label>
-                <input matInput [(ngModel)]="newGroupName" (keyup.enter)="createGroup()" placeholder="Name">
+                <mat-label>{{ 'admin.groups.newGroup' | translate }}</mat-label>
+                <input matInput [(ngModel)]="newGroupName" (keyup.enter)="createGroup()" [placeholder]="'admin.groups.namePlaceholder' | translate">
               </mat-form-field>
               <mat-form-field appearance="outline" class="group-desc-field">
-                <mat-label>Beschreibung (optional)</mat-label>
+                <mat-label>{{ 'admin.groups.descriptionOptional' | translate }}</mat-label>
                 <input matInput [(ngModel)]="newGroupDescription" (keyup.enter)="createGroup()">
               </mat-form-field>
               <button mat-raised-button color="primary" (click)="createGroup()" [disabled]="!newGroupName.trim()">
-                <mat-icon>add</mat-icon> Anlegen
+                <mat-icon>add</mat-icon> {{ 'admin.groups.create' | translate }}
               </button>
             </div>
 
             @if (groupsLoading) {
               <app-loading-spinner />
             } @else if (groups.length === 0) {
-              <p class="empty-hint">Noch keine Gruppen angelegt.</p>
+              <p class="empty-hint">{{ 'admin.groups.empty' | translate }}</p>
             } @else {
               <div class="group-layout">
                 <table mat-table [dataSource]="groups" class="full-width group-table">
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef>Gruppe</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.group' | translate }}</th>
                     <td mat-cell *matCellDef="let g">
                       <strong>{{ g.name }}</strong>
                       @if (g.description) { <div class="group-desc">{{ g.description }}</div> }
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="memberCount">
-                    <th mat-header-cell *matHeaderCellDef>Mitglieder</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.members' | translate }}</th>
                     <td mat-cell *matCellDef="let g">{{ g.memberCount }}</td>
                   </ng-container>
                   <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef>Aktionen</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.actions' | translate }}</th>
                     <td mat-cell *matCellDef="let g">
-                      <button mat-icon-button (click)="selectGroup(g)" title="Mitglieder verwalten">
+                      <button mat-icon-button (click)="selectGroup(g)" [attr.title]="'admin.groups.manageMembers' | translate">
                         <mat-icon>group</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteGroup(g)" title="Gruppe löschen">
+                      <button mat-icon-button color="warn" (click)="deleteGroup(g)" [attr.title]="'admin.groups.deleteGroup' | translate">
                         <mat-icon>delete</mat-icon>
                       </button>
                     </td>
@@ -236,12 +237,12 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                 @if (selectedGroup) {
                   <mat-card class="member-panel">
                     <mat-card-header>
-                      <mat-card-title>Mitglieder · {{ selectedGroup.name }}</mat-card-title>
+                      <mat-card-title>{{ 'admin.groups.membersOf' | translate: { name: selectedGroup.name } }}</mat-card-title>
                     </mat-card-header>
                     <mat-card-content>
                       <div class="member-add">
                         <mat-form-field appearance="outline" class="member-select">
-                          <mat-label>User hinzufügen</mat-label>
+                          <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
                           <mat-select [(ngModel)]="addMemberUserId">
                             @for (u of availableUsers(); track u.id) {
                               <mat-option [value]="u.id">{{ u.username }}</mat-option>
@@ -249,20 +250,20 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                           </mat-select>
                         </mat-form-field>
                         <button mat-raised-button color="primary" (click)="addMember()" [disabled]="!addMemberUserId">
-                          <mat-icon>person_add</mat-icon> Hinzufügen
+                          <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
                         </button>
                       </div>
 
                       @if (membersLoading) {
                         <app-loading-spinner />
                       } @else if (groupMembers.length === 0) {
-                        <p class="empty-hint">Keine Mitglieder.</p>
+                        <p class="empty-hint">{{ 'admin.groups.noMembers' | translate }}</p>
                       } @else {
                         <mat-chip-set>
                           @for (m of groupMembers; track m.userId) {
                             <mat-chip (removed)="removeMember(m)">
                               {{ m.username }}
-                              <button matChipRemove [attr.aria-label]="'Entfernen'"><mat-icon>cancel</mat-icon></button>
+                              <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
                             </mat-chip>
                           }
                         </mat-chip-set>
@@ -275,18 +276,18 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
           </div>
         </mat-tab>
 
-        <mat-tab label="Request Logs">
+        <mat-tab [label]="'admin.tabs.logs' | translate">
           <div class="tab-content">
             <div class="log-filters">
               <mat-form-field appearance="outline" class="filter-field">
-                <mat-label>Pfad</mat-label>
+                <mat-label>{{ 'admin.logs.columns.path' | translate }}</mat-label>
                 <input matInput [(ngModel)]="logFilterPath" placeholder="/api/...">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="filter-field filter-small">
-                <mat-label>Methode</mat-label>
+                <mat-label>{{ 'admin.logs.columns.method' | translate }}</mat-label>
                 <mat-select [(ngModel)]="logFilterMethod">
-                  <mat-option value="">Alle</mat-option>
+                  <mat-option value="">{{ 'admin.logs.all' | translate }}</mat-option>
                   <mat-option value="GET">GET</mat-option>
                   <mat-option value="POST">POST</mat-option>
                   <mat-option value="PUT">PUT</mat-option>
@@ -295,34 +296,34 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="filter-field filter-small">
-                <mat-label>Status</mat-label>
+                <mat-label>{{ 'admin.logs.columns.status' | translate }}</mat-label>
                 <mat-select [(ngModel)]="logFilterStatus">
-                  <mat-option value="">Alle</mat-option>
-                  <mat-option value="400">4xx+ (Fehler)</mat-option>
-                  <mat-option value="500">5xx (Server)</mat-option>
-                  <mat-option value="200">2xx+ (OK)</mat-option>
+                  <mat-option value="">{{ 'admin.logs.all' | translate }}</mat-option>
+                  <mat-option value="400">{{ 'admin.logs.status4xx' | translate }}</mat-option>
+                  <mat-option value="500">{{ 'admin.logs.status5xx' | translate }}</mat-option>
+                  <mat-option value="200">{{ 'admin.logs.status2xx' | translate }}</mat-option>
                 </mat-select>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="filter-field">
-                <mat-label>Benutzer</mat-label>
+                <mat-label>{{ 'admin.logs.columns.user' | translate }}</mat-label>
                 <input matInput [(ngModel)]="logFilterUser">
               </mat-form-field>
 
               <div class="filter-actions">
                 <button mat-raised-button color="primary" (click)="applyLogFilters()">
-                  <mat-icon>search</mat-icon> Filtern
+                  <mat-icon>search</mat-icon> {{ 'admin.logs.filter' | translate }}
                 </button>
                 <button mat-button (click)="resetLogFilters()">
-                  <mat-icon>clear</mat-icon> Zuruecksetzen
+                  <mat-icon>clear</mat-icon> {{ 'admin.logs.reset' | translate }}
                 </button>
               </div>
             </div>
 
             <div class="log-summary">
-              {{ logsTotalCount }} Eintraege
+              {{ 'admin.logs.entryCount' | translate: { count: logsTotalCount } }}
               @if (hasActiveLogFilters()) {
-                <span class="filter-hint">(gefiltert)</span>
+                <span class="filter-hint">{{ 'admin.logs.filtered' | translate }}</span>
               }
             </div>
 
@@ -332,39 +333,39 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <div class="table-responsive">
                 <table mat-table [dataSource]="logs" class="full-width log-table">
                   <ng-container matColumnDef="timestamp">
-                    <th mat-header-cell *matHeaderCellDef>Zeit</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.time' | translate }}</th>
                     <td mat-cell *matCellDef="let l">{{ l.timestamp | date:'dd.MM. HH:mm:ss' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="method">
-                    <th mat-header-cell *matHeaderCellDef>Methode</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.method' | translate }}</th>
                     <td mat-cell *matCellDef="let l">
                       <span class="method-badge method-{{ l.method | lowercase }}">{{ l.method }}</span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="path">
-                    <th mat-header-cell *matHeaderCellDef>Pfad</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.path' | translate }}</th>
                     <td mat-cell *matCellDef="let l" [matTooltip]="l.queryString || ''">
                       {{ l.path }}@if (l.queryString) { <span class="qs-indicator">?</span> }
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="statusCode">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.status' | translate }}</th>
                     <td mat-cell *matCellDef="let l">
                       <span [class]="'status-badge status-' + getStatusClass(l.statusCode)">{{ l.statusCode }}</span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="durationMs">
-                    <th mat-header-cell *matHeaderCellDef>Dauer</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.duration' | translate }}</th>
                     <td mat-cell *matCellDef="let l" [class.slow-request]="l.durationMs > 1000">
                       {{ l.durationMs }}ms
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="userName">
-                    <th mat-header-cell *matHeaderCellDef>Benutzer</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.user' | translate }}</th>
                     <td mat-cell *matCellDef="let l">{{ l.userName || '-' }}</td>
                   </ng-container>
                   <ng-container matColumnDef="ipAddress">
-                    <th mat-header-cell *matHeaderCellDef>IP</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'admin.logs.columns.ip' | translate }}</th>
                     <td mat-cell *matCellDef="let l">{{ l.ipAddress || '-' }}</td>
                   </ng-container>
 
@@ -487,7 +488,7 @@ export class AdminComponent implements OnInit {
   allUsers: AdminUser[] = [];
   addMemberUserId: number | null = null;
 
-  constructor(private adminService: AdminService, private snackBar: MatSnackBar) {}
+  constructor(private adminService: AdminService, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -506,7 +507,7 @@ export class AdminComponent implements OnInit {
         this.usersLoading = false;
       },
       error: () => {
-        this.snackBar.open('Failed to load users', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.users.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
         this.usersLoading = false;
       }
     });
@@ -530,7 +531,7 @@ export class AdminComponent implements OnInit {
         this.logsLoading = false;
       },
       error: () => {
-        this.snackBar.open('Logs konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.logs.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
         this.logsLoading = false;
       }
     });
@@ -577,24 +578,25 @@ export class AdminComponent implements OnInit {
     this.adminService.toggleAdmin(user.id).subscribe({
       next: updated => {
         user.isAdmin = updated.isAdmin;
-        this.snackBar.open(`${user.username} is ${updated.isAdmin ? 'now' : 'no longer'} admin`, 'OK', { duration: 3000 });
+        const key = updated.isAdmin ? 'admin.users.nowAdmin' : 'admin.users.noLongerAdmin';
+        this.snackBar.open(this.translate.instant(key, { username: user.username }), this.translate.instant('common.close'), { duration: 3000 });
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Failed to toggle admin', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
 
   deleteUser(user: AdminUser): void {
-    if (!confirm(`Delete user "${user.username}"? This cannot be undone.`)) return;
+    if (!confirm(this.translate.instant('admin.users.deleteConfirm', { username: user.username }))) return;
 
     this.adminService.deleteUser(user.id).subscribe({
       next: () => {
-        this.snackBar.open(`User "${user.username}" deleted`, 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.users.deleted', { username: user.username }), this.translate.instant('common.close'), { duration: 3000 });
         this.loadUsers();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Failed to delete user', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.users.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -608,7 +610,7 @@ export class AdminComponent implements OnInit {
         this.booksLoading = false;
       },
       error: () => {
-        this.snackBar.open('Bücher konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.books.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
         this.booksLoading = false;
       }
     });
@@ -621,13 +623,13 @@ export class AdminComponent implements OnInit {
     this.booksUploading = true;
     this.adminService.importBooks(input.files).subscribe({
       next: res => {
-        this.snackBar.open(`${res.totalImported} Puzzle(s) importiert, ${res.totalSkipped} übersprungen`, 'OK', { duration: 4000 });
+        this.snackBar.open(this.translate.instant('admin.books.imported', { imported: res.totalImported, skipped: res.totalSkipped }), this.translate.instant('common.close'), { duration: 4000 });
         this.booksUploading = false;
         input.value = '';
         this.loadBooks();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Import fehlgeschlagen', 'OK', { duration: 4000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.import'), this.translate.instant('common.close'), { duration: 4000 });
         this.booksUploading = false;
         input.value = '';
       }
@@ -643,7 +645,7 @@ export class AdminComponent implements OnInit {
       maxElo: book.maxElo
     }).subscribe({
       error: err => {
-        this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.save'), this.translate.instant('common.close'), { duration: 3000 });
         this.loadBooks(); // Stand zurücksetzen
       }
     });
@@ -652,22 +654,22 @@ export class AdminComponent implements OnInit {
   saveBookGroups(book: Book): void {
     this.adminService.updateBookGroups(book.id, book.accessGroupIds ?? []).subscribe({
       error: err => {
-        this.snackBar.open(err.error?.message || 'Gruppen-Freigabe fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.saveGroups'), this.translate.instant('common.close'), { duration: 3000 });
         this.loadBooks(); // Stand zurücksetzen
       }
     });
   }
 
   deleteBook(book: Book): void {
-    if (!confirm(`Buch "${book.displayName}" mit ${book.puzzleCount} Puzzle(s) löschen?`)) return;
+    if (!confirm(this.translate.instant('admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }))) return;
 
     this.adminService.deleteBook(book.id).subscribe({
       next: () => {
-        this.snackBar.open(`Buch "${book.displayName}" gelöscht`, 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.books.deleted', { name: book.displayName }), this.translate.instant('common.close'), { duration: 3000 });
         this.loadBooks();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Löschen fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -685,7 +687,7 @@ export class AdminComponent implements OnInit {
         }
       },
       error: () => {
-        this.snackBar.open('Gruppen konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.groups.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
         this.groupsLoading = false;
       }
     });
@@ -703,22 +705,22 @@ export class AdminComponent implements OnInit {
     if (!name) return;
     this.adminService.createGroup(name, this.newGroupDescription.trim() || null).subscribe({
       next: () => {
-        this.snackBar.open(`Gruppe "${name}" angelegt`, 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.groups.created', { name }), this.translate.instant('common.close'), { duration: 3000 });
         this.newGroupName = '';
         this.newGroupDescription = '';
         this.loadGroups();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Gruppe konnte nicht angelegt werden', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.create'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
 
   deleteGroup(group: Group): void {
-    if (!confirm(`Gruppe "${group.name}" löschen?`)) return;
+    if (!confirm(this.translate.instant('admin.groups.deleteConfirm', { name: group.name }))) return;
     this.adminService.deleteGroup(group.id).subscribe({
       next: () => {
-        this.snackBar.open(`Gruppe "${group.name}" gelöscht`, 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.groups.deleted', { name: group.name }), this.translate.instant('common.close'), { duration: 3000 });
         if (this.selectedGroup?.id === group.id) {
           this.selectedGroup = null;
           this.groupMembers = [];
@@ -726,7 +728,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Löschen fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -745,7 +747,7 @@ export class AdminComponent implements OnInit {
         this.membersLoading = false;
       },
       error: () => {
-        this.snackBar.open('Mitglieder konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('admin.groups.errors.loadMembers'), this.translate.instant('common.close'), { duration: 3000 });
         this.membersLoading = false;
       }
     });
@@ -766,7 +768,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Hinzufügen fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.addMember'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -780,7 +782,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
-        this.snackBar.open(err.error?.message || 'Entfernen fehlgeschlagen', 'OK', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.removeMember'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }

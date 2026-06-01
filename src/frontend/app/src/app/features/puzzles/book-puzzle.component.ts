@@ -24,6 +24,7 @@ import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode } from '../courses/course.service';
 import { WeeklyService } from '../weekly/weekly.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE';
 
@@ -33,7 +34,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, TranslateModule
   ],
   template: `
     <div class="puzzle-page">
@@ -61,32 +62,32 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             <mat-card class="course-card">
               <mat-card-content>
                 <div class="course-head">
-                  <button mat-icon-button (click)="backToCourses()" matTooltip="Zur Kursübersicht">
+                  <button mat-icon-button (click)="backToCourses()" [matTooltip]="'book.course.backToCourses' | translate">
                     <mat-icon>arrow_back</mat-icon>
                   </button>
-                  <span class="course-mode-chip">{{ courseModeKind === 'random' ? 'Zufällig' : 'Sequenziell' }}</span>
+                  <span class="course-mode-chip">{{ (courseModeKind === 'random' ? 'book.course.random' : 'book.course.sequential') | translate }}</span>
                   <span class="course-progress">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</span>
                 </div>
                 <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
                 @if (courseCompleted) {
-                  <p class="course-done"><mat-icon>emoji_events</mat-icon> Kurs abgeschlossen!</p>
+                  <p class="course-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   <div class="course-actions">
-                    <button mat-raised-button color="primary" (click)="backToCourses()">Zur Übersicht</button>
+                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
                   </div>
                 } @else if (state === 'SOLVED') {
                   <div class="course-actions">
                     <button mat-raised-button color="primary" (click)="courseNext()">
-                      <mat-icon>skip_next</mat-icon> Nächstes Puzzle
+                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                     </button>
                   </div>
                 } @else if (state === 'FAILED') {
                   <div class="course-actions">
-                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> Nochmal</button>
-                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> {{ 'book.actions.again' | translate }}</button>
+                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
                   </div>
                 } @else {
                   <div class="course-actions">
-                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
                   </div>
                 }
               </mat-card-content>
@@ -96,34 +97,34 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             <mat-card class="course-card">
               <mat-card-content>
                 <div class="course-head">
-                  <button mat-icon-button (click)="backToWeekly()" matTooltip="Zur Wochenpost-Übersicht">
+                  <button mat-icon-button (click)="backToWeekly()" [matTooltip]="'book.weekly.backToWeekly' | translate">
                     <mat-icon>arrow_back</mat-icon>
                   </button>
-                  <span class="course-mode-chip">Wochenpost</span>
+                  <span class="course-mode-chip">{{ 'book.weekly.label' | translate }}</span>
                   <span class="course-progress">{{ weeklyDisplayIndex }}/{{ weeklyTotal }}</span>
                 </div>
                 <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
                 @if (weeklyTitle) { <p class="weekly-title">{{ weeklyTitle }}</p> }
                 @if (weeklyTotal === 0) {
-                  <p class="course-done"><mat-icon>info</mat-icon> Dieser Wochenpost enthält keine spielbaren Puzzles.</p>
-                  <div class="course-actions"><button mat-stroked-button (click)="backToWeekly()">Zur Übersicht</button></div>
+                  <p class="course-done"><mat-icon>info</mat-icon> {{ 'book.weekly.noPuzzles' | translate }}</p>
+                  <div class="course-actions"><button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button></div>
                 } @else if (weeklyCompleted) {
-                  <p class="course-done"><mat-icon>emoji_events</mat-icon> Alle Puzzles gelöst!</p>
-                  <div class="course-actions"><button mat-raised-button color="primary" (click)="backToWeekly()">Zur Übersicht</button></div>
+                  <p class="course-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
+                  <div class="course-actions"><button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button></div>
                 } @else if (state === 'SOLVED') {
                   <div class="course-actions">
                     <button mat-raised-button color="primary" (click)="weeklyNext()">
-                      <mat-icon>skip_next</mat-icon> Nächstes Puzzle
+                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                     </button>
                   </div>
                 } @else if (state === 'FAILED') {
                   <div class="course-actions">
-                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> Nochmal</button>
-                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> {{ 'book.actions.again' | translate }}</button>
+                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
                   </div>
                 } @else {
                   <div class="course-actions">
-                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
                   </div>
                 }
               </mat-card-content>
@@ -132,14 +133,14 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
           @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
             <mat-card class="viz-card">
               <mat-card-content>
-                <div class="viz-title"><mat-icon>visibility_off</mat-icon> Visualisierung (Level {{ visualizationMode }})</div>
+                <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'book.viz.titleLevel' | translate: { level: visualizationMode } }}</div>
                 @if (vizCountdownSeconds > 0) {
-                  <div class="viz-countdown">Figuren verschwinden in {{ vizCountdownSeconds }}s...</div>
+                  <div class="viz-countdown">{{ 'book.viz.countdown' | translate: { seconds: vizCountdownSeconds } }}</div>
                 }
-                <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
+                <div class="viz-moves">{{ vizMoveText || ('book.viz.noMoveYet' | translate) }}</div>
                 @if (vizPiecesHidden) {
                   <button class="viz-show-btn" (click)="onVizShow()">
-                    {{ vizShowPressed ? 'Showing...' : 'Show' }}
+                    {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
                   </button>
                 }
                 <div class="viz-hint">{{ vizLevelDescription }}</div>
@@ -148,71 +149,71 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
           }
           <mat-card class="status-card">
             <mat-card-content>
-              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" title="Einstellungen">
+              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'book.settings.title' | translate">
                 <mat-icon>settings</mat-icon>
               </button>
               @if (reviewMode && !solutionReview) {
                 <div class="status-center">
-                  <p class="status-text">Ganze Partie</p>
+                  <p class="status-text">{{ 'book.status.fullGame' | translate }}</p>
                   <div class="review-nav">
                     <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
                     <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
                     <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
                   </div>
-                  <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> Zurück zum Puzzle</button>
+                  <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> {{ 'book.actions.backToPuzzle' | translate }}</button>
                 </div>
               } @else {
               @switch (state) {
                 @case ('LOADING') {
                   <div class="status-center">
                     <mat-spinner diameter="40"></mat-spinner>
-                    <p>Loading puzzle...</p>
+                    <p>{{ 'book.status.loading' | translate }}</p>
                   </div>
                 }
                 @case ('SETUP') {
                   <div class="status-center">
-                    <p class="status-text">Watch the opponent's move...</p>
+                    <p class="status-text">{{ 'book.status.watchOpponent' | translate }}</p>
                   </div>
                 }
                 @case ('AWAITING_USER_MOVE') {
                   <div class="status-center">
-                    <p class="status-text">{{ gaveUp ? 'Aufgegeben — spiel die Lösung selbst durch.' : 'Your turn! Find the best move.' }}</p>
+                    <p class="status-text">{{ (gaveUp ? 'book.status.gaveUp' : 'book.status.yourTurn') | translate }}</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                   </div>
                 }
                 @case ('THINKING') {
                   <div class="status-center">
                     <mat-spinner diameter="24"></mat-spinner>
-                    <p class="status-text">Stockfish denkt...</p>
+                    <p class="status-text">{{ 'book.status.stockfishThinking' | translate }}</p>
                     <div class="play-actions">
                       <button mat-button (click)="resetPuzzle()">
                         <mat-icon>replay</mat-icon>
-                        Reset
+                        {{ 'book.actions.reset' | translate }}
                       </button>
                       <button mat-button color="warn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
-                        Give Up
+                        {{ 'book.actions.giveUp' | translate }}
                       </button>
                     </div>
                   </div>
                 }
                 @case ('PLAYING') {
                   <div class="status-center">
-                    <p class="status-text">Dein Zug gegen Stockfish...</p>
+                    <p class="status-text">{{ 'book.status.yourMoveVsStockfish' | translate }}</p>
                     <div class="play-actions">
                       <button mat-button (click)="resetPuzzle()">
                         <mat-icon>replay</mat-icon>
-                        Reset
+                        {{ 'book.actions.reset' | translate }}
                       </button>
                       @if (!mouseslipUsed && !onSolutionPath) {
                         <button mat-button (click)="mouseslip()">
                           <mat-icon>mouse</mat-icon>
-                          Mouseslip
+                          {{ 'book.actions.mouseslip' | translate }}
                         </button>
                       }
                       <button mat-button color="warn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
-                        Give Up
+                        {{ 'book.actions.giveUp' | translate }}
                       </button>
                     </div>
                   </div>
@@ -221,10 +222,10 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                   <div class="status-center solved">
                     <mat-icon class="result-icon">check_circle</mat-icon>
                     @if (alternativeSolve) {
-                      <p class="status-text">Schachmatt!</p>
-                      <p class="alt-hint">Alternative Loesung — das Puzzle hatte eine andere beabsichtigte Zugfolge.</p>
+                      <p class="status-text">{{ 'book.status.checkmate' | translate }}</p>
+                      <p class="alt-hint">{{ 'book.status.altSolution' | translate }}</p>
                     } @else {
-                      <p class="status-text">Correct!</p>
+                      <p class="status-text">{{ 'book.status.correct' | translate }}</p>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     <div class="review-nav">
@@ -237,14 +238,14 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                 @case ('FAILED') {
                   <div class="status-center failed">
                     <mat-icon class="result-icon">cancel</mat-icon>
-                    <p class="status-text">Incorrect</p>
+                    <p class="status-text">{{ 'book.status.incorrect' | translate }}</p>
                     <div class="review-nav">
                       <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
                       <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
                       <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
                     </div>
                     <div class="fail-actions">
-                      <button mat-button (click)="retry()">Retry</button>
+                      <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
                     </div>
                   </div>
                 }
@@ -272,7 +273,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                       <span class="difficulty-badge" [class]="'diff-' + puzzle.difficulty.toLowerCase()">{{ puzzle.difficulty }}</span>
                     }
                     @if (puzzle.bookRating) {
-                      <span class="rating-badge">Schwierigkeit: {{ puzzle.bookRating }}/10</span>
+                      <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ puzzle.bookRating }}/10</span>
                     }
                   </div>
                   @if (puzzle.tags) {
@@ -284,11 +285,11 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                   }
                   @if ((state === 'SOLVED' || state === 'FAILED') && !(reviewMode && !solutionReview)) {
                     <button mat-stroked-button class="full-game-btn" (click)="enterReview()">
-                      <mat-icon>history_edu</mat-icon> Ganze Partie ansehen
+                      <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
                     </button>
                   }
                   <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
-                    <mat-icon>share</mat-icon> Puzzle teilen
+                    <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
                   </button>
                 </div>
               </mat-card-content>
@@ -299,32 +300,32 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
             <mat-card-content>
               @if (showSettings) {
               <div class="viz-slider">
-                <label>Visualisierung: Level {{ visualizationMode }}</label>
+                <label>{{ 'book.settings.visualizationLevel' | translate: { level: visualizationMode } }}</label>
                 <input type="range" min="0" max="4" step="1"
                        [value]="visualizationMode"
                        (input)="setVisualizationLevel(+$any($event.target).value)">
                 <div class="viz-level-desc">{{ vizLevelDescription }}</div>
               </div>
               <mat-form-field appearance="outline" class="depth-field">
-                <mat-label>Stockfish Depth</mat-label>
+                <mat-label>{{ 'book.settings.stockfishDepth' | translate }}</mat-label>
                 <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
-                <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
+                <mat-hint>{{ 'book.settings.depthHint' | translate }}</mat-hint>
               </mat-form-field>
               <div class="theme-section">
-                <div class="theme-label">Modus</div>
+                <div class="theme-label">{{ 'book.settings.mode' | translate }}</div>
                 <div class="theme-chips">
                   <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="setThemeMode('fixed')">
-                    <mat-icon>palette</mat-icon><span class="theme-name">Normal</span>
+                    <mat-icon>palette</mat-icon><span class="theme-name">{{ 'book.settings.modeNormal' | translate }}</span>
                   </div>
                   <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="setThemeMode('random')">
-                    <mat-icon>shuffle</mat-icon><span class="theme-name">Random</span>
+                    <mat-icon>shuffle</mat-icon><span class="theme-name">{{ 'book.settings.modeRandom' | translate }}</span>
                   </div>
                   <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="setThemeMode('crazy')">
-                    <mat-icon>auto_awesome</mat-icon><span class="theme-name">Crazy</span>
+                    <mat-icon>auto_awesome</mat-icon><span class="theme-name">{{ 'book.settings.modeCrazy' | translate }}</span>
                   </div>
                 </div>
                 @if (themeMode === 'fixed') {
-                <div class="theme-label" style="margin-top: 0.75rem;">Board Theme</div>
+                <div class="theme-label" style="margin-top: 0.75rem;">{{ 'book.settings.boardTheme' | translate }}</div>
                 <div class="theme-chips">
                   @for (t of boardThemes; track t.key) {
                     <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
@@ -340,7 +341,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                     </div>
                   }
                 </div>
-                <div class="theme-label" style="margin-top: 0.75rem;">Figuren</div>
+                <div class="theme-label" style="margin-top: 0.75rem;">{{ 'book.settings.pieces' | translate }}</div>
                 <div class="theme-chips">
                   @for (p of pieceSets; track p.key) {
                     <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
@@ -503,6 +504,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return this.puzzle.bookFileName.replace(/_firstkey\.pgn$/, '').replace(/_/g, ' ');
   }
 
+  override get vizLevelDescription(): string {
+    switch (this.visualizationMode) {
+      case 0: return this.translate.instant('book.viz.level0');
+      case 1: return this.translate.instant('book.viz.level1');
+      case 2: return this.translate.instant('book.viz.level2');
+      case 3: return this.translate.instant('book.viz.level3');
+      case 4: return this.translate.instant('book.viz.level4');
+      default: return '';
+    }
+  }
+
   constructor(
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
@@ -511,7 +523,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private dialog: MatDialog,
     private courseService: CourseService,
     private weeklyService: WeeklyService,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService
   ) {
     super(stockfish);
     this.loadConfig();

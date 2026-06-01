@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { TranslateModule } from '@ngx-translate/core';
 import { ChessBoardComponent } from './chess-board.component';
 import { MoveListComponent } from './move-list.component';
 import { PgnViewerService } from './pgn-viewer.service';
@@ -19,7 +20,7 @@ export interface PgnViewerData {
   standalone: true,
   imports: [
     CommonModule, MatDialogModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatFormFieldModule, ChessBoardComponent, MoveListComponent,
+    MatSelectModule, MatFormFieldModule, TranslateModule, ChessBoardComponent, MoveListComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -28,7 +29,9 @@ export interface PgnViewerData {
         <div class="header-info">
           @if (service.games.length > 1) {
             <mat-form-field appearance="outline" class="game-select">
-              <mat-select [value]="service.currentGameIndex" (selectionChange)="service.selectGame($event.value)">
+              <mat-label>{{ 'pgnViewer.gameLabel' | translate }}</mat-label>
+              <mat-select [value]="service.currentGameIndex" (selectionChange)="service.selectGame($event.value)"
+                          [attr.aria-label]="'pgnViewer.gameLabel' | translate">
                 @for (game of service.games; track $index) {
                   <mat-option [value]="$index">
                     {{ game.headers['White'] || '?' }} vs {{ game.headers['Black'] || '?' }}
@@ -57,7 +60,8 @@ export interface PgnViewerData {
             </div>
           }
         </div>
-        <button mat-icon-button (click)="dialogRef.close()">
+        <button mat-icon-button (click)="dialogRef.close()"
+                [attr.aria-label]="'common.close' | translate">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -66,18 +70,26 @@ export interface PgnViewerData {
         <div class="board-section">
           <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" />
           <div class="nav-buttons">
-            <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0">
+            <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"
+                    [attr.aria-label]="'pgnViewer.nav.first' | translate"
+                    [attr.title]="'pgnViewer.nav.first' | translate">
               <mat-icon>skip_previous</mat-icon>
             </button>
-            <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0">
+            <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"
+                    [attr.aria-label]="'pgnViewer.nav.previous' | translate"
+                    [attr.title]="'pgnViewer.nav.previous' | translate">
               <mat-icon>navigate_before</mat-icon>
             </button>
             <button mat-icon-button (click)="service.goForward()"
-                    [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1">
+                    [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"
+                    [attr.aria-label]="'pgnViewer.nav.next' | translate"
+                    [attr.title]="'pgnViewer.nav.next' | translate">
               <mat-icon>navigate_next</mat-icon>
             </button>
             <button mat-icon-button (click)="service.goToEnd()"
-                    [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1">
+                    [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"
+                    [attr.aria-label]="'pgnViewer.nav.last' | translate"
+                    [attr.title]="'pgnViewer.nav.last' | translate">
               <mat-icon>skip_next</mat-icon>
             </button>
           </div>

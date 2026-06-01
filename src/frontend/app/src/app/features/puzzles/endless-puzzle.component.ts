@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
@@ -48,7 +49,7 @@ const RATING_WINDOW = 40;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, PuzzleBoardComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent
   ],
   template: `
     <div class="endless-page">
@@ -56,46 +57,46 @@ const RATING_WINDOW = 40;
         <div class="help-overlay" (click)="showHelp = false">
           <div class="help-content" (click)="$event.stopPropagation()">
             <div class="help-header">
-              <h2>Endless Puzzle Mode</h2>
+              <h2>{{ 'endless.help.title' | translate }}</h2>
               <button mat-icon-button (click)="showHelp = false"><mat-icon>close</mat-icon></button>
             </div>
             <div class="help-body">
-              <h3>Spielablauf</h3>
-              <p>Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Das Rating steigt automatisch entlang der Fasttrack-Phasen (siehe unten).</p>
-              <p>Du hast <strong>3 Leben</strong>. Bei 0 Leben ist das Spiel vorbei.</p>
+              <h3>{{ 'endless.help.gameplayHeading' | translate }}</h3>
+              <p>{{ 'endless.help.gameplayP1' | translate }}</p>
+              <p [innerHTML]="'endless.help.gameplayP2' | translate"></p>
 
-              <h3>Züge & Stockfish</h3>
-              <p>Jedes Puzzle hat eine <strong>beabsichtigte Lösung</strong> (eine Zugfolge). Solange du die richtigen Züge spielst, folgst du diesem Lösungsweg.</p>
-              <p>Spielst du einen <strong>falschen Zug</strong>, übernimmt <strong>Stockfish</strong> (eine Schach-Engine) die Gegenseite. Du spielst dann frei gegen Stockfish weiter. Die Stärke ist über die Stockfish Depth einstellbar.</p>
+              <h3>{{ 'endless.help.movesHeading' | translate }}</h3>
+              <p [innerHTML]="'endless.help.movesP1' | translate"></p>
+              <p [innerHTML]="'endless.help.movesP2' | translate"></p>
               <ul>
-                <li><strong>Schachmatt gegen Stockfish</strong> zählt als alternative Lösung — kein Lebensverlust!</li>
-                <li><strong>Stockfish setzt dich matt</strong> — du verlierst ein Leben</li>
-                <li>Das Spiel gegen Stockfish geht endlos weiter bis Matt oder Give Up</li>
+                <li [innerHTML]="'endless.help.movesItem1' | translate"></li>
+                <li [innerHTML]="'endless.help.movesItem2' | translate"></li>
+                <li>{{ 'endless.help.movesItem3' | translate }}</li>
               </ul>
 
-              <h3>Buttons während des Spiels</h3>
+              <h3>{{ 'endless.help.buttonsHeading' | translate }}</h3>
               <ul>
-                <li><strong>Show Eval</strong> — Zeigt die Stockfish-Bewertung (Start vs. Aktuell)</li>
-                <li><strong>Reset</strong> — Setzt das Puzzle zurück, kostet aber ein Leben</li>
-                <li><strong>Mouseslip</strong> — Macht den letzten falschen Zug rückgängig (einmal pro Puzzle, gratis)</li>
-                <li><strong>Give Up</strong> — Aufgeben, kostet ein Leben</li>
+                <li [innerHTML]="'endless.help.buttonsShowEval' | translate"></li>
+                <li [innerHTML]="'endless.help.buttonsReset' | translate"></li>
+                <li [innerHTML]="'endless.help.buttonsMouseslip' | translate"></li>
+                <li [innerHTML]="'endless.help.buttonsGiveUp' | translate"></li>
               </ul>
 
-              <h3>Einstellungen</h3>
+              <h3>{{ 'endless.help.settingsHeading' | translate }}</h3>
               <ul>
-                <li><strong>Start Rating</strong> — Ab welchem Puzzle-Rating du beginnst</li>
-                <li><strong>Stockfish Depth</strong> — Stärke der Engine (1 = sehr schwach, 24 = maximale Stärke)</li>
-                <li><strong>Themes</strong> — Optional: nur bestimmte Taktik-Themen (z.B. "fork pin")</li>
+                <li [innerHTML]="'endless.help.settingsStartRating' | translate"></li>
+                <li [innerHTML]="'endless.help.settingsStockfishDepth' | translate"></li>
+                <li [innerHTML]="'endless.help.settingsThemes' | translate"></li>
               </ul>
 
-              <h3>Schwierigkeits-Anstieg (Fasttrack)</h3>
-              <p>Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.</p>
+              <h3>{{ 'endless.help.fasttrackHeading' | translate }}</h3>
+              <p>{{ 'endless.help.fasttrackP1' | translate }}</p>
               <ul>
-                <li><strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. Threshold</li>
-                <li><strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Threshold</li>
-                <li><strong>Phase 3 (ab Puzzle 11)</strong> — Konstanter Step von 20</li>
+                <li [innerHTML]="'endless.help.fasttrackPhase1' | translate"></li>
+                <li [innerHTML]="'endless.help.fasttrackPhase2' | translate"></li>
+                <li [innerHTML]="'endless.help.fasttrackPhase3' | translate"></li>
               </ul>
-              <p>Die Threshold-Werte (1st/2nd Threshold) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf "Auto: ..." setzt den Wert zurück.</p>
+              <p>{{ 'endless.help.fasttrackP2' | translate }}</p>
             </div>
           </div>
         </div>
@@ -106,97 +107,97 @@ const RATING_WINDOW = 40;
             <mat-card class="config-card">
               <mat-card-header>
                 <mat-card-title>
-                  Endless Puzzle Mode
+                  {{ 'endless.config.title' | translate }}
                   <button mat-icon-button class="help-btn" (click)="showHelp = true"><mat-icon>help_outline</mat-icon></button>
                 </mat-card-title>
-                <mat-card-subtitle>Progressive difficulty — how far can you go?</mat-card-subtitle>
+                <mat-card-subtitle>{{ 'endless.config.subtitle' | translate }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
                 <div class="config-fields">
                   <mat-form-field appearance="outline">
-                    <mat-label>Start Rating</mat-label>
+                    <mat-label>{{ 'endless.config.startRating' | translate }}</mat-label>
                     <input matInput type="number" [(ngModel)]="config.startElo" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                     <mat-hint>{{ puzzleRange.min }}–{{ puzzleRange.max }}</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Stockfish Depth</mat-label>
+                    <mat-label>{{ 'endless.config.stockfishDepth' | translate }}</mat-label>
                     <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
-                    <mat-hint>1 (schwach) – 24 (stark)</mat-hint>
+                    <mat-hint>{{ 'endless.config.stockfishDepthHint' | translate }}</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
-                    <mat-label>Themes (optional)</mat-label>
-                    <input matInput [(ngModel)]="config.themes" placeholder="e.g. fork pin">
+                    <mat-label>{{ 'endless.config.themes' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="config.themes" [placeholder]="'endless.config.themesPlaceholder' | translate">
                   </mat-form-field>
                 </div>
 
                 <div class="level-preview">
                   @if (fasttrackPhase1Step > 0) {
-                    <p class="threshold-explain">Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.</p>
+                    <p class="threshold-explain">{{ 'endless.config.thresholdExplain' | translate }}</p>
                     <div class="threshold-fields">
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
-                          <mat-label>1st Threshold</mat-label>
+                          <mat-label>{{ 'endless.config.firstThreshold' | translate }}</mat-label>
                           <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgFirst !== fasttrackAutoFirst) {
-                          <span class="auto-hint" (click)="resetThreshold(1)">Auto: {{ fasttrackAutoFirst }}</span>
+                          <span class="auto-hint" (click)="resetThreshold(1)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoFirst } }}</span>
                         }
                       </div>
                       <div class="threshold-field-wrap">
                         <mat-form-field appearance="outline">
-                          <mat-label>2nd Threshold</mat-label>
+                          <mat-label>{{ 'endless.config.secondThreshold' | translate }}</mat-label>
                           <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgSecond !== fasttrackAutoSecond) {
-                          <span class="auto-hint" (click)="resetThreshold(2)">Auto: {{ fasttrackAutoSecond }}</span>
+                          <span class="auto-hint" (click)="resetThreshold(2)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoSecond } }}</span>
                         }
                       </div>
                     </div>
                     <div class="fasttrack-preview">
                       <div class="fasttrack-phase">
-                        <span class="phase-label">Phase 1 (Lv 1–5)</span>
-                        <span class="phase-detail">Step {{ fasttrackPhase1Step }} | {{ config.startElo }} → {{ fasttrackAvgFirst }}</span>
+                        <span class="phase-label">{{ 'endless.config.phase1Label' | translate }}</span>
+                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: fasttrackPhase1Step } }} | {{ config.startElo }} → {{ fasttrackAvgFirst }}</span>
                       </div>
                       <div class="fasttrack-phase">
-                        <span class="phase-label">Phase 2 (Lv 6–10)</span>
-                        <span class="phase-detail">Step {{ fasttrackPhase2Step }} | {{ fasttrackAvgFirst }} → {{ fasttrackAvgSecond }}</span>
+                        <span class="phase-label">{{ 'endless.config.phase2Label' | translate }}</span>
+                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: fasttrackPhase2Step } }} | {{ fasttrackAvgFirst }} → {{ fasttrackAvgSecond }}</span>
                       </div>
                       <div class="fasttrack-phase">
-                        <span class="phase-label">Phase 3 (Lv 11+)</span>
-                        <span class="phase-detail">Step 20</span>
+                        <span class="phase-label">{{ 'endless.config.phase3Label' | translate }}</span>
+                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: 20 } }}</span>
                       </div>
                     </div>
                   }
                 </div>
 
                 <div class="settings-bar">
-                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" title="Einstellungen">
+                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" [attr.title]="'endless.config.settings' | translate">
                     <mat-icon>settings</mat-icon>
                   </button>
                 </div>
                 @if (showSettings) {
                 <div class="viz-slider">
-                  <label>Visualisierung: Level {{ visualizationMode }}</label>
+                  <label>{{ 'endless.config.visualizationLevel' | translate:{ level: visualizationMode } }}</label>
                   <input type="range" min="0" max="4" step="1"
                          [value]="visualizationMode"
                          (input)="setVisualizationLevel(+$any($event.target).value)">
                   <div class="viz-level-desc">{{ vizLevelDescription }}</div>
                 </div>
                 <div class="theme-section">
-                  <div class="theme-label">Modus</div>
+                  <div class="theme-label">{{ 'endless.config.mode' | translate }}</div>
                   <div class="theme-chips">
                     <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="setThemeMode('fixed')">
-                      <mat-icon>palette</mat-icon><span class="theme-name">Normal</span>
+                      <mat-icon>palette</mat-icon><span class="theme-name">{{ 'endless.config.modeNormal' | translate }}</span>
                     </div>
                     <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="setThemeMode('random')">
-                      <mat-icon>shuffle</mat-icon><span class="theme-name">Random</span>
+                      <mat-icon>shuffle</mat-icon><span class="theme-name">{{ 'endless.config.modeRandom' | translate }}</span>
                     </div>
                     <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="setThemeMode('crazy')">
-                      <mat-icon>auto_awesome</mat-icon><span class="theme-name">Crazy</span>
+                      <mat-icon>auto_awesome</mat-icon><span class="theme-name">{{ 'endless.config.modeCrazy' | translate }}</span>
                     </div>
                   </div>
                   @if (themeMode === 'fixed') {
-                  <div class="theme-label" style="margin-top: 0.75rem;">Board Theme</div>
+                  <div class="theme-label" style="margin-top: 0.75rem;">{{ 'endless.config.boardTheme' | translate }}</div>
                   <div class="theme-chips">
                     @for (t of boardThemes; track t.key) {
                       <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
@@ -212,7 +213,7 @@ const RATING_WINDOW = 40;
                       </div>
                     }
                   </div>
-                  <div class="theme-label" style="margin-top: 0.75rem;">Figuren</div>
+                  <div class="theme-label" style="margin-top: 0.75rem;">{{ 'endless.config.pieces' | translate }}</div>
                   <div class="theme-chips">
                     @for (p of pieceSets; track p.key) {
                       <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
@@ -234,16 +235,16 @@ const RATING_WINDOW = 40;
                 @if (highscore > 0) {
                   <div class="highscore-badge">
                     <mat-icon>emoji_events</mat-icon>
-                    Highscore: {{ highscore }} Rating
+                    {{ 'endless.config.highscore' | translate:{ rating: highscore } }}
                   </div>
                 }
 
                 @if (sessionHistory.length > 0) {
                   <p class="session-count">
-                    {{ sessionHistory.length }} sessions played
+                    {{ 'endless.config.sessionsPlayed' | translate:{ count: sessionHistory.length } }}
                     @if (authService.isLoggedIn) {
                       <button mat-button class="history-link" (click)="router.navigate(['/puzzles/endless/history'])">
-                        <mat-icon>history</mat-icon> View History
+                        <mat-icon>history</mat-icon> {{ 'endless.config.viewHistory' | translate }}
                       </button>
                     }
                   </p>
@@ -253,16 +254,16 @@ const RATING_WINDOW = 40;
                   <div class="resume-banner">
                     <div class="resume-info">
                       <mat-icon>pause_circle</mat-icon>
-                      <span>Unfinished run: Lv {{ activeGameState.level + 1 }} | {{ activeGameState.solved }} solved | {{ activeGameState.lives }} lives | {{ activeGameState.maxRatingReached }} max</span>
+                      <span>{{ 'endless.config.unfinishedRun' | translate:{ level: activeGameState.level + 1, solved: activeGameState.solved, lives: activeGameState.lives, max: activeGameState.maxRatingReached } }}</span>
                     </div>
                     <div class="resume-actions">
                       <button mat-raised-button color="primary" class="start-btn" (click)="resumeGame()">
                         <mat-icon>play_arrow</mat-icon>
-                        Continue
+                        {{ 'endless.config.continue' | translate }}
                       </button>
                       <button mat-stroked-button color="warn" (click)="archiveAndStartNew()">
                         <mat-icon>archive</mat-icon>
-                        Archive &amp; New Game
+                        {{ 'endless.config.archiveAndNew' | translate }}
                       </button>
                     </div>
                   </div>
@@ -270,7 +271,7 @@ const RATING_WINDOW = 40;
 
                 <button mat-raised-button color="primary" class="start-btn" (click)="startGame()">
                   <mat-icon>play_arrow</mat-icon>
-                  {{ activeGameState ? 'New Game' : 'Start' }}
+                  {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
                 </button>
               </mat-card-content>
             </mat-card>
@@ -301,14 +302,14 @@ const RATING_WINDOW = 40;
               @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
                 <mat-card class="viz-card">
                   <mat-card-content>
-                    <div class="viz-title"><mat-icon>visibility_off</mat-icon> Visualisierung (Level {{ visualizationMode }})</div>
+                    <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'endless.game.visualization' | translate:{ level: visualizationMode } }}</div>
                     @if (vizCountdownSeconds > 0) {
-                      <div class="viz-countdown">Figuren verschwinden in {{ vizCountdownSeconds }}s...</div>
+                      <div class="viz-countdown">{{ 'endless.game.vizCountdown' | translate:{ seconds: vizCountdownSeconds } }}</div>
                     }
-                    <div class="viz-moves">{{ vizMoveText || 'Noch kein Zug — klick Von-Feld → Ziel-Feld.' }}</div>
+                    <div class="viz-moves">{{ vizMoveText || ('endless.game.vizNoMove' | translate) }}</div>
                     @if (vizPiecesHidden) {
                       <button class="viz-show-btn" (click)="onVizShow()">
-                        {{ vizShowPressed ? 'Showing...' : 'Show' }}
+                        {{ (vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate }}
                       </button>
                     }
                     <div class="viz-hint">{{ vizLevelDescription }}</div>
@@ -321,36 +322,36 @@ const RATING_WINDOW = 40;
                     @case ('LOADING') {
                       <div class="status-center">
                         <mat-spinner diameter="40"></mat-spinner>
-                        <p>Loading puzzle...</p>
+                        <p>{{ 'endless.game.loadingPuzzle' | translate }}</p>
                       </div>
                     }
                     @case ('SETUP') {
                       <div class="status-center">
-                        <p class="status-text">Watch the opponent's move...</p>
+                        <p class="status-text">{{ 'endless.game.watchOpponent' | translate }}</p>
                       </div>
                     }
                     @case ('AWAITING_USER_MOVE') {
                       <div class="status-center">
-                        <p class="status-text">Your turn! Find the best move.</p>
+                        <p class="status-text">{{ 'endless.game.yourTurn' | translate }}</p>
                         @if (showEval) {
                           <div class="eval-compare">
                             @if (evalLoading) {
                               <mat-spinner diameter="16"></mat-spinner>
                             } @else {
-                              <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
                               <span class="eval-arrow">→</span>
-                              <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
                             }
                           </div>
                         }
                         <div class="play-actions">
                           <button mat-button (click)="toggleEval()">
                             <mat-icon>analytics</mat-icon>
-                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
                           </button>
                           <button mat-button color="warn" (click)="giveUp()">
                             <mat-icon>flag</mat-icon>
-                            Give Up
+                            {{ 'endless.game.giveUp' | translate }}
                           </button>
                         </div>
                       </div>
@@ -358,68 +359,68 @@ const RATING_WINDOW = 40;
                     @case ('THINKING') {
                       <div class="status-center">
                         <mat-spinner diameter="24"></mat-spinner>
-                        <p class="status-text">Opponent is thinking...</p>
+                        <p class="status-text">{{ 'endless.game.opponentThinking' | translate }}</p>
                         @if (showEval) {
                           <div class="eval-compare">
-                            <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                            <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
                             <span class="eval-arrow">→</span>
-                            <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                            <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
                           </div>
                         }
                         <div class="play-actions">
                           <button mat-button (click)="toggleEval()">
                             <mat-icon>analytics</mat-icon>
-                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
                           </button>
                           <button mat-button (click)="resetPuzzle()">
                             <mat-icon>replay</mat-icon>
-                            Reset
+                            {{ 'endless.game.reset' | translate }}
                           </button>
                           @if (!mouseslipUsed && !onSolutionPath) {
                             <button mat-button (click)="mouseslip()">
                               <mat-icon>mouse</mat-icon>
-                              Mouseslip
+                              {{ 'endless.game.mouseslip' | translate }}
                             </button>
                           }
                           <button mat-button color="warn" (click)="giveUp()">
                             <mat-icon>flag</mat-icon>
-                            Give Up
+                            {{ 'endless.game.giveUp' | translate }}
                           </button>
                         </div>
                       </div>
                     }
                     @case ('PLAYING') {
                       <div class="status-center">
-                        <p class="status-text">Your move...</p>
+                        <p class="status-text">{{ 'endless.game.yourMove' | translate }}</p>
                         @if (showEval) {
                           <div class="eval-compare">
                             @if (evalLoading) {
                               <mat-spinner diameter="16"></mat-spinner>
                             } @else {
-                              <span class="eval-item"><span class="eval-label">Start</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
                               <span class="eval-arrow">→</span>
-                              <span class="eval-item"><span class="eval-label">Now</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
                             }
                           </div>
                         }
                         <div class="play-actions">
                           <button mat-button (click)="toggleEval()">
                             <mat-icon>analytics</mat-icon>
-                            {{ showEval ? 'Hide Eval' : 'Show Eval' }}
+                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
                           </button>
                           <button mat-button (click)="resetPuzzle()">
                             <mat-icon>replay</mat-icon>
-                            Reset
+                            {{ 'endless.game.reset' | translate }}
                           </button>
                           @if (!mouseslipUsed && !onSolutionPath) {
                             <button mat-button (click)="mouseslip()">
                               <mat-icon>mouse</mat-icon>
-                              Mouseslip
+                              {{ 'endless.game.mouseslip' | translate }}
                             </button>
                           }
                           <button mat-button color="warn" (click)="giveUp()">
                             <mat-icon>flag</mat-icon>
-                            Give Up
+                            {{ 'endless.game.giveUp' | translate }}
                           </button>
                         </div>
                       </div>
@@ -428,10 +429,10 @@ const RATING_WINDOW = 40;
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
                         @if (alternativeSolve) {
-                          <p class="status-text">Checkmate!</p>
-                          <p class="alt-hint">Alternative solution — the puzzle had a different intended line.</p>
+                          <p class="status-text">{{ 'endless.game.checkmate' | translate }}</p>
+                          <p class="alt-hint">{{ 'endless.game.alternativeSolution' | translate }}</p>
                         } @else {
-                          <p class="status-text">Correct!</p>
+                          <p class="status-text">{{ 'endless.game.correct' | translate }}</p>
                         }
                         <div class="review-nav">
                           <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
@@ -441,11 +442,11 @@ const RATING_WINDOW = 40;
                         <div class="alt-actions">
                           @if (reviewingWrongPuzzle) {
                             <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                              <mat-icon>skip_next</mat-icon> Continue
+                              <mat-icon>skip_next</mat-icon> {{ 'endless.game.continue' | translate }}
                             </button>
                           } @else {
                             <button mat-raised-button color="primary" (click)="continueAfterSolve()">
-                              <mat-icon>arrow_forward</mat-icon> Continue
+                              <mat-icon>arrow_forward</mat-icon> {{ 'endless.game.continue' | translate }}
                             </button>
                           }
                         </div>
@@ -455,10 +456,10 @@ const RATING_WINDOW = 40;
                       <div class="status-center failed">
                         @if (gaveUp) {
                           <mat-icon class="result-icon gave-up-icon">flag</mat-icon>
-                          <p class="status-text">Gave Up</p>
+                          <p class="status-text">{{ 'endless.game.gaveUp' | translate }}</p>
                         } @else {
                           <mat-icon class="result-icon">cancel</mat-icon>
-                          <p class="status-text">Wrong!</p>
+                          <p class="status-text">{{ 'endless.game.wrong' | translate }}</p>
                         }
                         <div class="review-nav">
                           <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
@@ -467,7 +468,7 @@ const RATING_WINDOW = 40;
                         </div>
                         <div class="wrong-actions">
                           <button mat-raised-button color="primary" (click)="continueAfterWrong()">
-                            <mat-icon>skip_next</mat-icon> Continue
+                            <mat-icon>skip_next</mat-icon> {{ 'endless.game.continue' | translate }}
                           </button>
                         </div>
                       </div>
@@ -480,11 +481,11 @@ const RATING_WINDOW = 40;
                 <mat-card class="info-card">
                   <mat-card-content>
                     <div class="puzzle-info">
-                      <span class="rating-badge">Puzzle Rating: {{ puzzle.rating }}</span>
-                      <span class="level-badge">Level {{ level }} ({{ currentMinRating }}–{{ currentMaxRating }})</span>
+                      <span class="rating-badge">{{ 'endless.game.puzzleRating' | translate:{ rating: puzzle.rating } }}</span>
+                      <span class="level-badge">{{ 'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating } }}</span>
                       @if (puzzle.themes) {
                         <span class="themes-toggle" (click)="showThemes = !showThemes">
-                          {{ showThemes ? 'Hide tags' : 'Show tags' }}
+                          {{ (showThemes ? 'endless.game.hideTags' : 'endless.game.showTags') | translate }}
                         </span>
                         @if (showThemes) {
                           <div class="themes">
@@ -495,7 +496,7 @@ const RATING_WINDOW = 40;
                         }
                       }
                       <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
-                        <mat-icon>share</mat-icon> Puzzle teilen
+                        <mat-icon>share</mat-icon> {{ 'endless.game.sharePuzzle' | translate }}
                       </button>
                     </div>
                   </mat-card-content>
@@ -507,19 +508,19 @@ const RATING_WINDOW = 40;
                   <div class="stats-grid">
                     <div class="stat">
                       <span class="stat-value">{{ currentRating }}</span>
-                      <span class="stat-label">Rating</span>
+                      <span class="stat-label">{{ 'endless.game.statRating' | translate }}</span>
                     </div>
                     <div class="stat">
                       <span class="stat-value">{{ level }}</span>
-                      <span class="stat-label">Level</span>
+                      <span class="stat-label">{{ 'endless.game.statLevel' | translate }}</span>
                     </div>
                     <div class="stat">
                       <span class="stat-value">{{ solved }}</span>
-                      <span class="stat-label">Solved</span>
+                      <span class="stat-label">{{ 'endless.game.statSolved' | translate }}</span>
                     </div>
                     <div class="stat">
                       <span class="stat-value">{{ formatTime(sessionSeconds) }}</span>
-                      <span class="stat-label">Time</span>
+                      <span class="stat-label">{{ 'endless.game.statTime' | translate }}</span>
                     </div>
                   </div>
                   <div class="lives-display">
@@ -545,39 +546,39 @@ const RATING_WINDOW = 40;
           <div class="gameover-screen">
             <mat-card class="gameover-card exhausted-card">
               <mat-card-header>
-                <mat-card-title>Ausgespielt!</mat-card-title>
-                <mat-card-subtitle>Du hast alle Puzzle-Rating-Bereiche durchgespielt.</mat-card-subtitle>
+                <mat-card-title>{{ 'endless.gameOver.exhaustedTitle' | translate }}</mat-card-title>
+                <mat-card-subtitle>{{ 'endless.gameOver.exhaustedSubtitle' | translate }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
                 <div class="stockfish-question">
                   <span class="stockfish-fish">&#x1F41F;</span>
-                  <p class="stockfish-text">Bist du ein Stockfisch?</p>
+                  <p class="stockfish-text">{{ 'endless.gameOver.areYouAStockfish' | translate }}</p>
                 </div>
                 <div class="gameover-stats">
                   <div class="gameover-stat">
                     <mat-icon>trending_up</mat-icon>
                     <span class="go-value">{{ maxRatingReached }}</span>
-                    <span class="go-label">Max Rating</span>
+                    <span class="go-label">{{ 'endless.gameOver.maxRating' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>extension</mat-icon>
                     <span class="go-value">{{ solved }}</span>
-                    <span class="go-label">Puzzles Solved</span>
+                    <span class="go-label">{{ 'endless.gameOver.puzzlesSolved' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>favorite</mat-icon>
                     <span class="go-value">{{ lives }}</span>
-                    <span class="go-label">Lives Left</span>
+                    <span class="go-label">{{ 'endless.gameOver.livesLeft' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>timer</mat-icon>
                     <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
-                    <span class="go-label">Time</span>
+                    <span class="go-label">{{ 'endless.gameOver.time' | translate }}</span>
                   </div>
                 </div>
                 @if (currentSessionPuzzles.length > 0) {
                   <div class="puzzle-review">
-                    <h4 class="review-title">Puzzle Review</h4>
+                    <h4 class="review-title">{{ 'endless.gameOver.puzzleReview' | translate }}</h4>
                     <div class="review-list">
                       @for (attempt of currentSessionPuzzles; track attempt.puzzleNumber) {
                         <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle(attempt.puzzleId)">
@@ -594,28 +595,28 @@ const RATING_WINDOW = 40;
                 @if (isNewHighscore) {
                   <div class="new-highscore">
                     <mat-icon>emoji_events</mat-icon>
-                    New Highscore!
+                    {{ 'endless.gameOver.newHighscore' | translate }}
                   </div>
                 }
                 @if (authService.isLoggedIn && lastSessionId && !lastSessionArchived) {
                   <button mat-stroked-button color="warn" class="archive-btn" (click)="archiveLastSession()" [disabled]="archiving">
                     <mat-icon>archive</mat-icon>
-                    {{ archiving ? 'Archiving...' : 'Archive this Run' }}
+                    {{ (archiving ? 'endless.gameOver.archiving' : 'endless.gameOver.archiveRun') | translate }}
                   </button>
                 }
                 @if (lastSessionArchived) {
                   <div class="archived-hint">
-                    <mat-icon>check</mat-icon> Archived
+                    <mat-icon>check</mat-icon> {{ 'endless.gameOver.archived' | translate }}
                   </div>
                 }
                 <div class="gameover-actions">
                   <button mat-raised-button color="primary" (click)="playAgain()">
                     <mat-icon>replay</mat-icon>
-                    Play Again
+                    {{ 'endless.gameOver.playAgain' | translate }}
                   </button>
                   <button mat-button (click)="backToPuzzles()">
                     <mat-icon>arrow_back</mat-icon>
-                    Back to Puzzles
+                    {{ 'endless.gameOver.backToPuzzles' | translate }}
                   </button>
                 </div>
               </mat-card-content>
@@ -627,40 +628,40 @@ const RATING_WINDOW = 40;
           <div class="gameover-screen">
             <mat-card class="gameover-card">
               <mat-card-header>
-                <mat-card-title>Game Over</mat-card-title>
+                <mat-card-title>{{ 'endless.gameOver.title' | translate }}</mat-card-title>
               </mat-card-header>
               <mat-card-content>
                 <div class="gameover-stats">
                   <div class="gameover-stat">
                     <mat-icon>trending_up</mat-icon>
                     <span class="go-value">{{ maxRatingReached }}</span>
-                    <span class="go-label">Max Rating</span>
+                    <span class="go-label">{{ 'endless.gameOver.maxRating' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>extension</mat-icon>
                     <span class="go-value">{{ solved }}</span>
-                    <span class="go-label">Puzzles Solved</span>
+                    <span class="go-label">{{ 'endless.gameOver.puzzlesSolved' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>stacked_line_chart</mat-icon>
                     <span class="go-value">{{ level }}</span>
-                    <span class="go-label">Level Reached</span>
+                    <span class="go-label">{{ 'endless.gameOver.levelReached' | translate }}</span>
                   </div>
                   <div class="gameover-stat">
                     <mat-icon>timer</mat-icon>
                     <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
-                    <span class="go-label">Time</span>
+                    <span class="go-label">{{ 'endless.gameOver.time' | translate }}</span>
                   </div>
                 </div>
                 @if (currentSessionMistakes.length > 0) {
                   <div class="mistake-ratings">
                     <mat-icon>heart_broken</mat-icon>
-                    <span>Lives lost at: {{ currentSessionMistakes.join(', ') }}</span>
+                    <span>{{ 'endless.gameOver.livesLostAt' | translate:{ ratings: currentSessionMistakes.join(', ') } }}</span>
                   </div>
                 }
                 @if (currentSessionPuzzles.length > 0) {
                   <div class="puzzle-review">
-                    <h4 class="review-title">Puzzle Review</h4>
+                    <h4 class="review-title">{{ 'endless.gameOver.puzzleReview' | translate }}</h4>
                     <div class="review-list">
                       @for (attempt of currentSessionPuzzles; track attempt.puzzleNumber) {
                         <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle(attempt.puzzleId)">
@@ -677,28 +678,28 @@ const RATING_WINDOW = 40;
                 @if (isNewHighscore) {
                   <div class="new-highscore">
                     <mat-icon>emoji_events</mat-icon>
-                    New Highscore!
+                    {{ 'endless.gameOver.newHighscore' | translate }}
                   </div>
                 }
                 @if (authService.isLoggedIn && lastSessionId && !lastSessionArchived) {
                   <button mat-stroked-button color="warn" class="archive-btn" (click)="archiveLastSession()" [disabled]="archiving">
                     <mat-icon>archive</mat-icon>
-                    {{ archiving ? 'Archiving...' : 'Archive this Run' }}
+                    {{ (archiving ? 'endless.gameOver.archiving' : 'endless.gameOver.archiveRun') | translate }}
                   </button>
                 }
                 @if (lastSessionArchived) {
                   <div class="archived-hint">
-                    <mat-icon>check</mat-icon> Archived
+                    <mat-icon>check</mat-icon> {{ 'endless.gameOver.archived' | translate }}
                   </div>
                 }
                 <div class="gameover-actions">
                   <button mat-raised-button color="primary" (click)="playAgain()">
                     <mat-icon>replay</mat-icon>
-                    Play Again
+                    {{ 'endless.gameOver.playAgain' | translate }}
                   </button>
                   <button mat-button (click)="backToPuzzles()">
                     <mat-icon>arrow_back</mat-icon>
-                    Back to Puzzles
+                    {{ 'endless.gameOver.backToPuzzles' | translate }}
                   </button>
                 </div>
               </mat-card-content>
@@ -1011,7 +1012,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     public authService: AuthService,
     private prefs: PreferencesService,
     public router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private translate: TranslateService
   ) {
     super(stockfish);
     this.state = 'CONFIG';
@@ -1074,9 +1076,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   get currentRating(): number { return this._currentMinRating; }
 
   get currentPhaseLabel(): string {
-    if (this.solved < 5) return `Phase 1 (step ${this.fasttrackPhase1Step})`;
-    if (this.solved < 10) return `Phase 2 (step ${this.fasttrackPhase2Step})`;
-    return 'Phase 3 (step 20)';
+    if (this.solved < 5) return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: this.fasttrackPhase1Step });
+    if (this.solved < 10) return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: this.fasttrackPhase2Step });
+    return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: 20 });
   }
 
   private clampConfig(): void {

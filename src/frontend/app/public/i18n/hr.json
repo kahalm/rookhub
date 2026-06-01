@@ -1,0 +1,738 @@
+{
+  "common": {
+    "save": "Spremi",
+    "cancel": "Odustani",
+    "delete": "Izbriši",
+    "edit": "Uredi",
+    "add": "Dodaj",
+    "close": "Zatvori",
+    "search": "Pretraži",
+    "back": "Natrag",
+    "retry": "Pokušaj ponovno",
+    "loading": "Učitavanje…",
+    "ok": "U redu",
+    "remove": "Ukloni"
+  },
+  "nav": {
+    "dashboard": "Nadzorna ploča",
+    "repertoires": "Repertoari",
+    "tournaments": "Turniri",
+    "friends": "Prijatelji",
+    "puzzles": "Zagonetke",
+    "weekly": "Tjedna objava",
+    "courses": "Tečajevi",
+    "admin": "Administracija",
+    "profile": "Profil",
+    "puzzleHistory": "Povijest zagonetki",
+    "changelog": "Dnevnik promjena",
+    "logout": "Odjava",
+    "login": "Prijava",
+    "register": "Registracija",
+    "language": "Jezik",
+    "menu": "Izbornik",
+    "info": "Informacije"
+  },
+  "app": {
+    "changelogTitle": "Dnevnik promjena",
+    "quickstartTitle": "Brzi početak",
+    "qs": {
+      "subscribeTitle": "Pretplata",
+      "subscribeDesc": "Pretplatite se na turnire za brz pristup igračima, parovima i rezultatima.",
+      "monitorTitle": "Praćenje",
+      "monitorDesc": "Uključite praćenje turnira — nova kola automatski se prepoznaju i dohvaćaju.",
+      "favoritesTitle": "Favoriti",
+      "favoritesDesc": "Označite igrače ili timove kao favorite za brz pristup u prikazu turnira.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Unesite svoj ChessResults ID u profil — nadolazeći turniri pretplaćuju se automatski."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Prijava",
+      "usernameLabel": "Korisničko ime",
+      "passwordLabel": "Lozinka",
+      "submit": "Prijava",
+      "submitting": "Prijava u tijeku...",
+      "registerLink": "Nemate račun? Registrirajte se",
+      "failed": "Prijava nije uspjela"
+    },
+    "register": {
+      "title": "Registracija",
+      "usernameLabel": "Korisničko ime",
+      "emailLabel": "E-pošta",
+      "passwordLabel": "Lozinka",
+      "passwordHint": "Najmanje 8 znakova, velika i mala slova, broj",
+      "submit": "Registracija",
+      "submitting": "Registracija u tijeku...",
+      "loginLink": "Već imate račun? Prijavite se",
+      "failed": "Registracija nije uspjela"
+    }
+  },
+  "dashboard": {
+    "welcome": "Dobrodošli, {{username}}!",
+    "subscribedTournaments": "Pretplaćeni turniri",
+    "subscribedAt": "Pretplaćeno {{date}}",
+    "puzzles": {
+      "title": "Zagonetke",
+      "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}}%)",
+      "solve": "Rješavaj zagonetke",
+      "endless": "Beskonačno"
+    },
+    "subscriptions": {
+      "title": "Pretplate na turnire",
+      "count": "{{count}} pretplata",
+      "browse": "Pregledaj turnire"
+    },
+    "friends": {
+      "title": "Prijatelji",
+      "count": "{{count}} prijatelja",
+      "manage": "Upravljaj prijateljima"
+    },
+    "repertoires": {
+      "title": "Repertoari",
+      "count": "{{count}} repertoara",
+      "viewAll": "Prikaži sve"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partija",
+    "nav": {
+      "first": "Prvi potez",
+      "previous": "Prethodni potez",
+      "next": "Sljedeći potez",
+      "last": "Posljednji potez"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Ime",
+    "lastName": "Prezime",
+    "searchPlayer": "Pretraži igrača",
+    "noResults": "Nema rezultata.",
+    "displayName": "Prikazno ime",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com korisničko ime",
+    "lichessUsername": "Lichess korisničko ime",
+    "saving": "Spremanje...",
+    "saved": "Profil spremljen",
+    "saveFailed": "Spremanje profila nije uspjelo",
+    "searchFailed": "Pretraga nije uspjela",
+    "chessResultsApplied": "ChessResults podaci preuzeti",
+    "fideApplied": "FIDE podaci preuzeti"
+  },
+  "friends": {
+    "title": "Prijatelji",
+    "searchUsers": "Pretraži korisnike",
+    "searchResults": "Rezultati pretrage",
+    "tabs": {
+      "friends": "Prijatelji ({{count}})",
+      "requests": "Zahtjevi ({{count}})"
+    },
+    "empty": {
+      "friends": "Još nemate prijatelja. Pretražite korisnike da biste dodali prijatelje!",
+      "requests": "Nema zahtjeva na čekanju."
+    },
+    "sentOn": "Poslano {{date}}",
+    "requestSent": "Zahtjev za prijateljstvo poslan",
+    "errors": {
+      "loadFriends": "Učitavanje prijatelja nije uspjelo",
+      "loadRequests": "Učitavanje zahtjeva nije uspjelo",
+      "search": "Pretraga nije uspjela",
+      "sendRequest": "Slanje zahtjeva nije uspjelo",
+      "acceptRequest": "Prihvaćanje zahtjeva nije uspjelo",
+      "declineRequest": "Odbijanje zahtjeva nije uspjelo",
+      "removeFriend": "Uklanjanje prijatelja nije uspjelo"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Moji repertoari",
+      "new": "Novi repertoar",
+      "fileCount": "{{count}} datoteka",
+      "public": "Javno",
+      "private": "Privatno",
+      "noDescription": "Nema opisa",
+      "open": "Otvori",
+      "empty": "Još nema repertoara. Stvorite jedan za početak!",
+      "loadFailed": "Učitavanje repertoara nije uspjelo",
+      "createFailed": "Stvaranje repertoara nije uspjelo",
+      "deleteConfirm": "Izbrisati ovaj repertoar?",
+      "deleteFailed": "Brisanje repertoara nije uspjelo"
+    },
+    "detail": {
+      "noDescription": "Nema opisa",
+      "modeLines": "Linije",
+      "modeTree": "Stablo",
+      "modeEdit": "Uredi"
+    },
+    "dialog": {
+      "title": "Novi repertoar",
+      "name": "Naziv",
+      "description": "Opis",
+      "public": "Javno",
+      "create": "Stvori"
+    },
+    "lines": {
+      "allLines": "Sve linije",
+      "empty": "U ovom repertoaru nema pronađenih linija."
+    },
+    "tree": {
+      "start": "Početak",
+      "lineCount": "{{count}} linija",
+      "lineCountPlural": "{{count}} linija",
+      "empty": "Kraj linije — nema daljnjih poteza."
+    },
+    "edit": {
+      "uploadHint": "Povucite PGN datoteke ovdje ili kliknite za prijenos",
+      "files": "Datoteke ({{count}})",
+      "empty": "Još nema datoteka. Prenesite PGN datoteke za početak!",
+      "filesSkipped": "{{count}} datoteka preskočeno (samo .pgn do 10 MB)",
+      "uploadSuccess": "{{count}} datoteka preneseno",
+      "uploadPartial": "{{ok}} preneseno, {{failed}} neuspjelo",
+      "downloadFailed": "Preuzimanje nije uspjelo",
+      "deleteConfirm": "Izbrisati ovu datoteku?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Osvježi",
+      "subscribe": "Pretplati se",
+      "unsubscribe": "Otkaži pretplatu",
+      "monitor": "Prati",
+      "monitoringUntil": "Praćenje do {{time}}",
+      "share": "Podijeli",
+      "subscribed": "Pretplaćeno!",
+      "unsubscribed": "Pretplata otkazana",
+      "failed": "Neuspješno",
+      "unsubscribeFailed": "Otkazivanje pretplate nije uspjelo"
+    },
+    "tabs": {
+      "players": "Igrači ({{count}})",
+      "teams": "Ekipe ({{count}})",
+      "pairings": "Parovi"
+    },
+    "favoritesOnly": "Samo favoriti",
+    "favorites": {
+      "added": "{{name}} dodan u favorite",
+      "removed": "{{name}} uklonjen iz favorita",
+      "addedShort": "{{name}} označen kao favorit",
+      "removedShort": "{{name}} uklonjen"
+    },
+    "players": {
+      "snr": "Br.",
+      "title": "Titula",
+      "name": "Ime",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Država",
+      "team": "Ekipa",
+      "club": "Klub",
+      "boardShort": "Pl."
+    },
+    "teams": {
+      "rank": "Mjesto",
+      "team": "Ekipa",
+      "points": "Bodovi"
+    },
+    "pairings": {
+      "round": "Kolo",
+      "roundLabel": "Kolo {{round}}",
+      "board": "Ploča",
+      "white": "Bijeli",
+      "black": "Crni",
+      "home": "Domaćin",
+      "away": "Gost",
+      "result": "Rezultat"
+    },
+    "monitor": {
+      "stopped": "Praćenje zaustavljeno",
+      "stopFailed": "Zaustavljanje praćenja nije uspjelo",
+      "activated": "Praćenje aktivirano",
+      "activateFailed": "Aktiviranje praćenja nije uspjelo",
+      "newRoundTitle": "Dostupno novo kolo!",
+      "newRoundBody": "Kolo {{round}} je objavljeno.",
+      "newRoundSnack": "Dostupno novo kolo! Kolo {{round}}"
+    },
+    "list": {
+      "title": "Turniri",
+      "importTitle": "Uvezi turnir",
+      "importSubtitle": "Unesi ID turnira s chess-results.com za dohvaćanje",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "npr. 1234567",
+      "idHintPrefix": "Broj iz chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Dohvati",
+      "crawling": "Dohvaćanje turnira {{id}}... Posao #{{jobId}}",
+      "crawlerUnavailable": "Povezivanje s crawlerom turnira nije uspjelo. Provjeri radi li crawler usluga.",
+      "details": "Detalji",
+      "hide": "Sakrij",
+      "empty": "Nije pronađen nijedan turnir.",
+      "showHidden": "Prikaži {{count}} skrivenih",
+      "imported": "Turnir uvezen!",
+      "crawlStartFailed": "Pokretanje dohvaćanja nije uspjelo",
+      "crawlFailed": "Dohvaćanje nije uspjelo",
+      "crawlConnectionLost": "Izgubljena veza s poslom dohvaćanja"
+    },
+    "detail": {
+      "loadTournamentFailed": "Učitavanje turnira nije uspjelo",
+      "loadSubscriptionFailed": "Učitavanje statusa pretplate nije uspjelo",
+      "reloadTournamentFailed": "Ponovno učitavanje turnira nije uspjelo",
+      "refreshStartFailed": "Pokretanje osvježavanja nije uspjelo",
+      "dataRefreshed": "Podaci osvježeni!",
+      "refreshFailed": "Osvježavanje nije uspjelo",
+      "loadPlayersFailed": "Učitavanje igrača nije uspjelo",
+      "loadTeamsFailed": "Učitavanje ekipa nije uspjelo",
+      "loadPairingsFailed": "Učitavanje parova nije uspjelo",
+      "loadTeamDetailsFailed": "Učitavanje detalja ekipe nije uspjelo"
+    },
+    "public": {
+      "notFound": "Turnir nije pronađen."
+    },
+    "share": {
+      "title": "Podijeli turnir",
+      "copyLink": "Kopiraj poveznicu",
+      "linkCopied": "Poveznica kopirana!",
+      "copyFailed": "Kopiranje nije uspjelo"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Učitavanje zagonetke…",
+      "loadFailed": "Učitavanje zagonetke nije uspjelo",
+      "watchOpponent": "Pratite protivnikov potez…",
+      "yourTurn": "Vi ste na potezu!",
+      "gaveUpPlayOut": "Predali ste se — sami odigrajte rješenje.",
+      "thinking": "Stockfish razmišlja…"
+    },
+    "result": {
+      "solutionPlayedOut": "Rješenje odigrano.",
+      "tryYourselfNextTime": "Sljedeći put možda riješite sami!",
+      "checkmate": "Šah-mat!",
+      "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
+      "correct": "Točno!",
+      "incorrect": "Netočno"
+    },
+    "eval": {
+      "start": "Početak",
+      "now": "Sada",
+      "show": "Prikaži procjenu",
+      "hide": "Sakrij procjenu"
+    },
+    "actions": {
+      "reset": "Poništi",
+      "mouseslip": "Klizanje mišem",
+      "giveUp": "Predaj se",
+      "nextPuzzle": "Sljedeća zagonetka",
+      "share": "Podijeli zagonetku",
+      "loadPuzzle": "Učitaj zagonetku",
+      "reviewLast": "Pregledaj zadnju zagonetku",
+      "endlessMode": "Beskonačni način"
+    },
+    "info": {
+      "rating": "Ocjena"
+    },
+    "stats": {
+      "title": "Vaša statistika",
+      "solved": "Riješeno",
+      "accuracy": "Točnost",
+      "streak": "Niz",
+      "best": "Najbolje"
+    },
+    "settings": {
+      "tooltip": "Postavke"
+    },
+    "filters": {
+      "title": "Filtri",
+      "visualization": "Vizualizacija: razina {{level}}",
+      "difficulty": "Težina",
+      "difficultyHint": "Zagonetke oko vašeg Ela ({{elo}})",
+      "depthHint": "1 (slabo) – 24 (jako)",
+      "skipSolved": "Preskoči riješene"
+    },
+    "difficulty": {
+      "veryEasy": "Vrlo lako",
+      "easy": "Lako",
+      "normal": "Normalno",
+      "hard": "Teško",
+      "veryHard": "Vrlo teško"
+    },
+    "theme": {
+      "mode": "Način",
+      "modeNormal": "Normalno",
+      "modeRandom": "Nasumično",
+      "modeCrazy": "Ludo",
+      "boardTheme": "Tema ploče",
+      "pieces": "Figure"
+    },
+    "viz": {
+      "title": "Vizualizacija (razina {{level}})",
+      "countdown": "Figure nestaju za {{seconds}}s…",
+      "noMoveYet": "Još nema poteza — kliknite polje-od → ciljno polje.",
+      "show": "Prikaži",
+      "showing": "Prikazuje se…"
+    },
+    "share": {
+      "title": "Podijeli zagonetku",
+      "copied": "Poveznica kopirana!",
+      "copyFailed": "Kopiranje nije uspjelo"
+    }
+  },
+  "courses": {
+    "title": "Tečajevi",
+    "intro": "Prorađuj uvezenu knjigu zagonetku po zagonetku — slijedno ili nasumično. Tvoj napredak se sprema.",
+    "emptyHint": "Još nema uvezenih knjiga. Uvezi knjige u administratorskom području pod „Knjige\".",
+    "puzzleCount": "{{count}} zagonetki",
+    "completed": "Tečaj završen",
+    "sequential": "Slijedno",
+    "random": "Nasumično",
+    "resetTooltip": "Poništi napredak",
+    "resetConfirm": "Poništiti napredak za „{{name}}\"?",
+    "loadFailed": "Tečajeve nije moguće učitati",
+    "resetFailed": "Poništavanje nije uspjelo"
+  },
+  "weekly": {
+    "title": "Tjedna objava",
+    "intro": "Tjedne šahovske objave za prelistavanje. Datum i vrijeme označavaju kada je objava zakazana.",
+    "oClock": "sati",
+    "play": "Odigraj",
+    "empty": "Još nema tjednih objava.",
+    "deleteConfirm": "Izbrisati tjednu objavu „{{title}}“?",
+    "created": "Tjedna objava stvorena",
+    "deleted": "Tjedna objava izbrisana",
+    "loadFailed": "Tjedne objave nije moguće učitati",
+    "uploadFailed": "Učitavanje nije uspjelo",
+    "saveFailed": "Spremanje nije uspjelo",
+    "deleteFailed": "Brisanje nije uspjelo",
+    "fields": {
+      "date": "Datum",
+      "time": "Vrijeme",
+      "titleOptional": "Naslov (neobavezno)"
+    },
+    "columns": {
+      "scheduled": "Termin",
+      "title": "Naslov",
+      "actions": "Radnje"
+    },
+    "upload": {
+      "title": "Učitaj novu tjednu objavu",
+      "choosePgn": "Odaberi PGN",
+      "titlePlaceholder": "iz naziva datoteke",
+      "create": "Stvori",
+      "hint": "Zadano: zadnji termin + 7 dana, isto vrijeme (inače 19:00)."
+    }
+  },
+  "endless": {
+    "help": {
+      "title": "Endless Puzzle Mode",
+      "gameplayHeading": "Tijek igre",
+      "gameplayP1": "Rješavaš šahovske zagonetke sve veće težine. Počinješ s odabranim rejtingom i napreduješ prema gore. Rejting se automatski povećava kroz Fasttrack faze (vidi dolje).",
+      "gameplayP2": "Imaš <strong>3 života</strong>. Kad ostaneš bez života, igra je gotova.",
+      "movesHeading": "Potezi i Stockfish",
+      "movesP1": "Svaka zagonetka ima <strong>predviđeno rješenje</strong> (niz poteza). Dok igraš ispravne poteze, slijediš tu liniju rješenja.",
+      "movesP2": "Ako odigraš <strong>pogrešan potez</strong>, <strong>Stockfish</strong> (šahovski mehanizam) preuzima protivničku stranu. Tada slobodno nastavljaš igrati protiv Stockfisha. Jačina se podešava putem Stockfish Depth.",
+      "movesItem1": "<strong>Mat Stockfishu</strong> računa se kao alternativno rješenje — bez gubitka života!",
+      "movesItem2": "<strong>Stockfish ti da mat</strong> — gubiš život",
+      "movesItem3": "Igra protiv Stockfisha nastavlja se beskonačno do mata ili predaje",
+      "buttonsHeading": "Gumbi tijekom igre",
+      "buttonsShowEval": "<strong>Show Eval</strong> — Prikazuje Stockfish procjenu (Početak vs. Sada)",
+      "buttonsReset": "<strong>Reset</strong> — Vraća zagonetku na početak, ali košta život",
+      "buttonsMouseslip": "<strong>Mouseslip</strong> — Poništava zadnji pogrešan potez (jednom po zagonetki, besplatno)",
+      "buttonsGiveUp": "<strong>Give Up</strong> — Predaja, košta život",
+      "settingsHeading": "Postavke",
+      "settingsStartRating": "<strong>Start Rating</strong> — S kojim rejtingom zagonetke počinješ",
+      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Jačina mehanizma (1 = vrlo slab, 24 = maksimalna jačina)",
+      "settingsThemes": "<strong>Themes</strong> — Opcionalno: samo određene taktičke teme (npr. \"fork pin\")",
+      "fasttrackHeading": "Porast težine (Fasttrack)",
+      "fasttrackP1": "Porast se prilagođava tvojoj dosadašnjoj izvedbi: analizira tvoje posljednje sesije i izračunava pri kojem rejtingu obično gubiš živote.",
+      "fasttrackPhase1": "<strong>Faza 1 (zagonetke 1–5)</strong> — Brzi porast do tvog 1. praga",
+      "fasttrackPhase2": "<strong>Faza 2 (zagonetke 6–10)</strong> — Porast od 1. do 2. praga",
+      "fasttrackPhase3": "<strong>Faza 3 (od zagonetke 11)</strong> — Stalni korak od 20",
+      "fasttrackP2": "Vrijednosti pragova (1./2. prag) izračunavaju se automatski, ali se mogu ručno prilagoditi. Klik na \"Auto: …\" vraća vrijednost."
+    },
+    "config": {
+      "title": "Endless Puzzle Mode",
+      "subtitle": "Progresivna težina — koliko daleko možeš doći?",
+      "startRating": "Start Rating",
+      "stockfishDepth": "Stockfish Depth",
+      "stockfishDepthHint": "1 (slabo) – 24 (jako)",
+      "themes": "Themes (opcionalno)",
+      "themesPlaceholder": "npr. fork pin",
+      "thresholdExplain": "Rejtinzi pri kojima obično gubiš živote. Prilagodi da brže ili sporije preskačeš lakše zagonetke.",
+      "firstThreshold": "1. prag",
+      "secondThreshold": "2. prag",
+      "auto": "Auto: {{value}}",
+      "step": "Korak {{step}}",
+      "phase1Label": "Faza 1 (Lv 1–5)",
+      "phase2Label": "Faza 2 (Lv 6–10)",
+      "phase3Label": "Faza 3 (Lv 11+)",
+      "settings": "Postavke",
+      "visualizationLevel": "Vizualizacija: razina {{level}}",
+      "mode": "Način",
+      "modeNormal": "Normalno",
+      "modeRandom": "Nasumično",
+      "modeCrazy": "Ludo",
+      "boardTheme": "Tema ploče",
+      "pieces": "Figure",
+      "highscore": "Najbolji rezultat: {{rating}} rejting",
+      "sessionsPlayed": "{{count}} odigranih sesija",
+      "viewHistory": "Prikaži povijest",
+      "unfinishedRun": "Nedovršena igra: Lv {{level}} | {{solved}} riješeno | {{lives}} života | {{max}} max",
+      "continue": "Nastavi",
+      "archiveAndNew": "Arhiviraj i nova igra",
+      "newGame": "Nova igra",
+      "start": "Početak"
+    },
+    "game": {
+      "visualization": "Vizualizacija (razina {{level}})",
+      "vizCountdown": "Figure nestaju za {{seconds}}s...",
+      "vizNoMove": "Još nema poteza — klikni polje-od → ciljno polje.",
+      "vizShow": "Prikaži",
+      "vizShowing": "Prikazuje se...",
+      "loadingPuzzle": "Učitavanje zagonetke...",
+      "watchOpponent": "Promatraj protivnikov potez...",
+      "yourTurn": "Ti si na potezu! Pronađi najbolji potez.",
+      "yourMove": "Tvoj potez...",
+      "opponentThinking": "Protivnik razmišlja...",
+      "evalStart": "Početak",
+      "evalNow": "Sada",
+      "showEval": "Show Eval",
+      "hideEval": "Hide Eval",
+      "reset": "Reset",
+      "mouseslip": "Mouseslip",
+      "giveUp": "Give Up",
+      "checkmate": "Šah-mat!",
+      "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiju predviđenu liniju.",
+      "correct": "Točno!",
+      "wrong": "Pogrešno!",
+      "gaveUp": "Predano",
+      "continue": "Nastavi",
+      "puzzleRating": "Rejting zagonetke: {{rating}}",
+      "levelRange": "Razina {{level}} ({{min}}–{{max}})",
+      "showTags": "Prikaži oznake",
+      "hideTags": "Sakrij oznake",
+      "sharePuzzle": "Podijeli zagonetku",
+      "statRating": "Rejting",
+      "statLevel": "Razina",
+      "statSolved": "Riješeno",
+      "statTime": "Vrijeme",
+      "phaseLabel": "Faza {{phase}} (korak {{step}})"
+    },
+    "gameOver": {
+      "title": "Game Over",
+      "exhaustedTitle": "Sve odigrano!",
+      "exhaustedSubtitle": "Prošao si kroz sve raspone rejtinga zagonetki.",
+      "areYouAStockfish": "Jesi li ti Stockfish?",
+      "maxRating": "Maksimalni rejting",
+      "puzzlesSolved": "Riješene zagonetke",
+      "livesLeft": "Preostali životi",
+      "levelReached": "Dostignuta razina",
+      "time": "Vrijeme",
+      "livesLostAt": "Životi izgubljeni pri: {{ratings}}",
+      "puzzleReview": "Pregled zagonetki",
+      "newHighscore": "Novi najbolji rezultat!",
+      "archiving": "Arhiviranje...",
+      "archiveRun": "Arhiviraj ovu igru",
+      "archived": "Arhivirano",
+      "playAgain": "Igraj ponovno",
+      "backToPuzzles": "Natrag na zagonetke"
+    },
+    "history": {
+      "title": "Povijest Endless Puzzlea",
+      "noSessions": "Još nema odigranih sesija.",
+      "startPlaying": "Počni igrati",
+      "filterAll": "Sve",
+      "filterActive": "Aktivne",
+      "filterArchived": "Arhivirane",
+      "selected": "{{count}} odabrano",
+      "archive": "Arhiviraj",
+      "unarchive": "Vrati iz arhive",
+      "noArchivedSessions": "Nema arhiviranih sesija.",
+      "noActiveSessions": "Nema aktivnih sesija.",
+      "colDate": "Datum",
+      "colMaxRating": "Maksimalni rejting",
+      "colSolved": "Riješeno",
+      "colDuration": "Trajanje",
+      "colConfig": "Konfiguracija",
+      "colMistakes": "Pogreške",
+      "backToEndless": "Natrag na Endless Mode"
+    }
+  },
+  "book": {
+    "difficulty": "Težina",
+    "status": {
+      "loading": "Učitavanje zagonetke...",
+      "watchOpponent": "Pogledaj protivnikov potez...",
+      "yourTurn": "Ti si na potezu! Pronađi najbolji potez.",
+      "gaveUp": "Predao si — odigraj rješenje sam.",
+      "stockfishThinking": "Stockfish razmišlja...",
+      "yourMoveVsStockfish": "Tvoj potez protiv Stockfisha...",
+      "correct": "Točno!",
+      "incorrect": "Netočno",
+      "checkmate": "Šah-mat!",
+      "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
+      "fullGame": "Cijela partija"
+    },
+    "actions": {
+      "reset": "Poništi",
+      "giveUp": "Predaj se",
+      "mouseslip": "Omaška mišem",
+      "nextPuzzle": "Sljedeća zagonetka",
+      "again": "Ponovno",
+      "skip": "Preskoči",
+      "viewFullGame": "Pogledaj cijelu partiju",
+      "sharePuzzle": "Podijeli zagonetku",
+      "backToPuzzle": "Natrag na zagonetku"
+    },
+    "settings": {
+      "title": "Postavke",
+      "visualizationLevel": "Vizualizacija: Razina {{level}}",
+      "stockfishDepth": "Stockfish dubina",
+      "depthHint": "1 (slabo) – 24 (jako)",
+      "mode": "Način",
+      "modeNormal": "Normalno",
+      "modeRandom": "Nasumično",
+      "modeCrazy": "Ludo",
+      "boardTheme": "Tema ploče",
+      "pieces": "Figure"
+    },
+    "viz": {
+      "titleLevel": "Vizualizacija (Razina {{level}})",
+      "countdown": "Figure nestaju za {{seconds}}s...",
+      "noMoveYet": "Još nema poteza — klikni polje-od → ciljno polje.",
+      "show": "Prikaži",
+      "showing": "Prikazujem...",
+      "level0": "Normalno — Povuci i ispusti",
+      "level1": "Naslijepo — ploča zamrznuta, potezi kao tekst",
+      "level2": "Žetoni — figure se nakon 3s zamjenjuju žetonima",
+      "level3": "Tamno — figure se nakon 3s zamjenjuju crnim žetonima",
+      "level4": "Nevidljivo — figure nakon 3s potpuno nestaju"
+    },
+    "course": {
+      "backToCourses": "Na pregled tečajeva",
+      "sequential": "Slijedno",
+      "random": "Nasumično",
+      "completed": "Tečaj završen!",
+      "toOverview": "Na pregled"
+    },
+    "weekly": {
+      "backToWeekly": "Na pregled tjednih objava",
+      "label": "Tjedna objava",
+      "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
+      "allSolved": "Sve zagonetke riješene!"
+    }
+  },
+  "admin": {
+    "title": "Administracija",
+    "tabs": {
+      "users": "Korisnici",
+      "books": "Knjige",
+      "groups": "Grupe",
+      "logs": "Zapisi zahtjeva"
+    },
+    "users": {
+      "searchLabel": "Pretraži korisnike",
+      "toggleAdmin": "Promijeni administratora",
+      "deleteUser": "Izbriši korisnika",
+      "deleteConfirm": "Izbrisati korisnika \"{{username}}\"? To se ne može poništiti.",
+      "deleted": "Korisnik \"{{username}}\" izbrisan",
+      "nowAdmin": "{{username}} je sada administrator",
+      "noLongerAdmin": "{{username}} više nije administrator",
+      "columns": {
+        "id": "ID",
+        "username": "Korisničko ime",
+        "email": "E-pošta",
+        "admin": "Administrator",
+        "created": "Stvoreno",
+        "actions": "Radnje"
+      },
+      "errors": {
+        "load": "Učitavanje korisnika nije uspjelo",
+        "toggleAdmin": "Promjena administratorskog statusa nije uspjela",
+        "delete": "Brisanje korisnika nije uspjelo"
+      }
+    },
+    "books": {
+      "uploadPgn": "Učitaj PGN-ove",
+      "importing": "Uvoz u tijeku…",
+      "poolHint": "Za svaku knjigu odredite u kojim se skupovima zagonetke pojavljuju.",
+      "empty": "Još nema uvezenih knjiga.",
+      "eloFrom": "od",
+      "eloTo": "do",
+      "adminOnly": "samo administrator",
+      "deleteBook": "Izbriši knjigu",
+      "deleteConfirm": "Izbrisati knjigu \"{{name}}\" s {{count}} zagonetki?",
+      "deleted": "Knjiga \"{{name}}\" izbrisana",
+      "imported": "{{imported}} zagonetki uvezeno, {{skipped}} preskočeno",
+      "columns": {
+        "book": "Knjiga",
+        "puzzles": "Zagonetke",
+        "difficulty": "Težina",
+        "elo": "Elo od/do",
+        "daily": "Dnevno",
+        "random": "Nasumično",
+        "blind": "Naslijepo",
+        "visibleFor": "Vidljivo za (tečajeve)",
+        "actions": "Radnje"
+      },
+      "errors": {
+        "load": "Učitavanje knjiga nije uspjelo",
+        "import": "Uvoz nije uspio",
+        "save": "Spremanje nije uspjelo",
+        "saveGroups": "Ažuriranje pristupa grupa nije uspjelo",
+        "delete": "Brisanje nije uspjelo"
+      }
+    },
+    "groups": {
+      "newGroup": "Nova grupa",
+      "namePlaceholder": "Naziv",
+      "descriptionOptional": "Opis (neobavezno)",
+      "create": "Stvori",
+      "empty": "Još nema stvorenih grupa.",
+      "manageMembers": "Upravljaj članovima",
+      "deleteGroup": "Izbriši grupu",
+      "membersOf": "Članovi · {{name}}",
+      "addUser": "Dodaj korisnika",
+      "noMembers": "Nema članova.",
+      "created": "Grupa \"{{name}}\" stvorena",
+      "deleteConfirm": "Izbrisati grupu \"{{name}}\"?",
+      "deleted": "Grupa \"{{name}}\" izbrisana",
+      "columns": {
+        "group": "Grupa",
+        "members": "Članovi",
+        "actions": "Radnje"
+      },
+      "errors": {
+        "load": "Učitavanje grupa nije uspjelo",
+        "create": "Stvaranje grupe nije uspjelo",
+        "delete": "Brisanje nije uspjelo",
+        "loadMembers": "Učitavanje članova nije uspjelo",
+        "addMember": "Dodavanje nije uspjelo",
+        "removeMember": "Uklanjanje nije uspjelo"
+      }
+    },
+    "logs": {
+      "all": "Sve",
+      "filter": "Filtriraj",
+      "reset": "Poništi",
+      "filtered": "(filtrirano)",
+      "entryCount": "{{count}} unosa",
+      "status4xx": "4xx+ (pogreške)",
+      "status5xx": "5xx (poslužitelj)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Vrijeme",
+        "method": "Metoda",
+        "path": "Putanja",
+        "status": "Status",
+        "duration": "Trajanje",
+        "user": "Korisnik",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Učitavanje zapisa nije uspjelo"
+      }
+    }
+  }
+}

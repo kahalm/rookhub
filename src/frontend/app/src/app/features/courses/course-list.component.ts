@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
@@ -15,17 +16,17 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, MatSnackBarModule, LoadingSpinnerComponent
+    MatProgressBarModule, MatTooltipModule, MatSnackBarModule, LoadingSpinnerComponent, TranslateModule
   ],
   template: `
     <div class="courses-container">
-      <h1>Kurse</h1>
-      <p class="intro">Arbeite ein importiertes Buch puzzleweise durch — sequenziell oder zufällig. Dein Fortschritt wird gespeichert.</p>
+      <h1>{{ 'courses.title' | translate }}</h1>
+      <p class="intro">{{ 'courses.intro' | translate }}</p>
 
       @if (loading) {
         <app-loading-spinner />
       } @else if (courses.length === 0) {
-        <p class="empty-hint">Noch keine Bücher importiert. Importiere Bücher im Admin-Bereich unter „Bücher".</p>
+        <p class="empty-hint">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
         <div class="course-grid">
           @for (c of courses; track c.bookId) {
@@ -33,7 +34,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               <mat-card-header>
                 <mat-card-title>{{ c.displayName }}</mat-card-title>
                 <mat-card-subtitle>
-                  {{ c.puzzleCount }} Puzzle{{ c.puzzleCount === 1 ? '' : 's' }}
+                  {{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}
                   @if (c.difficulty) { · {{ c.difficulty }} }
                   @if (c.rating) { · {{ c.rating }}/10 }
                 </mat-card-subtitle>
@@ -44,20 +45,20 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                   <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }} ({{ c.progressPercent }}%)</span>
                 </div>
                 @if (c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount) {
-                  <p class="done-hint"><mat-icon>emoji_events</mat-icon> Kurs abgeschlossen</p>
+                  <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
                 }
               </mat-card-content>
               <mat-card-actions class="course-actions">
                 <button mat-raised-button color="primary"
                         [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
-                  <mat-icon>format_list_numbered</mat-icon> Sequenziell
+                  <mat-icon>format_list_numbered</mat-icon> {{ 'courses.sequential' | translate }}
                 </button>
                 <button mat-stroked-button
                         [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
-                  <mat-icon>shuffle</mat-icon> Zufällig
+                  <mat-icon>shuffle</mat-icon> {{ 'courses.random' | translate }}
                 </button>
                 <span class="spacer"></span>
-                <button mat-icon-button matTooltip="Fortschritt zurücksetzen"
+                <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
                         [disabled]="c.solvedCount === 0" (click)="reset(c)">
                   <mat-icon>restart_alt</mat-icon>
                 </button>
@@ -90,7 +91,7 @@ export class CourseListComponent implements OnInit {
   courses: CourseListItem[] = [];
   loading = false;
 
-  constructor(private courseService: CourseService, private snackBar: MatSnackBar) {}
+  constructor(private courseService: CourseService, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadCourses();
@@ -104,20 +105,20 @@ export class CourseListComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.snackBar.open('Kurse konnten nicht geladen werden', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('courses.loadFailed'), this.translate.instant('common.ok'), { duration: 3000 });
         this.loading = false;
       }
     });
   }
 
   reset(course: CourseListItem): void {
-    if (!confirm(`Fortschritt für „${course.displayName}" zurücksetzen?`)) return;
+    if (!confirm(this.translate.instant('courses.resetConfirm', { name: course.displayName }))) return;
     this.courseService.reset(course.bookId).subscribe({
       next: p => {
         course.solvedCount = p.solvedCount;
         course.progressPercent = p.progressPercent;
       },
-      error: () => this.snackBar.open('Zurücksetzen fehlgeschlagen', 'OK', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('courses.resetFailed'), this.translate.instant('common.ok'), { duration: 3000 })
     });
   }
 }

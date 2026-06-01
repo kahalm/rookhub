@@ -7,35 +7,36 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSnackBarModule, TranslateModule],
   template: `
     <div class="auth-container">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Login</mat-card-title>
+          <mat-card-title>{{ 'auth.login.title' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
-              <mat-label>Username</mat-label>
+              <mat-label>{{ 'auth.login.usernameLabel' | translate }}</mat-label>
               <input matInput [(ngModel)]="username" name="username" required autofocus>
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Password</mat-label>
+              <mat-label>{{ 'auth.login.passwordLabel' | translate }}</mat-label>
               <input matInput type="password" [(ngModel)]="password" name="password" required>
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
-              {{ loading ? 'Logging in...' : 'Login' }}
+              {{ loading ? ('auth.login.submitting' | translate) : ('auth.login.submit' | translate) }}
             </button>
           </form>
         </mat-card-content>
         <mat-card-actions>
-          <a mat-button routerLink="/register" [queryParams]="{ returnUrl: returnUrl }">Don't have an account? Register</a>
+          <a mat-button routerLink="/register" [queryParams]="{ returnUrl: returnUrl }">{{ 'auth.login.registerLink' | translate }}</a>
         </mat-card-actions>
       </mat-card>
     </div>
@@ -54,7 +55,7 @@ export class LoginComponent {
 
   returnUrl: string;
 
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar) {
+  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = this.sanitizeReturnUrl(raw);
   }
@@ -74,8 +75,8 @@ export class LoginComponent {
         this.loading = false;
         const msg = err.error?.message
           || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
-          || 'Login failed';
-        this.snackBar.open(msg, 'Close', { duration: 5000 });
+          || this.translate.instant('auth.login.failed');
+        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
       }
     });
   }

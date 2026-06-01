@@ -2,16 +2,17 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslateModule } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
 
 @Component({
   selector: 'app-repertoire-tree',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, TranslateModule],
   template: `
     <div class="tree-container">
       <div class="breadcrumbs">
-        <span class="crumb" (click)="goToRoot.emit()">Start</span>
+        <span class="crumb" (click)="goToRoot.emit()">{{ 'repertoire.tree.start' | translate }}</span>
         @for (crumb of breadcrumbs; track crumb.depth) {
           <mat-icon class="crumb-sep">chevron_right</mat-icon>
           <span class="crumb" (click)="goToDepth.emit(crumb.depth)">{{ crumb.san }}</span>
@@ -20,7 +21,7 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
 
       @if (breadcrumbs.length > 0) {
         <button mat-button (click)="goUp.emit()" class="back-btn">
-          <mat-icon>arrow_back</mat-icon> Back
+          <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
         </button>
       }
 
@@ -28,10 +29,10 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
         @for (child of children; track child.san) {
           <div class="child-item" (click)="nodeSelected.emit(child.san)">
             <span class="child-san">{{ child.san }}</span>
-            <span class="child-count">{{ child.count }} {{ child.count === 1 ? 'line' : 'lines' }}</span>
+            <span class="child-count">{{ (child.count === 1 ? 'repertoire.tree.lineCount' : 'repertoire.tree.lineCountPlural') | translate: { count: child.count } }}</span>
           </div>
         } @empty {
-          <div class="empty">End of line — no further moves.</div>
+          <div class="empty">{{ 'repertoire.tree.empty' | translate }}</div>
         }
       </div>
     </div>

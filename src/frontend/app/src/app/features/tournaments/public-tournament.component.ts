@@ -14,6 +14,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
@@ -22,7 +23,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
 @Component({
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -35,22 +36,22 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
           </mat-card-header>
           <mat-card-actions class="action-bar">
             <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
-              <mat-icon>open_in_new</mat-icon><span class="btn-label"> Chess-Results</span>
+              <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
             </a>
             <button mat-raised-button (click)="share()">
-              <mat-icon>share</mat-icon><span class="btn-label"> Teilen</span>
+              <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
             </button>
           </mat-card-actions>
         </mat-card>
 
         <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
-          <mat-tab label="Players ({{ players.length }})">
+          <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
             @if (playersLoading) {
               <app-loading-spinner />
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
                 </div>
               }
               <!-- Desktop -->
@@ -65,31 +66,31 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nr.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.snr' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
                   </ng-container>
                   <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.title }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.name }}</td>
                   </ng-container>
                   <ng-container matColumnDef="fideId">
-                    <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.fideId' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
                   </ng-container>
                   <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Elo</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.elo' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
                   </ng-container>
                   <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Country</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.country' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.country }}</td>
                   </ng-container>
                   <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Team' : 'Verein' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (p.teamName && hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
@@ -99,7 +100,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Br.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.boardShort' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
@@ -123,7 +124,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
                       @if (p.elo) { <span>{{ p.elo }}</span> }
                       @if (p.country) { <span>{{ p.country }}</span> }
                       @if (p.teamName) { <span>{{ p.teamName }}</span> }
-                      @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
+                      @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
                     </div>
                   </div>
                 }
@@ -131,13 +132,13 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
             }
           </mat-tab>
 
-          <mat-tab label="Teams ({{ teams.length }})">
+          <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
             @if (teamsLoading) {
               <app-loading-spinner />
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
                 </div>
               }
               <div class="table-scroll">
@@ -151,17 +152,17 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="rank">
-                    <th mat-header-cell *matHeaderCellDef>Rank</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.teams.rank' | translate }}</th>
                     <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Team</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
                     <td mat-cell *matCellDef="let t">
                       <span class="team-link" (click)="showTeamPlayers(t.name)">{{ t.name }}</span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="points">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Points</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.points' | translate }}</th>
                     <td mat-cell *matCellDef="let t">{{ t.points }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
@@ -171,18 +172,18 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
             }
           </mat-tab>
 
-          <mat-tab label="Pairings">
+          <mat-tab [label]="'tournaments.tabs.pairings' | translate">
             <div class="round-selector">
               <mat-form-field appearance="outline">
-                <mat-label>Round</mat-label>
+                <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
                 <mat-select [(ngModel)]="selectedRound" (selectionChange)="loadPairings()">
                   @for (r of rounds; track r) {
-                    <mat-option [value]="r">Round {{ r }}</mat-option>
+                    <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
               @if (hasFavorites) {
-                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
               }
             </div>
             @if (pairingsLoading) {
@@ -192,11 +193,11 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
               <div class="table-scroll desktop-only">
                 <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Board</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.pairings.board' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.board }}</td>
                   </ng-container>
                   <ng-container matColumnDef="white">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Home' : 'White' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.home' : 'tournaments.pairings.white') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
@@ -206,11 +207,11 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="result">
-                    <th mat-header-cell *matHeaderCellDef>Result</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.pairings.result' | translate }}</th>
                     <td mat-cell *matCellDef="let p" class="result-cell">{{ p.result }}</td>
                   </ng-container>
                   <ng-container matColumnDef="black">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Away' : 'Black' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.away' : 'tournaments.pairings.black') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
@@ -257,7 +258,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
       <div class="detail-container">
         <mat-card>
           <mat-card-content>
-            <p>Turnier nicht gefunden.</p>
+            <p>{{ 'tournaments.public.notFound' | translate }}</p>
           </mat-card-content>
         </mat-card>
       </div>
@@ -361,7 +362,8 @@ export class PublicTournamentComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -555,10 +557,10 @@ export class PublicTournamentComponent implements OnInit {
   toggleFavorite(player: TournamentPlayer): void {
     if (this.favoriteSnrs.has(player.snr)) {
       this.favoriteSnrs.delete(player.snr);
-      this.snackBar.open(`${player.name} entfernt`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.removedShort', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
     } else {
       this.favoriteSnrs.add(player.snr);
-      this.snackBar.open(`${player.name} favorisiert`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.addedShort', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
     }
     this.favoriteSnrs = new Set(this.favoriteSnrs);
     this.saveLocalFavorites();
@@ -571,10 +573,10 @@ export class PublicTournamentComponent implements OnInit {
   toggleTeamFavorite(team: TournamentTeam): void {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
-      this.snackBar.open(`${team.name} entfernt`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.removedShort', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
     } else {
       this.favoriteTeamSnrs.add(team.snr);
-      this.snackBar.open(`${team.name} favorisiert`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.addedShort', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
     }
     this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
     this.saveLocalFavorites();
@@ -594,7 +596,7 @@ export class PublicTournamentComponent implements OnInit {
         });
       },
       error: () => {
-        this.snackBar.open('Team-Details konnten nicht geladen werden', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }

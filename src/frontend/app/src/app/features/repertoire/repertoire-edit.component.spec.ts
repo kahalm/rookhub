@@ -2,13 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { RepertoireEditComponent } from './repertoire-edit.component';
 
 describe('RepertoireEditComponent batch upload', () => {
   it('emits fileUploaded once after all uploads finish (not per file)', () => {
     TestBed.configureTestingModule({
       imports: [RepertoireEditComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService()],
     });
     const fixture = TestBed.createComponent(RepertoireEditComponent);
     const component = fixture.componentInstance;
@@ -32,7 +33,7 @@ describe('RepertoireEditComponent batch upload', () => {
   it('skips non-.pgn files (client-side validation)', () => {
     TestBed.configureTestingModule({
       imports: [RepertoireEditComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService()],
     });
     const component = TestBed.createComponent(RepertoireEditComponent).componentInstance;
     component.repertoireId = 9;

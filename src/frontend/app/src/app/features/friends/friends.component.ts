@@ -10,28 +10,29 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatSnackBarModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatSnackBarModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="friends-container">
-      <h1>Friends</h1>
+      <h1>{{ 'friends.title' | translate }}</h1>
 
       <mat-card class="search-card">
         <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Search users</mat-label>
+          <mat-label>{{ 'friends.searchUsers' | translate }}</mat-label>
           <input matInput [(ngModel)]="searchQuery" (keyup.enter)="search()">
         </mat-form-field>
-        <button mat-raised-button color="primary" (click)="search()">Search</button>
+        <button mat-raised-button color="primary" (click)="search()">{{ 'common.search' | translate }}</button>
       </mat-card>
 
       @if (searchResults.length > 0) {
         <mat-card>
-          <mat-card-header><mat-card-title>Search Results</mat-card-title></mat-card-header>
+          <mat-card-header><mat-card-title>{{ 'friends.searchResults' | translate }}</mat-card-title></mat-card-header>
           <mat-list>
             @for (user of searchResults; track user.userId) {
               <mat-list-item>
@@ -50,7 +51,7 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
       }
 
       <mat-tab-group>
-        <mat-tab label="Friends ({{ friends.length }})">
+        <mat-tab [label]="'friends.tabs.friends' | translate:{ count: friends.length }">
           @if (loading) {
             <app-loading-spinner />
           } @else {
@@ -64,17 +65,17 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
                   </button>
                 </mat-list-item>
               } @empty {
-                <p class="empty-text">No friends yet. Search for users to add friends!</p>
+                <p class="empty-text">{{ 'friends.empty.friends' | translate }}</p>
               }
             </mat-list>
           }
         </mat-tab>
-        <mat-tab label="Requests ({{ requests.length }})">
+        <mat-tab [label]="'friends.tabs.requests' | translate:{ count: requests.length }">
           <mat-list>
             @for (req of requests; track req.friendshipId) {
               <mat-list-item>
                 <span matListItemTitle>{{ req.requesterUsername }}</span>
-                <span matListItemLine>Sent {{ req.createdAt | date }}</span>
+                <span matListItemLine>{{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
                 <div matListItemMeta>
                   <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)">
                     <mat-icon>check</mat-icon>
@@ -85,7 +86,7 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
                 </div>
               </mat-list-item>
             } @empty {
-              <p class="empty-text">No pending requests.</p>
+              <p class="empty-text">{{ 'friends.empty.requests' | translate }}</p>
             }
           </mat-list>
         </mat-tab>
@@ -113,7 +114,7 @@ export class FriendsComponent implements OnInit {
   searchQuery = '';
   loading = true;
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -123,11 +124,11 @@ export class FriendsComponent implements OnInit {
     this.loading = true;
     this.http.get<Friend[]>('/api/friends').subscribe({
       next: f => { this.friends = f; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open('Failed to load friends', 'Close', { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('friends.errors.loadFriends'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
     this.http.get<FriendRequest[]>('/api/friends/requests').subscribe({
       next: r => this.requests = r,
-      error: () => this.snackBar.open('Failed to load requests', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('friends.errors.loadRequests'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -136,35 +137,35 @@ export class FriendsComponent implements OnInit {
     this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
       .subscribe({
         next: r => this.searchResults = r,
-        error: () => this.snackBar.open('Search failed', 'Close', { duration: 3000 })
+        error: () => this.snackBar.open(this.translate.instant('friends.errors.search'), this.translate.instant('common.close'), { duration: 3000 })
       });
   }
 
   sendRequest(userId: number): void {
     this.http.post(`/api/friends/request/${userId}`, {}).subscribe({
-      next: () => this.snackBar.open('Friend request sent', 'Close', { duration: 2000 }),
-      error: (err) => this.snackBar.open(err.error?.message || 'Failed', 'Close', { duration: 3000 })
+      next: () => this.snackBar.open(this.translate.instant('friends.requestSent'), this.translate.instant('common.close'), { duration: 2000 }),
+      error: (err) => this.snackBar.open(err.error?.message || this.translate.instant('friends.errors.sendRequest'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 
   acceptRequest(id: number): void {
     this.http.post(`/api/friends/accept/${id}`, {}).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open('Failed to accept request', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('friends.errors.acceptRequest'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 
   declineRequest(id: number): void {
     this.http.post(`/api/friends/decline/${id}`, {}).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open('Failed to decline request', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('friends.errors.declineRequest'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 
   removeFriend(id: number): void {
     this.http.delete(`/api/friends/${id}`).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open('Failed to remove friend', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('friends.errors.removeFriend'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 

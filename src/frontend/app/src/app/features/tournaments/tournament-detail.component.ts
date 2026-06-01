@@ -15,6 +15,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
@@ -24,7 +25,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -37,31 +38,31 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
           </mat-card-header>
           <mat-card-actions class="action-bar">
             <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
-              <mat-icon>open_in_new</mat-icon><span class="btn-label"> Chess-Results</span>
+              <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
             </a>
             <button mat-raised-button (click)="refresh()" [disabled]="refreshing">
-              <mat-icon>refresh</mat-icon><span class="btn-label"> Refresh</span>
+              <mat-icon>refresh</mat-icon><span class="btn-label"> {{ 'tournaments.actions.refresh' | translate }}</span>
             </button>
             @if (subscription) {
               <button mat-raised-button color="warn" (click)="unsubscribe()" [disabled]="toggling">
-                <mat-icon>notifications_off</mat-icon><span class="btn-label"> Unsubscribe</span>
+                <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.unsubscribe' | translate }}</span>
               </button>
             } @else {
               <button mat-raised-button color="primary" (click)="subscribe()" [disabled]="toggling">
-                <mat-icon>notifications</mat-icon><span class="btn-label"> Subscribe</span>
+                <mat-icon>notifications</mat-icon><span class="btn-label"> {{ 'tournaments.actions.subscribe' | translate }}</span>
               </button>
             }
             @if (monitoring) {
               <button mat-raised-button color="primary" (click)="toggleMonitor()" [disabled]="monitorToggling">
-                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitoring bis {{ monitorActiveUntil | date:'HH:mm' }}</span>
+                <mat-icon>visibility</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
               </button>
             } @else {
               <button mat-raised-button (click)="toggleMonitor()" [disabled]="monitorToggling">
-                <mat-icon>visibility</mat-icon><span class="btn-label"> Monitor</span>
+                <mat-icon>visibility</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
               </button>
             }
             <button mat-raised-button (click)="share()">
-              <mat-icon>share</mat-icon><span class="btn-label"> Teilen</span>
+              <mat-icon>share</mat-icon><span class="btn-label"> {{ 'tournaments.actions.share' | translate }}</span>
             </button>
           </mat-card-actions>
           @if (refreshing) {
@@ -70,13 +71,13 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
         </mat-card>
 
         <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
-          <mat-tab label="Players ({{ players.length }})">
+          <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
             @if (playersLoading) {
               <app-loading-spinner />
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
                 </div>
               }
               <!-- Desktop: full table -->
@@ -91,31 +92,31 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Nr.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.snr' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
                   </ng-container>
                   <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Title</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.title }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.name }}</td>
                   </ng-container>
                   <ng-container matColumnDef="fideId">
-                    <th mat-header-cell *matHeaderCellDef>FIDE ID</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.fideId' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
                   </ng-container>
                   <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Elo</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.elo' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
                   </ng-container>
                   <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Country</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.country' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.country }}</td>
                   </ng-container>
                   <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Team' : 'Verein' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (p.teamName && hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
@@ -125,7 +126,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Br.</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.boardShort' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
@@ -149,7 +150,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                       @if (p.elo) { <span>{{ p.elo }}</span> }
                       @if (p.country) { <span>{{ p.country }}</span> }
                       @if (p.teamName) { <span>{{ p.teamName }}</span> }
-                      @if (p.boardNumber) { <span>Br. {{ p.boardNumber }}</span> }
+                      @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
                     </div>
                   </div>
                 }
@@ -157,13 +158,13 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
             }
           </mat-tab>
 
-          <mat-tab label="Teams ({{ teams.length }})">
+          <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
             @if (teamsLoading) {
               <app-loading-spinner />
             } @else {
               @if (hasFavorites) {
                 <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
                 </div>
               }
               <div class="table-scroll">
@@ -177,17 +178,17 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="rank">
-                    <th mat-header-cell *matHeaderCellDef>Rank</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.teams.rank' | translate }}</th>
                     <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Team</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
                     <td mat-cell *matCellDef="let t">
                       <span class="team-link" (click)="showTeamPlayers(t.name)">{{ t.name }}</span>
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="points">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Points</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.points' | translate }}</th>
                     <td mat-cell *matCellDef="let t">{{ t.points }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
@@ -197,18 +198,18 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
             }
           </mat-tab>
 
-          <mat-tab label="Pairings">
+          <mat-tab [label]="'tournaments.tabs.pairings' | translate">
             <div class="round-selector">
               <mat-form-field appearance="outline">
-                <mat-label>Round</mat-label>
+                <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
                 <mat-select [(ngModel)]="selectedRound" (selectionChange)="loadPairings()">
                   @for (r of rounds; track r) {
-                    <mat-option [value]="r">Round {{ r }}</mat-option>
+                    <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
               @if (hasFavorites) {
-                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">Nur Favoriten</mat-slide-toggle>
+                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
               }
             </div>
             @if (pairingsLoading) {
@@ -218,11 +219,11 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
               <div class="table-scroll desktop-only">
                 <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="onPairingSort($event)" class="full-width">
                   <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>Board</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.pairings.board' | translate }}</th>
                     <td mat-cell *matCellDef="let p">{{ p.board }}</td>
                   </ng-container>
                   <ng-container matColumnDef="white">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Home' : 'White' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.home' : 'tournaments.pairings.white') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
@@ -232,11 +233,11 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="result">
-                    <th mat-header-cell *matHeaderCellDef>Result</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.pairings.result' | translate }}</th>
                     <td mat-cell *matCellDef="let p" class="result-cell">{{ p.result }}</td>
                   </ng-container>
                   <ng-container matColumnDef="black">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ hasTeamPairings ? 'Away' : 'Black' }}</th>
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.away' : 'tournaments.pairings.black') | translate }}</th>
                     <td mat-cell *matCellDef="let p">
                       @if (hasTeamPairings) {
                         <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
@@ -418,7 +419,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private favoriteIdMap: Map<number, number> = new Map();
   private teamFavoriteIdMap: Map<number, number> = new Map();
 
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog, private notificationService: NotificationService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
@@ -437,7 +438,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.loadTeams();
         if (this.selectedTabIndex === 2) this.loadPairings();
       },
-      error: () => { this.loading = false; this.snackBar.open('Failed to load tournament', 'Close', { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadTournamentFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
     this.loadSubscription();
     this.loadMonitorStatus();
@@ -453,7 +454,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (subs) => {
         this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
       },
-      error: () => this.snackBar.open('Failed to load subscription status', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('tournaments.detail.loadSubscriptionFailed'), this.translate.instant('common.close'), { duration: 3000 })
     });
   }
 
@@ -466,11 +467,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (sub) => {
         this.subscription = sub;
         this.toggling = false;
-        this.snackBar.open('Subscribed!', 'Close', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.subscribed'), this.translate.instant('common.close'), { duration: 2000 });
       },
       error: (err) => {
         this.toggling = false;
-        this.snackBar.open(err.error?.message || 'Failed', 'Close', { duration: 3000 });
+        this.snackBar.open(err.error?.message || this.translate.instant('tournaments.actions.failed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -482,11 +483,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: () => {
         this.subscription = null;
         this.toggling = false;
-        this.snackBar.open('Unsubscribed', 'Close', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribed'), this.translate.instant('common.close'), { duration: 2000 });
       },
       error: () => {
         this.toggling = false;
-        this.snackBar.open('Failed to unsubscribe', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribeFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -514,11 +515,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.monitorActiveUntil = null;
           this.monitorToggling = false;
           this.stopMonitorPoll();
-          this.snackBar.open('Monitoring stopped', 'Close', { duration: 2000 });
+          this.snackBar.open(this.translate.instant('tournaments.monitor.stopped'), this.translate.instant('common.close'), { duration: 2000 });
         },
         error: () => {
           this.monitorToggling = false;
-          this.snackBar.open('Failed to stop monitoring', 'Close', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('tournaments.monitor.stopFailed'), this.translate.instant('common.close'), { duration: 3000 });
         }
       });
     } else {
@@ -530,11 +531,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.lastKnownRounds = res.lastKnownRounds || 0;
           this.monitorToggling = false;
           this.startMonitorPoll();
-          this.snackBar.open('Monitoring activated', 'Close', { duration: 2000 });
+          this.snackBar.open(this.translate.instant('tournaments.monitor.activated'), this.translate.instant('common.close'), { duration: 2000 });
         },
         error: () => {
           this.monitorToggling = false;
-          this.snackBar.open('Failed to activate monitoring', 'Close', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('tournaments.monitor.activateFailed'), this.translate.instant('common.close'), { duration: 3000 });
         }
       });
     }
@@ -562,12 +563,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
             const newRound = res.lastKnownRounds;
             this.lastKnownRounds = newRound;
             // Browser notification
-            this.notificationService.notify('Neue Runde verfuegbar!', {
-              body: `Runde ${newRound} wurde publiziert.`,
+            this.notificationService.notify(this.translate.instant('tournaments.monitor.newRoundTitle'), {
+              body: this.translate.instant('tournaments.monitor.newRoundBody', { round: newRound }),
               icon: '/favicon.ico'
             });
             // Snackbar as fallback
-            this.snackBar.open(`Neue Runde verfuegbar! Runde ${newRound}`, 'Close', { duration: 5000 });
+            this.snackBar.open(this.translate.instant('tournaments.monitor.newRoundSnack', { round: newRound }), this.translate.instant('common.close'), { duration: 5000 });
             // Reload data
             this.reloadAll();
             if (this.selectedTabIndex === 2) {
@@ -599,7 +600,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (job) => this.pollRefreshJob(job.id),
       error: () => {
         this.refreshing = false;
-        this.snackBar.open('Failed to start refresh', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('tournaments.detail.refreshStartFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -612,20 +613,20 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
             if (this.pollInterval) clearInterval(this.pollInterval);
             this.pollInterval = null;
             this.refreshing = false;
-            this.snackBar.open('Data refreshed!', 'Close', { duration: 2000 });
+            this.snackBar.open(this.translate.instant('tournaments.detail.dataRefreshed'), this.translate.instant('common.close'), { duration: 2000 });
             this.reloadAll();
           } else if (job.status === 'Failed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
             this.pollInterval = null;
             this.refreshing = false;
-            this.snackBar.open(job.errorMessage || 'Refresh failed', 'Close', { duration: 3000 });
+            this.snackBar.open(job.errorMessage || this.translate.instant('tournaments.detail.refreshFailed'), this.translate.instant('common.close'), { duration: 3000 });
           }
         },
         error: () => {
           if (this.pollInterval) clearInterval(this.pollInterval);
           this.pollInterval = null;
           this.refreshing = false;
-          this.snackBar.open('Lost connection to crawl job', 'Close', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('tournaments.list.crawlConnectionLost'), this.translate.instant('common.close'), { duration: 3000 });
         }
       });
     }, 2000);
@@ -639,7 +640,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
       },
-      error: () => this.snackBar.open('Failed to reload tournament', 'Close', { duration: 3000 })
+      error: () => this.snackBar.open(this.translate.instant('tournaments.detail.reloadTournamentFailed'), this.translate.instant('common.close'), { duration: 3000 })
     });
     this.loadPlayers();
     this.teams = [];
@@ -662,7 +663,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.playersLoading = true;
     this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
-      error: () => { this.playersLoading = false; this.snackBar.open('Failed to load players', 'Close', { duration: 3000 }); }
+      error: () => { this.playersLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadPlayersFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
   }
 
@@ -670,7 +671,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.teamsLoading = true;
     this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedTeams(); },
-      error: () => { this.teamsLoading = false; this.snackBar.open('Failed to load teams', 'Close', { duration: 3000 }); }
+      error: () => { this.teamsLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamsFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
   }
 
@@ -700,7 +701,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.pairingsLoading = false;
         this.refreshDisplayedPairings();
       },
-      error: () => { this.pairingsLoading = false; this.snackBar.open('Failed to load pairings', 'Close', { duration: 3000 }); }
+      error: () => { this.pairingsLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadPairingsFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
     });
   }
 
@@ -831,7 +832,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs.delete(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(`${player.name} removed from favorites`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.removed', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
       this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
         next: () => { this.favoriteIdMap.delete(player.snr); },
         error: () => {}
@@ -840,7 +841,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs.add(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(`${player.name} added to favorites`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.added', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
       this.http.post<TournamentFavorite>('/api/tournament-favorites', {
         crawlerTournamentId: this.id,
         playerSnr: player.snr
@@ -860,7 +861,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs.delete(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(`${team.name} removed from favorites`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.removed', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
       this.http.delete(`/api/tournament-favorites/by-team/${this.id}/${team.snr}`).subscribe({
         next: () => { this.teamFavoriteIdMap.delete(team.snr); },
         error: () => {}
@@ -869,7 +870,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs.add(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(`${team.name} added to favorites`, 'Close', { duration: 1500 });
+      this.snackBar.open(this.translate.instant('tournaments.favorites.added', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
       this.http.post<TournamentFavorite>('/api/tournament-favorites/team', {
         crawlerTournamentId: this.id,
         teamSnr: team.snr
@@ -903,7 +904,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         });
       },
       error: () => {
-        this.snackBar.open('Failed to load team details', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }

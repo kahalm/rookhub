@@ -10,6 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
 
 interface EndlessSessionDto {
@@ -36,7 +37,7 @@ interface EndlessHistoryResponse {
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatPaginatorModule, MatProgressSpinnerModule,
-    MatCheckboxModule, MatButtonToggleModule
+    MatCheckboxModule, MatButtonToggleModule, TranslateModule
   ],
   template: `
     <div class="history-container">
@@ -44,7 +45,7 @@ interface EndlessHistoryResponse {
         <mat-card-header>
           <mat-card-title>
             <mat-icon>history</mat-icon>
-            Endless Puzzle History
+            {{ 'endless.history.title' | translate }}
           </mat-card-title>
         </mat-card-header>
         <mat-card-content>
@@ -53,30 +54,30 @@ interface EndlessHistoryResponse {
           } @else if (totalCount === 0 && archiveFilter === null) {
             <div class="empty-state">
               <mat-icon class="empty-icon">sports_esports</mat-icon>
-              <p>No sessions played yet.</p>
+              <p>{{ 'endless.history.noSessions' | translate }}</p>
               <button mat-raised-button color="primary" (click)="router.navigate(['/puzzles/endless'])">
-                <mat-icon>play_arrow</mat-icon> Start Playing
+                <mat-icon>play_arrow</mat-icon> {{ 'endless.history.startPlaying' | translate }}
               </button>
             </div>
           } @else {
             <div class="toolbar">
               <mat-button-toggle-group [value]="archiveFilterValue" (change)="onFilterChange($event.value)">
-                <mat-button-toggle value="all">All</mat-button-toggle>
-                <mat-button-toggle value="active">Active</mat-button-toggle>
-                <mat-button-toggle value="archived">Archived</mat-button-toggle>
+                <mat-button-toggle value="all">{{ 'endless.history.filterAll' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="active">{{ 'endless.history.filterActive' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="archived">{{ 'endless.history.filterArchived' | translate }}</mat-button-toggle>
               </mat-button-toggle-group>
 
               @if (selection.hasValue()) {
                 <div class="bulk-actions">
-                  <span class="selection-count">{{ selection.selected.length }} selected</span>
+                  <span class="selection-count">{{ 'endless.history.selected' | translate:{ count: selection.selected.length } }}</span>
                   @if (hasUnarchived()) {
                     <button mat-raised-button (click)="archiveSelected(true)">
-                      <mat-icon>archive</mat-icon> Archive
+                      <mat-icon>archive</mat-icon> {{ 'endless.history.archive' | translate }}
                     </button>
                   }
                   @if (hasArchived()) {
                     <button mat-raised-button (click)="archiveSelected(false)">
-                      <mat-icon>unarchive</mat-icon> Unarchive
+                      <mat-icon>unarchive</mat-icon> {{ 'endless.history.unarchive' | translate }}
                     </button>
                   }
                 </div>
@@ -85,7 +86,7 @@ interface EndlessHistoryResponse {
 
             @if (totalCount === 0) {
               <div class="empty-state">
-                <p>No {{ archiveFilter === true ? 'archived' : 'active' }} sessions.</p>
+                <p>{{ (archiveFilter === true ? 'endless.history.noArchivedSessions' : 'endless.history.noActiveSessions') | translate }}</p>
               </div>
             } @else {
               <!-- Desktop table -->
@@ -108,27 +109,27 @@ interface EndlessHistoryResponse {
                     </td>
                   </ng-container>
                   <ng-container matColumnDef="date">
-                    <th mat-header-cell *matHeaderCellDef>Date</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colDate' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ formatDate(s.timestamp) }}</td>
                   </ng-container>
                   <ng-container matColumnDef="maxRating">
-                    <th mat-header-cell *matHeaderCellDef>Max Rating</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMaxRating' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ s.maxRating }}</td>
                   </ng-container>
                   <ng-container matColumnDef="solved">
-                    <th mat-header-cell *matHeaderCellDef>Solved</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colSolved' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ s.totalSolved }}</td>
                   </ng-container>
                   <ng-container matColumnDef="duration">
-                    <th mat-header-cell *matHeaderCellDef>Duration</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colDuration' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ formatDuration(s.durationSeconds) }}</td>
                   </ng-container>
                   <ng-container matColumnDef="config">
-                    <th mat-header-cell *matHeaderCellDef>Config</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colConfig' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ formatConfig(s.configJson) }}</td>
                   </ng-container>
                   <ng-container matColumnDef="mistakes">
-                    <th mat-header-cell *matHeaderCellDef>Mistakes</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMistakes' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ formatMistakes(s.mistakeAtRatings) }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -155,19 +156,19 @@ interface EndlessHistoryResponse {
                     <div class="session-card-stats">
                       <div class="session-stat">
                         <span class="session-stat-value">{{ s.maxRating }}</span>
-                        <span class="session-stat-label">Max Rating</span>
+                        <span class="session-stat-label">{{ 'endless.history.colMaxRating' | translate }}</span>
                       </div>
                       <div class="session-stat">
                         <span class="session-stat-value">{{ s.totalSolved }}</span>
-                        <span class="session-stat-label">Solved</span>
+                        <span class="session-stat-label">{{ 'endless.history.colSolved' | translate }}</span>
                       </div>
                       <div class="session-stat">
                         <span class="session-stat-value">{{ formatDuration(s.durationSeconds) }}</span>
-                        <span class="session-stat-label">Duration</span>
+                        <span class="session-stat-label">{{ 'endless.history.colDuration' | translate }}</span>
                       </div>
                       <div class="session-stat">
                         <span class="session-stat-value">{{ formatConfig(s.configJson) }}</span>
-                        <span class="session-stat-label">Config</span>
+                        <span class="session-stat-label">{{ 'endless.history.colConfig' | translate }}</span>
                       </div>
                     </div>
                     @if (formatMistakes(s.mistakeAtRatings) !== '-') {
@@ -195,7 +196,7 @@ interface EndlessHistoryResponse {
 
       <div class="back-link">
         <button mat-button (click)="router.navigate(['/puzzles/endless'])">
-          <mat-icon>arrow_back</mat-icon> Back to Endless Mode
+          <mat-icon>arrow_back</mat-icon> {{ 'endless.history.backToEndless' | translate }}
         </button>
       </div>
     </div>

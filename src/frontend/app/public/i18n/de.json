@@ -1,0 +1,738 @@
+{
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "close": "Schließen",
+    "search": "Suchen",
+    "back": "Zurück",
+    "retry": "Wiederholen",
+    "loading": "Wird geladen…",
+    "ok": "OK",
+    "remove": "Entfernen"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "repertoires": "Repertoires",
+    "tournaments": "Turniere",
+    "friends": "Freunde",
+    "puzzles": "Puzzles",
+    "weekly": "Wochenpost",
+    "courses": "Kurse",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Puzzle-Verlauf",
+    "changelog": "Changelog",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "language": "Sprache",
+    "menu": "Menü",
+    "info": "Info"
+  },
+  "app": {
+    "changelogTitle": "Changelog",
+    "quickstartTitle": "Schnellstart",
+    "qs": {
+      "subscribeTitle": "Abonnieren",
+      "subscribeDesc": "Abonniere Turniere für schnellen Zugriff auf Spieler, Paarungen und Ergebnisse.",
+      "monitorTitle": "Monitor",
+      "monitorDesc": "Aktiviere den Monitor bei einem Turnier – neue Runden werden automatisch erkannt und gecrawlt.",
+      "favoritesTitle": "Favoriten",
+      "favoritesDesc": "Markiere Spieler oder Teams als Favorit für schnellen Zugriff in der Turnieransicht.",
+      "chessResultsTitle": "ChessResults-ID",
+      "chessResultsDesc": "Hinterlege deine ChessResults-ID im Profil – anstehende Turniere werden automatisch abonniert."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Anmelden",
+      "usernameLabel": "Benutzername",
+      "passwordLabel": "Passwort",
+      "submit": "Anmelden",
+      "submitting": "Anmeldung läuft...",
+      "registerLink": "Noch kein Konto? Registrieren",
+      "failed": "Anmeldung fehlgeschlagen"
+    },
+    "register": {
+      "title": "Registrieren",
+      "usernameLabel": "Benutzername",
+      "emailLabel": "E-Mail",
+      "passwordLabel": "Passwort",
+      "passwordHint": "Mind. 8 Zeichen, Groß- und Kleinbuchstabe, Zahl",
+      "submit": "Registrieren",
+      "submitting": "Registrierung läuft...",
+      "loginLink": "Bereits ein Konto? Anmelden",
+      "failed": "Registrierung fehlgeschlagen"
+    }
+  },
+  "dashboard": {
+    "welcome": "Willkommen, {{username}}!",
+    "subscribedTournaments": "Abonnierte Turniere",
+    "subscribedAt": "Abonniert am {{date}}",
+    "puzzles": {
+      "title": "Puzzles",
+      "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}}%)",
+      "solve": "Puzzles lösen",
+      "endless": "Endlos"
+    },
+    "subscriptions": {
+      "title": "Turnier-Abonnements",
+      "count": "{{count}} Abonnements",
+      "browse": "Turniere durchsuchen"
+    },
+    "friends": {
+      "title": "Freunde",
+      "count": "{{count}} Freunde",
+      "manage": "Freunde verwalten"
+    },
+    "repertoires": {
+      "title": "Repertoires",
+      "count": "{{count}} Repertoires",
+      "viewAll": "Alle anzeigen"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partie",
+    "nav": {
+      "first": "Erster Zug",
+      "previous": "Vorheriger Zug",
+      "next": "Nächster Zug",
+      "last": "Letzter Zug"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "searchPlayer": "Spieler suchen",
+    "noResults": "Keine Ergebnisse gefunden.",
+    "displayName": "Anzeigename",
+    "fideId": "FIDE-ID",
+    "chessResultsId": "ChessResults-ID",
+    "chessComUsername": "Chess.com-Benutzername",
+    "lichessUsername": "Lichess-Benutzername",
+    "saving": "Wird gespeichert...",
+    "saved": "Profil gespeichert",
+    "saveFailed": "Profil konnte nicht gespeichert werden",
+    "searchFailed": "Suche fehlgeschlagen",
+    "chessResultsApplied": "ChessResults-Daten übernommen",
+    "fideApplied": "FIDE-Daten übernommen"
+  },
+  "friends": {
+    "title": "Freunde",
+    "searchUsers": "Benutzer suchen",
+    "searchResults": "Suchergebnisse",
+    "tabs": {
+      "friends": "Freunde ({{count}})",
+      "requests": "Anfragen ({{count}})"
+    },
+    "empty": {
+      "friends": "Noch keine Freunde. Suche nach Benutzern, um Freunde hinzuzufügen!",
+      "requests": "Keine offenen Anfragen."
+    },
+    "sentOn": "Gesendet am {{date}}",
+    "requestSent": "Freundschaftsanfrage gesendet",
+    "errors": {
+      "loadFriends": "Freunde konnten nicht geladen werden",
+      "loadRequests": "Anfragen konnten nicht geladen werden",
+      "search": "Suche fehlgeschlagen",
+      "sendRequest": "Anfrage konnte nicht gesendet werden",
+      "acceptRequest": "Anfrage konnte nicht angenommen werden",
+      "declineRequest": "Anfrage konnte nicht abgelehnt werden",
+      "removeFriend": "Freund konnte nicht entfernt werden"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Meine Repertoires",
+      "new": "Neues Repertoire",
+      "fileCount": "{{count}} Dateien",
+      "public": "Öffentlich",
+      "private": "Privat",
+      "noDescription": "Keine Beschreibung",
+      "open": "Öffnen",
+      "empty": "Noch keine Repertoires. Erstelle eines, um loszulegen!",
+      "loadFailed": "Repertoires konnten nicht geladen werden",
+      "createFailed": "Repertoire konnte nicht erstellt werden",
+      "deleteConfirm": "Dieses Repertoire löschen?",
+      "deleteFailed": "Repertoire konnte nicht gelöscht werden"
+    },
+    "detail": {
+      "noDescription": "Keine Beschreibung",
+      "modeLines": "Linien",
+      "modeTree": "Baum",
+      "modeEdit": "Bearbeiten"
+    },
+    "dialog": {
+      "title": "Neues Repertoire",
+      "name": "Name",
+      "description": "Beschreibung",
+      "public": "Öffentlich",
+      "create": "Erstellen"
+    },
+    "lines": {
+      "allLines": "Alle Linien",
+      "empty": "Keine Linien in diesem Repertoire gefunden."
+    },
+    "tree": {
+      "start": "Start",
+      "lineCount": "{{count}} Linie",
+      "lineCountPlural": "{{count}} Linien",
+      "empty": "Ende der Linie — keine weiteren Züge."
+    },
+    "edit": {
+      "uploadHint": "PGN-Dateien hierher ziehen oder zum Hochladen klicken",
+      "files": "Dateien ({{count}})",
+      "empty": "Noch keine Dateien. Lade PGN-Dateien hoch, um loszulegen!",
+      "filesSkipped": "{{count}} Datei(en) übersprungen (nur .pgn bis 10 MB)",
+      "uploadSuccess": "{{count}} Datei(en) hochgeladen",
+      "uploadPartial": "{{ok}} hochgeladen, {{failed}} fehlgeschlagen",
+      "downloadFailed": "Download fehlgeschlagen",
+      "deleteConfirm": "Diese Datei löschen?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Aktualisieren",
+      "subscribe": "Abonnieren",
+      "unsubscribe": "Abo beenden",
+      "monitor": "Beobachten",
+      "monitoringUntil": "Beobachtung bis {{time}}",
+      "share": "Teilen",
+      "subscribed": "Abonniert!",
+      "unsubscribed": "Abo beendet",
+      "failed": "Fehlgeschlagen",
+      "unsubscribeFailed": "Abo konnte nicht beendet werden"
+    },
+    "tabs": {
+      "players": "Spieler ({{count}})",
+      "teams": "Teams ({{count}})",
+      "pairings": "Paarungen"
+    },
+    "favoritesOnly": "Nur Favoriten",
+    "favorites": {
+      "added": "{{name}} zu Favoriten hinzugefügt",
+      "removed": "{{name}} aus Favoriten entfernt",
+      "addedShort": "{{name}} favorisiert",
+      "removedShort": "{{name}} entfernt"
+    },
+    "players": {
+      "snr": "Nr.",
+      "title": "Titel",
+      "name": "Name",
+      "fideId": "FIDE-ID",
+      "elo": "Elo",
+      "country": "Land",
+      "team": "Team",
+      "club": "Verein",
+      "boardShort": "Br."
+    },
+    "teams": {
+      "rank": "Rang",
+      "team": "Team",
+      "points": "Punkte"
+    },
+    "pairings": {
+      "round": "Runde",
+      "roundLabel": "Runde {{round}}",
+      "board": "Brett",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "home": "Heim",
+      "away": "Gast",
+      "result": "Ergebnis"
+    },
+    "monitor": {
+      "stopped": "Beobachtung beendet",
+      "stopFailed": "Beobachtung konnte nicht beendet werden",
+      "activated": "Beobachtung aktiviert",
+      "activateFailed": "Beobachtung konnte nicht aktiviert werden",
+      "newRoundTitle": "Neue Runde verfügbar!",
+      "newRoundBody": "Runde {{round}} wurde veröffentlicht.",
+      "newRoundSnack": "Neue Runde verfügbar! Runde {{round}}"
+    },
+    "list": {
+      "title": "Turniere",
+      "importTitle": "Turnier importieren",
+      "importSubtitle": "Gib eine chess-results.com-Turnier-ID ein, um es zu crawlen",
+      "chessResultsId": "Chess-Results-ID",
+      "idPlaceholder": "z. B. 1234567",
+      "idHintPrefix": "Die Nummer aus chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Crawlen",
+      "crawling": "Turnier {{id}} wird gecrawlt... Job #{{jobId}}",
+      "crawlerUnavailable": "Verbindung zum Turnier-Crawler fehlgeschlagen. Stelle sicher, dass der Crawler-Dienst läuft.",
+      "details": "Details",
+      "hide": "Ausblenden",
+      "empty": "Keine Turniere gefunden.",
+      "showHidden": "{{count}} ausgeblendete anzeigen",
+      "imported": "Turnier importiert!",
+      "crawlStartFailed": "Crawl konnte nicht gestartet werden",
+      "crawlFailed": "Crawl fehlgeschlagen",
+      "crawlConnectionLost": "Verbindung zum Crawl-Job verloren"
+    },
+    "detail": {
+      "loadTournamentFailed": "Turnier konnte nicht geladen werden",
+      "loadSubscriptionFailed": "Abo-Status konnte nicht geladen werden",
+      "reloadTournamentFailed": "Turnier konnte nicht neu geladen werden",
+      "refreshStartFailed": "Aktualisierung konnte nicht gestartet werden",
+      "dataRefreshed": "Daten aktualisiert!",
+      "refreshFailed": "Aktualisierung fehlgeschlagen",
+      "loadPlayersFailed": "Spieler konnten nicht geladen werden",
+      "loadTeamsFailed": "Teams konnten nicht geladen werden",
+      "loadPairingsFailed": "Paarungen konnten nicht geladen werden",
+      "loadTeamDetailsFailed": "Team-Details konnten nicht geladen werden"
+    },
+    "public": {
+      "notFound": "Turnier nicht gefunden."
+    },
+    "share": {
+      "title": "Turnier teilen",
+      "copyLink": "Link kopieren",
+      "linkCopied": "Link kopiert!",
+      "copyFailed": "Kopieren fehlgeschlagen"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Puzzle wird geladen…",
+      "loadFailed": "Puzzle konnte nicht geladen werden",
+      "watchOpponent": "Beobachte den Zug des Gegners…",
+      "yourTurn": "Du bist am Zug!",
+      "gaveUpPlayOut": "Aufgegeben — spiel die Lösung selbst durch.",
+      "thinking": "Stockfish denkt…"
+    },
+    "result": {
+      "solutionPlayedOut": "Lösung durchgespielt.",
+      "tryYourselfNextTime": "Nächstes Mal vielleicht selbst lösen!",
+      "checkmate": "Schachmatt!",
+      "alternativeSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
+      "correct": "Richtig!",
+      "incorrect": "Falsch"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Jetzt",
+      "show": "Bewertung anzeigen",
+      "hide": "Bewertung ausblenden"
+    },
+    "actions": {
+      "reset": "Zurücksetzen",
+      "mouseslip": "Mausrutscher",
+      "giveUp": "Aufgeben",
+      "nextPuzzle": "Nächstes Puzzle",
+      "share": "Puzzle teilen",
+      "loadPuzzle": "Puzzle laden",
+      "reviewLast": "Letztes Puzzle ansehen",
+      "endlessMode": "Endlos-Modus"
+    },
+    "info": {
+      "rating": "Wertung"
+    },
+    "stats": {
+      "title": "Deine Statistik",
+      "solved": "Gelöst",
+      "accuracy": "Genauigkeit",
+      "streak": "Serie",
+      "best": "Beste"
+    },
+    "settings": {
+      "tooltip": "Einstellungen"
+    },
+    "filters": {
+      "title": "Filter",
+      "visualization": "Visualisierung: Level {{level}}",
+      "difficulty": "Schwierigkeit",
+      "difficultyHint": "Puzzles rund um deine Elo ({{elo}})",
+      "depthHint": "1 (schwach) – 24 (stark)",
+      "skipSolved": "Gelöste überspringen"
+    },
+    "difficulty": {
+      "veryEasy": "Sehr leicht",
+      "easy": "Leicht",
+      "normal": "Normal",
+      "hard": "Schwer",
+      "veryHard": "Sehr schwer"
+    },
+    "theme": {
+      "mode": "Modus",
+      "modeNormal": "Normal",
+      "modeRandom": "Zufällig",
+      "modeCrazy": "Verrückt",
+      "boardTheme": "Brett-Design",
+      "pieces": "Figuren"
+    },
+    "viz": {
+      "title": "Visualisierung (Level {{level}})",
+      "countdown": "Figuren verschwinden in {{seconds}}s…",
+      "noMoveYet": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
+      "show": "Anzeigen",
+      "showing": "Wird angezeigt…"
+    },
+    "share": {
+      "title": "Puzzle teilen",
+      "copied": "Link kopiert!",
+      "copyFailed": "Kopieren fehlgeschlagen"
+    }
+  },
+  "courses": {
+    "title": "Kurse",
+    "intro": "Arbeite ein importiertes Buch puzzleweise durch — sequenziell oder zufällig. Dein Fortschritt wird gespeichert.",
+    "emptyHint": "Noch keine Bücher importiert. Importiere Bücher im Admin-Bereich unter „Bücher\".",
+    "puzzleCount": "{{count}} Puzzles",
+    "completed": "Kurs abgeschlossen",
+    "sequential": "Sequenziell",
+    "random": "Zufällig",
+    "resetTooltip": "Fortschritt zurücksetzen",
+    "resetConfirm": "Fortschritt für „{{name}}\" zurücksetzen?",
+    "loadFailed": "Kurse konnten nicht geladen werden",
+    "resetFailed": "Zurücksetzen fehlgeschlagen"
+  },
+  "weekly": {
+    "title": "Wochenpost",
+    "intro": "Die wöchentlichen Schach-Posts zum Durchklicken. Datum & Uhrzeit geben an, wann der Post geplant ist.",
+    "oClock": "Uhr",
+    "play": "Durchspielen",
+    "empty": "Noch keine Wochenposts vorhanden.",
+    "deleteConfirm": "Wochenpost „{{title}}“ löschen?",
+    "created": "Wochenpost angelegt",
+    "deleted": "Wochenpost gelöscht",
+    "loadFailed": "Wochenposts konnten nicht geladen werden",
+    "uploadFailed": "Upload fehlgeschlagen",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "fields": {
+      "date": "Datum",
+      "time": "Uhrzeit",
+      "titleOptional": "Titel (optional)"
+    },
+    "columns": {
+      "scheduled": "Termin",
+      "title": "Titel",
+      "actions": "Aktionen"
+    },
+    "upload": {
+      "title": "Neuen Wochenpost hochladen",
+      "choosePgn": "PGN wählen",
+      "titlePlaceholder": "aus Dateiname",
+      "create": "Anlegen",
+      "hint": "Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00)."
+    }
+  },
+  "endless": {
+    "help": {
+      "title": "Endless Puzzle Mode",
+      "gameplayHeading": "Spielablauf",
+      "gameplayP1": "Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Das Rating steigt automatisch entlang der Fasttrack-Phasen (siehe unten).",
+      "gameplayP2": "Du hast <strong>3 Leben</strong>. Bei 0 Leben ist das Spiel vorbei.",
+      "movesHeading": "Züge & Stockfish",
+      "movesP1": "Jedes Puzzle hat eine <strong>beabsichtigte Lösung</strong> (eine Zugfolge). Solange du die richtigen Züge spielst, folgst du diesem Lösungsweg.",
+      "movesP2": "Spielst du einen <strong>falschen Zug</strong>, übernimmt <strong>Stockfish</strong> (eine Schach-Engine) die Gegenseite. Du spielst dann frei gegen Stockfish weiter. Die Stärke ist über die Stockfish Depth einstellbar.",
+      "movesItem1": "<strong>Schachmatt gegen Stockfish</strong> zählt als alternative Lösung — kein Lebensverlust!",
+      "movesItem2": "<strong>Stockfish setzt dich matt</strong> — du verlierst ein Leben",
+      "movesItem3": "Das Spiel gegen Stockfish geht endlos weiter bis Matt oder Give Up",
+      "buttonsHeading": "Buttons während des Spiels",
+      "buttonsShowEval": "<strong>Show Eval</strong> — Zeigt die Stockfish-Bewertung (Start vs. Aktuell)",
+      "buttonsReset": "<strong>Reset</strong> — Setzt das Puzzle zurück, kostet aber ein Leben",
+      "buttonsMouseslip": "<strong>Mouseslip</strong> — Macht den letzten falschen Zug rückgängig (einmal pro Puzzle, gratis)",
+      "buttonsGiveUp": "<strong>Give Up</strong> — Aufgeben, kostet ein Leben",
+      "settingsHeading": "Einstellungen",
+      "settingsStartRating": "<strong>Start Rating</strong> — Ab welchem Puzzle-Rating du beginnst",
+      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Stärke der Engine (1 = sehr schwach, 24 = maximale Stärke)",
+      "settingsThemes": "<strong>Themes</strong> — Optional: nur bestimmte Taktik-Themen (z.B. \"fork pin\")",
+      "fasttrackHeading": "Schwierigkeits-Anstieg (Fasttrack)",
+      "fasttrackP1": "Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.",
+      "fasttrackPhase1": "<strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. Threshold",
+      "fasttrackPhase2": "<strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Threshold",
+      "fasttrackPhase3": "<strong>Phase 3 (ab Puzzle 11)</strong> — Konstanter Step von 20",
+      "fasttrackP2": "Die Threshold-Werte (1./2. Schwellenwert) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf \"Auto: …\" setzt den Wert zurück."
+    },
+    "config": {
+      "title": "Endless Puzzle Mode",
+      "subtitle": "Progressive Schwierigkeit — wie weit kommst du?",
+      "startRating": "Start Rating",
+      "stockfishDepth": "Stockfish Depth",
+      "stockfishDepthHint": "1 (schwach) – 24 (stark)",
+      "themes": "Themes (optional)",
+      "themesPlaceholder": "z.B. fork pin",
+      "thresholdExplain": "Ratings, bei denen du typischerweise Leben verlierst. Anpassen, um leichtere Puzzles schneller oder langsamer zu überspringen.",
+      "firstThreshold": "1. Schwellenwert",
+      "secondThreshold": "2. Schwellenwert",
+      "auto": "Auto: {{value}}",
+      "step": "Step {{step}}",
+      "phase1Label": "Phase 1 (Lv 1–5)",
+      "phase2Label": "Phase 2 (Lv 6–10)",
+      "phase3Label": "Phase 3 (Lv 11+)",
+      "settings": "Einstellungen",
+      "visualizationLevel": "Visualisierung: Level {{level}}",
+      "mode": "Modus",
+      "modeNormal": "Normal",
+      "modeRandom": "Random",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Board Theme",
+      "pieces": "Figuren",
+      "highscore": "Highscore: {{rating}} Rating",
+      "sessionsPlayed": "{{count}} Sessions gespielt",
+      "viewHistory": "Verlauf ansehen",
+      "unfinishedRun": "Unbeendeter Lauf: Lv {{level}} | {{solved}} gelöst | {{lives}} Leben | {{max}} max",
+      "continue": "Fortsetzen",
+      "archiveAndNew": "Archivieren & neues Spiel",
+      "newGame": "Neues Spiel",
+      "start": "Start"
+    },
+    "game": {
+      "visualization": "Visualisierung (Level {{level}})",
+      "vizCountdown": "Figuren verschwinden in {{seconds}}s...",
+      "vizNoMove": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
+      "vizShow": "Show",
+      "vizShowing": "Showing...",
+      "loadingPuzzle": "Puzzle wird geladen...",
+      "watchOpponent": "Beobachte den Zug des Gegners...",
+      "yourTurn": "Du bist dran! Finde den besten Zug.",
+      "yourMove": "Dein Zug...",
+      "opponentThinking": "Gegner denkt nach...",
+      "evalStart": "Start",
+      "evalNow": "Aktuell",
+      "showEval": "Show Eval",
+      "hideEval": "Hide Eval",
+      "reset": "Reset",
+      "mouseslip": "Mouseslip",
+      "giveUp": "Give Up",
+      "checkmate": "Schachmatt!",
+      "alternativeSolution": "Alternative Lösung — das Puzzle hatte einen anderen vorgesehenen Lösungsweg.",
+      "correct": "Richtig!",
+      "wrong": "Falsch!",
+      "gaveUp": "Aufgegeben",
+      "continue": "Fortsetzen",
+      "puzzleRating": "Puzzle Rating: {{rating}}",
+      "levelRange": "Level {{level}} ({{min}}–{{max}})",
+      "showTags": "Tags anzeigen",
+      "hideTags": "Tags ausblenden",
+      "sharePuzzle": "Puzzle teilen",
+      "statRating": "Rating",
+      "statLevel": "Level",
+      "statSolved": "Gelöst",
+      "statTime": "Zeit",
+      "phaseLabel": "Phase {{phase}} (step {{step}})"
+    },
+    "gameOver": {
+      "title": "Game Over",
+      "exhaustedTitle": "Ausgespielt!",
+      "exhaustedSubtitle": "Du hast alle Puzzle-Rating-Bereiche durchgespielt.",
+      "areYouAStockfish": "Bist du ein Stockfisch?",
+      "maxRating": "Max Rating",
+      "puzzlesSolved": "Gelöste Puzzles",
+      "livesLeft": "Verbleibende Leben",
+      "levelReached": "Erreichtes Level",
+      "time": "Zeit",
+      "livesLostAt": "Leben verloren bei: {{ratings}}",
+      "puzzleReview": "Puzzle-Rückblick",
+      "newHighscore": "Neuer Highscore!",
+      "archiving": "Wird archiviert...",
+      "archiveRun": "Diesen Lauf archivieren",
+      "archived": "Archiviert",
+      "playAgain": "Nochmal spielen",
+      "backToPuzzles": "Zurück zu den Puzzles"
+    },
+    "history": {
+      "title": "Endless Puzzle Verlauf",
+      "noSessions": "Noch keine Sessions gespielt.",
+      "startPlaying": "Jetzt spielen",
+      "filterAll": "Alle",
+      "filterActive": "Aktiv",
+      "filterArchived": "Archiviert",
+      "selected": "{{count}} ausgewählt",
+      "archive": "Archivieren",
+      "unarchive": "Dearchivieren",
+      "noArchivedSessions": "Keine archivierten Sessions.",
+      "noActiveSessions": "Keine aktiven Sessions.",
+      "colDate": "Datum",
+      "colMaxRating": "Max Rating",
+      "colSolved": "Gelöst",
+      "colDuration": "Dauer",
+      "colConfig": "Konfiguration",
+      "colMistakes": "Fehler",
+      "backToEndless": "Zurück zum Endless Mode"
+    }
+  },
+  "book": {
+    "difficulty": "Schwierigkeit",
+    "status": {
+      "loading": "Puzzle wird geladen...",
+      "watchOpponent": "Beobachte den Zug des Gegners...",
+      "yourTurn": "Du bist am Zug! Finde den besten Zug.",
+      "gaveUp": "Aufgegeben — spiel die Lösung selbst durch.",
+      "stockfishThinking": "Stockfish denkt...",
+      "yourMoveVsStockfish": "Dein Zug gegen Stockfish...",
+      "correct": "Richtig!",
+      "incorrect": "Falsch",
+      "checkmate": "Schachmatt!",
+      "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
+      "fullGame": "Ganze Partie"
+    },
+    "actions": {
+      "reset": "Zurücksetzen",
+      "giveUp": "Aufgeben",
+      "mouseslip": "Mausverrutscher",
+      "nextPuzzle": "Nächstes Puzzle",
+      "again": "Nochmal",
+      "skip": "Überspringen",
+      "viewFullGame": "Ganze Partie ansehen",
+      "sharePuzzle": "Puzzle teilen",
+      "backToPuzzle": "Zurück zum Puzzle"
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "visualizationLevel": "Visualisierung: Level {{level}}",
+      "stockfishDepth": "Stockfish-Tiefe",
+      "depthHint": "1 (schwach) – 24 (stark)",
+      "mode": "Modus",
+      "modeNormal": "Normal",
+      "modeRandom": "Zufällig",
+      "modeCrazy": "Verrückt",
+      "boardTheme": "Brett-Design",
+      "pieces": "Figuren"
+    },
+    "viz": {
+      "titleLevel": "Visualisierung (Level {{level}})",
+      "countdown": "Figuren verschwinden in {{seconds}}s...",
+      "noMoveYet": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
+      "show": "Anzeigen",
+      "showing": "Wird angezeigt...",
+      "level0": "Normal — Drag & Drop",
+      "level1": "Blindspiel — Brett eingefroren, Züge als Text",
+      "level2": "Checker — Figuren werden nach 3s durch Spielsteine ersetzt",
+      "level3": "Dunkel — Figuren werden nach 3s durch schwarze Steine ersetzt",
+      "level4": "Unsichtbar — Figuren verschwinden nach 3s komplett"
+    },
+    "course": {
+      "backToCourses": "Zur Kursübersicht",
+      "sequential": "Sequenziell",
+      "random": "Zufällig",
+      "completed": "Kurs abgeschlossen!",
+      "toOverview": "Zur Übersicht"
+    },
+    "weekly": {
+      "backToWeekly": "Zur Wochenpost-Übersicht",
+      "label": "Wochenpost",
+      "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
+      "allSolved": "Alle Puzzles gelöst!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "tabs": {
+      "users": "Users",
+      "books": "Bücher",
+      "groups": "Gruppen",
+      "logs": "Request Logs"
+    },
+    "users": {
+      "searchLabel": "User suchen",
+      "toggleAdmin": "Admin umschalten",
+      "deleteUser": "User löschen",
+      "deleteConfirm": "User \"{{username}}\" löschen? Das kann nicht rückgängig gemacht werden.",
+      "deleted": "User \"{{username}}\" gelöscht",
+      "nowAdmin": "{{username}} ist jetzt Admin",
+      "noLongerAdmin": "{{username}} ist kein Admin mehr",
+      "columns": {
+        "id": "ID",
+        "username": "Username",
+        "email": "E-Mail",
+        "admin": "Admin",
+        "created": "Erstellt",
+        "actions": "Aktionen"
+      },
+      "errors": {
+        "load": "User konnten nicht geladen werden",
+        "toggleAdmin": "Admin-Status konnte nicht geändert werden",
+        "delete": "User konnte nicht gelöscht werden"
+      }
+    },
+    "books": {
+      "uploadPgn": "PGN(s) hochladen",
+      "importing": "Import läuft…",
+      "poolHint": "Pro Buch festlegen, in welchen Pools die Puzzles erscheinen.",
+      "empty": "Noch keine Bücher importiert.",
+      "eloFrom": "von",
+      "eloTo": "bis",
+      "adminOnly": "nur Admin",
+      "deleteBook": "Buch löschen",
+      "deleteConfirm": "Buch \"{{name}}\" mit {{count}} Puzzle(s) löschen?",
+      "deleted": "Buch \"{{name}}\" gelöscht",
+      "imported": "{{imported}} Puzzle(s) importiert, {{skipped}} übersprungen",
+      "columns": {
+        "book": "Buch",
+        "puzzles": "Puzzles",
+        "difficulty": "Schwierigkeit",
+        "elo": "Elo von/bis",
+        "daily": "Daily",
+        "random": "Random",
+        "blind": "Blind",
+        "visibleFor": "Sichtbar für (Kurse)",
+        "actions": "Aktionen"
+      },
+      "errors": {
+        "load": "Bücher konnten nicht geladen werden",
+        "import": "Import fehlgeschlagen",
+        "save": "Speichern fehlgeschlagen",
+        "saveGroups": "Gruppen-Freigabe fehlgeschlagen",
+        "delete": "Löschen fehlgeschlagen"
+      }
+    },
+    "groups": {
+      "newGroup": "Neue Gruppe",
+      "namePlaceholder": "Name",
+      "descriptionOptional": "Beschreibung (optional)",
+      "create": "Anlegen",
+      "empty": "Noch keine Gruppen angelegt.",
+      "manageMembers": "Mitglieder verwalten",
+      "deleteGroup": "Gruppe löschen",
+      "membersOf": "Mitglieder · {{name}}",
+      "addUser": "User hinzufügen",
+      "noMembers": "Keine Mitglieder.",
+      "created": "Gruppe \"{{name}}\" angelegt",
+      "deleteConfirm": "Gruppe \"{{name}}\" löschen?",
+      "deleted": "Gruppe \"{{name}}\" gelöscht",
+      "columns": {
+        "group": "Gruppe",
+        "members": "Mitglieder",
+        "actions": "Aktionen"
+      },
+      "errors": {
+        "load": "Gruppen konnten nicht geladen werden",
+        "create": "Gruppe konnte nicht angelegt werden",
+        "delete": "Löschen fehlgeschlagen",
+        "loadMembers": "Mitglieder konnten nicht geladen werden",
+        "addMember": "Hinzufügen fehlgeschlagen",
+        "removeMember": "Entfernen fehlgeschlagen"
+      }
+    },
+    "logs": {
+      "all": "Alle",
+      "filter": "Filtern",
+      "reset": "Zurücksetzen",
+      "filtered": "(gefiltert)",
+      "entryCount": "{{count}} Einträge",
+      "status4xx": "4xx+ (Fehler)",
+      "status5xx": "5xx (Server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Zeit",
+        "method": "Methode",
+        "path": "Pfad",
+        "status": "Status",
+        "duration": "Dauer",
+        "user": "Benutzer",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Logs konnten nicht geladen werden"
+      }
+    }
+  }
+}

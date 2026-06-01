@@ -4,30 +4,31 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { TranslateModule } from '@ngx-translate/core';
 import { TournamentPlayer } from '../../core/models';
 
 @Component({
   selector: 'app-team-players-dialog',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule],
   template: `
     <h2 class="dialog-title">{{ data.teamName }}</h2>
     <div class="dialog-table-scroll">
       <table mat-table [dataSource]="data.players" class="full-width">
         <ng-container matColumnDef="boardNumber">
-          <th mat-header-cell *matHeaderCellDef>Br.</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.boardShort' | translate }}</th>
           <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
         </ng-container>
         <ng-container matColumnDef="title">
-          <th mat-header-cell *matHeaderCellDef>Title</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.title' | translate }}</th>
           <td mat-cell *matCellDef="let p">{{ p.title }}</td>
         </ng-container>
         <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.name' | translate }}</th>
           <td mat-cell *matCellDef="let p">{{ p.name }}</td>
         </ng-container>
         <ng-container matColumnDef="elo">
-          <th mat-header-cell *matHeaderCellDef>Elo</th>
+          <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.elo' | translate }}</th>
           <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -35,7 +36,7 @@ import { TournamentPlayer } from '../../core/models';
       </table>
     </div>
     <div class="dialog-actions">
-      <button mat-button mat-dialog-close>Close</button>
+      <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
     </div>
   `,
   styles: [`

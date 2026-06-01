@@ -4,14 +4,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-share-puzzle-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, QRCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, TranslateModule, QRCodeComponent],
   template: `
-    <h2 class="dialog-title">Puzzle teilen</h2>
+    <h2 class="dialog-title">{{ 'puzzles.share.title' | translate }}</h2>
     <div class="qr-container">
       <qrcode [qrdata]="data.url" [width]="220" errorCorrectionLevel="M"></qrcode>
     </div>
@@ -22,7 +23,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
       </button>
     </div>
     <div class="dialog-actions">
-      <button mat-button mat-dialog-close>Schliessen</button>
+      <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
     </div>
   `,
   styles: [`
@@ -40,13 +41,14 @@ import { QRCodeComponent } from 'angularx-qrcode';
 export class SharePuzzleDialogComponent {
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: { url: string },
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   copyLink(): void {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(this.data.url).then(() => {
-        this.snackBar.open('Link kopiert!', '', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('puzzles.share.copied'), '', { duration: 2000 });
       }).catch(() => this.fallbackCopy());
     } else {
       this.fallbackCopy();
@@ -62,9 +64,9 @@ export class SharePuzzleDialogComponent {
     textarea.select();
     try {
       document.execCommand('copy');
-      this.snackBar.open('Link kopiert!', '', { duration: 2000 });
+      this.snackBar.open(this.translate.instant('puzzles.share.copied'), '', { duration: 2000 });
     } catch {
-      this.snackBar.open('Kopieren fehlgeschlagen', '', { duration: 2000 });
+      this.snackBar.open(this.translate.instant('puzzles.share.copyFailed'), '', { duration: 2000 });
     }
     document.body.removeChild(textarea);
   }

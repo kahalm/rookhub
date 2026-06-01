@@ -5,13 +5,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 
 @Component({
   selector: 'app-repertoire-edit',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, MatSnackBarModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, MatSnackBarModule, TranslateModule],
   template: `
     <div class="edit-container">
       <div class="upload-area"
@@ -19,11 +20,11 @@ import { RepertoireFile } from '../../core/models';
            (drop)="onDrop($event)"
            (click)="fileInput.click()">
         <mat-icon>cloud_upload</mat-icon>
-        <p>Drag & drop PGN files here or click to upload</p>
+        <p>{{ 'repertoire.edit.uploadHint' | translate }}</p>
         <input #fileInput type="file" accept=".pgn" multiple (change)="onFileSelect($event)" hidden>
       </div>
 
-      <h3>Files ({{ files.length }})</h3>
+      <h3>{{ 'repertoire.edit.files' | translate: { count: files.length } }}</h3>
       <mat-list>
         @for (file of files; track file.id) {
           <mat-list-item>
@@ -40,7 +41,7 @@ import { RepertoireFile } from '../../core/models';
             </div>
           </mat-list-item>
         } @empty {
-          <p class="empty-text">No files yet. Upload PGN files to get started!</p>
+          <p class="empty-text">{{ 'repertoire.edit.empty' | translate }}</p>
         }
       </mat-list>
     </div>
@@ -64,7 +65,7 @@ export class RepertoireEditComponent {
   @Output() fileUploaded = new EventEmitter<void>();
   @Output() fileDeleted = new EventEmitter<void>();
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -96,7 +97,7 @@ export class RepertoireEditComponent {
     const valid = list.filter(f => f.name.toLowerCase().endsWith('.pgn') && f.size <= MAX_BYTES);
     const rejected = list.length - valid.length;
     if (rejected > 0)
-      this.snackBar.open(`${rejected} Datei(en) übersprungen (nur .pgn bis 10 MB)`, 'Close', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('repertoire.edit.filesSkipped', { count: rejected }), this.translate.instant('common.close'), { duration: 3000 });
     if (valid.length === 0) return;
 
     // Alle Uploads buendeln und den Reload (fileUploaded) GENAU EINMAL nach Abschluss
@@ -116,9 +117,9 @@ export class RepertoireEditComponent {
       const ok = results.filter(r => r.ok).length;
       const failed = results.length - ok;
       const msg = failed === 0
-        ? `${ok} Datei(en) hochgeladen`
-        : `${ok} hochgeladen, ${failed} fehlgeschlagen`;
-      this.snackBar.open(msg, 'Close', { duration: 3000 });
+        ? this.translate.instant('repertoire.edit.uploadSuccess', { count: ok })
+        : this.translate.instant('repertoire.edit.uploadPartial', { ok, failed });
+      this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 3000 });
       this.fileUploaded.emit();
     });
   }
@@ -133,12 +134,12 @@ export class RepertoireEditComponent {
         a.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => this.snackBar.open('Download fehlgeschlagen', 'Close', { duration: 3000 }),
+      error: () => this.snackBar.open(this.translate.instant('repertoire.edit.downloadFailed'), this.translate.instant('common.close'), { duration: 3000 }),
     });
   }
 
   deleteFile(fileId: number): void {
-    if (confirm('Delete this file?')) {
+    if (confirm(this.translate.instant('repertoire.edit.deleteConfirm'))) {
       this.http.delete(`/api/repertoires/${this.repertoireId}/files/${fileId}`).subscribe(() => {
         this.fileDeleted.emit();
       });

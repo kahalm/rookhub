@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface Profile {
@@ -49,7 +50,7 @@ interface PlayerSearchItem {
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatSnackBarModule, MatProgressSpinnerModule, MatListModule,
-    MatIconModule, MatDividerModule, LoadingSpinnerComponent],
+    MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -57,17 +58,17 @@ interface PlayerSearchItem {
       <div class="profile-container">
         <mat-card>
           <mat-card-header>
-            <mat-card-title>Profile: {{ profile.username }}</mat-card-title>
+            <mat-card-title>{{ 'profile.title' | translate: { username: profile.username } }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <form (ngSubmit)="save()" class="profile-form">
               <div class="name-row">
                 <mat-form-field appearance="outline">
-                  <mat-label>Vorname</mat-label>
+                  <mat-label>{{ 'profile.firstName' | translate }}</mat-label>
                   <input matInput [(ngModel)]="profile.firstName" name="firstName">
                 </mat-form-field>
                 <mat-form-field appearance="outline">
-                  <mat-label>Nachname</mat-label>
+                  <mat-label>{{ 'profile.lastName' | translate }}</mat-label>
                   <input matInput [(ngModel)]="profile.lastName" name="lastName">
                 </mat-form-field>
                 <button mat-stroked-button type="button" (click)="searchPlayer()"
@@ -76,7 +77,7 @@ interface PlayerSearchItem {
                   @if (searching) {
                     <mat-spinner diameter="20"></mat-spinner>
                   } @else {
-                    <mat-icon>search</mat-icon> Spieler suchen
+                    <mat-icon>search</mat-icon> {{ 'profile.searchPlayer' | translate }}
                   }
                 </button>
               </div>
@@ -84,7 +85,7 @@ interface PlayerSearchItem {
               @if (searchResults) {
                 <div class="search-results">
                   @if (searchResults.chessResultsResults.length === 0 && searchResults.fideResults.length === 0) {
-                    <p class="no-results">Keine Ergebnisse gefunden.</p>
+                    <p class="no-results">{{ 'profile.noResults' | translate }}</p>
                   }
 
                   @if (searchResults.chessResultsResults.length > 0) {
@@ -127,27 +128,27 @@ interface PlayerSearchItem {
               }
 
               <mat-form-field appearance="outline">
-                <mat-label>Display Name</mat-label>
+                <mat-label>{{ 'profile.displayName' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.displayName" name="displayName">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>FIDE ID</mat-label>
+                <mat-label>{{ 'profile.fideId' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.fideId" name="fideId">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>ChessResults ID</mat-label>
+                <mat-label>{{ 'profile.chessResultsId' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.chessResultsId" name="chessResultsId">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Chess.com Username</mat-label>
+                <mat-label>{{ 'profile.chessComUsername' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.chessComUsername" name="chessComUsername">
               </mat-form-field>
               <mat-form-field appearance="outline">
-                <mat-label>Lichess Username</mat-label>
+                <mat-label>{{ 'profile.lichessUsername' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.lichessUsername" name="lichessUsername">
               </mat-form-field>
               <button mat-raised-button color="primary" type="submit" [disabled]="saving">
-                {{ saving ? 'Saving...' : 'Save' }}
+                {{ saving ? ('profile.saving' | translate) : ('common.save' | translate) }}
               </button>
             </form>
           </mat-card-content>
@@ -196,7 +197,7 @@ export class ProfileComponent implements OnInit {
   searching = false;
   searchResults: PlayerSearchResult | null = null;
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
+  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.http.get<Profile>('/api/profile').subscribe({
@@ -235,7 +236,7 @@ export class ProfileComponent implements OnInit {
       },
       error: () => {
         this.searching = false;
-        this.snackBar.open('Suche fehlgeschlagen', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('profile.searchFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
@@ -244,13 +245,13 @@ export class ProfileComponent implements OnInit {
     if (!this.profile) return;
     if (p.chessResultsId) this.profile.chessResultsId = p.chessResultsId;
     if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackBar.open('ChessResults-Daten uebernommen', 'Close', { duration: 2000 });
+    this.snackBar.open(this.translate.instant('profile.chessResultsApplied'), this.translate.instant('common.close'), { duration: 2000 });
   }
 
   selectFidePlayer(p: PlayerSearchItem): void {
     if (!this.profile) return;
     if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackBar.open('FIDE-Daten uebernommen', 'Close', { duration: 2000 });
+    this.snackBar.open(this.translate.instant('profile.fideApplied'), this.translate.instant('common.close'), { duration: 2000 });
   }
 
   save(): void {
@@ -268,11 +269,11 @@ export class ProfileComponent implements OnInit {
       next: (p) => {
         this.profile = p;
         this.saving = false;
-        this.snackBar.open('Profile saved', 'Close', { duration: 2000 });
+        this.snackBar.open(this.translate.instant('profile.saved'), this.translate.instant('common.close'), { duration: 2000 });
       },
       error: () => {
         this.saving = false;
-        this.snackBar.open('Failed to save profile', 'Close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('profile.saveFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }
