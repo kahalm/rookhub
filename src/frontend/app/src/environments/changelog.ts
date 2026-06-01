@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.17';
+export const APP_VERSION = '0.40.18';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.18', date: '2026-06-01', changes: [
+    'Security/UX (Auth): Das JWT-Ablaufdatum wurde nur einmal beim App-Start geprüft — eine abgelaufene Session galt clientseitig bis zum nächsten 401 als eingeloggt. Die Gültigkeit wird jetzt bei jedem Zugriff (isLoggedIn/token/currentUser/isAdmin) erneut geprüft und bei abgelaufenem Token automatisch ausgeloggt. (Code-Audit Finding, auth.service.spec.ts. Hinweis: JWT bleibt in localStorage — Umstieg auf HttpOnly-Cookie ist als größerer Umbau separat offen.)',
+  ]},
   { version: '0.40.17', date: '2026-06-01', changes: [
     'Fix (Anti-DoS): Anonyme Puzzle-Versuche wurden pro Session unbegrenzt gespeichert (Tabellen-Bloat). Pro anonymer Session werden jetzt nur die neuesten 200 Versuche behalten (ältere werden beim Aufzeichnen getrimmt); die anonymen Endpunkte sind zusätzlich rate-limitiert. (Code-Audit Finding, AnonymousPuzzleTests.)',
   ]},

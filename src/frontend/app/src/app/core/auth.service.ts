@@ -19,19 +19,44 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router, private injector: Injector) {}
 
   get isLoggedIn(): boolean {
-    return !!this.currentUserSubject.value;
+    return this.getValidUser() !== null;
   }
 
   get token(): string | null {
-    return this.currentUserSubject.value?.token ?? null;
+    return this.getValidUser()?.token ?? null;
   }
 
   get currentUser(): AuthResponse | null {
-    return this.currentUserSubject.value;
+    return this.getValidUser();
   }
 
   get isAdmin(): boolean {
-    return this.currentUserSubject.value?.isAdmin ?? false;
+    return this.getValidUser()?.isAdmin ?? false;
+  }
+
+  /**
+   * Liefert den aktuellen User, loggt aber bei abgelaufenem Token automatisch
+   * aus — eine abgelaufene Session gilt damit sofort als ausgeloggt, nicht erst
+   * nach dem naechsten 401 vom Server.
+   */
+  private getValidUser(): AuthResponse | null {
+    const user = this.currentUserSubject.value;
+    if (user && this.isTokenExpired(user.token)) {
+      localStorage.removeItem('rookhub_user');
+      this.currentUserSubject.next(null);
+      return null;
+    }
+    return user;
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+      return !!payload.exp && payload.exp * 1000 < Date.now();
+    } catch {
+      return true; // unparsebares Token -> als abgelaufen behandeln
+    }
   }
 
   register(username: string, email: string, password: string): Observable<AuthResponse> {
@@ -80,10 +105,7 @@ export class AuthService {
       const stored = localStorage.getItem('rookhub_user');
       if (!stored) return null;
       const user: AuthResponse = JSON.parse(stored);
-      const base64Url = user.token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(atob(base64));
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
+      if (this.isTokenExpired(user.token)) {
         localStorage.removeItem('rookhub_user');
         return null;
       }
