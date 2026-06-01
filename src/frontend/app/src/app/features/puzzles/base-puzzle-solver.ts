@@ -191,7 +191,10 @@ export abstract class BasePuzzleSolver {
       this.moveIndex++;
       this.updateBoard();
       if (this.moveIndex >= this.solutionMoves.length) { this.solvedInternal(false); return; }
-      this.state = 'PLAYING';
+      // Solver-Antwort im Lösungspfad → User soll seinen nächsten Lösungszug machen.
+      // PLAYING ist reserviert für off-path/freies Spiel; in onMoveMade wird PLAYING
+      // direkt als off-path interpretiert und der Lösungsvergleich übersprungen.
+      this.state = 'AWAITING_USER_MOVE';
       this.moveStartTime = Date.now();
       this.updateBoard();
     }, 400);

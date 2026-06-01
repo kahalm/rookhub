@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.1';
+export const APP_VERSION = '0.40.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.2', date: '2026-06-01', changes: [
+    'Fix: Mehrzügige Puzzles beendeten nach korrekter Lösung nicht mehr — der zweite/letzte Lösungszug wurde fälschlich als off-path-Zug behandelt, weil der Solver nach der Stockfish-Antwort auf PLAYING statt AWAITING_USER_MOVE wechselte (Regression aus dem BasePuzzleSolver-Refactor v0.38.2).',
+  ]},
   { version: '0.40.1', date: '2026-06-01', changes: [
     'Fix (Infra): nginx-Frontend stuerzte beim Start ab ("host not found in upstream api"), wenn der api-Container nach einem Reboot noch nicht im DNS war → 502 auf der ganzen Seite. Upstream wird jetzt zur Laufzeit ueber Dockers DNS aufgeloest (resolver + Variable im proxy_pass), nginx startet dadurch zuverlaessig und faengt api-Neustarts (neue IP) automatisch ab.',
   ]},

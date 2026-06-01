@@ -142,6 +142,30 @@ test.describe('Puzzle Moves', () => {
       await expect(page.getByRole('button', { name: /Reset/ })).toBeVisible({ timeout: 5_000 });
     });
 
+    test('4-move puzzle: second correct move is recognised as solved (no premove)', async ({ page }) => {
+      // Regression: nach dem Refactor in v0.38.2 wurde der state nach dem
+      // Stockfish-Antwortzug fälschlich auf PLAYING gesetzt. onMoveMade
+      // behandelt PLAYING aber als off-path → der 2. Lösungszug zählte nicht
+      // mehr als gelöst, der User konnte einfach weiterspielen.
+      await mockPuzzleApi(page, FOUR_MOVE_PUZZLE);
+      await page.addInitScript(() => {
+        localStorage.setItem('rookhub_puzzle_config', JSON.stringify({ stockfishDepth: 1 }));
+      });
+
+      await page.goto('/puzzles');
+      const board = page.locator('cg-board');
+      await expect(board).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+
+      // 1. korrekter User-Zug: Qd1→h5
+      await makeMove(page, board, 'd1', 'h5');
+      // Solver antwortet (g8f6) → 400ms später wieder dran
+      await expect(page.locator('.status-text')).toContainText('Your turn', { timeout: 10_000 });
+      // 2. korrekter User-Zug: Qh5→e5 → muss SOLVED auslösen
+      await makeMove(page, board, 'h5', 'e5');
+      await expect(page.locator('.status-text')).toContainText('Correct', { timeout: 10_000 });
+    });
+
     test('premove during THINKING solves the puzzle', async ({ page }) => {
       await mockPuzzleApi(page, FOUR_MOVE_PUZZLE);
       await page.addInitScript(() => {
