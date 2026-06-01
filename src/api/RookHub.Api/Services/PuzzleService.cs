@@ -53,15 +53,42 @@ public class PuzzleService
         // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
         // ID-range picks a random point in the PK space and seeks forward - O(1).
-        var (minId, maxId) = await GetCachedIdRangeAsync();
+        var anyFilter = minRating.HasValue || maxRating.HasValue
+            || !string.IsNullOrEmpty(themes) || (excludeSolved && userId.HasValue);
+
+        int? minId, maxId;
+        if (anyFilter)
+        {
+            // ID-Range ueber die GEFILTERTE Menge bestimmen (eine Aggregat-Abfrage).
+            // Die globale Range wuerde randomId fast immer ausserhalb der gefilterten
+            // Treffer platzieren -> alle Versuche scheitern -> degenerierter Fallback,
+            // der stets dasselbe (erste) Puzzle liefert.
+            var range = await query
+                .GroupBy(_ => 1)
+                .Select(g => new { Min = g.Min(p => p.Id), Max = g.Max(p => p.Id) })
+                .FirstOrDefaultAsync();
+            if (range == null) return null; // leere gefilterte Menge
+            minId = range.Min;
+            maxId = range.Max;
+        }
+        else
+        {
+            (minId, maxId) = await GetCachedIdRangeAsync();
+        }
         if (minId == null || maxId == null) return null;
 
         for (int attempt = 0; attempt < 5; attempt++)
         {
             var randomId = Random.Shared.Next(minId.Value, maxId.Value + 1);
+            // Vorwaerts suchen; wenn nichts mehr kommt (randomId nahe Max), rueckwaerts –
+            // so liefert jeder randomId in [min,max] einen Treffer (kein Always-First-Bias).
             var puzzle = await query
                 .Where(p => p.Id >= randomId)
                 .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync()
+                ?? await query
+                .Where(p => p.Id <= randomId)
+                .OrderByDescending(p => p.Id)
                 .FirstOrDefaultAsync();
             if (puzzle != null) return MapToDto(puzzle);
         }

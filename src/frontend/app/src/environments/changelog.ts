@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.38';
+export const APP_VERSION = '0.40.39';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.39', date: '2026-06-01', changes: [
+    'Fix (Random-Puzzle): Bei gesetzten Filtern (Rating/Themen/„gelöste ausblenden") wird die ID-Range jetzt über die *gefilterte* Treffermenge bestimmt statt global — vorher landete der Zufallspunkt fast immer außerhalb der Treffer, sodass der Fallback stets dasselbe Puzzle lieferte. Zusätzlich Wrap-around-Suche (vorwärts/rückwärts) statt „immer das erste". (Code-Audit Finding.)',
+  ]},
   { version: '0.40.38', date: '2026-06-01', changes: [
     'Fix (Profil-Spielersuche): Bei je genau einem ChessResults- und FIDE-Treffer überschreibt der FIDE-Treffer nicht mehr die zum CR-Spieler gehörende FIDE-Id (Auto-Fill); manuelles Anklicken bleibt unverändert.',
     'Fix (Endless-Sync): Das „bereits migriert"-Flag ist jetzt pro Identität (User-Id bzw. anonyme Session) statt global — ein zweiter Account/Anon im selben Browser migriert seine lokalen Daten wieder; der alte globale Flag wird sicher übernommen (keine Doppel-Migration).',

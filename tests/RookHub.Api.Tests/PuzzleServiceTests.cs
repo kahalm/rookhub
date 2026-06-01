@@ -73,6 +73,32 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandom_FilteredSelectionIsNotDegenerate()
+    {
+        var userId = await CreateUserAsync();
+        // 3 Treffer mit NIEDRIGEN Ids (verschiedene Ratings zur Unterscheidung) ...
+        await CreatePuzzleAsync(rating: 2000);
+        await CreatePuzzleAsync(rating: 2100);
+        await CreatePuzzleAsync(rating: 2200);
+        // ... gefolgt von vielen Nicht-Treffern mit HOHEN Ids.
+        for (int i = 0; i < 100; i++)
+            await CreatePuzzleAsync(rating: 1000);
+
+        var seen = new System.Collections.Generic.HashSet<int>();
+        for (int i = 0; i < 60; i++)
+        {
+            var r = await _service.GetRandomAsync(userId, minRating: 1900, maxRating: null, null, false);
+            Assert.NotNull(r);
+            Assert.True(r!.Rating >= 1900);
+            seen.Add(r.Rating);
+        }
+        // Vor dem Fix landete randomId (globale Range) fast immer ausserhalb der
+        // niedrigen Treffer-Ids -> degenerierter Fallback, stets dasselbe Puzzle.
+        // Jetzt wird die Range ueber die gefilterte Menge bestimmt -> es variiert.
+        Assert.True(seen.Count >= 2, $"Erwartet >=2 verschiedene Treffer, war {seen.Count}");
+    }
+
+    [Fact]
     public async Task GetRandom_ReturnsNull_WhenNoPuzzles()
     {
         var userId = await CreateUserAsync();
