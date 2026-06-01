@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { BookPuzzleDto } from '../puzzles/puzzle.service';
 
 export interface WeeklyPost {
   id: number;
@@ -16,6 +17,13 @@ export interface WeeklyPostDetail extends WeeklyPost {
   pgnContent: string;
 }
 
+/** Wochenpost als Puzzle-Sequenz zum Durchspielen. */
+export interface WeeklyPlay {
+  id: number;
+  title: string;
+  puzzles: BookPuzzleDto[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class WeeklyService {
   constructor(private http: HttpClient) {}
@@ -26,6 +34,11 @@ export class WeeklyService {
 
   getById(id: number): Observable<WeeklyPostDetail> {
     return this.http.get<WeeklyPostDetail>(`/api/weekly-posts/${id}`);
+  }
+
+  /** Puzzles des Wochenposts zum sequenziellen Durchspielen. */
+  getPlay(id: number): Observable<WeeklyPlay> {
+    return this.http.get<WeeklyPlay>(`/api/weekly-posts/${id}/puzzles`);
   }
 
   /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */

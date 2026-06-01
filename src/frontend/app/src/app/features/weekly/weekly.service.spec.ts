@@ -55,6 +55,19 @@ describe('WeeklyService', () => {
       scheduledAt: '2026-06-15T19:00:00', createdAt: '', updatedAt: '' });
   });
 
+  it('loads the play sequence (puzzles)', () => {
+    svc.getPlay(7).subscribe(p => {
+      expect(p.title).toBe('Woche 1');
+      expect(p.puzzles.length).toBe(2);
+    });
+    const req = http.expectOne('/api/weekly-posts/7/puzzles');
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 7, title: 'Woche 1', puzzles: [
+      { id: 0, lineId: 'a:1', bookFileName: 'a.pgn', round: '1', fen: '8/8/8/8/8/8/8/K6k w - - 0 1', moves: 'a1a2', startPly: -1 },
+      { id: 1, lineId: 'a:2', bookFileName: 'a.pgn', round: '2', fen: '8/8/8/8/8/8/8/K6k w - - 0 1', moves: 'a1b1', startPly: -1 },
+    ] });
+  });
+
   it('deletes a post', () => {
     svc.delete(3).subscribe();
     const req = http.expectOne('/api/admin/weekly-posts/3');

@@ -8,10 +8,9 @@ import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, WeeklyPost } from './weekly.service';
-import { PgnViewerComponent } from '../../shared/pgn-viewer/pgn-viewer.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -23,8 +22,8 @@ interface WeeklyPostRow extends WeeklyPost {
   selector: 'app-weekly-list',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, MatDialogModule,
+    CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
+    MatTableModule, MatFormFieldModule, MatInputModule, MatSnackBarModule,
     LoadingSpinnerComponent
   ],
   template: `
@@ -93,8 +92,8 @@ interface WeeklyPostRow extends WeeklyPost {
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Aktionen</th>
             <td mat-cell *matCellDef="let r">
-              <button mat-stroked-button (click)="view(r)">
-                <mat-icon>visibility</mat-icon> Ansehen
+              <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
+                <mat-icon>play_arrow</mat-icon> Durchspielen
               </button>
               @if (auth.isAdmin) {
                 <button mat-icon-button color="warn" (click)="remove(r)" title="Löschen">
@@ -140,8 +139,7 @@ export class WeeklyListComponent implements OnInit {
   constructor(
     public auth: AuthService,
     private weekly: WeeklyService,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -219,18 +217,6 @@ export class WeeklyListComponent implements OnInit {
         this.snackBar.open(err.error?.message || 'Speichern fehlgeschlagen', 'OK', { duration: 3000 });
         this.loadPosts();
       }
-    });
-  }
-
-  view(row: WeeklyPostRow): void {
-    this.weekly.getById(row.id).subscribe({
-      next: detail => {
-        this.dialog.open(PgnViewerComponent, {
-          data: { pgn: detail.pgnContent, fileName: detail.title },
-          width: '900px', maxWidth: '95vw',
-        });
-      },
-      error: () => this.snackBar.open('PGN konnte nicht geladen werden', 'OK', { duration: 3000 })
     });
   }
 

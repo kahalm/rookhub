@@ -23,6 +23,7 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode } from '../courses/course.service';
+import { WeeklyService } from '../weekly/weekly.service';
 
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE';
 
@@ -86,6 +87,43 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                 } @else {
                   <div class="course-actions">
                     <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+          @if (inWeekly) {
+            <mat-card class="course-card">
+              <mat-card-content>
+                <div class="course-head">
+                  <button mat-icon-button (click)="backToWeekly()" matTooltip="Zur Wochenpost-Übersicht">
+                    <mat-icon>arrow_back</mat-icon>
+                  </button>
+                  <span class="course-mode-chip">Wochenpost</span>
+                  <span class="course-progress">{{ weeklyDisplayIndex }}/{{ weeklyTotal }}</span>
+                </div>
+                <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
+                @if (weeklyTitle) { <p class="weekly-title">{{ weeklyTitle }}</p> }
+                @if (weeklyTotal === 0) {
+                  <p class="course-done"><mat-icon>info</mat-icon> Dieser Wochenpost enthält keine spielbaren Puzzles.</p>
+                  <div class="course-actions"><button mat-stroked-button (click)="backToWeekly()">Zur Übersicht</button></div>
+                } @else if (weeklyCompleted) {
+                  <p class="course-done"><mat-icon>emoji_events</mat-icon> Alle Puzzles gelöst!</p>
+                  <div class="course-actions"><button mat-raised-button color="primary" (click)="backToWeekly()">Zur Übersicht</button></div>
+                } @else if (state === 'SOLVED') {
+                  <div class="course-actions">
+                    <button mat-raised-button color="primary" (click)="weeklyNext()">
+                      <mat-icon>skip_next</mat-icon> Nächstes Puzzle
+                    </button>
+                  </div>
+                } @else if (state === 'FAILED') {
+                  <div class="course-actions">
+                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> Nochmal</button>
+                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                  </div>
+                } @else {
+                  <div class="course-actions">
+                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
                   </div>
                 }
               </mat-card-content>
@@ -406,6 +444,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .course-card .course-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .course-card .course-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
     .course-card .course-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .course-card .weekly-title { font-weight: 600; margin: 0.4rem 0 0; }
 
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
@@ -427,6 +466,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   courseSolved = 0;
   courseTotal = 0;
   courseCompleted = false;
+
+  // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen
+  // (kein Leben, beliebige Retrys, keine Fortschritts-Speicherung; client-seitige Liste).
+  inWeekly = false;
+  weeklyId: number | null = null;
+  weeklyTitle = '';
+  weeklyPuzzles: BookPuzzleDto[] = [];
+  weeklyIndex = 0;
+  weeklyCompleted = false;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -462,6 +510,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private route: ActivatedRoute,
     private dialog: MatDialog,
     private courseService: CourseService,
+    private weeklyService: WeeklyService,
     private router: Router
   ) {
     super(stockfish);
@@ -505,6 +554,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   ngOnInit(): void {
+    const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
+    if (weeklyIdParam) {
+      this.inWeekly = true;
+      this.weeklyId = Number(weeklyIdParam);
+      this.loadWeekly();
+      return;
+    }
+
     const bookIdParam = this.route.snapshot.paramMap.get('bookId');
     const modeParam = this.route.snapshot.paramMap.get('mode');
     if (bookIdParam && modeParam) {
@@ -569,6 +626,57 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   backToCourses(): void {
     this.router.navigate(['/courses']);
+  }
+
+  // ===== Wochenpost-Modus =====
+  get weeklyTotal(): number { return this.weeklyPuzzles.length; }
+  get weeklyDisplayIndex(): number {
+    return this.weeklyTotal === 0 ? 0 : Math.min(this.weeklyIndex + 1, this.weeklyTotal);
+  }
+  get weeklyPercent(): number {
+    if (this.weeklyTotal === 0) return 0;
+    return this.weeklyCompleted ? 100 : Math.round(100 * this.weeklyIndex / this.weeklyTotal);
+  }
+
+  private loadWeekly(): void {
+    if (this.weeklyId == null) return;
+    this.state = 'LOADING';
+    this.weeklyService.getPlay(this.weeklyId).subscribe({
+      next: play => {
+        this.weeklyTitle = play.title;
+        this.weeklyPuzzles = play.puzzles ?? [];
+        this.weeklyIndex = 0;
+        if (this.weeklyPuzzles.length === 0) {
+          this.weeklyCompleted = false;
+          this.puzzle = null;
+          this.state = 'COURSE_DONE';   // Done-Panel; weekly-Card zeigt „keine Puzzles"
+          return;
+        }
+        this.loadWeeklyAt(0);
+      },
+      error: () => { this.state = 'COURSE_DONE'; this.puzzle = null; }
+    });
+  }
+
+  private loadWeeklyAt(index: number): void {
+    if (index >= this.weeklyPuzzles.length) {
+      this.weeklyCompleted = true;
+      // letztes Puzzle bleibt sichtbar (state SOLVED) — Card zeigt „abgeschlossen"
+      return;
+    }
+    this.weeklyCompleted = false;
+    this.gaveUp = false;
+    this.weeklyIndex = index;
+    this.puzzle = this.weeklyPuzzles[index];
+    this.setupPuzzle(this.puzzle);
+  }
+
+  weeklyNext(): void {
+    this.loadWeeklyAt(this.weeklyIndex + 1);
+  }
+
+  backToWeekly(): void {
+    this.router.navigate(['/weekly']);
   }
 
   private recordCourseSolved(): void {

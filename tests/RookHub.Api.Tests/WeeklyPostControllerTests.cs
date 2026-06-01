@@ -97,6 +97,31 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.IsType<NotFoundObjectResult>(await _controller.GetById(999));
     }
 
+    // ChessBase-Trainings-PGN mit [%tqu]-Marker -> ergibt ein Puzzle (wie Bücher).
+    private const string TrainingPgn = "[Event \"WP\"]\n[Round \"1.1\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *";
+
+    [Fact]
+    public async Task GetPuzzles_ParsesPgnIntoSequence()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(TrainingPgn, "woche.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), "Woche 1", default));
+
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
+
+        Assert.Equal("Woche 1", play.Title);
+        var puzzle = Assert.Single(play.Puzzles);
+        Assert.Equal(0, puzzle.Id);                       // lokaler Index
+        Assert.False(string.IsNullOrEmpty(puzzle.Moves)); // UCI-Zugfolge vorhanden
+    }
+
+    [Fact]
+    public async Task GetPuzzles_NotFound_Returns404()
+    {
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetPuzzles(999));
+    }
+
     [Fact]
     public async Task Update_ChangesTitleAndSchedule()
     {

@@ -27,3 +27,11 @@ public class UpdateWeeklyPostDto
     public string? Title { get; set; }
     public DateTime? ScheduledAt { get; set; }
 }
+
+/// <summary>Wochenpost als Puzzle-Sequenz zum Durchspielen (PGN on-the-fly geparst).</summary>
+public class WeeklyPlayDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public List<BookPuzzleDto> Puzzles { get; set; } = new();
+}

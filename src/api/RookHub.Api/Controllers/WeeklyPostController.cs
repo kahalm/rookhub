@@ -62,6 +62,36 @@ public class WeeklyPostController : BaseApiController
         });
     }
 
+    /// <summary>
+    /// Puzzles des Wochenposts zum Durchspielen (sequenziell). Das gespeicherte PGN wird on-the-fly
+    /// in Puzzles geparst (gleiche Logik wie Bücher); keine Fortschritts-Speicherung, beliebige Retrys.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/puzzles")]
+    public async Task<IActionResult> GetPuzzles(int id)
+    {
+        var w = await _db.WeeklyPosts.FindAsync(id);
+        if (w == null)
+            return NotFound(new { message = "Weekly post not found." });
+
+        var parsed = PgnImportService.ParsePgn(w.FileName, w.PgnContent);
+        var puzzles = parsed.Select((p, i) => new BookPuzzleDto
+        {
+            Id = i,                       // lokaler Index (kein DB-Datensatz)
+            LineId = p.LineId,
+            BookFileName = w.FileName,
+            Round = p.Round,
+            Fen = p.Fen,
+            Moves = p.Moves,
+            StartPly = p.StartPly,
+            Title = p.Title,
+            Chapter = p.Chapter,
+            Comment = p.Comment,
+        }).ToList();
+
+        return Ok(new WeeklyPlayDto { Id = w.Id, Title = w.Title, Puzzles = puzzles });
+    }
+
     [HttpPost("/api/admin/weekly-posts")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(RepertoireService.MaxFileSize)]

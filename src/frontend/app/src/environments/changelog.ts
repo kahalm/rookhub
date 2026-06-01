@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.43.0';
+export const APP_VERSION = '0.44.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.44.0', date: '2026-06-01', changes: [
+    'Neu (Wochenpost durchspielen): „Durchspielen" öffnet jetzt eine Spiel-Seite (`/weekly/:id`) statt eines PGN-Dialogs — man löst die Puzzles des Wochenposts der Reihe nach (wie im Endlosmodus, aber ohne Leben und mit beliebig vielen Retrys). Das hochgeladene PGN wird serverseitig on-the-fly in Puzzles geparst (gleiche Logik wie Bücher); neuer öffentlicher Endpoint GET `/api/weekly-posts/{id}/puzzles`. Fortschritt (X/Y) + „Nächstes Puzzle" / „Überspringen" / „Zur Übersicht".',
+  ]},
   { version: '0.43.0', date: '2026-06-01', changes: [
     'Neu (Wochenpost): Neuer öffentlicher Menüpunkt „Wochenpost" — bildet die wöchentlichen Schach-Posts auf RookHub ab. Admins laden ein PGN mit Termin (Datum + Uhrzeit) hoch; das Datum wird automatisch auf „letzter Eintrag + 7 Tage" vorbelegt, die Uhrzeit bleibt gleich (Standard 19:00). Jeder Post ist über den PGN-Viewer interaktiv durchklickbar; Liste/Anzeige sind öffentlich (auch ohne Login), Hochladen/Bearbeiten/Löschen nur für Admins. Daten liegen in der DB (neue Tabelle WeeklyPosts). Neue API: GET `/api/weekly-posts`(+`/{id}`), POST/PUT/DELETE `/api/admin/weekly-posts`.',
   ]},
