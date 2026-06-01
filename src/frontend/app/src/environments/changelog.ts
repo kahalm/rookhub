@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.41';
+export const APP_VERSION = '0.41.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.41.0', date: '2026-06-01', changes: [
+    'Neu (Kurse, admin-only): Neuer Menüpunkt „Kurse" zeigt alle als Bücher importierten Sammlungen als Übersicht mit Fortschrittsbalken (gelöste Puzzles / gesamt). Jedes Buch lässt sich in zwei Modi durcharbeiten — sequenziell (Buchreihenfolge, „Überspringen" springt weiter) oder zufällig. Der Fortschritt ist user-bezogen und wird komplett in der DB gespeichert (neue Tabellen CourseProgress + CoursePuzzleResult); ein Buch hat einen geteilten Fortschritt über beide Modi. Reset pro Kurs möglich. Neue API: GET `/api/courses`, GET `/api/courses/{bookId}/next`, POST `/api/courses/{bookId}/results`, POST `/api/courses/{bookId}/reset`.',
+  ]},
   { version: '0.40.41', date: '2026-06-01', changes: [
     'Härtung (Crawler-Proxy): (1) `/api/tournaments/crawl` reicht nicht mehr den Roh-Body durch, sondern baut einen validierten Body (chessResultsId + jobType gegen Whitelist) — keine Injektion beliebiger/zukünftiger Felder. (2) Alle Proxy-Aufrufe reichen `HttpContext.RequestAborted` durch, sodass abgebrochene Client-Requests nicht am Crawler weiterlaufen. (3) `GET /api/book-puzzles/random` liefert bei einem Pool-Schrumpf zwischen Count und Skip jetzt 404 statt eines unbehandelten 500. (Code-Audit Findings, Projektübergreifend.)',
   ]},

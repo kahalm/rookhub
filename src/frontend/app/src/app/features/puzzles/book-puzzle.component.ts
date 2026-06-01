@@ -5,10 +5,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { ActivatedRoute } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -20,16 +22,17 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { CourseService, CourseMode } from '../courses/course.service';
 
-type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED';
+type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE';
 
 @Component({
   selector: 'app-book-puzzle',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatDialogModule, PuzzleBoardComponent
+    MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent
   ],
   template: `
     <div class="puzzle-page">
@@ -53,6 +56,41 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
         </div>
 
         <div class="info-section">
+          @if (inCourse) {
+            <mat-card class="course-card">
+              <mat-card-content>
+                <div class="course-head">
+                  <button mat-icon-button (click)="backToCourses()" matTooltip="Zur Kursübersicht">
+                    <mat-icon>arrow_back</mat-icon>
+                  </button>
+                  <span class="course-mode-chip">{{ courseModeKind === 'random' ? 'Zufällig' : 'Sequenziell' }}</span>
+                  <span class="course-progress">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</span>
+                </div>
+                <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
+                @if (courseCompleted) {
+                  <p class="course-done"><mat-icon>emoji_events</mat-icon> Kurs abgeschlossen!</p>
+                  <div class="course-actions">
+                    <button mat-raised-button color="primary" (click)="backToCourses()">Zur Übersicht</button>
+                  </div>
+                } @else if (state === 'SOLVED') {
+                  <div class="course-actions">
+                    <button mat-raised-button color="primary" (click)="courseNext()">
+                      <mat-icon>skip_next</mat-icon> Nächstes Puzzle
+                    </button>
+                  </div>
+                } @else if (state === 'FAILED') {
+                  <div class="course-actions">
+                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> Nochmal</button>
+                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                  </div>
+                } @else {
+                  <div class="course-actions">
+                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> Überspringen</button>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
           @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
             <mat-card class="viz-card">
               <mat-card-content>
@@ -359,6 +397,16 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .tp-light, .tp-dark { flex: 1; }
     .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
 
+    .course-card .course-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .course-card .course-mode-chip {
+      font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;
+      background: #e3f2fd; color: #1565c0;
+    }
+    .course-card .course-progress { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 0.9rem; color: #444; }
+    .course-card .course-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+    .course-card .course-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
+    .course-card .course-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
       .board-section { width: 100%; }
@@ -370,6 +418,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   // moveIndex, startPly, autoAdvanceTimer, aborted, onSolutionPath, alternativeSolve,
   // mouseslipUsed, visualizationMode, vizMoves → BasePuzzleSolver
   puzzle: BookPuzzleDto | null = null;
+
+  // Kursmodus: Komponente wird über /courses/:bookId/:mode aufgerufen und arbeitet ein
+  // Buch puzzleweise durch; Fortschritt liegt user-bezogen in der DB.
+  inCourse = false;
+  courseBookId: number | null = null;
+  courseModeKind: CourseMode = 'sequential';
+  courseSolved = 0;
+  courseTotal = 0;
+  courseCompleted = false;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -403,7 +460,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     stockfish: StockfishService,
     private prefs: PreferencesService,
     private route: ActivatedRoute,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private courseService: CourseService,
+    private router: Router
   ) {
     super(stockfish);
     this.loadConfig();
@@ -435,6 +494,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
+    this.recordCourseSolved();
   }
 
   protected override handleFailed(): void {
@@ -445,6 +505,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   ngOnInit(): void {
+    const bookIdParam = this.route.snapshot.paramMap.get('bookId');
+    const modeParam = this.route.snapshot.paramMap.get('mode');
+    if (bookIdParam && modeParam) {
+      this.inCourse = true;
+      this.courseBookId = Number(bookIdParam);
+      this.courseModeKind = modeParam === 'random' ? 'random' : 'sequential';
+      this.loadCourseNext();
+      return;
+    }
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.loadPuzzle(Number(idParam));
@@ -456,6 +526,56 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.abortSolver();
     clearCrazyStyles();
     clearVisualizationHide();
+  }
+
+  // ===== Kursmodus =====
+  get coursePercent(): number {
+    return this.courseTotal > 0
+      ? Math.round(100 * Math.min(this.courseSolved, this.courseTotal) / this.courseTotal)
+      : 0;
+  }
+
+  /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
+  private loadCourseNext(after?: number, exclude?: number): void {
+    if (this.courseBookId == null) return;
+    const hadPuzzle = this.puzzle != null;
+    if (!hadPuzzle) this.state = 'LOADING';
+
+    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude).subscribe({
+      next: res => {
+        this.courseSolved = res.solvedCount;
+        this.courseTotal = res.total;
+        if (res.completed || !res.puzzle) {
+          this.courseCompleted = true;
+          // Letztes Puzzle gerade gelöst: gelöstes Brett stehen lassen; sonst leeres Done-Panel.
+          if (!hadPuzzle) { this.puzzle = null; this.state = 'COURSE_DONE'; }
+          return;
+        }
+        this.courseCompleted = false;
+        this.gaveUp = false;
+        this.puzzle = res.puzzle;
+        this.setupPuzzle(res.puzzle);
+      },
+      error: () => { this.state = 'LOADING'; }
+    });
+  }
+
+  /** „Nächstes Puzzle" / „Überspringen": eins weiter im jeweiligen Modus. */
+  courseNext(): void {
+    const cur = this.puzzle?.id;
+    if (this.courseModeKind === 'random') this.loadCourseNext(undefined, cur);
+    else this.loadCourseNext(cur, undefined);
+  }
+
+  backToCourses(): void {
+    this.router.navigate(['/courses']);
+  }
+
+  private recordCourseSolved(): void {
+    if (!this.inCourse || this.courseBookId == null || !this.puzzle) return;
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind).subscribe({
+      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; }
+    });
   }
 
   private loadPuzzle(id: number): void {

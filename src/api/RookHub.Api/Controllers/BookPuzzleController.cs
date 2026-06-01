@@ -207,7 +207,7 @@ public class BookPuzzleController : BaseApiController
         return Ok(new { imported = toAdd.Count, skipped });
     }
 
-    private static BookPuzzleDto MapToDto(BookPuzzle bp) => new()
+    internal static BookPuzzleDto MapToDto(BookPuzzle bp) => new()
     {
         Id = bp.Id,
         LineId = bp.LineId,

@@ -256,7 +256,12 @@ public class AdminController : BaseApiController
         if (book == null)
             return NotFound(new { message = "Book not found." });
 
-        // Zugehörige Puzzles explizit entfernen (FK-Cascade greift bei InMemory nicht).
+        // Kurs-Daten (Fortschritt + gelöste Puzzles) und zugehörige Puzzles explizit entfernen.
+        // FK-Cascade greift bei InMemory nicht; zudem hat CoursePuzzleResult eine Restrict-FK
+        // auf BookPuzzle — EF löscht beim SaveChanges die Dependents (CoursePuzzleResult) vor
+        // den Principals (BookPuzzle), sodass die Reihenfolge auch real korrekt ist.
+        _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
+        _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

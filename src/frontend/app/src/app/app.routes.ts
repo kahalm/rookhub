@@ -18,6 +18,8 @@ export const routes: Routes = [
   { path: 'puzzles/book/:id', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
   { path: 'puzzles/:id', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent) },
   { path: 'puzzles', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent) },
+  { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [adminGuard] },
+  { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [adminGuard] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
   { path: '**', redirectTo: '/dashboard' }

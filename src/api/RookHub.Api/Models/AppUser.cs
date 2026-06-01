@@ -34,4 +34,6 @@ public class AppUser
     public ICollection<EndlessProgress> EndlessProgresses { get; set; } = new List<EndlessProgress>();
     public ICollection<EndlessSession> EndlessSessions { get; set; } = new List<EndlessSession>();
     public ICollection<UserGroup> Groups { get; set; } = new List<UserGroup>();
+    public ICollection<CourseProgress> CourseProgresses { get; set; } = new List<CourseProgress>();
+    public ICollection<CoursePuzzleResult> CoursePuzzleResults { get; set; } = new List<CoursePuzzleResult>();
 }

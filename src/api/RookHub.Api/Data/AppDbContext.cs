@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
+    public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
+    public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -209,6 +211,45 @@ public class AppDbContext : DbContext
             e.HasIndex(es => new { es.UserId, es.Timestamp });
             e.HasIndex(es => es.AnonymousSessionId);
             e.Property(es => es.AnonymousSessionId).HasMaxLength(36);
+        });
+
+        modelBuilder.Entity<CourseProgress>(e =>
+        {
+            e.HasOne(cp => cp.User)
+             .WithMany(u => u.CourseProgresses)
+             .HasForeignKey(cp => cp.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(cp => cp.Book)
+             .WithMany()
+             .HasForeignKey(cp => cp.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(cp => new { cp.UserId, cp.BookId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CoursePuzzleResult>(e =>
+        {
+            e.HasOne(cr => cr.User)
+             .WithMany(u => u.CoursePuzzleResults)
+             .HasForeignKey(cr => cr.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(cr => cr.Book)
+             .WithMany()
+             .HasForeignKey(cr => cr.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Kein zusätzlicher Cascade-Pfad über BookPuzzle: BookPuzzle wird bereits via Book
+            // kaskadiert; ein zweiter Cascade-Pfad (BookPuzzle -> CoursePuzzleResult) löst in
+            // MySQL/MariaDB einen "multiple cascade paths"-Fehler aus. Daher Restrict.
+            e.HasOne(cr => cr.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(cr => cr.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
+            e.HasIndex(cr => new { cr.UserId, cr.BookId });
         });
     }
 }

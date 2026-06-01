@@ -151,6 +151,15 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | POST | `/api/endless/sessions/bulk/anonymous` | Anon+RL | Bulk-Import anonym |
 | POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User uebertragen |
 
+### Kurse (Admin)
+„Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Fortschritt pro Buch (gelöste Puzzles / gesamt), geteilt über beide Modi; der Modus bestimmt nur die Reihenfolge. Alles user-bezogen in der DB. Aktuell admin-only (Sichtbarkeit später auf Gruppen erweiterbar).
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/courses` | Admin | Alle Bücher als Kurse inkl. Fortschritt des Users |
+| GET | `/api/courses/{bookId}/next?mode=sequential\|random&after=&exclude=` | Admin | Nächstes ungelöstes Puzzle (sequential: Buchreihenfolge, `after` = überspringen; random: zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst |
+| POST | `/api/courses/{bookId}/results` | Admin | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
+| POST | `/api/courses/{bookId}/reset` | Admin | Fortschritt des Kurses zurücksetzen |
+
 ## Datenbank-Schema (eigene DB `rookhub`, nicht geteilt mit Crawler)
 
 | Tabelle | Zweck | Wichtige Felder / Constraints |
@@ -166,8 +175,10 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
 | EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Step, Themes, Fasttrack, Highscore, ActiveGameState (LONGTEXT) |
 | EndlessSessions | Abgeschlossene Endless Sessions | UserId (nullable), AnonymousSessionId, Timestamp, TotalSolved, MaxRating, DurationSeconds, ConfigJson (TEXT), MistakeAtRatings |
+| CourseProgresses | Per-Kurs-Zustand (Buch) | UserId + BookId (unique pair), LastMode ("sequential"/"random"), CreatedAt, UpdatedAt |
+| CoursePuzzleResults | Gelöste Buch-Puzzles im Kurs | UserId + BookPuzzleId (unique pair), BookId (denormalisiert, indexed mit UserId), SolvedAt |
 
-Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups; Repertoire -> Files; Group -> UserGroups.
+Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults; Repertoire -> Files; Group -> UserGroups; Book -> BookPuzzles, CourseProgresses, CoursePuzzleResults (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden — Admin-DeleteBook räumt Kursdaten explizit ab).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur
@@ -278,7 +289,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.40.41`
+- **Aktuelle Version**: `0.41.0`
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
