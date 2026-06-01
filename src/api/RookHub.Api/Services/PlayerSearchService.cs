@@ -59,9 +59,12 @@ public class PlayerSearchService
             {
                 foreach (var el in json.EnumerateArray())
                 {
+                    // Eintrag ohne "name" ueberspringen, statt mit GetProperty zu werfen
+                    // und (im catch) die GANZE Trefferliste zu verwerfen.
+                    if (!el.TryGetProperty("name", out var nameEl)) continue;
                     items.Add(new PlayerSearchItemDto
                     {
-                        Name = el.GetProperty("name").GetString() ?? "",
+                        Name = nameEl.GetString() ?? "",
                         FideId = el.TryGetProperty("fideId", out var fid) ? fid.GetString() : null,
                         ChessResultsId = el.TryGetProperty("chessResultsId", out var crid) ? crid.GetString() : null,
                         Elo = el.TryGetProperty("elo", out var elo) && elo.ValueKind == JsonValueKind.Number ? elo.GetInt32() : null,

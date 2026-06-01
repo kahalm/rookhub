@@ -147,6 +147,29 @@ public class PlayerSearchServiceTests
         Assert.Empty(result.FideResults);
     }
 
+    [Fact]
+    public async Task SearchAsync_ChessResultsEntryMissingName_KeepsOtherResults()
+    {
+        // Regression: ein Element ohne "name" warf bei el.GetProperty("name") und
+        // verwarf (im catch) die GANZE Liste. Jetzt wird es uebersprungen.
+        var crResponse = """
+        [
+          { "fideId": "999", "chessResultsId": "888", "elo": 1500 },
+          { "name": "Huber, Johann", "fideId": "123", "chessResultsId": "456", "elo": 2400 }
+        ]
+        """;
+
+        var service = new PlayerSearchService(
+            CreateCrawlerProxy(new MockHttpMessageHandler(crResponse)),
+            CreateFideClientFactory(new MockHttpMessageHandler(HttpStatusCode.InternalServerError)),
+            new LoggerFactory().CreateLogger<PlayerSearchService>());
+
+        var result = await service.SearchAsync("Huber", null);
+
+        Assert.Single(result.ChessResultsResults);
+        Assert.Equal("Huber, Johann", result.ChessResultsResults[0].Name);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly string? _response;
