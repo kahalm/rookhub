@@ -64,6 +64,31 @@ public class RepertoireServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadFile_RejectsNonPgnContent()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
+
+        // Enthaelt "1." (in "Chapter 1.") aber keinen echten Zug und kein Tag-Pair -> abgelehnt.
+        var junk = "Chapter 1. Introduction\nThis is just prose, not a game.";
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(junk));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _repertoireService.UploadFileAsync(rep.Id, userId, "notes.pgn", stream));
+    }
+
+    [Fact]
+    public async Task UploadFile_AcceptsHeaderOnlyPgn()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
+
+        var pgn = "[Event \"My Game\"]\n[Site \"?\"]\n\n*";
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(pgn));
+        var file = await _repertoireService.UploadFileAsync(rep.Id, userId, "headers.pgn", stream);
+        Assert.Equal("headers.pgn", file.FileName);
+    }
+
+    [Fact]
     public async Task GetCombinedPgn_CombinesAllFiles()
     {
         var userId = await CreateUserAsync();

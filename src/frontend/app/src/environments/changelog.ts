@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.40.36';
+export const APP_VERSION = '0.40.37';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.40.37', date: '2026-06-01', changes: [
+    'Härtung (PGN-Upload): Die Inhaltsvalidierung verlangt jetzt ein echtes Tag-Pair (`[Event "…"]`) oder einen echten ersten Zug (`1. e4`/`1. Nf3`/`1. O-O`) statt nur die Teilstrings `[Event`/`1.` irgendwo — reiner Fließtext wie „Chapter 1. Intro" wird abgelehnt (ReDoS-sicheres Regex mit Timeout). (Code-Audit Finding.)',
+  ]},
   { version: '0.40.36', date: '2026-06-01', changes: [
     'Fix (PGN-Parser): `stripVariations` erzeugt jetzt brace-balancierte Ausgabe (keine Streu-`}`, eine unterminierte `{`-Kommentarklammer wird am Ende geschlossen) — ein Spiel mit unbalancierten Klammern wird so geparst statt still verworfen. Der vormals leere `catch{}`-Block loggt übersprungene Spiele jetzt per `console.warn` (Diagnose). (Code-Audit Findings.)',
   ]},

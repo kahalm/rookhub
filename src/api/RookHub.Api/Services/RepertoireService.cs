@@ -10,6 +10,11 @@ public class RepertoireService
 {
     private readonly AppDbContext _db;
     public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
+
+    // S-13: PGN-Heuristik. Linear (kein katastrophisches Backtracking); 2s-Timeout als Defense-in-depth.
+    // Tag-Pair wie [Event "..."] bzw. echter erster Zug 1. e4 / 1. Nf3 / 1. O-O — nicht blosse Teilstrings.
+    private static readonly Regex PgnTagPair = new(@"\[[A-Za-z][A-Za-z0-9_]*\s+""", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
+    private static readonly Regex PgnFirstMove = new(@"\b1\.\s*(O-O|[NBRQKa-h])", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
     public const int MaxRepertoiresPerUser = 50;
     public const int MaxFilesPerRepertoire = 100;
 
@@ -147,8 +152,9 @@ public class RepertoireService
         if (content.Length > MaxFileSize)
             throw new InvalidOperationException($"File content exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
 
-        // S-13: Basic PGN content validation
-        if (!content.Contains("[Event") && !content.Contains("1."))
+        // S-13: PGN content validation — verlangt ein echtes Tag-Pair ODER einen echten ersten Zug,
+        // nicht nur die Teilstrings "[Event" / "1." irgendwo (die auch beliebigen Text durchlassen).
+        if (!PgnTagPair.IsMatch(content) && !PgnFirstMove.IsMatch(content))
             throw new InvalidOperationException("File does not appear to be valid PGN content.");
 
         var file = new RepertoireFile
