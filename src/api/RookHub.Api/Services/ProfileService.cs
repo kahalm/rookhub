@@ -28,14 +28,23 @@ public class ProfileService
         return MapToDto(user);
     }
 
-    public async Task<ProfileDto> GetProfileByUsernameAsync(string username)
+    /// <summary>Öffentliche (reduzierte) Profil-Sicht — ohne PII/Discord/Einstellungen.</summary>
+    public async Task<PublicProfileDto> GetPublicProfileByUsernameAsync(string username)
     {
         var user = await _db.AppUsers
             .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.Username == username)
             ?? throw new KeyNotFoundException("User not found.");
 
-        return MapToDto(user);
+        return new PublicProfileDto
+        {
+            UserId = user.Id,
+            Username = user.Username,
+            DisplayName = user.Profile?.DisplayName,
+            FideId = user.Profile?.FideId,
+            ChessComUsername = user.Profile?.ChessComUsername,
+            LichessUsername = user.Profile?.LichessUsername,
+        };
     }
 
     public async Task<ProfileDto> UpdateProfileAsync(int userId, UpdateProfileDto dto)
@@ -131,7 +140,17 @@ public class ProfileService
         profile.DiscordId = discordId;
         profile.DiscordUsername = discordUsername;
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // TOCTOU: zwei Accounts verknüpfen (fast) gleichzeitig dieselbe Discord-ID → die
+            // Vorab-Prüfung passiert beide, der zweite Insert verletzt den Unique-Index auf
+            // DiscordId. Sauber als Kollision (409) statt 500 behandeln.
+            throw new InvalidOperationException("This Discord account is already linked to another RookHub user.");
+        }
         _logger.LogInformation("Linked Discord account {DiscordId} to user {UserId}.", discordId, userId);
         return MapToDto(user);
     }

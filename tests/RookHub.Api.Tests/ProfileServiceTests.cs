@@ -62,11 +62,27 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetProfileByUsername_ReturnsProfile()
+    public async Task GetPublicProfileByUsername_ReturnsReducedProfile_WithoutPii()
     {
-        await CreateUserAsync("alice");
-        var profile = await _profileService.GetProfileByUsernameAsync("alice");
+        var userId = await CreateUserAsync("alice");
+        // Sensible Felder setzen, die NICHT öffentlich erscheinen dürfen.
+        await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto
+        {
+            DisplayName = "Alice A.",
+            FirstName = "Alice",
+            LastName = "Anderson",
+            FideId = "999",
+            ChessResultsId = "777",
+        });
+        await _profileService.LinkDiscordAsync(userId, "discord-123", "alice#1");
+
+        var profile = await _profileService.GetPublicProfileByUsernameAsync("alice");
+
         Assert.Equal("alice", profile.Username);
+        Assert.Equal("Alice A.", profile.DisplayName);
+        Assert.Equal("999", profile.FideId);
+        // PublicProfileDto besitzt KEINE DiscordId/ChessResultsId/Klarnamen-Felder (Compile-Garantie),
+        // d.h. diese Daten können gar nicht anonym geleakt werden.
     }
 
     [Fact]

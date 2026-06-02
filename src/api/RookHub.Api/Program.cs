@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -144,6 +145,20 @@ try
         });
     });
 
+    // Hinter nginx (Docker) kommt sonst nur die Proxy-IP an → der globale Rate-Limiter
+    // würde ALLE Nutzer in eine Partition werfen (faktische Site-weite 100/min-Drossel) und
+    // die geloggte IP wäre die Proxy-IP. X-Forwarded-For NUR von privaten Peers (nginx im
+    // Docker-Netz) vertrauen — nicht öffentlich, sonst IP-Spoofing.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownProxies.Clear();
+        options.KnownNetworks.Clear();
+        options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.Parse("10.0.0.0"), 8));
+        options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12));
+        options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.Parse("192.168.0.0"), 16));
+    });
+
     // M-11: Rate limiting for auth endpoints
     // S-6: Global rate limiting for all endpoints
     builder.Services.AddRateLimiter(options =>
@@ -209,6 +224,9 @@ try
     });
 
     var app = builder.Build();
+
+    // Muss VOR UseRateLimiter + dem IP-Logging laufen, damit RemoteIpAddress die echte Client-IP ist.
+    app.UseForwardedHeaders();
 
     // Auto-migrate on startup + seed admin
     {

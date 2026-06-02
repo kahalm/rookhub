@@ -43,6 +43,20 @@ public class ClientLogControllerTests
     }
 
     [Fact]
+    public void Post_StripsNewlines_NoLogForging()
+    {
+        var logger = new TestLogger<ClientLogController>();
+        var ctrl = CreateController(logger);
+
+        var result = ctrl.Post(new ClientLogDto { Kind = "k\nFAKE LOG LINE", Detail = "a\r\nb" });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Single(logger.Messages);
+        Assert.DoesNotContain("\n", logger.Messages[0]);
+        Assert.DoesNotContain("\r", logger.Messages[0]);
+    }
+
+    [Fact]
     public void Post_TruncatesOverlongDetail()
     {
         var logger = new TestLogger<ClientLogController>();

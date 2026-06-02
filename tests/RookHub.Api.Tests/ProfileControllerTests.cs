@@ -126,7 +126,7 @@ public class ProfileControllerTests : IDisposable
         var result = await _controller.GetPublicProfile("publicuser");
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var profile = okResult.Value as ProfileDto;
+        var profile = okResult.Value as PublicProfileDto;
         Assert.NotNull(profile);
         Assert.Equal("publicuser", profile.Username);
     }

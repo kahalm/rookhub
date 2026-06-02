@@ -10,8 +10,8 @@ export class StockfishService implements OnDestroy {
   private worker?: Worker;
   private initPromise?: Promise<void>;
   private pending: Promise<any> = Promise.resolve();
-  /** Reject der gerade laufenden Suche — damit ein Worker-Crash sie sofort beendet (statt 10 s Timeout). */
-  private currentReject?: (reason?: unknown) => void;
+  /** Abbruch der gerade laufenden Suche (räumt Timeout + Listener auf und rejected) — für sofortigen Crash-Abbruch. */
+  private currentAbort?: () => void;
 
   /** Optionaler Telemetrie-Hook (Crash/Hänger melden); von AppComponent an ClientLogService verdrahtet. */
   reportEngineEvent?: (kind: string, detail?: string) => void;
@@ -66,8 +66,9 @@ export class StockfishService implements OnDestroy {
   }
 
   async getBestMove(fen: string, depth = 16): Promise<StockfishResult> {
-    await this.init();
-    const task = this.pending.then(() => this.runSearch(fen, depth));
+    // init() INNERHALB der Kette: stürzt eine vorherige Suche ab (Worker weg), initialisiert
+    // die nächste gequeuete Suche einen frischen Worker, statt mit „not initialized" zu scheitern.
+    const task = this.pending.then(async () => { await this.init(); return this.runSearch(fen, depth); });
     this.pending = task.catch(() => {});
     return task;
   }
@@ -79,13 +80,13 @@ export class StockfishService implements OnDestroy {
 
   /** Worker abgestürzt → terminieren + zurücksetzen, laufende Suche abbrechen. Nächster Aufruf init neu. */
   private handleCrash(): void {
+    const abort = this.currentAbort;
+    this.currentAbort = undefined;
     try { this.worker?.terminate(); } catch { /* ignore */ }
     this.worker = undefined;
     this.initPromise = undefined;
     this.pending = Promise.resolve();
-    const reject = this.currentReject;
-    this.currentReject = undefined;
-    if (reject) reject('Stockfish worker crashed');
+    abort?.();   // räumt Timeout + Listener der laufenden Suche auf und rejected sie
   }
 
   private runSearch(fen: string, depth: number): Promise<StockfishResult> {
@@ -99,7 +100,7 @@ export class StockfishService implements OnDestroy {
       const done = (fn: () => void) => {
         clearTimeout(timeout);
         worker.removeEventListener('message', handler);
-        if (this.currentReject === reject) this.currentReject = undefined;
+        this.currentAbort = undefined;
         fn();
       };
 
@@ -107,8 +108,8 @@ export class StockfishService implements OnDestroy {
         this.reportEngineEvent?.('search_timeout', `depth=${depth}`);
         reject('Stockfish timeout');
       }), 10000);
-      // Damit ein Crash (handleCrash) diese Suche sofort beenden kann.
-      this.currentReject = reject;
+      // Damit ein Crash (handleCrash) diese Suche sofort sauber beenden kann (Timeout+Listener weg).
+      this.currentAbort = () => done(() => reject('Stockfish worker crashed'));
 
       const handler = (e: MessageEvent) => {
         const line = e.data as string;
@@ -151,7 +152,7 @@ export class StockfishService implements OnDestroy {
       this.worker = undefined;
       this.initPromise = undefined;
       this.pending = Promise.resolve();
-      this.currentReject = undefined;
+      this.currentAbort = undefined;
     }
   }
 }

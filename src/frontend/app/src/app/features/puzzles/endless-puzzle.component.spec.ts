@@ -26,8 +26,9 @@ function makeComponent(): any {
   const translate: any = {};
   const offline: any = { puzzleCount: 0, endlessRuns: 0 };
   const snackBar: any = {};
+  const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, dialog, translate, offline, snackBar
+    puzzleService, stockfish, storage, auth, prefs, router, dialog, translate, offline, snackBar, offlineQueue
   );
 }
 

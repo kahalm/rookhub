@@ -155,6 +155,9 @@ export class AppComponent implements OnInit {
           );
           ref.onAction().subscribe(() => document.location.reload());
         });
+      // Kaputter SW-Zustand (z.B. Hash-Mismatch nach Teil-Deploy) → einmal hart neu laden,
+      // sonst lädt die App veraltete/fehlende Chunks bis zu einem manuellen Reload.
+      this.swUpdate.unrecoverable.subscribe(() => document.location.reload());
     }
 
     this.router.events.subscribe(() => {

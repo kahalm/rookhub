@@ -1,4 +1,6 @@
-import { Component, EventEmitter, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of, switchMap, catchError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -114,17 +116,24 @@ export class NavbarComponent implements OnInit {
   /** Kurse-Menü sichtbar: Admin (sofort) oder Nicht-Admin mit mind. einem freigegebenen Kurs. */
   showCourses = false;
 
+  private destroyRef = inject(DestroyRef);
+
   constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService) {}
 
   ngOnInit(): void {
-    // Bei jedem Login/Logout neu bestimmen, ob das Kurse-Menü gezeigt wird.
-    this.auth.currentUser$.subscribe(user => {
-      if (!user) { this.showCourses = false; return; }
-      if (this.auth.isAdmin) { this.showCourses = true; return; }
-      this.courseService.checkAccess().subscribe({
-        next: r => this.showCourses = r.hasAccess,
-        error: () => this.showCourses = false,
-      });
-    });
+    // Bei jedem Login/Logout neu bestimmen, ob das Kurse-Menü gezeigt wird. switchMap bricht
+    // einen laufenden checkAccess()-Call bei erneutem Login-State-Wechsel ab (kein Leak/Race);
+    // takeUntilDestroyed räumt die Subscription auf.
+    this.auth.currentUser$.pipe(
+      switchMap(user => {
+        if (!user) return of(false);
+        if (this.auth.isAdmin) return of(true);
+        return this.courseService.checkAccess().pipe(
+          switchMap(r => of(r.hasAccess)),
+          catchError(() => of(false)),
+        );
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(show => this.showCourses = show);
   }
 }

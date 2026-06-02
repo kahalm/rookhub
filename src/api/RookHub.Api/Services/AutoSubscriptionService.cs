@@ -201,7 +201,10 @@ public class AutoSubscriptionService : BackgroundService
         var players = new List<(int Snr, string Name, string? FideId)>();
         foreach (var p in playersJson.EnumerateArray())
         {
-            var snr = p.TryGetProperty("snr", out var s) ? s.GetInt32() : 0;
+            // Defensiv: nur lesen, wenn 'snr' tatsächlich eine Zahl ist (Crawler liefert es sonst
+            // ggf. als String/Null → s.GetInt32() würde werfen und die ganze Turnier-Verarbeitung killen).
+            var snr = p.TryGetProperty("snr", out var s) && s.ValueKind == System.Text.Json.JsonValueKind.Number
+                && s.TryGetInt32(out var snrVal) ? snrVal : 0;
             var name = p.TryGetProperty("name", out var n) ? n.GetString() : null;
             var fideId = p.TryGetProperty("fideId", out var f) ? f.GetString() : null;
             if (snr > 0 && !string.IsNullOrWhiteSpace(name))

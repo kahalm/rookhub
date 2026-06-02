@@ -41,6 +41,11 @@ public class ClientLogController : BaseApiController
         return NoContent();
     }
 
-    private static string Truncate(string? s, int max) =>
-        string.IsNullOrEmpty(s) ? string.Empty : (s.Length <= max ? s : s.Substring(0, max));
+    private static string Truncate(string? s, int max)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        // Zeilenumbrüche entfernen → kein Log-Forging (gefälschte Zusatzzeilen) in der Console-Ausgabe.
+        var clean = s.Replace('\r', ' ').Replace('\n', ' ');
+        return clean.Length <= max ? clean : clean.Substring(0, max);
+    }
 }

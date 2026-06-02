@@ -75,7 +75,10 @@ export class RegisterComponent {
     this.loading = true;
     this.auth.register(this.username, this.email, this.password).subscribe({
       next: () => {
-        this.router.navigate([this.returnUrl], { queryParams: { quickstart: '1' } });
+        // navigateByUrl (nicht navigate([...])): returnUrl ist ein kompletter Pfad und kann mehrere
+        // Segmente haben (z.B. /tournaments/123) — navigate([...]) würde den Slash url-encoden → 404.
+        const sep = this.returnUrl.includes('?') ? '&' : '?';
+        this.router.navigateByUrl(`${this.returnUrl}${sep}quickstart=1`);
       },
       error: (err) => {
         this.loading = false;

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.66.0';
+export const APP_VERSION = '0.66.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.66.1', date: '2026-06-02', changes: [
+    'Sicherheit/Robustheit (Code-Review): Öffentliche Profile (per Username) geben keine sensiblen Daten mehr preis — nur noch Anzeigename + öffentliche Schach-IDs, KEINE Klarnamen/ChessResults-ID/Discord-Verknüpfung. Kurs-Lösungen können bei parallelem Speichern nicht mehr verloren gehen. Discord-Verknüpfung meldet eine Kollision jetzt sauber (statt Serverfehler). Analyse-Engine erkennt einen ausbleibenden Engine-Start jetzt auch in der Initialisierungsphase und startet automatisch neu (kein „Berechne…"-Festhängen mehr). Offline gelöste Endless-Puzzles werden nicht mehr verloren (lokal vorgemerkt + bei Reconnect synchronisiert). Offline-Fallback wählt ein Puzzle mit passendem Rating statt irgendeinem. Mehrere kleinere Härtungen (Rate-Limiting hinter Proxy, Log-Hygiene, defensivere Server-Aufrufe).',
+  ]},
   { version: '0.66.0', date: '2026-06-02', changes: [
     'Schach-Engine (Stockfish) funktioniert jetzt auch offline: Die Engine-Dateien werden vom Service Worker vorab gecacht, sodass Analyse, Bewertungsanzeige und Eval-Bar ohne Internet laufen. (Der frühere „Berechne…"-Hänger lag nicht am Offline-Caching, sondern an der Befehlsreihenfolge zur Engine und ist seit 0.64.2 behoben; greift dennoch etwas daneben, springt die Selbstheilung + Hänger-Watchdog ein.)',
   ]},

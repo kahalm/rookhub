@@ -109,3 +109,18 @@ export function takeFromPool(pool: PuzzleDto[], min: number, max: number): Puzzl
   const idx = pool.findIndex(p => p.rating >= min && p.rating <= max);
   return idx < 0 ? null : pool.splice(idx, 1)[0];
 }
+
+/**
+ * Fallback, wenn kein Puzzle ins Fenster passt: das im Rating dem Zentrum NÄCHSTGELEGENE nehmen
+ * (statt blind das erste/niedrigste) — vermeidet z.B. ein viel zu leichtes Puzzle bei hohem Rating.
+ */
+export function takeNearestFromPool(pool: PuzzleDto[], center: number): PuzzleDto | null {
+  if (pool.length === 0) return null;
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < pool.length; i++) {
+    const d = Math.abs(pool[i].rating - center);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  return pool.splice(bestIdx, 1)[0];
+}

@@ -26,6 +26,21 @@ public class ProfileDto
     public int? BookStockfishDepth { get; set; }
 }
 
+/// <summary>
+/// Öffentliche Profil-Sicht (anonym via Username abrufbar). Enthält bewusst NUR nicht-sensible,
+/// ohnehin öffentliche Schach-Identitäten — KEINE Klarnamen, ChessResults-ID, Discord-Verknüpfung
+/// oder Einstellungen (sonst De-Anonymisierung/PII-Leak an Unauthentifizierte).
+/// </summary>
+public class PublicProfileDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+    public string? FideId { get; set; }
+    public string? ChessComUsername { get; set; }
+    public string? LichessUsername { get; set; }
+}
+
 public class UpdateProfileDto
 {
     [MaxLength(50)]

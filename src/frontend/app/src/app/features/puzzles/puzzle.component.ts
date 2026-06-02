@@ -19,7 +19,7 @@ import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './p
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { DIFFICULTY_OFFSET, puzzleWindow } from './puzzle-window.util';
-import { takeFromPool } from './endless-prefetch.util';
+import { takeFromPool, takeNearestFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -725,7 +725,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       // Offline: aus dem vorab geladenen Pool bedienen.
       const r = this.ratingRange();
       const pooled = takeFromPool(this.offlinePuzzlePool, r.min, r.max)
-        ?? (this.offlinePuzzlePool.length ? this.offlinePuzzlePool.shift()! : null);
+        ?? takeNearestFromPool(this.offlinePuzzlePool, (r.min + r.max) / 2);
       if (!pooled) { this.offlineNoCache = true; this.state = 'ERROR'; this.puzzle = null; return; }
       this.saveOfflinePool();
       source$ = of(pooled);

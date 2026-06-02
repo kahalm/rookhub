@@ -37,8 +37,20 @@ export class OfflineQueueService {
   /** Einen Request für später vormerken (wenn offline / Netzwerkfehler). */
   enqueue(method: 'POST' | 'PUT', url: string, body: unknown): void {
     const q = this.read();
-    q.push({ id: `${Date.now()}-${this.seq++}`, method, url, body, ts: Date.now() });
+    q.push({ id: this.newId(), method, url, body, ts: Date.now() });
     this.write(q);
+  }
+
+  private newId(): string {
+    try { return crypto.randomUUID(); } catch { return `${Date.now()}-${this.seq++}`; }
+  }
+
+  private retryTimer?: ReturnType<typeof setTimeout>;
+
+  /** Einmaligen Backoff-Retry planen (für „online, aber Server gerade 5xx/weg"). */
+  private scheduleRetry(): void {
+    if (this.retryTimer !== undefined) return;
+    this.retryTimer = setTimeout(() => { this.retryTimer = undefined; this.flush(); }, 30000);
   }
 
   /** Anzahl noch ausstehender Requests. */
@@ -73,8 +85,10 @@ export class OfflineQueueService {
           this.remove(r.id);
           this.sendNext(q, i + 1);
         } else {
-          // Netzwerk (0) oder 5xx → Queue stehen lassen, später erneut.
+          // Netzwerk (0) oder 5xx → Queue stehen lassen + Backoff-Retry planen (sonst bliebe
+          // sie bei durchgehend „online" bis zum nächsten App-Start/online-Event liegen).
           this.flushing = false;
+          this.scheduleRetry();
         }
       },
     });

@@ -75,7 +75,9 @@ public class EndlessProgressService
     public async Task<EndlessSyncResponseDto> GetAnonymousSyncDataAsync(string sessionId)
     {
         var progress = await _db.EndlessProgresses
-            .FirstOrDefaultAsync(p => p.AnonymousSessionId == sessionId);
+            .Where(p => p.AnonymousSessionId == sessionId)
+            .OrderBy(p => p.Id)
+            .FirstOrDefaultAsync();
 
         var sessions = await _db.EndlessSessions
             .Where(s => s.AnonymousSessionId == sessionId)
@@ -94,7 +96,9 @@ public class EndlessProgressService
     public async Task<EndlessProgressDto> SaveAnonymousProgressAsync(string sessionId, SaveEndlessProgressDto dto)
     {
         var progress = await _db.EndlessProgresses
-            .FirstOrDefaultAsync(p => p.AnonymousSessionId == sessionId);
+            .Where(p => p.AnonymousSessionId == sessionId)
+            .OrderBy(p => p.Id)
+            .FirstOrDefaultAsync();
 
         var isNew = progress == null;
         if (isNew)
@@ -113,7 +117,10 @@ public class EndlessProgressService
             // Race auf dem AnonymousSessionId-Insert: nun vorhandene Zeile laden
             // und das Update darauf anwenden (statt 500/Lost-Update).
             _db.ChangeTracker.Clear();
-            progress = await _db.EndlessProgresses.FirstAsync(p => p.AnonymousSessionId == sessionId);
+            progress = await _db.EndlessProgresses
+                .Where(p => p.AnonymousSessionId == sessionId)
+                .OrderBy(p => p.Id)
+                .FirstAsync();
             ApplyProgressDto(progress, dto);
             await _db.SaveChangesAsync();
         }
@@ -171,9 +178,13 @@ public class EndlessProgressService
         if (puzzles == null || puzzles.Count == 0) return;
         foreach (var p in puzzles.Take(MaxLoggedSessionPuzzles))
         {
+            // Client-Timestamps plausibilisieren: Dauer auf [0, 86400]s clampen und SolvedAt aus
+            // StartedAt + Dauer ableiten (konsistent zu den anderen Modi; verhindert absurde Werte
+            // wie 1970/9999 oder negative Dauer im Kibana-Log bei fehlerhaften Client-Daten).
             var startedAt = DateTimeOffset.FromUnixTimeMilliseconds(p.StartedAt).UtcDateTime;
-            var solvedAt = DateTimeOffset.FromUnixTimeMilliseconds(p.EndedAt).UtcDateTime;
-            var seconds = Math.Max(0, (solvedAt - startedAt).TotalSeconds);
+            var rawSolvedAt = DateTimeOffset.FromUnixTimeMilliseconds(p.EndedAt).UtcDateTime;
+            var seconds = Math.Clamp((rawSolvedAt - startedAt).TotalSeconds, 0, 86400);
+            var solvedAt = startedAt.AddSeconds(seconds);
             var result = p.Solved ? "solved" : "failed";
             if (userId.HasValue)
                 _logger.LogInformation(

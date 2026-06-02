@@ -9,6 +9,7 @@ namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/book-puzzles")]
+[Authorize]   // secure by default; öffentliche Endpoints sind explizit mit [AllowAnonymous] markiert
 public class BookPuzzleController : BaseApiController
 {
     private readonly AppDbContext _db;

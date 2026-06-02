@@ -166,6 +166,10 @@ export class AnalysisEngineService implements OnDestroy {
       this.awaitingReady = true;
       this.send('isready');
     }
+    // Watchdog schon ab HIER scharf stellen — deckt auch die isready→readyok-Phase ab.
+    // Bleibt readyok aus (Worker-Hänger ohne onerror), greift sonst nichts: awaitingReady
+    // bliebe für immer true und keine spätere analyze() würde je wieder isready senden.
+    this.armWatchdog();
   }
 
   stop(): void {

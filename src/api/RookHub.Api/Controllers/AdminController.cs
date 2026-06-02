@@ -156,10 +156,26 @@ public class AdminController : BaseApiController
     [HttpDelete("puzzles")]
     public async Task<IActionResult> ClearPuzzles()
     {
+        // InMemory-Provider unterstützt keine Transaktionen → nur mit relationalem Provider umklammern.
+        if (!_db.Database.IsRelational())
+        {
+            await _db.PuzzleAttempts.ExecuteDeleteAsync();
+            await _db.Puzzles.ExecuteDeleteAsync();
+            return NoContent();
+        }
+
         await using var tx = await _db.Database.BeginTransactionAsync();
-        await _db.PuzzleAttempts.ExecuteDeleteAsync();
-        await _db.Puzzles.ExecuteDeleteAsync();
-        await tx.CommitAsync();
+        try
+        {
+            await _db.PuzzleAttempts.ExecuteDeleteAsync();
+            await _db.Puzzles.ExecuteDeleteAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
         return NoContent();
     }
 

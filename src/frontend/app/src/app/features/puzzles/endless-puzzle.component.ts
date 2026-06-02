@@ -17,8 +17,9 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { takeFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps } from './endless-prefetch.util';
+import { takeFromPool, takeNearestFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps } from './endless-prefetch.util';
 import { OfflineService } from '../../core/offline.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
@@ -1040,7 +1041,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private dialog: MatDialog,
     private translate: TranslateService,
     private offline: OfflineService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private offlineQueue: OfflineQueueService
   ) {
     super(stockfish);
     this.state = 'CONFIG';
@@ -1314,7 +1316,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Offline: ausschließlich aus dem vorab geladenen Run-Pool bedienen.
     if (!navigator.onLine) {
       const pooled = takeFromPool(this.offlinePool, min, max)
-        ?? (this.offlinePool.length ? this.offlinePool.shift()! : null);   // nächstbestes, falls Fenster leer
+        ?? takeNearestFromPool(this.offlinePool, (min + max) / 2);   // sonst rating-nächstes statt blind shift()
       if (pooled) {
         this.storage.saveOfflinePool(this.offlinePool);
         this.prefetchedPuzzle = null;
@@ -1697,11 +1699,20 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (!this.puzzle) return;
     const timeSpent = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
-    if (this.authService.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, timeSpent, log, this.visualizationMode).subscribe();
-    } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, timeSpent, log, this.visualizationMode).subscribe();
-    }
+    const id = this.puzzle.id;
+    const loggedIn = this.authService.isLoggedIn;
+    const url = loggedIn ? `/api/puzzles/${id}/attempt` : `/api/puzzles/${id}/attempt/anonymous`;
+    const body: Record<string, unknown> = {
+      solved, timeSpentSeconds: timeSpent, moveLog: log ?? null, visualizationLevel: this.visualizationMode,
+      screenWidth: window.innerWidth, screenHeight: window.innerHeight,
+    };
+    if (!loggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
+    // Offline gelöste Endless-Puzzles nicht verlieren → vormerken (Sync bei Reconnect).
+    if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
+    const obs = loggedIn
+      ? this.puzzleService.recordAttempt(id, solved, timeSpent, log, this.visualizationMode)
+      : this.puzzleService.recordAnonymousAttempt(id, solved, timeSpent, log, this.visualizationMode);
+    obs.subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
   }
 
   // --- localStorage ---

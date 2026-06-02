@@ -144,7 +144,16 @@ public class CourseController : BaseApiController
 
         mode = NormalizeMode(mode);
         await UpsertProgressAsync(userId, bookId, mode);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Race: zwei (fast) gleichzeitige .../next-Aufrufe legen den CourseProgress parallel an
+            // (Unique (UserId, BookId)). Der LastMode-Upsert ist nur Nebeneffekt → Konflikt verwerfen.
+            _db.ChangeTracker.Clear();
+        }
 
         var total = await _db.BookPuzzles.CountAsync(bp => bp.BookId == bookId);
         var solvedCount = await _db.CoursePuzzleResults.CountAsync(cr => cr.UserId == userId && cr.BookId == bookId);
@@ -206,6 +215,8 @@ public class CourseController : BaseApiController
             "CoursePuzzleAttempt: User {UserId} {Result} course-puzzle {PuzzleId} in book {BookId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
             userId, dto.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, startedAt, solvedAt, timeSeconds);
 
+        // Solve in EIGENEM SaveChanges aufzeichnen — damit ein späterer CourseProgress-Konflikt
+        // (paralleler Erstinsert) die gültige Lösung NICHT mit zurückrollt (sonst stiller Solve-Verlust).
         if (dto.Solved)
         {
             var already = await _db.CoursePuzzleResults
@@ -217,21 +228,29 @@ public class CourseController : BaseApiController
                     UserId = userId,
                     BookId = bookId,
                     BookPuzzleId = dto.BookPuzzleId,
-                    SolvedAt = DateTime.UtcNow,
+                    SolvedAt = solvedAt,
                 });
+                try
+                {
+                    await _db.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    // Race: paralleles Aufzeichnen desselben Puzzles → Unique (UserId, BookPuzzleId). Idempotent.
+                    _db.ChangeTracker.Clear();
+                }
             }
         }
 
+        // Fortschritt/LastMode getrennt upserten; ein paralleler Erstinsert (Unique (UserId, BookId)) ist hier unkritisch.
         await UpsertProgressAsync(userId, bookId, dto.Mode);
-
         try
         {
             await _db.SaveChangesAsync();
         }
         catch (DbUpdateException)
         {
-            // Race: paralleles Aufzeichnen desselben Puzzles -> Unique-Index (UserId, BookPuzzleId).
-            // Idempotent behandeln: Fortschritt unten frisch aus der DB lesen.
+            _db.ChangeTracker.Clear();
         }
 
         return Ok(await BuildProgressAsync(userId, bookId));

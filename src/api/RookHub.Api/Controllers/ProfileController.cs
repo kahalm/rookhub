@@ -97,11 +97,11 @@ public class ProfileController : BaseApiController
 
     [HttpGet("{username}")]
     [AllowAnonymous]
-    public async Task<ActionResult<ProfileDto>> GetPublicProfile(string username)
+    public async Task<ActionResult<PublicProfileDto>> GetPublicProfile(string username)
     {
         try
         {
-            return Ok(await _profileService.GetProfileByUsernameAsync(username));
+            return Ok(await _profileService.GetPublicProfileByUsernameAsync(username));
         }
         catch (KeyNotFoundException ex)
         {

@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { OfflineService, PUZZLE_POOL_KEY } from './offline.service';
 import { EndlessStorageService, EndlessConfig } from '../features/puzzles/endless-storage.service';
 import { puzzleWindow } from '../features/puzzles/puzzle-window.util';
-import { buildEndlessRunWindows } from '../features/puzzles/endless-prefetch.util';
+import { buildEndlessRunWindows, computeRunSize } from '../features/puzzles/endless-prefetch.util';
 
 const ENDLESS_DEFAULT_CONFIG: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
 
@@ -54,9 +54,11 @@ export class OfflinePrefetchService {
 
   private prefetchEndlessPool(): void {
     const runs = Math.max(1, this.offline.endlessRuns);
-    if (this.endlessStorage.loadOfflinePool().length > 0) return;   // schon ein Run gecacht
     const config = this.endlessStorage.loadConfig({ ...ENDLESS_DEFAULT_CONFIG });
     const history = this.endlessStorage.loadSessionHistory();
+    // Nachfüllen, sobald weniger als EIN Run gecacht ist (nicht erst bei komplett leer) —
+    // sonst hätte ein nur halb verbrauchter Run-Rest nie wieder genug Puzzles für offline.
+    if (this.endlessStorage.loadOfflinePool().length >= computeRunSize(history)) return;
     this.puzzleService.getRatingRange().pipe(catchError(() => of(null))).subscribe(bounds => {
       const windows = buildEndlessRunWindows(config, history, bounds?.max ?? 3000, runs);
       if (!windows.length) return;

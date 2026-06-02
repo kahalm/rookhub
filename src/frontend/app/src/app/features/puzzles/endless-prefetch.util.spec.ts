@@ -1,5 +1,5 @@
 import {
-  computeRunSize, buildRunWindows, takeFromPool,
+  computeRunSize, buildRunWindows, takeFromPool, takeNearestFromPool,
   autoFasttrackThresholds, fasttrackSteps, stepForSolved, buildEndlessRunWindows
 } from './endless-prefetch.util';
 import { PuzzleDto } from './puzzle.service';
@@ -62,6 +62,19 @@ describe('takeFromPool', () => {
     const pool = [p(1, 800)];
     expect(takeFromPool(pool, 1000, 1100)).toBeNull();
     expect(pool.length).toBe(1);
+  });
+});
+
+describe('takeNearestFromPool', () => {
+  it('removes and returns the puzzle whose rating is closest to the center', () => {
+    const pool = [p(1, 800), p(2, 1500), p(3, 1180)];
+    const got = takeNearestFromPool(pool, 1200);
+    expect(got?.id).toBe(3);                       // 1180 ist am nächsten an 1200
+    expect(pool.map(x => x.id)).toEqual([1, 2]);   // entfernt
+  });
+
+  it('returns null for an empty pool', () => {
+    expect(takeNearestFromPool([], 1200)).toBeNull();
   });
 });
 
