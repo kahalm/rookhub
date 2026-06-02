@@ -192,13 +192,44 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const fenParam = this.route.snapshot.queryParamMap.get('fen');
+    const params = this.route.snapshot.queryParamMap;
+    const fenParam = params.get('fen');
     if (fenParam && this.isValidFen(fenParam)) {
       this.startFen = fenParam;
     }
+    const orientationParam = params.get('orientation');
+    if (orientationParam === 'white' || orientationParam === 'black') {
+      this.orientation = orientationParam;
+    }
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines));
-    this.resetToStart();
+
+    // Optional: eine Zugfolge (UCI, durch Leerzeichen/Komma getrennt) ab startFen vorladen
+    // und an die aktuelle (letzte) Stellung springen — genutzt vom „Analysieren"-Button der Puzzles.
+    const movesParam = params.get('moves');
+    const uci = movesParam ? movesParam.split(/[ ,]+/).filter(Boolean) : [];
+    if (uci.length) {
+      this.loadFromUci(this.startFen, uci);
+    } else {
+      this.resetToStart();
+    }
+  }
+
+  /** Baut die Hauptlinie aus UCI-Zügen ab `fromFen` und springt ans Ende (aktuelle Stellung). */
+  private loadFromUci(fromFen: string, uciMoves: string[]): void {
+    let replay: Chess;
+    try { replay = new Chess(fromFen); } catch { this.resetToStart(); return; }
+    const built: LineNode[] = [];
+    for (const u of uciMoves) {
+      let mv;
+      try { mv = replay.move({ from: u.substring(0, 2), to: u.substring(2, 4), promotion: u.length > 4 ? u[4] : undefined }); }
+      catch { break; }
+      if (!mv) break;
+      built.push({ san: mv.san, fen: replay.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
+    }
+    this.line = built;
+    this.ply = built.length;
+    this.refresh();
   }
 
   ngOnDestroy(): void {

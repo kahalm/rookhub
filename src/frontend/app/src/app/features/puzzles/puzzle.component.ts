@@ -235,6 +235,9 @@ const RATING_WINDOW = 100;
                       <button mat-raised-button color="primary" (click)="loadNext()">
                         {{ 'puzzles.actions.nextPuzzle' | translate }} @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
                       </button>
+                      <button mat-button (click)="analyze()">
+                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
+                      </button>
                     </div>
                   </div>
                 }
@@ -252,6 +255,9 @@ const RATING_WINDOW = 100;
                     </div>
                     <div class="fail-actions">
                       <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
+                      <button mat-button (click)="analyze()">
+                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
+                      </button>
                       <button mat-raised-button color="primary" (click)="loadNext()">{{ 'puzzles.actions.nextPuzzle' | translate }}</button>
                     </div>
                   </div>
@@ -607,6 +613,15 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/${this.puzzle.id}`;
     this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+  }
+
+  /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */
+  analyze(): void {
+    if (!this.puzzle) return;
+    const moves = this.puzzle.moves.split(' ').filter(m => m);
+    this.router.navigate(['/analysis'], {
+      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation },
+    });
   }
 
   ngOnInit(): void {

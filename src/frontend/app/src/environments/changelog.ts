@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.50.1';
+export const APP_VERSION = '0.51.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.51.0', date: '2026-06-02', changes: [
+    'Neu: „Analysieren"-Button bei Puzzles (Standard- und Buch-/Kurs-/Wochenpost-Puzzles, im gelösten/aufgegebenen Zustand) — öffnet den Analysemodus mit der aktuellen Stellung und der kompletten Zugfolge (über `/analysis?fen=…&moves=…&orientation=…`). Dort dann Engine-Lines, eigenes Weiterziehen und Pfeile/Kreise (Rechtsklick-Ziehen). Der Analysemodus lädt eine übergebene Zugfolge ab der Startstellung und springt an die aktuelle Stellung.',
+  ]},
   { version: '0.50.1', date: '2026-06-02', changes: [
     'Fix (Puzzle): „Aufgeben" wechselt jetzt auch im normalen Puzzle-Modus auf die Anfangsstellung und spielt die Lösung automatisch Zug für Zug durch (vorher verhielt es sich wie „Zurücksetzen"). Manuelles Vor-/Zurückklicken stoppt die Wiedergabe; „Nochmal"/„Nächstes" beendet sie. Analog zum bereits bestehenden Verhalten bei Buch-/Kurs-/Wochenpost-Puzzles.',
   ]},
