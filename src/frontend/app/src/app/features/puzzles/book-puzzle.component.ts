@@ -237,8 +237,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                 }
                 @case ('FAILED') {
                   <div class="status-center failed">
-                    <mat-icon class="result-icon">cancel</mat-icon>
-                    <p class="status-text">{{ 'book.status.incorrect' | translate }}</p>
+                    <mat-icon class="result-icon">{{ gaveUp ? 'flag' : 'cancel' }}</mat-icon>
+                    <p class="status-text">{{ (gaveUp ? 'book.status.gaveUpSolution' : 'book.status.incorrect') | translate }}</p>
                     <div class="review-nav">
                       <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
                       <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
@@ -593,6 +593,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   ngOnDestroy(): void {
     this.stopTimer();
+    this.clearSolutionPlay();
     this.abortSolver();
     clearCrazyStyles();
     clearVisualizationHide();
@@ -719,6 +720,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   private setupPuzzle(puzzle: BookPuzzleDto): void {
+    this.clearSolutionPlay();
     this.reviewMode = false;
     this.solutionReview = false;
     // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
@@ -731,10 +733,33 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   giveUp(): void {
+    if (!this.puzzle) return;
     this.abortSolver();
-    // Puzzle zuruecksetzen, sodass der Spieler die Loesung selber durchspielen kann.
+    this.stopTimer();
     this.gaveUp = true;
-    if (this.puzzle) this.setupPuzzle(this.puzzle);
+    this.state = 'FAILED';
+    // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
+    this.playSolutionFromStart();
+  }
+
+  /** Spult die Lösung ab der Anfangsstellung selbsttätig durch (Zug für Zug). */
+  private solutionPlayTimer?: ReturnType<typeof setInterval>;
+  private playSolutionFromStart(): void {
+    this.clearSolutionPlay();
+    this.solutionReview = true;
+    this.reviewMode = true;
+    this.solutionReviewGoTo(0);
+    this.solutionPlayTimer = setInterval(() => {
+      if (this.reviewIndex >= this.reviewTotal) { this.clearSolutionPlay(); return; }
+      this.solutionReviewGoTo(this.reviewIndex + 1);
+    }, 900);
+  }
+
+  private clearSolutionPlay(): void {
+    if (this.solutionPlayTimer) {
+      clearInterval(this.solutionPlayTimer);
+      this.solutionPlayTimer = undefined;
+    }
   }
 
   retry(): void {
@@ -788,6 +813,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.clearSolutionPlay();
     this.stopTimer();
     this.solutionReview = false;
     this.reviewMode = true;
@@ -801,10 +827,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   reviewNext(): void {
+    this.clearSolutionPlay();   // manuelles Klicken stoppt die Auto-Wiedergabe
     if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex + 1);
     else this.reviewGoTo(this.reviewIndex + 1);
   }
   reviewPrev(): void {
+    this.clearSolutionPlay();
     if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex - 1);
     else this.reviewGoTo(this.reviewIndex - 1);
   }

@@ -570,6 +570,7 @@
       "yourMoveVsStockfish": "Tvoj potez protiv Stockfisha...",
       "correct": "Točno!",
       "incorrect": "Netočno",
+      "gaveUpSolution": "Predao si — evo rješenja",
       "checkmate": "Šah-mat!",
       "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "fullGame": "Cijela partija"

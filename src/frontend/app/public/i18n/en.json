@@ -570,6 +570,7 @@
       "yourMoveVsStockfish": "Your move against Stockfish...",
       "correct": "Correct!",
       "incorrect": "Incorrect",
+      "gaveUpSolution": "Gave up — here's the solution",
       "checkmate": "Checkmate!",
       "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",
       "fullGame": "Full game"

@@ -570,6 +570,7 @@
       "yourMoveVsStockfish": "Dein Zug gegen Stockfish...",
       "correct": "Richtig!",
       "incorrect": "Falsch",
+      "gaveUpSolution": "Aufgegeben — hier ist die Lösung",
       "checkmate": "Schachmatt!",
       "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
       "fullGame": "Ganze Partie"
