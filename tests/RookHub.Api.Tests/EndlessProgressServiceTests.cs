@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -17,7 +18,7 @@ public class EndlessProgressServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new EndlessProgressService(_db);
+        _service = new EndlessProgressService(_db, NullLogger<EndlessProgressService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -56,6 +57,50 @@ public class EndlessProgressServiceTests : IDisposable
         ConfigJson = "{\"startElo\":700}",
         MistakeAtRatings = "780,920"
     };
+
+    // --- Per-Puzzle-Logging der Session (Start-/Lösungszeit) ---
+
+    private static RecordEndlessSessionDto SessionWithPuzzles() => new()
+    {
+        Timestamp = 1,
+        TotalSolved = 1,
+        MaxRating = 1600,
+        DurationSeconds = 17,
+        Puzzles =
+        {
+            new EndlessSessionPuzzleDto { PuzzleId = 10, LichessId = "abc", Rating = 1500, Solved = true,  StartedAt = 1_700_000_000_000, EndedAt = 1_700_000_012_000 },
+            new EndlessSessionPuzzleDto { PuzzleId = 11, LichessId = "def", Rating = 1600, Solved = false, StartedAt = 1_700_000_020_000, EndedAt = 1_700_000_025_000 },
+        }
+    };
+
+    [Fact]
+    public async Task RecordSessionAsync_WithPuzzles_LogsEachPuzzleWithStartAndSolveTime()
+    {
+        var logger = new TestLogger<EndlessProgressService>();
+        var service = new EndlessProgressService(_db, logger);
+
+        await service.RecordSessionAsync(42, SessionWithPuzzles());
+
+        var logs = logger.Messages.Where(m => m.Contains("EndlessPuzzleAttempt")).ToList();
+        Assert.Equal(2, logs.Count);
+        Assert.Contains(logs, m => m.Contains("User 42") && m.Contains("endless-puzzle 10") && m.Contains("solved")
+            && m.Contains("StartedAt=") && m.Contains("SolvedAt=") && m.Contains("in 12s"));
+        Assert.Contains(logs, m => m.Contains("endless-puzzle 11") && m.Contains("failed") && m.Contains("in 5s"));
+    }
+
+    [Fact]
+    public async Task RecordAnonymousSessionAsync_WithPuzzles_LogsAsAnonymous()
+    {
+        var logger = new TestLogger<EndlessProgressService>();
+        var service = new EndlessProgressService(_db, logger);
+
+        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-000000000001", SessionWithPuzzles());
+
+        var logs = logger.Messages.Where(m => m.Contains("EndlessPuzzleAttempt")).ToList();
+        Assert.Equal(2, logs.Count);
+        Assert.All(logs, m => Assert.Contains("Anonymous", m));
+        Assert.Contains(logs, m => m.Contains("endless-puzzle 10") && m.Contains("StartedAt=") && m.Contains("SolvedAt="));
+    }
 
     // --- Progress Tests ---
 

@@ -17,7 +17,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { computeRunSize, buildRunWindows, takeFromPool } from './endless-prefetch.util';
+import { takeFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps } from './endless-prefetch.util';
 import { OfflineService } from '../../core/offline.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -40,9 +40,11 @@ interface EndlessPuzzleAttempt {
   rating: number;
   solved: boolean;
   themes?: string;
+  /** Start-/Endzeit dieses Puzzles als Unix-Millis (fürs serverseitige Logging). */
+  startedAt: number;
+  endedAt: number;
 }
 
-const FASTTRACK_SESSION_COUNT = 10;
 /** Breite des Rating-Fensters bei der Puzzleauswahl (früher = config.step). */
 const RATING_WINDOW = 40;
 
@@ -1206,13 +1208,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * damit auch offline gepuzzelt werden kann. Run-Größe = max(gelöste der letzten 5 Runs) + 10.
    */
   private prefetchRun(): void {
-    const runSize = computeRunSize(this.sessionHistory);
     const runs = Math.max(1, this.offline.endlessRuns);   // konfigurierbar im Profil (Standard 2)
-    let windows: { minRating: number; maxRating: number }[] = [];
-    for (let r = 0; r < runs; r++) {
-      windows = windows.concat(buildRunWindows(
-        this.config.startElo, runSize, (n) => this.getStepForSolved(n), this.puzzleRange.max, RATING_WINDOW));
-    }
+    const windows = buildEndlessRunWindows(this.config, this.sessionHistory, this.puzzleRange.max, runs);
     if (!windows.length) return;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandomBatch(windows, themes).subscribe({
@@ -1407,14 +1404,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.state = 'CORRECT';
     this.solved++;
     if (this.puzzle) {
-      this.currentSessionPuzzles.push({
-        puzzleNumber: this.currentSessionPuzzles.length + 1,
-        puzzleId: this.puzzle.id,
-        lichessId: this.puzzle.lichessId,
-        rating: this.puzzle.rating,
-        solved: true,
-        themes: this.puzzle.themes
-      });
+      this.pushSessionPuzzle(true);
       // Für „Letztes Puzzle analysieren" merken (überlebt den Auto-Advance).
       this.lastSolvedPuzzleId = this.puzzle.id;
       this.lastSolvedFen = this.puzzle.fen;
@@ -1542,16 +1532,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   private loseLife(): void {
     this.currentSessionMistakes.push(this._currentMinRating);
-    if (this.puzzle) {
-      this.currentSessionPuzzles.push({
-        puzzleNumber: this.currentSessionPuzzles.length + 1,
-        puzzleId: this.puzzle.id,
-        lichessId: this.puzzle.lichessId,
-        rating: this.puzzle.rating,
-        solved: false,
-        themes: this.puzzle.themes
-      });
-    }
+    this.pushSessionPuzzle(false);
     this.lives--;
     this.recordAttempt(false);
     // Bei 0 Lives ist der Run faktisch vorbei — nicht den Zombie-State (0 Lives) auf den
@@ -1605,14 +1586,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.lives--;
     if (this.lives <= 0) {
       this.currentSessionMistakes.push(this._currentMinRating);
-      this.currentSessionPuzzles.push({
-        puzzleNumber: this.currentSessionPuzzles.length + 1,
-        puzzleId: this.puzzle.id,
-        lichessId: this.puzzle.lichessId,
-        rating: this.puzzle.rating,
-        solved: false,
-        themes: this.puzzle.themes
-      });
+      this.pushSessionPuzzle(false);
       this.recordAttempt(false);
       // 0 Lives = Run ist vorbei. Active-State (mit jetzt veralteten Werten) auf
       // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
@@ -1655,32 +1629,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   private computeFasttrackSteps(): void {
-    const withMistakes = this.sessionHistory
-      .filter(s => s.mistakeAtRatings.length > 0)
-      .slice(-FASTTRACK_SESSION_COUNT);
-
-    // Auto-calculate from history, ensure minimum startElo+400/+800
-    const defaultFirst = this.config.startElo + 400;
-    const defaultSecond = this.config.startElo + 800;
-    if (withMistakes.length > 0) {
-      const avgFirst = Math.round(
-        withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length
-      );
-      const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
-      const avgSecond = withSecond.length > 0
-        ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
-        : avgFirst + 100;
-      this.fasttrackAutoFirst = Math.max(defaultFirst, avgFirst);
-      this.fasttrackAutoSecond = Math.max(defaultSecond, avgSecond);
-    } else {
-      this.fasttrackAutoFirst = defaultFirst;
-      this.fasttrackAutoSecond = defaultSecond;
-    }
-
-    // Apply manual overrides from config, or use auto values
+    const auto = autoFasttrackThresholds(this.config, this.sessionHistory);
+    this.fasttrackAutoFirst = auto.first;
+    this.fasttrackAutoSecond = auto.second;
+    // Manuelle Overrides aus der Config, sonst Auto-Werte
     this.fasttrackAvgFirst = this.config.fasttrackThreshold1 ?? this.fasttrackAutoFirst;
     this.fasttrackAvgSecond = this.config.fasttrackThreshold2 ?? this.fasttrackAutoSecond;
-
     this.recalcStepsFromThresholds();
   }
 
@@ -1705,8 +1659,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   private recalcStepsFromThresholds(): void {
-    this.fasttrackPhase1Step = Math.max(10, Math.round((this.fasttrackAvgFirst - this.config.startElo) / 5));
-    this.fasttrackPhase2Step = Math.max(10, Math.round((this.fasttrackAvgSecond - this.fasttrackAvgFirst) / 5));
+    const steps = fasttrackSteps(this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond);
+    this.fasttrackPhase1Step = steps.phase1Step;
+    this.fasttrackPhase2Step = steps.phase2Step;
   }
 
   // --- Timer ---
@@ -1786,8 +1741,26 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       mistakeAtRatings: [...this.currentSessionMistakes]
     };
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
-    this.storage.recordSessionToServer(session).subscribe(id => {
+    // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server für das Logging mitgeben,
+    // nicht in die lokale History (würde localStorage aufblähen).
+    this.storage.recordSessionToServer(session, this.currentSessionPuzzles).subscribe(id => {
       if (id) this.lastSessionId = id;
+    });
+  }
+
+  /** Hängt das aktuelle Puzzle (mit Start-/Endzeit) an die Session-Liste an. */
+  private pushSessionPuzzle(solved: boolean): void {
+    if (!this.puzzle) return;
+    const now = Date.now();
+    this.currentSessionPuzzles.push({
+      puzzleNumber: this.currentSessionPuzzles.length + 1,
+      puzzleId: this.puzzle.id,
+      lichessId: this.puzzle.lichessId,
+      rating: this.puzzle.rating,
+      solved,
+      themes: this.puzzle.themes,
+      startedAt: this.puzzleStartTime > 0 ? this.puzzleStartTime : now,
+      endedAt: now,
     });
   }
 }

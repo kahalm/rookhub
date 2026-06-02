@@ -24,7 +24,7 @@ public class CourseControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new CourseController(_db);
+        _controller = new CourseController(_db, NullLogger<CourseController>.Instance);
         SetUser(_controller, UserId);
     }
 
@@ -234,6 +234,25 @@ public class CourseControllerTests : IDisposable
         // Puzzle aus Buch B gegen Buch A aufzeichnen -> 404.
         var res = await _controller.RecordResult(bookA.Id, new RecordCourseResultDto { BookPuzzleId = idsB[0], Solved = true });
         Assert.IsType<NotFoundObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task RecordResult_LogsStartAndSolveTime()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("Log", 1);
+        var logger = new TestLogger<CourseController>();
+        var controller = new CourseController(_db, logger) { ControllerContext = _controller.ControllerContext };
+
+        await controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 20 });
+
+        var log = Assert.Single(logger.Messages, m => m.Contains("CoursePuzzleAttempt"));
+        Assert.Contains($"course-puzzle {ids[0]}", log);
+        Assert.Contains($"in book {book.Id}", log);
+        Assert.Contains("solved", log);
+        Assert.Contains("StartedAt=", log);
+        Assert.Contains("SolvedAt=", log);
+        Assert.Contains("in 20s", log);
     }
 
     [Fact]

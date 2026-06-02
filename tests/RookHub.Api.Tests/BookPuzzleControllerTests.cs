@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -20,7 +21,7 @@ public class BookPuzzleControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new BookPuzzleController(_db);
+        _controller = new BookPuzzleController(_db, NullLogger<BookPuzzleController>.Instance);
         SetUser(99);
     }
 
@@ -156,6 +157,23 @@ public class BookPuzzleControllerTests : IDisposable
     {
         SetUser(1);
         Assert.IsType<NotFoundObjectResult>(await _controller.RecordAttempt(99999, new RecordBookAttemptDto { Solved = true, TimeSeconds = 1 }));
+    }
+
+    [Fact]
+    public async Task RecordAttempt_LogsStartAndSolveTime()
+    {
+        var logger = new TestLogger<BookPuzzleController>();
+        var controller = new BookPuzzleController(_db, logger) { ControllerContext = _controller.ControllerContext };
+        var p = await CreateBookPuzzleAsync(lineId: "log.pgn:1", bookFileName: "log.pgn");
+
+        Assert.IsType<OkResult>(await controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 15 }));
+
+        var log = Assert.Single(logger.Messages, m => m.Contains("BookPuzzleAttempt"));
+        Assert.Contains($"book-puzzle {p.Id}", log);
+        Assert.Contains("solved", log);
+        Assert.Contains("StartedAt=", log);
+        Assert.Contains("SolvedAt=", log);
+        Assert.Contains("in 15s", log);
     }
 
     [Fact]

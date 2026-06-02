@@ -81,6 +81,20 @@ public class RecordEndlessSessionDto
 
     [MaxLength(100)]
     public string MistakeAtRatings { get; set; } = string.Empty;
+
+    /// <summary>Optional: einzelne Puzzles der Session (nur fürs Logging der Start-/Lösungszeit, nicht persistiert).</summary>
+    public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();
+}
+
+/// <summary>Ein einzelnes Puzzle einer Endless-Session (Start-/Lösungszeit als Unix-Millis) — nur fürs Logging, nicht persistiert.</summary>
+public class EndlessSessionPuzzleDto
+{
+    public int PuzzleId { get; set; }
+    public string? LichessId { get; set; }
+    public int Rating { get; set; }
+    public bool Solved { get; set; }
+    public long StartedAt { get; set; }
+    public long EndedAt { get; set; }
 }
 
 public class RecordAnonymousSessionDto : RecordEndlessSessionDto

@@ -12,8 +12,13 @@ namespace RookHub.Api.Controllers;
 public class BookPuzzleController : BaseApiController
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<BookPuzzleController> _logger;
 
-    public BookPuzzleController(AppDbContext db) => _db = db;
+    public BookPuzzleController(AppDbContext db, ILogger<BookPuzzleController> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     [AllowAnonymous]
     [HttpGet("{id}")]
@@ -74,15 +79,24 @@ public class BookPuzzleController : BaseApiController
         if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
             return NotFound(new { message = "Book puzzle not found." });
 
+        var userId = GetUserId();
+        var solvedAt = DateTime.UtcNow;
+        var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
+        var startedAt = solvedAt.AddSeconds(-timeSeconds);
+
         _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
         {
             BookPuzzleId = id,
-            UserId = GetUserId(),
+            UserId = userId,
             Solved = dto.Solved,
-            TimeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400),
-            AttemptedAt = DateTime.UtcNow
+            TimeSeconds = timeSeconds,
+            AttemptedAt = solvedAt
         });
         await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "BookPuzzleAttempt: User {UserId} {Result} book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
+            userId, dto.Solved ? "solved" : "failed", id, startedAt, solvedAt, timeSeconds);
         return Ok();
     }
 

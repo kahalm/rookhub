@@ -22,6 +22,16 @@ export interface EndlessSession {
   mistakeAtRatings: number[];
 }
 
+/** Ein einzelnes Puzzle einer Session (mit Start-/Endzeit als Unix-Millis) — nur fürs serverseitige Logging. */
+export interface SessionPuzzleLog {
+  puzzleId: number;
+  lichessId: string;
+  rating: number;
+  solved: boolean;
+  startedAt: number;
+  endedAt: number;
+}
+
 export interface EndlessSyncResponse {
   progress: EndlessProgressDto | null;
   sessions: EndlessSessionDto[];
@@ -236,14 +246,23 @@ export class EndlessStorageService {
     this.doSaveProgress(config, highscore, activeGameState);
   }
 
-  recordSessionToServer(session: EndlessSession): Observable<number | null> {
+  recordSessionToServer(session: EndlessSession, puzzles: SessionPuzzleLog[] = []): Observable<number | null> {
     const body: any = {
       timestamp: session.timestamp,
       totalSolved: session.totalSolved,
       maxRating: session.maxRating,
       durationSeconds: session.durationSeconds,
       configJson: JSON.stringify(session.config),
-      mistakeAtRatings: session.mistakeAtRatings.join(',')
+      mistakeAtRatings: session.mistakeAtRatings.join(','),
+      // Nur fürs serverseitige Logging (Start-/Lösungszeit je Puzzle), nicht persistiert.
+      puzzles: (puzzles ?? []).map(p => ({
+        puzzleId: p.puzzleId,
+        lichessId: p.lichessId,
+        rating: p.rating,
+        solved: p.solved,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt,
+      }))
     };
 
     if (this.authService.isLoggedIn) {

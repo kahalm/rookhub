@@ -34,6 +34,8 @@ public class RecordCourseResultDto
     public bool Solved { get; set; }
     /// <summary>Optional: "sequential" oder "random" — aktualisiert den zuletzt genutzten Modus.</summary>
     public string? Mode { get; set; }
+    /// <summary>Optional: am Puzzle verbrachte Zeit in Sekunden (nur fürs Logging der Startzeit).</summary>
+    public int TimeSeconds { get; set; }
 }
 
 /// <summary>Fortschritt eines Kurses (Buch) für den aktuellen User.</summary>

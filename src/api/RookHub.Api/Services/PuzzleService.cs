@@ -163,9 +163,11 @@ public class PuzzleService
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
 
+        var solvedAt = attempt.AttemptedAt;
+        var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
-            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0})",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change);
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0})",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change);
 
         return new PuzzleAttemptDto
         {
@@ -218,9 +220,11 @@ public class PuzzleService
 
         await TrimAnonymousAttemptsAsync(sessionId);
 
+        var solvedAt = attempt.AttemptedAt;
+        var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
-            "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
-            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
+            "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
+            dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
 
         return new PuzzleAttemptDto
         {

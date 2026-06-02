@@ -8,9 +8,16 @@ namespace RookHub.Api.Services;
 public class EndlessProgressService
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<EndlessProgressService> _logger;
     private const int MaxSessions = 50;
+    /// <summary>Obergrenze fürs Per-Puzzle-Logging einer Session (Schutz gegen überlange Payloads).</summary>
+    private const int MaxLoggedSessionPuzzles = 2000;
 
-    public EndlessProgressService(AppDbContext db) => _db = db;
+    public EndlessProgressService(AppDbContext db, ILogger<EndlessProgressService> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     // --- Authenticated Progress ---
 
@@ -130,6 +137,7 @@ public class EndlessProgressService
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
+        LogSessionPuzzles(userId, dto.Puzzles);
         await TrimSessionsAsync(userId: userId);
         return MapSessionDto(session);
     }
@@ -149,8 +157,33 @@ public class EndlessProgressService
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
+        LogSessionPuzzles(null, dto.Puzzles);
         await TrimSessionsAsync(anonymousSessionId: sessionId);
         return MapSessionDto(session);
+    }
+
+    /// <summary>
+    /// Loggt jedes Puzzle einer Endless-Session mit Start- und Lösungszeit (für ES/Kibana).
+    /// userId == null = anonyme Session. Nicht persistiert — reines strukturiertes Logging.
+    /// </summary>
+    private void LogSessionPuzzles(int? userId, List<EndlessSessionPuzzleDto> puzzles)
+    {
+        if (puzzles == null || puzzles.Count == 0) return;
+        foreach (var p in puzzles.Take(MaxLoggedSessionPuzzles))
+        {
+            var startedAt = DateTimeOffset.FromUnixTimeMilliseconds(p.StartedAt).UtcDateTime;
+            var solvedAt = DateTimeOffset.FromUnixTimeMilliseconds(p.EndedAt).UtcDateTime;
+            var seconds = Math.Max(0, (solvedAt - startedAt).TotalSeconds);
+            var result = p.Solved ? "solved" : "failed";
+            if (userId.HasValue)
+                _logger.LogInformation(
+                    "EndlessPuzzleAttempt: User {UserId} {Result} endless-puzzle {PuzzleId} (LichessId={LichessId}, Rating={Rating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {DurationSeconds:F0}s",
+                    userId.Value, result, p.PuzzleId, p.LichessId, p.Rating, startedAt, solvedAt, seconds);
+            else
+                _logger.LogInformation(
+                    "EndlessPuzzleAttempt: Anonymous {Result} endless-puzzle {PuzzleId} (LichessId={LichessId}, Rating={Rating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {DurationSeconds:F0}s",
+                    result, p.PuzzleId, p.LichessId, p.Rating, startedAt, solvedAt, seconds);
+        }
     }
 
     // --- Bulk Import ---

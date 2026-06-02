@@ -20,8 +20,13 @@ namespace RookHub.Api.Controllers;
 public class CourseController : BaseApiController
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<CourseController> _logger;
 
-    public CourseController(AppDbContext db) => _db = db;
+    public CourseController(AppDbContext db, ILogger<CourseController> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     private static string NormalizeMode(string? mode) =>
         (mode ?? string.Empty).Trim().ToLowerInvariant() == "random" ? "random" : "sequential";
@@ -193,6 +198,13 @@ public class CourseController : BaseApiController
         var belongsToBook = await _db.BookPuzzles.AnyAsync(bp => bp.Id == dto.BookPuzzleId && bp.BookId == bookId);
         if (!belongsToBook)
             return NotFound(new { message = "Puzzle does not belong to this book." });
+
+        var solvedAt = DateTime.UtcNow;
+        var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
+        var startedAt = solvedAt.AddSeconds(-timeSeconds);
+        _logger.LogInformation(
+            "CoursePuzzleAttempt: User {UserId} {Result} course-puzzle {PuzzleId} in book {BookId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
+            userId, dto.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, startedAt, solvedAt, timeSeconds);
 
         if (dto.Solved)
         {

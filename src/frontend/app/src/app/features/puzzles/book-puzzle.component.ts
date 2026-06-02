@@ -800,14 +800,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordCourseSolved(): void {
     if (!this.inCourse || this.courseBookId == null || !this.puzzle) return;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved: true, mode: this.courseModeKind };
+    const body = { bookPuzzleId: this.puzzle.id, solved: true, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds };
     if (!navigator.onLine) {
       // Offline gelöst → lokalen Fortschritt hochzählen + Server-Aufzeichnung vormerken.
       this.offlineQueue.enqueue('POST', url, body);
       this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind, this.elapsedSeconds).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });

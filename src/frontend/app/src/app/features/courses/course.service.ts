@@ -60,8 +60,8 @@ export class CourseService {
     return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params });
   }
 
-  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode): Observable<CourseProgress> {
-    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode });
+  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0): Observable<CourseProgress> {
+    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds });
   }
 
   reset(bookId: number): Observable<CourseProgress> {
