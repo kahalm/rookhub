@@ -302,6 +302,23 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllPuzzles_ReturnsAllPuzzles_ForAccessibleBook()
+    {
+        var (book, ids) = await SeedBookAsync("OfflineBook", 3);
+        var list = Unwrap<List<BookPuzzleDto>>((await _controller.GetAllPuzzles(book.Id)).Result!);
+        Assert.Equal(3, list.Count);
+        Assert.Equal(ids.OrderBy(x => x).ToList(), list.Select(p => p.Id).OrderBy(x => x).ToList());
+    }
+
+    [Fact]
+    public async Task GetAllPuzzles_NonAdmin_NoAccess_Returns404()
+    {
+        var (book, _) = await SeedBookAsync("Secret", 2);
+        SetUser(_controller, 2, isAdmin: false);
+        Assert.IsType<NotFoundObjectResult>((await _controller.GetAllPuzzles(book.Id)).Result);
+    }
+
+    [Fact]
     public async Task GetCourses_NonAdmin_OnlySeesAccessibleBooks()
     {
         var (bookA, _) = await SeedBookAsync("Visible", 2);

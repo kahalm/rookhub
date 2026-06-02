@@ -12,6 +12,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
@@ -24,6 +25,7 @@ import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode } from '../courses/course.service';
 import { AuthService } from '../../core/auth.service';
+import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
 import { WeeklyService } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -35,7 +37,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, TranslateModule
+    MatTooltipModule, MatDialogModule, MatSnackBarModule, PuzzleBoardComponent, TranslateModule
   ],
   template: `
     <div class="puzzle-page">
@@ -546,7 +548,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private weeklyService: WeeklyService,
     private router: Router,
     private translate: TranslateService,
-    private auth: AuthService
+    private auth: AuthService,
+    private snackBar: MatSnackBar
   ) {
     super(stockfish);
     this.loadConfig();
@@ -574,6 +577,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Nächstes Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
   nextInBook(): void {
     if (!this.puzzle || this.bookNavLoading) return;
+    if (!navigator.onLine) { this.navOfflineInBook(false); return; }
     this.bookNavLoading = true;
     this.puzzleService.getNextBookPuzzle(this.puzzle.id).subscribe({
       next: p => this.goToBookPuzzle(p),
@@ -584,11 +588,31 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Zufälliges Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
   randomInBook(): void {
     if (!this.puzzle || this.bookNavLoading) return;
+    if (!navigator.onLine) { this.navOfflineInBook(true); return; }
     this.bookNavLoading = true;
     this.puzzleService.getRandomBookPuzzle(this.puzzle.id).subscribe({
       next: p => this.goToBookPuzzle(p),
       error: () => { this.bookNavLoading = false; }
     });
+  }
+
+  /** Offline: nächstes/zufälliges Puzzle aus dem lokal gespeicherten Buch. */
+  private navOfflineInBook(random: boolean): void {
+    if (!this.puzzle) return;
+    const book = getBookOffline(this.puzzle.bookFileName);
+    if (!book || !book.length) {
+      this.snackBar.open(this.translate.instant('book.offlineUnavailable'), this.translate.instant('common.ok'), { duration: 2500 });
+      return;
+    }
+    let next: BookPuzzleDto;
+    if (random) {
+      const others = book.filter(p => p.id !== this.puzzle!.id);
+      next = (others.length ? others : book)[Math.floor(Math.random() * (others.length || book.length))];
+    } else {
+      const i = book.findIndex(p => p.id === this.puzzle!.id);
+      next = book[((i < 0 ? -1 : i) + 1 + book.length) % book.length];   // Loop am Ende
+    }
+    this.goToBookPuzzle(next);
   }
 
   private goToBookPuzzle(p: BookPuzzleDto): void {
@@ -780,6 +804,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
     this.gaveUp = false;
+
+    // Offline: aus einem lokal gespeicherten Buch bedienen.
+    if (!navigator.onLine) {
+      const cached = findCachedBookPuzzle(id);
+      if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
+    }
 
     this.puzzleService.getBookPuzzleById(id).subscribe({
       next: puzzle => {

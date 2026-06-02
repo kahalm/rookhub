@@ -40,6 +40,20 @@ public class CourseController : BaseApiController
             _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
     }
 
+    /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
+    [HttpGet("{bookId}/puzzles")]
+    public async Task<ActionResult<List<BookPuzzleDto>>> GetAllPuzzles(int bookId)
+    {
+        if (!await CanAccessAsync(GetUserId(), bookId))
+            return NotFound(new { message = "Book not found." });
+        var puzzles = await _db.BookPuzzles
+            .Include(bp => bp.Book)
+            .Where(bp => bp.BookId == bookId)
+            .OrderBy(bp => bp.Id)
+            .ToListAsync();
+        return Ok(puzzles.Select(BookPuzzleController.MapToDto).ToList());
+    }
+
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
     [HttpGet]
     public async Task<IActionResult> GetCourses()

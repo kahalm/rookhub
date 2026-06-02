@@ -10,6 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
 
 @Component({
   selector: 'app-course-list',
@@ -57,6 +58,12 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                         [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
                   <mat-icon>shuffle</mat-icon> {{ 'courses.random' | translate }}
                 </button>
+                <button mat-icon-button
+                        [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
+                        [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
+                        (click)="toggleOffline(c)">
+                  <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+                </button>
                 <span class="spacer"></span>
                 <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
                         [disabled]="c.solvedCount === 0" (click)="reset(c)">
@@ -90,10 +97,40 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 export class CourseListComponent implements OnInit {
   courses: CourseListItem[] = [];
   loading = false;
+  savingOffline: number | null = null;
+  private offlineFiles = new Set<string>();
 
   constructor(private courseService: CourseService, private snackBar: MatSnackBar, private translate: TranslateService) {}
 
+  isOffline(c: CourseListItem): boolean {
+    return this.offlineFiles.has(c.fileName);
+  }
+
+  /** Buch offline speichern (alle Puzzles laden + cachen) bzw. den Cache wieder entfernen. */
+  toggleOffline(c: CourseListItem): void {
+    if (this.isOffline(c)) {
+      removeBookOffline(c.fileName);
+      this.offlineFiles.delete(c.fileName);
+      this.snackBar.open(this.translate.instant('courses.offlineRemoved', { name: c.displayName }), this.translate.instant('common.ok'), { duration: 2000 });
+      return;
+    }
+    this.savingOffline = c.bookId;
+    this.courseService.getBookPuzzles(c.bookId).subscribe({
+      next: puzzles => {
+        saveBookOffline(c.fileName, puzzles);
+        this.offlineFiles.add(c.fileName);
+        this.savingOffline = null;
+        this.snackBar.open(this.translate.instant('courses.offlineSaved', { name: c.displayName, count: puzzles.length }), this.translate.instant('common.ok'), { duration: 2500 });
+      },
+      error: () => {
+        this.savingOffline = null;
+        this.snackBar.open(this.translate.instant('courses.offlineFailed'), this.translate.instant('common.ok'), { duration: 3000 });
+      }
+    });
+  }
+
   ngOnInit(): void {
+    this.offlineFiles = new Set(cachedBookFileNames());
     this.loadCourses();
   }
 

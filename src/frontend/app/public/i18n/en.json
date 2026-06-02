@@ -414,7 +414,12 @@
     "resetTooltip": "Reset progress",
     "resetConfirm": "Reset progress for \"{{name}}\"?",
     "loadFailed": "Could not load courses",
-    "resetFailed": "Reset failed"
+    "resetFailed": "Reset failed",
+    "offlineSaveTooltip": "Save book offline",
+    "offlineRemoveTooltip": "Remove offline copy",
+    "offlineSaved": "\"{{name}}\" saved offline ({{count}} puzzles)",
+    "offlineRemoved": "\"{{name}}\" removed from offline",
+    "offlineFailed": "Could not save book offline"
   },
   "weekly": {
     "title": "Weekly",
@@ -585,6 +590,7 @@
   },
   "book": {
     "difficulty": "Difficulty",
+    "offlineUnavailable": "This book is not available offline.",
     "status": {
       "loading": "Loading puzzle...",
       "watchOpponent": "Watch the opponent's move...",

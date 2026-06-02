@@ -414,7 +414,12 @@
     "resetTooltip": "Poništi napredak",
     "resetConfirm": "Poništiti napredak za „{{name}}\"?",
     "loadFailed": "Tečajeve nije moguće učitati",
-    "resetFailed": "Poništavanje nije uspjelo"
+    "resetFailed": "Poništavanje nije uspjelo",
+    "offlineSaveTooltip": "Spremi knjigu offline",
+    "offlineRemoveTooltip": "Ukloni offline kopiju",
+    "offlineSaved": "\"{{name}}\" spremljeno offline ({{count}} zagonetki)",
+    "offlineRemoved": "\"{{name}}\" uklonjeno iz offline pohrane",
+    "offlineFailed": "Spremanje knjige offline nije uspjelo"
   },
   "weekly": {
     "title": "Tjedna objava",
@@ -585,6 +590,7 @@
   },
   "book": {
     "difficulty": "Težina",
+    "offlineUnavailable": "Ova knjiga nije dostupna offline.",
     "status": {
       "loading": "Učitavanje zagonetke...",
       "watchOpponent": "Pogledaj protivnikov potez...",

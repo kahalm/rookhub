@@ -43,6 +43,11 @@ export class CourseService {
     return this.http.get<CourseListItem[]>('/api/courses');
   }
 
+  /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */
+  getBookPuzzles(bookId: number): Observable<BookPuzzleDto[]> {
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
+  }
+
   /** Hat der eingeloggte User Zugriff auf mindestens einen Kurs? (Menü-Sichtbarkeit) */
   checkAccess(): Observable<{ hasAccess: boolean }> {
     return this.http.get<{ hasAccess: boolean }>('/api/courses/access');

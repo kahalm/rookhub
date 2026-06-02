@@ -414,7 +414,12 @@
     "resetTooltip": "Fortschritt zurücksetzen",
     "resetConfirm": "Fortschritt für „{{name}}\" zurücksetzen?",
     "loadFailed": "Kurse konnten nicht geladen werden",
-    "resetFailed": "Zurücksetzen fehlgeschlagen"
+    "resetFailed": "Zurücksetzen fehlgeschlagen",
+    "offlineSaveTooltip": "Buch offline speichern",
+    "offlineRemoveTooltip": "Offline-Kopie entfernen",
+    "offlineSaved": "\"{{name}}\" offline gespeichert ({{count}} Puzzles)",
+    "offlineRemoved": "\"{{name}}\" aus dem Offline-Cache entfernt",
+    "offlineFailed": "Buch konnte nicht offline gespeichert werden"
   },
   "weekly": {
     "title": "Wochenpost",
@@ -585,6 +590,7 @@
   },
   "book": {
     "difficulty": "Schwierigkeit",
+    "offlineUnavailable": "Dieses Buch ist nicht offline verfügbar.",
     "status": {
       "loading": "Puzzle wird geladen...",
       "watchOpponent": "Beobachte den Zug des Gegners...",

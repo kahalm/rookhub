@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.59.0';
+export const APP_VERSION = '0.60.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.60.0', date: '2026-06-02', changes: [
+    'Bücher offline: In der Kurs-Liste lässt sich jedes Buch per Wolken-Button offline speichern (alle Puzzles lokal gecacht) bzw. wieder entfernen. Ist ein Buch offline gespeichert, funktionieren ohne Internet der Direktaufruf eines Buch-Puzzles sowie „Nächstes im Buch"/„Zufällig aus Buch" aus dem Cache. Größe + Anzahl gecachter Bücher stehen im Profil unter „Offline" (mit „Cache leeren"). Neuer Endpoint GET `/api/courses/{bookId}/puzzles`.',
+  ]},
   { version: '0.59.0', date: '2026-06-02', changes: [
     'Offline-Einstellungen im Profil (Abschnitt „Offline", pro Gerät): wie viele Standard-Puzzles (auf der aktuellen Schwierigkeit) und wie viele Endless-Runs offline vorgehalten werden (Standard 10 / 2), plus Anzeige der Cache-Größe und „Cache leeren"-Button.',
     'Standard-Puzzle-Modus offline: bei fehlender Verbindung werden vorab geladene Puzzles aus dem lokalen Pool gespielt (wird online aufgefüllt; bei Schwierigkeitswechsel neu).',
