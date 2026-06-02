@@ -206,18 +206,24 @@ const RATING_WINDOW = 100;
                 }
                 @case ('SOLVED') {
                   <div class="status-center solved">
-                    <mat-icon class="result-icon">check_circle</mat-icon>
                     @if (gaveUp) {
+                      <mat-icon class="result-icon" style="color:#f44336">flag</mat-icon>
                       <p class="status-text">{{ 'puzzles.result.solutionPlayedOut' | translate }}</p>
                       <p class="alt-hint">{{ 'puzzles.result.tryYourselfNextTime' | translate }}</p>
                     } @else if (alternativeSolve) {
+                      <mat-icon class="result-icon">check_circle</mat-icon>
                       <p class="status-text">{{ 'puzzles.result.checkmate' | translate }}</p>
                       <p class="alt-hint">{{ 'puzzles.result.alternativeSolution' | translate }}</p>
                     } @else {
+                      <mat-icon class="result-icon">check_circle</mat-icon>
                       <p class="status-text">{{ 'puzzles.result.correct' | translate }}</p>
                     }
                     @if (lastEloChange != null) {
-                      <span class="elo-change elo-up">+{{ lastEloChange }}</span>
+                      @if (gaveUp || lastEloChange < 0) {
+                        <span class="elo-change elo-down">{{ lastEloChange }}</span>
+                      } @else {
+                        <span class="elo-change elo-up">+{{ lastEloChange }}</span>
+                      }
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     <div class="review-nav">
@@ -640,6 +646,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   ngOnDestroy(): void {
     this.stopTimer();
     this.stopCountdown();
+    this.clearSolutionPlay();
     this.abortSolver();
     clearCrazyStyles();
     clearVisualizationHide();
@@ -651,6 +658,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.gaveUp = false;
     this.stopTimer();
     this.stopCountdown();
+    this.clearSolutionPlay();
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
     this.lastEloChange = null;
@@ -716,18 +724,40 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   giveUp(): void {
+    if (!this.puzzle) return;
     this.abortSolver();
-    // Fehlversuch aufzeichnen (Elo-Loss + Statistik), aber NICHT in den FAILED-Endzustand
-    // gehen — stattdessen das Puzzle ab Setup neu aufbauen, damit der Spieler die richtige
-    // Loesung selber durchspielen kann (kein weiterer recordAttempt, weil attemptRecorded
-    // schon gesetzt ist).
-    if (this.puzzle && !this.attemptRecorded) this.recordAttempt(false);
+    this.stopTimer();
+    // Fehlversuch aufzeichnen (Elo-Loss + Statistik), falls noch nicht geschehen.
+    if (!this.attemptRecorded) this.recordAttempt(false);
     this.gaveUp = true;
-    if (this.puzzle) this.setupPuzzle(this.puzzle);
+    // Endzustand wie beim Lösen (zeigt Review-Navigation + „Lösung durchgespielt"),
+    // dann auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
+    this.state = 'SOLVED';
+    this.playSolutionFromStart();
+  }
+
+  /** Spult die Lösung ab der Anfangsstellung selbsttätig durch (Zug für Zug). */
+  private solutionPlayTimer?: ReturnType<typeof setInterval>;
+  private playSolutionFromStart(): void {
+    this.clearSolutionPlay();
+    this.reviewMode = true;
+    this.reviewGoTo(0);
+    this.solutionPlayTimer = setInterval(() => {
+      if (this.reviewIndex >= this.reviewTotal) { this.clearSolutionPlay(); return; }
+      this.reviewGoTo(this.reviewIndex + 1);
+    }, 900);
+  }
+
+  private clearSolutionPlay(): void {
+    if (this.solutionPlayTimer) {
+      clearInterval(this.solutionPlayTimer);
+      this.solutionPlayTimer = undefined;
+    }
   }
 
   retry(): void {
     if (!this.puzzle) return;
+    this.clearSolutionPlay();
     this.attemptRecorded = false;
     this.gaveUp = false;
     this.setupPuzzle(this.puzzle);
@@ -742,8 +772,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { this.stopCountdown(); this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.stopCountdown(); this.reviewGoTo(this.reviewIndex - 1); }
+  reviewNext(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex - 1); }
 
   private reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -862,6 +892,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   resetPuzzle(): void {
     if (!this.puzzle) return;
     this.aborted = true;
+    this.clearSolutionPlay();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.currentEval = '';
     this.initialEval = '';

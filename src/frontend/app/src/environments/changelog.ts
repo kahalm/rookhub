@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.49.0';
+export const APP_VERSION = '0.50.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.50.1', date: '2026-06-02', changes: [
+    'Fix (Puzzle): „Aufgeben" wechselt jetzt auch im normalen Puzzle-Modus auf die Anfangsstellung und spielt die Lösung automatisch Zug für Zug durch (vorher verhielt es sich wie „Zurücksetzen"). Manuelles Vor-/Zurückklicken stoppt die Wiedergabe; „Nochmal"/„Nächstes" beendet sie. Analog zum bereits bestehenden Verhalten bei Buch-/Kurs-/Wochenpost-Puzzles.',
+  ]},
   { version: '0.49.0', date: '2026-06-02', changes: [
     'Statistik erweitert: Aufschlüsselung nach Thema (Trefferquote je Taktik-Thema), Rating-Verteilung der gelösten Puzzles (Balken je 200er-Rating-Band, Genauigkeit beim Überfahren) und eine Aktivitäts-Heatmap (Versuche pro Tag, letzte ~6 Monate). Neuer Endpoint GET `/api/puzzles/stats/breakdown`.',
   ]},
