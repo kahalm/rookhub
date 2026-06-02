@@ -47,7 +47,9 @@
       "chessResultsTitle": "ChessResults ID",
       "chessResultsDesc": "Unesite svoj ChessResults ID u profil — nadolazeći turniri pretplaćuju se automatski."
     },
-    "feedback": "Povratne informacije / Prijavi grešku"
+    "feedback": "Povratne informacije / Prijavi grešku",
+    "updateAvailable": "Dostupna je nova verzija.",
+    "reload": "Ponovno učitaj"
   },
   "auth": {
     "login": {
@@ -141,7 +143,8 @@
       "cacheSize": "Veličina predmemorije",
       "books": "{{count}} knjiga",
       "clear": "Isprazni predmemoriju",
-      "cleared": "Offline predmemorija ispražnjena"
+      "cleared": "Offline predmemorija ispražnjena",
+      "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budete na mreži."
     }
   },
   "friends": {
@@ -324,6 +327,7 @@
     "status": {
       "loading": "Učitavanje zagonetke…",
       "loadFailed": "Učitavanje zagonetke nije uspjelo",
+      "offlineNoCache": "Izvan mreže ste i nema spremljenih zagonetki. Otvorite ovu stranicu jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
       "watchOpponent": "Pratite protivnikov potez…",
       "yourTurn": "Vi ste na potezu!",
       "gaveUpPlayOut": "Predali ste se — sami odigrajte rješenje.",
@@ -453,6 +457,7 @@
     }
   },
   "endless": {
+    "offlineNoCache": "Izvan mreže ste i nema spremljenog niza. Otvorite Endless jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
     "help": {
       "title": "Endless Puzzle Mode",
       "gameplayHeading": "Tijek igre",

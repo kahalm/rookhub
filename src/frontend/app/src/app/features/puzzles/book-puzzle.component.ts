@@ -26,6 +26,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode } from '../courses/course.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { WeeklyService } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -549,7 +550,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private router: Router,
     private translate: TranslateService,
     private auth: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private offlineQueue: OfflineQueueService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -661,7 +663,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordBookAttempt(solved: boolean): void {
     if (!this.standalone || this.bookAttemptRecorded || !this.puzzle || !this.auth.isLoggedIn) return;
     this.bookAttemptRecorded = true;
-    this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe({ error: () => {} });
+    const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
+    const body = { solved, timeSeconds: this.elapsedSeconds };
+    if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
+    this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds)
+      .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
   }
 
   ngOnInit(): void {
@@ -793,8 +799,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private recordCourseSolved(): void {
     if (!this.inCourse || this.courseBookId == null || !this.puzzle) return;
+    const url = `/api/courses/${this.courseBookId}/results`;
+    const body = { bookPuzzleId: this.puzzle.id, solved: true, mode: this.courseModeKind };
+    if (!navigator.onLine) {
+      // Offline gelöst → lokalen Fortschritt hochzählen + Server-Aufzeichnung vormerken.
+      this.offlineQueue.enqueue('POST', url, body);
+      this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
+      return;
+    }
     this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind).subscribe({
-      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; }
+      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
+      error: () => this.offlineQueue.enqueue('POST', url, body),
     });
   }
 

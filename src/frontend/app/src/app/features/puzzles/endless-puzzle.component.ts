@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -51,7 +52,7 @@ const RATING_WINDOW = 40;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent
+    MatDialogModule, MatSnackBarModule, TranslateModule, PuzzleBoardComponent
   ],
   template: `
     <div class="endless-page">
@@ -1018,7 +1019,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     public router: Router,
     private dialog: MatDialog,
     private translate: TranslateService,
-    private offline: OfflineService
+    private offline: OfflineService,
+    private snackBar: MatSnackBar
   ) {
     super(stockfish);
     this.state = 'CONFIG';
@@ -1074,7 +1076,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     });
 
     this.puzzleService.getRatingRange().subscribe({
-      next: r => { this.puzzleRange = r; this.clampConfig(); },
+      next: r => {
+        this.puzzleRange = r;
+        this.clampConfig();
+        // Schon beim Öffnen der Config einen Run vorab laden, damit Endless später
+        // auch offline gestartet werden kann (nur online + wenn noch kein Cache da ist).
+        if (navigator.onLine && this.offlinePool.length === 0) this.prefetchRun();
+      },
       error: () => {}
     });
     this.stockfish.init().catch(() => {});
@@ -1296,8 +1304,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.storage.saveOfflinePool(this.offlinePool);
         this.prefetchedPuzzle = null;
         this.onPuzzleLoaded(pooled);
+      } else if (this.solved === 0) {
+        // Offline gestartet, aber kein Run gecacht → kein „Run beendet", sondern Hinweis + zurück zur Config.
+        this.stopSessionTimer();
+        this.storage.saveActiveGameLocal(null);
+        this.snackBar.open(this.translate.instant('endless.offlineNoCache'), this.translate.instant('common.ok'), { duration: 5000 });
+        this.state = 'CONFIG';
       } else {
-        // Offline und Pool leer → Run hier beenden.
+        // Mitten im Run offline und Pool leer → Run hier regulär beenden.
         this.stopSessionTimer();
         this.checkHighscore();
         this.recordSession();

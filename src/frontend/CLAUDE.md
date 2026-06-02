@@ -46,6 +46,12 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Key-Namespaces**: `common`, `nav`, `app`, `auth`, `dashboard`, `profile`, `friends`, `repertoire`, `tournaments`, `puzzles`, `endless`, `book`, `courses`, `weekly`, `admin`, `pgnViewer`. Generische Begriffe (Speichern/Abbrechen/…) unter `common.*`.
 - **Nicht übersetzt**: Schach-Notation/FEN/PGN, Eigennamen, „RookHub"/„Stockfish", gecrawlte Daten, HTTP-Methoden.
 
+## Offline / PWA (Service Worker)
+
+- **Service Worker**: `@angular/service-worker` (ngsw), Konfig in `ngsw-config.json`, registriert in `app.config.ts` via `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() })` — **nur im Prod-Build aktiv** (`serviceWorker: "ngsw-config.json"` steht in der `production`-Configuration der `angular.json`). Cacht App-Shell, **alle Lazy-Chunks** (assetGroup `app`, prefetch → Routen wie `/puzzles`, `/endless` öffnen offline) + i18n (prefetch) + Google-Fonts (dataGroup, performance). `/api/*` wird **nicht** vom SW gecacht (immer Netz → App fällt offline auf lokale Caches/Queue zurück). nginx: SW-Steuerdateien `no-cache`, CSP `connect-src` enthält die Font-Origins (SW-Caching).
+- **Offline-Daten-Caches** (`core/offline.service.ts`, localStorage, pro Gerät, im Profil einstellbar): Standard-Puzzle-Pool (`PUZZLE_POOL_KEY`), Endless-Run-Pool (`ENDLESS_POOL_KEY`), ganze Bücher (`BOOK_OFFLINE_PREFIX`, `features/puzzles/book-offline.util.ts`). Pools werden **online beim Modus-Eintritt** vorab geladen, damit ein Offline-Start Daten hat.
+- **Offline-Lösungs-Queue** (`core/offline-queue.service.ts`): schreibende Solve-Requests (Standard-/Tagespuzzle-Attempt, Kurs-Result, Endless-Session), die offline scheitern, werden als rohe `{method,url,body}` in localStorage (`rookhub_offline_queue`) vorgemerkt und bei `window 'online'` + App-Start über den `HttpClient` (inkl. authInterceptor) erneut gesendet — Eintrag erst nach Erfolg entfernt, 4xx verworfen, Netz/5xx bleibt liegen. App-weit instanziiert in `AppComponent`.
+
 ## Auth-Flow
 
 1. Login/Register -> `AuthService.login()` / `.register()` -> POST an `/api/auth/*`

@@ -142,6 +142,11 @@ export class PuzzleService {
     return id;
   }
 
+  /** Anonyme Puzzle-Session-Id (für das Offline-Vormerken anonymer Versuche). */
+  ensureSessionId(): string {
+    return this.getOrCreateSessionId();
+  }
+
   recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
       sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel,

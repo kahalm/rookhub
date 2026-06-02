@@ -2,10 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
 import { DiscordLinkService } from './core/discord-link.service';
+import { OfflineQueueService } from './core/offline-queue.service';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -115,12 +118,29 @@ export class AppComponent implements OnInit {
     private auth: AuthService,
     private discordLink: DiscordLinkService,
     private snackBar: MatSnackBar,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private swUpdate: SwUpdate,
+    // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
+    _offlineQueue: OfflineQueueService
   ) {
     locale.init();
   }
 
   ngOnInit(): void {
+    // Service Worker: neue Version verfügbar → Hinweis mit „Neu laden".
+    if (this.swUpdate.isEnabled) {
+      this.swUpdate.versionUpdates
+        .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
+        .subscribe(() => {
+          const ref = this.snackBar.open(
+            this.translate.instant('app.updateAvailable'),
+            this.translate.instant('app.reload'),
+            { duration: 0 }
+          );
+          ref.onAction().subscribe(() => document.location.reload());
+        });
+    }
+
     this.router.events.subscribe(() => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('quickstart') === '1') {

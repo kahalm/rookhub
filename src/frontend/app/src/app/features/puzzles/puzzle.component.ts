@@ -17,6 +17,7 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { takeFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -97,8 +98,8 @@ const RATING_WINDOW = 100;
                 }
                 @case ('ERROR') {
                   <div class="status-center failed">
-                    <mat-icon class="result-icon">error_outline</mat-icon>
-                    <p class="status-text">{{ 'puzzles.status.loadFailed' | translate }}</p>
+                    <mat-icon class="result-icon">{{ offlineNoCache ? 'cloud_off' : 'error_outline' }}</mat-icon>
+                    <p class="status-text">{{ (offlineNoCache ? 'puzzles.status.offlineNoCache' : 'puzzles.status.loadFailed') | translate }}</p>
                     <button mat-raised-button color="primary" (click)="loadNext()">
                       <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
                     </button>
@@ -561,7 +562,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private router: Router,
     private route: ActivatedRoute,
     private dialog: MatDialog,
-    private offline: OfflineService
+    private offline: OfflineService,
+    private offlineQueue: OfflineQueueService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -571,6 +573,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   // ===== Offline-Puzzle-Pool (Standard-Modus) =====
   private offlinePuzzlePool: PuzzleDto[] = [];
+  offlineNoCache = false;
 
   private loadOfflinePool(): PuzzleDto[] {
     try { return JSON.parse(localStorage.getItem(PUZZLE_POOL_KEY) || '[]') || []; } catch { return []; }
@@ -701,6 +704,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   loadNext(): void {
     this.state = 'LOADING';
+    this.offlineNoCache = false;
     this.attemptRecorded = false;
     this.gaveUp = false;
     this.stopTimer();
@@ -726,7 +730,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       const r = this.ratingRange();
       const pooled = takeFromPool(this.offlinePuzzlePool, r.min, r.max)
         ?? (this.offlinePuzzlePool.length ? this.offlinePuzzlePool.shift()! : null);
-      if (!pooled) { this.state = 'ERROR'; this.puzzle = null; return; }
+      if (!pooled) { this.offlineNoCache = true; this.state = 'ERROR'; this.puzzle = null; return; }
       this.saveOfflinePool();
       source$ = of(pooled);
     } else {
@@ -930,14 +934,31 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (!this.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
+    const id = this.puzzle.id;
+    const url = this.isLoggedIn ? `/api/puzzles/${id}/attempt` : `/api/puzzles/${id}/attempt/anonymous`;
+    const body: Record<string, unknown> = {
+      solved, timeSpentSeconds: this.elapsedSeconds, moveLog: log ?? null,
+      visualizationLevel: this.visualizationMode,
+      screenWidth: window.innerWidth, screenHeight: window.innerHeight,
+    };
+    if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
+    if (!navigator.onLine) {
+      // Offline gelöst → für späteres Hochladen vormerken (Stats aktualisieren sich beim Sync).
+      this.offlineQueue.enqueue('POST', url, body);
+      return;
+    }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(this.puzzle.id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe(res => {
-        if (res.eloChange != null) this.lastEloChange = res.eloChange;
-        this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
+      this.puzzleService.recordAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe({
+        next: res => {
+          if (res.eloChange != null) this.lastEloChange = res.eloChange;
+          this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
+        },
+        error: () => this.offlineQueue.enqueue('POST', url, body),
       });
     } else {
-      this.puzzleService.recordAnonymousAttempt(this.puzzle.id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe(() => {
-        this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s);
+      this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe({
+        next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
+        error: () => this.offlineQueue.enqueue('POST', url, body),
       });
     }
   }

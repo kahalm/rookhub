@@ -47,7 +47,9 @@
       "chessResultsTitle": "ChessResults ID",
       "chessResultsDesc": "Add your ChessResults ID in your profile — upcoming tournaments are subscribed automatically."
     },
-    "feedback": "Feedback / Report a bug"
+    "feedback": "Feedback / Report a bug",
+    "updateAvailable": "A new version is available.",
+    "reload": "Reload"
   },
   "auth": {
     "login": {
@@ -141,7 +143,8 @@
       "cacheSize": "Cache size",
       "books": "{{count}} books",
       "clear": "Clear cache",
-      "cleared": "Offline cache cleared"
+      "cleared": "Offline cache cleared",
+      "pending": "{{count}} solutions waiting to sync — they upload automatically when you're back online."
     }
   },
   "friends": {
@@ -324,6 +327,7 @@
     "status": {
       "loading": "Loading puzzle…",
       "loadFailed": "Failed to load puzzle",
+      "offlineNoCache": "You're offline and no puzzles are cached. Open this page once while online to save puzzles for offline play.",
       "watchOpponent": "Watch the opponent's move…",
       "yourTurn": "Your turn!",
       "gaveUpPlayOut": "Gave up — play the solution yourself.",
@@ -453,6 +457,7 @@
     }
   },
   "endless": {
+    "offlineNoCache": "You're offline and no run is cached. Open Endless once while online to save puzzles for offline play.",
     "help": {
       "title": "Endless Puzzle Mode",
       "gameplayHeading": "How it works",

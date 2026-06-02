@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 import { Observable, of, catchError, map, tap } from 'rxjs';
 import { PuzzleDto } from './puzzle.service';
 
@@ -64,7 +65,7 @@ export class EndlessStorageService {
   /** Hoechster bekannter Highscore (Server + lokal) — es wird nie ein niedrigerer gesendet. */
   private highestKnownHighscore = 0;
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient, private authService: AuthService, private offlineQueue: OfflineQueueService) {}
 
   // --- localStorage (cache/fallback) ---
 
@@ -246,16 +247,21 @@ export class EndlessStorageService {
     };
 
     if (this.authService.isLoggedIn) {
-      return this.http.post<any>(`${this.apiUrl}/sessions`, body).pipe(
+      const url = `${this.apiUrl}/sessions`;
+      if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return of(null); }
+      return this.http.post<any>(url, body).pipe(
         map(res => res?.id ?? null),
-        catchError(() => of(null))
+        catchError(() => { this.offlineQueue.enqueue('POST', url, body); return of(null); })
       );
     } else {
       const sessionId = this.getSessionId();
       if (sessionId) {
-        return this.http.post<any>(`${this.apiUrl}/sessions/anonymous`, { ...body, sessionId }).pipe(
+        const url = `${this.apiUrl}/sessions/anonymous`;
+        const anonBody = { ...body, sessionId };
+        if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, anonBody); return of(null); }
+        return this.http.post<any>(url, anonBody).pipe(
           map(res => res?.id ?? null),
-          catchError(() => of(null))
+          catchError(() => { this.offlineQueue.enqueue('POST', url, anonBody); return of(null); })
         );
       }
       return of(null);

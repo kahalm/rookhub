@@ -15,6 +15,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { OfflineService } from '../../core/offline.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
 
 interface Profile {
   userId: number;
@@ -192,6 +193,11 @@ interface PlayerSearchItem {
                   <mat-icon>delete_sweep</mat-icon> {{ 'profile.offline.clear' | translate }}
                 </button>
               </div>
+              @if (offlinePending > 0) {
+                <p class="offline-pending">
+                  <mat-icon>sync</mat-icon> {{ 'profile.offline.pending' | translate: { count: offlinePending } }}
+                </p>
+              }
             </div>
           </mat-card-content>
         </mat-card>
@@ -232,6 +238,8 @@ interface PlayerSearchItem {
     .offline-fields mat-form-field { width: 200px; max-width: 100%; }
     .offline-cache { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .offline-size { color: #ccc; font-size: 0.9rem; }
+    .offline-pending { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: 0.85rem; margin: 6px 0 0; }
+    .offline-pending mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .discord-linked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .discord-icon { color: #5865F2; }
     .discord-name { font-weight: 500; }
@@ -257,13 +265,15 @@ export class ProfileComponent implements OnInit {
   offlineEndlessRuns = 2;
   offlineSize = '0 B';
   offlineBooks = 0;
+  offlinePending = 0;
 
   constructor(
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
-    private offline: OfflineService
+    private offline: OfflineService,
+    private offlineQueue: OfflineQueueService
   ) {}
 
   ngOnInit(): void {
@@ -286,6 +296,7 @@ export class ProfileComponent implements OnInit {
   private refreshOfflineSize(): void {
     this.offlineSize = this.offline.formatSize(this.offline.cacheSizeBytes());
     this.offlineBooks = this.offline.cachedBookCount();
+    this.offlinePending = this.offlineQueue.pendingCount();
   }
 
   clearOfflineCache(): void {
