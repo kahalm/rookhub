@@ -30,7 +30,8 @@
     "register": "Register",
     "language": "Language",
     "menu": "Menu",
-    "info": "Info"
+    "info": "Info",
+    "analysis": "Analysis"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -734,5 +735,22 @@
         "load": "Failed to load logs"
       }
     }
+  },
+  "analysis": {
+    "title": "Analysis",
+    "engine": "Engine",
+    "depth": "Depth",
+    "lines": "Lines",
+    "calculating": "Calculating…",
+    "engineOff": "Engine off",
+    "start": "Start",
+    "flip": "Flip board",
+    "reset": "Reset",
+    "noMoves": "No moves yet — play moves on the board.",
+    "fen": "FEN",
+    "loadFen": "Load FEN",
+    "copyFen": "Copy FEN",
+    "pgn": "PGN",
+    "loadPgn": "Load PGN"
   }
 }

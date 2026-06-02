@@ -30,7 +30,8 @@
     "register": "Registracija",
     "language": "Jezik",
     "menu": "Izbornik",
-    "info": "Informacije"
+    "info": "Informacije",
+    "analysis": "Analiza"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -734,5 +735,22 @@
         "load": "Učitavanje zapisa nije uspjelo"
       }
     }
+  },
+  "analysis": {
+    "title": "Analiza",
+    "engine": "Procjena",
+    "depth": "Dubina",
+    "lines": "Linije",
+    "calculating": "Računam…",
+    "engineOff": "Procjena isključena",
+    "start": "Početak",
+    "flip": "Okreni ploču",
+    "reset": "Poništi",
+    "noMoves": "Još nema poteza — odigraj poteze na ploči.",
+    "fen": "FEN",
+    "loadFen": "Učitaj FEN",
+    "copyFen": "Kopiraj FEN",
+    "pgn": "PGN",
+    "loadPgn": "Učitaj PGN"
   }
 }

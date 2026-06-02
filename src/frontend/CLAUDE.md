@@ -68,6 +68,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/tournaments` | TournamentListComponent | ja |
 | `/tournaments/:id` | TournamentDetailComponent | ja |
 | `/weekly` | WeeklyListComponent | nein (öffentlich; Verwalten nur Admin) |
+| `/analysis` | AnalysisComponent | nein (öffentlich; lokale Stockfish-MultiPV-Analyse) |
 | `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | nein (öffentlich) |
 | `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
 | `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
