@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
+import { OfflineService } from '../../core/offline.service';
 
 interface Profile {
   userId: number;
@@ -170,6 +171,28 @@ interface PlayerSearchItem {
                 <p class="discord-hint">{{ 'profile.discord.hint' | translate }}</p>
               }
             </div>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <div class="offline-section">
+              <h4>{{ 'profile.offline.title' | translate }}</h4>
+              <p class="offline-hint">{{ 'profile.offline.hint' | translate }}</p>
+              <div class="offline-fields">
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'profile.offline.puzzleCount' | translate }}</mat-label>
+                  <input matInput type="number" min="0" max="200" [(ngModel)]="offlinePuzzleCount" name="offPuzzles" (change)="saveOffline()">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ 'profile.offline.endlessRuns' | translate }}</mat-label>
+                  <input matInput type="number" min="0" max="50" [(ngModel)]="offlineEndlessRuns" name="offRuns" (change)="saveOffline()">
+                </mat-form-field>
+              </div>
+              <div class="offline-cache">
+                <span class="offline-size">{{ 'profile.offline.cacheSize' | translate }}: <strong>{{ offlineSize }}</strong>{{ offlineBooks > 0 ? ' (' + ('profile.offline.books' | translate: { count: offlineBooks }) + ')' : '' }}</span>
+                <button mat-stroked-button color="warn" type="button" (click)="clearOfflineCache()">
+                  <mat-icon>delete_sweep</mat-icon> {{ 'profile.offline.clear' | translate }}
+                </button>
+              </div>
+            </div>
           </mat-card-content>
         </mat-card>
       </div>
@@ -203,6 +226,12 @@ interface PlayerSearchItem {
     .no-results { color: #bdbdbd; font-style: italic; text-align: center; padding: 1rem 0; }
     .discord-divider { margin: 1.25rem 0 1rem; }
     .discord-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
+    .offline-section h4 { margin: 0 0 0.25rem; color: #90caf9; }
+    .offline-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
+    .offline-fields { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .offline-fields mat-form-field { width: 200px; max-width: 100%; }
+    .offline-cache { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .offline-size { color: #ccc; font-size: 0.9rem; }
     .discord-linked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .discord-icon { color: #5865F2; }
     .discord-name { font-weight: 500; }
@@ -224,18 +253,45 @@ export class ProfileComponent implements OnInit {
   unlinking = false;
   searchResults: PlayerSearchResult | null = null;
 
+  offlinePuzzleCount = 10;
+  offlineEndlessRuns = 2;
+  offlineSize = '0 B';
+  offlineBooks = 0;
+
   constructor(
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private translate: TranslateService,
-    private discordLink: DiscordLinkService
+    private discordLink: DiscordLinkService,
+    private offline: OfflineService
   ) {}
 
   ngOnInit(): void {
+    this.offlinePuzzleCount = this.offline.puzzleCount;
+    this.offlineEndlessRuns = this.offline.endlessRuns;
+    this.refreshOfflineSize();
     this.http.get<Profile>('/api/profile').subscribe({
       next: (p) => { this.profile = p; this.loading = false; },
       error: () => { this.loading = false; }
     });
+  }
+
+  saveOffline(): void {
+    this.offline.setPuzzleCount(this.offlinePuzzleCount);
+    this.offline.setEndlessRuns(this.offlineEndlessRuns);
+    this.offlinePuzzleCount = this.offline.puzzleCount;   // geklemmte Werte zurückspiegeln
+    this.offlineEndlessRuns = this.offline.endlessRuns;
+  }
+
+  private refreshOfflineSize(): void {
+    this.offlineSize = this.offline.formatSize(this.offline.cacheSizeBytes());
+    this.offlineBooks = this.offline.cachedBookCount();
+  }
+
+  clearOfflineCache(): void {
+    this.offline.clearAll();
+    this.refreshOfflineSize();
+    this.snackBar.open(this.translate.instant('profile.offline.cleared'), this.translate.instant('common.close'), { duration: 2000 });
   }
 
   searchPlayer(): void {

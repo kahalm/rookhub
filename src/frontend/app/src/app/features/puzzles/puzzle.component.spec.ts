@@ -14,7 +14,8 @@ function makeComponent(): any {
   const router: any = { navigate: jasmine.createSpy('navigate') };
   const route: any = { snapshot: { paramMap: { get: () => null } } };
   const dialog: any = {};
-  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog);
+  const offline: any = { puzzleCount: 0, endlessRuns: 0 };
+  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline);
 }
 
 const PUZZLE = { id: 1, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };

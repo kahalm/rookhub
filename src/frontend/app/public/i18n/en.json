@@ -132,6 +132,16 @@
       "linkConflict": "This Discord account is already linked to another RookHub user.",
       "linkFailed": "Could not link Discord account",
       "stashed": "Sign in or register to finish linking your Discord account."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Store puzzles on this device to keep solving without internet (per device).",
+      "puzzleCount": "Puzzles offline",
+      "endlessRuns": "Endless runs offline",
+      "cacheSize": "Cache size",
+      "books": "{{count}} books",
+      "clear": "Clear cache",
+      "cleared": "Offline cache cleared"
     }
   },
   "friends": {

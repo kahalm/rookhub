@@ -17,6 +17,7 @@ import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
 import { computeRunSize, buildRunWindows, takeFromPool } from './endless-prefetch.util';
+import { OfflineService } from '../../core/offline.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
@@ -1016,7 +1017,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private prefs: PreferencesService,
     public router: Router,
     private dialog: MatDialog,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private offline: OfflineService
   ) {
     super(stockfish);
     this.state = 'CONFIG';
@@ -1179,8 +1181,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    */
   private prefetchRun(): void {
     const runSize = computeRunSize(this.sessionHistory);
-    const windows = buildRunWindows(
-      this.config.startElo, runSize, (n) => this.getStepForSolved(n), this.puzzleRange.max, RATING_WINDOW);
+    const runs = Math.max(1, this.offline.endlessRuns);   // konfigurierbar im Profil (Standard 2)
+    let windows: { minRating: number; maxRating: number }[] = [];
+    for (let r = 0; r < runs; r++) {
+      windows = windows.concat(buildRunWindows(
+        this.config.startElo, runSize, (n) => this.getStepForSolved(n), this.puzzleRange.max, RATING_WINDOW));
+    }
     if (!windows.length) return;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandomBatch(windows, themes).subscribe({

@@ -132,6 +132,16 @@
       "linkConflict": "Ovaj Discord račun već je povezan s drugim RookHub korisnikom.",
       "linkFailed": "Povezivanje Discord računa nije uspjelo",
       "stashed": "Prijavi se ili registriraj kako bi dovršio povezivanje Discord računa."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Spremi zagonetke na ovaj uređaj za igru bez interneta (po uređaju).",
+      "puzzleCount": "Zagonetke offline",
+      "endlessRuns": "Beskonačni runovi offline",
+      "cacheSize": "Veličina predmemorije",
+      "books": "{{count}} knjiga",
+      "clear": "Isprazni predmemoriju",
+      "cleared": "Offline predmemorija ispražnjena"
     }
   },
   "friends": {

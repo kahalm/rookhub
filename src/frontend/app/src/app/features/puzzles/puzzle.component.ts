@@ -16,6 +16,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
+import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
+import { takeFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -558,11 +560,35 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private prefs: PreferencesService,
     private router: Router,
     private route: ActivatedRoute,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private offline: OfflineService
   ) {
     super(stockfish);
     this.loadConfig();
+    this.offlinePuzzlePool = this.loadOfflinePool();
     this.stockfish.init().catch(() => {});
+  }
+
+  // ===== Offline-Puzzle-Pool (Standard-Modus) =====
+  private offlinePuzzlePool: PuzzleDto[] = [];
+
+  private loadOfflinePool(): PuzzleDto[] {
+    try { return JSON.parse(localStorage.getItem(PUZZLE_POOL_KEY) || '[]') || []; } catch { return []; }
+  }
+  private saveOfflinePool(): void {
+    try { localStorage.setItem(PUZZLE_POOL_KEY, JSON.stringify(this.offlinePuzzlePool)); } catch { /* ignore */ }
+  }
+
+  /** Lädt im Hintergrund N Puzzles auf der aktuellen Schwierigkeit für Offline-Spiel. */
+  private prefetchOfflinePool(): void {
+    const n = this.offline.puzzleCount;
+    if (n <= 0 || !navigator.onLine || this.offlinePuzzlePool.length >= n) return;   // nur auffüllen
+    const r = this.ratingRange();
+    const windows = Array.from({ length: n }, () => ({ minRating: r.min, maxRating: r.max }));
+    this.puzzleService.getRandomBatch(windows, undefined, this.excludeSolved).subscribe({
+      next: pool => { this.offlinePuzzlePool = pool || []; this.saveOfflinePool(); },
+      error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
+    });
   }
 
   // ===== Hooks für BasePuzzleSolver =====
@@ -695,6 +721,14 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     } else if (this.nextPuzzle) {
       source$ = of(this.nextPuzzle);
       this.nextPuzzle = null;
+    } else if (!navigator.onLine) {
+      // Offline: aus dem vorab geladenen Pool bedienen.
+      const r = this.ratingRange();
+      const pooled = takeFromPool(this.offlinePuzzlePool, r.min, r.max)
+        ?? (this.offlinePuzzlePool.length ? this.offlinePuzzlePool.shift()! : null);
+      if (!pooled) { this.state = 'ERROR'; this.puzzle = null; return; }
+      this.saveOfflinePool();
+      source$ = of(pooled);
     } else {
       const r = this.ratingRange();
       source$ = this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved);
@@ -705,6 +739,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           this.puzzle = puzzle;
           this.setupPuzzle(puzzle);
           this.prefetchNext();
+          this.prefetchOfflinePool();
         },
         error: () => {
           this.state = 'ERROR';
@@ -734,6 +769,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   onDifficultyChange(): void {
     this.nextPuzzle = null;  // vorab geladenes Puzzle hatte die alte Schwierigkeit
+    this.offlinePuzzlePool = [];   // Offline-Pool galt für die alte Schwierigkeit → neu füllen
+    this.saveOfflinePool();
+    this.prefetchOfflinePool();
     this.saveConfig();
   }
 

@@ -132,6 +132,16 @@
       "linkConflict": "Dieses Discord-Konto ist bereits mit einem anderen RookHub-Benutzer verknüpft.",
       "linkFailed": "Discord-Konto konnte nicht verknüpft werden",
       "stashed": "Melde dich an oder registriere dich, um die Discord-Verknüpfung abzuschließen."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Puzzles auf diesem Gerät speichern, um ohne Internet weiterzuspielen (pro Gerät).",
+      "puzzleCount": "Puzzles offline",
+      "endlessRuns": "Endless-Runs offline",
+      "cacheSize": "Cache-Größe",
+      "books": "{{count}} Bücher",
+      "clear": "Cache leeren",
+      "cleared": "Offline-Cache geleert"
     }
   },
   "friends": {
