@@ -64,17 +64,13 @@ public class PuzzleService
         int? minId, maxId;
         if (anyFilter)
         {
-            // ID-Range ueber die GEFILTERTE Menge bestimmen (eine Aggregat-Abfrage).
-            // Die globale Range wuerde randomId fast immer ausserhalb der gefilterten
-            // Treffer platzieren -> alle Versuche scheitern -> degenerierter Fallback,
-            // der stets dasselbe (erste) Puzzle liefert.
-            var range = await query
-                .GroupBy(_ => 1)
-                .Select(g => new { Min = g.Min(p => p.Id), Max = g.Max(p => p.Id) })
-                .FirstOrDefaultAsync();
-            if (range == null) return null; // leere gefilterte Menge
-            minId = range.Min;
-            maxId = range.Max;
+            // ID-Range ueber die GEFILTERTE Menge bestimmen. Min/Max-Aggregate statt
+            // GroupBy(_=>1)+FirstOrDefault — so entsteht KEIN "FirstOrDefault ohne OrderBy"
+            // (das Aggregat ist deterministisch). Die globale Range wuerde randomId fast immer
+            // ausserhalb der gefilterten Treffer platzieren -> degenerierter Always-First-Fallback.
+            if (!await query.AnyAsync()) return null; // leere gefilterte Menge
+            minId = await query.MinAsync(p => p.Id);
+            maxId = await query.MaxAsync(p => p.Id);
         }
         else
         {

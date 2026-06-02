@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.57.0';
+export const APP_VERSION = '0.57.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.57.1', date: '2026-06-02', changes: [
+    'Fix: Die EF-Core-Warnung „FirstOrDefault ohne OrderBy" wird jetzt an der Quelle behoben — die zufällige Puzzle-Auswahl ermittelt den ID-Bereich über deterministische Min/Max-Aggregate statt über GroupBy+FirstOrDefault. Die frühere Log-Unterdrückung dafür wurde wieder entfernt.',
+  ]},
   { version: '0.57.0', date: '2026-06-02', changes: [
     'Buch-Puzzle (Standalone, `/puzzles/book/:id`): zwei neue Buttons „Nächstes im Buch" (nächstes Puzzle in Buchreihenfolge, am Ende wieder vorne) und „Zufällig aus Buch". Neue Endpoints GET `/api/book-puzzles/{id}/next` + `/api/book-puzzles/{id}/random`. In Kurs-/Wochenpost-Ansicht weiterhin deren eigene Navigation.',
   ]},

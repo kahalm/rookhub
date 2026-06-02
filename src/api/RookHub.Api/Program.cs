@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RookHub.Api.Data;
@@ -59,11 +57,7 @@ try
     // Database
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-            // Die zufällige Puzzle-Auswahl nutzt bewusst FirstOrDefault ohne OrderBy (ID-Range/
-            // Aggregat-Query, deterministisch) — die EF-Warnung dazu ist hier ein False-Positive
-            // und wird auf Debug herabgestuft (statt jede Random-Abfrage als Warning zu loggen).
-            .ConfigureWarnings(w => w.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug))));
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
     // JWT Authentication
     var jwtKey = builder.Configuration["Jwt:Key"]
