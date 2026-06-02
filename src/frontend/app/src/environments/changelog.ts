@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.58.0';
+export const APP_VERSION = '0.67.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.67.0', date: '2026-06-03', changes: [
+    'Kibana-Dashboard stark erweitert (in Sektionen): Puzzle (Genauigkeit, Rating-Verteilung, Ø Zeit/Puzzle, Attempts je Viz-Level, Top-User nach Elo), Endless (Runs/Tag, Ø gelöste Puzzles, Max-Rating-Verteilung, Leaderboard), Kurse (Solves/Tag, je Buch, je User) und Betrieb (Feature-Nutzung nach Bereich, HTTP-Fehler über Zeit, langsamste Endpoints).',
+    'Neu „Unique Visits" statt der Login-Panels: eindeutige Besucher (eingeloggt via Username, anonym via Session-Id) als Metrik + Verlauf je Tag. „Recent Logs" zeigt jetzt Zeitstempel / Level / RequestPath / Message / Username.',
+    'API-Logging für die neuen Kennzahlen: strukturierte Events EndlessSessionCompleted + CoursePuzzleSolved; jeder Request loggt eine VisitorId (Username wenn eingeloggt, sonst die anonyme Session-Id aus dem neuen X-Visitor-Id-Header, den das Frontend setzt).',
+    'Dashboard-Deploy automatisiert: kibana-init ist jetzt ein gebautes Image (init-kibana.sh eingebacken) — Dashboard-Updates wandern beim `docker compose up -d --build` automatisch mit, ohne manuelles git pull / Container-Recreate.',
+  ]},
   { version: '0.58.0', date: '2026-06-02', changes: [
     'Grundlage Tagespuzzle-Anzeige: Lösungsversuche an Standalone-Buch-Puzzles werden für eingeloggte User erfasst (neue Endpoints POST `/api/book-puzzles/{id}/attempt` + GET `/api/book-puzzles/{id}/results` mit Solver-Liste inkl. Discord-Verknüpfung). Der Schach-Bot kann damit anzeigen, wer das Tagespuzzle gelöst hat.',
   ]},

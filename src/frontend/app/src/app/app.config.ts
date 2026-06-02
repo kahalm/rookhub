@@ -8,12 +8,13 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
 import { retryInterceptor } from './core/retry.interceptor';
+import { visitorInterceptor } from './core/visitor.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([retryInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([retryInterceptor, visitorInterceptor, authInterceptor])),
     provideAnimationsAsync(),
     // i18n (ngx-translate): JSON aus public/i18n/*.json, Fallback Englisch.
     provideTranslateService({

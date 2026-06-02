@@ -16,6 +16,7 @@ public class CourseControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly CourseController _controller;
+    private readonly CapturingLogger<CourseController> _logger = new();
     private const int UserId = 1;
 
     public CourseControllerTests()
@@ -24,7 +25,7 @@ public class CourseControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new CourseController(_db);
+        _controller = new CourseController(_db, _logger);
         SetUser(_controller, UserId);
     }
 
@@ -210,6 +211,24 @@ public class CourseControllerTests : IDisposable
 
         Assert.Equal(1, dto.SolvedCount);
         Assert.Equal(1, await _db.CoursePuzzleResults.CountAsync());
+    }
+
+    [Fact]
+    public async Task RecordResult_NewSolve_LogsCoursePuzzleSolvedOnce()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("Log", 2);
+
+        // Erster echter Solve -> genau ein CoursePuzzleSolved-Event (fuer Kibana: solves/Tag, je Buch, je User).
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+        var ev = Assert.Single(_logger.Events, e => e.Message.Contains("CoursePuzzleSolved"));
+        Assert.Equal(UserId, Assert.IsType<int>(ev.State["UserId"]));
+        Assert.Equal(book.Id, Assert.IsType<int>(ev.State["BookId"]));
+        Assert.Equal(ids[0], Assert.IsType<int>(ev.State["BookPuzzleId"]));
+
+        // Wiederholung desselben Puzzles -> kein zweiter Event (idempotent, kein Doppel-Log).
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+        Assert.Single(_logger.Events, e => e.Message.Contains("CoursePuzzleSolved"));
     }
 
     [Fact]

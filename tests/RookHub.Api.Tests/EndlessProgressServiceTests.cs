@@ -10,6 +10,7 @@ public class EndlessProgressServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly EndlessProgressService _service;
+    private readonly CapturingLogger<EndlessProgressService> _logger = new();
 
     public EndlessProgressServiceTests()
     {
@@ -17,7 +18,7 @@ public class EndlessProgressServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new EndlessProgressService(_db);
+        _service = new EndlessProgressService(_db, _logger);
     }
 
     public void Dispose() => _db.Dispose();
@@ -145,6 +146,21 @@ public class EndlessProgressServiceTests : IDisposable
         var dbSession = await _db.EndlessSessions.FindAsync(result.Id);
         Assert.NotNull(dbSession);
         Assert.Equal(dto.TotalSolved, dbSession.TotalSolved);
+    }
+
+    [Fact]
+    public async Task RecordSession_LogsEndlessSessionCompletedWithStats()
+    {
+        var userId = await CreateUserAsync();
+        var dto = MakeSessionDto(maxRating: 1500);
+
+        await _service.RecordSessionAsync(userId, dto);
+
+        // Kibana wertet messageTemplate "EndlessSessionCompleted" + fields.UserId/TotalSolved/MaxRating aus.
+        var ev = Assert.Single(_logger.Events, e => e.Message.Contains("EndlessSessionCompleted"));
+        Assert.Equal(userId, Assert.IsType<int>(ev.State["UserId"]));
+        Assert.Equal(dto.TotalSolved, Assert.IsType<int>(ev.State["TotalSolved"]));
+        Assert.Equal(1500, Assert.IsType<int>(ev.State["MaxRating"]));
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -20,8 +21,13 @@ namespace RookHub.Api.Controllers;
 public class CourseController : BaseApiController
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<CourseController> _logger;
 
-    public CourseController(AppDbContext db) => _db = db;
+    public CourseController(AppDbContext db, ILogger<CourseController> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     private static string NormalizeMode(string? mode) =>
         (mode ?? string.Empty).Trim().ToLowerInvariant() == "random" ? "random" : "sequential";
@@ -180,6 +186,7 @@ public class CourseController : BaseApiController
         if (!belongsToBook)
             return NotFound(new { message = "Puzzle does not belong to this book." });
 
+        var newSolve = false;
         if (dto.Solved)
         {
             var already = await _db.CoursePuzzleResults
@@ -193,6 +200,7 @@ public class CourseController : BaseApiController
                     BookPuzzleId = dto.BookPuzzleId,
                     SolvedAt = DateTime.UtcNow,
                 });
+                newSolve = true;
             }
         }
 
@@ -206,7 +214,15 @@ public class CourseController : BaseApiController
         {
             // Race: paralleles Aufzeichnen desselben Puzzles -> Unique-Index (UserId, BookPuzzleId).
             // Idempotent behandeln: Fortschritt unten frisch aus der DB lesen.
+            newSolve = false;
         }
+
+        // Strukturierter Event fuer Kibana: geloeste Buch-Puzzle/Tag, je Buch, je User.
+        // Nur bei echtem Neu-Solve (idempotent: kein Doppel-Log bei Wiederholung/Race).
+        if (newSolve)
+            _logger.LogInformation(
+                "CoursePuzzleSolved: User {UserId} solved book {BookId} puzzle {BookPuzzleId}",
+                userId, bookId, dto.BookPuzzleId);
 
         return Ok(await BuildProgressAsync(userId, bookId));
     }

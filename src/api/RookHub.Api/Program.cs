@@ -248,7 +248,7 @@ try
     // Nach UseAuthentication, damit HttpContext.User bereits gesetzt ist.
     app.Use(async (ctx, next) =>
     {
-        var scopes = new List<IDisposable>(3);
+        var scopes = new List<IDisposable>(4);
         var ip = ctx.Connection.RemoteIpAddress?.ToString();
         if (!string.IsNullOrEmpty(ip))
             scopes.Add(LogContext.PushProperty("IpAddress", ip));
@@ -260,6 +260,14 @@ try
             if (!string.IsNullOrEmpty(ctx.User.Identity.Name))
                 scopes.Add(LogContext.PushProperty("UserName", ctx.User.Identity.Name));
         }
+        // VisitorId fuer Kibana „Unique Visits": Username (eingeloggt) sonst validierte Anon-Session-Id
+        // aus dem X-Visitor-Id-Header. So zaehlen eingeloggte UND anonyme Besucher in EINEM Feld.
+        var visitorId = RookHub.Api.Logging.VisitorIdResolver.Resolve(
+            ctx.User?.Identity?.IsAuthenticated == true,
+            ctx.User?.Identity?.Name,
+            ctx.Request.Headers[RookHub.Api.Logging.VisitorIdResolver.HeaderName].FirstOrDefault());
+        if (!string.IsNullOrEmpty(visitorId))
+            scopes.Add(LogContext.PushProperty("VisitorId", visitorId));
         try { await next(); }
         finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
     });
