@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -31,7 +32,7 @@ public class AuthControllerTests : IDisposable
             })
             .Build();
 
-        _authService = new AuthService(_db, config);
+        _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance);
         _controller = new AuthController(_authService);
     }
 

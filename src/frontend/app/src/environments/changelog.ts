@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.53.0';
+export const APP_VERSION = '0.55.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.55.0', date: '2026-06-02', changes: [
+    'Kibana-Logging-Dashboard erweitert: neue Panels „Logins per Day" (erfolgreiche Logins pro Tag) und „Unique Logins" (eindeutige User pro Zeitraum) neben den bestehenden Puzzle-Kennzahlen (Puzzles Solved, Puzzles per User).',
+    'API: Erfolgreiche Logins erzeugen jetzt einen strukturierten Log-Event („UserLogin" mit UserId/UserName) — Grundlage für die Login- und Unique-Login-Auswertung in Kibana.',
+  ]},
   { version: '0.53.0', date: '2026-06-02', changes: [
     'Analysebrett: Pfeile/Kreise (Rechtsklick-Ziehen) funktionieren jetzt zuverlässig — Engine-Updates verwerfen die Zeichnung nicht mehr (Brett wird nur bei echten Stellungsänderungen neu gesetzt).',
     'Pfeile/Kreise jetzt auch auf den Puzzle-Brettern (Standard, Buch, Kurs, Wochenpost, Endless, Blind) per Rechtsklick-Ziehen.',
