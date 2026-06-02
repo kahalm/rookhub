@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.65.0';
+export const APP_VERSION = '0.66.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.66.0', date: '2026-06-02', changes: [
+    'Schach-Engine (Stockfish) funktioniert jetzt auch offline: Die Engine-Dateien werden vom Service Worker vorab gecacht, sodass Analyse, Bewertungsanzeige und Eval-Bar ohne Internet laufen. (Der frühere „Berechne…"-Hänger lag nicht am Offline-Caching, sondern an der Befehlsreihenfolge zur Engine und ist seit 0.64.2 behoben; greift dennoch etwas daneben, springt die Selbstheilung + Hänger-Watchdog ein.)',
+  ]},
   { version: '0.65.0', date: '2026-06-02', changes: [
     'Engine-Diagnostik: Browser-Stockfish-Crashes und -Hänger werden jetzt erkannt und an den Server gemeldet (neuer Endpoint POST /api/client-log → strukturiert in Elasticsearch/Kibana). Erfasst werden Worker-Absturz, fehlgeschlagene Engine-Initialisierung, abgebrochene Suchen (Timeout) und – im Analyse-Modus – ein „Hänger"-Watchdog (keine Berechnungs-Ergebnisse nach Start) inkl. automatischem Neustart. So sieht man in Kibana, wie oft die Engine bei echten Nutzern Probleme macht. (Meldungen pro Art gedrosselt.)',
   ]},
