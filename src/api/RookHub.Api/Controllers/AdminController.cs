@@ -185,6 +185,7 @@ public class AdminController : BaseApiController
             result.Books.Add(item);
             result.TotalImported += item.Imported;
             result.TotalSkipped += item.Skipped;
+            result.TotalInvalid += item.Invalid;
         }
         return Ok(result);
     }

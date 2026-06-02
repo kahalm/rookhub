@@ -56,6 +56,8 @@ public class BookImportResultDto
     public List<BookImportItemDto> Books { get; set; } = new();
     public int TotalImported { get; set; }
     public int TotalSkipped { get; set; }
+    /// <summary>Spiele, die der Parser verworfen hat (kein FEN/Round, keine Mainline, Grundstellung ohne [%tqu]).</summary>
+    public int TotalInvalid { get; set; }
 }
 
 public class BookImportItemDto
@@ -63,5 +65,8 @@ public class BookImportItemDto
     public int BookId { get; set; }
     public string FileName { get; set; } = string.Empty;
     public int Imported { get; set; }
+    /// <summary>Duplikate (LineId schon in DB oder im selben Batch doppelt).</summary>
     public int Skipped { get; set; }
+    /// <summary>Spiele, die der Parser verworfen hat (kein FEN/Round, keine Mainline, Grundstellung ohne [%tqu]).</summary>
+    public int Invalid { get; set; }
 }

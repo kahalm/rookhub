@@ -682,6 +682,9 @@
       "deleteConfirm": "Izbrisati knjigu \"{{name}}\" s {{count}} zagonetki?",
       "deleted": "Knjiga \"{{name}}\" izbrisana",
       "imported": "{{imported}} zagonetki uvezeno, {{skipped}} preskočeno",
+      "importedCount": "{{count}} zagonetki uvezeno",
+      "duplicatesCount": "{{count}} duplikata",
+      "invalidCount": "{{count}} nevažeće",
       "columns": {
         "book": "Knjiga",
         "puzzles": "Zagonetke",

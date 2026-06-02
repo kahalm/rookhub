@@ -74,7 +74,7 @@ public class WeeklyPostController : BaseApiController
         if (w == null)
             return NotFound(new { message = "Weekly post not found." });
 
-        var parsed = PgnImportService.ParsePgn(w.FileName, w.PgnContent);
+        var parsed = PgnImportService.ParsePgn(w.FileName, w.PgnContent).Puzzles;
         var puzzles = parsed.Select((p, i) => new BookPuzzleDto
         {
             Id = i,                       // lokaler Index (kein DB-Datensatz)

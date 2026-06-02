@@ -64,9 +64,10 @@ export interface UpdateBook {
 }
 
 export interface BookImportResult {
-  books: { bookId: number; fileName: string; imported: number; skipped: number }[];
+  books: { bookId: number; fileName: string; imported: number; skipped: number; invalid: number }[];
   totalImported: number;
   totalSkipped: number;
+  totalInvalid: number;
 }
 
 export interface Group {

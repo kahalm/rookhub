@@ -682,6 +682,9 @@
       "deleteConfirm": "Delete book \"{{name}}\" with {{count}} puzzle(s)?",
       "deleted": "Book \"{{name}}\" deleted",
       "imported": "{{imported}} puzzle(s) imported, {{skipped}} skipped",
+      "importedCount": "{{count}} puzzle(s) imported",
+      "duplicatesCount": "{{count}} duplicate(s)",
+      "invalidCount": "{{count}} invalid",
       "columns": {
         "book": "Book",
         "puzzles": "Puzzles",

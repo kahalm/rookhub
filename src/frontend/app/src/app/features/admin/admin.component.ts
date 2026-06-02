@@ -639,7 +639,10 @@ export class AdminComponent implements OnInit {
     this.booksUploading = true;
     this.adminService.importBooks(input.files).subscribe({
       next: res => {
-        this.snackBar.open(this.translate.instant('admin.books.imported', { imported: res.totalImported, skipped: res.totalSkipped }), this.translate.instant('common.close'), { duration: 4000 });
+        const parts = [this.translate.instant('admin.books.importedCount', { count: res.totalImported })];
+        if (res.totalSkipped > 0) parts.push(this.translate.instant('admin.books.duplicatesCount', { count: res.totalSkipped }));
+        if (res.totalInvalid > 0) parts.push(this.translate.instant('admin.books.invalidCount', { count: res.totalInvalid }));
+        this.snackBar.open(parts.join(', '), this.translate.instant('common.close'), { duration: 6000 });
         this.booksUploading = false;
         input.value = '';
         this.loadBooks();

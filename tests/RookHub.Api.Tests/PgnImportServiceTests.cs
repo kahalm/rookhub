@@ -35,9 +35,10 @@ public class PgnImportServiceTests : IDisposable
     [Fact]
     public void ParsePgn_ExtractsMainlineAsUci_StrippingVariationsNagsNumbers()
     {
-        var puzzles = PgnImportService.ParsePgn("book.pgn", SamplePgn);
+        var (puzzles, invalid) = PgnImportService.ParsePgn("book.pgn", SamplePgn);
 
         var p = Assert.Single(puzzles);
+        Assert.Equal(0, invalid);
         Assert.Equal("book.pgn:1.1", p.LineId);
         Assert.Equal("1.1", p.Round);
         Assert.Equal("g1f3 b8c6 f1b5 a7a6", p.Moves);   // variation (2... d6) entfernt
@@ -56,7 +57,7 @@ public class PgnImportServiceTests : IDisposable
 
 1. a8=Q+ Kb2 *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("p.pgn", pgn));
+        var p = Assert.Single(PgnImportService.ParsePgn("p.pgn", pgn).Puzzles);
         Assert.Equal("a7a8q a1b2", p.Moves);
     }
 
@@ -70,7 +71,7 @@ public class PgnImportServiceTests : IDisposable
 
 1. O-O O-O-O *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn));
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
         Assert.Equal("e1g1 e8c8", p.Moves);
     }
 
@@ -94,7 +95,9 @@ public class PgnImportServiceTests : IDisposable
 
 1. e4 *
 ";
-        Assert.Empty(PgnImportService.ParsePgn("skip.pgn", pgn));
+        var skipResult = PgnImportService.ParsePgn("skip.pgn", pgn);
+        Assert.Empty(skipResult.Puzzles);
+        Assert.Equal(3, skipResult.Invalid); // alle drei Eintraege zaehlen als "Invalid"
     }
 
     [Fact]
@@ -108,7 +111,9 @@ public class PgnImportServiceTests : IDisposable
 1. Qh5 *
 ";
         // Qh5 ist aus der Grundstellung illegal → Eintrag wird übersprungen, nicht geworfen.
-        Assert.Empty(PgnImportService.ParsePgn("bad.pgn", pgn));
+        var bad = PgnImportService.ParsePgn("bad.pgn", pgn);
+        Assert.Empty(bad.Puzzles);
+        Assert.Equal(1, bad.Invalid);
     }
 
     [Fact]
@@ -128,11 +133,12 @@ public class PgnImportServiceTests : IDisposable
 
 1. a4 *
 ";
-        var puzzles = PgnImportService.ParsePgn("multi.pgn", pgn);
-        Assert.Equal(2, puzzles.Count);
-        Assert.Equal("g2g4", puzzles[0].Moves);
-        Assert.Equal("a2a4", puzzles[1].Moves);
-        Assert.Equal(-1, puzzles[0].StartPly);
+        var multi = PgnImportService.ParsePgn("multi.pgn", pgn);
+        Assert.Equal(2, multi.Puzzles.Count);
+        Assert.Equal(0, multi.Invalid);
+        Assert.Equal("g2g4", multi.Puzzles[0].Moves);
+        Assert.Equal("a2a4", multi.Puzzles[1].Moves);
+        Assert.Equal(-1, multi.Puzzles[0].StartPly);
     }
 
     [Fact]
@@ -146,7 +152,7 @@ public class PgnImportServiceTests : IDisposable
 
 1. e4 e5 2. Nf3 Nc6 {[%tqu ""En"",""find"","""","""",""f1b5"","""",10]} 3. Bb5 a6 *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
         // Ganze Partie bleibt erhalten:
         Assert.Equal("e2e4 e7e5 g1f3 b8c6 f1b5 a7a6", p.Moves);
         Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);
@@ -165,7 +171,7 @@ public class PgnImportServiceTests : IDisposable
 
 {[%tqu ""En"",""find"",""""]} 1. Ng5 d5 *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
         Assert.Equal("f3g5 d7d5", p.Moves);
         Assert.Equal(-1, p.StartPly);
     }
@@ -181,7 +187,7 @@ public class PgnImportServiceTests : IDisposable
 
 1. Bxa7 *
 ";
-        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn));
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
         Assert.Equal(-1, p.StartPly);
         Assert.Equal("e3a7", p.Moves);
     }
@@ -197,7 +203,9 @@ public class PgnImportServiceTests : IDisposable
 
 1. e4 e5 2. Nf3 *
 ";
-        Assert.Empty(PgnImportService.ParsePgn("t.pgn", pgn));
+        var startSkip = PgnImportService.ParsePgn("t.pgn", pgn);
+        Assert.Empty(startSkip.Puzzles);
+        Assert.Equal(1, startSkip.Invalid);
     }
 
     [Fact]
@@ -215,6 +223,7 @@ public class PgnImportServiceTests : IDisposable
 
         Assert.Equal(1, item.Imported);
         Assert.Equal(0, item.Skipped);
+        Assert.Equal(0, item.Invalid);
 
         var book = await _db.Books.SingleAsync();
         Assert.Equal("Test Book_firstkey.pgn", book.FileName);
@@ -233,7 +242,43 @@ public class PgnImportServiceTests : IDisposable
 
         Assert.Equal(0, second.Imported);
         Assert.Equal(1, second.Skipped);
+        Assert.Equal(0, second.Invalid);
         Assert.Equal(1, await _db.BookPuzzles.CountAsync());
         Assert.Equal(1, await _db.Books.CountAsync()); // kein zweites Buch
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CountsParseSkipsAsInvalid()
+    {
+        // Mix: 1 gueltiges Puzzle + 2 parse-skipped (kein Round + Grundstellung-ohne-Marker)
+        // + 1 Duplikat des ersten Puzzles → Imported=1, Skipped=1, Invalid=2.
+        var pgn = @"
+[Event ""Mix""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ *
+
+[Event ""NoRound""]
+[FEN ""8/8/8/8/8/8/PP6/K7 w - - 0 1""]
+
+1. a4 *
+
+[Event ""StartFenNoMarker""]
+[Round ""2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+1. e4 *
+
+[Event ""DupOfFirst""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ *
+";
+        var item = await _service.ImportFileAsync("mix.pgn", pgn, default);
+        Assert.Equal(1, item.Imported);
+        Assert.Equal(1, item.Skipped);  // Duplikat innerhalb des Batches
+        Assert.Equal(2, item.Invalid);  // NoRound + StartFenNoMarker
     }
 }

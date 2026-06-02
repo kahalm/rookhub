@@ -682,6 +682,9 @@
       "deleteConfirm": "Buch \"{{name}}\" mit {{count}} Puzzle(s) löschen?",
       "deleted": "Buch \"{{name}}\" gelöscht",
       "imported": "{{imported}} Puzzle(s) importiert, {{skipped}} übersprungen",
+      "importedCount": "{{count}} Puzzle(s) importiert",
+      "duplicatesCount": "{{count}} Duplikat(e)",
+      "invalidCount": "{{count}} ungültig",
       "columns": {
         "book": "Buch",
         "puzzles": "Puzzles",

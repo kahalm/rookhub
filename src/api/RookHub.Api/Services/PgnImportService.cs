@@ -39,6 +39,13 @@ public partial class PgnImportService
         string LineId, string Round, string Fen, string Moves, int StartPly,
         string? Title, string? Chapter, string? Comment);
 
+    /// <summary>
+    /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
+    /// fehlender/ungültiger Felder verworfen wurden (kein FEN/Round, keine spielbare
+    /// Mainline, Grundstellung ohne Trainingsmarker etc.).
+    /// </summary>
+    public record ParseResult(List<ParsedPuzzle> Puzzles, int Invalid);
+
     /// <summary>Entfernt PGN-Suffixe für den Anzeigenamen (wie schach-bot _clean_book_name).</summary>
     public static string CleanDisplayName(string fileName)
     {
@@ -51,22 +58,24 @@ public partial class PgnImportService
 
     /// <summary>
     /// Parst einen PGN-Text in eine Liste von Puzzles. Reine Funktion (kein DB-Zugriff).
-    /// Ungültige/unparsebare Einträge werden übersprungen, nicht geworfen.
+    /// Ungültige/unparsebare Einträge werden übersprungen und in <see cref="ParseResult.Invalid"/>
+    /// gezählt, nicht geworfen.
     /// </summary>
-    public static List<ParsedPuzzle> ParsePgn(string fileName, string pgnText)
+    public static ParseResult ParsePgn(string fileName, string pgnText)
     {
         var result = new List<ParsedPuzzle>();
+        var invalid = 0;
         foreach (var (headers, moveText) in SplitGames(pgnText))
         {
             var fen = headers.GetValueOrDefault("FEN", "").Trim();
             var round = headers.GetValueOrDefault("Round", "").Trim();
             // Skip-Regeln wie import_books.py
-            if (string.IsNullOrEmpty(fen) || fen == "?") continue;
-            if (string.IsNullOrEmpty(round) || round == "?") continue;
+            if (string.IsNullOrEmpty(fen) || fen == "?") { invalid++; continue; }
+            if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
 
             var comment = ExtractFirstComment(moveText);
             var uci = TryExtractUciMainline(fen, moveText);
-            if (uci == null || uci.Count == 0) continue;
+            if (uci == null || uci.Count == 0) { invalid++; continue; }
 
             // Trainingsstart bestimmen. Zwei Buch-Typen kommen vor:
             //  (a) Mid-line-[%tqu]: ganze Partie ab Grundstellung, der Marker hängt an Zug k
@@ -83,7 +92,7 @@ public partial class PgnImportService
             }
             else
             {
-                if (IsStartPosition(fen)) continue;
+                if (IsStartPosition(fen)) { invalid++; continue; }
                 startPly = -1;
             }
 
@@ -100,7 +109,7 @@ public partial class PgnImportService
                 Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
                 Comment: comment));
         }
-        return result;
+        return new ParseResult(result, invalid);
     }
 
     // ---- Spiel-Splitting (Header-Block + Movetext) ------------------------
@@ -289,7 +298,7 @@ public partial class PgnImportService
     /// <summary>Parst eine Datei und legt Book + BookPuzzles an (Dedup per LineId).</summary>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
     {
-        var parsed = ParsePgn(fileName, pgnText);
+        var (parsed, invalid) = ParsePgn(fileName, pgnText);
         var now = DateTime.UtcNow;
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.FileName == fileName, ct);
@@ -346,6 +355,7 @@ public partial class PgnImportService
             FileName = fileName,
             Imported = toAdd.Count,
             Skipped = skipped,
+            Invalid = invalid,
         };
     }
 }
