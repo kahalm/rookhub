@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.46.2';
+export const APP_VERSION = '0.47.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.47.0', date: '2026-06-02', changes: [
+    'Neu (Analyse): Eigenständiger Analysemodus (Menü „Analyse", öffentlich) à la Lichess — Brett mit freiem Ziehen beider Seiten, lokale Stockfish-Engine mit konfigurierbarer Anzahl Top-Lines (1–5, Standard 3) inkl. Eval und SAN-Zugfolge, Eval-Bar, beste Züge als Pfeile, eigene Pfeile/Kreise per Rechtsklick-Ziehen (chessground). Zugliste mit Durchklicken + Tastatur (←/→/Pos1/Ende), Brett drehen, FEN laden/kopieren, PGN laden. (Phase 1; Varianten-Baum & „Analysieren"-Button folgen.)',
+  ]},
   { version: '0.46.2', date: '2026-06-02', changes: [
     'Buch-/Kurs-/Wochenpost-Puzzles: „Aufgeben" wechselt jetzt auf die Anfangsstellung und spielt die Lösung automatisch Zug für Zug durch (statt sie selbst spielen zu lassen). Manuelles Vor-/Zurückklicken stoppt die Wiedergabe; „Nochmal" startet das Puzzle neu.',
   ]},

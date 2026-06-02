@@ -30,7 +30,8 @@
     "register": "Registrieren",
     "language": "Sprache",
     "menu": "Menü",
-    "info": "Info"
+    "info": "Info",
+    "analysis": "Analyse"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -736,5 +737,22 @@
         "load": "Logs konnten nicht geladen werden"
       }
     }
+  },
+  "analysis": {
+    "title": "Analyse",
+    "engine": "Engine",
+    "depth": "Tiefe",
+    "lines": "Linien",
+    "calculating": "Berechne…",
+    "engineOff": "Engine aus",
+    "start": "Start",
+    "flip": "Brett drehen",
+    "reset": "Zurücksetzen",
+    "noMoves": "Noch keine Züge — zieh auf dem Brett.",
+    "fen": "FEN",
+    "loadFen": "FEN laden",
+    "copyFen": "FEN kopieren",
+    "pgn": "PGN",
+    "loadPgn": "PGN laden"
   }
 }
