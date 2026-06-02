@@ -21,12 +21,16 @@ import { LocaleService } from '../../core/locale.service';
       @if (auth.isLoggedIn) {
         <div class="nav-links">
           <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
+          @if (auth.isAdmin) {
+            <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
+          }
           <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
           <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
+          @if (auth.isAdmin) {
+            <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
+          }
           @if (showCourses) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
@@ -39,12 +43,16 @@ import { LocaleService } from '../../core/locale.service';
         </button>
         <mat-menu #navMenu="matMenu">
           <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
+          @if (auth.isAdmin) {
+            <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
+          }
           <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
           <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
+          @if (auth.isAdmin) {
+            <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
+          }
           @if (showCourses) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
@@ -68,7 +76,6 @@ import { LocaleService } from '../../core/locale.service';
       } @else {
         <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
         <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-        <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
         <button mat-icon-button (click)="quickstartClick.emit()" aria-label="Info">
           <mat-icon>info_outline</mat-icon>
         </button>

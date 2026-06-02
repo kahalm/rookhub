@@ -311,7 +311,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.52.0` (Statistik „Alle" zeigt Kurve je Modus; „Analysieren"-Button bei Puzzles; Puzzle-Aufgeben spielt Lösung durch; Discord-Konto-Verknüpfung; User-Statistikseite; Analysemodus; Frontend mehrsprachig en/de/hr)
+- **Aktuelle Version**: `0.52.1` (Repertoires + Wochenpost vorerst nur Admin; Statistik „Alle" zeigt Kurve je Modus; „Analysieren"-Button bei Puzzles; Puzzle-Aufgeben spielt Lösung durch; Discord-Konto-Verknüpfung; User-Statistikseite; Analysemodus; Frontend mehrsprachig en/de/hr)
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

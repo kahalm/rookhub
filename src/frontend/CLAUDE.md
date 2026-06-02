@@ -63,14 +63,14 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/dashboard` | DashboardComponent | ja |
 | `/profile` | ProfileComponent | ja |
 | `/friends` | FriendsComponent | ja |
-| `/repertoires` | RepertoireListComponent | ja |
-| `/repertoires/:id` | RepertoireDetailComponent | ja |
+| `/repertoires` | RepertoireListComponent | `adminGuard` (vorerst nur Admin) |
+| `/repertoires/:id` | RepertoireDetailComponent | `adminGuard` (vorerst nur Admin) |
 | `/tournaments` | TournamentListComponent | ja |
 | `/tournaments/:id` | TournamentDetailComponent | ja |
-| `/weekly` | WeeklyListComponent | nein (öffentlich; Verwalten nur Admin) |
+| `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |
 | `/analysis` | AnalysisComponent | nein (öffentlich; lokale Stockfish-MultiPV-Analyse) |
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |
-| `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | nein (öffentlich) |
+| `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
 | `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
 | `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
 | `/` | redirect -> `/dashboard` | - |

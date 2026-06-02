@@ -54,16 +54,18 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
           </mat-card-actions>
         </mat-card>
 
-        <mat-card>
-          <mat-card-header>
-            <mat-icon mat-card-avatar>library_books</mat-icon>
-            <mat-card-title>{{ 'dashboard.repertoires.title' | translate }}</mat-card-title>
-            <mat-card-subtitle>{{ 'dashboard.repertoires.count' | translate:{ count: repertoireCount } }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-actions>
-            <button mat-button routerLink="/repertoires">{{ 'dashboard.repertoires.viewAll' | translate }}</button>
-          </mat-card-actions>
-        </mat-card>
+        @if (auth.isAdmin) {
+          <mat-card>
+            <mat-card-header>
+              <mat-icon mat-card-avatar>library_books</mat-icon>
+              <mat-card-title>{{ 'dashboard.repertoires.title' | translate }}</mat-card-title>
+              <mat-card-subtitle>{{ 'dashboard.repertoires.count' | translate:{ count: repertoireCount } }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-actions>
+              <button mat-button routerLink="/repertoires">{{ 'dashboard.repertoires.viewAll' | translate }}</button>
+            </mat-card-actions>
+          </mat-card>
+        }
       </div>
 
       @if (subscriptions.length > 0) {

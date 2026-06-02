@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.52.0';
+export const APP_VERSION = '0.52.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.52.1', date: '2026-06-02', changes: [
+    'Menüpunkte „Repertoires" und „Wochenpost" sind vorerst nur für Admins sichtbar/erreichbar (Navigation ausgeblendet, Routen per adminGuard geschützt, Dashboard-Repertoire-Kachel nur für Admins). Die Lese-API der Wochenposts bleibt unverändert.',
+  ]},
   { version: '0.52.0', date: '2026-06-02', changes: [
     'Statistik: Bei Level „Alle" wird die Elo-Kurve jetzt pro Visualisierungs-Modus getrennt als eigener Graph angezeigt (ein Graph je Modus, sofern dort mind. 2 Einträge vorliegen) — statt einer modus-übergreifenden Mischkurve. Einzelne Level zeigen weiterhin ihre eigene Kurve.',
   ]},
