@@ -598,6 +598,8 @@
       "skip": "Skip",
       "viewFullGame": "View full game",
       "analyze": "Analyze",
+      "nextInBook": "Next in book",
+      "randomInBook": "Random from book",
       "sharePuzzle": "Share puzzle",
       "backToPuzzle": "Back to puzzle"
     },

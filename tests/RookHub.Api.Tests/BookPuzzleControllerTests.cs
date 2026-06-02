@@ -69,6 +69,44 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetNextInBook_ReturnsNextInSameBook_WrapsAtEnd()
+    {
+        var p1 = await CreateBookPuzzleAsync(lineId: "b.pgn:1", bookFileName: "b.pgn", round: "1");
+        var p2 = await CreateBookPuzzleAsync(lineId: "b.pgn:2", bookFileName: "b.pgn", round: "2");
+        var p3 = await CreateBookPuzzleAsync(lineId: "b.pgn:3", bookFileName: "b.pgn", round: "3");
+        await CreateBookPuzzleAsync(lineId: "other.pgn:1", bookFileName: "other.pgn", round: "1"); // anderes Buch
+
+        var next = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetNextInBook(p1.Id)).Value);
+        Assert.Equal(p2.Id, next.Id);
+
+        var wrap = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetNextInBook(p3.Id)).Value);
+        Assert.Equal(p1.Id, wrap.Id);   // am Ende → erstes Puzzle des Buchs
+    }
+
+    [Fact]
+    public async Task GetRandomInBook_ReturnsOtherPuzzleFromSameBook()
+    {
+        var p1 = await CreateBookPuzzleAsync(lineId: "b.pgn:1", bookFileName: "b.pgn");
+        var p2 = await CreateBookPuzzleAsync(lineId: "b.pgn:2", bookFileName: "b.pgn");
+        await CreateBookPuzzleAsync(lineId: "other.pgn:1", bookFileName: "other.pgn"); // darf nicht kommen
+
+        var r = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetRandomInBook(p1.Id)).Value);
+        Assert.Equal(p2.Id, r.Id);   // einziges anderes im selben Buch
+    }
+
+    [Fact]
+    public async Task GetRandomInBook_SinglePuzzle_ReturnsItself()
+    {
+        var p1 = await CreateBookPuzzleAsync(lineId: "solo.pgn:1", bookFileName: "solo.pgn");
+        var r = Assert.IsType<BookPuzzleDto>(((OkObjectResult)await _controller.GetRandomInBook(p1.Id)).Value);
+        Assert.Equal(p1.Id, r.Id);
+    }
+
+    [Fact]
+    public async Task GetNextInBook_NotFound_WhenMissing()
+        => Assert.IsType<NotFoundObjectResult>(await _controller.GetNextInBook(99999));
+
+    [Fact]
     public async Task GetById_ReturnsPuzzle()
     {
         var puzzle = await CreateBookPuzzleAsync();

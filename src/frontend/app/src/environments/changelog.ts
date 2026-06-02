@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.56.0';
+export const APP_VERSION = '0.57.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.57.0', date: '2026-06-02', changes: [
+    'Buch-Puzzle (Standalone, `/puzzles/book/:id`): zwei neue Buttons „Nächstes im Buch" (nächstes Puzzle in Buchreihenfolge, am Ende wieder vorne) und „Zufällig aus Buch". Neue Endpoints GET `/api/book-puzzles/{id}/next` + `/api/book-puzzles/{id}/random`. In Kurs-/Wochenpost-Ansicht weiterhin deren eigene Navigation.',
+  ]},
   { version: '0.56.0', date: '2026-06-02', changes: [
     'Statistik „Alle": Die Elo-Kurven aller Visualisierungs-Modi werden jetzt in EINER Grafik überlagert (gemeinsame Skala, je Modus farbkodiert) mit kleiner Legende — statt getrennter Mini-Charts.',
   ]},

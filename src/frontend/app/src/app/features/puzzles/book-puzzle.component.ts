@@ -294,6 +294,16 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                   <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
                     <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
                   </button>
+                  @if (standalone) {
+                    <div class="book-nav">
+                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                      </button>
+                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                      </button>
+                    </div>
+                  }
                 </div>
               </mat-card-content>
             </mat-card>
@@ -380,6 +390,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; }
     .share-puzzle-btn { margin-top: 0.5rem; }
+    .book-nav { display: flex; gap: 8px; margin-top: 0.5rem; flex-wrap: wrap; }
+    .book-nav button { flex: 1; min-width: 130px; }
     .meta-title { font-weight: bold; font-size: 1.1em; margin: 0; }
     .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; }
     .meta-comment { font-style: italic; color: rgba(0,0,0,0.6); margin: 0; font-size: 0.9em; }
@@ -502,6 +514,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   reviewIndex = 0;
   solutionReview = false;
 
+  /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
+  get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
+  bookNavLoading = false;
+
   get displayBookName(): string {
     if (!this.puzzle) return '';
     return this.puzzle.bookFileName.replace(/_firstkey\.pgn$/, '').replace(/_/g, ' ');
@@ -550,6 +566,34 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         from: this.router.url.split('?')[0],   // zurück zum aktuellen Buch-/Kurs-/Wochenpost-Puzzle
       },
     });
+  }
+
+  /** Nächstes Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
+  nextInBook(): void {
+    if (!this.puzzle || this.bookNavLoading) return;
+    this.bookNavLoading = true;
+    this.puzzleService.getNextBookPuzzle(this.puzzle.id).subscribe({
+      next: p => this.goToBookPuzzle(p),
+      error: () => { this.bookNavLoading = false; }
+    });
+  }
+
+  /** Zufälliges Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
+  randomInBook(): void {
+    if (!this.puzzle || this.bookNavLoading) return;
+    this.bookNavLoading = true;
+    this.puzzleService.getRandomBookPuzzle(this.puzzle.id).subscribe({
+      next: p => this.goToBookPuzzle(p),
+      error: () => { this.bookNavLoading = false; }
+    });
+  }
+
+  private goToBookPuzzle(p: BookPuzzleDto): void {
+    this.bookNavLoading = false;
+    this.clearSolutionPlay();
+    this.router.navigate(['/puzzles/book', p.id]);   // URL aktualisieren (Komponente wird wiederverwendet)
+    this.puzzle = p;
+    this.setupPuzzle(p);
   }
 
   // ===== Hooks für BasePuzzleSolver =====

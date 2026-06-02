@@ -166,6 +166,16 @@ export class PuzzleService {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
   }
 
+  /** Nächstes Puzzle im selben Buch (Standalone-Buch-Navigation). */
+  getNextBookPuzzle(id: number): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/next`);
+  }
+
+  /** Zufälliges Puzzle aus demselben Buch. */
+  getRandomBookPuzzle(id: number): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/random`);
+  }
+
   getBookList(): Observable<BookInfoDto[]> {
     return this.http.get<BookInfoDto[]>('/api/book-puzzles/books');
   }

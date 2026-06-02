@@ -27,6 +27,44 @@ public class BookPuzzleController : BaseApiController
         return Ok(MapToDto(puzzle));
     }
 
+    /// <summary>Nächstes Puzzle im selben Buch (Id-Reihenfolge = Buchreihenfolge); am Ende wieder das erste.</summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/next")]
+    public async Task<IActionResult> GetNextInBook(int id)
+    {
+        var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id);
+        if (current == null)
+            return NotFound(new { message = "Book puzzle not found." });
+
+        var siblings = BookSiblings(current).Include(bp => bp.Book);
+        var next = await siblings.Where(bp => bp.Id > current.Id).OrderBy(bp => bp.Id).FirstOrDefaultAsync()
+                   ?? await siblings.OrderBy(bp => bp.Id).FirstOrDefaultAsync();   // am Ende → erstes (Loop)
+        return next == null ? NotFound(new { message = "No puzzles in book." }) : Ok(MapToDto(next));
+    }
+
+    /// <summary>Zufälliges Puzzle aus demselben Buch (möglichst nicht das aktuelle).</summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/random")]
+    public async Task<IActionResult> GetRandomInBook(int id)
+    {
+        var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id);
+        if (current == null)
+            return NotFound(new { message = "Book puzzle not found." });
+
+        var others = BookSiblings(current).Where(bp => bp.Id != current.Id);
+        var count = await others.CountAsync();
+        if (count == 0)
+            return Ok(MapToDto(await BookSiblings(current).Include(bp => bp.Book).FirstAsync(bp => bp.Id == current.Id)));
+        var pick = await others.Include(bp => bp.Book).OrderBy(bp => bp.Id).Skip(Random.Shared.Next(count)).FirstAsync();
+        return Ok(MapToDto(pick));
+    }
+
+    /// <summary>Puzzles desselben Buchs (per BookId; Fallback BookFileName für Altbestand ohne BookId).</summary>
+    private IQueryable<BookPuzzle> BookSiblings(BookPuzzle current) =>
+        current.BookId != null
+            ? _db.BookPuzzles.Where(bp => bp.BookId == current.BookId)
+            : _db.BookPuzzles.Where(bp => bp.BookFileName == current.BookFileName);
+
     /// <summary>
     /// Liefert ein zufälliges Buch-Puzzle aus dem gewünschten Pool.
     /// pool=random|blind → echtes Zufallspuzzle; pool=daily → deterministisch pro UTC-Tag
