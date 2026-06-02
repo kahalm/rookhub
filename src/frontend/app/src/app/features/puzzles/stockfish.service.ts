@@ -13,6 +13,9 @@ export class StockfishService implements OnDestroy {
   /** Reject der gerade laufenden Suche — damit ein Worker-Crash sie sofort beendet (statt 10 s Timeout). */
   private currentReject?: (reason?: unknown) => void;
 
+  /** Optionaler Telemetrie-Hook (Crash/Hänger melden); von AppComponent an ClientLogService verdrahtet. */
+  reportEngineEvent?: (kind: string, detail?: string) => void;
+
   /** Worker-Erzeugung als Seam (in Tests überschreibbar). */
   protected createWorker(): Worker {
     return new Worker('/assets/stockfish/stockfish-18-lite-single.js');
@@ -38,6 +41,7 @@ export class StockfishService implements OnDestroy {
         try { worker.terminate(); } catch { /* ignore */ }
         if (this.worker === worker) this.worker = undefined;
         this.initPromise = undefined;
+        this.reportEngineEvent?.('init_failed', reason);
         reject(reason);
       };
 
@@ -49,7 +53,7 @@ export class StockfishService implements OnDestroy {
           worker.removeEventListener('message', handler);
           clearTimeout(timeout);
           // Ab jetzt: dauerhafter Crash-Handler statt init-reject.
-          worker.onerror = () => this.handleCrash();
+          worker.onerror = () => { this.reportEngineEvent?.('crash'); this.handleCrash(); };
           resolve();
         }
       };
@@ -99,7 +103,10 @@ export class StockfishService implements OnDestroy {
         fn();
       };
 
-      const timeout = setTimeout(() => done(() => reject('Stockfish timeout')), 10000);
+      const timeout = setTimeout(() => done(() => {
+        this.reportEngineEvent?.('search_timeout', `depth=${depth}`);
+        reject('Stockfish timeout');
+      }), 10000);
       // Damit ein Crash (handleCrash) diese Suche sofort beenden kann.
       this.currentReject = reject;
 

@@ -53,6 +53,13 @@ export class AnalysisEngineService implements OnDestroy {
   private pendingGoFen: string | null = null;
   private awaitingReady = false;
 
+  /** Hänger-Watchdog: liefert die Engine nach `go` binnen `watchdogMs` keine Info-Line → Stall. */
+  protected watchdogMs = 9000;
+  private watchdog?: ReturnType<typeof setTimeout>;
+
+  /** Optionaler Telemetrie-Hook (Crash/Hänger melden); von AppComponent an ClientLogService verdrahtet. */
+  reportEngineEvent?: (kind: string, detail?: string) => void;
+
   get linesRequested(): number { return this.multiPv; }
   get depthLimit(): number { return this.depthCap; }
 
@@ -78,6 +85,7 @@ export class AnalysisEngineService implements OnDestroy {
         try { worker.terminate(); } catch { /* ignore */ }
         if (this.worker === worker) this.worker = undefined;
         this.initPromise = undefined;
+        this.reportEngineEvent?.('init_failed', reason);
         reject(reason);
       };
       const timeout = setTimeout(() => fail('Stockfish init timeout'), 15000);
@@ -87,7 +95,7 @@ export class AnalysisEngineService implements OnDestroy {
           worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
           // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
-          worker.onerror = () => this.handleCrash();
+          worker.onerror = () => { this.reportEngineEvent?.('crash'); this.handleCrash(); };
           worker.addEventListener('message', (ev) => this.onMessage(ev));
           resolve();
         }
@@ -104,6 +112,7 @@ export class AnalysisEngineService implements OnDestroy {
 
   /** Worker abgestürzt → zurücksetzen und (falls eine Analyse lief) die aktuelle Stellung neu aufnehmen. */
   private handleCrash(): void {
+    this.clearWatchdog();
     try { this.worker?.terminate(); } catch { /* ignore */ }
     this.worker = undefined;
     this.initPromise = undefined;
@@ -118,8 +127,23 @@ export class AnalysisEngineService implements OnDestroy {
       this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
     } else {
       // Zu viele Crashes hintereinander → aufgeben statt Endlos-Loop.
+      this.reportEngineEvent?.('giveup', `streak=${this.crashStreak}`);
       this.state$.next({ fen, depth: 0, lines: [], running: false });
     }
+  }
+
+  private armWatchdog(): void {
+    this.clearWatchdog();
+    if (this.watchdogMs <= 0) return;
+    this.watchdog = setTimeout(() => {
+      // Engine läuft (running), liefert aber keine Info-Line → als Hänger behandeln + neu starten.
+      this.reportEngineEvent?.('stall', `no info ${this.watchdogMs}ms`);
+      this.handleCrash();
+    }, this.watchdogMs);
+  }
+
+  private clearWatchdog(): void {
+    if (this.watchdog !== undefined) { clearTimeout(this.watchdog); this.watchdog = undefined; }
   }
 
   /** Startet (oder wechselt) die Analyse auf eine Stellung. */
@@ -129,6 +153,7 @@ export class AnalysisEngineService implements OnDestroy {
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
     this.partial = new Map();
+    this.clearWatchdog();
     this.state$.next({ fen, depth: 0, lines: [], running: true });
     // Sauberes Sequencing: stop → (isready/readyok) → position+go. So wird 'position' nie
     // mitten in eine laufende Suche geschickt (sonst verschluckt Stockfish sie → keine
@@ -144,6 +169,7 @@ export class AnalysisEngineService implements OnDestroy {
   }
 
   stop(): void {
+    this.clearWatchdog();
     this.send('stop');
     const s = this.state$.value;
     if (s.running) this.state$.next({ ...s, running: false });
@@ -171,6 +197,7 @@ export class AnalysisEngineService implements OnDestroy {
         this.pendingGoFen = null;
         this.send('position fen ' + fen);
         this.send('go depth ' + this.depthCap);
+        this.armWatchdog();   // ab jetzt Info-Lines erwarten
       }
       return;
     }
@@ -180,6 +207,7 @@ export class AnalysisEngineService implements OnDestroy {
     if (line.startsWith('bestmove')) {
       // 'bestmove' eines gestoppten Suchlaufs ignorieren, wenn schon ein neuer ansteht.
       if (this.pendingGoFen !== null || this.awaitingReady) return;
+      this.clearWatchdog();   // Suche regulär beendet
       const s = this.state$.value;
       if (s.running) this.state$.next({ ...s, running: false });
       return;
@@ -191,6 +219,7 @@ export class AnalysisEngineService implements OnDestroy {
     if (genAtSend !== this.gen) return;   // Stellung hat gewechselt
     if (parsed.multipv > this.multiPv) return;
 
+    this.clearWatchdog();   // Engine antwortet → kein Hänger
     this.crashStreak = 0;   // Engine liefert wieder → Recovery-Zähler zurücksetzen
     this.partial.set(parsed.multipv, parsed);
     const lines = [...this.partial.values()].sort((a, b) => a.multipv - b.multipv);
@@ -242,6 +271,7 @@ export class AnalysisEngineService implements OnDestroy {
     }
     this.awaitingReady = false;
     this.pendingGoFen = null;
+    this.clearWatchdog();
     this.state$.next(EMPTY);
   }
 }

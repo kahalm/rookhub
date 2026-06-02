@@ -22,6 +22,7 @@ class FakeWorker {
 
 class TestEngine extends AnalysisEngineService {
   workers: FakeWorker[] = [];
+  constructor(watchdogMs = 0) { super(); (this as any).watchdogMs = watchdogMs; }   // Watchdog standardmäßig aus
   protected override createWorker(): Worker {
     const w = new FakeWorker();
     this.workers.push(w);
@@ -96,6 +97,23 @@ describe('AnalysisEngineService crash recovery', () => {
     for (let i = 0; i < 4; i++) { eng.last.crash(); await tick; }   // 4× crash ohne info
 
     expect(state.running).toBeFalse();
+  });
+});
+
+describe('AnalysisEngineService stall watchdog', () => {
+  it('reports a stall and recovers when no info arrives after go', async () => {
+    const eng = new TestEngine(40);   // kurzer Watchdog
+    const events: string[] = [];
+    eng.reportEngineEvent = (kind) => events.push(kind);
+
+    await eng.analyze(FEN);            // go gesendet (FakeWorker liefert KEINE info)
+    expect(eng.workers.length).toBe(1);
+    await new Promise(r => setTimeout(r, 80));   // Watchdog (40ms) feuert
+
+    expect(events).toContain('stall');
+    expect(eng.workers[0].terminated).toBeTrue();
+    expect(eng.workers.length).toBeGreaterThanOrEqual(2);   // automatisch neu gestartet
+    eng.destroy();                                          // Timer/Worker aufräumen
   });
 });
 

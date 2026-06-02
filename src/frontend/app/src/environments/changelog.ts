@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.64.2';
+export const APP_VERSION = '0.65.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.65.0', date: '2026-06-02', changes: [
+    'Engine-Diagnostik: Browser-Stockfish-Crashes und -Hänger werden jetzt erkannt und an den Server gemeldet (neuer Endpoint POST /api/client-log → strukturiert in Elasticsearch/Kibana). Erfasst werden Worker-Absturz, fehlgeschlagene Engine-Initialisierung, abgebrochene Suchen (Timeout) und – im Analyse-Modus – ein „Hänger"-Watchdog (keine Berechnungs-Ergebnisse nach Start) inkl. automatischem Neustart. So sieht man in Kibana, wie oft die Engine bei echten Nutzern Probleme macht. (Meldungen pro Art gedrosselt.)',
+  ]},
   { version: '0.64.2', date: '2026-06-02', changes: [
     'Analyse hängt nicht mehr bei „Berechne …": Der Stockfish-WASM wird nicht mehr über den Service-Worker-Cache geladen (sondern direkt) — ein aus dem Cache serviertes WASM ließ den Engine-Worker oft nicht starten. Außerdem sauberes UCI-Sequencing: eine neue Stellung wird erst analysiert, nachdem die Engine den vorherigen Lauf bestätigt gestoppt hat (verhindert verschluckte Suchen). Hinweis: Engine-Analyse/Eval brauchen jetzt eine Verbindung (Puzzle-/Endless-Lösen offline bleibt unberührt).',
   ]},

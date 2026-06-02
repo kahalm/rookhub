@@ -10,6 +10,9 @@ import { AuthService } from './core/auth.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
+import { ClientLogService } from './core/client-log.service';
+import { StockfishService } from './features/puzzles/stockfish.service';
+import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -123,9 +126,15 @@ export class AppComponent implements OnInit {
     private swUpdate: SwUpdate,
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
     _offlineQueue: OfflineQueueService,
-    private offlinePrefetch: OfflinePrefetchService
+    private offlinePrefetch: OfflinePrefetchService,
+    clientLog: ClientLogService,
+    stockfish: StockfishService,
+    analysisEngine: AnalysisEngineService
   ) {
     locale.init();
+    // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).
+    stockfish.reportEngineEvent = (kind, detail) => clientLog.report('engine_stockfish_' + kind, detail);
+    analysisEngine.reportEngineEvent = (kind, detail) => clientLog.report('engine_analysis_' + kind, detail);
   }
 
   ngOnInit(): void {
