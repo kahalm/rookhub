@@ -542,6 +542,8 @@
       "wrong": "Pogrešno!",
       "gaveUp": "Predano",
       "continue": "Nastavi",
+      "analyze": "Analiziraj",
+      "reviewLast": "Analiziraj zadnju zagonetku",
       "puzzleRating": "Rejting zagonetke: {{rating}}",
       "levelRange": "Razina {{level}} ({{min}}–{{max}})",
       "showTags": "Prikaži oznake",

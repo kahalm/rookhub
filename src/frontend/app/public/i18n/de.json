@@ -542,6 +542,8 @@
       "wrong": "Falsch!",
       "gaveUp": "Aufgegeben",
       "continue": "Fortsetzen",
+      "analyze": "Analysieren",
+      "reviewLast": "Letztes Puzzle analysieren",
       "puzzleRating": "Puzzle Rating: {{rating}}",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Tags anzeigen",

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.61.0';
+export const APP_VERSION = '0.62.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.62.0', date: '2026-06-02', changes: [
+    'Endless: Nach dem Lösen eines Puzzles lässt es sich jetzt analysieren — der Button „Letztes Puzzle analysieren" bleibt sichtbar (auch nachdem automatisch das nächste Puzzle geladen wurde) und öffnet das gerade gelöste Puzzle im Analysemodus. Beim Aufgeben gibt es im Lösungs-Screen zusätzlich „Analysieren" für das aktuelle Puzzle. Zurück führt jeweils in den Endless-Modus (laufender Run lässt sich fortsetzen).',
+  ]},
   { version: '0.61.0', date: '2026-06-02', changes: [
     'Echter Offline-Betrieb: Die App hat jetzt einen Service Worker und cacht App-Shell, alle Lazy-Module (Puzzle, Endless …) und die Übersetzungen. Dadurch lassen sich Puzzle- und Endless-Modus auch ohne Verbindung öffnen und starten (sofern vorher einmal online geladen) — nicht mehr nur weiterspielen. Bei einer neuen Version erscheint ein „Neu laden"-Hinweis.',
     'Offline gelöste Puzzles gehen nicht mehr verloren: Lösungen/Versuche (Standard-Puzzle, Tagespuzzle, Kurs-Puzzle und Endless-Sessions) werden offline lokal vorgemerkt und automatisch hochgeladen, sobald wieder eine Verbindung besteht. Im Profil zeigt „Offline" die Anzahl noch wartender Lösungen.',

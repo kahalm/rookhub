@@ -470,6 +470,9 @@ const RATING_WINDOW = 40;
                           <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
                         </div>
                         <div class="wrong-actions">
+                          <button mat-stroked-button (click)="analyzeCurrentPuzzle()">
+                            <mat-icon>biotech</mat-icon> {{ 'endless.game.analyze' | translate }}
+                          </button>
                           <button mat-raised-button color="primary" (click)="continueAfterWrong()">
                             <mat-icon>skip_next</mat-icon> {{ 'endless.game.continue' | translate }}
                           </button>
@@ -479,6 +482,12 @@ const RATING_WINDOW = 40;
                   }
                 </mat-card-content>
               </mat-card>
+
+              @if (lastSolvedPuzzleId) {
+                <button mat-stroked-button class="review-last-btn" (click)="reviewLastPuzzle()">
+                  <mat-icon>history</mat-icon> {{ 'endless.game.reviewLast' | translate }}
+                </button>
+              }
 
               @if (puzzle) {
                 <mat-card class="info-card">
@@ -829,6 +838,8 @@ const RATING_WINDOW = 40;
     .failed .gave-up-icon { color: #ff9800; }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .review-last-btn { width: 100%; height: 40px; font-size: 0.9em; }
+    .review-last-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .review-nav { display: flex; align-items: center; gap: 0.5rem; }
     .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
@@ -1009,6 +1020,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   reviewIndex = 0;
   gaveUp = false;
   private puzzleStartTime = 0;
+
+  // Zuletzt gelöstes Puzzle — für „Letztes Puzzle analysieren" (bleibt auch nach dem
+  // Auto-Advance auf das nächste Puzzle erhalten, da der CORRECT-Status nur kurz sichtbar ist).
+  lastSolvedPuzzleId: number | null = null;
+  private lastSolvedFen: string | null = null;
+  private lastSolvedMoves = '';
+  private lastSolvedOrientation: 'white' | 'black' = 'white';
 
   constructor(
     private puzzleService: PuzzleService,
@@ -1397,6 +1415,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         solved: true,
         themes: this.puzzle.themes
       });
+      // Für „Letztes Puzzle analysieren" merken (überlebt den Auto-Advance).
+      this.lastSolvedPuzzleId = this.puzzle.id;
+      this.lastSolvedFen = this.puzzle.fen;
+      this.lastSolvedMoves = this.puzzle.moves;
+      this.lastSolvedOrientation = this.orientation;
     }
     this.recordAttempt(true);
     this.syncActiveGameToServer();
@@ -1438,6 +1461,34 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private enterSolutionReview(): void {
     this.reviewMode = true;
     this.reviewIndex = this.reviewTotal;
+  }
+
+  /** Aktuelles Puzzle (z.B. nach dem Aufgeben) im Analysemodus öffnen. */
+  analyzeCurrentPuzzle(): void {
+    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
+    if (!this.puzzle) return;
+    this.router.navigate(['/analysis'], {
+      queryParams: {
+        fen: this.puzzle.fen,
+        moves: this.puzzle.moves.split(' ').filter(m => m).join(','),
+        orientation: this.orientation,
+        from: '/puzzles/endless',
+      },
+    });
+  }
+
+  /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */
+  reviewLastPuzzle(): void {
+    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
+    if (!this.lastSolvedFen) return;
+    this.router.navigate(['/analysis'], {
+      queryParams: {
+        fen: this.lastSolvedFen,
+        moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
+        orientation: this.lastSolvedOrientation,
+        from: '/puzzles/endless',
+      },
+    });
   }
 
   showIntendedSolution(): void {
