@@ -46,35 +46,74 @@ export class AnalysisEngineService implements OnDestroy {
   private state$ = new BehaviorSubject<AnalysisState>(EMPTY);
   readonly analysis$: Observable<AnalysisState> = this.state$.asObservable();
 
+  /** Aufeinanderfolgende Crashes ohne erfolgreiche Antwort — gegen Endlos-Recovery-Loops. */
+  private crashStreak = 0;
+
   get linesRequested(): number { return this.multiPv; }
   get depthLimit(): number { return this.depthCap; }
+
+  /** Worker-Erzeugung als Seam (in Tests überschreibbar). */
+  protected createWorker(): Worker {
+    return new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+  }
 
   init(): Promise<void> {
     if (this.initPromise) return this.initPromise;
     this.initPromise = new Promise<void>((resolve, reject) => {
+      let worker: Worker;
       try {
-        this.worker = new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+        worker = this.createWorker();
+        this.worker = worker;
       } catch {
+        this.initPromise = undefined;   // Retry beim nächsten Aufruf erlauben
         reject('Failed to create Stockfish worker');
         return;
       }
-      const timeout = setTimeout(() => reject('Stockfish init timeout'), 15000);
-      this.worker.onerror = () => { clearTimeout(timeout); reject('Stockfish worker error'); };
+      const fail = (reason: string) => {
+        clearTimeout(timeout);
+        try { worker.terminate(); } catch { /* ignore */ }
+        if (this.worker === worker) this.worker = undefined;
+        this.initPromise = undefined;
+        reject(reason);
+      };
+      const timeout = setTimeout(() => fail('Stockfish init timeout'), 15000);
+      worker.onerror = () => fail('Stockfish worker error');
       const onReady = (e: MessageEvent) => {
         if (typeof e.data === 'string' && e.data.includes('readyok')) {
-          this.worker!.removeEventListener('message', onReady);
+          worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
-          // Dauerhaften Listener für die laufende Analyse anhängen.
-          this.worker!.addEventListener('message', (ev) => this.onMessage(ev));
+          // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
+          worker.onerror = () => this.handleCrash();
+          worker.addEventListener('message', (ev) => this.onMessage(ev));
           resolve();
         }
       };
-      this.worker.addEventListener('message', onReady);
+      worker.addEventListener('message', onReady);
       this.send('uci');
+      // Hash klein halten → verhindert unbegrenztes Wachsen des WASM-Heaps (OOM-Crashes).
+      this.send('setoption name Hash value 16');
       this.send('setoption name MultiPV value ' + this.multiPv);
       this.send('isready');
     });
     return this.initPromise;
+  }
+
+  /** Worker abgestürzt → zurücksetzen und (falls eine Analyse lief) die aktuelle Stellung neu aufnehmen. */
+  private handleCrash(): void {
+    try { this.worker?.terminate(); } catch { /* ignore */ }
+    this.worker = undefined;
+    this.initPromise = undefined;
+    this.partial = new Map();
+    const fen = this.currentFen;
+    const wasRunning = this.state$.value.running;
+    this.crashStreak++;
+    if (fen && wasRunning && this.crashStreak <= 3) {
+      // Nahtlos neu initialisieren + dieselbe Stellung erneut analysieren.
+      this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
+    } else {
+      // Zu viele Crashes hintereinander → aufgeben statt Endlos-Loop.
+      this.state$.next({ fen, depth: 0, lines: [], running: false });
+    }
   }
 
   /** Startet (oder wechselt) die Analyse auf eine Stellung. */
@@ -125,6 +164,7 @@ export class AnalysisEngineService implements OnDestroy {
     if (genAtSend !== this.gen) return;   // Stellung hat gewechselt
     if (parsed.multipv > this.multiPv) return;
 
+    this.crashStreak = 0;   // Engine liefert wieder → Recovery-Zähler zurücksetzen
     this.partial.set(parsed.multipv, parsed);
     const lines = [...this.partial.values()].sort((a, b) => a.multipv - b.multipv);
     const depth = Math.max(...lines.map(l => l.depth), 0);

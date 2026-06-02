@@ -10,35 +10,52 @@ export class StockfishService implements OnDestroy {
   private worker?: Worker;
   private initPromise?: Promise<void>;
   private pending: Promise<any> = Promise.resolve();
+  /** Reject der gerade laufenden Suche — damit ein Worker-Crash sie sofort beendet (statt 10 s Timeout). */
+  private currentReject?: (reason?: unknown) => void;
+
+  /** Worker-Erzeugung als Seam (in Tests überschreibbar). */
+  protected createWorker(): Worker {
+    return new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+  }
 
   init(): Promise<void> {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise<void>((resolve, reject) => {
+      let worker: Worker;
       try {
-        this.worker = new Worker('/assets/stockfish/stockfish-18-lite-single.js');
+        worker = this.createWorker();
+        this.worker = worker;
       } catch {
+        this.initPromise = undefined;   // Retry beim nächsten Aufruf erlauben
         reject('Failed to create Stockfish worker');
         return;
       }
 
-      const timeout = setTimeout(() => reject('Stockfish init timeout'), 15000);
-
-      this.worker.onerror = () => {
+      const fail = (reason: string) => {
         clearTimeout(timeout);
-        reject('Stockfish worker error');
+        // init fehlgeschlagen → alles zurücksetzen, damit der nächste Aufruf neu versucht.
+        try { worker.terminate(); } catch { /* ignore */ }
+        if (this.worker === worker) this.worker = undefined;
+        this.initPromise = undefined;
+        reject(reason);
       };
+
+      const timeout = setTimeout(() => fail('Stockfish init timeout'), 15000);
+      worker.onerror = () => fail('Stockfish worker error');
 
       const handler = (e: MessageEvent) => {
         if (typeof e.data === 'string' && e.data.includes('readyok')) {
-          this.worker!.removeEventListener('message', handler);
+          worker.removeEventListener('message', handler);
           clearTimeout(timeout);
+          // Ab jetzt: dauerhafter Crash-Handler statt init-reject.
+          worker.onerror = () => this.handleCrash();
           resolve();
         }
       };
-      this.worker.addEventListener('message', handler);
-      this.send('uci');
-      this.send('isready');
+      worker.addEventListener('message', handler);
+      worker.postMessage('uci');
+      worker.postMessage('isready');
     });
 
     return this.initPromise;
@@ -56,21 +73,35 @@ export class StockfishService implements OnDestroy {
     return result.eval;
   }
 
+  /** Worker abgestürzt → terminieren + zurücksetzen, laufende Suche abbrechen. Nächster Aufruf init neu. */
+  private handleCrash(): void {
+    try { this.worker?.terminate(); } catch { /* ignore */ }
+    this.worker = undefined;
+    this.initPromise = undefined;
+    this.pending = Promise.resolve();
+    const reject = this.currentReject;
+    this.currentReject = undefined;
+    if (reject) reject('Stockfish worker crashed');
+  }
+
   private runSearch(fen: string, depth: number): Promise<StockfishResult> {
     const sideToMove = fen.split(' ')[1];
-    // Worker lokal festhalten: ein paralleles destroy() setzt this.worker auf
-    // undefined; ueber die lokale Referenz wirft der Timeout/Handler dann keinen
-    // TypeError mehr (removeEventListener auf terminiertem Worker ist no-op).
     const worker = this.worker;
     if (!worker) return Promise.reject('Stockfish not initialized');
 
     return new Promise<StockfishResult>((resolve, reject) => {
       let lastEval = '0.0';
 
-      const timeout = setTimeout(() => {
+      const done = (fn: () => void) => {
+        clearTimeout(timeout);
         worker.removeEventListener('message', handler);
-        reject('Stockfish timeout');
-      }, 10000);
+        if (this.currentReject === reject) this.currentReject = undefined;
+        fn();
+      };
+
+      const timeout = setTimeout(() => done(() => reject('Stockfish timeout')), 10000);
+      // Damit ein Crash (handleCrash) diese Suche sofort beenden kann.
+      this.currentReject = reject;
 
       const handler = (e: MessageEvent) => {
         const line = e.data as string;
@@ -89,14 +120,11 @@ export class StockfishService implements OnDestroy {
         }
 
         if (line.startsWith('bestmove')) {
-          clearTimeout(timeout);
-          worker.removeEventListener('message', handler);
           const move = line.split(' ')[1];
-          if (move && move !== '(none)') {
-            resolve({ move, eval: lastEval });
-          } else {
-            reject('No move found');
-          }
+          done(() => {
+            if (move && move !== '(none)') resolve({ move, eval: lastEval });
+            else reject('No move found');
+          });
         }
       };
       worker.addEventListener('message', handler);
@@ -105,21 +133,18 @@ export class StockfishService implements OnDestroy {
     });
   }
 
-  private send(cmd: string): void {
-    this.worker?.postMessage(cmd);
-  }
-
   ngOnDestroy(): void {
     this.destroy();
   }
 
   destroy(): void {
     if (this.worker) {
-      this.send('quit');
-      this.worker.terminate();
+      try { this.worker.postMessage('quit'); } catch { /* ignore */ }
+      try { this.worker.terminate(); } catch { /* ignore */ }
       this.worker = undefined;
       this.initPromise = undefined;
       this.pending = Promise.resolve();
+      this.currentReject = undefined;
     }
   }
 }
