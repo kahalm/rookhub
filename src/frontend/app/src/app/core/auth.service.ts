@@ -79,9 +79,21 @@ export class AuthService {
     localStorage.setItem('rookhub_user', JSON.stringify(user));
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();
+    this.consumeStashedDiscordLink();
     // Sync user preferences from server (overwrites localStorage)
     import('./preferences.service').then(m => {
       this.injector.get(m.PreferencesService).loadFromServer();
+    });
+  }
+
+  /**
+   * Löst einen über einen Bot-Link (?dl=) vorgemerkten Discord-Token ein, sobald
+   * sich ein anonymer User ein-/registriert — so wird die beim Klick hinterlegte
+   * Discord-ID automatisch mit dem neuen Account verknüpft.
+   */
+  private consumeStashedDiscordLink(): void {
+    import('./discord-link.service').then(m => {
+      this.injector.get(m.DiscordLinkService).consumeStashed();
     });
   }
 

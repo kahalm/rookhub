@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.49.0';
+export const APP_VERSION = '0.50.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.50.0', date: '2026-06-02', changes: [
+    'Neu: RookHub-Konto mit Discord verknüpfen. Im Profil unter „Discord" wird ein verknüpftes Konto angezeigt + „Verknüpfung trennen". Verknüpft wird über einen vom Schach-Bot signierten Link (`/link`-Befehl bzw. Begrüßungs-DM): eingeloggt sofort, anonym wird der Link vorgemerkt und nach Login/Registrierung automatisch eingelöst. Neue Endpoints POST `/api/profile/discord/link` + DELETE `/api/profile/discord`; Discord-ID ist eindeutig (≤ 1 RookHub-User). Secret via `Discord__LinkSecret` (= Bot `ROOKHUB_LINK_SECRET`), leer → Feature inaktiv.',
+  ]},
   { version: '0.49.0', date: '2026-06-02', changes: [
     'Statistik erweitert: Aufschlüsselung nach Thema (Trefferquote je Taktik-Thema), Rating-Verteilung der gelösten Puzzles (Balken je 200er-Rating-Band, Genauigkeit beim Überfahren) und eine Aktivitäts-Heatmap (Versuche pro Tag, letzte ~6 Monate). Neuer Endpoint GET `/api/puzzles/stats/breakdown`.',
   ]},

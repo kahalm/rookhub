@@ -122,7 +122,17 @@
     "saveFailed": "Spremanje profila nije uspjelo",
     "searchFailed": "Pretraga nije uspjela",
     "chessResultsApplied": "ChessResults podaci preuzeti",
-    "fideApplied": "FIDE podaci preuzeti"
+    "fideApplied": "FIDE podaci preuzeti",
+    "discord": {
+      "title": "Discord",
+      "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) kako bi povezao svoj Discord račun.",
+      "unlink": "Prekini povezivanje",
+      "unlinked": "Discord povezivanje prekinuto",
+      "linked": "Discord račun povezan",
+      "linkConflict": "Ovaj Discord račun već je povezan s drugim RookHub korisnikom.",
+      "linkFailed": "Povezivanje Discord računa nije uspjelo",
+      "stashed": "Prijavi se ili registriraj kako bi dovršio povezivanje Discord računa."
+    }
   },
   "friends": {
     "title": "Prijatelji",

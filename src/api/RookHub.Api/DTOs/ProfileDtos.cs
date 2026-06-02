@@ -14,6 +14,10 @@ public class ProfileDto
     public string? ChessComUsername { get; set; }
     public string? LichessUsername { get; set; }
 
+    // Discord-Verknüpfung (Username zur Anzeige; ID ist die eindeutige Identität)
+    public string? DiscordId { get; set; }
+    public string? DiscordUsername { get; set; }
+
     // User Preferences
     public string? BoardTheme { get; set; }
     public string? PieceSet { get; set; }
@@ -60,4 +64,10 @@ public class UpdateProfileDto
 
     [Range(1, 24)]
     public int? BookStockfishDepth { get; set; }
+}
+
+public class LinkDiscordDto
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
 }

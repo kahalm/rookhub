@@ -122,7 +122,17 @@
     "saveFailed": "Profil konnte nicht gespeichert werden",
     "searchFailed": "Suche fehlgeschlagen",
     "chessResultsApplied": "ChessResults-Daten übernommen",
-    "fideApplied": "FIDE-Daten übernommen"
+    "fideApplied": "FIDE-Daten übernommen",
+    "discord": {
+      "title": "Discord",
+      "hint": "Öffne einen persönlichen Link des RookHub-Discord-Bots (dessen /link-Befehl oder eine Puzzle-DM), um dein Discord-Konto zu verknüpfen.",
+      "unlink": "Verknüpfung trennen",
+      "unlinked": "Discord-Verknüpfung getrennt",
+      "linked": "Discord-Konto verknüpft",
+      "linkConflict": "Dieses Discord-Konto ist bereits mit einem anderen RookHub-Benutzer verknüpft.",
+      "linkFailed": "Discord-Konto konnte nicht verknüpft werden",
+      "stashed": "Melde dich an oder registriere dich, um die Discord-Verknüpfung abzuschließen."
+    }
   },
   "friends": {
     "title": "Freunde",

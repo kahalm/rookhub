@@ -122,7 +122,17 @@
     "saveFailed": "Failed to save profile",
     "searchFailed": "Search failed",
     "chessResultsApplied": "ChessResults data applied",
-    "fideApplied": "FIDE data applied"
+    "fideApplied": "FIDE data applied",
+    "discord": {
+      "title": "Discord",
+      "hint": "Open a personal link from the RookHub Discord bot (its /link command or a puzzle DM) to connect your Discord account.",
+      "unlink": "Unlink",
+      "unlinked": "Discord unlinked",
+      "linked": "Discord account linked",
+      "linkConflict": "This Discord account is already linked to another RookHub user.",
+      "linkFailed": "Could not link Discord account",
+      "stashed": "Sign in or register to finish linking your Discord account."
+    }
   },
   "friends": {
     "title": "Friends",

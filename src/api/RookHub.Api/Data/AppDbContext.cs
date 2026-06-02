@@ -43,6 +43,10 @@ public class AppDbContext : DbContext
              .WithOne(u => u.Profile)
              .HasForeignKey<UserProfile>(p => p.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+
+            // Eine Discord-ID ist höchstens einem RookHub-User zugeordnet.
+            // (MySQL behandelt mehrere NULLs als verschieden → nicht-verknüpfte Profile sind ok.)
+            e.HasIndex(p => p.DiscordId).IsUnique();
         });
 
         modelBuilder.Entity<Friendship>(e =>

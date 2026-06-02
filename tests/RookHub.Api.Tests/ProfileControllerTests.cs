@@ -28,7 +28,7 @@ public class ProfileControllerTests : IDisposable
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
         // For controller tests, we pass a null-ish PlayerSearchService only for non-search tests
-        _controller = new ProfileController(_profileService, null!);
+        _controller = new ProfileController(_profileService, null!, DiscordTokenTestHelper.Service());
     }
 
     public void Dispose() => _db.Dispose();
@@ -137,6 +137,82 @@ public class ProfileControllerTests : IDisposable
         var result = await _controller.GetPublicProfile("nonexistent");
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    // ---- Discord link/unlink ----
+
+    [Fact]
+    public async Task LinkDiscord_ReturnsOk_WithValidToken()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var token = DiscordTokenTestHelper.Make("555000111", "DiscoUser", DiscordTokenTestHelper.FarFuture);
+
+        var result = await _controller.LinkDiscord(new LinkDiscordDto { Token = token });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var profile = Assert.IsType<ProfileDto>(ok.Value);
+        Assert.Equal("555000111", profile.DiscordId);
+        Assert.Equal("DiscoUser", profile.DiscordUsername);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_ReturnsBadRequest_WithInvalidToken()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.LinkDiscord(new LinkDiscordDto { Token = "garbage.token" });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_ReturnsConflict_WhenDiscordIdAlreadyLinkedToAnother()
+    {
+        var other = await CreateUserAsync("otheruser");
+        other.Profile!.DiscordId = "999";
+        await _db.SaveChangesAsync();
+
+        var user = await CreateUserAsync("me");
+        SetUser(user.Id);
+        var token = DiscordTokenTestHelper.Make("999", "Dupe", DiscordTokenTestHelper.FarFuture);
+
+        var result = await _controller.LinkDiscord(new LinkDiscordDto { Token = token });
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_Succeeds_WhenRelinkingSameUser()
+    {
+        var user = await CreateUserAsync();
+        user.Profile!.DiscordId = "777";
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+        var token = DiscordTokenTestHelper.Make("777", "Same", DiscordTokenTestHelper.FarFuture);
+
+        var result = await _controller.LinkDiscord(new LinkDiscordDto { Token = token });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("777", ((ProfileDto)ok.Value!).DiscordId);
+    }
+
+    [Fact]
+    public async Task UnlinkDiscord_ClearsLink()
+    {
+        var user = await CreateUserAsync();
+        user.Profile!.DiscordId = "123";
+        user.Profile!.DiscordUsername = "Name";
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var result = await _controller.UnlinkDiscord();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var profile = Assert.IsType<ProfileDto>(ok.Value);
+        Assert.Null(profile.DiscordId);
+        Assert.Null(profile.DiscordUsername);
     }
 
     // ---- SearchPlayers ----

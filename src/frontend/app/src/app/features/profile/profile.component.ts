@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { DiscordLinkService } from '../../core/discord-link.service';
 
 interface Profile {
   userId: number;
@@ -24,6 +25,8 @@ interface Profile {
   chessResultsId: string | null;
   chessComUsername: string | null;
   lichessUsername: string | null;
+  discordId: string | null;
+  discordUsername: string | null;
   boardTheme: string | null;
   pieceSet: string | null;
   stockfishDepth: number | null;
@@ -151,6 +154,22 @@ interface PlayerSearchItem {
                 {{ saving ? ('profile.saving' | translate) : ('common.save' | translate) }}
               </button>
             </form>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <div class="discord-section">
+              <h4>{{ 'profile.discord.title' | translate }}</h4>
+              @if (profile.discordId) {
+                <div class="discord-linked">
+                  <mat-icon class="discord-icon">link</mat-icon>
+                  <span class="discord-name">{{ profile.discordUsername || profile.discordId }}</span>
+                  <button mat-stroked-button color="warn" type="button" (click)="unlinkDiscord()" [disabled]="unlinking">
+                    {{ 'profile.discord.unlink' | translate }}
+                  </button>
+                </div>
+              } @else {
+                <p class="discord-hint">{{ 'profile.discord.hint' | translate }}</p>
+              }
+            </div>
           </mat-card-content>
         </mat-card>
       </div>
@@ -182,6 +201,13 @@ interface PlayerSearchItem {
     .id { color: #bdbdbd; font-size: 12px; }
     .select-icon { color: #90caf9; margin-left: auto; }
     .no-results { color: #bdbdbd; font-style: italic; text-align: center; padding: 1rem 0; }
+    .discord-divider { margin: 1.25rem 0 1rem; }
+    .discord-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
+    .discord-linked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .discord-icon { color: #5865F2; }
+    .discord-name { font-weight: 500; }
+    .discord-linked button { margin-left: auto; }
+    .discord-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0; }
     @media (max-width: 768px) {
       .profile-container { padding: 0.75rem; }
       .name-row mat-form-field { min-width: 0; flex-basis: 100%; }
@@ -195,9 +221,15 @@ export class ProfileComponent implements OnInit {
   loading = true;
   saving = false;
   searching = false;
+  unlinking = false;
   searchResults: PlayerSearchResult | null = null;
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(
+    private http: HttpClient,
+    private snackBar: MatSnackBar,
+    private translate: TranslateService,
+    private discordLink: DiscordLinkService
+  ) {}
 
   ngOnInit(): void {
     this.http.get<Profile>('/api/profile').subscribe({
@@ -274,6 +306,22 @@ export class ProfileComponent implements OnInit {
       error: () => {
         this.saving = false;
         this.snackBar.open(this.translate.instant('profile.saveFailed'), this.translate.instant('common.close'), { duration: 3000 });
+      }
+    });
+  }
+
+  unlinkDiscord(): void {
+    if (!this.profile) return;
+    this.unlinking = true;
+    this.discordLink.unlink().subscribe({
+      next: () => {
+        if (this.profile) { this.profile.discordId = null; this.profile.discordUsername = null; }
+        this.unlinking = false;
+        this.snackBar.open(this.translate.instant('profile.discord.unlinked'), this.translate.instant('common.close'), { duration: 2000 });
+      },
+      error: () => {
+        this.unlinking = false;
+        this.snackBar.open(this.translate.instant('profile.discord.linkFailed'), this.translate.instant('common.close'), { duration: 3000 });
       }
     });
   }

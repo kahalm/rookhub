@@ -12,11 +12,13 @@ public class ProfileController : BaseApiController
 {
     private readonly ProfileService _profileService;
     private readonly PlayerSearchService _playerSearchService;
+    private readonly DiscordLinkService _discordLink;
 
-    public ProfileController(ProfileService profileService, PlayerSearchService playerSearchService)
+    public ProfileController(ProfileService profileService, PlayerSearchService playerSearchService, DiscordLinkService discordLink)
     {
         _profileService = profileService;
         _playerSearchService = playerSearchService;
+        _discordLink = discordLink;
     }
 
     [HttpGet]
@@ -53,6 +55,44 @@ public class ProfileController : BaseApiController
             return BadRequest(new { message = "lastName must be at least 2 characters." });
 
         return Ok(await _playerSearchService.SearchAsync(lastName.Trim(), firstName?.Trim()));
+    }
+
+    /// <summary>
+    /// Verknüpft das Discord-Konto anhand eines vom schach-bot signierten Tokens (`?dl=`-Param).
+    /// 400 bei ungültigem/abgelaufenem Token oder deaktiviertem Feature, 409 bei Kollision.
+    /// </summary>
+    [HttpPost("discord/link")]
+    public async Task<ActionResult<ProfileDto>> LinkDiscord([FromBody] LinkDiscordDto dto)
+    {
+        var identity = _discordLink.Verify(dto.Token);
+        if (identity == null)
+            return BadRequest(new { message = "Invalid or expired Discord link token." });
+
+        try
+        {
+            return Ok(await _profileService.LinkDiscordAsync(GetUserId(), identity.Id, identity.Username));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("discord")]
+    public async Task<ActionResult<ProfileDto>> UnlinkDiscord()
+    {
+        try
+        {
+            return Ok(await _profileService.UnlinkDiscordAsync(GetUserId()));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpGet("{username}")]

@@ -101,6 +101,60 @@ public class ProfileService
         return MapToDto(user);
     }
 
+    /// <summary>
+    /// Verknüpft das (bereits verifizierte) Discord-Konto mit dem User.
+    /// Wirft <see cref="InvalidOperationException"/>, wenn die Discord-ID bereits an einen
+    /// anderen RookHub-User gebunden ist (Controller → 409).
+    /// </summary>
+    public async Task<ProfileDto> LinkDiscordAsync(int userId, string discordId, string? discordUsername)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.Profile)
+            .FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        // Kollision: gehört die Discord-ID schon einem anderen User?
+        var ownerId = await _db.UserProfiles
+            .Where(p => p.DiscordId == discordId)
+            .Select(p => (int?)p.UserId)
+            .FirstOrDefaultAsync();
+        if (ownerId != null && ownerId != userId)
+            throw new InvalidOperationException("This Discord account is already linked to another RookHub user.");
+
+        var profile = user.Profile ?? new UserProfile { UserId = userId };
+        if (user.Profile == null)
+        {
+            user.Profile = profile;
+            _db.UserProfiles.Add(profile);
+        }
+
+        profile.DiscordId = discordId;
+        profile.DiscordUsername = discordUsername;
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Linked Discord account {DiscordId} to user {UserId}.", discordId, userId);
+        return MapToDto(user);
+    }
+
+    /// <summary>Hebt die Discord-Verknüpfung des Users auf (idempotent).</summary>
+    public async Task<ProfileDto> UnlinkDiscordAsync(int userId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.Profile)
+            .FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        if (user.Profile != null && (user.Profile.DiscordId != null || user.Profile.DiscordUsername != null))
+        {
+            user.Profile.DiscordId = null;
+            user.Profile.DiscordUsername = null;
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("Unlinked Discord account from user {UserId}.", userId);
+        }
+
+        return MapToDto(user);
+    }
+
     private static ProfileDto MapToDto(AppUser user) => new()
     {
         UserId = user.Id,
@@ -112,6 +166,8 @@ public class ProfileService
         ChessResultsId = user.Profile?.ChessResultsId,
         ChessComUsername = user.Profile?.ChessComUsername,
         LichessUsername = user.Profile?.LichessUsername,
+        DiscordId = user.Profile?.DiscordId,
+        DiscordUsername = user.Profile?.DiscordUsername,
         BoardTheme = user.Profile?.BoardTheme,
         PieceSet = user.Profile?.PieceSet,
         StockfishDepth = user.Profile?.StockfishDepth,

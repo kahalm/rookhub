@@ -76,6 +76,7 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Crawler__BaseUrl: http://crawler:8080
       Crawler__ApiKey: ${CRAWLER_API_KEY}
+      Discord__LinkSecret: ${DISCORD_LINK_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}

@@ -1,14 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { LocaleService } from './core/locale.service';
+import { AuthService } from './core/auth.service';
+import { DiscordLinkService } from './core/discord-link.service';
 import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, TranslateModule],
+  imports: [RouterOutlet, NavbarComponent, TranslateModule, MatSnackBarModule],
   template: `
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
@@ -104,7 +107,16 @@ export class AppComponent implements OnInit {
   showChangelog = false;
   showQuickstart = false;
 
-  constructor(private router: Router, locale: LocaleService) {
+  private dlHandled = false;
+
+  constructor(
+    private router: Router,
+    locale: LocaleService,
+    private auth: AuthService,
+    private discordLink: DiscordLinkService,
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
+  ) {
     locale.init();
   }
 
@@ -116,6 +128,37 @@ export class AppComponent implements OnInit {
         // Clean up query param
         window.history.replaceState({}, '', window.location.pathname);
       }
+      this.handleDiscordLinkParam(params);
     });
+  }
+
+  /**
+   * Bot-Link `?dl=<token>`: eingeloggt -> sofort verknüpfen; anonym -> Token vormerken
+   * (wird nach Login/Registrierung automatisch eingelöst). Param wird aus der URL entfernt.
+   */
+  private handleDiscordLinkParam(params: URLSearchParams): void {
+    if (this.dlHandled) return;
+    const token = params.get('dl');
+    if (!token) return;
+    this.dlHandled = true;
+
+    // 'dl' aus der URL entfernen, andere Query-Params + Pfad behalten.
+    params.delete('dl');
+    const qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+
+    const close = this.translate.instant('common.close');
+    if (this.auth.isLoggedIn) {
+      this.discordLink.link(token).subscribe({
+        next: () => this.snackBar.open(this.translate.instant('profile.discord.linked'), close, { duration: 3000 }),
+        error: (err) => {
+          const key = err?.status === 409 ? 'profile.discord.linkConflict' : 'profile.discord.linkFailed';
+          this.snackBar.open(this.translate.instant(key), close, { duration: 4000 });
+        }
+      });
+    } else {
+      this.discordLink.stash(token);
+      this.snackBar.open(this.translate.instant('profile.discord.stashed'), close, { duration: 5000 });
+    }
   }
 }

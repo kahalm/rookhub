@@ -30,6 +30,13 @@ public class UserProfile
     [MaxLength(50)]
     public string? LichessUsername { get; set; }
 
+    /// <summary>Verknüpfte Discord-User-ID (Snowflake) — eindeutig, ≤ 1 RookHub-User je Discord-ID.</summary>
+    [MaxLength(32)]
+    public string? DiscordId { get; set; }
+
+    [MaxLength(64)]
+    public string? DiscordUsername { get; set; }
+
     // User Preferences (synced across devices)
     [MaxLength(20)]
     public string? BoardTheme { get; set; }
