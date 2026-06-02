@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
+    public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
@@ -191,6 +192,24 @@ public class AppDbContext : DbContext
              .WithMany(b => b.Puzzles)
              .HasForeignKey(bp => bp.BookId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BookPuzzleAttempt>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Kein zweiter Cascade-Pfad über BookPuzzle (BookPuzzle wird via Book kaskadiert);
+            // Restrict vermeidet den MySQL "multiple cascade paths"-Fehler (analog CoursePuzzleResult).
+            e.HasOne(a => a.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(a => a.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(a => new { a.BookPuzzleId, a.AttemptedAt });
+            e.HasIndex(a => new { a.BookPuzzleId, a.UserId });
         });
 
         modelBuilder.Entity<EndlessProgress>(e =>

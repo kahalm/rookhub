@@ -106,6 +106,58 @@ public class BookPuzzleControllerTests : IDisposable
     public async Task GetNextInBook_NotFound_WhenMissing()
         => Assert.IsType<NotFoundObjectResult>(await _controller.GetNextInBook(99999));
 
+    private async Task<AppUser> CreateUserAsync(string username, string? discordId = null)
+    {
+        var u = new AppUser
+        {
+            Username = username,
+            Email = $"{username}@test.com",
+            PasswordHash = "hash",
+            Profile = new UserProfile
+            {
+                DisplayName = username,
+                DiscordId = discordId,
+                DiscordUsername = discordId != null ? username + "#disc" : null
+            }
+        };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+        return u;
+    }
+
+    [Fact]
+    public async Task RecordAttempt_AndResults_AggregatesSolversMitDiscord()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "daily.pgn:1", bookFileName: "daily.pgn");
+        var anna = await CreateUserAsync("anna", discordId: "111");
+        var ben = await CreateUserAsync("ben");    // gelöst, nicht verknüpft
+        var carl = await CreateUserAsync("carl");  // nur versucht, nicht gelöst
+
+        SetUser(anna.Id);
+        Assert.IsType<OkResult>(await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 23 }));
+        SetUser(ben.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 40 });
+        SetUser(carl.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 10 });
+        // anna nochmal (Fehlversuch) → darf Solver-Status/Count nicht doppeln
+        SetUser(anna.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 5 });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(2, res.SolvedCount);                 // anna, ben
+        Assert.Equal(3, res.AttemptCount);                // anna, ben, carl (je User 1×)
+        Assert.Equal("111", res.Solvers.Single(s => s.Name == "anna").DiscordId);
+        Assert.Null(res.Solvers.Single(s => s.Name == "ben").DiscordId);
+        Assert.DoesNotContain(res.Solvers, s => s.Name == "carl");
+    }
+
+    [Fact]
+    public async Task RecordAttempt_NotFound_WhenPuzzleMissing()
+    {
+        SetUser(1);
+        Assert.IsType<NotFoundObjectResult>(await _controller.RecordAttempt(99999, new RecordBookAttemptDto { Solved = true, TimeSeconds = 1 }));
+    }
+
     [Fact]
     public async Task GetById_ReturnsPuzzle()
     {

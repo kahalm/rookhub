@@ -65,6 +65,76 @@ public class BookPuzzleController : BaseApiController
             ? _db.BookPuzzles.Where(bp => bp.BookId == current.BookId)
             : _db.BookPuzzles.Where(bp => bp.BookFileName == current.BookFileName);
 
+    /// <summary>Zeichnet einen Lösungsversuch des eingeloggten Users an einem Buch-Puzzle auf
+    /// (für die Tagespuzzle-Visualisierung auf Discord).</summary>
+    [Authorize]
+    [HttpPost("{id}/attempt")]
+    public async Task<IActionResult> RecordAttempt(int id, [FromBody] RecordBookAttemptDto dto)
+    {
+        if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
+            return NotFound(new { message = "Book puzzle not found." });
+
+        _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
+        {
+            BookPuzzleId = id,
+            UserId = GetUserId(),
+            Solved = dto.Solved,
+            TimeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400),
+            AttemptedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    /// <summary>
+    /// Aggregierte Ergebnisse zu einem Buch-Puzzle (für die Tagespuzzle-Anzeige): wer hat gelöst
+    /// (je User dedupliziert, mit Discord-Verknüpfung sofern vorhanden) + Versuchs-/Lösungszähler.
+    /// `since` (ISO-UTC) grenzt optional auf einen Zeitraum ein (z. B. seit dem Tagespuzzle-Post).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/results")]
+    public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
+    {
+        var q = _db.BookPuzzleAttempts.Where(a => a.BookPuzzleId == id);
+        if (DateTime.TryParse(since, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var sinceUtc))
+            q = q.Where(a => a.AttemptedAt >= sinceUtc);
+
+        // Je User aggregieren (nur skalare Aggregate → EF-übersetzbar): wie oft gelöst?
+        var perUser = await q
+            .GroupBy(a => a.UserId)
+            .Select(g => new { UserId = g.Key, SolvedCount = g.Count(a => a.Solved) })
+            .ToListAsync();
+
+        var userIds = perUser.Select(u => u.UserId).ToList();
+        var names = await _db.AppUsers.Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Username }).ToDictionaryAsync(u => u.Id, u => u.Username);
+        var profiles = await _db.UserProfiles.Where(p => userIds.Contains(p.UserId))
+            .ToDictionaryAsync(p => p.UserId);
+
+        var solvers = perUser
+            .Where(u => u.SolvedCount > 0)
+            .Select(u =>
+            {
+                profiles.TryGetValue(u.UserId, out var prof);
+                names.TryGetValue(u.UserId, out var uname);
+                return new BookSolverDto
+                {
+                    Name = prof?.DisplayName ?? uname ?? $"#{u.UserId}",
+                    DiscordId = prof?.DiscordId,
+                    DiscordUsername = prof?.DiscordUsername
+                };
+            })
+            .OrderBy(s => s.Name)
+            .ToList();
+
+        return Ok(new BookPuzzleResultsDto
+        {
+            SolvedCount = solvers.Count,
+            AttemptCount = perUser.Count,
+            Solvers = solvers
+        });
+    }
+
     /// <summary>
     /// Liefert ein zufälliges Buch-Puzzle aus dem gewünschten Pool.
     /// pool=random|blind → echtes Zufallspuzzle; pool=daily → deterministisch pro UTC-Tag

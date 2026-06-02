@@ -124,6 +124,8 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | GET | `/api/book-puzzles/{id}` | AllowAnonymous | Puzzle by ID |
 | GET | `/api/book-puzzles/{id}/next` | AllowAnonymous | Nächstes Puzzle im selben Buch (Loop am Ende) |
 | GET | `/api/book-puzzles/{id}/random` | AllowAnonymous | Zufälliges Puzzle aus demselben Buch |
+| POST | `/api/book-puzzles/{id}/attempt` | Auth | Lösungsversuch erfassen `{ solved, timeSeconds }` (Tagespuzzle) |
+| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User, inkl. Discord) + Versuchs-/Lösungszähler |
 | GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup fuer schach-bot |
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
@@ -193,6 +195,7 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags |
+| BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche (eingeloggt) | BookPuzzleId (Restrict) + UserId (Cascade), Solved, TimeSeconds, AttemptedAt; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
 | EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Themes, FasttrackThreshold1/2, StockfishDepth, Highscore, ActiveGameState (LONGTEXT) |
@@ -313,7 +316,7 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.57.2` (Fix: Endless „Unfinished run | 0 lives"-Zombie weg; davor: Fix EF „FirstOrDefault ohne OrderBy" an der Quelle behoben; Buch-Puzzle Standalone: „Nächstes im Buch" + „Zufällig aus Buch"; Statistik „Alle": überlagerte farbkodierte Elo-Kurven + Legende; Buch-Import meldet Importiert / Duplikate / Ungültig getrennt; davor: Log-Rauschen reduziert; Kibana-Dashboard Logins/Tag + Unique Logins; strukturierter UserLogin-Log in der API; Endless offline-Vorabladen eines Runs; Pfeile/Kreise auf allen Puzzle-Brettern + Analyse-Fix; Analyse-Tiefe einstellbar + Zurück-zum-Puzzle; „Letztes Puzzle ansehen" öffnet Analysemodus; Repertoires + Wochenpost vorerst nur Admin; Statistik „Alle" zeigt Kurve je Modus; „Analysieren"-Button bei Puzzles; Puzzle-Aufgeben spielt Lösung durch; Discord-Konto-Verknüpfung; User-Statistikseite; Analysemodus; Frontend mehrsprachig en/de/hr)
+- **Aktuelle Version**: `0.58.0` (Tagespuzzle-Solves erfasst + Results-Endpoint für Discord-Anzeige; Fix: Endless „Unfinished run | 0 lives"-Zombie weg; Fix: EF „FirstOrDefault ohne OrderBy" an der Quelle behoben; Buch-Puzzle Standalone: „Nächstes im Buch" + „Zufällig aus Buch"; Statistik „Alle": überlagerte farbkodierte Elo-Kurven + Legende; Buch-Import meldet Importiert / Duplikate / Ungültig getrennt; davor: Log-Rauschen reduziert; Kibana-Dashboard Logins/Tag + Unique Logins; strukturierter UserLogin-Log in der API; Endless offline-Vorabladen eines Runs; Pfeile/Kreise auf allen Puzzle-Brettern + Analyse-Fix; Analyse-Tiefe einstellbar + Zurück-zum-Puzzle; „Letztes Puzzle ansehen" öffnet Analysemodus; Repertoires + Wochenpost vorerst nur Admin; Statistik „Alle" zeigt Kurve je Modus; „Analysieren"-Button bei Puzzles; Puzzle-Aufgeben spielt Lösung durch; Discord-Konto-Verknüpfung; User-Statistikseite; Analysemodus; Frontend mehrsprachig en/de/hr)
 - Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
 - Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)

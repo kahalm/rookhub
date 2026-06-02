@@ -1,5 +1,25 @@
 namespace RookHub.Api.DTOs;
 
+public class RecordBookAttemptDto
+{
+    public bool Solved { get; set; }
+    public int TimeSeconds { get; set; }
+}
+
+public class BookSolverDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? DiscordId { get; set; }
+    public string? DiscordUsername { get; set; }
+}
+
+public class BookPuzzleResultsDto
+{
+    public int SolvedCount { get; set; }
+    public int AttemptCount { get; set; }
+    public List<BookSolverDto> Solvers { get; set; } = new();
+}
+
 public class BookPuzzleDto
 {
     public int Id { get; set; }

@@ -23,6 +23,7 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode } from '../courses/course.service';
+import { AuthService } from '../../core/auth.service';
 import { WeeklyService } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -517,6 +518,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
   bookNavLoading = false;
+  private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -543,7 +545,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private courseService: CourseService,
     private weeklyService: WeeklyService,
     private router: Router,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private auth: AuthService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -616,6 +619,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.updateBoard();
     this.enterSolutionReview();
     this.recordCourseSolved();
+    this.recordBookAttempt(true);
   }
 
   protected override handleFailed(): void {
@@ -623,6 +627,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
+    this.recordBookAttempt(false);
+  }
+
+  /**
+   * Meldet einen Lösungsversuch ans Backend — nur im Standalone-Buch-Modus und nur eingeloggt
+   * (Basis für die Tagespuzzle-Visualisierung auf Discord). Pro Puzzle nur einmal.
+   */
+  private recordBookAttempt(solved: boolean): void {
+    if (!this.standalone || this.bookAttemptRecorded || !this.puzzle || !this.auth.isLoggedIn) return;
+    this.bookAttemptRecorded = true;
+    this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds).subscribe({ error: () => {} });
   }
 
   ngOnInit(): void {
@@ -780,6 +795,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private setupPuzzle(puzzle: BookPuzzleDto): void {
     this.clearSolutionPlay();
+    this.bookAttemptRecorded = false;
     this.reviewMode = false;
     this.solutionReview = false;
     // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
@@ -797,6 +813,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.gaveUp = true;
     this.state = 'FAILED';
+    this.recordBookAttempt(false);
     // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
     this.playSolutionFromStart();
   }

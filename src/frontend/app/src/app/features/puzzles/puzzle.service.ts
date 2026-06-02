@@ -176,6 +176,11 @@ export class PuzzleService {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/random`);
   }
 
+  /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige). */
+  recordBookAttempt(id: number, solved: boolean, timeSeconds: number): Observable<unknown> {
+    return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds });
+  }
+
   getBookList(): Observable<BookInfoDto[]> {
     return this.http.get<BookInfoDto[]>('/api/book-puzzles/books');
   }
