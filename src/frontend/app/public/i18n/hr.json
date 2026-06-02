@@ -31,7 +31,8 @@
     "language": "Jezik",
     "menu": "Izbornik",
     "info": "Informacije",
-    "analysis": "Analiza"
+    "analysis": "Analiza",
+    "stats": "Statistika"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -755,5 +756,25 @@
     "copyFen": "Kopiraj FEN",
     "pgn": "PGN",
     "loadPgn": "Učitaj PGN"
+  },
+  "stats": {
+    "title": "Statistika",
+    "currentElo": "Elo zagonetki",
+    "totalSolved": "Riješeno",
+    "attempts": "Pokušaji",
+    "accuracy": "Točnost",
+    "currentStreak": "Trenutni niz",
+    "bestStreak": "Najbolji niz",
+    "eloProgress": "Napredak Ela zagonetki",
+    "level": "Razina",
+    "allLevels": "Sve",
+    "noData": "Još nema podataka.",
+    "perLevel": "Elo po razini vizualizacije",
+    "vizLevel": "Razina",
+    "recentPuzzles": "Nedavne zagonetke",
+    "date": "Datum",
+    "rating": "Ocjena",
+    "result": "Rezultat",
+    "time": "Vrijeme"
   }
 }

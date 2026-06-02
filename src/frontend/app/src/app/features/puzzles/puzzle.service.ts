@@ -40,6 +40,13 @@ export interface PuzzleAttemptDto {
   visualizationLevel?: number;
 }
 
+export interface EloHistoryPoint {
+  attemptedAt: string;
+  elo: number;
+  vizLevel: number;
+  solved: boolean;
+}
+
 export interface BookPuzzleDto {
   id: number;
   lineId: string;
@@ -102,6 +109,12 @@ export class PuzzleService {
   getHistory(page = 1, pageSize = 20): Observable<PuzzleAttemptDto[]> {
     return this.http.get<PuzzleAttemptDto[]>('/api/puzzles/history', {
       params: new HttpParams().set('page', page).set('pageSize', pageSize)
+    });
+  }
+
+  getEloHistory(limit = 500): Observable<EloHistoryPoint[]> {
+    return this.http.get<EloHistoryPoint[]>('/api/puzzles/elo-history', {
+      params: new HttpParams().set('limit', limit)
     });
   }
 

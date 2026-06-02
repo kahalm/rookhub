@@ -60,6 +60,7 @@ import { LocaleService } from '../../core/locale.service';
         </button>
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
+          <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>

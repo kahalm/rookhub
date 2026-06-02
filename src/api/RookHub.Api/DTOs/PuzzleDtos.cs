@@ -87,3 +87,12 @@ public class PuzzleAttemptDto
     public int? EloChange { get; set; }
     public int VisualizationLevel { get; set; }
 }
+
+/// <summary>Ein Punkt der Puzzle-Elo-Kurve (für die Statistikseite).</summary>
+public class EloHistoryPointDto
+{
+    public DateTime AttemptedAt { get; set; }
+    public int Elo { get; set; }
+    public int VizLevel { get; set; }
+    public bool Solved { get; set; }
+}

@@ -354,6 +354,28 @@ public class PuzzleService
             .ToListAsync();
     }
 
+    /// <summary>Puzzle-Elo-Verlauf (letzte <paramref name="limit"/> bewertete Versuche, chronologisch aufsteigend).</summary>
+    public async Task<List<EloHistoryPointDto>> GetEloHistoryAsync(int userId, int limit = 500)
+    {
+        if (limit < 1) limit = 1;
+        if (limit > 2000) limit = 2000;
+
+        var points = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.EloAfter != null)
+            .OrderByDescending(a => a.AttemptedAt)
+            .Take(limit)
+            .Select(a => new EloHistoryPointDto
+            {
+                AttemptedAt = a.AttemptedAt,
+                Elo = a.EloAfter!.Value,
+                VizLevel = a.VisualizationLevel,
+                Solved = a.Solved,
+            })
+            .ToListAsync();
+        points.Reverse();   // ältester zuerst
+        return points;
+    }
+
     public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
         var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);

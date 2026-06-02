@@ -80,6 +80,12 @@ public class PuzzleController : BaseApiController
         return Ok(await _puzzleService.GetHistoryAsync(GetUserId(), page, pageSize));
     }
 
+    [HttpGet("elo-history")]
+    public async Task<ActionResult<List<EloHistoryPointDto>>> GetEloHistory([FromQuery] int limit = 500)
+    {
+        return Ok(await _puzzleService.GetEloHistoryAsync(GetUserId(), limit));
+    }
+
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
     [HttpPost("{id}/attempt/anonymous")]

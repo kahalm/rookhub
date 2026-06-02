@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.47.1';
+export const APP_VERSION = '0.48.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.48.0', date: '2026-06-02', changes: [
+    'Neu (Statistik): Persönliche Statistikseite (Menü „Statistik", eingeloggt) — Puzzle-Elo-Verlauf als Kurve (pro Visualisierungs-Level filterbar), Kennzahlen (Elo, gelöst, Versuche, Genauigkeit, aktuelle/beste Serie), Elo je Level und eine Liste der zuletzt gespielten Puzzles (mit Δ-Elo, Zeit, Link zum Puzzle). Neuer Endpoint GET `/api/puzzles/elo-history`.',
+  ]},
   { version: '0.47.1', date: '2026-06-02', changes: [
     'Footer: „Feedback / Bug melden"-Link zum GitHub-Issue-Tracker (github.com/kahalm/rookhub/issues).',
   ]},

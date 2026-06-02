@@ -745,4 +745,24 @@ public class PuzzleServiceTests : IDisposable
     {
         Assert.Equal(expected, PuzzleService.GetDefaultElo(level));
     }
+
+    [Fact]
+    public async Task GetEloHistory_ReturnsRatedAttemptsChronologically()
+    {
+        var userId = await CreateUserAsync();
+        var puzzle = await CreatePuzzleAsync();
+        var t0 = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = userId, PuzzleId = puzzle.Id, Solved = true, EloAfter = 1520, AttemptedAt = t0.AddMinutes(2) },
+            new PuzzleAttempt { UserId = userId, PuzzleId = puzzle.Id, Solved = false, EloAfter = 1505, AttemptedAt = t0 },
+            new PuzzleAttempt { UserId = userId, PuzzleId = puzzle.Id, Solved = true, EloAfter = 1540, AttemptedAt = t0.AddMinutes(5) },
+            new PuzzleAttempt { UserId = userId, PuzzleId = puzzle.Id, Solved = true, EloAfter = null, AttemptedAt = t0.AddMinutes(1) }); // ohne Elo -> ausgeschlossen
+        await _db.SaveChangesAsync();
+
+        var hist = await _service.GetEloHistoryAsync(userId);
+
+        Assert.Equal(3, hist.Count);
+        Assert.Equal(new[] { 1505, 1520, 1540 }, hist.Select(h => h.Elo));   // chronologisch aufsteigend
+        Assert.True(hist[0].AttemptedAt <= hist[1].AttemptedAt && hist[1].AttemptedAt <= hist[2].AttemptedAt);
+    }
 }

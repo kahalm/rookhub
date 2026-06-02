@@ -31,7 +31,8 @@
     "language": "Language",
     "menu": "Menu",
     "info": "Info",
-    "analysis": "Analysis"
+    "analysis": "Analysis",
+    "stats": "Statistics"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -755,5 +756,25 @@
     "copyFen": "Copy FEN",
     "pgn": "PGN",
     "loadPgn": "Load PGN"
+  },
+  "stats": {
+    "title": "Statistics",
+    "currentElo": "Puzzle Elo",
+    "totalSolved": "Solved",
+    "attempts": "Attempts",
+    "accuracy": "Accuracy",
+    "currentStreak": "Current streak",
+    "bestStreak": "Best streak",
+    "eloProgress": "Puzzle Elo progress",
+    "level": "Level",
+    "allLevels": "All",
+    "noData": "No data yet.",
+    "perLevel": "Elo per visualization level",
+    "vizLevel": "Level",
+    "recentPuzzles": "Recent puzzles",
+    "date": "Date",
+    "rating": "Rating",
+    "result": "Result",
+    "time": "Time"
   }
 }
