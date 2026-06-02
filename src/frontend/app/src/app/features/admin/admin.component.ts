@@ -65,6 +65,20 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
                     }
                   </td>
                 </ng-container>
+                <ng-container matColumnDef="groups">
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.groups' | translate }}</th>
+                  <td mat-cell *matCellDef="let u">
+                    @if (u.groups?.length) {
+                      <mat-chip-set>
+                        @for (g of u.groups; track g) {
+                          <mat-chip class="group-chip">{{ g }}</mat-chip>
+                        }
+                      </mat-chip-set>
+                    } @else {
+                      <span class="no-groups">–</span>
+                    }
+                  </td>
+                </ng-container>
                 <ng-container matColumnDef="createdAt">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.created' | translate }}</th>
                   <td mat-cell *matCellDef="let u">{{ u.createdAt | date:'short' }}</td>
@@ -395,6 +409,8 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .search-field { width: 100%; max-width: 400px; }
     .full-width { width: 100%; }
     .admin-badge { color: #ff9800; font-size: 20px; }
+    .group-chip { font-size: 0.72rem; min-height: 22px; }
+    .no-groups { color: #999; }
     .table-responsive { overflow-x: auto; }
 
     .book-upload {
@@ -458,7 +474,7 @@ export class AdminComponent implements OnInit {
   usersPageSize = 20;
   usersTotalCount = 0;
   usersLoading = false;
-  userColumns = ['id', 'username', 'email', 'isAdmin', 'createdAt', 'actions'];
+  userColumns = ['id', 'username', 'email', 'isAdmin', 'groups', 'createdAt', 'actions'];
 
   logs: RequestLog[] = [];
   logsPage = 1;

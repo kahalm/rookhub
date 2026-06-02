@@ -644,6 +644,7 @@
         "username": "Username",
         "email": "Email",
         "admin": "Admin",
+        "groups": "Groups",
         "created": "Created",
         "actions": "Actions"
       },

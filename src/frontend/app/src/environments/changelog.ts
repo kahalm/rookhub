@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.46.0';
+export const APP_VERSION = '0.46.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.46.1', date: '2026-06-02', changes: [
+    'Admin/Userliste: Neue Spalte „Gruppen" zeigt pro User die Gruppen-Mitgliedschaften (als Chips). `GET /api/admin/users` liefert die Gruppennamen mit.',
+  ]},
   { version: '0.46.0', date: '2026-06-01', changes: [
     'Lokalisierung (i18n): Die gesamte Oberfläche ist jetzt mehrsprachig — Englisch (Standard), Deutsch und Kroatisch. Sprachumschalter (Globus-Icon) in der Navigationsleiste, Auswahl wird gespeichert (localStorage). Umgesetzt mit ngx-translate; alle Texte aller Bereiche (Navigation, Auth, Dashboard, Profil, Freunde, Repertoires, Turniere, Puzzles, Endlosmodus, Bücher/Kurse, Wochenpost, Admin, PGN-Viewer) laufen über Übersetzungs-Keys (`public/i18n/{en,de,hr}.json`). Fehlende Keys fallen auf Englisch zurück. (Backend-/API-Meldungen bleiben vorerst Englisch.)',
   ]},

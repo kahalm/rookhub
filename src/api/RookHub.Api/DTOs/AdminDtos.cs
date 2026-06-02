@@ -7,4 +7,6 @@ public class AdminUserDto
     public string Email { get; set; } = string.Empty;
     public bool IsAdmin { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Namen der Gruppen, in denen der User Mitglied ist.</summary>
+    public List<string> Groups { get; set; } = new();
 }

@@ -8,6 +8,7 @@ export interface AdminUser {
   email: string;
   isAdmin: boolean;
   createdAt: string;
+  groups: string[];
 }
 
 export interface PagedResult<T> {

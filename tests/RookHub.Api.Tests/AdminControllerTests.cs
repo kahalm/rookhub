@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
+using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -68,6 +69,30 @@ public class AdminControllerTests : IDisposable
         var data = result.Value!;
         var totalCount = (int)data.GetType().GetProperty("totalCount")!.GetValue(data)!;
         Assert.Equal(2, totalCount);
+    }
+
+    [Fact]
+    public async Task GetUsers_IncludesGroupNames()
+    {
+        var alice = await CreateUserAsync("alice");
+        await CreateUserAsync("bob");
+        var g1 = new Group { Name = "Trainees", CreatedAt = DateTime.UtcNow };
+        var g2 = new Group { Name = "Coaches", CreatedAt = DateTime.UtcNow };
+        _db.Groups.AddRange(g1, g2);
+        await _db.SaveChangesAsync();
+        _db.UserGroups.AddRange(
+            new UserGroup { UserId = alice.Id, GroupId = g1.Id },
+            new UserGroup { UserId = alice.Id, GroupId = g2.Id });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.GetUsers(null, 1, 20) as OkObjectResult;
+        var data = result!.Value!;
+        var items = (System.Collections.IEnumerable)data.GetType().GetProperty("items")!.GetValue(data)!;
+        var aliceDto = items.Cast<AdminUserDto>().Single(u => u.Username == "alice");
+        var bobDto = items.Cast<AdminUserDto>().Single(u => u.Username == "bob");
+
+        Assert.Equal(new[] { "Coaches", "Trainees" }, aliceDto.Groups);   // alphabetisch
+        Assert.Empty(bobDto.Groups);
     }
 
     [Fact]

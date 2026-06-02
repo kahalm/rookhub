@@ -55,7 +55,8 @@ public class AdminController : BaseApiController
                 Username = u.Username,
                 Email = u.Email,
                 IsAdmin = u.IsAdmin,
-                CreatedAt = u.CreatedAt
+                CreatedAt = u.CreatedAt,
+                Groups = u.Groups.Select(ug => ug.Group!.Name).OrderBy(n => n).ToList()
             })
             .ToListAsync();
 
@@ -108,13 +109,20 @@ public class AdminController : BaseApiController
         user.IsAdmin = !user.IsAdmin;
         await _db.SaveChangesAsync();
 
+        var groups = await _db.UserGroups
+            .Where(ug => ug.UserId == user.Id)
+            .Select(ug => ug.Group!.Name)
+            .OrderBy(n => n)
+            .ToListAsync();
+
         return Ok(new AdminUserDto
         {
             Id = user.Id,
             Username = user.Username,
             Email = user.Email,
             IsAdmin = user.IsAdmin,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            Groups = groups
         });
     }
 

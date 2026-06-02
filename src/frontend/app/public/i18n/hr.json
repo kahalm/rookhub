@@ -644,6 +644,7 @@
         "username": "Korisničko ime",
         "email": "E-pošta",
         "admin": "Administrator",
+        "groups": "Grupe",
         "created": "Stvoreno",
         "actions": "Radnje"
       },
