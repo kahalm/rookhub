@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.55.0';
+export const APP_VERSION = '0.55.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.55.1', date: '2026-06-02', changes: [
+    'Log-Rauschen reduziert: erwartete DataProtection-Startup-Warnungen (Key-Ring im gemounteten /keys-Volume, ohne XML-Encryptor) werden nicht mehr bei jedem Neustart als Warning geloggt; die EF-Core-„FirstOrDefault ohne OrderBy"-Meldung der zufälligen Puzzle-Auswahl (deterministische Aggregat-/ID-Range-Query) ist auf Debug herabgestuft. Echte Fehler bleiben sichtbar.',
+  ]},
   { version: '0.55.0', date: '2026-06-02', changes: [
     'Kibana-Logging-Dashboard erweitert: neue Panels „Logins per Day" (erfolgreiche Logins pro Tag) und „Unique Logins" (eindeutige User pro Zeitraum) neben den bestehenden Puzzle-Kennzahlen (Puzzles Solved, Puzzles per User).',
     'API: Erfolgreiche Logins erzeugen jetzt einen strukturierten Log-Event („UserLogin" mit UserId/UserName) — Grundlage für die Login- und Unique-Login-Auswertung in Kibana.',

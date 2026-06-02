@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RookHub.Api.Data;
@@ -29,6 +31,11 @@ try
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            // Erwartetes, harmloses Startup-Rauschen: DataProtection persistiert den Key-Ring
+            // bewusst unverschlüsselt in das gemountete /keys-Volume (privat, durable). Die zwei
+            // Hinweise ("no XML encryptor" / "may not be persisted") kämen bei JEDEM Neustart →
+            // hier auf Error angehoben, echte DataProtection-Fehler bleiben sichtbar.
+            .MinimumLevel.Override("Microsoft.AspNetCore.DataProtection", LogEventLevel.Error)
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithProperty("Application", "RookHub")
@@ -52,7 +59,11 @@ try
     // Database
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+            // Die zufällige Puzzle-Auswahl nutzt bewusst FirstOrDefault ohne OrderBy (ID-Range/
+            // Aggregat-Query, deterministisch) — die EF-Warnung dazu ist hier ein False-Positive
+            // und wird auf Debug herabgestuft (statt jede Random-Abfrage als Warning zu loggen).
+            .ConfigureWarnings(w => w.Log((CoreEventId.RowLimitingOperationWithoutOrderByWarning, LogLevel.Debug))));
 
     // JWT Authentication
     var jwtKey = builder.Configuration["Jwt:Key"]
