@@ -541,6 +541,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private routePuzzleId: number | null = null;
   lastSolvedPuzzleId: number | null = null;
+  private lastSolvedFen: string | null = null;
+  private lastSolvedMoves = '';
+  private lastSolvedOrientation: 'white' | 'black' = 'white';
   solvedCountdown = 0;
   private countdownInterval?: ReturnType<typeof setInterval>;
   /** True wenn der User aufgegeben hat. Brett wird zurueckgesetzt damit er die Loesung
@@ -583,6 +586,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.updateBoard();
     this.recordAttempt(true);
     this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
+    this.lastSolvedFen = this.puzzle?.fen ?? null;
+    this.lastSolvedMoves = this.puzzle?.moves ?? '';
+    this.lastSolvedOrientation = this.orientation;
     this.enterSolutionReview();
     this.startSolvedCountdown();
   }
@@ -844,6 +850,17 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   reviewLastPuzzle(): void {
+    // Direkt in den Analysemodus mit dem zuletzt gelösten Puzzle (Stellung + Zugfolge).
+    if (this.lastSolvedFen) {
+      this.router.navigate(['/analysis'], {
+        queryParams: {
+          fen: this.lastSolvedFen,
+          moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
+          orientation: this.lastSolvedOrientation,
+        },
+      });
+      return;
+    }
     if (this.lastSolvedPuzzleId) {
       this.router.navigate(['/puzzles', this.lastSolvedPuzzleId]);
     }

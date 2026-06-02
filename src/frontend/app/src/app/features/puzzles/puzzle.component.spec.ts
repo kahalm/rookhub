@@ -11,7 +11,7 @@ function makeComponent(): any {
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
   const puzzleService: any = {};
-  const router: any = {};
+  const router: any = { navigate: jasmine.createSpy('navigate') };
   const route: any = { snapshot: { paramMap: { get: () => null } } };
   const dialog: any = {};
   return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog);
@@ -52,6 +52,20 @@ describe('PuzzleComponent give-up', () => {
 
     c.ngOnDestroy();
   }));
+
+  it('reviewLastPuzzle navigates straight to the analysis board with the last solved puzzle', () => {
+    const c = makeComponent();
+    // Zustand wie nach einem gelösten Puzzle (handleSolved merkt sich fen/moves/orientation):
+    c.lastSolvedFen = PUZZLE.fen;
+    c.lastSolvedMoves = PUZZLE.moves;       // 'e2e4 e7e5 g1f3'
+    c.lastSolvedOrientation = 'black';
+
+    c.reviewLastPuzzle();
+
+    expect((c as any).router.navigate).toHaveBeenCalledWith(['/analysis'], {
+      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'black' },
+    });
+  });
 
   it('manual review navigation stops the auto-playback', fakeAsync(() => {
     const c = makeComponent();
