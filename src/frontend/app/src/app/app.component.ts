@@ -14,6 +14,8 @@ import { environment } from '../environments/environment';
     <main><router-outlet /></main>
     <footer class="app-footer">
       <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      <span class="footer-sep">·</span>
+      <a class="feedback-link" href="https://github.com/kahalm/rookhub/issues" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
     </footer>
     @if (showChangelog) {
       <div class="changelog-overlay" (click)="showChangelog = false">
@@ -68,6 +70,9 @@ import { environment } from '../environments/environment';
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
     .version-link:hover { color: #aaa; text-decoration: underline; }
+    .footer-sep { margin: 0 6px; color: #aaa; }
+    .feedback-link { color: inherit; text-decoration: none; }
+    .feedback-link:hover { color: #aaa; text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
     .changelog-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);

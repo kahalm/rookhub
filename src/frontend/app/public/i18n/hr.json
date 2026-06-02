@@ -45,7 +45,8 @@
       "favoritesDesc": "Označite igrače ili timove kao favorite za brz pristup u prikazu turnira.",
       "chessResultsTitle": "ChessResults ID",
       "chessResultsDesc": "Unesite svoj ChessResults ID u profil — nadolazeći turniri pretplaćuju se automatski."
-    }
+    },
+    "feedback": "Povratne informacije / Prijavi grešku"
   },
   "auth": {
     "login": {

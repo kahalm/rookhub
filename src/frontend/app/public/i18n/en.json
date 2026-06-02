@@ -45,7 +45,8 @@
       "favoritesDesc": "Mark players or teams as favorites for quick access in the tournament view.",
       "chessResultsTitle": "ChessResults ID",
       "chessResultsDesc": "Add your ChessResults ID in your profile — upcoming tournaments are subscribed automatically."
-    }
+    },
+    "feedback": "Feedback / Report a bug"
   },
   "auth": {
     "login": {
