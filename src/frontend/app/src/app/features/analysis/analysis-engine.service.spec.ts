@@ -98,3 +98,18 @@ describe('AnalysisEngineService crash recovery', () => {
     expect(state.running).toBeFalse();
   });
 });
+
+describe('AnalysisEngineService UCI sequencing', () => {
+  it('sends position/go only after stop + readyok (not mid-search)', async () => {
+    const eng = new TestEngine();
+    await eng.analyze(FEN);            // FakeWorker beantwortet isready automatisch mit readyok
+    const posted = eng.last.posted;
+    const lastStop = posted.lastIndexOf('stop');
+    const lastReady = posted.lastIndexOf('isready');
+    const iPos = posted.findIndex(c => c.startsWith('position fen'));
+    const iGo = posted.findIndex(c => c.startsWith('go depth'));
+    expect(lastReady).toBeGreaterThan(lastStop);   // erst stoppen, dann auf bereit warten
+    expect(iPos).toBeGreaterThan(lastReady);        // Stellung erst NACH readyok
+    expect(iGo).toBeGreaterThan(iPos);
+  });
+});

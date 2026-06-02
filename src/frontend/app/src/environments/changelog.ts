@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.64.1';
+export const APP_VERSION = '0.64.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.64.2', date: '2026-06-02', changes: [
+    'Analyse hängt nicht mehr bei „Berechne …": Der Stockfish-WASM wird nicht mehr über den Service-Worker-Cache geladen (sondern direkt) — ein aus dem Cache serviertes WASM ließ den Engine-Worker oft nicht starten. Außerdem sauberes UCI-Sequencing: eine neue Stellung wird erst analysiert, nachdem die Engine den vorherigen Lauf bestätigt gestoppt hat (verhindert verschluckte Suchen). Hinweis: Engine-Analyse/Eval brauchen jetzt eine Verbindung (Puzzle-/Endless-Lösen offline bleibt unberührt).',
+  ]},
   { version: '0.64.1', date: '2026-06-02', changes: [
     'Stockfish im Browser stabiler: Stürzt der WASM-Worker ab (z.B. Speicher), wird er jetzt automatisch neu gestartet, statt die Engine für die restliche Sitzung lahmzulegen. Im Analyse-Modus wird die aktuelle Stellung nach einem Absturz nahtlos wieder aufgenommen (mit Schutz gegen Endlos-Neustarts); die Hash-Größe ist begrenzt, um Speicher-Crashes bei langen Analysen vorzubeugen. Eine fehlgeschlagene Engine-Initialisierung wird beim nächsten Versuch erneut probiert.',
   ]},

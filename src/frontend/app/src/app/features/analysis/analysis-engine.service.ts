@@ -49,6 +49,10 @@ export class AnalysisEngineService implements OnDestroy {
   /** Aufeinanderfolgende Crashes ohne erfolgreiche Antwort — gegen Endlos-Recovery-Loops. */
   private crashStreak = 0;
 
+  /** UCI-Sequencing: neue Suche erst nach `readyok` starten (nicht mitten in laufender Suche). */
+  private pendingGoFen: string | null = null;
+  private awaitingReady = false;
+
   get linesRequested(): number { return this.multiPv; }
   get depthLimit(): number { return this.depthCap; }
 
@@ -104,6 +108,8 @@ export class AnalysisEngineService implements OnDestroy {
     this.worker = undefined;
     this.initPromise = undefined;
     this.partial = new Map();
+    this.awaitingReady = false;
+    this.pendingGoFen = null;
     const fen = this.currentFen;
     const wasRunning = this.state$.value.running;
     this.crashStreak++;
@@ -124,10 +130,17 @@ export class AnalysisEngineService implements OnDestroy {
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
     this.partial = new Map();
     this.state$.next({ fen, depth: 0, lines: [], running: true });
-    this.send('stop');
+    // Sauberes Sequencing: stop → (isready/readyok) → position+go. So wird 'position' nie
+    // mitten in eine laufende Suche geschickt (sonst verschluckt Stockfish sie → keine
+    // Info-Lines → ewiges „calculating"). Nur EIN isready offen halten; bei schneller
+    // Navigation gewinnt die zuletzt angeforderte Stellung.
+    this.pendingGoFen = fen;
     this.send('setoption name MultiPV value ' + this.multiPv);
-    this.send('position fen ' + fen);
-    this.send('go depth ' + this.depthCap);
+    this.send('stop');
+    if (!this.awaitingReady) {
+      this.awaitingReady = true;
+      this.send('isready');
+    }
   }
 
   stop(): void {
@@ -150,9 +163,23 @@ export class AnalysisEngineService implements OnDestroy {
   private onMessage(e: MessageEvent): void {
     const line = e.data;
     if (typeof line !== 'string') return;
+
+    if (line.startsWith('readyok')) {
+      this.awaitingReady = false;
+      const fen = this.pendingGoFen;
+      if (fen !== null) {
+        this.pendingGoFen = null;
+        this.send('position fen ' + fen);
+        this.send('go depth ' + this.depthCap);
+      }
+      return;
+    }
+
     const genAtSend = this.gen;
 
     if (line.startsWith('bestmove')) {
+      // 'bestmove' eines gestoppten Suchlaufs ignorieren, wenn schon ein neuer ansteht.
+      if (this.pendingGoFen !== null || this.awaitingReady) return;
       const s = this.state$.value;
       if (s.running) this.state$.next({ ...s, running: false });
       return;
@@ -213,6 +240,8 @@ export class AnalysisEngineService implements OnDestroy {
       this.worker = undefined;
       this.initPromise = undefined;
     }
+    this.awaitingReady = false;
+    this.pendingGoFen = null;
     this.state$.next(EMPTY);
   }
 }
