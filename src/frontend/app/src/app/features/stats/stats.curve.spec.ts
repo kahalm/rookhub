@@ -1,4 +1,4 @@
-import { buildEloCurve } from './stats.component';
+import { buildEloCurve, buildHeatmap, heatLevel } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
 function pt(elo: number, day: number): EloHistoryPoint {
@@ -28,5 +28,41 @@ describe('buildEloCurve', () => {
     const c = buildEloCurve([pt(1500, 1), pt(1500, 2)])!;
     expect(c.poly).toContain(',');
     expect(Number.isFinite(c.minElo)).toBeTrue();
+  });
+});
+
+describe('heatLevel', () => {
+  it('buckets counts into 0–4', () => {
+    expect(heatLevel(0)).toBe(0);
+    expect(heatLevel(2)).toBe(1);
+    expect(heatLevel(5)).toBe(2);
+    expect(heatLevel(9)).toBe(3);
+    expect(heatLevel(20)).toBe(4);
+  });
+});
+
+describe('buildHeatmap', () => {
+  const today = new Date(2026, 5, 2); // 2 Jun 2026
+  const tk = '2026-06-02';
+
+  it('builds a weeks × 7 grid', () => {
+    const grid = buildHeatmap([], today, 4);
+    expect(grid.length).toBe(4);
+    expect(grid.every(w => w.length === 7)).toBeTrue();
+  });
+
+  it('places the count on the matching day with the right level', () => {
+    const grid = buildHeatmap([{ date: tk, count: 5 }], today, 4);
+    const cell = grid.flat().find(c => c.date === tk)!;
+    expect(cell.count).toBe(5);
+    expect(cell.level).toBe(2);
+  });
+
+  it('marks days after today as level -1, others >= 0', () => {
+    const grid = buildHeatmap([], today, 4);
+    for (const c of grid.flat()) {
+      if (c.date > tk) expect(c.level).toBe(-1);
+      else expect(c.level).toBeGreaterThanOrEqual(0);
+    }
   });
 });

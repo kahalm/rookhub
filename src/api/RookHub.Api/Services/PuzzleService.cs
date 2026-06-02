@@ -376,6 +376,55 @@ public class PuzzleService
         return points;
     }
 
+    /// <summary>Aufschlüsselung der Versuche nach Thema, Rating-Band und Tag (für die Statistikseite).</summary>
+    public async Task<PuzzleBreakdownDto> GetBreakdownAsync(int userId)
+    {
+        var rows = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId)
+            .Select(a => new { a.Solved, a.AttemptedAt, Rating = a.Puzzle.Rating, a.Puzzle.Themes })
+            .ToListAsync();
+
+        // Themen (Lichess-Themes sind leerzeichengetrennt im Themes-String).
+        var themeAgg = new Dictionary<string, (int attempts, int solved)>();
+        foreach (var r in rows)
+        {
+            if (string.IsNullOrWhiteSpace(r.Themes)) continue;
+            foreach (var theme in r.Themes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var (att, sol) = themeAgg.TryGetValue(theme, out var v) ? v : (0, 0);
+                themeAgg[theme] = (att + 1, sol + (r.Solved ? 1 : 0));
+            }
+        }
+        var themes = themeAgg
+            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+            .OrderByDescending(t => t.Attempts).ThenBy(t => t.Theme)
+            .Take(20).ToList();
+
+        // Rating-Bänder (200er-Schritte).
+        var bandAgg = new Dictionary<int, (int attempts, int solved)>();
+        foreach (var r in rows)
+        {
+            var bucket = (r.Rating / 200) * 200;
+            var (att, sol) = bandAgg.TryGetValue(bucket, out var v) ? v : (0, 0);
+            bandAgg[bucket] = (att + 1, sol + (r.Solved ? 1 : 0));
+        }
+        var ratingBands = bandAgg
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new RatingBandStatDto { From = kv.Key, To = kv.Key + 199, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+            .ToList();
+
+        // Aktivität pro Tag (letzte 365 Tage).
+        var since = DateTime.UtcNow.Date.AddDays(-364);
+        var activity = rows
+            .Where(r => r.AttemptedAt.Date >= since)
+            .GroupBy(r => r.AttemptedAt.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new ActivityDayDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+            .ToList();
+
+        return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };
+    }
+
     public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
         var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);

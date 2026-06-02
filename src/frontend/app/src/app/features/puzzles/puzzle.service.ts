@@ -47,6 +47,11 @@ export interface EloHistoryPoint {
   solved: boolean;
 }
 
+export interface ThemeStat { theme: string; attempts: number; solved: number; }
+export interface RatingBand { from: number; to: number; attempts: number; solved: number; }
+export interface ActivityDay { date: string; count: number; }
+export interface PuzzleBreakdown { themes: ThemeStat[]; ratingBands: RatingBand[]; activity: ActivityDay[]; }
+
 export interface BookPuzzleDto {
   id: number;
   lineId: string;
@@ -116,6 +121,10 @@ export class PuzzleService {
     return this.http.get<EloHistoryPoint[]>('/api/puzzles/elo-history', {
       params: new HttpParams().set('limit', limit)
     });
+  }
+
+  getBreakdown(): Observable<PuzzleBreakdown> {
+    return this.http.get<PuzzleBreakdown>('/api/puzzles/stats/breakdown');
   }
 
   private getOrCreateSessionId(): string {

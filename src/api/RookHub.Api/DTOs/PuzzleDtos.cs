@@ -96,3 +96,19 @@ public class EloHistoryPointDto
     public int VizLevel { get; set; }
     public bool Solved { get; set; }
 }
+
+// --- Statistik-Aufschlüsselungen ---
+
+public class ThemeStatDto { public string Theme { get; set; } = string.Empty; public int Attempts { get; set; } public int Solved { get; set; } }
+public class RatingBandStatDto { public int From { get; set; } public int To { get; set; } public int Attempts { get; set; } public int Solved { get; set; } }
+public class ActivityDayDto { public string Date { get; set; } = string.Empty; public int Count { get; set; } }
+
+public class PuzzleBreakdownDto
+{
+    /// <summary>Top-Themen nach Anzahl Versuche.</summary>
+    public List<ThemeStatDto> Themes { get; set; } = new();
+    /// <summary>Rating-Bänder (200er-Schritte) mit Versuchen/Gelöst — nach Schwierigkeit + Rating-Verteilung.</summary>
+    public List<RatingBandStatDto> RatingBands { get; set; } = new();
+    /// <summary>Versuche pro Tag (letzte 365 Tage) für die Aktivitäts-Heatmap.</summary>
+    public List<ActivityDayDto> Activity { get; set; } = new();
+}

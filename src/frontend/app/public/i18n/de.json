@@ -775,6 +775,10 @@
     "date": "Datum",
     "rating": "Wertung",
     "result": "Ergebnis",
-    "time": "Zeit"
+    "time": "Zeit",
+    "byTheme": "Nach Thema",
+    "byRating": "Nach Rating (gelöst)",
+    "byRatingHint": "Gelöste Puzzles je Rating-Band — Genauigkeit beim Überfahren.",
+    "activity": "Aktivität"
   }
 }

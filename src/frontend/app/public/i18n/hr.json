@@ -775,6 +775,10 @@
     "date": "Datum",
     "rating": "Ocjena",
     "result": "Rezultat",
-    "time": "Vrijeme"
+    "time": "Vrijeme",
+    "byTheme": "Po temi",
+    "byRating": "Po rejtingu (riješeno)",
+    "byRatingHint": "Riješene zagonetke po rejting-rasponu — pređi mišem za točnost.",
+    "activity": "Aktivnost"
   }
 }

@@ -86,6 +86,12 @@ public class PuzzleController : BaseApiController
         return Ok(await _puzzleService.GetEloHistoryAsync(GetUserId(), limit));
     }
 
+    [HttpGet("stats/breakdown")]
+    public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
+    {
+        return Ok(await _puzzleService.GetBreakdownAsync(GetUserId()));
+    }
+
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
     [HttpPost("{id}/attempt/anonymous")]

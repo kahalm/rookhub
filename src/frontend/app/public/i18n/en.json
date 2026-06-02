@@ -775,6 +775,10 @@
     "date": "Date",
     "rating": "Rating",
     "result": "Result",
-    "time": "Time"
+    "time": "Time",
+    "byTheme": "By theme",
+    "byRating": "By rating (solved)",
+    "byRatingHint": "Solved puzzles per rating band — hover for accuracy.",
+    "activity": "Activity"
   }
 }

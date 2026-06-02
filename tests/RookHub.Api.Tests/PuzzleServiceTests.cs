@@ -765,4 +765,32 @@ public class PuzzleServiceTests : IDisposable
         Assert.Equal(new[] { 1505, 1520, 1540 }, hist.Select(h => h.Elo));   // chronologisch aufsteigend
         Assert.True(hist[0].AttemptedAt <= hist[1].AttemptedAt && hist[1].AttemptedAt <= hist[2].AttemptedAt);
     }
+
+    [Fact]
+    public async Task GetBreakdown_AggregatesThemesRatingBandsAndActivity()
+    {
+        var userId = await CreateUserAsync();
+        var p1 = await CreatePuzzleAsync(rating: 1450, lichessId: "b1", themes: "fork endgame");
+        var p2 = await CreatePuzzleAsync(rating: 1650, lichessId: "b2", themes: "fork pin");
+        var now = DateTime.UtcNow;
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = userId, PuzzleId = p1.Id, Solved = true, AttemptedAt = now },
+            new PuzzleAttempt { UserId = userId, PuzzleId = p1.Id, Solved = false, AttemptedAt = now },
+            new PuzzleAttempt { UserId = userId, PuzzleId = p2.Id, Solved = true, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var b = await _service.GetBreakdownAsync(userId);
+
+        var fork = b.Themes.Single(t => t.Theme == "fork");
+        Assert.Equal(3, fork.Attempts);   // p1 x2 + p2 x1
+        Assert.Equal(2, fork.Solved);
+        Assert.Equal(1, b.Themes.Single(t => t.Theme == "pin").Attempts);
+
+        var band1400 = b.RatingBands.Single(x => x.From == 1400);
+        Assert.Equal(2, band1400.Attempts);
+        Assert.Equal(1, band1400.Solved);
+        Assert.Equal(1, b.RatingBands.Single(x => x.From == 1600).Attempts);
+
+        Assert.Equal(3, b.Activity.Sum(a => a.Count));   // alle heute
+    }
 }
