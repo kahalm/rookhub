@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.57.1';
+export const APP_VERSION = '0.57.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.57.2', date: '2026-06-02', changes: [
+    'Fix (Endless): „Unfinished run" wurde mit `0 lives` angezeigt — der Run war faktisch vorbei, aber der Active-State landete kurz vor `endGame()` mit lives=0 auf dem Server und wurde dort als „resumebar" gemerkt, wenn der User die Seite verlies. `loseLife()` und `resetPuzzle()` schreiben jetzt bei 0 Lives null statt einen Zombie-State; beim Laden werden Legacy-Zombies (lives ≤ 0) lokal und am Server aufgeräumt; das Banner ist zusätzlich gegen lives ≤ 0 abgesichert.',
+  ]},
   { version: '0.57.1', date: '2026-06-02', changes: [
     'Fix: Die EF-Core-Warnung „FirstOrDefault ohne OrderBy" wird jetzt an der Quelle behoben — die zufällige Puzzle-Auswahl ermittelt den ID-Bereich über deterministische Min/Max-Aggregate statt über GroupBy+FirstOrDefault. Die frühere Log-Unterdrückung dafür wurde wieder entfernt.',
   ]},

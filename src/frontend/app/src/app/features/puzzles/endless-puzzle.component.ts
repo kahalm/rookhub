@@ -251,7 +251,7 @@ const RATING_WINDOW = 40;
                   </p>
                 }
 
-                @if (activeGameState) {
+                @if (activeGameState && activeGameState.lives > 0) {
                   <div class="resume-banner">
                     <div class="resume-info">
                       <mat-icon>pause_circle</mat-icon>
@@ -1035,6 +1035,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Load local active game state for immediate display
     const localGame = this.storage.loadActiveGameLocal();
     if (localGame) this.activeGameState = localGame;
+    // Defensiv: ein resumebarer Run mit 0 Lives existiert nicht — entweder
+    // Zombie-State aus aelterer Logik oder Race vor endGame(). Aufraeumen.
+    if (this.activeGameState && this.activeGameState.lives <= 0) {
+      this.activeGameState = null;
+      this.storage.saveActiveGameLocal(null);
+    }
 
     // 2. Load from server (async) and merge
     this.storage.loadFromServer().subscribe(serverData => {
@@ -1051,6 +1057,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
           // Server active game state takes priority
           if (serverData.progress?.activeGameState) {
             try { this.activeGameState = JSON.parse(serverData.progress.activeGameState); } catch {}
+          }
+          // Auch Server-State auf 0-Lives-Zombie pruefen (Legacy aus aelteren Builds).
+          if (this.activeGameState && this.activeGameState.lives <= 0) {
+            this.activeGameState = null;
+            this.storage.saveActiveGameLocal(null);
+            this.storage.saveProgressImmediate(this.config, this.highscore, null);
           }
         } else {
           // Server empty: migrate localStorage data up (one-time)
@@ -1471,7 +1483,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
     this.lives--;
     this.recordAttempt(false);
-    this.syncActiveGameToServer();
+    // Bei 0 Lives ist der Run faktisch vorbei — nicht den Zombie-State (0 Lives) auf den
+    // Server schreiben. endGame() raeumt nach Klick auf Continue endgueltig auf; falls der
+    // User vorher die Seite verlaesst, ist dann kein 0-Lives-Run als "unfinished" gemerkt.
+    if (this.lives > 0) {
+      this.syncActiveGameToServer();
+    } else {
+      this.storage.saveActiveGameLocal(null);
+      this.storage.saveProgressImmediate(this.config, this.highscore, null);
+    }
     this.state = 'WRONG';
     this.updateBoard();
     this.enterSolutionReview();
@@ -1523,6 +1543,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         themes: this.puzzle.themes
       });
       this.recordAttempt(false);
+      // 0 Lives = Run ist vorbei. Active-State (mit jetzt veralteten Werten) auf
+      // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
+      this.storage.saveActiveGameLocal(null);
+      this.storage.saveProgressImmediate(this.config, this.highscore, null);
       this.state = 'WRONG';
       this.updateBoard();
       this.enterSolutionReview();
