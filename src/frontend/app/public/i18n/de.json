@@ -341,7 +341,8 @@
       "share": "Puzzle teilen",
       "loadPuzzle": "Puzzle laden",
       "reviewLast": "Letztes Puzzle ansehen",
-      "endlessMode": "Endlos-Modus"
+      "endlessMode": "Endlos-Modus",
+      "analyze": "Analysieren"
     },
     "info": {
       "rating": "Wertung"
@@ -596,6 +597,7 @@
       "again": "Nochmal",
       "skip": "Überspringen",
       "viewFullGame": "Ganze Partie ansehen",
+      "analyze": "Analysieren",
       "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle"
     },

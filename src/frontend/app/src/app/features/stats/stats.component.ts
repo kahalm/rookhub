@@ -64,6 +64,24 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
   return { poly, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
 }
 
+/**
+ * Baut je Visualisierungs-Level eine eigene Kurve (für die „Alle"-Ansicht). Levels ohne
+ * genug Datenpunkte (< 2) entfallen. Reihenfolge der Punkte (chronologisch) bleibt erhalten.
+ */
+export function buildCurvesPerLevel(points: EloHistoryPoint[], w = 600, h = 180, pad = 6): { level: number; curve: Curve }[] {
+  const byLevel = new Map<number, EloHistoryPoint[]>();
+  for (const p of points) {
+    const arr = byLevel.get(p.vizLevel);
+    if (arr) arr.push(p); else byLevel.set(p.vizLevel, [p]);
+  }
+  const out: { level: number; curve: Curve }[] = [];
+  for (const lv of [...byLevel.keys()].sort((a, b) => a - b)) {
+    const curve = buildEloCurve(byLevel.get(lv)!, w, h, pad);
+    if (curve) out.push({ level: lv, curve });
+  }
+  return out;
+}
+
 @Component({
   selector: 'app-stats',
   standalone: true,
@@ -99,7 +117,26 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
             </mat-form-field>
           </mat-card-header>
           <mat-card-content>
-            @if (curve) {
+            @if (level === -1) {
+              @if (multiCurves.length) {
+                <div class="multi-curves">
+                  @for (mc of multiCurves; track mc.level) {
+                    <div class="mini-chart">
+                      <div class="mini-title">{{ 'stats.vizLevel' | translate }} {{ mc.level }}</div>
+                      <div class="chart">
+                        <div class="y-axis"><span>{{ mc.curve.maxElo }}</span><span>{{ mc.curve.minElo }}</span></div>
+                        <svg [attr.viewBox]="'0 0 ' + mc.curve.w + ' ' + mc.curve.h" preserveAspectRatio="none" class="svg">
+                          <polyline [attr.points]="mc.curve.poly" fill="none" stroke="#1976d2" stroke-width="2" vector-effect="non-scaling-stroke" />
+                        </svg>
+                      </div>
+                      <div class="x-axis"><span>{{ mc.curve.first }}</span><span>{{ mc.curve.last }}</span></div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="muted">{{ 'stats.noData' | translate }}</p>
+              }
+            } @else if (curve) {
               <div class="chart">
                 <div class="y-axis"><span>{{ curve.maxElo }}</span><span>{{ curve.minElo }}</span></div>
                 <svg [attr.viewBox]="'0 0 ' + curve.w + ' ' + curve.h" preserveAspectRatio="none" class="svg">
@@ -235,6 +272,9 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
     .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: #888; }
     .svg { flex: 1; height: 180px; background: linear-gradient(#fafafa,#f0f0f0); border-radius: 4px; }
     .x-axis { display: flex; justify-content: space-between; font-size: .7rem; color: #888; margin-top: 2px; }
+    .multi-curves { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .mini-title { font-size: .8rem; font-weight: 600; color: #555; margin-bottom: 4px; }
+    .mini-chart .chart, .mini-chart .svg { height: 130px; }
     .muted { color: #888; font-style: italic; }
     .perlevel { display: flex; flex-wrap: wrap; gap: 12px; }
     .pl { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; background: #f5f5f5; border-radius: 6px; }
@@ -278,6 +318,7 @@ export class StatsComponent implements OnInit {
   level = 0;
   private eloPoints: EloHistoryPoint[] = [];
   curve: Curve | null = null;
+  multiCurves: { level: number; curve: Curve }[] = [];   // „Alle"-Ansicht: je Modus eine Kurve
 
   themes: ThemeStat[] = [];
   ratingBands: RatingBand[] = [];
@@ -319,7 +360,13 @@ export class StatsComponent implements OnInit {
   }
 
   rebuildCurve(): void {
-    const pts = this.eloPoints.filter(p => this.level === -1 || p.vizLevel === this.level);
-    this.curve = buildEloCurve(pts);
+    if (this.level === -1) {
+      // „Alle" → je Modus eine eigene Kurve (keine modus-übergreifende Mischkurve).
+      this.multiCurves = buildCurvesPerLevel(this.eloPoints);
+      this.curve = null;
+    } else {
+      this.multiCurves = [];
+      this.curve = buildEloCurve(this.eloPoints.filter(p => p.vizLevel === this.level));
+    }
   }
 }

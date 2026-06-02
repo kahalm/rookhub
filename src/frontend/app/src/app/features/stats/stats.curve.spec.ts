@@ -1,8 +1,8 @@
-import { buildEloCurve, buildHeatmap, heatLevel } from './stats.component';
+import { buildEloCurve, buildCurvesPerLevel, buildHeatmap, heatLevel } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
-function pt(elo: number, day: number): EloHistoryPoint {
-  return { elo, attemptedAt: `2026-01-${String(day).padStart(2, '0')}T12:00:00`, vizLevel: 0, solved: true };
+function pt(elo: number, day: number, vizLevel = 0): EloHistoryPoint {
+  return { elo, attemptedAt: `2026-01-${String(day).padStart(2, '0')}T12:00:00`, vizLevel, solved: true };
 }
 
 describe('buildEloCurve', () => {
@@ -28,6 +28,30 @@ describe('buildEloCurve', () => {
     const c = buildEloCurve([pt(1500, 1), pt(1500, 2)])!;
     expect(c.poly).toContain(',');
     expect(Number.isFinite(c.minElo)).toBeTrue();
+  });
+});
+
+describe('buildCurvesPerLevel', () => {
+  it('builds one curve per visualization level (sorted), each with >= 2 points', () => {
+    const res = buildCurvesPerLevel([
+      pt(1500, 1, 0), pt(1520, 2, 0),
+      pt(1400, 1, 2), pt(1450, 2, 2), pt(1460, 3, 2),
+    ]);
+    expect(res.map(r => r.level)).toEqual([0, 2]);
+    expect(res[0].curve.poly.trim().split(/\s+/).length).toBe(2);
+    expect(res[1].curve.poly.trim().split(/\s+/).length).toBe(3);
+  });
+
+  it('drops levels with fewer than 2 points', () => {
+    const res = buildCurvesPerLevel([
+      pt(1500, 1, 0), pt(1520, 2, 0),
+      pt(1400, 1, 1),                    // nur 1 Punkt → kein Graph
+    ]);
+    expect(res.map(r => r.level)).toEqual([0]);
+  });
+
+  it('returns empty when no level has enough data', () => {
+    expect(buildCurvesPerLevel([pt(1500, 1, 0), pt(1400, 1, 1)])).toEqual([]);
   });
 });
 

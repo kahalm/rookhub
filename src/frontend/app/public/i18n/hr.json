@@ -341,7 +341,8 @@
       "share": "Podijeli zagonetku",
       "loadPuzzle": "Učitaj zagonetku",
       "reviewLast": "Pregledaj zadnju zagonetku",
-      "endlessMode": "Beskonačni način"
+      "endlessMode": "Beskonačni način",
+      "analyze": "Analiziraj"
     },
     "info": {
       "rating": "Ocjena"
@@ -596,6 +597,7 @@
       "again": "Ponovno",
       "skip": "Preskoči",
       "viewFullGame": "Pogledaj cijelu partiju",
+      "analyze": "Analiziraj",
       "sharePuzzle": "Podijeli zagonetku",
       "backToPuzzle": "Natrag na zagonetku"
     },

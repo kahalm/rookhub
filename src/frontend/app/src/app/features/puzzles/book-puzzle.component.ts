@@ -287,6 +287,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                     <button mat-stroked-button class="full-game-btn" (click)="enterReview()">
                       <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
                     </button>
+                    <button mat-stroked-button class="analyze-btn" (click)="analyze()">
+                      <mat-icon>biotech</mat-icon> {{ 'book.actions.analyze' | translate }}
+                    </button>
                   }
                   <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
                     <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
@@ -535,6 +538,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}`;
     this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+  }
+
+  /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */
+  analyze(): void {
+    if (!this.puzzle) return;
+    const moves = (this.puzzle.moves || '').split(' ').filter(m => m);
+    this.router.navigate(['/analysis'], {
+      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation },
+    });
   }
 
   // ===== Hooks für BasePuzzleSolver =====

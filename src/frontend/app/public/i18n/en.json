@@ -341,7 +341,8 @@
       "share": "Share Puzzle",
       "loadPuzzle": "Load Puzzle",
       "reviewLast": "Review last puzzle",
-      "endlessMode": "Endless Mode"
+      "endlessMode": "Endless Mode",
+      "analyze": "Analyze"
     },
     "info": {
       "rating": "Rating"
@@ -596,6 +597,7 @@
       "again": "Again",
       "skip": "Skip",
       "viewFullGame": "View full game",
+      "analyze": "Analyze",
       "sharePuzzle": "Share puzzle",
       "backToPuzzle": "Back to puzzle"
     },
