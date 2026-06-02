@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.53.0';
+export const APP_VERSION = '0.54.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.54.0', date: '2026-06-02', changes: [
+    'Endless offline: Beim Start eines Runs werden jetzt im Hintergrund passende Puzzles für einen ganzen Run vorab geladen und lokal gespeichert — so kann man auch ohne Internet weiterpuzzeln. Run-Größe = Maximum der gelösten Puzzles der letzten 5 Runs + 10 (ohne Historie: 30). Neuer Endpoint POST `/api/puzzles/random-batch` (ein Puzzle je Rating-Fenster, eindeutig).',
+  ]},
   { version: '0.53.0', date: '2026-06-02', changes: [
     'Analysebrett: Pfeile/Kreise (Rechtsklick-Ziehen) funktionieren jetzt zuverlässig — Engine-Updates verwerfen die Zeichnung nicht mehr (Brett wird nur bei echten Stellungsänderungen neu gesetzt).',
     'Pfeile/Kreise jetzt auch auf den Puzzle-Brettern (Standard, Buch, Kurs, Wochenpost, Endless, Blind) per Rechtsklick-Ziehen.',

@@ -59,6 +59,36 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandomBatch_ReturnsDistinctPuzzlePerWindow()
+    {
+        // Je Fenster mehrere Kandidaten, damit Eindeutigkeit überhaupt prüfbar ist.
+        for (int i = 0; i < 3; i++) await CreatePuzzleAsync(rating: 810);
+        for (int i = 0; i < 3; i++) await CreatePuzzleAsync(rating: 850);
+        for (int i = 0; i < 3; i++) await CreatePuzzleAsync(rating: 900);
+
+        var windows = new (int, int)[] { (800, 840), (840, 880), (880, 920) };
+        var result = await _service.GetRandomBatchAsync(null, windows, null, false);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result.Select(p => p.Id).Distinct().Count());   // keine Duplikate
+        Assert.InRange(result[0].Rating, 800, 840);
+        Assert.InRange(result[1].Rating, 840, 880);
+        Assert.InRange(result[2].Rating, 880, 920);
+    }
+
+    [Fact]
+    public async Task GetRandomBatch_SkipsEmptyWindows()
+    {
+        await CreatePuzzleAsync(rating: 810);
+        // Zweites Fenster (2000–2040) hat keine Puzzles → entfällt.
+        var windows = new (int, int)[] { (800, 840), (2000, 2040) };
+        var result = await _service.GetRandomBatchAsync(null, windows, null, false);
+
+        Assert.Single(result);
+        Assert.InRange(result[0].Rating, 800, 840);
+    }
+
+    [Fact]
     public async Task GetRandom_ReturnsPuzzleInRatingRange()
     {
         var userId = await CreateUserAsync();

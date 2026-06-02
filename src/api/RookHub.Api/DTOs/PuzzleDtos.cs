@@ -13,6 +13,19 @@ public class PuzzleDto
     public string? GameUrl { get; set; }
 }
 
+public class RandomBatchRequestDto
+{
+    public List<RatingWindowDto> Windows { get; set; } = new();
+    public string? Themes { get; set; }
+    public bool ExcludeSolved { get; set; }
+}
+
+public class RatingWindowDto
+{
+    public int MinRating { get; set; }
+    public int MaxRating { get; set; }
+}
+
 public class RecordPuzzleAttemptDto
 {
     public bool Solved { get; set; }

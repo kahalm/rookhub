@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { Observable, of, catchError, map, tap } from 'rxjs';
+import { PuzzleDto } from './puzzle.service';
 
 export interface EndlessConfig {
   startElo: number;
@@ -51,6 +52,7 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
 const HISTORY_KEY = 'rookhub_endless_history';
 const ACTIVE_GAME_KEY = 'rookhub_endless_active_game';
 const SYNCED_KEY = 'rookhub_endless_synced';
+const OFFLINE_POOL_KEY = 'rookhub_endless_offline_pool';
 const MAX_HISTORY_SESSIONS = 50;
 
 @Injectable({ providedIn: 'root' })
@@ -117,6 +119,23 @@ export class EndlessStorageService {
 
   saveSessionHistory(history: EndlessSession[]): void {
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch {}
+  }
+
+  // --- Offline-Puzzle-Pool (für Endless ohne Internet) ---
+  saveOfflinePool(puzzles: PuzzleDto[]): void {
+    try { localStorage.setItem(OFFLINE_POOL_KEY, JSON.stringify(puzzles ?? [])); } catch {}
+  }
+
+  loadOfflinePool(): PuzzleDto[] {
+    try {
+      const raw = localStorage.getItem(OFFLINE_POOL_KEY);
+      if (raw) return JSON.parse(raw) || [];
+    } catch {}
+    return [];
+  }
+
+  clearOfflinePool(): void {
+    try { localStorage.removeItem(OFFLINE_POOL_KEY); } catch {}
   }
 
   recordSession(history: EndlessSession[], session: EndlessSession): EndlessSession[] {

@@ -94,6 +94,11 @@ export class PuzzleService {
     return this.http.get<PuzzleDto>('/api/puzzles/random', { params });
   }
 
+  /** Lädt je Rating-Fenster ein eindeutiges Zufalls-Puzzle (Offline-Vorab-Laden eines Runs). */
+  getRandomBatch(windows: { minRating: number; maxRating: number }[], themes?: string, excludeSolved = false): Observable<PuzzleDto[]> {
+    return this.http.post<PuzzleDto[]>('/api/puzzles/random-batch', { windows, themes: themes ?? null, excludeSolved });
+  }
+
   getById(id: number): Observable<PuzzleDto> {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }

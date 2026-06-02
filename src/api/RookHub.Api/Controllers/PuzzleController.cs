@@ -42,6 +42,23 @@ public class PuzzleController : BaseApiController
         return Ok(puzzle);
     }
 
+    /// <summary>
+    /// Lädt für jedes Rating-Fenster ein eindeutiges Zufalls-Puzzle — für das Offline-
+    /// Vorab-Laden eines ganzen Endless-Runs (ein Request statt vieler).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("random-batch")]
+    public async Task<ActionResult<List<PuzzleDto>>> GetRandomBatch([FromBody] RandomBatchRequestDto dto)
+    {
+        if (dto?.Windows == null || dto.Windows.Count == 0)
+            return Ok(new List<PuzzleDto>());
+        // Schutz gegen überzogene Anfragen.
+        var windows = dto.Windows.Take(100).Select(w => (w.MinRating, w.MaxRating));
+        int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
+        var puzzles = await _puzzleService.GetRandomBatchAsync(userId, windows, dto.Themes, dto.ExcludeSolved);
+        return Ok(puzzles);
+    }
+
     [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)

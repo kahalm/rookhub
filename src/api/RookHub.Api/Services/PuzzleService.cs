@@ -24,7 +24,8 @@ public class PuzzleService
         _logger = logger;
     }
 
-    public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved)
+    public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved,
+        IReadOnlyCollection<int>? excludeIds = null)
     {
         var query = _db.Puzzles.AsQueryable();
 
@@ -49,12 +50,16 @@ public class PuzzleService
                 .Select(a => a.PuzzleId);
             query = query.Where(p => !solvedIds.Contains(p.Id));
         }
+        // Bereits im selben Batch vergebene Puzzles ausschliessen (Offline-Vorab-Laden).
+        if (excludeIds is { Count: > 0 })
+            query = query.Where(p => !excludeIds.Contains(p.Id));
 
         // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
         // ID-range picks a random point in the PK space and seeks forward - O(1).
         var anyFilter = minRating.HasValue || maxRating.HasValue
-            || !string.IsNullOrEmpty(themes) || (excludeSolved && userId.HasValue);
+            || !string.IsNullOrEmpty(themes) || (excludeSolved && userId.HasValue)
+            || excludeIds is { Count: > 0 };
 
         int? minId, maxId;
         if (anyFilter)
@@ -96,6 +101,25 @@ public class PuzzleService
         // Fallback: get any matching puzzle
         var fallback = await query.OrderBy(p => p.Id).FirstOrDefaultAsync();
         return fallback == null ? null : MapToDto(fallback);
+    }
+
+    /// <summary>
+    /// Liefert je Rating-Fenster ein zufälliges, im Batch eindeutiges Puzzle (für das
+    /// Offline-Vorab-Laden eines ganzen Endless-Runs). Fenster ohne Treffer entfallen;
+    /// die Reihenfolge folgt den übergebenen Fenstern.
+    /// </summary>
+    public async Task<List<PuzzleDto>> GetRandomBatchAsync(int? userId,
+        IEnumerable<(int Min, int Max)> windows, string? themes, bool excludeSolved)
+    {
+        var used = new HashSet<int>();
+        var result = new List<PuzzleDto>();
+        foreach (var (min, max) in windows)
+        {
+            var dto = await GetRandomAsync(userId, min, max, themes, excludeSolved, used);
+            if (dto != null && used.Add(dto.Id))
+                result.Add(dto);
+        }
+        return result;
     }
 
     public async Task<(int Min, int Max)?> GetRatingRangeAsync()

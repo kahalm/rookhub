@@ -16,6 +16,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
+import { computeRunSize, buildRunWindows, takeFromPool } from './endless-prefetch.util';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
@@ -999,6 +1000,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   puzzle: PuzzleDto | null = null;
   private initialFen = '';
   private prefetchedPuzzle: PuzzleDto | null = null;
+  /** Vorab geladene Puzzles für Offline-Spiel (ein ganzer Run). */
+  private offlinePool: PuzzleDto[] = [];
   reviewingWrongPuzzle = false;
   reviewMode = false;
   reviewIndex = 0;
@@ -1026,6 +1029,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
     this.sessionHistory = this.storage.loadSessionHistory();
+    this.offlinePool = this.storage.loadOfflinePool();   // evtl. vorhandener Run-Cache (Offline/Resume)
     this.computeFasttrackSteps();
 
     // Load local active game state for immediate display
@@ -1153,7 +1157,24 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.computeFasttrackSteps();
     this.startSessionTimer();
     this.syncActiveGameToServer();
+    this.prefetchRun();
     this.loadPuzzle();
+  }
+
+  /**
+   * Lädt im Hintergrund einen ganzen Run an Puzzles vorab und legt ihn im Storage ab,
+   * damit auch offline gepuzzelt werden kann. Run-Größe = max(gelöste der letzten 5 Runs) + 10.
+   */
+  private prefetchRun(): void {
+    const runSize = computeRunSize(this.sessionHistory);
+    const windows = buildRunWindows(
+      this.config.startElo, runSize, (n) => this.getStepForSolved(n), this.puzzleRange.max, RATING_WINDOW);
+    if (!windows.length) return;
+    const themes = this.config.themes.trim() || undefined;
+    this.puzzleService.getRandomBatch(windows, themes).subscribe({
+      next: pool => { this.offlinePool = pool || []; this.storage.saveOfflinePool(this.offlinePool); },
+      error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
+    });
   }
 
   resumeGame(): void {
@@ -1248,6 +1269,25 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
     const min = this._currentMinRating;
     const max = this._currentMinRating + RATING_WINDOW;
+
+    // Offline: ausschließlich aus dem vorab geladenen Run-Pool bedienen.
+    if (!navigator.onLine) {
+      const pooled = takeFromPool(this.offlinePool, min, max)
+        ?? (this.offlinePool.length ? this.offlinePool.shift()! : null);   // nächstbestes, falls Fenster leer
+      if (pooled) {
+        this.storage.saveOfflinePool(this.offlinePool);
+        this.prefetchedPuzzle = null;
+        this.onPuzzleLoaded(pooled);
+      } else {
+        // Offline und Pool leer → Run hier beenden.
+        this.stopSessionTimer();
+        this.checkHighscore();
+        this.recordSession();
+        this.storage.saveActiveGameLocal(null);
+        this.state = 'EXHAUSTED';
+      }
+      return;
+    }
 
     if (this.prefetchedPuzzle &&
         this.prefetchedPuzzle.rating >= min &&
