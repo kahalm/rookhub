@@ -9,6 +9,7 @@ import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
+import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -121,12 +122,18 @@ export class AppComponent implements OnInit {
     private translate: TranslateService,
     private swUpdate: SwUpdate,
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
-    _offlineQueue: OfflineQueueService
+    _offlineQueue: OfflineQueueService,
+    private offlinePrefetch: OfflinePrefetchService
   ) {
     locale.init();
   }
 
   ngOnInit(): void {
+    // Offline-Pools (Standard + Endless) gleich beim Start vorab laden, sobald online —
+    // nicht erst beim ersten Öffnen der Modi. Leicht verzögert, damit der Initial-Load Vorrang hat.
+    setTimeout(() => this.offlinePrefetch.prefetchAll(), 3000);
+    window.addEventListener('online', () => this.offlinePrefetch.prefetchAll());
+
     // Service Worker: neue Version verfügbar → Hinweis mit „Neu laden".
     if (this.swUpdate.isEnabled) {
       this.swUpdate.versionUpdates

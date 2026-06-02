@@ -1,4 +1,7 @@
-import { computeRunSize, buildRunWindows, takeFromPool } from './endless-prefetch.util';
+import {
+  computeRunSize, buildRunWindows, takeFromPool,
+  autoFasttrackThresholds, fasttrackSteps, stepForSolved, buildEndlessRunWindows
+} from './endless-prefetch.util';
 import { PuzzleDto } from './puzzle.service';
 
 function p(id: number, rating: number): PuzzleDto {
@@ -59,5 +62,55 @@ describe('takeFromPool', () => {
     const pool = [p(1, 800)];
     expect(takeFromPool(pool, 1000, 1100)).toBeNull();
     expect(pool.length).toBe(1);
+  });
+});
+
+describe('autoFasttrackThresholds', () => {
+  it('uses startElo+400/+800 defaults without mistake history', () => {
+    expect(autoFasttrackThresholds({ startElo: 700 }, [])).toEqual({ first: 1100, second: 1500 });
+  });
+
+  it('averages recent mistake ratings but keeps the minimum defaults', () => {
+    // Mittelwerte (1300 / 1700) liegen über den Defaults (1100/1500) → werden genommen
+    const hist = [{ mistakeAtRatings: [1300, 1700] }, { mistakeAtRatings: [1300, 1700] }];
+    expect(autoFasttrackThresholds({ startElo: 700 }, hist)).toEqual({ first: 1300, second: 1700 });
+  });
+
+  it('never drops below the startElo+400/+800 floor', () => {
+    const hist = [{ mistakeAtRatings: [800, 900] }];   // unter Defaults
+    expect(autoFasttrackThresholds({ startElo: 700 }, hist)).toEqual({ first: 1100, second: 1500 });
+  });
+});
+
+describe('fasttrackSteps', () => {
+  it('derives per-phase steps from thresholds (min 10)', () => {
+    expect(fasttrackSteps(700, 1100, 1500)).toEqual({ phase1Step: 80, phase2Step: 80 });
+    expect(fasttrackSteps(700, 720, 740)).toEqual({ phase1Step: 10, phase2Step: 10 });   // geklemmt auf 10
+  });
+});
+
+describe('stepForSolved', () => {
+  const steps = { phase1Step: 80, phase2Step: 50 };
+  it('maps solved count to the right phase step', () => {
+    expect(stepForSolved(steps, 3)).toBe(80);    // Phase 1 (≤5)
+    expect(stepForSolved(steps, 8)).toBe(50);    // Phase 2 (≤10)
+    expect(stepForSolved(steps, 15)).toBe(20);   // Phase 3
+  });
+});
+
+describe('buildEndlessRunWindows', () => {
+  it('concatenates windows for the requested number of runs', () => {
+    const config = { startElo: 700 };
+    const oneRun = buildEndlessRunWindows(config, [], 3000, 1);
+    const twoRuns = buildEndlessRunWindows(config, [], 3000, 2);
+    expect(oneRun.length).toBeGreaterThan(0);
+    expect(twoRuns.length).toBe(oneRun.length * 2);
+    expect(twoRuns[0].minRating).toBe(700);   // startet bei startElo
+  });
+
+  it('honours config threshold overrides', () => {
+    // Override macht Phase 1 sehr steil → erstes Fenster startet trotzdem bei startElo
+    const w = buildEndlessRunWindows({ startElo: 700, fasttrackThreshold1: 1200 }, [], 3000, 1);
+    expect(w[0]).toEqual({ minRating: 700, maxRating: 740 });
   });
 });

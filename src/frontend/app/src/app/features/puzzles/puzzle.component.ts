@@ -18,6 +18,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { DIFFICULTY_OFFSET, puzzleWindow } from './puzzle-window.util';
 import { takeFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -31,11 +32,6 @@ import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
-// Schwierigkeit → Elo-Offset des Fenster-Zentrums; Fenster ±RATING_WINDOW um (Elo + Offset).
-const DIFFICULTY_OFFSET: Record<string, number> = {
-  sehr_leicht: -600, leicht: -300, normal: 0, schwer: 300, sehr_schwer: 600,
-};
-const RATING_WINDOW = 100;
 
 @Component({
   selector: 'app-puzzle',
@@ -760,15 +756,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
   private ratingRange(): { min: number; max: number } {
-    const elo = this.stats?.puzzleElo ?? 1500;
-    let center = elo + (DIFFICULTY_OFFSET[this.difficulty] ?? 0);
-    const b = this.ratingRangeBounds;
-    if (b && b.max > b.min) {
-      // Zentrum so verschieben, dass das ±Fenster im echten DB-Rating-Bereich bleibt
-      // (sonst leeres Ergebnis → 404 → ERROR/Retry-Schleife bei extremen Offsets).
-      center = Math.min(Math.max(center, b.min + RATING_WINDOW), b.max - RATING_WINDOW);
-    }
-    return { min: Math.max(0, center - RATING_WINDOW), max: center + RATING_WINDOW };
+    return puzzleWindow(this.stats?.puzzleElo ?? 1500, this.difficulty, this.ratingRangeBounds);
   }
 
   onDifficultyChange(): void {

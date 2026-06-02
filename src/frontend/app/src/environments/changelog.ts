@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.63.0';
+export const APP_VERSION = '0.64.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.64.0', date: '2026-06-02', changes: [
+    'Offline-Pools werden jetzt schon beim App-Start vorab geladen (sobald online) – nicht erst beim ersten Öffnen des Modus. Standard-Puzzle (passend zu Elo + Schwierigkeit) und Endless-Run werden im Hintergrund gecacht, sodass beide Modi direkt offline gestartet werden können. Wird auch bei Reconnect nachgezogen; füllt nur, was noch fehlt.',
+  ]},
   { version: '0.63.0', date: '2026-06-02', changes: [
     'Strukturiertes Logging pro Puzzle (für Elasticsearch/Kibana): jedes gelöste/aufgegebene Puzzle wird mit Start- und Lösungszeit geloggt — über alle Modi (Standard-Puzzle, Tagespuzzle/Buch, Kurs, Endless). Im Endless-Modus werden die einzelnen Puzzles einer Session mit ihren Zeiten beim Session-Ende an den Server gemeldet (nur Logging, nicht persistiert); Kurs-Lösungen senden jetzt zusätzlich die benötigte Zeit.',
   ]},
