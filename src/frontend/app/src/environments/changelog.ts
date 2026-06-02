@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.52.2';
+export const APP_VERSION = '0.53.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.53.0', date: '2026-06-02', changes: [
+    'Analysebrett: Pfeile/Kreise (Rechtsklick-Ziehen) funktionieren jetzt zuverlässig — Engine-Updates verwerfen die Zeichnung nicht mehr (Brett wird nur bei echten Stellungsänderungen neu gesetzt).',
+    'Pfeile/Kreise jetzt auch auf den Puzzle-Brettern (Standard, Buch, Kurs, Wochenpost, Endless, Blind) per Rechtsklick-Ziehen.',
+    'Analysemodus: Such-Tiefe manuell einstellbar (12–30, Standard 22, wird gespeichert); Anzeige „Tiefe erreicht/Max". Das „Linien"-Feld hat jetzt genug Platz.',
+    'Analysemodus: „Zurück zum Puzzle"-Button, wenn man über „Analysieren"/„Letztes Puzzle ansehen" hergekommen ist.',
+  ]},
   { version: '0.52.2', date: '2026-06-02', changes: [
     '„Letztes Puzzle ansehen" öffnet jetzt direkt den Analysemodus mit dem zuletzt gelösten Puzzle (Stellung + Zugfolge + Orientierung), statt das Puzzle erneut zum Lösen zu laden.',
   ]},

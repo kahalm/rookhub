@@ -757,6 +757,8 @@
     "engine": "Procjena",
     "depth": "Dubina",
     "lines": "Linije",
+    "maxDepth": "Maks. dubina",
+    "backToPuzzle": "Natrag na zagonetku",
     "calculating": "Računam…",
     "engineOff": "Procjena isključena",
     "start": "Početak",

@@ -55,14 +55,20 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
-    this.ground.set({
-      fen: this.fen,
-      orientation: this.orientation,
-      turnColor: this.turnColor,
-      check: this.check,
-      lastMove: this.lastMove as Key[] | undefined,
-      movable: { free: false, color: this.turnColor, dests: this.dests, showDests: true },
-    });
+    // Brett-State nur aktualisieren, wenn er sich wirklich ändert. WICHTIG: Engine-Updates
+    // ändern nur `shapes` (häufig, ~10×/s) — würde man dabei jedes Mal set() aufrufen, würde
+    // das laufende Rechtsklick-Zeichnen ständig unterbrochen/verworfen (= „Pfeile gehen nicht").
+    if (changes['fen'] || changes['orientation'] || changes['turnColor'] ||
+        changes['check'] || changes['lastMove'] || changes['dests']) {
+      this.ground.set({
+        fen: this.fen,
+        orientation: this.orientation,
+        turnColor: this.turnColor,
+        check: this.check,
+        lastMove: this.lastMove as Key[] | undefined,
+        movable: { free: false, color: this.turnColor, dests: this.dests, showDests: true },
+      });
+    }
     if (changes['shapes']) this.applyShapes();
   }
 

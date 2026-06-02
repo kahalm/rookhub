@@ -757,6 +757,8 @@
     "engine": "Engine",
     "depth": "Tiefe",
     "lines": "Linien",
+    "maxDepth": "Max. Tiefe",
+    "backToPuzzle": "Zurück zum Puzzle",
     "calculating": "Berechne…",
     "engineOff": "Engine aus",
     "start": "Start",

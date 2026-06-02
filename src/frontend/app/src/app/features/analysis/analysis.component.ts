@@ -1,7 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,8 @@ interface EngineDisplayLine { evalText: string; san: string; positive: boolean; 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = 'rookhub_analysis_lines';
 const ENGINE_KEY = 'rookhub_analysis_engine';
+const DEPTH_KEY = 'rookhub_analysis_depth';
+const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30];
 const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
 
 @Component({
@@ -52,12 +54,24 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
         </div>
 
         <div class="side-col">
+          @if (returnTo) {
+            <button mat-stroked-button class="back-btn" (click)="backToPuzzle()">
+              <mat-icon>arrow_back</mat-icon> {{ 'analysis.backToPuzzle' | translate }}
+            </button>
+          }
           <mat-card class="engine-card">
             <mat-card-content>
               <div class="engine-head">
                 <mat-slide-toggle [(ngModel)]="engineOn" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
-                <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}</span>
-                <mat-form-field appearance="outline" class="lines-field" subscriptSizing="dynamic">
+                <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }}</span>
+                <span class="he-spacer"></span>
+                <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
+                  <mat-label>{{ 'analysis.maxDepth' | translate }}</mat-label>
+                  <mat-select [(ngModel)]="depthSetting" (selectionChange)="onDepthChange()">
+                    @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
                   <mat-label>{{ 'analysis.lines' | translate }}</mat-label>
                   <mat-select [(ngModel)]="linesCount" (selectionChange)="onLinesChange()">
                     @for (n of [1,2,3,4,5]; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
@@ -138,7 +152,9 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
     .engine-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .depth { font-size: .8rem; color: #666; }
-    .lines-field { width: 90px; margin-left: auto; }
+    .he-spacer { flex: 1 1 auto; }
+    .num-field { width: 104px; }
+    .back-btn { width: 100%; margin-bottom: 8px; }
     .muted { color: #888; font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .line-row { display: flex; gap: 8px; font-size: .9rem; }
@@ -174,6 +190,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   engineOn = true;
   linesCount = 3;
   depth = 0;
+  depthSetting = 22;
+  readonly depthOptions = DEPTH_OPTIONS;
+  returnTo: string | null = null;
   displayLines: EngineDisplayLine[] = [];
   evalText = '0.00';
   whiteHeight = 50;
@@ -183,11 +202,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   private sub?: Subscription;
 
-  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackBar: MatSnackBar) {
+  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackBar: MatSnackBar, private router: Router) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
       this.engineOn = localStorage.getItem(ENGINE_KEY) !== '0';
+      const d = parseInt(localStorage.getItem(DEPTH_KEY) || '', 10);
+      if (DEPTH_OPTIONS.includes(d)) this.depthSetting = d;
     } catch {}
   }
 
@@ -201,6 +222,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (orientationParam === 'white' || orientationParam === 'black') {
       this.orientation = orientationParam;
     }
+    // Herkunft (z.B. das Puzzle) für den Zurück-Button merken.
+    const from = params.get('from');
+    if (from && from.startsWith('/') && !from.startsWith('//') && !from.includes('://')) {
+      this.returnTo = from;
+    }
+    this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines));
 
@@ -358,6 +385,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     try { localStorage.setItem(LINES_KEY, String(this.linesCount)); } catch {}
     this.engine.setMultiPv(this.linesCount);
     if (this.engineOn) this.engine.analyze(this.currentFen);
+  }
+  onDepthChange(): void {
+    try { localStorage.setItem(DEPTH_KEY, String(this.depthSetting)); } catch {}
+    this.engine.setDepth(this.depthSetting);
+    if (this.engineOn) this.engine.analyze(this.currentFen);
+  }
+  backToPuzzle(): void {
+    if (this.returnTo) this.router.navigateByUrl(this.returnTo);
   }
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 

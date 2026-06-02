@@ -55,7 +55,8 @@ describe('PuzzleComponent give-up', () => {
 
   it('reviewLastPuzzle navigates straight to the analysis board with the last solved puzzle', () => {
     const c = makeComponent();
-    // Zustand wie nach einem gelösten Puzzle (handleSolved merkt sich fen/moves/orientation):
+    // Zustand wie nach einem gelösten Puzzle (handleSolved merkt sich id/fen/moves/orientation):
+    c.lastSolvedPuzzleId = 123;
     c.lastSolvedFen = PUZZLE.fen;
     c.lastSolvedMoves = PUZZLE.moves;       // 'e2e4 e7e5 g1f3'
     c.lastSolvedOrientation = 'black';
@@ -63,7 +64,7 @@ describe('PuzzleComponent give-up', () => {
     c.reviewLastPuzzle();
 
     expect((c as any).router.navigate).toHaveBeenCalledWith(['/analysis'], {
-      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'black' },
+      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'black', from: '/puzzles/123' },
     });
   });
 

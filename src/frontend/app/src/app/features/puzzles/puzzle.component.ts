@@ -626,7 +626,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);
     this.router.navigate(['/analysis'], {
-      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation },
+      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation, from: '/puzzles/' + this.puzzle.id },
     });
   }
 
@@ -857,6 +857,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           fen: this.lastSolvedFen,
           moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
           orientation: this.lastSolvedOrientation,
+          from: this.lastSolvedPuzzleId ? '/puzzles/' + this.lastSolvedPuzzleId : undefined,
         },
       });
       return;

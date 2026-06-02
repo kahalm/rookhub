@@ -8,13 +8,15 @@ import { AnalysisComponent } from './analysis.component';
 function makeComponent(params: Record<string, string | null>): any {
   const engine: any = {
     analysis$: new Subject(),
-    setMultiPv: () => {},
-    analyze: () => {},
+    setMultiPv: jasmine.createSpy('setMultiPv'),
+    setDepth: jasmine.createSpy('setDepth'),
+    analyze: jasmine.createSpy('analyze'),
     stop: () => {},
   };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const snackBar: any = { open: () => {} };
-  return new AnalysisComponent(engine, route, snackBar);
+  const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
+  return new AnalysisComponent(engine, route, snackBar, router);
 }
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -53,6 +55,43 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnInit();
     expect(c.line.length).toBe(0);
     expect(c.ply).toBe(0);
+    c.ngOnDestroy();
+  });
+});
+
+describe('AnalysisComponent back-to-puzzle + depth', () => {
+  it('reads the from param and navigates back to it', () => {
+    const c = makeComponent({ fen: START, from: '/puzzles/123' });
+    c.ngOnInit();
+    expect(c.returnTo).toBe('/puzzles/123');
+    c.backToPuzzle();
+    expect((c as any).router.navigateByUrl).toHaveBeenCalledWith('/puzzles/123');
+    c.ngOnDestroy();
+  });
+
+  it('ignores an unsafe from param (no back button)', () => {
+    const c = makeComponent({ fen: START, from: 'https://evil.example/x' });
+    c.ngOnInit();
+    expect(c.returnTo).toBeNull();
+    c.backToPuzzle();
+    expect((c as any).router.navigateByUrl).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('applies the configured max depth to the engine on init', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    expect((c as any).engine.setDepth).toHaveBeenCalledWith(c.depthSetting);
+    c.ngOnDestroy();
+  });
+
+  it('onDepthChange re-applies depth to the engine', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+    c.depthSetting = 30;
+    c.onDepthChange();
+    expect((c as any).engine.setDepth).toHaveBeenCalledWith(30);
     c.ngOnDestroy();
   });
 });

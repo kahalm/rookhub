@@ -545,7 +545,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     const moves = (this.puzzle.moves || '').split(' ').filter(m => m);
     this.router.navigate(['/analysis'], {
-      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation },
+      queryParams: {
+        fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation,
+        from: this.router.url.split('?')[0],   // zurück zum aktuellen Buch-/Kurs-/Wochenpost-Puzzle
+      },
     });
   }
 

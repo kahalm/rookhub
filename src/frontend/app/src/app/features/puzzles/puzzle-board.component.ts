@@ -281,6 +281,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         enabled: this.premovable,
         showDests: true
       },
+      // Pfeile/Kreise per Rechtsklick-Ziehen (wie im Analysemodus), auch im viewOnly-Zustand.
+      drawable: { enabled: true, visible: true },
       events: {
         move: (orig: Key, dest: Key) => {
           if (this.isPromotion(orig, dest)) {
