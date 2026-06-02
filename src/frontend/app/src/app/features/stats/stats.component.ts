@@ -64,22 +64,51 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
   return { poly, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
 }
 
+export interface OverlayLine { level: number; poly: string; color: string; }
+export interface Overlay { lines: OverlayLine[]; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
+
+/** Farben je Visualisierungs-Level für die „Alle"-Overlay-Ansicht (Index = Level). */
+export const LEVEL_COLORS = ['#1976d2', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00897b'];
+
 /**
- * Baut je Visualisierungs-Level eine eigene Kurve (für die „Alle"-Ansicht). Levels ohne
- * genug Datenpunkte (< 2) entfallen. Reihenfolge der Punkte (chronologisch) bleibt erhalten.
+ * Baut EINE Overlay-Grafik aller Level-Kurven auf GEMEINSAMER Skala (Y = globaler Elo-Bereich,
+ * X = globaler Zeitbereich), je Level farbkodiert. Levels mit < 2 Punkten entfallen.
+ * null, wenn insgesamt < 2 Punkte oder kein Level zeichenbar.
  */
-export function buildCurvesPerLevel(points: EloHistoryPoint[], w = 600, h = 180, pad = 6): { level: number; curve: Curve }[] {
+export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 6): Overlay | null {
+  if (points.length < 2) return null;
   const byLevel = new Map<number, EloHistoryPoint[]>();
   for (const p of points) {
     const arr = byLevel.get(p.vizLevel);
     if (arr) arr.push(p); else byLevel.set(p.vizLevel, [p]);
   }
-  const out: { level: number; curve: Curve }[] = [];
-  for (const lv of [...byLevel.keys()].sort((a, b) => a - b)) {
-    const curve = buildEloCurve(byLevel.get(lv)!, w, h, pad);
-    if (curve) out.push({ level: lv, curve });
-  }
-  return out;
+  const drawn = [...byLevel.entries()].filter(([, ps]) => ps.length >= 2).sort((a, b) => a[0] - b[0]);
+  if (!drawn.length) return null;
+
+  const all = drawn.flatMap(([, ps]) => ps);
+  const elos = all.map(p => p.elo);
+  let minElo = Math.min(...elos), maxElo = Math.max(...elos);
+  if (minElo === maxElo) { minElo -= 10; maxElo += 10; }
+  const times = all.map(p => Date.parse(p.attemptedAt)).filter(t => !isNaN(t));
+  const tMin = times.length ? Math.min(...times) : 0;
+  const tSpan = (times.length ? Math.max(...times) : 0) - tMin;
+
+  const xOf = (p: EloHistoryPoint, i: number, n: number): number => {
+    const t = Date.parse(p.attemptedAt);
+    if (tSpan > 0 && !isNaN(t)) return pad + ((t - tMin) / tSpan) * (w - 2 * pad);
+    return pad + (n > 1 ? i / (n - 1) : 0) * (w - 2 * pad);   // Fallback: gleichmäßig
+  };
+  const yOf = (elo: number): number => h - pad - ((elo - minElo) / (maxElo - minElo)) * (h - 2 * pad);
+
+  const lines: OverlayLine[] = drawn.map(([level, ps]) => ({
+    level,
+    color: LEVEL_COLORS[level % LEVEL_COLORS.length],
+    poly: ps.map((p, i) => `${xOf(p, i, ps.length).toFixed(1)},${yOf(p.elo).toFixed(1)}`).join(' '),
+  }));
+
+  const byTime = [...all].sort((a, b) => Date.parse(a.attemptedAt) - Date.parse(b.attemptedAt));
+  const fmt = (s: string) => { const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); };
+  return { lines, minElo, maxElo, w, h, first: fmt(byTime[0].attemptedAt), last: fmt(byTime[byTime.length - 1].attemptedAt) };
 }
 
 @Component({
@@ -118,19 +147,19 @@ export function buildCurvesPerLevel(points: EloHistoryPoint[], w = 600, h = 180,
           </mat-card-header>
           <mat-card-content>
             @if (level === -1) {
-              @if (multiCurves.length) {
-                <div class="multi-curves">
-                  @for (mc of multiCurves; track mc.level) {
-                    <div class="mini-chart">
-                      <div class="mini-title">{{ 'stats.vizLevel' | translate }} {{ mc.level }}</div>
-                      <div class="chart">
-                        <div class="y-axis"><span>{{ mc.curve.maxElo }}</span><span>{{ mc.curve.minElo }}</span></div>
-                        <svg [attr.viewBox]="'0 0 ' + mc.curve.w + ' ' + mc.curve.h" preserveAspectRatio="none" class="svg">
-                          <polyline [attr.points]="mc.curve.poly" fill="none" stroke="#1976d2" stroke-width="2" vector-effect="non-scaling-stroke" />
-                        </svg>
-                      </div>
-                      <div class="x-axis"><span>{{ mc.curve.first }}</span><span>{{ mc.curve.last }}</span></div>
-                    </div>
+              @if (overlay) {
+                <div class="chart">
+                  <div class="y-axis"><span>{{ overlay.maxElo }}</span><span>{{ overlay.minElo }}</span></div>
+                  <svg [attr.viewBox]="'0 0 ' + overlay.w + ' ' + overlay.h" preserveAspectRatio="none" class="svg">
+                    @for (l of overlay.lines; track l.level) {
+                      <polyline [attr.points]="l.poly" fill="none" [attr.stroke]="l.color" stroke-width="2" vector-effect="non-scaling-stroke" />
+                    }
+                  </svg>
+                </div>
+                <div class="x-axis"><span>{{ overlay.first }}</span><span>{{ overlay.last }}</span></div>
+                <div class="legend">
+                  @for (l of overlay.lines; track l.level) {
+                    <span class="legend-item"><span class="legend-swatch" [style.background]="l.color"></span>{{ 'stats.vizLevel' | translate }} {{ l.level }}</span>
                   }
                 </div>
               } @else {
@@ -272,9 +301,9 @@ export function buildCurvesPerLevel(points: EloHistoryPoint[], w = 600, h = 180,
     .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: #888; }
     .svg { flex: 1; height: 180px; background: linear-gradient(#fafafa,#f0f0f0); border-radius: 4px; }
     .x-axis { display: flex; justify-content: space-between; font-size: .7rem; color: #888; margin-top: 2px; }
-    .multi-curves { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .mini-title { font-size: .8rem; font-weight: 600; color: #555; margin-bottom: 4px; }
-    .mini-chart .chart, .mini-chart .svg { height: 130px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 8px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: #555; }
+    .legend-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
     .muted { color: #888; font-style: italic; }
     .perlevel { display: flex; flex-wrap: wrap; gap: 12px; }
     .pl { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; background: #f5f5f5; border-radius: 6px; }
@@ -318,7 +347,7 @@ export class StatsComponent implements OnInit {
   level = 0;
   private eloPoints: EloHistoryPoint[] = [];
   curve: Curve | null = null;
-  multiCurves: { level: number; curve: Curve }[] = [];   // „Alle"-Ansicht: je Modus eine Kurve
+  overlay: Overlay | null = null;   // „Alle"-Ansicht: alle Level in einer Grafik, farbkodiert
 
   themes: ThemeStat[] = [];
   ratingBands: RatingBand[] = [];
@@ -361,11 +390,11 @@ export class StatsComponent implements OnInit {
 
   rebuildCurve(): void {
     if (this.level === -1) {
-      // „Alle" → je Modus eine eigene Kurve (keine modus-übergreifende Mischkurve).
-      this.multiCurves = buildCurvesPerLevel(this.eloPoints);
+      // „Alle" → alle Modi farbkodiert in EINER Grafik (gemeinsame Skala) + Legende.
+      this.overlay = buildOverlay(this.eloPoints);
       this.curve = null;
     } else {
-      this.multiCurves = [];
+      this.overlay = null;
       this.curve = buildEloCurve(this.eloPoints.filter(p => p.vizLevel === this.level));
     }
   }

@@ -1,4 +1,4 @@
-import { buildEloCurve, buildCurvesPerLevel, buildHeatmap, heatLevel } from './stats.component';
+import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
 function pt(elo: number, day: number, vizLevel = 0): EloHistoryPoint {
@@ -31,27 +31,34 @@ describe('buildEloCurve', () => {
   });
 });
 
-describe('buildCurvesPerLevel', () => {
-  it('builds one curve per visualization level (sorted), each with >= 2 points', () => {
-    const res = buildCurvesPerLevel([
-      pt(1500, 1, 0), pt(1520, 2, 0),
-      pt(1400, 1, 2), pt(1450, 2, 2), pt(1460, 3, 2),
-    ]);
-    expect(res.map(r => r.level)).toEqual([0, 2]);
-    expect(res[0].curve.poly.trim().split(/\s+/).length).toBe(2);
-    expect(res[1].curve.poly.trim().split(/\s+/).length).toBe(3);
+describe('buildOverlay', () => {
+  it('builds one colored line per level (sorted), shared scale + global date range', () => {
+    const o = buildOverlay([
+      pt(1500, 1, 0), pt(1520, 5, 0),
+      pt(1400, 2, 2), pt(1450, 3, 2), pt(1460, 4, 2),
+    ])!;
+    expect(o.lines.map(l => l.level)).toEqual([0, 2]);
+    expect(o.lines[0].color).toBe(LEVEL_COLORS[0]);
+    expect(o.lines[1].color).toBe(LEVEL_COLORS[2]);
+    // gemeinsame Y-Skala über ALLE Punkte
+    expect(o.minElo).toBe(1400);
+    expect(o.maxElo).toBe(1520);
+    // ein Punktpaar je Datenpunkt
+    expect(o.lines[0].poly.trim().split(/\s+/).length).toBe(2);
+    expect(o.lines[1].poly.trim().split(/\s+/).length).toBe(3);
   });
 
   it('drops levels with fewer than 2 points', () => {
-    const res = buildCurvesPerLevel([
+    const o = buildOverlay([
       pt(1500, 1, 0), pt(1520, 2, 0),
-      pt(1400, 1, 1),                    // nur 1 Punkt → kein Graph
-    ]);
-    expect(res.map(r => r.level)).toEqual([0]);
+      pt(1400, 1, 1),                    // nur 1 Punkt → keine Linie
+    ])!;
+    expect(o.lines.map(l => l.level)).toEqual([0]);
   });
 
-  it('returns empty when no level has enough data', () => {
-    expect(buildCurvesPerLevel([pt(1500, 1, 0), pt(1400, 1, 1)])).toEqual([]);
+  it('returns null when no level has enough data', () => {
+    expect(buildOverlay([pt(1500, 1, 0), pt(1400, 1, 1)])).toBeNull();
+    expect(buildOverlay([])).toBeNull();
   });
 });
 

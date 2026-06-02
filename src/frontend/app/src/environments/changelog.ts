@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.55.2';
+export const APP_VERSION = '0.56.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.56.0', date: '2026-06-02', changes: [
+    'Statistik „Alle": Die Elo-Kurven aller Visualisierungs-Modi werden jetzt in EINER Grafik überlagert (gemeinsame Skala, je Modus farbkodiert) mit kleiner Legende — statt getrennter Mini-Charts.',
+  ]},
   { version: '0.55.2', date: '2026-06-02', changes: [
     'Feature: Buch-Import-Antwort meldet jetzt drei Zahlen statt zwei — Importiert / Duplikate / Ungültig. Bisher zählte „Skipped" nur Duplikate; Spiele, die der Parser wegen fehlender Round/FEN/Mainline oder Grundstellung-ohne-[%tqu]-Marker verwirft, fielen heimlich raus. Snackbar zeigt nur die nicht-null Teile an.',
     'API: BookImportItemDto + BookImportResultDto bekommen ein neues Feld `Invalid` / `TotalInvalid`. `PgnImportService.ParsePgn` liefert jetzt einen `ParseResult`-Record (Puzzles + Invalid) statt einer flachen Liste.',
