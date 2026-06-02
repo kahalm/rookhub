@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -10,6 +11,7 @@ public class AuthServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly AuthService _authService;
+    private readonly CapturingLogger<AuthService> _logger = new();
 
     public AuthServiceTests()
     {
@@ -27,7 +29,7 @@ public class AuthServiceTests : IDisposable
             })
             .Build();
 
-        _authService = new AuthService(_db, config);
+        _authService = new AuthService(_db, config, _logger);
     }
 
     public void Dispose() => _db.Dispose();
@@ -112,5 +114,51 @@ public class AuthServiceTests : IDisposable
 
         var dup = new RegisterDto { Username = "admin", Email = "other@example.com", Password = "password123" };
         await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(dup));
+    }
+
+    [Fact]
+    public async Task Login_ValidCredentials_LogsUserLoginWithUserIdAndName()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+
+        // Kibana zaehlt Logins ueber messageTemplate "UserLogin" und Unique Logins
+        // ueber fields.UserId -> beide Properties muessen im Log-Event stecken.
+        var ev = Assert.Single(_logger.Events, e => e.Message.Contains("UserLogin"));
+        Assert.Equal(reg.UserId, Assert.IsType<int>(ev.State["UserId"]));
+        Assert.Equal("testuser", ev.State["UserName"]);
+    }
+
+    [Fact]
+    public async Task Login_InvalidPassword_DoesNotLogUserLogin()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "wrongpassword" }));
+
+        Assert.DoesNotContain(_logger.Events, e => e.Message.Contains("UserLogin"));
+    }
+
+    // Minimaler ILogger, der Events samt strukturierter Properties mitschreibt.
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public sealed record Entry(string Message, IReadOnlyDictionary<string, object?> State);
+
+        public List<Entry> Events { get; } = new();
+
+        IDisposable? ILogger.BeginScope<TState>(TState state) => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var dict = new Dictionary<string, object?>();
+            if (state is IEnumerable<KeyValuePair<string, object?>> kvps)
+                foreach (var kv in kvps)
+                    dict[kv.Key] = kv.Value;
+            Events.Add(new Entry(formatter(state, exception), dict));
+        }
     }
 }

@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -13,6 +14,7 @@ public class AuthService
 {
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
+    private readonly ILogger<AuthService> _logger;
 
     // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
     // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
@@ -20,10 +22,11 @@ public class AuthService
     private static readonly string DummyHash =
         BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy", BcryptWorkFactor);
 
-    public AuthService(AppDbContext db, IConfiguration config)
+    public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
     {
         _db = db;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
@@ -82,6 +85,13 @@ public class AuthService
         var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, hash);
         if (user == null || !passwordOk)
             throw new UnauthorizedAccessException("Invalid username or password.");
+
+        // Strukturierter Login-Event fuer Kibana: Logins/Tag (Count) + Unique Logins
+        // (Cardinality auf fields.UserId). Nur bei erfolgreichem Login, analog zum
+        // PuzzleAttempt-Log in PuzzleService. messageTemplate enthaelt "UserLogin".
+        _logger.LogInformation(
+            "UserLogin: User {UserId} {UserName} logged in",
+            user.Id, user.Username);
 
         return new AuthResponseDto
         {
