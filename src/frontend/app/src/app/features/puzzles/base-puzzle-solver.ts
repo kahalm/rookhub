@@ -39,6 +39,11 @@ export abstract class BasePuzzleSolver {
   mouseslipUsed = false;
   currentEval = '';
 
+  // ---- Lösungs-Durchsicht (Review) — von allen Modi geteilt ----
+  reviewMode = false;
+  reviewIndex = 0;
+  protected solutionPlayTimer?: ReturnType<typeof setInterval>;
+
   // ---- Visualisierungs-/Blindfold-Modus (0 = aus, 1-4 = aktiv) ----
   visualizationMode = 0;
   vizMoves: string[] = [];
@@ -82,6 +87,10 @@ export abstract class BasePuzzleSolver {
   protected abstract handleSolved(alternative: boolean): void;
   /** Puzzle verloren — Komponente setzt Endzustand + Mode-Logik. */
   protected abstract handleFailed(): void;
+  /** Anzahl Schritte in der Lösungs-Durchsicht (mode-spezifisch). */
+  abstract get reviewTotal(): number;
+  /** Brett auf Schritt `index` der Lösungs-Durchsicht aufbauen (mode-spezifisch). */
+  protected abstract reviewGoTo(index: number): void;
   /** Stockfish-Suchtiefe (Komponente liefert ihre Einstellung). */
   protected get depth(): number { return 16; }
   /** Bei Stockfish-Fehler weiterspielen (true) oder als verloren werten (false, z.B. Buch). */
@@ -375,10 +384,36 @@ export abstract class BasePuzzleSolver {
     }
   }
 
+  // ===== Lösungs-Durchsicht (geteilt) =====
+  /** Endzustand-Review: ans Ende springen (keine Auto-Wiedergabe) — für gelöst/falsch. */
+  protected enterSolutionReview(): void {
+    this.reviewMode = true;
+    this.reviewIndex = this.reviewTotal;
+  }
+
+  /** Aufgeben: Lösung ab dem ersten Zug automatisch durchspielen (alle Modi identisch). */
+  protected playSolutionFromStart(): void {
+    this.clearSolutionPlay();
+    this.reviewMode = true;
+    this.reviewGoTo(0);
+    this.solutionPlayTimer = setInterval(() => {
+      if (this.reviewIndex >= this.reviewTotal) { this.clearSolutionPlay(); return; }
+      this.reviewGoTo(this.reviewIndex + 1);
+    }, 900);
+  }
+
+  protected clearSolutionPlay(): void {
+    if (this.solutionPlayTimer) {
+      clearInterval(this.solutionPlayTimer);
+      this.solutionPlayTimer = undefined;
+    }
+  }
+
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */
   protected abortSolver(): void {
     this.aborted = true;
     this.solverEpoch++;                         // laufende Stockfish-Aufrufe verwerfen
+    this.clearSolutionPlay();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     // endVisualizationHide raeumt auch den vizShowTimer auf — sonst feuert dessen
     // setTimeout-Callback nach Teardown/Puzzlewechsel.

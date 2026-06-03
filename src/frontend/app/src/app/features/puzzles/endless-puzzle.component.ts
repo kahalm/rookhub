@@ -134,8 +134,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** Vorab geladene Puzzles für Offline-Spiel (ein ganzer Run). */
   private offlinePool: PuzzleDto[] = [];
   reviewingWrongPuzzle = false;
-  reviewMode = false;
-  reviewIndex = 0;
   gaveUp = false;
   private puzzleStartTime = 0;
 
@@ -565,11 +563,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
   }
 
-  private enterSolutionReview(): void {
-    this.reviewMode = true;
-    this.reviewIndex = this.reviewTotal;
-  }
-
   /** Aktuelles Puzzle (z.B. nach dem Aufgeben) im Analysemodus öffnen. */
   analyzeCurrentPuzzle(): void {
     if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
@@ -606,14 +599,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.reviewGoTo(0);
   }
 
-  get reviewTotal(): number {
+  override get reviewTotal(): number {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
   reviewNext(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
   reviewPrev(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
 
-  private reviewGoTo(index: number): void {
+  protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);
     index = Math.max(0, Math.min(index, moves.length));

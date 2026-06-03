@@ -87,9 +87,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
   gaveUp = false;
 
-  // Review-Modus „Ganze Partie" / Lösungs-Step-Through (komponentenspezifisch).
-  reviewMode = false;
-  reviewIndex = 0;
+  // Review-Modus „Ganze Partie" vs. Lösungs-Step-Through (komponentenspezifisch;
+  // reviewMode/reviewIndex in BasePuzzleSolver).
   solutionReview = false;
 
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
@@ -446,9 +445,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.playSolutionFromStart();
   }
 
-  /** Spult die Lösung ab der Anfangsstellung selbsttätig durch (Zug für Zug). */
-  private solutionPlayTimer?: ReturnType<typeof setInterval>;
-  private playSolutionFromStart(): void {
+  /** Buch-Variante: spielt die LÖSUNG (ab Trainingsstart) durch, nicht die ganze Partie. */
+  protected override playSolutionFromStart(): void {
     this.clearSolutionPlay();
     this.solutionReview = true;
     this.reviewMode = true;
@@ -457,13 +455,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       if (this.reviewIndex >= this.reviewTotal) { this.clearSolutionPlay(); return; }
       this.solutionReviewGoTo(this.reviewIndex + 1);
     }, 900);
-  }
-
-  private clearSolutionPlay(): void {
-    if (this.solutionPlayTimer) {
-      clearInterval(this.solutionPlayTimer);
-      this.solutionPlayTimer = undefined;
-    }
   }
 
   retry(): void {
@@ -505,10 +496,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dests = new Map();
   }
 
-  private enterSolutionReview(): void {
+  protected override enterSolutionReview(): void {
     this.solutionReview = true;
-    this.reviewMode = true;
-    this.reviewIndex = this.reviewTotal;
+    super.enterSolutionReview();
   }
 
   // ---- „Ganze Partie" Review ---------------------------------------------
@@ -524,7 +514,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.reviewGoTo(0);
   }
 
-  get reviewTotal(): number {
+  override get reviewTotal(): number {
     if (!this.puzzle) return 0;
     const allMoves = this.puzzle.moves.split(' ').filter(m => m);
     return this.solutionReview ? allMoves.length - Math.max(0, this.startPly) : allMoves.length;
@@ -541,7 +531,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     else this.reviewGoTo(this.reviewIndex - 1);
   }
 
-  private reviewGoTo(index: number): void {
+  protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);
     index = Math.max(0, Math.min(index, moves.length));

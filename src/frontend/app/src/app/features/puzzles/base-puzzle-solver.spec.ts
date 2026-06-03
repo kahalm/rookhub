@@ -8,6 +8,8 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 class TestSolver extends BasePuzzleSolver {
   protected handleSolved(): void { this.state = 'SOLVED'; }
   protected handleFailed(): void { this.state = 'FAILED'; }
+  override get reviewTotal(): number { return this.solutionMoves.length; }
+  protected override reviewGoTo(index: number): void { this.reviewIndex = index; }
   setup(fen: string, moves: string): void { this.setupSolver(fen, moves, 0); }
   get fen(): string { return (this as unknown as { chess: { fen(): string } }).chess.fen(); }
 }

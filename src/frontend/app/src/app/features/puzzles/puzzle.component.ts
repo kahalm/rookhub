@@ -69,10 +69,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private nextPuzzle: PuzzleDto | null = null;
   lastEloChange: number | null = null;
 
-  // Review mode (Lösungs-Step-Through)
-  reviewMode = false;
-  reviewIndex = 0;
-
   // Eval
   showEval = false;
   evalLoading = false;
@@ -331,25 +327,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.playSolutionFromStart();
   }
 
-  /** Spult die Lösung ab der Anfangsstellung selbsttätig durch (Zug für Zug). */
-  private solutionPlayTimer?: ReturnType<typeof setInterval>;
-  private playSolutionFromStart(): void {
-    this.clearSolutionPlay();
-    this.reviewMode = true;
-    this.reviewGoTo(0);
-    this.solutionPlayTimer = setInterval(() => {
-      if (this.reviewIndex >= this.reviewTotal) { this.clearSolutionPlay(); return; }
-      this.reviewGoTo(this.reviewIndex + 1);
-    }, 900);
-  }
-
-  private clearSolutionPlay(): void {
-    if (this.solutionPlayTimer) {
-      clearInterval(this.solutionPlayTimer);
-      this.solutionPlayTimer = undefined;
-    }
-  }
-
   retry(): void {
     if (!this.puzzle) return;
     this.clearSolutionPlay();
@@ -358,19 +335,14 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.setupPuzzle(this.puzzle);
   }
 
-  private enterSolutionReview(): void {
-    this.reviewMode = true;
-    this.reviewIndex = this.reviewTotal;
-  }
-
-  get reviewTotal(): number {
+  override get reviewTotal(): number {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
   reviewNext(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex + 1); }
   reviewPrev(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex - 1); }
 
-  private reviewGoTo(index: number): void {
+  protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);
     index = Math.max(0, Math.min(index, moves.length));
