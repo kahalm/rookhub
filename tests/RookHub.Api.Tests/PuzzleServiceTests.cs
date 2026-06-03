@@ -276,6 +276,31 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetStats_NoLevel_ReturnsEloOfMostPlayedLevel()
+    {
+        // User spielt überwiegend auf Viz-Level 1 (dort Elo 1800), Level 0 ist Default 1500.
+        var userId = await CreateUserAsync();
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleElo = 1500;
+        user.PuzzleEloViz1 = 1800;
+        await _db.SaveChangesAsync();
+
+        var p = await CreatePuzzleAsync(lichessId: "lvl1");
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = userId, PuzzleId = p.Id, Solved = true, VisualizationLevel = 1, AttemptedAt = DateTime.UtcNow.AddMinutes(-3) },
+            new PuzzleAttempt { UserId = userId, PuzzleId = p.Id, Solved = true, VisualizationLevel = 1, AttemptedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PuzzleAttempt { UserId = userId, PuzzleId = p.Id, Solved = false, VisualizationLevel = 0, AttemptedAt = DateTime.UtcNow.AddMinutes(-1) }
+        );
+        await _db.SaveChangesAsync();
+
+        var overview = await _service.GetStatsAsync(userId);    // ohne Level → meistgespieltes (Level 1)
+        var level0 = await _service.GetStatsAsync(userId, 0);    // explizit Level 0
+
+        Assert.Equal(1800, overview.PuzzleElo);   // tatsächliches Haupt-Elo, nicht der Level-0-Default
+        Assert.Equal(1500, level0.PuzzleElo);     // explizit angefragtes Level bleibt unverändert
+    }
+
+    [Fact]
     public async Task GetHistory_ReturnsPaginated()
     {
         var userId = await CreateUserAsync();

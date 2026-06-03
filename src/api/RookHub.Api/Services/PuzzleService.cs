@@ -299,15 +299,20 @@ public class PuzzleService
         return attempts.Count;
     }
 
-    public async Task<PuzzleStatsDto> GetStatsAsync(int userId, int vizLevel = 0)
+    public async Task<PuzzleStatsDto> GetStatsAsync(int userId, int? vizLevel = null)
     {
         var user = await _db.AppUsers.FindAsync(userId);
+
+        // Ohne explizit angefragtes Level (Dashboard/Übersicht): das vom User am meisten
+        // gespielte Level — sonst zeigt das Dashboard stur das Level-0-Elo (Default 1500),
+        // obwohl der User z.B. im Blindfold-Level bei 1800 steht.
+        var level = vizLevel ?? await GetPrimaryLevelAsync(userId);
 
         var totalAttempts = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId);
         if (totalAttempts == 0)
             return new PuzzleStatsDto
             {
-                PuzzleElo = user != null ? GetEloForLevel(user, vizLevel) : GetDefaultElo(vizLevel),
+                PuzzleElo = user != null ? GetEloForLevel(user, level) : GetDefaultElo(level),
                 PuzzleEloPerLevel = user != null ? BuildEloDict(user) : null
             };
 
@@ -344,9 +349,22 @@ public class PuzzleService
             Accuracy = Math.Round(accuracy, 1),
             CurrentStreak = currentStreak,
             BestStreak = bestStreak,
-            PuzzleElo = user != null ? GetEloForLevel(user, vizLevel) : GetDefaultElo(vizLevel),
+            PuzzleElo = user != null ? GetEloForLevel(user, level) : GetDefaultElo(level),
             PuzzleEloPerLevel = user != null ? BuildEloDict(user) : null
         };
+    }
+
+    /// <summary>Das vom User am meisten gespielte Visualisierungs-Level (0–4); 0 falls keine Versuche.
+    /// Liefert das „Haupt-Elo" für Dashboard/Übersicht, statt stur Level 0 (Default 1500) zu zeigen.</summary>
+    private async Task<int> GetPrimaryLevelAsync(int userId)
+    {
+        var top = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId)
+            .GroupBy(a => a.VisualizationLevel)
+            .Select(g => new { Level = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count).ThenBy(x => x.Level)
+            .FirstOrDefaultAsync();
+        return top?.Level ?? 0;
     }
 
     public async Task<List<PuzzleAttemptDto>> GetHistoryAsync(int userId, int page, int pageSize)

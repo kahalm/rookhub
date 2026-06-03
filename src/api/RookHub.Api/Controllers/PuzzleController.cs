@@ -86,7 +86,9 @@ public class PuzzleController : BaseApiController
     [HttpGet("stats")]
     public async Task<ActionResult<PuzzleStatsDto>> GetStats([FromQuery] int? vizLevel)
     {
-        return Ok(await _puzzleService.GetStatsAsync(GetUserId(), vizLevel ?? 0));
+        // vizLevel bewusst nullable durchreichen: ohne explizites Level liefert der Service
+        // das Elo des meistgespielten Levels (Dashboard/Übersicht), nicht stur Level 0.
+        return Ok(await _puzzleService.GetStatsAsync(GetUserId(), vizLevel));
     }
 
     [HttpGet("history")]
