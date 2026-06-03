@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { OfflineService, PUZZLE_POOL_KEY } from './offline.service';
 import { EndlessStorageService, EndlessConfig } from '../features/puzzles/endless-storage.service';
 import { puzzleWindow } from '../features/puzzles/puzzle-window.util';
-import { buildEndlessRunWindows, computeRunSize } from '../features/puzzles/endless-prefetch.util';
+import { buildChainWindows, autoFasttrackThresholds, ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
 
 const ENDLESS_DEFAULT_CONFIG: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
 
@@ -53,18 +53,23 @@ export class OfflinePrefetchService {
   }
 
   private prefetchEndlessPool(): void {
-    const runs = Math.max(1, this.offline.endlessRuns);
     const config = this.endlessStorage.loadConfig({ ...ENDLESS_DEFAULT_CONFIG });
     const history = this.endlessStorage.loadSessionHistory();
-    // Nachfüllen, sobald weniger als EIN Run gecacht ist (nicht erst bei komplett leer) —
-    // sonst hätte ein nur halb verbrauchter Run-Rest nie wieder genug Puzzles für offline.
-    if (this.endlessStorage.loadOfflinePool().length >= computeRunSize(history)) return;
+    // Nachfüllen, sobald weniger als eine volle Gauntlet-Kette gecacht ist.
+    if (this.endlessStorage.loadOfflinePool().length >= ENDLESS_CHAIN_BLOCK) return;
     this.puzzleService.getRatingRange().pipe(catchError(() => of(null))).subscribe(bounds => {
-      const windows = buildEndlessRunWindows(config, history, bounds?.max ?? 3000, runs);
+      // Dieselbe Ketten-Kurve wie der Live-Gauntlet (T1/T2 aus Config-Override bzw. Historie).
+      const auto = autoFasttrackThresholds(config, history);
+      const t1 = config.fasttrackThreshold1 ?? auto.first;
+      const t2 = config.fasttrackThreshold2 ?? auto.second;
+      const windows = buildChainWindows(config.startElo, t1, t2, bounds?.max ?? 3000);
       if (!windows.length) return;
       const themes = config.themes.trim() || undefined;
       this.puzzleService.getRandomBatch(windows, themes).subscribe({
-        next: pool => this.endlessStorage.saveOfflinePool(pool || []),
+        next: pool => {
+          this.endlessStorage.saveOfflinePool(pool || []);
+          this.endlessStorage.saveChainToken(0);   // Prefetch gehört zu keinem laufenden Run
+        },
         error: () => { /* offline/Fehler: ignorieren */ },
       });
     });

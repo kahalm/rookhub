@@ -17,6 +17,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     'Jedes Puzzle führt weiter — egal ob gelöst oder nicht: Ein Fehler kostet ein Leben UND rückt zum nächsten (höheren) Puzzle. Bei 0 Leben ist Schluss.',
     'Online wird am Kettenende automatisch nachgeneriert; offline am Ende der Kette erscheint „You win" 🏆.',
     'Einstellungen: beide Schwellenwerte bleiben editierbar; die Vorschau zeigt jetzt den Rating-Verlauf der Kette (Puzzle 1 / 6 / 21 / 30).',
+    'Das Offline-Vorabladen des Endlos-Pools nutzt jetzt dieselbe Ketten-Kurve wie der Live-Gauntlet (vorher die alte Lauf-Logik).',
   ]},
   { version: '0.76.0', date: '2026-06-03', changes: [
     'Tagespuzzle wird persistiert: neuer Endpoint `GET /api/book-puzzles/daily/{yyyyMMdd|today}` (anonym) liefert das Tagespuzzle für ein UTC-Datum. Pro Tag eine Zeile in der neuen Tabelle `DailyPuzzles` (PK=Date, FK→BookPuzzle); ein Background-Service `DailyPuzzleScheduler` legt die heutige Zuordnung um 00:00 UTC an + holt verpasste Tage beim Start nach. On-Demand-Fallback wenn Scheduler offline war. `GetRandomAsync(pool="daily")` routet jetzt durch die persistierte Zuordnung — historische Tagespuzzles bleiben damit stabil, egal wie der `forDaily`-Pool sich später ändert. Migration `AddDailyPuzzleTable`, Book-Löschung räumt Historie ab.',

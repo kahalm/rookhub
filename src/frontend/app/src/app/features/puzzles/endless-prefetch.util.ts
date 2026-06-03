@@ -92,68 +92,6 @@ export function fasttrackSteps(startElo: number, avgFirst: number, avgSecond: nu
   };
 }
 
-/** Step für den n-ten gelösten Puzzle (Phase 1 ≤5, Phase 2 ≤10, danach 20). */
-export function stepForSolved(steps: FasttrackSteps, solvedCount: number): number {
-  if (solvedCount <= 5) return steps.phase1Step;
-  if (solvedCount <= 10) return steps.phase2Step;
-  return 20;
-}
-
-/**
- * Vollständige Rating-Fenster für `runs` Endless-Runs aus gespeicherter Config + Historie —
- * für das Offline-Vorab-Laden (App-Start und Modus-Eintritt nutzen dieselbe Logik).
- */
-export function buildEndlessRunWindows(
-  config: FasttrackConfig & { fasttrackThreshold1?: number; fasttrackThreshold2?: number },
-  history: (FasttrackSession & { totalSolved: number })[],
-  ratingMax: number,
-  runs: number
-): RatingWindow[] {
-  const auto = autoFasttrackThresholds(config, history);
-  const avgFirst = config.fasttrackThreshold1 ?? auto.first;
-  const avgSecond = config.fasttrackThreshold2 ?? auto.second;
-  const steps = fasttrackSteps(config.startElo, avgFirst, avgSecond);
-  const runSize = computeRunSize(history);
-  let windows: RatingWindow[] = [];
-  for (let r = 0; r < Math.max(1, runs); r++) {
-    windows = windows.concat(
-      buildRunWindows(config.startElo, runSize, n => stepForSolved(steps, n), ratingMax, ENDLESS_RATING_WINDOW)
-    );
-  }
-  return windows;
-}
-
-/**
- * Run-Größe für das Offline-Vorab-Laden: Maximum der gelösten Puzzles der letzten 5 Runs + 10.
- * Ohne (genügend) Historie wird eine Basis von 20 angenommen (→ 30 Puzzles).
- */
-export function computeRunSize(history: { totalSolved: number }[]): number {
-  const last5 = (history ?? []).slice(-5);
-  const base = last5.length ? Math.max(...last5.map(s => s.totalSolved || 0)) : 20;
-  return base + 10;
-}
-
-/**
- * Simuliert die Rating-Fenster eines Endless-Runs (analog zur Live-Progression):
- * Fenster i beginnt bei `cur`, danach `cur += stepForSolved(i+1)`.
- */
-export function buildRunWindows(
-  startElo: number,
-  runSize: number,
-  stepForSolved: (solvedCount: number) => number,
-  ratingMax: number,
-  ratingWindow = 40
-): RatingWindow[] {
-  const windows: RatingWindow[] = [];
-  let cur = startElo;
-  for (let i = 0; i < runSize; i++) {
-    if (cur > ratingMax) break;
-    windows.push({ minRating: cur, maxRating: cur + ratingWindow });
-    cur += Math.max(1, Math.round(stepForSolved(i + 1)));
-  }
-  return windows;
-}
-
 /**
  * Nimmt (und entfernt) ein Puzzle aus dem Offline-Pool, dessen Rating ins Fenster [min,max] passt.
  * `null`, wenn kein passendes vorhanden ist.
