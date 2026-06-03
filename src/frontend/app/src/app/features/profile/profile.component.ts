@@ -16,6 +16,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { ApiTokensComponent } from './api-tokens.component';
 
 interface Profile {
   userId: number;
@@ -55,7 +56,8 @@ interface PlayerSearchItem {
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatProgressSpinnerModule, MatListModule,
-    MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent],
+    MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent,
+    ApiTokensComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -172,6 +174,9 @@ interface PlayerSearchItem {
                 <p class="discord-hint">{{ 'profile.discord.hint' | translate }}</p>
               }
             </div>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <app-api-tokens></app-api-tokens>
 
             <mat-divider class="discord-divider"></mat-divider>
             <div class="offline-section">
