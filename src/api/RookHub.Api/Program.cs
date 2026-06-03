@@ -92,6 +92,8 @@ try
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
+    builder.Services.AddScoped<AdminService>();
+    builder.Services.AddScoped<BookAdminService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     builder.Services.AddSingleton<AutoSubscriptionService>();

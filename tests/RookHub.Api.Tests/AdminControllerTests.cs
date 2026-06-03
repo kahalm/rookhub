@@ -23,7 +23,8 @@ public class AdminControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _controller = new AdminController(
-            _db,
+            new AdminService(_db),
+            new BookAdminService(_db),
             new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db));
         SetUser(99);
