@@ -15,13 +15,23 @@ public class AdminController : BaseApiController
     private readonly BookAdminService _bookAdmin;
     private readonly PuzzleService _puzzleService;
     private readonly PgnImportService _pgnImportService;
+    private readonly IConfiguration _config;
 
-    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService)
+    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config)
     {
         _admin = admin;
         _bookAdmin = bookAdmin;
         _puzzleService = puzzleService;
         _pgnImportService = pgnImportService;
+        _config = config;
+    }
+
+    /// <summary>Konfigurationswerte fürs Admin-UI (z. B. Kibana-Link aus dem Server-Env).</summary>
+    [HttpGet("config")]
+    public IActionResult GetConfig()
+    {
+        var kibanaUrl = (_config["Kibana:Url"] ?? string.Empty).TrimEnd('/');
+        return Ok(new { kibanaUrl });
     }
 
     // ---- Benutzer ---------------------------------------------------------

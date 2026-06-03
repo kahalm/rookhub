@@ -83,9 +83,18 @@ export interface GroupMember {
   username: string;
 }
 
+export interface AdminConfig {
+  kibanaUrl: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private http: HttpClient) {}
+
+  /** Konfigurationswerte fürs Admin-UI (Kibana-Link aus dem Server-Env). */
+  getConfig(): Observable<AdminConfig> {
+    return this.http.get<AdminConfig>('/api/admin/config');
+  }
 
   getUsers(search = '', page = 1, pageSize = 20): Observable<PagedResult<AdminUser>> {
     return this.http.get<PagedResult<AdminUser>>('/api/admin/users', {

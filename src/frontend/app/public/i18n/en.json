@@ -667,6 +667,7 @@
   },
   "admin": {
     "title": "Admin",
+    "kibanaLink": "Kibana dashboard",
     "tabs": {
       "users": "Users",
       "books": "Books",

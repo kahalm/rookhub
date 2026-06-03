@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -15,6 +16,7 @@ public class AdminControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly AdminController _controller;
+    private readonly IConfigurationRoot _config;
 
     public AdminControllerTests()
     {
@@ -22,11 +24,18 @@ public class AdminControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
+        _config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Kibana:Url"] = "https://kibana-test.example.com/"
+            })
+            .Build();
         _controller = new AdminController(
             new AdminService(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
-            new PgnImportService(_db));
+            new PgnImportService(_db),
+            _config);
         SetUser(99);
     }
 
@@ -56,6 +65,41 @@ public class AdminControllerTests : IDisposable
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
         return user;
+    }
+
+    [Fact]
+    public void GetConfig_ReturnsKibanaUrlFromConfig_TrimmedSlash()
+    {
+        var result = _controller.GetConfig() as OkObjectResult;
+
+        Assert.NotNull(result);
+        var data = result.Value!;
+        var kibanaUrl = (string)data.GetType().GetProperty("kibanaUrl")!.GetValue(data)!;
+        // Trailing slash gestrippt — der Konstruktor liest aus Config "https://kibana-test.example.com/".
+        Assert.Equal("https://kibana-test.example.com", kibanaUrl);
+    }
+
+    [Fact]
+    public void GetConfig_ReturnsEmptyString_WhenKibanaUrlMissing()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var db = new AppDbContext(options);
+        var emptyConfig = new ConfigurationBuilder().Build();
+        var ctrl = new AdminController(
+            new AdminService(db),
+            new BookAdminService(db),
+            new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PgnImportService(db),
+            emptyConfig);
+
+        var result = ctrl.GetConfig() as OkObjectResult;
+
+        Assert.NotNull(result);
+        var data = result.Value!;
+        var kibanaUrl = (string)data.GetType().GetProperty("kibanaUrl")!.GetValue(data)!;
+        Assert.Equal(string.Empty, kibanaUrl);
     }
 
     [Fact]

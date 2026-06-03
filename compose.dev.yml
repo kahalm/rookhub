@@ -93,6 +93,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
+      Kibana__Url: ${KIBANA_URL:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

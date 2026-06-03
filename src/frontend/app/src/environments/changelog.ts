@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.73.2';
+export const APP_VERSION = '0.74.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.74.0', date: '2026-06-03', changes: [
+    'Admin: Kibana-Dashboard-Link im Admin-Header (en/de/hr lokalisiert). Wird nur angezeigt, wenn `KIBANA_URL` im Server-Env gesetzt ist — gelesen via neuem Endpoint `GET /api/admin/config` (Admin-only). Compose-Files reichen `KIBANA_URL` an die API als `Kibana__Url`.',
+  ]},
   { version: '0.73.2', date: '2026-06-03', changes: [
     'Fix (Endlos): Nach „Nochmal spielen" konnte ein bereits beendeter Run fälschlich erneut fortgesetzt werden (Resume → Aufgeben → Nochmal → wieder fortsetzbar). „Nochmal spielen" verwirft den beendeten Run jetzt vollständig.',
   ]},

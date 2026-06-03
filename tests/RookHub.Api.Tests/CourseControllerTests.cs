@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -300,7 +301,8 @@ public class CourseControllerTests : IDisposable
             new AdminService(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
-            new PgnImportService(_db));
+            new PgnImportService(_db),
+            new ConfigurationBuilder().Build());
         SetUser(admin, UserId);
         Assert.IsType<NoContentResult>(await admin.DeleteBook(book.Id));
 
@@ -335,7 +337,8 @@ public class CourseControllerTests : IDisposable
             new AdminService(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
-            new PgnImportService(_db));
+            new PgnImportService(_db),
+            new ConfigurationBuilder().Build());
         SetUser(admin, UserId);
         return admin;
     }

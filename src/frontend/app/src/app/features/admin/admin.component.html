@@ -1,5 +1,13 @@
     <div class="admin-container">
-      <h1>{{ 'admin.title' | translate }}</h1>
+      <div class="admin-header">
+        <h1>{{ 'admin.title' | translate }}</h1>
+        @if (kibanaUrl) {
+          <a mat-stroked-button class="kibana-link" [href]="kibanaUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon>insights</mat-icon>
+            {{ 'admin.kibanaLink' | translate }}
+          </a>
+        }
+      </div>
 
       <mat-tab-group>
         <mat-tab [label]="'admin.tabs.users' | translate">

@@ -1,4 +1,7 @@
     .admin-container { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .admin-header h1 { margin: 0; }
+    .kibana-link { display: inline-flex; align-items: center; gap: 6px; }
     .tab-content { padding: 16px 0; }
     .search-field { width: 100%; max-width: 400px; }
     .full-width { width: 100%; }

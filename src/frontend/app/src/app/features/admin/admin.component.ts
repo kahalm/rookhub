@@ -66,6 +66,9 @@ export class AdminComponent implements OnInit {
   allUsers: AdminUser[] = [];
   addMemberUserId: number | null = null;
 
+  /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
+  kibanaUrl = '';
+
   constructor(private adminService: AdminService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
@@ -74,6 +77,10 @@ export class AdminComponent implements OnInit {
     this.loadBooks();
     this.loadGroups();
     this.loadAllUsers();
+    this.adminService.getConfig().subscribe({
+      next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
+      error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
+    });
   }
 
   loadUsers(): void {

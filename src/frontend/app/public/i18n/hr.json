@@ -667,6 +667,7 @@
   },
   "admin": {
     "title": "Administracija",
+    "kibanaLink": "Kibana nadzorna ploča",
     "tabs": {
       "users": "Korisnici",
       "books": "Knjige",
