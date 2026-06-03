@@ -157,19 +157,23 @@ public class BookPuzzleController : BaseApiController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("random")]
-    public async Task<IActionResult> GetRandom([FromQuery] string pool = "random", [FromQuery] string? exclude = null)
+    public async Task<IActionResult> GetRandom([FromQuery] string pool = "random", [FromQuery] string? exclude = null, [FromQuery] int? bookId = null)
     {
         pool = (pool ?? "random").Trim().ToLowerInvariant();
         if (pool != "random" && pool != "daily" && pool != "blind")
             return BadRequest(new { message = "pool must be one of: random, daily, blind." });
 
         var query = _db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Book != null);
-        query = pool switch
-        {
-            "daily" => query.Where(bp => bp.Book!.ForDaily),
-            "blind" => query.Where(bp => bp.Book!.ForBlind),
-            _ => query.Where(bp => bp.Book!.ForRandom),
-        };
+        if (bookId.HasValue)
+            // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch.
+            query = query.Where(bp => bp.BookId == bookId.Value);
+        else
+            query = pool switch
+            {
+                "daily" => query.Where(bp => bp.Book!.ForDaily),
+                "blind" => query.Where(bp => bp.Book!.ForBlind),
+                _ => query.Where(bp => bp.Book!.ForRandom),
+            };
 
         if (!string.IsNullOrWhiteSpace(exclude))
         {
@@ -233,6 +237,7 @@ public class BookPuzzleController : BaseApiController
             .GroupBy(bp => bp.BookFileName)
             .Select(g => new BookInfoDto
             {
+                BookId = g.Max(bp => bp.BookId),
                 BookFileName = g.Key,
                 Difficulty = g.First().Difficulty,
                 BookRating = g.First().BookRating,

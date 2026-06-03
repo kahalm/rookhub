@@ -55,6 +55,8 @@ public class BookPuzzleImportDto
 
 public class BookInfoDto
 {
+    /// <summary>Stabile Buch-ID (für gezielte Abfragen, z. B. „Zufallspuzzle aus Buch X").</summary>
+    public int? BookId { get; set; }
     public string BookFileName { get; set; } = string.Empty;
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }

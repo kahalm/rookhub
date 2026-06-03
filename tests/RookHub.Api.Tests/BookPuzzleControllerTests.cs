@@ -516,6 +516,33 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetBooks_IncludesStableBookId()
+    {
+        var (book, _) = await CreateBookWithPuzzleAsync("withid.pgn", "withid.pgn:1", forRandom: true);
+
+        var result = await _controller.GetBooks() as OkObjectResult;
+        var books = Assert.IsType<List<BookInfoDto>>(result!.Value);
+        var dto = Assert.Single(books, b => b.BookFileName == "withid.pgn");
+        Assert.Equal(book.Id, dto.BookId);
+    }
+
+    [Fact]
+    public async Task GetRandom_WithBookId_ReturnsFromThatBook_OverridingPool()
+    {
+        await CreateBookWithPuzzleAsync("rand.pgn", "rand.pgn:1", forRandom: true);
+        // Zielbuch ist in KEINEM Pool (kein forRandom/forDaily/forBlind):
+        var (target, tp) = await CreateBookWithPuzzleAsync("chosen.pgn", "chosen.pgn:1");
+
+        // Trotz pool=random liefert bookId das Puzzle aus dem gewählten Buch.
+        for (int i = 0; i < 5; i++)
+        {
+            var result = await _controller.GetRandom("random", null, target.Id) as OkObjectResult;
+            var dto = Assert.IsType<BookPuzzleDto>(result!.Value);
+            Assert.Equal(tp.Id, dto.Id);
+        }
+    }
+
+    [Fact]
     public async Task GetById_ReturnsAllFields()
     {
         var puzzle = new BookPuzzle
