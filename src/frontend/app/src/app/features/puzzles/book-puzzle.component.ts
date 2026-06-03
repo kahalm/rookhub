@@ -83,6 +83,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private timerInterval?: ReturnType<typeof setInterval>;
   private startTime = 0;
 
+  // Eval (Stockfish-Bewertung) — wie Standard/Endless; currentEval kommt aus BasePuzzleSolver.
+  showEval = false;
+  evalLoading = false;
+  initialEval = '';
+  private initialFen = '';
+
   /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
   gaveUp = false;
 
@@ -209,7 +215,26 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   protected override onSolvingBegins(): void {
+    this.initialFen = this.chess.fen();
     this.startTimer();
+  }
+
+  toggleEval(): void {
+    this.showEval = !this.showEval;
+    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
+      this.refreshEval();
+    }
+  }
+
+  private async refreshEval(): Promise<void> {
+    this.evalLoading = true;
+    try {
+      if (!this.initialEval && this.initialFen) {
+        this.initialEval = await this.stockfish.getEval(this.initialFen, this.stockfishDepth);
+      }
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.stockfishDepth);
+    } catch { /* ignore */ }
+    this.evalLoading = false;
   }
 
   protected override handleSolved(): void {
@@ -425,6 +450,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.bookAttemptRecorded = false;
     this.reviewMode = false;
     this.solutionReview = false;
+    this.showEval = false;
+    this.initialEval = '';
+    this.currentEval = '';
     // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
   }
