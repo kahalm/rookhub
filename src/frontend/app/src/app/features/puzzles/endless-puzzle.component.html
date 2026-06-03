@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="settings-bar">
-                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="showSettings = !showSettings" [attr.title]="'endless.config.settings' | translate">
+                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'endless.config.settings' | translate">
                     <mat-icon>settings</mat-icon>
                   </button>
                 </div>

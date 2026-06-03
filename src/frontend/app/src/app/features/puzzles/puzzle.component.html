@@ -128,7 +128,7 @@
                         <mat-icon>replay</mat-icon>
                         {{ 'puzzles.actions.reset' | translate }}
                       </button>
-                      @if (!mouseslipUsed) {
+                      @if (!mouseslipUsed && !onSolutionPath) {
                         <button mat-button (click)="mouseslip()">
                           <mat-icon>mouse</mat-icon>
                           {{ 'puzzles.actions.mouseslip' | translate }}

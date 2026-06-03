@@ -75,7 +75,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  showSettings = false;
   themeMode: ThemeMode = 'fixed';
   @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = PIECE_SETS;
@@ -128,6 +127,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   ) {
     super(stockfish);
     this.loadConfig();
+    this.loadSettingsOpen();
     this.stockfish.init().catch(() => {});
   }
 
@@ -626,8 +626,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.pieceSet = applied.pieceSet;
   }
 
-  toggleSettings(): void {
-    this.showSettings = !this.showSettings;
+  override toggleSettings(): void {
+    super.toggleSettings();
     if (this.showSettings) {
       setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }

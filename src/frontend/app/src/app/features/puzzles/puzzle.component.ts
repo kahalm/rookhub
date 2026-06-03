@@ -166,7 +166,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  showSettings = false;
   themeMode: ThemeMode = 'fixed';
   @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = PIECE_SETS;
@@ -194,7 +193,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   ngOnInit(): void {
     // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
-    try { this.showSettings = localStorage.getItem('rookhub_puzzle_settings_open') === 'true'; } catch {}
+    this.loadSettingsOpen();
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
@@ -540,9 +539,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.pieceSet = applied.pieceSet;
   }
 
-  toggleSettings(): void {
-    this.showSettings = !this.showSettings;
-    try { localStorage.setItem('rookhub_puzzle_settings_open', String(this.showSettings)); } catch {}
+  override toggleSettings(): void {
+    super.toggleSettings();
     if (this.showSettings) {
       setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }

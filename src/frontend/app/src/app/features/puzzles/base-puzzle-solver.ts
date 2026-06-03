@@ -44,6 +44,10 @@ export abstract class BasePuzzleSolver {
   reviewIndex = 0;
   protected solutionPlayTimer?: ReturnType<typeof setInterval>;
 
+  // ---- Einstellungs-Panel (Zahnrad) — Offen-Zustand über alle Modi gemerkt ----
+  showSettings = false;
+  private static readonly SETTINGS_OPEN_KEY = 'rookhub_puzzle_settings_open';
+
   // ---- Visualisierungs-/Blindfold-Modus (0 = aus, 1-4 = aktiv) ----
   visualizationMode = 0;
   vizMoves: string[] = [];
@@ -409,6 +413,18 @@ export abstract class BasePuzzleSolver {
       clearInterval(this.solutionPlayTimer);
       this.solutionPlayTimer = undefined;
     }
+  }
+
+  // ===== Einstellungs-Panel =====
+  /** Offen-Zustand des Einstellungs-Panels umschalten + persistieren (modusübergreifend). */
+  toggleSettings(): void {
+    this.showSettings = !this.showSettings;
+    try { localStorage.setItem(BasePuzzleSolver.SETTINGS_OPEN_KEY, String(this.showSettings)); } catch { /* ignore */ }
+  }
+
+  /** Gemerkten Offen-Zustand laden — von der Komponente beim Init aufrufen. */
+  protected loadSettingsOpen(): void {
+    try { this.showSettings = localStorage.getItem(BasePuzzleSolver.SETTINGS_OPEN_KEY) === 'true'; } catch { /* ignore */ }
   }
 
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */

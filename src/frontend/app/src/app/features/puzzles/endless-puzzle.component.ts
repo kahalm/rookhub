@@ -82,7 +82,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  showSettings = false;
   themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
@@ -160,6 +159,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   ) {
     super(stockfish);
     this.state = 'CONFIG';
+    this.loadSettingsOpen();
     // Load board theme from preferences service
     this.boardTheme = this.prefs.boardTheme;
     this.pieceSet = this.prefs.pieceSet;
