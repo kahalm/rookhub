@@ -277,7 +277,7 @@
                   <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
                     <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
                   </button>
-                  @if (standalone) {
+                  @if (standalone && !isDaily) {
                     <div class="book-nav">
                       <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
@@ -285,6 +285,18 @@
                       <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
                         <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
                       </button>
+                    </div>
+                  }
+                  @if (isDaily) {
+                    <div class="book-nav">
+                      <button mat-stroked-button (click)="prevDaily()">
+                        <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
+                      </button>
+                      @if (canGoForwardDaily) {
+                        <button mat-stroked-button (click)="nextDaily()">
+                          {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
+                        </button>
+                      }
                     </div>
                   }
                 </div>

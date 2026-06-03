@@ -82,6 +82,7 @@
       "title": "Zagonetke",
       "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}}%)",
       "solve": "Rješavaj zagonetke",
+      "daily": "Dnevna zagonetka",
       "endless": "Beskonačno"
     },
     "subscriptions": {
@@ -670,6 +671,8 @@
       "analyze": "Analiziraj",
       "nextInBook": "Sljedeća u knjizi",
       "randomInBook": "Slučajna iz knjige",
+      "prevDaily": "Prethodni dan",
+      "nextDaily": "Sljedeći dan",
       "sharePuzzle": "Podijeli zagonetku",
       "backToPuzzle": "Natrag na zagonetku"
     },

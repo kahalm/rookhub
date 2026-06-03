@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.80.1';
+export const APP_VERSION = '0.81.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.81.0', date: '2026-06-03', changes: [
+    'Tagespuzzle-Ansicht (`/puzzles/daily/:date`): keine Buch-Navigation („Nächstes/Zufällig aus Buch") mehr, sondern Datums-Navigation — „Voriger Tag" immer, „Nächster Tag" nur, wenn man in der Vergangenheit ist (keine Zukunft). Browser-Vor/Zurück funktionieren ebenfalls.',
+    'Neuer Schnellzugriff „Tagespuzzle" auf der Dashboard-Puzzles-Karte (neben Lösen/Endlos) → öffnet das heutige Tagespuzzle.',
+  ]},
   { version: '0.80.1', date: '2026-06-03', changes: [
     'Fix (kritisch): Die API startete nicht mehr — beim Auth-Setup kollidierte der JWT-Handler mit dem Policy-Scheme „Bearer" (beide unter dem Namen „Bearer" registriert → „Scheme already exists: Bearer", Startup-Crash). Der JWT-Handler läuft jetzt unter dem Namen „Jwt"; das Policy-Scheme „Bearer" bleibt der Default und leitet je nach Token (`rkh_…` → ApiToken, sonst → JWT) weiter. Behebt den API-Ausfall seit dem Auth-/API-Token-Feature.',
   ]},

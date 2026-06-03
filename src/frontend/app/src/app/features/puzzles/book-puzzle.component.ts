@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
@@ -69,6 +70,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   weeklyPuzzles: BookPuzzleDto[] = [];
   weeklyIndex = 0;
   weeklyCompleted = false;
+
+  // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
+  dailyDate: string | null = null;
+  private dailySub?: Subscription;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -251,9 +256,30 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
   private solvedAutoNext(): void {
+    if (this.isDaily) return;            // Tagespuzzle: kein Auto-Advance, Navigation via Datum
     if (this.inCourse) this.courseNext();
     else if (this.inWeekly) this.weeklyNext();
     else this.nextInBook();
+  }
+
+  // ===== Tagespuzzle-Navigation (Datum statt Buch) =====
+  get isDaily(): boolean { return this.dailyDate != null; }
+  /** „Vor" nur erlaubt, solange das angezeigte Datum vor heute (UTC) liegt — keine Zukunft. */
+  get canGoForwardDaily(): boolean { return !!this.dailyDate && this.dailyDate < this.todayUtc(); }
+
+  prevDaily(): void { this.goDaily(-1); }
+  nextDaily(): void { if (this.canGoForwardDaily) this.goDaily(1); }
+
+  private goDaily(delta: number): void {
+    if (!this.dailyDate) return;
+    const y = +this.dailyDate.slice(0, 4), m = +this.dailyDate.slice(4, 6), d = +this.dailyDate.slice(6, 8);
+    this.router.navigate(['/puzzles/daily', this.fmtUtc(new Date(Date.UTC(y, m - 1, d + delta)))]);
+  }
+
+  private todayUtc(): string { return this.fmtUtc(new Date()); }
+  private fmtUtc(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`;
   }
 
   protected override handleFailed(): void {
@@ -306,9 +332,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       return;
     }
 
-    const dateParam = this.route.snapshot.paramMap.get('date');
-    if (dateParam) {
-      this.loadDaily(dateParam);
+    if (this.route.snapshot.paramMap.has('date')) {
+      // Reaktiv auf den :date-Param hören: prev/next-Daily (und Browser zurück/vor) wechseln
+      // nur den Param, ohne die Komponente neu aufzubauen → Snapshot würde nicht neu laden.
+      this.dailySub = this.route.paramMap.subscribe(pm => {
+        const d = pm.get('date');
+        if (d) this.loadDaily(d);
+      });
       return;
     }
 
@@ -319,6 +349,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   ngOnDestroy(): void {
+    this.dailySub?.unsubscribe();
     this.stopTimer();
     this.clearSolutionPlay();
     this.abortSolver();
@@ -437,7 +468,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */
-  private loadDaily(date: string): void {
+  private loadDaily(dateParam: string): void {
+    const date = dateParam === 'today' ? this.todayUtc() : dateParam;
+    this.dailyDate = date;
     this.state = 'LOADING';
     this.stopTimer();
     this.elapsedSeconds = 0;

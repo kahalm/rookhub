@@ -82,6 +82,7 @@
       "title": "Puzzles",
       "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}}%)",
       "solve": "Puzzles lösen",
+      "daily": "Tagespuzzle",
       "endless": "Endlos"
     },
     "subscriptions": {
@@ -670,6 +671,8 @@
       "analyze": "Analysieren",
       "nextInBook": "Nächstes im Buch",
       "randomInBook": "Zufällig aus Buch",
+      "prevDaily": "Voriger Tag",
+      "nextDaily": "Nächster Tag",
       "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle"
     },
