@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.73.1';
+export const APP_VERSION = '0.73.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.73.2', date: '2026-06-03', changes: [
+    'Fix (Endlos): Nach „Nochmal spielen" konnte ein bereits beendeter Run fälschlich erneut fortgesetzt werden (Resume → Aufgeben → Nochmal → wieder fortsetzbar). „Nochmal spielen" verwirft den beendeten Run jetzt vollständig.',
+  ]},
   { version: '0.73.1', date: '2026-06-03', changes: [
     'Fix: Das Dashboard zeigt jetzt dein tatsächliches Puzzle-Elo — nämlich das deines meistgespielten Levels — statt immer das Elo des Normal-Levels (das bei reinem Visualisierungs-/Blindfold-Spiel auf dem Standardwert 1500 stehen bleibt). Die Statistik-Übersicht nutzt dieselbe Logik.',
   ]},

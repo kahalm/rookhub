@@ -72,4 +72,18 @@ describe('EndlessPuzzleComponent analyse', () => {
 
     expect(c.router.navigate).not.toHaveBeenCalled();
   });
+
+  // Bug: nach Game-Over + „Nochmal spielen" konnte der beendete Run erneut fortgesetzt
+  // werden, weil playAgain den in-memory activeGameState nicht löschte (nur der Storage
+  // war genullt). Der Config-Screen zeigte dann wieder den Resume-Banner.
+  it('playAgain clears the finished run so it cannot be resumed again', () => {
+    const c = makeComponent();
+    c.activeGameState = { lives: 1, solved: 5, level: 3, currentMinRating: 1800, maxRatingReached: 1800 };
+    c.state = 'GAME_OVER';
+
+    c.playAgain();
+
+    expect(c.state).toBe('CONFIG');
+    expect(c.activeGameState).toBeNull();
+  });
 });

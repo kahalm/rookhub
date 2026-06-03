@@ -401,6 +401,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   playAgain(): void {
+    // Beendeten Run vollständig verwerfen (in-memory + Speicher), damit der Config-Screen
+    // ihn nicht erneut zum Fortsetzen anbietet — sonst „Resume → Aufgeben → Nochmal →
+    // wieder fortsetzbar"-Schleife (nur der Storage war genullt, der in-memory-Snapshot nicht).
+    this.activeGameState = null;
+    this.storage.saveActiveGameLocal(null);
     this.state = 'CONFIG';
     this.lastSessionId = null;
     this.lastSessionArchived = false;
