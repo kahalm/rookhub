@@ -223,7 +223,10 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(ep => ep.UserId).IsUnique();
-            e.HasIndex(ep => ep.AnonymousSessionId);
+            // Unique je anonymer Session: SaveAnonymousProgressAsync verlässt sich auf einen
+            // Konflikt bei Races (DbUpdateException → re-read). MySQL erlaubt mehrere NULLs in
+            // einem Unique-Index → die eingeloggten Zeilen (AnonymousSessionId NULL) kollidieren nicht.
+            e.HasIndex(ep => ep.AnonymousSessionId).IsUnique();
             e.Property(ep => ep.AnonymousSessionId).HasMaxLength(36);
         });
 

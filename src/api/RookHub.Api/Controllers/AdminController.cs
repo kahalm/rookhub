@@ -333,6 +333,11 @@ public class AdminController : BaseApiController
         _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
+        // BookPuzzleAttempt hat (wie CoursePuzzleResult) eine Restrict-FK auf BookPuzzle →
+        // die Versuche (Tagespuzzle-/Buch-Solves) explizit vor den Puzzles entfernen, sonst
+        // schlägt SaveChanges bei einem Buch mit aufgezeichneten Solves mit FK-Fehler fehl.
+        var puzzleIds = _db.BookPuzzles.Where(bp => bp.BookId == id).Select(bp => bp.Id);
+        _db.BookPuzzleAttempts.RemoveRange(_db.BookPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

@@ -308,6 +308,24 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(0, await _db.BookPuzzles.CountAsync());
     }
 
+    [Fact]
+    public async Task DeleteBook_AlsoRemovesBookPuzzleAttempts()
+    {
+        // Regression: BookPuzzleAttempt hat eine Restrict-FK auf BookPuzzle → ohne explizites
+        // Entfernen scheitert das Löschen eines Buchs mit aufgezeichneten Solves (real FK-Fehler).
+        var (book, ids) = await SeedBookAsync("WithSolves", 1);
+        _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
+        {
+            BookPuzzleId = ids[0], UserId = UserId, Solved = true, TimeSeconds = 5, AttemptedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var admin = CreateAdminController();
+        Assert.IsType<NoContentResult>(await admin.DeleteBook(book.Id));
+        Assert.Equal(0, await _db.BookPuzzleAttempts.CountAsync());
+        Assert.Equal(0, await _db.BookPuzzles.CountAsync());
+    }
+
     // ===== Phase 2: Gruppen-Berechtigungen =====
 
     private AdminController CreateAdminController()
