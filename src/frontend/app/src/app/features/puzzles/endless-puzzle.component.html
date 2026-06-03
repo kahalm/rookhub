@@ -380,11 +380,7 @@
                         } @else {
                           <p class="status-text">{{ 'endless.game.correct' | translate }}</p>
                         }
-                        <div class="review-nav">
-                          <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                          <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                          <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                        </div>
+                        <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                         <div class="alt-actions">
                           @if (reviewingWrongPuzzle) {
                             <button mat-raised-button color="primary" (click)="continueAfterWrong()">
@@ -407,11 +403,7 @@
                           <mat-icon class="result-icon">cancel</mat-icon>
                           <p class="status-text">{{ 'endless.game.wrong' | translate }}</p>
                         }
-                        <div class="review-nav">
-                          <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                          <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                          <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                        </div>
+                        <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                         <div class="wrong-actions">
                           <button mat-stroked-button (click)="analyzeCurrentPuzzle()">
                             <mat-icon>biotech</mat-icon> {{ 'endless.game.analyze' | translate }}

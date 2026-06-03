@@ -171,11 +171,7 @@
                       }
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <div class="review-nav">
-                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                    </div>
+                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                     <div class="solved-actions">
                       <button mat-raised-button color="primary" (click)="loadNext()">
                         {{ 'puzzles.actions.nextPuzzle' | translate }} @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
@@ -193,11 +189,7 @@
                     @if (lastEloChange != null) {
                       <span class="elo-change elo-down">{{ lastEloChange }}</span>
                     }
-                    <div class="review-nav">
-                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                    </div>
+                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                     <div class="fail-actions">
                       <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
                       <button mat-button (click)="analyze()">

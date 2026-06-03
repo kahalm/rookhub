@@ -13,6 +13,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
+import { ReviewNavComponent } from './review-nav.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -55,7 +56,7 @@ const RATING_WINDOW = 40;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],

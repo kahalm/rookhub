@@ -53,8 +53,6 @@
     .viz-show-btn:active { background: #e3f2fd; }
     .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
-    .review-nav { display: flex; align-items: center; gap: 0.5rem; }
-    .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
     .review-btn { width: 100%; height: 40px; font-size: 0.9em; }
     .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .endless-btn { width: 100%; height: 44px; font-size: 1em; }

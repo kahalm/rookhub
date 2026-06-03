@@ -116,11 +116,7 @@
               @if (reviewMode && !solutionReview) {
                 <div class="status-center">
                   <p class="status-text">{{ 'book.status.fullGame' | translate }}</p>
-                  <div class="review-nav">
-                    <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                    <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                    <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                  </div>
+                  <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                   <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> {{ 'book.actions.backToPuzzle' | translate }}</button>
                 </div>
               } @else {
@@ -195,22 +191,14 @@
                       <p class="status-text">{{ 'book.status.correct' | translate }}</p>
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <div class="review-nav">
-                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                    </div>
+                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                   </div>
                 }
                 @case ('FAILED') {
                   <div class="status-center failed">
                     <mat-icon class="result-icon">{{ gaveUp ? 'flag' : 'cancel' }}</mat-icon>
                     <p class="status-text">{{ (gaveUp ? 'book.status.gaveUpSolution' : 'book.status.incorrect') | translate }}</p>
-                    <div class="review-nav">
-                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
-                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
-                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
-                    </div>
+                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                     <div class="fail-actions">
                       <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
                     </div>
