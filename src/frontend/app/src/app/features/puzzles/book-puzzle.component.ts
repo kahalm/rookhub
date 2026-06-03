@@ -244,6 +244,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.enterSolutionReview();
     this.recordCourseSolved();
     this.recordBookAttempt(true);
+    // Einheitlicher Auto-Advance wie Standard/Endless: nach kurzem Countdown zum nächsten
+    // (kontextabhängig Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
+    this.startSolvedCountdown(() => this.solvedAutoNext());
+  }
+
+  /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
+  private solvedAutoNext(): void {
+    if (this.inCourse) this.courseNext();
+    else if (this.inWeekly) this.weeklyNext();
+    else this.nextInBook();
   }
 
   protected override handleFailed(): void {

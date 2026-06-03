@@ -217,6 +217,9 @@
                     }
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
                     <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
+                    @if (solvedCountdown > 0) {
+                      <p class="alt-hint"><mat-icon class="countdown-icon">timer</mat-icon> {{ solvedCountdown }}</p>
+                    }
                   </div>
                 }
                 @case ('FAILED') {
