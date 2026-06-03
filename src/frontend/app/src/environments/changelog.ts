@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.71.0';
+export const APP_VERSION = '0.71.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.71.1', date: '2026-06-03', changes: [
+    'Fix (Betrieb): Der Docker-Healthcheck des Frontend-Containers prüft jetzt 127.0.0.1 statt localhost — sonst wurde der Container fälschlich als „unhealthy" gemeldet (busybox-wget wählte für „localhost" IPv6 ::1, wo nginx nicht lauscht). Reiner Healthcheck-Fix, keine Funktionsänderung an der App.',
+  ]},
   { version: '0.71.0', date: '2026-06-03', changes: [
     'Internes Code-Review/Refactoring (keine bewusste Funktionsänderung): die großen Puzzle-/Turnier-/Admin-Komponenten wurden in Templates/Styles + wiederverwendbare Bausteine aufgeteilt, die Hinweis-Meldungen (Snackbars) zentralisiert und die Buch-/Kurs-/Admin-Logik in eigene Services ausgelagert (schlankere, testbarere Controller). Verbessert Wartbarkeit; 223 Frontend- + 482 Backend-Tests grün.',
     'Fix: Das Löschen eines Buchs entfernt jetzt auch die aufgezeichneten Tagespuzzle-/Buch-Versuche korrekt (vorher konnte es an einer Datenbank-Beziehung scheitern).',
