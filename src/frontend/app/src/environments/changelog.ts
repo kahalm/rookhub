@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.0';
+export const APP_VERSION = '0.78.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.1', date: '2026-06-03', changes: [
+    'App-Vorbereitung: echte App-Icons (192/512 px + „maskable" für runde/adaptive Android-Icons) statt nur des kleinen Favicons; das Web-App-Manifest wurde vervollständigt (id/scope/lang/categories + apple-touch-icon). Damit ist RookHub eine sauber installierbare PWA — Grundlage für eine spätere Veröffentlichung im Google Play Store. Keine Änderung an Funktionen.',
+  ]},
   { version: '0.78.0', date: '2026-06-03', changes: [
     'Endlos-Gauntlet: jeder Lauf bekommt jetzt einen eindeutigen Seed; Seed + die geordneten Ketten-Puzzle-IDs werden beim Lauf-Ende am Server gespeichert (neue Spalten auf der Session). Damit ist die exakte Kette eines Laufs dauerhaft hinterlegt — Grundlage für ein späteres Replay.',
   ]},

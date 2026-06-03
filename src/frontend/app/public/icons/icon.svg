@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#3f51b5"/>
+  <g fill="#ffffff" transform="translate(0,-30)">
+    <!-- Zinnen (3 Merlons) -->
+    <rect x="148" y="176" width="50" height="56"/>
+    <rect x="231" y="176" width="50" height="56"/>
+    <rect x="314" y="176" width="50" height="56"/>
+    <!-- Verbindungsbalken -->
+    <rect x="148" y="214" width="216" height="40"/>
+    <!-- Hals -->
+    <polygon points="180,254 332,254 320,316 192,316"/>
+    <!-- Korpus -->
+    <polygon points="192,316 320,316 348,392 164,392"/>
+    <!-- Sockel -->
+    <rect x="150" y="388" width="212" height="36"/>
+    <rect x="134" y="420" width="244" height="34" rx="6"/>
+  </g>
+</svg>
