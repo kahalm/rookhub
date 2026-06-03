@@ -6,8 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
@@ -15,7 +15,7 @@ import { Repertoire } from '../../core/models';
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -60,7 +60,7 @@ export class RepertoireListComponent implements OnInit {
   repertoires: Repertoire[] = [];
   loading = true;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadRepertoires();
@@ -70,7 +70,7 @@ export class RepertoireListComponent implements OnInit {
     this.loading = true;
     this.http.get<Repertoire[]>('/api/repertoires').subscribe({
       next: (r) => { this.repertoires = r; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('repertoire.list.loadFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('repertoire.list.loadFailed')); }
     });
   }
 
@@ -80,7 +80,7 @@ export class RepertoireListComponent implements OnInit {
       if (result) {
         this.http.post('/api/repertoires', result).subscribe({
           next: () => this.loadRepertoires(),
-          error: () => this.snackBar.open(this.translate.instant('repertoire.list.createFailed'), this.translate.instant('common.close'), { duration: 3000 })
+          error: () => this.snackbar.info(this.translate.instant('repertoire.list.createFailed'))
         });
       }
     });
@@ -90,7 +90,7 @@ export class RepertoireListComponent implements OnInit {
     if (confirm(this.translate.instant('repertoire.list.deleteConfirm'))) {
       this.http.delete(`/api/repertoires/${id}`).subscribe({
         next: () => this.loadRepertoires(),
-        error: () => this.snackBar.open(this.translate.instant('repertoire.list.deleteFailed'), this.translate.instant('common.close'), { duration: 3000 })
+        error: () => this.snackbar.info(this.translate.instant('repertoire.list.deleteFailed'))
       });
     }
   }

@@ -12,7 +12,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
@@ -38,7 +38,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, MatSnackBarModule, PuzzleBoardComponent, TranslateModule
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, TranslateModule
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -121,7 +121,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private router: Router,
     private translate: TranslateService,
     private auth: AuthService,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService
   ) {
     super(stockfish);
@@ -174,7 +174,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     const book = getBookOffline(this.puzzle.bookFileName);
     if (!book || !book.length) {
-      this.snackBar.open(this.translate.instant('book.offlineUnavailable'), this.translate.instant('common.ok'), { duration: 2500 });
+      this.snackbar.info(this.translate.instant('book.offlineUnavailable'), { action: 'common.ok', duration: 2500 });
       return;
     }
     let next: BookPuzzleDto;

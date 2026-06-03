@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -55,7 +55,7 @@ const RATING_WINDOW = 40;
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, MatSnackBarModule, TranslateModule, PuzzleBoardComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
@@ -156,7 +156,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private dialog: MatDialog,
     private translate: TranslateService,
     private offline: OfflineService,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService
   ) {
     super(stockfish);
@@ -440,7 +440,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         // Offline gestartet, aber kein Run gecacht → kein „Run beendet", sondern Hinweis + zurück zur Config.
         this.stopSessionTimer();
         this.storage.saveActiveGameLocal(null);
-        this.snackBar.open(this.translate.instant('endless.offlineNoCache'), this.translate.instant('common.ok'), { duration: 5000 });
+        this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
         this.state = 'CONFIG';
       } else {
         // Mitten im Run offline und Pool leer → Run hier regulär beenden.

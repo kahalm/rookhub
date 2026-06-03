@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -23,7 +23,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '..
 @Component({
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })
@@ -57,7 +57,7 @@ export class PublicTournamentComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private dialog: MatDialog,
     private translate: TranslateService
   ) {}
@@ -253,10 +253,10 @@ export class PublicTournamentComponent implements OnInit {
   toggleFavorite(player: TournamentPlayer): void {
     if (this.favoriteSnrs.has(player.snr)) {
       this.favoriteSnrs.delete(player.snr);
-      this.snackBar.open(this.translate.instant('tournaments.favorites.removedShort', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.removedShort', { name: player.name }));
     } else {
       this.favoriteSnrs.add(player.snr);
-      this.snackBar.open(this.translate.instant('tournaments.favorites.addedShort', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.addedShort', { name: player.name }));
     }
     this.favoriteSnrs = new Set(this.favoriteSnrs);
     this.saveLocalFavorites();
@@ -269,10 +269,10 @@ export class PublicTournamentComponent implements OnInit {
   toggleTeamFavorite(team: TournamentTeam): void {
     if (this.favoriteTeamSnrs.has(team.snr)) {
       this.favoriteTeamSnrs.delete(team.snr);
-      this.snackBar.open(this.translate.instant('tournaments.favorites.removedShort', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.removedShort', { name: team.name }));
     } else {
       this.favoriteTeamSnrs.add(team.snr);
-      this.snackBar.open(this.translate.instant('tournaments.favorites.addedShort', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.addedShort', { name: team.name }));
     }
     this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
     this.saveLocalFavorites();
@@ -292,7 +292,7 @@ export class PublicTournamentComponent implements OnInit {
         });
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'));
       }
     });
   }

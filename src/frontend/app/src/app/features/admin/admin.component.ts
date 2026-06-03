@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -24,7 +24,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatSnackBarModule, MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent
+    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
@@ -66,7 +66,7 @@ export class AdminComponent implements OnInit {
   allUsers: AdminUser[] = [];
   addMemberUserId: number | null = null;
 
-  constructor(private adminService: AdminService, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private adminService: AdminService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -85,7 +85,7 @@ export class AdminComponent implements OnInit {
         this.usersLoading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('admin.users.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.users.errors.load'));
         this.usersLoading = false;
       }
     });
@@ -109,7 +109,7 @@ export class AdminComponent implements OnInit {
         this.logsLoading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('admin.logs.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.logs.errors.load'));
         this.logsLoading = false;
       }
     });
@@ -157,10 +157,10 @@ export class AdminComponent implements OnInit {
       next: updated => {
         user.isAdmin = updated.isAdmin;
         const key = updated.isAdmin ? 'admin.users.nowAdmin' : 'admin.users.noLongerAdmin';
-        this.snackBar.open(this.translate.instant(key, { username: user.username }), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant(key, { username: user.username }));
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'));
       }
     });
   }
@@ -170,11 +170,11 @@ export class AdminComponent implements OnInit {
 
     this.adminService.deleteUser(user.id).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('admin.users.deleted', { username: user.username }), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.users.deleted', { username: user.username }));
         this.loadUsers();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.users.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.delete'));
       }
     });
   }
@@ -188,7 +188,7 @@ export class AdminComponent implements OnInit {
         this.booksLoading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('admin.books.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.books.errors.load'));
         this.booksLoading = false;
       }
     });
@@ -204,13 +204,13 @@ export class AdminComponent implements OnInit {
         const parts = [this.translate.instant('admin.books.importedCount', { count: res.totalImported })];
         if (res.totalSkipped > 0) parts.push(this.translate.instant('admin.books.duplicatesCount', { count: res.totalSkipped }));
         if (res.totalInvalid > 0) parts.push(this.translate.instant('admin.books.invalidCount', { count: res.totalInvalid }));
-        this.snackBar.open(parts.join(', '), this.translate.instant('common.close'), { duration: 6000 });
+        this.snackbar.info(parts.join(', '), { duration: 6000 });
         this.booksUploading = false;
         input.value = '';
         this.loadBooks();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.import'), this.translate.instant('common.close'), { duration: 4000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.import'), { duration: 4000 });
         this.booksUploading = false;
         input.value = '';
       }
@@ -226,7 +226,7 @@ export class AdminComponent implements OnInit {
       maxElo: book.maxElo
     }).subscribe({
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.save'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save'));
         this.loadBooks(); // Stand zurücksetzen
       }
     });
@@ -235,7 +235,7 @@ export class AdminComponent implements OnInit {
   saveBookGroups(book: Book): void {
     this.adminService.updateBookGroups(book.id, book.accessGroupIds ?? []).subscribe({
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.saveGroups'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.saveGroups'));
         this.loadBooks(); // Stand zurücksetzen
       }
     });
@@ -246,11 +246,11 @@ export class AdminComponent implements OnInit {
 
     this.adminService.deleteBook(book.id).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('admin.books.deleted', { name: book.displayName }), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.books.deleted', { name: book.displayName }));
         this.loadBooks();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.books.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.delete'));
       }
     });
   }
@@ -268,7 +268,7 @@ export class AdminComponent implements OnInit {
         }
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('admin.groups.errors.load'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.groups.errors.load'));
         this.groupsLoading = false;
       }
     });
@@ -286,13 +286,13 @@ export class AdminComponent implements OnInit {
     if (!name) return;
     this.adminService.createGroup(name, this.newGroupDescription.trim() || null).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('admin.groups.created', { name }), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.groups.created', { name }));
         this.newGroupName = '';
         this.newGroupDescription = '';
         this.loadGroups();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.create'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.create'));
       }
     });
   }
@@ -301,7 +301,7 @@ export class AdminComponent implements OnInit {
     if (!confirm(this.translate.instant('admin.groups.deleteConfirm', { name: group.name }))) return;
     this.adminService.deleteGroup(group.id).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('admin.groups.deleted', { name: group.name }), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.groups.deleted', { name: group.name }));
         if (this.selectedGroup?.id === group.id) {
           this.selectedGroup = null;
           this.groupMembers = [];
@@ -309,7 +309,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups();
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.delete'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.delete'));
       }
     });
   }
@@ -328,7 +328,7 @@ export class AdminComponent implements OnInit {
         this.membersLoading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('admin.groups.errors.loadMembers'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('admin.groups.errors.loadMembers'));
         this.membersLoading = false;
       }
     });
@@ -349,7 +349,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.addMember'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.addMember'));
       }
     });
   }
@@ -363,7 +363,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('admin.groups.errors.removeMember'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.removeMember'));
       }
     });
   }

@@ -3,14 +3,14 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-share-tournament-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, TranslateModule, QRCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QRCodeComponent],
   template: `
     <h2 class="dialog-title">{{ 'tournaments.share.title' | translate }}</h2>
     <div class="qr-container">
@@ -41,14 +41,14 @@ import { QRCodeComponent } from 'angularx-qrcode';
 export class ShareTournamentDialogComponent {
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: { url: string },
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private translate: TranslateService
   ) {}
 
   copyLink(): void {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(this.data.url).then(() => {
-        this.snackBar.open(this.translate.instant('tournaments.share.linkCopied'), '', { duration: 2000 });
+        this.snackbar.copy(this.translate.instant('tournaments.share.linkCopied'));
       }).catch(() => this.fallbackCopy());
     } else {
       this.fallbackCopy();
@@ -64,9 +64,9 @@ export class ShareTournamentDialogComponent {
     textarea.select();
     try {
       document.execCommand('copy');
-      this.snackBar.open(this.translate.instant('tournaments.share.linkCopied'), '', { duration: 2000 });
+      this.snackbar.copy(this.translate.instant('tournaments.share.linkCopied'));
     } catch {
-      this.snackBar.open(this.translate.instant('tournaments.share.copyFailed'), '', { duration: 2000 });
+      this.snackbar.copy(this.translate.instant('tournaments.share.copyFailed'));
     }
     document.body.removeChild(textarea);
   }

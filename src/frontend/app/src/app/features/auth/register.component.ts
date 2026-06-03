@@ -6,14 +6,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSnackBarModule, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, TranslateModule],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -61,7 +61,7 @@ export class RegisterComponent {
 
   returnUrl: string;
 
-  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackBar: MatSnackBar, private translate: TranslateService) {
+  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = this.sanitizeReturnUrl(raw);
   }
@@ -85,7 +85,7 @@ export class RegisterComponent {
         const msg = err.error?.message
           || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
           || this.translate.instant('auth.register.failed');
-        this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
+        this.snackbar.warn(msg);
       }
     });
   }

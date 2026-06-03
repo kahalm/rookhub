@@ -10,7 +10,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
@@ -18,6 +17,7 @@ import { DrawShape } from 'chessground/draw';
 import { Subscription } from 'rxjs';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
+import { SnackbarService } from '../../core/snackbar.service';
 
 interface LineNode { san: string; fen: string; uci: string; }
 interface EngineDisplayLine { evalText: string; san: string; positive: boolean; }
@@ -35,7 +35,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, MatSnackBarModule, TranslateModule, AnalysisBoardComponent
+    MatTooltipModule, TranslateModule, AnalysisBoardComponent
   ],
   template: `
     <div class="analysis-page">
@@ -202,7 +202,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   private sub?: Subscription;
 
-  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackBar: MatSnackBar, private router: Router) {
+  constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService, private router: Router) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -402,7 +402,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   loadFen(): void {
     const fen = this.fenInput.trim();
     if (!fen) return;
-    if (!this.isValidFen(fen)) { this.snackBar.open('Invalid FEN', 'OK', { duration: 2500 }); return; }
+    if (!this.isValidFen(fen)) { this.snackbar.show('Invalid FEN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
     this.startFen = fen;
     this.fenInput = '';
     this.resetToStart();
@@ -410,7 +410,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   copyFen(): void {
     navigator.clipboard?.writeText(this.currentFen).then(
-      () => this.snackBar.open(this.currentFen, 'OK', { duration: 2000 }),
+      () => this.snackbar.show(this.currentFen, { action: 'OK', rawAction: true, duration: 2000 }),
       () => {}
     );
   }
@@ -419,9 +419,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const pgn = this.pgnInput.trim();
     if (!pgn) return;
     const c = new Chess();
-    try { c.loadPgn(pgn); } catch { this.snackBar.open('Invalid PGN', 'OK', { duration: 2500 }); return; }
+    try { c.loadPgn(pgn); } catch { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
     const history = c.history({ verbose: true }) as any[];
-    if (history.length === 0) { this.snackBar.open('Invalid PGN', 'OK', { duration: 2500 }); return; }
+    if (history.length === 0) { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
     // Hauptlinie ab Standard-Grundstellung nachspielen.
     const replay = new Chess();
     this.startFen = START_FEN;

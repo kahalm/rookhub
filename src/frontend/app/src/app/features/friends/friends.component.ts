@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
@@ -17,7 +17,7 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatSnackBarModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -114,7 +114,7 @@ export class FriendsComponent implements OnInit {
   searchQuery = '';
   loading = true;
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -124,11 +124,11 @@ export class FriendsComponent implements OnInit {
     this.loading = true;
     this.http.get<Friend[]>('/api/friends').subscribe({
       next: f => { this.friends = f; this.loading = false; },
-      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('friends.errors.loadFriends'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('friends.errors.loadFriends')); }
     });
     this.http.get<FriendRequest[]>('/api/friends/requests').subscribe({
       next: r => this.requests = r,
-      error: () => this.snackBar.open(this.translate.instant('friends.errors.loadRequests'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
     });
   }
 
@@ -137,35 +137,35 @@ export class FriendsComponent implements OnInit {
     this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
       .subscribe({
         next: r => this.searchResults = r,
-        error: () => this.snackBar.open(this.translate.instant('friends.errors.search'), this.translate.instant('common.close'), { duration: 3000 })
+        error: () => this.snackbar.info(this.translate.instant('friends.errors.search'))
       });
   }
 
   sendRequest(userId: number): void {
     this.http.post(`/api/friends/request/${userId}`, {}).subscribe({
-      next: () => this.snackBar.open(this.translate.instant('friends.requestSent'), this.translate.instant('common.close'), { duration: 2000 }),
-      error: (err) => this.snackBar.open(err.error?.message || this.translate.instant('friends.errors.sendRequest'), this.translate.instant('common.close'), { duration: 3000 })
+      next: () => this.snackbar.success(this.translate.instant('friends.requestSent')),
+      error: (err) => this.snackbar.info(err.error?.message || this.translate.instant('friends.errors.sendRequest'))
     });
   }
 
   acceptRequest(id: number): void {
     this.http.post(`/api/friends/accept/${id}`, {}).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open(this.translate.instant('friends.errors.acceptRequest'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('friends.errors.acceptRequest'))
     });
   }
 
   declineRequest(id: number): void {
     this.http.post(`/api/friends/decline/${id}`, {}).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open(this.translate.instant('friends.errors.declineRequest'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('friends.errors.declineRequest'))
     });
   }
 
   removeFriend(id: number): void {
     this.http.delete(`/api/friends/${id}`).subscribe({
       next: () => this.loadData(),
-      error: () => this.snackBar.open(this.translate.instant('friends.errors.removeFriend'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('friends.errors.removeFriend'))
     });
   }
 

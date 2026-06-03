@@ -4,15 +4,15 @@ import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
+import { SnackbarService } from '../../core/snackbar.service';
 
 @Component({
   selector: 'app-repertoire-edit',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, MatSnackBarModule, TranslateModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslateModule],
   template: `
     <div class="edit-container">
       <div class="upload-area"
@@ -65,7 +65,7 @@ export class RepertoireEditComponent {
   @Output() fileUploaded = new EventEmitter<void>();
   @Output() fileDeleted = new EventEmitter<void>();
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -97,7 +97,7 @@ export class RepertoireEditComponent {
     const valid = list.filter(f => f.name.toLowerCase().endsWith('.pgn') && f.size <= MAX_BYTES);
     const rejected = list.length - valid.length;
     if (rejected > 0)
-      this.snackBar.open(this.translate.instant('repertoire.edit.filesSkipped', { count: rejected }), this.translate.instant('common.close'), { duration: 3000 });
+      this.snackbar.info(this.translate.instant('repertoire.edit.filesSkipped', { count: rejected }));
     if (valid.length === 0) return;
 
     // Alle Uploads buendeln und den Reload (fileUploaded) GENAU EINMAL nach Abschluss
@@ -119,7 +119,7 @@ export class RepertoireEditComponent {
       const msg = failed === 0
         ? this.translate.instant('repertoire.edit.uploadSuccess', { count: ok })
         : this.translate.instant('repertoire.edit.uploadPartial', { ok, failed });
-      this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 3000 });
+      this.snackbar.info(msg);
       this.fileUploaded.emit();
     });
   }
@@ -134,7 +134,7 @@ export class RepertoireEditComponent {
         a.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => this.snackBar.open(this.translate.instant('repertoire.edit.downloadFailed'), this.translate.instant('common.close'), { duration: 3000 }),
+      error: () => this.snackbar.info(this.translate.instant('repertoire.edit.downloadFailed')),
     });
   }
 

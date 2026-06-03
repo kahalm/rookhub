@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
@@ -11,6 +10,7 @@ import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
 import { ClientLogService } from './core/client-log.service';
+import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { environment } from '../environments/environment';
@@ -18,7 +18,7 @@ import { environment } from '../environments/environment';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, TranslateModule, MatSnackBarModule],
+  imports: [RouterOutlet, NavbarComponent, TranslateModule],
   template: `
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
@@ -121,7 +121,7 @@ export class AppComponent implements OnInit {
     locale: LocaleService,
     private auth: AuthService,
     private discordLink: DiscordLinkService,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private translate: TranslateService,
     private swUpdate: SwUpdate,
     // App-weit instanziieren, damit der Offline-Queue-Sync ('online'-Listener) immer läuft.
@@ -148,11 +148,7 @@ export class AppComponent implements OnInit {
       this.swUpdate.versionUpdates
         .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
         .subscribe(() => {
-          const ref = this.snackBar.open(
-            this.translate.instant('app.updateAvailable'),
-            this.translate.instant('app.reload'),
-            { duration: 0 }
-          );
+          const ref = this.snackbar.show(this.translate.instant('app.updateAvailable'), { action: 'app.reload', duration: 0 });
           ref.onAction().subscribe(() => document.location.reload());
         });
       // Kaputter SW-Zustand (z.B. Hash-Mismatch nach Teil-Deploy) → einmal hart neu laden,
@@ -186,18 +182,17 @@ export class AppComponent implements OnInit {
     const qs = params.toString();
     window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
 
-    const close = this.translate.instant('common.close');
     if (this.auth.isLoggedIn) {
       this.discordLink.link(token).subscribe({
-        next: () => this.snackBar.open(this.translate.instant('profile.discord.linked'), close, { duration: 3000 }),
+        next: () => this.snackbar.info(this.translate.instant('profile.discord.linked')),
         error: (err) => {
           const key = err?.status === 409 ? 'profile.discord.linkConflict' : 'profile.discord.linkFailed';
-          this.snackBar.open(this.translate.instant(key), close, { duration: 4000 });
+          this.snackbar.info(this.translate.instant(key), { duration: 4000 });
         }
       });
     } else {
       this.discordLink.stash(token);
-      this.snackBar.open(this.translate.instant('profile.discord.stashed'), close, { duration: 5000 });
+      this.snackbar.warn(this.translate.instant('profile.discord.stashed'));
     }
   }
 }

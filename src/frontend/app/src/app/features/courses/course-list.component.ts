@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -17,7 +17,7 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, MatSnackBarModule, LoadingSpinnerComponent, TranslateModule
+    MatProgressBarModule, MatTooltipModule, LoadingSpinnerComponent, TranslateModule
   ],
   template: `
     <div class="courses-container">
@@ -100,7 +100,7 @@ export class CourseListComponent implements OnInit {
   savingOffline: number | null = null;
   private offlineFiles = new Set<string>();
 
-  constructor(private courseService: CourseService, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   isOffline(c: CourseListItem): boolean {
     return this.offlineFiles.has(c.fileName);
@@ -111,7 +111,7 @@ export class CourseListComponent implements OnInit {
     if (this.isOffline(c)) {
       removeBookOffline(c.fileName);
       this.offlineFiles.delete(c.fileName);
-      this.snackBar.open(this.translate.instant('courses.offlineRemoved', { name: c.displayName }), this.translate.instant('common.ok'), { duration: 2000 });
+      this.snackbar.info(this.translate.instant('courses.offlineRemoved', { name: c.displayName }), { action: 'common.ok', duration: 2000 });
       return;
     }
     this.savingOffline = c.bookId;
@@ -120,11 +120,11 @@ export class CourseListComponent implements OnInit {
         saveBookOffline(c.fileName, puzzles);
         this.offlineFiles.add(c.fileName);
         this.savingOffline = null;
-        this.snackBar.open(this.translate.instant('courses.offlineSaved', { name: c.displayName, count: puzzles.length }), this.translate.instant('common.ok'), { duration: 2500 });
+        this.snackbar.info(this.translate.instant('courses.offlineSaved', { name: c.displayName, count: puzzles.length }), { action: 'common.ok', duration: 2500 });
       },
       error: () => {
         this.savingOffline = null;
-        this.snackBar.open(this.translate.instant('courses.offlineFailed'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('courses.offlineFailed'), { action: 'common.ok', duration: 3000 });
       }
     });
   }
@@ -142,7 +142,7 @@ export class CourseListComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('courses.loadFailed'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('courses.loadFailed'), { action: 'common.ok', duration: 3000 });
         this.loading = false;
       }
     });
@@ -155,7 +155,7 @@ export class CourseListComponent implements OnInit {
         course.solvedCount = p.solvedCount;
         course.progressPercent = p.progressPercent;
       },
-      error: () => this.snackBar.open(this.translate.instant('courses.resetFailed'), this.translate.instant('common.ok'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
     });
   }
 }

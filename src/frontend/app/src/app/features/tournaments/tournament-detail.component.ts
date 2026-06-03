@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
@@ -25,7 +25,7 @@ import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscript
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSnackBarModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })
@@ -79,7 +79,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private favoriteIdMap: Map<number, number> = new Map();
   private teamFavoriteIdMap: Map<number, number> = new Map();
 
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackBar: MatSnackBar, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
@@ -98,7 +98,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.loadTeams();
         if (this.selectedTabIndex === 2) this.loadPairings();
       },
-      error: () => { this.loading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadTournamentFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadTournamentFailed')); }
     });
     this.loadSubscription();
     this.loadMonitorStatus();
@@ -114,7 +114,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (subs) => {
         this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
       },
-      error: () => this.snackBar.open(this.translate.instant('tournaments.detail.loadSubscriptionFailed'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('tournaments.detail.loadSubscriptionFailed'))
     });
   }
 
@@ -127,11 +127,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (sub) => {
         this.subscription = sub;
         this.toggling = false;
-        this.snackBar.open(this.translate.instant('tournaments.actions.subscribed'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('tournaments.actions.subscribed'));
       },
       error: (err) => {
         this.toggling = false;
-        this.snackBar.open(err.error?.message || this.translate.instant('tournaments.actions.failed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('tournaments.actions.failed'));
       }
     });
   }
@@ -143,11 +143,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: () => {
         this.subscription = null;
         this.toggling = false;
-        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribed'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('tournaments.actions.unsubscribed'));
       },
       error: () => {
         this.toggling = false;
-        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribeFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('tournaments.actions.unsubscribeFailed'));
       }
     });
   }
@@ -175,11 +175,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.monitorActiveUntil = null;
           this.monitorToggling = false;
           this.stopMonitorPoll();
-          this.snackBar.open(this.translate.instant('tournaments.monitor.stopped'), this.translate.instant('common.close'), { duration: 2000 });
+          this.snackbar.success(this.translate.instant('tournaments.monitor.stopped'));
         },
         error: () => {
           this.monitorToggling = false;
-          this.snackBar.open(this.translate.instant('tournaments.monitor.stopFailed'), this.translate.instant('common.close'), { duration: 3000 });
+          this.snackbar.info(this.translate.instant('tournaments.monitor.stopFailed'));
         }
       });
     } else {
@@ -191,11 +191,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.lastKnownRounds = res.lastKnownRounds || 0;
           this.monitorToggling = false;
           this.startMonitorPoll();
-          this.snackBar.open(this.translate.instant('tournaments.monitor.activated'), this.translate.instant('common.close'), { duration: 2000 });
+          this.snackbar.success(this.translate.instant('tournaments.monitor.activated'));
         },
         error: () => {
           this.monitorToggling = false;
-          this.snackBar.open(this.translate.instant('tournaments.monitor.activateFailed'), this.translate.instant('common.close'), { duration: 3000 });
+          this.snackbar.info(this.translate.instant('tournaments.monitor.activateFailed'));
         }
       });
     }
@@ -228,7 +228,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
               icon: '/favicon.ico'
             });
             // Snackbar as fallback
-            this.snackBar.open(this.translate.instant('tournaments.monitor.newRoundSnack', { round: newRound }), this.translate.instant('common.close'), { duration: 5000 });
+            this.snackbar.warn(this.translate.instant('tournaments.monitor.newRoundSnack', { round: newRound }));
             // Reload data
             this.reloadAll();
             if (this.selectedTabIndex === 2) {
@@ -260,7 +260,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (job) => this.pollRefreshJob(job.id),
       error: () => {
         this.refreshing = false;
-        this.snackBar.open(this.translate.instant('tournaments.detail.refreshStartFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('tournaments.detail.refreshStartFailed'));
       }
     });
   }
@@ -273,20 +273,20 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
             if (this.pollInterval) clearInterval(this.pollInterval);
             this.pollInterval = null;
             this.refreshing = false;
-            this.snackBar.open(this.translate.instant('tournaments.detail.dataRefreshed'), this.translate.instant('common.close'), { duration: 2000 });
+            this.snackbar.success(this.translate.instant('tournaments.detail.dataRefreshed'));
             this.reloadAll();
           } else if (job.status === 'Failed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
             this.pollInterval = null;
             this.refreshing = false;
-            this.snackBar.open(job.errorMessage || this.translate.instant('tournaments.detail.refreshFailed'), this.translate.instant('common.close'), { duration: 3000 });
+            this.snackbar.info(job.errorMessage || this.translate.instant('tournaments.detail.refreshFailed'));
           }
         },
         error: () => {
           if (this.pollInterval) clearInterval(this.pollInterval);
           this.pollInterval = null;
           this.refreshing = false;
-          this.snackBar.open(this.translate.instant('tournaments.list.crawlConnectionLost'), this.translate.instant('common.close'), { duration: 3000 });
+          this.snackbar.info(this.translate.instant('tournaments.list.crawlConnectionLost'));
         }
       });
     }, 2000);
@@ -300,7 +300,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
       },
-      error: () => this.snackBar.open(this.translate.instant('tournaments.detail.reloadTournamentFailed'), this.translate.instant('common.close'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('tournaments.detail.reloadTournamentFailed'))
     });
     this.loadPlayers();
     this.teams = [];
@@ -323,7 +323,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.playersLoading = true;
     this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
-      error: () => { this.playersLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadPlayersFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.playersLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPlayersFailed')); }
     });
   }
 
@@ -331,7 +331,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.teamsLoading = true;
     this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedTeams(); },
-      error: () => { this.teamsLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamsFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.teamsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadTeamsFailed')); }
     });
   }
 
@@ -361,7 +361,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.pairingsLoading = false;
         this.refreshDisplayedPairings();
       },
-      error: () => { this.pairingsLoading = false; this.snackBar.open(this.translate.instant('tournaments.detail.loadPairingsFailed'), this.translate.instant('common.close'), { duration: 3000 }); }
+      error: () => { this.pairingsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPairingsFailed')); }
     });
   }
 
@@ -492,7 +492,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs.delete(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(this.translate.instant('tournaments.favorites.removed', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: player.name }));
       this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
         next: () => { this.favoriteIdMap.delete(player.snr); },
         error: () => {}
@@ -501,7 +501,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs.add(player.snr);
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(this.translate.instant('tournaments.favorites.added', { name: player.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: player.name }));
       this.http.post<TournamentFavorite>('/api/tournament-favorites', {
         crawlerTournamentId: this.id,
         playerSnr: player.snr
@@ -521,7 +521,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs.delete(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(this.translate.instant('tournaments.favorites.removed', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: team.name }));
       this.http.delete(`/api/tournament-favorites/by-team/${this.id}/${team.snr}`).subscribe({
         next: () => { this.teamFavoriteIdMap.delete(team.snr); },
         error: () => {}
@@ -530,7 +530,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs.add(team.snr);
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
-      this.snackBar.open(this.translate.instant('tournaments.favorites.added', { name: team.name }), this.translate.instant('common.close'), { duration: 1500 });
+      this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: team.name }));
       this.http.post<TournamentFavorite>('/api/tournament-favorites/team', {
         crawlerTournamentId: this.id,
         teamSnr: team.snr
@@ -564,7 +564,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         });
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('tournaments.detail.loadTeamDetailsFailed'));
       }
     });
   }

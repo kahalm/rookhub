@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
@@ -24,7 +24,7 @@ interface WeeklyPostRow extends WeeklyPost {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatFormFieldModule, MatInputModule, MatSnackBarModule,
+    MatTableModule, MatFormFieldModule, MatInputModule,
     TranslateModule, LoadingSpinnerComponent
   ],
   template: `
@@ -140,7 +140,7 @@ export class WeeklyListComponent implements OnInit {
   constructor(
     public auth: AuthService,
     private weekly: WeeklyService,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private translate: TranslateService
   ) {}
 
@@ -157,7 +157,7 @@ export class WeeklyListComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.snackBar.open(this.translate.instant('weekly.loadFailed'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('weekly.loadFailed'), { action: 'common.ok', duration: 3000 });
         this.loading = false;
       }
     });
@@ -183,7 +183,7 @@ export class WeeklyListComponent implements OnInit {
     const scheduledAt = `${this.uploadDate}T${this.uploadTime}:00`;
     this.weekly.create(this.uploadFile, scheduledAt, this.uploadTitle.trim() || undefined).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('weekly.created'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('weekly.created'), { action: 'common.ok', duration: 3000 });
         this.uploading = false;
         this.uploadFile = null;
         this.uploadFileName = '';
@@ -191,7 +191,7 @@ export class WeeklyListComponent implements OnInit {
         this.loadPosts();   // lädt neu + setzt nächsten Termin-Vorschlag
       },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('weekly.uploadFailed'), this.translate.instant('common.ok'), { duration: 4000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('weekly.uploadFailed'), { action: 'common.ok', duration: 4000 });
         this.uploading = false;
       }
     });
@@ -203,7 +203,7 @@ export class WeeklyListComponent implements OnInit {
     this.weekly.update(row.id, { title: row.title, scheduledAt }).subscribe({
       next: p => { row.scheduledAt = p.scheduledAt; },
       error: err => {
-        this.snackBar.open(err.error?.message || this.translate.instant('weekly.saveFailed'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('weekly.saveFailed'), { action: 'common.ok', duration: 3000 });
         this.loadPosts();
       }
     });
@@ -213,10 +213,10 @@ export class WeeklyListComponent implements OnInit {
     if (!confirm(this.translate.instant('weekly.deleteConfirm', { title: row.title }))) return;
     this.weekly.delete(row.id).subscribe({
       next: () => {
-        this.snackBar.open(this.translate.instant('weekly.deleted'), this.translate.instant('common.ok'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('weekly.deleted'), { action: 'common.ok', duration: 3000 });
         this.loadPosts();
       },
-      error: () => this.snackBar.open(this.translate.instant('weekly.deleteFailed'), this.translate.instant('common.ok'), { duration: 3000 })
+      error: () => this.snackbar.info(this.translate.instant('weekly.deleteFailed'), { action: 'common.ok', duration: 3000 })
     });
   }
 }

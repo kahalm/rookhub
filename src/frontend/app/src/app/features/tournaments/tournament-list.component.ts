@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -18,7 +18,7 @@ import { Tournament, Subscription } from '../../core/models';
 @Component({
   selector: 'app-tournament-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatSnackBarModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="tournament-container">
       <h1>{{ 'tournaments.list.title' | translate }}</h1>
@@ -132,7 +132,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     return this.tournaments.length - this.visibleTournaments.length;
   }
 
-  constructor(private http: HttpClient, private snackBar: MatSnackBar, private translate: TranslateService) {}
+  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   formatSubtitle(t: Tournament): string {
     return [t.location, t.date].filter((v) => !!v).join(' | ');
@@ -193,11 +193,11 @@ export class TournamentListComponent implements OnInit, OnDestroy {
       next: (sub) => {
         this.subscriptions.push(sub);
         this.togglingId = null;
-        this.snackBar.open(this.translate.instant('tournaments.actions.subscribed'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('tournaments.actions.subscribed'));
       },
       error: (err) => {
         this.togglingId = null;
-        this.snackBar.open(err.error?.message || this.translate.instant('tournaments.actions.failed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(err.error?.message || this.translate.instant('tournaments.actions.failed'));
       }
     });
   }
@@ -234,7 +234,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
             this.pollInterval = null;
             this.crawling = false;
             this.crawlId = '';
-            this.snackBar.open(this.translate.instant('tournaments.list.imported'), this.translate.instant('common.close'), { duration: 3000 });
+            this.snackbar.info(this.translate.instant('tournaments.list.imported'));
             this.loadTournaments();
           } else if (job.status === 'Failed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
@@ -261,11 +261,11 @@ export class TournamentListComponent implements OnInit, OnDestroy {
       next: () => {
         this.subscriptions = this.subscriptions.filter(s => s.id !== sub.id);
         this.togglingId = null;
-        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribed'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('tournaments.actions.unsubscribed'));
       },
       error: () => {
         this.togglingId = null;
-        this.snackBar.open(this.translate.instant('tournaments.actions.unsubscribeFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('tournaments.actions.unsubscribeFailed'));
       }
     });
   }

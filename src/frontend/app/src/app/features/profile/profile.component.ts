@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -54,7 +54,7 @@ interface PlayerSearchItem {
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatSnackBarModule, MatProgressSpinnerModule, MatListModule,
+    MatButtonModule, MatProgressSpinnerModule, MatListModule,
     MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     @if (loading) {
@@ -269,7 +269,7 @@ export class ProfileComponent implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private snackBar: MatSnackBar,
+    private snackbar: SnackbarService,
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
     private offline: OfflineService,
@@ -302,7 +302,7 @@ export class ProfileComponent implements OnInit {
   clearOfflineCache(): void {
     this.offline.clearAll();
     this.refreshOfflineSize();
-    this.snackBar.open(this.translate.instant('profile.offline.cleared'), this.translate.instant('common.close'), { duration: 2000 });
+    this.snackbar.success(this.translate.instant('profile.offline.cleared'));
   }
 
   searchPlayer(): void {
@@ -335,7 +335,7 @@ export class ProfileComponent implements OnInit {
       },
       error: () => {
         this.searching = false;
-        this.snackBar.open(this.translate.instant('profile.searchFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('profile.searchFailed'));
       }
     });
   }
@@ -344,13 +344,13 @@ export class ProfileComponent implements OnInit {
     if (!this.profile) return;
     if (p.chessResultsId) this.profile.chessResultsId = p.chessResultsId;
     if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackBar.open(this.translate.instant('profile.chessResultsApplied'), this.translate.instant('common.close'), { duration: 2000 });
+    this.snackbar.success(this.translate.instant('profile.chessResultsApplied'));
   }
 
   selectFidePlayer(p: PlayerSearchItem): void {
     if (!this.profile) return;
     if (p.fideId) this.profile.fideId = p.fideId;
-    this.snackBar.open(this.translate.instant('profile.fideApplied'), this.translate.instant('common.close'), { duration: 2000 });
+    this.snackbar.success(this.translate.instant('profile.fideApplied'));
   }
 
   save(): void {
@@ -368,11 +368,11 @@ export class ProfileComponent implements OnInit {
       next: (p) => {
         this.profile = p;
         this.saving = false;
-        this.snackBar.open(this.translate.instant('profile.saved'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('profile.saved'));
       },
       error: () => {
         this.saving = false;
-        this.snackBar.open(this.translate.instant('profile.saveFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('profile.saveFailed'));
       }
     });
   }
@@ -384,11 +384,11 @@ export class ProfileComponent implements OnInit {
       next: () => {
         if (this.profile) { this.profile.discordId = null; this.profile.discordUsername = null; }
         this.unlinking = false;
-        this.snackBar.open(this.translate.instant('profile.discord.unlinked'), this.translate.instant('common.close'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant('profile.discord.unlinked'));
       },
       error: () => {
         this.unlinking = false;
-        this.snackBar.open(this.translate.instant('profile.discord.linkFailed'), this.translate.instant('common.close'), { duration: 3000 });
+        this.snackbar.info(this.translate.instant('profile.discord.linkFailed'));
       }
     });
   }
