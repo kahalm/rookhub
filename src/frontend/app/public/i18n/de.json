@@ -502,6 +502,8 @@
       "phase1Label": "Phase 1 (Lv 1–5)",
       "phase2Label": "Phase 2 (Lv 6–10)",
       "phase3Label": "Phase 3 (Lv 11+)",
+      "curveHint": "Rating-Verlauf der Kette (beim Start fest vorgegeben):",
+      "curvePuzzle": "Puzzle {{n}}",
       "settings": "Einstellungen",
       "visualizationLevel": "Visualisierung: Level {{level}}",
       "mode": "Modus",
@@ -558,6 +560,9 @@
     },
     "gameOver": {
       "title": "Game Over",
+      "wonTitle": "Gewonnen!",
+      "wonSubtitle": "Du hast die gesamte Kette durchgespielt.",
+      "wonText": "Die Kette ist bezwungen – starte einen neuen Lauf für die nächste Herausforderung.",
       "exhaustedTitle": "Ausgespielt!",
       "exhaustedSubtitle": "Du hast alle Puzzle-Rating-Bereiche durchgespielt.",
       "areYouAStockfish": "Bist du ein Stockfisch?",

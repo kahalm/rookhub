@@ -502,6 +502,8 @@
       "phase1Label": "Phase 1 (Lv 1–5)",
       "phase2Label": "Phase 2 (Lv 6–10)",
       "phase3Label": "Phase 3 (Lv 11+)",
+      "curveHint": "Rating curve of the gauntlet (fixed when you start):",
+      "curvePuzzle": "Puzzle {{n}}",
       "settings": "Settings",
       "visualizationLevel": "Visualization: Level {{level}}",
       "mode": "Mode",
@@ -558,6 +560,9 @@
     },
     "gameOver": {
       "title": "Game Over",
+      "wonTitle": "You win!",
+      "wonSubtitle": "You cleared the entire gauntlet.",
+      "wonText": "The chain is beaten – start a new run for the next challenge.",
       "exhaustedTitle": "Played out!",
       "exhaustedSubtitle": "You have played through all puzzle rating ranges.",
       "areYouAStockfish": "Are you a Stockfish?",

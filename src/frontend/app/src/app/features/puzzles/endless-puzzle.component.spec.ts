@@ -7,11 +7,37 @@ import { EndlessPuzzleComponent } from './endless-puzzle.component';
  *   Auto-Advance verfügbar, da die lastSolved*-Felder dort gemerkt werden).
  * Rücksprungziel ist jeweils der Endless-Modus.
  */
+/** Synchroner Observable-Stub: ruft next sofort auf (für getRandomBatch/recordSessionToServer). */
+function sub(value: any): any {
+  return {
+    subscribe: (h: any) => {
+      const next = typeof h === 'function' ? h : h?.next;
+      if (next) next(value);
+      return { unsubscribe() {} };
+    },
+  };
+}
+
+const PUZZLE = { id: 7, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };
+
+/** Vordefinierte Kette, die getRandomBatch im Test zurückgibt. */
+const CHAIN = [
+  { id: 100, lichessId: 'a', fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 700 },
+  { id: 101, lichessId: 'b', fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 900 },
+  { id: 102, lichessId: 'c', fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 1100 },
+];
+
 function makeComponent(): any {
   const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
-  const puzzleService: any = { getRatingRange: () => ({ subscribe: () => {} }) };
+  const puzzleService: any = {
+    getRatingRange: () => ({ subscribe: () => {} }),
+    getRandomBatch: jasmine.createSpy('getRandomBatch').and.callFake(() => sub(CHAIN.map(p => ({ ...p })))),
+    recordAttempt: () => sub(null),
+    recordAnonymousAttempt: () => sub(null),
+    ensureSessionId: () => 'sess',
+  };
   const storage: any = {
     loadConfig: (c: any) => c,
     loadHighscore: () => 0,
@@ -19,21 +45,28 @@ function makeComponent(): any {
     loadOfflinePool: () => [],
     loadActiveGameLocal: () => null,
     saveActiveGameLocal: () => {},
+    saveOfflinePool: () => {},
+    saveChainToken: () => {},
+    loadChainToken: () => 0,
+    saveConfig: () => {},
+    saveProgressToServer: () => {},
+    saveProgressImmediate: () => {},
+    checkHighscore: (max: number, hs: number) => ({ highscore: Math.max(max, hs), isNew: max > hs }),
+    recordSession: (hist: any[]) => hist,
+    recordSessionToServer: () => sub(null),
     loadFromServer: () => ({ subscribe: () => {} }),   // async Merge: im Test no-op
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
   const route: any = { snapshot: { queryParamMap: { get: () => null } } };
   const dialog: any = {};
-  const translate: any = {};
+  const translate: any = { instant: (k: string) => k };
   const offline: any = { puzzleCount: 0, endlessRuns: 0 };
-  const snackBar: any = {};
+  const snackBar: any = { info: jasmine.createSpy('info') };
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   return new EndlessPuzzleComponent(
     puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue
   );
 }
-
-const PUZZLE = { id: 7, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };
 
 describe('EndlessPuzzleComponent analyse', () => {
   it('analyzeCurrentPuzzle opens the current puzzle in the analysis board (give-up case)', () => {
@@ -85,5 +118,75 @@ describe('EndlessPuzzleComponent analyse', () => {
 
     expect(c.state).toBe('CONFIG');
     expect(c.activeGameState).toBeNull();
+  });
+});
+
+/** Tijdelijk navigator.onLine = false innerhalb von fn(). */
+function withOffline(fn: () => void): void {
+  Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+  try { fn(); } finally { delete (navigator as any).onLine; }
+}
+
+describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
+  it('startGame generiert die Kette und lädt das erste Ketten-Puzzle', () => {
+    const c = makeComponent();
+    c.startGame();
+    expect(c['puzzleService'].getRandomBatch).toHaveBeenCalled();
+    expect(c['chain'].length).toBe(3);
+    expect(c.chainIndex).toBe(0);
+    expect(c.puzzle.id).toBe(100);   // chain[0]
+    c.ngOnDestroy();
+  });
+
+  it('Lösen rückt eine Stelle in der Kette weiter', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.continueAfterSolve();
+    expect(c.chainIndex).toBe(1);
+    expect(c.puzzle.id).toBe(101);   // chain[1]
+    c.ngOnDestroy();
+  });
+
+  it('Ein Fehler kostet ein Leben UND rückt weiter (Gauntlet)', () => {
+    const c = makeComponent();
+    c.startGame();
+    expect(c.lives).toBe(3);
+    c['loseLife']();                 // Fehler: Leben -1, Status FAILED
+    expect(c.lives).toBe(2);
+    expect(c.state).toBe('FAILED');
+    c.continueAfterWrong();          // weiter zum nächsten (höheren) Puzzle
+    expect(c.chainIndex).toBe(1);
+    expect(c.puzzle.id).toBe(101);
+    c.ngOnDestroy();
+  });
+
+  it('continueAfterWrong bei 0 Leben beendet das Spiel (Game Over)', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.lives = 0;
+    c.continueAfterWrong();
+    expect(c.state).toBe('GAME_OVER');
+    expect(c.chainIndex).toBe(0);    // kein Weiterrücken mehr
+    c.ngOnDestroy();
+  });
+
+  it('Kette offline durchgespielt → „You win"', () => {
+    const c = makeComponent();
+    c['chain'] = [{ ...CHAIN[0] }];
+    c.chainIndex = 1;                // hinter dem Kettenende
+    withOffline(() => c['loadCurrent']());
+    expect(c.state).toBe('WON');
+    c.ngOnDestroy();
+  });
+
+  it('Fortsetzen stellt bei passendem Token das aktuelle Ketten-Puzzle wieder her', () => {
+    const c = makeComponent();
+    c['storage'].loadChainToken = () => 555;
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, chainToken: 555, maxRatingReached: 1100 };
+    c.resumeGame();
+    expect(c.chainIndex).toBe(2);
+    expect(c.puzzle.id).toBe(102);   // exakt dasselbe Puzzle wie vor dem Refresh
+    c.ngOnDestroy();
   });
 });

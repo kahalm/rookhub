@@ -502,6 +502,8 @@
       "phase1Label": "Faza 1 (Lv 1–5)",
       "phase2Label": "Faza 2 (Lv 6–10)",
       "phase3Label": "Faza 3 (Lv 11+)",
+      "curveHint": "Krivulja rejtinga lanca (fiksirana na početku):",
+      "curvePuzzle": "Zagonetka {{n}}",
       "settings": "Postavke",
       "visualizationLevel": "Vizualizacija: razina {{level}}",
       "mode": "Način",
@@ -558,6 +560,9 @@
     },
     "gameOver": {
       "title": "Game Over",
+      "wonTitle": "Pobjeda!",
+      "wonSubtitle": "Prošao si cijeli lanac.",
+      "wonText": "Lanac je svladan – pokreni novi tijek za sljedeći izazov.",
       "exhaustedTitle": "Sve odigrano!",
       "exhaustedSubtitle": "Prošao si kroz sve raspone rejtinga zagonetki.",
       "areYouAStockfish": "Jesi li ti Stockfish?",

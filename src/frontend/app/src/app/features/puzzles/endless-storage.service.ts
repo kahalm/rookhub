@@ -64,6 +64,7 @@ const HISTORY_KEY = 'rookhub_endless_history';
 const ACTIVE_GAME_KEY = 'rookhub_endless_active_game';
 const SYNCED_KEY = 'rookhub_endless_synced';
 const OFFLINE_POOL_KEY = 'rookhub_endless_offline_pool';
+const CHAIN_TOKEN_KEY = 'rookhub_endless_chain_token';
 const MAX_HISTORY_SESSIONS = 50;
 
 @Injectable({ providedIn: 'root' })
@@ -147,6 +148,24 @@ export class EndlessStorageService {
 
   clearOfflinePool(): void {
     try { localStorage.removeItem(OFFLINE_POOL_KEY); } catch {}
+  }
+
+  /**
+   * Token der lokal gecachten Kette (= Run-Start-Zeitstempel). Wird beim Fortsetzen mit dem
+   * Token im Spielstand verglichen: stimmt es überein, ist der lokale Pool DIESE Run-Kette
+   * (Refresh auf demselben Gerät → exakt dasselbe Puzzle). Sonst (anderes Gerät / überschrieben
+   * durch einen Config-Prefetch) wird die Kette neu generiert. `0` = kein gültiger Ketten-Cache.
+   */
+  saveChainToken(token: number): void {
+    try { localStorage.setItem(CHAIN_TOKEN_KEY, String(token || 0)); } catch {}
+  }
+
+  loadChainToken(): number {
+    try {
+      const raw = localStorage.getItem(CHAIN_TOKEN_KEY);
+      if (raw) return parseInt(raw, 10) || 0;
+    } catch {}
+    return 0;
   }
 
   recordSession(history: EndlessSession[], session: EndlessSession): EndlessSession[] {

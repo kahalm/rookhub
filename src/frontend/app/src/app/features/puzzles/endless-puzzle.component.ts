@@ -20,7 +20,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { takeFromPool, takeNearestFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps, ENDLESS_RATING_WINDOW } from './endless-prefetch.util';
+import { buildChainWindows, autoFasttrackThresholds, fasttrackSteps, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
@@ -35,7 +35,7 @@ import { Key } from 'chessground/types';
 // THINKING = opponent responding (buttons visible, board locked)
 // PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
-  | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'EXHAUSTED';
+  | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'EXHAUSTED' | 'WON';
 
 interface EndlessPuzzleAttempt {
   puzzleNumber: number;
@@ -61,7 +61,8 @@ interface EndlessPuzzleAttempt {
   styleUrls: ['./endless-puzzle.component.scss'],
 })
 export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy, OnInit {
-  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' {
+  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' | 'won' {
+    if (this.state === 'WON') return 'won';
     if (this.state === 'EXHAUSTED') return 'exhausted';
     if (this.state === 'GAME_OVER') return 'gameover';
     if (this.state === 'CONFIG') return 'config';
@@ -129,8 +130,17 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // Board (Brett/Viz/Lös-State in BasePuzzleSolver)
   puzzle: PuzzleDto | null = null;
   private initialFen = '';
-  private prefetchedPuzzle: PuzzleDto | null = null;
-  /** Vorab geladene Puzzles für Offline-Spiel (ein ganzer Run). */
+  /**
+   * Gauntlet-Kette: die beim Run-Start (serverseitig per getRandomBatch) generierte, vollständig
+   * vordefinierte Puzzle-Folge entlang der ~logarithmischen Kurve. `chainIndex` zeigt auf das aktuell
+   * gespielte Puzzle. Lösen UND Fehler rücken eine Stelle weiter (höher); ein Fehler kostet ein Leben.
+   * Die Kette liegt lokal (Offline/Refresh → exakt dasselbe Puzzle); `chainIndex`/`chainToken` werden
+   * zusätzlich im (synchronisierten) Spielstand abgelegt.
+   */
+  private chain: PuzzleDto[] = [];
+  chainIndex = 0;
+  private chainToken = 0;
+  /** Lokal gecachte Kette (Offline-Start / Resume); identisch zu {@link chain} während eines Runs. */
   private offlinePool: PuzzleDto[] = [];
   reviewingWrongPuzzle = false;
   gaveUp = false;
@@ -248,9 +258,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   get currentRating(): number { return this._currentMinRating; }
 
   get currentPhaseLabel(): string {
-    if (this.solved < 5) return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: this.fasttrackPhase1Step });
-    if (this.solved < 10) return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: this.fasttrackPhase2Step });
+    if (this.chainIndex < CHAIN_T1_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: this.fasttrackPhase1Step });
+    if (this.chainIndex < CHAIN_T2_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: this.fasttrackPhase2Step });
     return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: 20 });
+  }
+
+  /** Vorschau der Ketten-Kurve: Rating an markanten Stellen (Start, T1 ≈ Puzzle 6, T2 ≈ Puzzle 21, Block-Ende). */
+  get chainPreview(): { puzzle: number; rating: number }[] {
+    const s = this.config.startElo, t1 = this.fasttrackAvgFirst, t2 = this.fasttrackAvgSecond;
+    return [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK - 1]
+      .map(i => ({ puzzle: i + 1, rating: chainRatingAt(i, s, t1, t2) }));
   }
 
   private clampConfig(): void {
@@ -312,36 +329,100 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.lives = 3;
     this.level = 0;
     this.solved = 0;
+    this.chainIndex = 0;
+    this.chainToken = Date.now();
     this._currentMinRating = this.config.startElo;
     this.maxRatingReached = this.config.startElo;
     this.isNewHighscore = false;
-    this.prefetchedPuzzle = null;
     this.sessionSeconds = 0;
     this.currentSessionMistakes = [];
     this.currentSessionPuzzles = [];
     this.activeGameState = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    this.computeFasttrackSteps();
+    this.computeFasttrackSteps();   // fasttrackAvgFirst/Second = T1/T2 für die Ketten-Kurve
     this.startSessionTimer();
-    this.syncActiveGameToServer();
-    this.prefetchRun();
-    this.loadPuzzle();
+
+    if (navigator.onLine) {
+      // Volle Kette serverseitig generieren (ein Batch) und beim Client ablegen.
+      this.state = 'LOADING';
+      this.chain = [];
+      this.generateChainBlock(0, () => this.loadCurrent());
+    } else if (this.offlinePool.length > 0) {
+      // Offline-Start: vorab geladene Kette nutzen.
+      this.chain = this.offlinePool;
+      this.storage.saveOfflinePool(this.chain);
+      this.storage.saveChainToken(this.chainToken);
+      this.persistRun();
+      this.loadCurrent();
+    } else {
+      this.stopSessionTimer();
+      this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
+      this.state = 'CONFIG';
+    }
   }
 
   /**
-   * Lädt im Hintergrund einen ganzen Run an Puzzles vorab und legt ihn im Storage ab,
-   * damit auch offline gepuzzelt werden kann. Run-Größe = max(gelöste der letzten 5 Runs) + 10.
+   * Generiert (online) einen Ketten-Block für die absoluten Indizes [startIndex, startIndex+count)
+   * via getRandomBatch entlang der Kurven-Fenster und hängt ihn an die Kette an (bzw. ersetzt sie
+   * bei startIndex 0). `then` wird nach dem Eintreffen aufgerufen. Bleibt leer/leerer Block:
+   * Run-Start → zurück zur Config; Verlängerung → „You win".
+   */
+  private generateChainBlock(startIndex: number, then?: () => void, count = ENDLESS_CHAIN_BLOCK): void {
+    const windows = buildChainWindows(
+      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, count, startIndex
+    );
+    const themes = this.config.themes.trim() || undefined;
+    this.puzzleService.getRandomBatch(windows, themes).subscribe({
+      next: pool => {
+        const block = pool || [];
+        if (block.length === 0) {
+          if (startIndex === 0) {
+            this.stopSessionTimer();
+            this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
+            this.state = 'CONFIG';
+          } else {
+            this.winRun();   // online, aber keine weiteren Puzzles mehr → Kette durchgespielt
+          }
+          return;
+        }
+        this.chain = startIndex === 0 ? block : this.chain.concat(block);
+        this.offlinePool = this.chain;
+        this.storage.saveOfflinePool(this.chain);
+        this.storage.saveChainToken(this.chainToken);
+        this.persistRun();
+        if (then) then();
+      },
+      error: () => {
+        // Während der Generierung offline geworden: vorhandene Kette weiterspielen bzw. „You win".
+        if (then) then();
+      }
+    });
+  }
+
+  /**
+   * Lädt im Hintergrund eine Kette vorab und legt sie im Storage ab, damit Endless auch offline
+   * gestartet werden kann. Invalidiert den Ketten-Token (dieser Cache gehört zu keinem Run).
    */
   private prefetchRun(): void {
-    const runs = Math.max(1, this.offline.endlessRuns);   // konfigurierbar im Profil (Standard 2)
-    const windows = buildEndlessRunWindows(this.config, this.sessionHistory, this.puzzleRange.max, runs);
+    this.computeFasttrackSteps();
+    const windows = buildChainWindows(
+      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max
+    );
     if (!windows.length) return;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandomBatch(windows, themes).subscribe({
-      next: pool => { this.offlinePool = pool || []; this.storage.saveOfflinePool(this.offlinePool); },
+      next: pool => {
+        this.offlinePool = pool || [];
+        this.storage.saveOfflinePool(this.offlinePool);
+        this.storage.saveChainToken(0);   // Prefetch gehört zu keinem laufenden Run
+      },
       error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
     });
+  }
+
+  private persistRun(): void {
+    this.syncActiveGameToServer();
   }
 
   resumeGame(): void {
@@ -349,14 +430,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const g = this.activeGameState;
     this.lives = g.lives ?? 3;
     this.solved = g.solved ?? 0;
-    this.level = g.level ?? 0;
+    this.chainIndex = g.chainIndex ?? 0;
+    this.level = g.level ?? this.chainIndex;
+    this.chainToken = g.chainToken ?? 0;
     this._currentMinRating = g.currentMinRating ?? this.config.startElo;
     this.maxRatingReached = g.maxRatingReached ?? this._currentMinRating;
     this.sessionSeconds = g.sessionSeconds ?? 0;
     this.currentSessionMistakes = g.mistakes ?? [];
     this.currentSessionPuzzles = [];
     this.isNewHighscore = false;
-    this.prefetchedPuzzle = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
     this.computeFasttrackSteps();
@@ -365,7 +447,29 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionInterval = setInterval(() => {
       this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
     }, 1000);
-    this.loadPuzzle();
+
+    // Kette wiederherstellen: lokal nur, wenn der Token zu DIESEM Run passt (Refresh auf demselben
+    // Gerät → exakt dasselbe Puzzle). Sonst (anderes Gerät / Cache überschrieben) die Kette von vorne
+    // bis über die aktuelle Position neu generieren, damit chainIndex weiterhin korrekt zeigt.
+    const localOk = this.chainToken !== 0 && this.storage.loadChainToken() === this.chainToken
+      && this.offlinePool.length > this.chainIndex;
+    if (localOk) {
+      this.chain = this.offlinePool;
+      this.loadCurrent();
+    } else if (navigator.onLine) {
+      this.state = 'LOADING';
+      this.chain = [];
+      this.chainToken = this.chainToken || Date.now();
+      this.generateChainBlock(0, () => this.loadCurrent(), this.chainIndex + ENDLESS_CHAIN_BLOCK);
+    } else if (this.offlinePool.length > this.chainIndex) {
+      // Offline ohne passenden Token, aber genug Puzzles vorhanden → bestmöglich fortsetzen.
+      this.chain = this.offlinePool;
+      this.loadCurrent();
+    } else {
+      this.stopSessionTimer();
+      this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
+      this.state = 'CONFIG';
+    }
   }
 
   archiveAndStartNew(): void {
@@ -418,9 +522,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.router.navigate(['/puzzles', id]);
   }
 
-  // --- Loading ---
+  // --- Loading (Gauntlet: vordefinierte Kette) ---
 
-  private loadPuzzle(): void {
+  /** Lädt das aktuelle Ketten-Puzzle (`chain[chainIndex]`); am Kettenende wird verlängert/gewonnen. */
+  private loadCurrent(): void {
     this.state = 'LOADING';
     this.alternativeSolve = false;
     this.showEval = false;
@@ -428,96 +533,43 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.initialEval = '';
     this.currentEval = '';
 
-    // Check if we exceeded the max puzzle rating
-    if (this._currentMinRating > this.puzzleRange.max) {
-      this.stopSessionTimer();
-      this.checkHighscore();
-      this.recordSession();
-      this.storage.saveActiveGameLocal(null);
-      this.storage.saveProgressImmediate(this.config, this.highscore, null);
-      this.state = 'EXHAUSTED';
-      return;
-    }
-
-    const min = this._currentMinRating;
-    const max = this._currentMinRating + ENDLESS_RATING_WINDOW;
-
-    // Offline: ausschließlich aus dem vorab geladenen Run-Pool bedienen.
-    if (!navigator.onLine) {
-      const pooled = takeFromPool(this.offlinePool, min, max)
-        ?? takeNearestFromPool(this.offlinePool, (min + max) / 2);   // sonst rating-nächstes statt blind shift()
-      if (pooled) {
-        this.storage.saveOfflinePool(this.offlinePool);
-        this.prefetchedPuzzle = null;
-        this.onPuzzleLoaded(pooled);
-      } else if (this.solved === 0) {
-        // Offline gestartet, aber kein Run gecacht → kein „Run beendet", sondern Hinweis + zurück zur Config.
-        this.stopSessionTimer();
-        this.storage.saveActiveGameLocal(null);
-        this.snackbar.info(this.translate.instant('endless.offlineNoCache'), { action: 'common.ok', duration: 5000 });
-        this.state = 'CONFIG';
-      } else {
-        // Mitten im Run offline und Pool leer → Run hier regulär beenden.
-        this.stopSessionTimer();
-        this.checkHighscore();
-        this.recordSession();
-        this.storage.saveActiveGameLocal(null);
-        this.state = 'EXHAUSTED';
-      }
-      return;
-    }
-
-    if (this.prefetchedPuzzle &&
-        this.prefetchedPuzzle.rating >= min &&
-        this.prefetchedPuzzle.rating <= max) {
-      const p = this.prefetchedPuzzle;
-      this.prefetchedPuzzle = null;
-      this.onPuzzleLoaded(p);
-      return;
-    }
-
-    this.prefetchedPuzzle = null;
-    const themes = this.config.themes.trim() || undefined;
-    this.puzzleService.getRandom(min, max, themes).subscribe({
-      next: p => this.onPuzzleLoaded(p),
-      error: () => this.onPuzzleLoadError()
-    });
+    if (this.chainIndex >= this.chain.length) { this.handleChainEnd(); return; }
+    this.onPuzzleLoaded(this.chain[this.chainIndex]);
   }
 
-  private onPuzzleLoadError(): void {
-    // No puzzles in this range — skip to next range
-    this._currentMinRating += this.getCurrentStep();
-    this.level++;
-    // Check if we've gone beyond the max
-    if (this._currentMinRating > this.puzzleRange.max) {
-      this.stopSessionTimer();
-      this.checkHighscore();
-      this.recordSession();
-      this.storage.saveActiveGameLocal(null);
-      this.storage.saveProgressImmediate(this.config, this.highscore, null);
-      this.state = 'EXHAUSTED';
-      return;
+  /** Kettenende erreicht: online → nächsten Block nachgenerieren; offline → „You win". */
+  private handleChainEnd(): void {
+    if (navigator.onLine) {
+      this.state = 'LOADING';
+      this.generateChainBlock(this.chain.length, () => this.loadCurrent());
+    } else {
+      this.winRun();
     }
-    this.loadPuzzle();
+  }
+
+  /** Kette vollständig durchgespielt (offline am Ende) — Run als Sieg abschließen. */
+  private winRun(): void {
+    this.stopSessionTimer();
+    this.checkHighscore();
+    this.recordSession();
+    this.storage.saveActiveGameLocal(null);
+    this.storage.saveProgressImmediate(this.config, this.highscore, null);
+    this.state = 'WON';
+  }
+
+  /** Eine Stelle in der Kette weiterrücken (nach Lösen ODER Fehler) und das nächste Puzzle laden. */
+  private advance(): void {
+    this.chainIndex++;
+    this.level = this.chainIndex;
+    this.persistRun();
+    this.loadCurrent();
   }
 
   private onPuzzleLoaded(puzzle: PuzzleDto): void {
     this.puzzle = puzzle;
+    this._currentMinRating = puzzle.rating;   // Anzeige/Fehler-Logging am tatsächlichen Puzzle-Rating
     this.trackMaxRating(puzzle.rating);
     this.setupPuzzle(puzzle);
-    this.prefetchNext();
-  }
-
-  private prefetchNext(): void {
-    const nextSolved = this.solved + 1;
-    const nextStep = this.getStepForSolved(nextSolved);
-    const min = this._currentMinRating + nextStep;
-    const max = min + ENDLESS_RATING_WINDOW;
-    const themes = this.config.themes.trim() || undefined;
-    this.puzzleService.getRandom(min, max, themes).subscribe({
-      next: p => this.prefetchedPuzzle = p,
-      error: () => this.prefetchedPuzzle = null
-    });
   }
 
   // --- Puzzle setup ---
@@ -561,9 +613,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.reviewMode = false;
     this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);  // pending Auto-Advance verwerfen
-    this._currentMinRating += this.getCurrentStep();
-    this.level++;
-    this.loadPuzzle();
+    this.advance();
   }
 
   continueAfterWrong(): void {
@@ -573,8 +623,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (this.lives <= 0) {
       this.endGame();
     } else {
-      this.prefetchedPuzzle = null;
-      this.loadPuzzle();
+      // Gauntlet: ein Fehler kostet ein Leben UND rückt zum nächsten (höheren) Ketten-Puzzle.
+      this.advance();
     }
   }
 
@@ -755,16 +805,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // --- Step calculation ---
 
-  private getCurrentStep(): number {
-    return this.getStepForSolved(this.solved);
-  }
-
-  private getStepForSolved(solvedCount: number): number {
-    if (solvedCount <= 5) return this.fasttrackPhase1Step;
-    if (solvedCount <= 10) return this.fasttrackPhase2Step;
-    return 20;
-  }
-
   private computeFasttrackSteps(): void {
     const auto = autoFasttrackThresholds(this.config, this.sessionHistory);
     this.fasttrackAutoFirst = auto.first;
@@ -868,6 +908,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       lives: this.lives,
       solved: this.solved,
       level: this.level,
+      chainIndex: this.chainIndex,
+      chainToken: this.chainToken,
       currentMinRating: this._currentMinRating,
       maxRatingReached: this.maxRatingReached,
       sessionSeconds: this.sessionSeconds,

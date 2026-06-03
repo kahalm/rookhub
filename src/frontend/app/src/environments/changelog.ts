@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.76.0';
+export const APP_VERSION = '0.77.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.77.0', date: '2026-06-03', changes: [
+    'Endlos ist jetzt ein „Gauntlet": Beim Start wird die komplette Puzzle-Kette generiert und auf deinem Gerät abgelegt. Ein Seiten-Refresh oder „Fortsetzen" zeigt deshalb immer exakt dasselbe Puzzle — die Reihenfolge steht von Anfang an fest.',
+    'Die Schwierigkeit folgt einer annähernd logarithmischen Kurve: schnell hoch bis zum 1. Schwellenwert (Ø erster Fehler, ~5 Puzzles), dann gemächlicher bis zum 2. Schwellenwert (Ø Maximum deiner letzten 5 Läufe, ~20 Puzzles), danach nur noch leicht ansteigend.',
+    'Jedes Puzzle führt weiter — egal ob gelöst oder nicht: Ein Fehler kostet ein Leben UND rückt zum nächsten (höheren) Puzzle. Bei 0 Leben ist Schluss.',
+    'Online wird am Kettenende automatisch nachgeneriert; offline am Ende der Kette erscheint „You win" 🏆.',
+    'Einstellungen: beide Schwellenwerte bleiben editierbar; die Vorschau zeigt jetzt den Rating-Verlauf der Kette (Puzzle 1 / 6 / 21 / 30).',
+  ]},
   { version: '0.76.0', date: '2026-06-03', changes: [
     'Tagespuzzle wird persistiert: neuer Endpoint `GET /api/book-puzzles/daily/{yyyyMMdd|today}` (anonym) liefert das Tagespuzzle für ein UTC-Datum. Pro Tag eine Zeile in der neuen Tabelle `DailyPuzzles` (PK=Date, FK→BookPuzzle); ein Background-Service `DailyPuzzleScheduler` legt die heutige Zuordnung um 00:00 UTC an + holt verpasste Tage beim Start nach. On-Demand-Fallback wenn Scheduler offline war. `GetRandomAsync(pool="daily")` routet jetzt durch die persistierte Zuordnung — historische Tagespuzzles bleiben damit stabil, egal wie der `forDaily`-Pool sich später ändert. Migration `AddDailyPuzzleTable`, Book-Löschung räumt Historie ab.',
   ]},

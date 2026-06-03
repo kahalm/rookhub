@@ -100,17 +100,14 @@
                       </div>
                     </div>
                     <div class="fasttrack-preview">
-                      <div class="fasttrack-phase">
-                        <span class="phase-label">{{ 'endless.config.phase1Label' | translate }}</span>
-                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: fasttrackPhase1Step } }} | {{ config.startElo }} → {{ fasttrackAvgFirst }}</span>
-                      </div>
-                      <div class="fasttrack-phase">
-                        <span class="phase-label">{{ 'endless.config.phase2Label' | translate }}</span>
-                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: fasttrackPhase2Step } }} | {{ fasttrackAvgFirst }} → {{ fasttrackAvgSecond }}</span>
-                      </div>
-                      <div class="fasttrack-phase">
-                        <span class="phase-label">{{ 'endless.config.phase3Label' | translate }}</span>
-                        <span class="phase-detail">{{ 'endless.config.step' | translate:{ step: 20 } }}</span>
+                      <p class="threshold-explain">{{ 'endless.config.curveHint' | translate }}</p>
+                      <div class="curve-points">
+                        @for (pt of chainPreview; track pt.puzzle) {
+                          <div class="fasttrack-phase">
+                            <span class="phase-label">{{ 'endless.config.curvePuzzle' | translate:{ n: pt.puzzle } }}</span>
+                            <span class="phase-detail">{{ pt.rating }}</span>
+                          </div>
+                        }
                       </div>
                     </div>
                   }
@@ -467,6 +464,61 @@
                 </mat-card-content>
               </mat-card>
             </div>
+          </div>
+        }
+
+        @case ('won') {
+          <div class="gameover-screen">
+            <mat-card class="gameover-card exhausted-card">
+              <mat-card-header>
+                <mat-card-title>{{ 'endless.gameOver.wonTitle' | translate }}</mat-card-title>
+                <mat-card-subtitle>{{ 'endless.gameOver.wonSubtitle' | translate }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stockfish-question">
+                  <span class="stockfish-fish">&#x1F3C6;</span>
+                  <p class="stockfish-text">{{ 'endless.gameOver.wonText' | translate }}</p>
+                </div>
+                <div class="gameover-stats">
+                  <div class="gameover-stat">
+                    <mat-icon>trending_up</mat-icon>
+                    <span class="go-value">{{ maxRatingReached }}</span>
+                    <span class="go-label">{{ 'endless.gameOver.maxRating' | translate }}</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>extension</mat-icon>
+                    <span class="go-value">{{ solved }}</span>
+                    <span class="go-label">{{ 'endless.gameOver.puzzlesSolved' | translate }}</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>favorite</mat-icon>
+                    <span class="go-value">{{ lives }}</span>
+                    <span class="go-label">{{ 'endless.gameOver.livesLeft' | translate }}</span>
+                  </div>
+                  <div class="gameover-stat">
+                    <mat-icon>timer</mat-icon>
+                    <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
+                    <span class="go-label">{{ 'endless.gameOver.time' | translate }}</span>
+                  </div>
+                </div>
+                @if (isNewHighscore) {
+                  <div class="new-highscore">
+                    <mat-icon>emoji_events</mat-icon>
+                    {{ 'endless.gameOver.newHighscore' | translate }}
+                  </div>
+                }
+                <div class="gameover-actions">
+                  <button mat-raised-button color="primary" (click)="playAgain()">
+                    <mat-icon>replay</mat-icon>
+                    {{ 'endless.gameOver.playAgain' | translate }}
+                  </button>
+                  <button mat-button (click)="backToPuzzles()">
+                    <mat-icon>arrow_back</mat-icon>
+                    {{ 'endless.gameOver.backToPuzzles' | translate }}
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
           </div>
         }
 
