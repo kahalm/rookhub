@@ -1,0 +1,56 @@
+name: Build Android TWA (AAB)
+
+# Manuell ausgelöst: baut aus twa/twa-manifest.json einen signierten Android App Bundle
+# (AAB) für Google Play und lädt ihn als Artefakt hoch.
+#
+# Benötigte Repository-Secrets:
+#   ANDROID_KEYSTORE_BASE64    - base64 -w0 android.keystore
+#   ANDROID_KEYSTORE_PASSWORD  - Keystore-Passwort
+#   ANDROID_KEY_PASSWORD       - Schlüssel-Passwort (Alias: rookhub)
+#
+# Hinweis: nicht in dieser Umgebung getestet; ggf. Bubblewrap-Version/Flags anpassen.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Restore signing keystore
+        working-directory: twa
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
+
+      - name: Generate Android project from manifest
+        working-directory: twa
+        run: bubblewrap update --skipVersionUpgrade
+
+      - name: Build signed AAB
+        working-directory: twa
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bubblewrap build --skipPwaValidation
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: rookhub-android-aab
+          path: |
+            twa/app-release-bundle.aab
+            twa/app-release-signed.apk
+          if-no-files-found: warn

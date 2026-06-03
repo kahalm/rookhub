@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.4';
+export const APP_VERSION = '0.78.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.5', date: '2026-06-03', changes: [
+    'App-Vorbereitung (technisch): TWA-Projektgerüst (Bubblewrap-Config twa/twa-manifest.json) + GitHub-Actions-Workflow zum Bauen des signierten Android-App-Bundles (AAB) für Google Play. Keine Änderung an der Web-App.',
+  ]},
   { version: '0.78.4', date: '2026-06-03', changes: [
     'App-Vorbereitung (technisch): Digital Asset Links (/.well-known/assetlinks.json) hinterlegt — verknüpft die spätere Android-App (Google Play) mit der Domain und blendet die Browserleiste aus. Keine sichtbare Änderung; der App-Signatur-Fingerprint wird beim Play-Release eingetragen.',
   ]},

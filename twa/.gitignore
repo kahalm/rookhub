@@ -1,0 +1,6 @@
+# Von Bubblewrap generiertes Android-Projekt + Build-Artefakte — NICHT committen.
+# Quelle der Wahrheit ist twa-manifest.json; `bubblewrap update` regeneriert den Rest.
+*
+!.gitignore
+!twa-manifest.json
+!README.md
