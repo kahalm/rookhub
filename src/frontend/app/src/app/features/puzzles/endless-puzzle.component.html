@@ -376,6 +376,29 @@
                 </mat-card-content>
               </mat-card>
 
+              <div class="settings-bar">
+                <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'endless.config.settings' | translate">
+                  <mat-icon>settings</mat-icon>
+                </button>
+              </div>
+              @if (showSettings) {
+                <mat-card class="config-card">
+                  <mat-card-content>
+                    <div class="viz-slider">
+                      <label>{{ 'endless.config.visualizationLevel' | translate:{ level: visualizationMode } }}</label>
+                      <input type="range" min="0" max="4" step="1"
+                             [value]="visualizationMode"
+                             (input)="setVisualizationLevel(+$any($event.target).value)">
+                      <div class="viz-level-desc">{{ vizLevelDescription }}</div>
+                    </div>
+                    <div class="theme-section">
+                      <app-theme-picker namespace="endless.config" [themeMode]="themeMode" [boardTheme]="boardTheme" [pieceSet]="pieceSet"
+                        (themeModeChanged)="setThemeMode($event)" (boardThemeChanged)="setBoardTheme($event)" (pieceSetChanged)="setPieceSet($event)" />
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+
               @if (lastSolvedPuzzleId) {
                 <button mat-stroked-button class="review-last-btn" (click)="reviewLastPuzzle()">
                   <mat-icon>history</mat-icon> {{ 'endless.game.reviewLast' | translate }}
