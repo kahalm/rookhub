@@ -91,6 +91,7 @@ try
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
+    builder.Services.AddScoped<CourseService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     builder.Services.AddSingleton<AutoSubscriptionService>();
