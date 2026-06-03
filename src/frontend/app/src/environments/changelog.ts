@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.74.0';
+export const APP_VERSION = '0.75.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.75.0', date: '2026-06-03', changes: [
+    'Tagespuzzle-Solver-Updates per Webhook: nach jedem Buch-/Tagespuzzle-Versuch feuert die API einen HMAC-signierten POST an den Schach-Bot — der aktualisiert den Discord-Post sofort statt erst nach ≤5 Minuten (vorheriges Polling-Modell). Neuer Service `SchachBotWebhookService`, fire-and-forget via vorhandene `BackgroundTaskQueue`. Konfig: `SchachBot__WebhookUrl` (z.B. http://schach-bot:9000/webhook/puzzle-attempt) + `SchachBot__WebhookSecret` (muss identisch zum Bot-`WEBHOOK_SECRET` sein). Beide leer = Webhook deaktiviert. Compose-Files (dev / dev.vpn / vpn) reichen `SCHACH_BOT_WEBHOOK_URL` und `SCHACH_BOT_WEBHOOK_SECRET` durch.',
+  ]},
   { version: '0.74.0', date: '2026-06-03', changes: [
     'Admin: Kibana-Dashboard-Link im Admin-Header (en/de/hr lokalisiert). Wird nur angezeigt, wenn `KIBANA_URL` im Server-Env gesetzt ist — gelesen via neuem Endpoint `GET /api/admin/config` (Admin-only). Compose-Files reichen `KIBANA_URL` an die API als `Kibana__Url`.',
   ]},

@@ -102,6 +102,13 @@ try
     // Periodisches Lebenszeichen nach ES (Standard 60 s) → log-watcher erkennt toten Dienst.
     builder.Services.AddHostedService<HeartbeatService>();
 
+    // SchachBot-Webhook (Solver-Updates fuer Daily-Puzzle live an den Bot pushen).
+    // URL + Secret optional → ohne Konfig stillschweigend deaktiviert.
+    builder.Services.AddHttpClient<SchachBotWebhookService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(5);
+    });
+
     // Crawler Proxy HttpClient
     var crawlerBaseUrl = builder.Configuration["Crawler:BaseUrl"] ?? "http://host.docker.internal:8080";
     if (!Uri.TryCreate(crawlerBaseUrl, UriKind.Absolute, out var crawlerUri))

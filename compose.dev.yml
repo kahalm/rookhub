@@ -94,6 +94,8 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
       Kibana__Url: ${KIBANA_URL:-}
+      SchachBot__WebhookUrl: ${SCHACH_BOT_WEBHOOK_URL:-}
+      SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

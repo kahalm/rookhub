@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -15,11 +16,13 @@ public class BookPuzzleService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<BookPuzzleService> _logger;
+    private readonly IBackgroundTaskQueue _bgQueue;
 
-    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger)
+    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IBackgroundTaskQueue bgQueue)
     {
         _db = db;
         _logger = logger;
+        _bgQueue = bgQueue;
     }
 
     private static readonly Regex SessionIdPattern =
@@ -90,6 +93,8 @@ public class BookPuzzleService
         _logger.LogInformation(
             "BookPuzzleAttempt: User {UserId} {Result} book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
             userId, dto.Solved ? "solved" : "failed", id, startedAt, solvedAt, timeSeconds);
+
+        await NotifySchachBotAsync(id);
     }
 
     /// <summary>Anonymer (nicht eingeloggter) Lösungsversuch — zählt fürs Tagespuzzle mit,
@@ -122,8 +127,39 @@ public class BookPuzzleService
                 _logger.LogInformation(
                     "BookPuzzleAttempt: Anonymous solved book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
                     id, solvedAt.AddSeconds(-timeSeconds), solvedAt, timeSeconds);
+                await NotifySchachBotAsync(id);
             }
         }
+    }
+
+    /// <summary>
+    /// Stoesst den schach-bot-Webhook fuer das Puzzle an (fire-and-forget via BG-Queue).
+    /// Holt im Worker frische Solver-Daten + ruft <see cref="SchachBotWebhookService.NotifyAttemptAsync"/> auf.
+    /// </summary>
+    private async ValueTask NotifySchachBotAsync(int puzzleId)
+    {
+        await _bgQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var hookLogger = sp.GetService<ILoggerFactory>()?.CreateLogger("RookHub.SchachBotNotify");
+            var hook = sp.GetService<SchachBotWebhookService>();
+            if (hook == null || !hook.IsEnabled) return;
+            // Service-Provider ist scoped → eigene Service-Instanz mit eigenem DbContext.
+            var svc = sp.GetService<BookPuzzleService>();
+            if (svc == null)
+            {
+                hookLogger?.LogWarning("SchachBot-Notify: BookPuzzleService nicht im Scope verfuegbar.");
+                return;
+            }
+            try
+            {
+                var results = await svc.GetResultsAsync(puzzleId, null);
+                await hook.NotifyAttemptAsync(puzzleId, results, ct);
+            }
+            catch (Exception ex)
+            {
+                hookLogger?.LogWarning(ex, "SchachBot-Notify Worker fehlgeschlagen (puzzleId={PuzzleId})", puzzleId);
+            }
+        });
     }
 
     /// <summary>
