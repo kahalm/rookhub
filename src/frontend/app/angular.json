@@ -56,6 +56,10 @@
                 "glob": "stockfish-18-lite-single.*",
                 "input": "node_modules/stockfish/bin",
                 "output": "/assets/stockfish"
+              },
+              {
+                "glob": ".well-known/**",
+                "input": "public"
               }
             ],
             "styles": [
