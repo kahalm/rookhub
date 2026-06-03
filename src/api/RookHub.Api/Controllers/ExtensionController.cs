@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,19 @@ public class ExtensionController : BaseApiController
     public ExtensionController(RepertoireService repertoireService) => _repertoireService = repertoireService;
 
     /// <summary>
+    /// Wenn ein API-Token genutzt wird (User-Identity hat scope-Claim), muss dieser
+    /// <c>extension</c> sein. JWT-User (kein scope-Claim) duerfen immer. Schuetzt davor,
+    /// dass spaeter dazukommende Token-Scopes versehentlich Extension-Daten lesen.
+    /// </summary>
+    private ActionResult? ScopeGuard()
+    {
+        var scope = User.FindFirst("scope")?.Value;
+        if (scope == null) return null; // JWT
+        if (scope == "extension") return null;
+        return Forbid();
+    }
+
+    /// <summary>
     /// Repertoire-Liste fuer Extension-Clients. <paramref name="kind"/> akzeptiert die
     /// String-Repraesentation von <see cref="RepertoireKind"/> (z. B. <c>opening</c>,
     /// case-insensitive). Ohne Filter werden alle Kinds zurueckgegeben.
@@ -25,6 +39,7 @@ public class ExtensionController : BaseApiController
     [HttpGet("repertoires")]
     public async Task<ActionResult<List<ExtensionRepertoireDto>>> GetRepertoires([FromQuery] string? kind = null)
     {
+        if (ScopeGuard() is { } forbid) return forbid;
         RepertoireKind? kindFilter = null;
         if (!string.IsNullOrWhiteSpace(kind))
         {
@@ -38,6 +53,7 @@ public class ExtensionController : BaseApiController
     [HttpGet("repertoires/{id}/pgn")]
     public async Task<IActionResult> GetPgn(int id)
     {
+        if (ScopeGuard() is { } forbid) return forbid;
         try
         {
             var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());

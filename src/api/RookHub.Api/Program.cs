@@ -159,14 +159,15 @@ try
     // CORS policies
     builder.Services.AddCors(options =>
     {
-        // Policy for the Chrome extension (applied only to ExtensionController)
+        // Policy for the Chrome extension (applied only to ExtensionController).
+        // KEIN AllowCredentials: Auth laeuft ausschliesslich ueber Bearer-Token im
+        // Authorization-Header — Cookies werden vom Userscript nicht gebraucht und
+        // wuerden CSRF-Risiko schaffen, sollten weitere Origins hinzukommen.
         options.AddPolicy("ExtensionPolicy", policy =>
         {
-            policy.WithOrigins(
-                    "https://www.chess.com")
-                .WithMethods("GET", "POST")
-                .WithHeaders("Authorization", "Content-Type")
-                .AllowCredentials();
+            policy.WithOrigins("https://www.chess.com")
+                .WithMethods("GET")
+                .WithHeaders("Authorization", "Content-Type");
         });
         // Default policy for frontend
         options.AddDefaultPolicy(policy =>

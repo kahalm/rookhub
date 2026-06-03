@@ -28,9 +28,10 @@ public class ExtensionControllerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private void SetUser(int userId)
+    private void SetUser(int userId, string? scope = null)
     {
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (scope != null) claims.Add(new Claim("scope", scope));
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -127,5 +128,66 @@ public class ExtensionControllerTests : IDisposable
         var result = await _controller.GetPgn(rep.Id);
 
         Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetRepertoires_FiltersByKind()
+    {
+        var user = await CreateUserAsync();
+        _db.Repertoires.AddRange(
+            new Repertoire { UserId = user.Id, Name = "open", Kind = RepertoireKind.Opening },
+            new Repertoire { UserId = user.Id, Name = "end", Kind = RepertoireKind.Endgame },
+            new Repertoire { UserId = user.Id, Name = "none" }
+        );
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var all = (await _controller.GetRepertoires()).Result as OkObjectResult;
+        Assert.Equal(3, ((List<ExtensionRepertoireDto>)all!.Value!).Count);
+
+        var openings = (await _controller.GetRepertoires("opening")).Result as OkObjectResult;
+        var openList = (List<ExtensionRepertoireDto>)openings!.Value!;
+        Assert.Single(openList);
+        Assert.Equal("open", openList[0].Name);
+        Assert.Equal(RepertoireKind.Opening, openList[0].Kind);
+    }
+
+    [Fact]
+    public async Task GetRepertoires_InvalidKind_Returns400()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var result = await _controller.GetRepertoires("hyperspeed");
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetRepertoires_WithExtensionScope_Allowed()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        var result = await _controller.GetRepertoires();
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetRepertoires_WithForeignScope_Forbidden()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "admin"); // anderer Scope → kein Zugriff
+        var result = await _controller.GetRepertoires();
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetPgn_WithForeignScope_Forbidden()
+    {
+        var user = await CreateUserAsync();
+        var rep = new Repertoire { UserId = user.Id, Name = "x" };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        SetUser(user.Id, scope: "admin");
+        var result = await _controller.GetPgn(rep.Id);
+        Assert.IsType<ForbidResult>(result);
     }
 }
