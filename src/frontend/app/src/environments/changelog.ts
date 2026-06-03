@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.80.0';
+export const APP_VERSION = '0.80.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.80.1', date: '2026-06-03', changes: [
+    'Fix (kritisch): Die API startete nicht mehr — beim Auth-Setup kollidierte der JWT-Handler mit dem Policy-Scheme „Bearer" (beide unter dem Namen „Bearer" registriert → „Scheme already exists: Bearer", Startup-Crash). Der JWT-Handler läuft jetzt unter dem Namen „Jwt"; das Policy-Scheme „Bearer" bleibt der Default und leitet je nach Token (`rkh_…` → ApiToken, sonst → JWT) weiter. Behebt den API-Ausfall seit dem Auth-/API-Token-Feature.',
+  ]},
   { version: '0.80.0', date: '2026-06-03', changes: [
     'Tagespuzzle ist jetzt über einen stabilen, datumsbasierten Link erreichbar: neue Route `/puzzles/daily/:date` (z.B. `/puzzles/daily/20260603`) lädt das Tagespuzzle des jeweiligen UTC-Datums. Der Schach-Bot verlinkt seine Tagespuzzle-Posts ab sofort dorthin (statt auf die wechselnde Puzzle-ID `/puzzles/book/{id}`) — derselbe Link zeigt dauerhaft auf das Tagespuzzle dieses Tages.',
   ]},

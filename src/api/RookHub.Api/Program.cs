@@ -80,10 +80,12 @@ try
             var auth = ctx.Request.Headers.Authorization.ToString();
             if (auth.StartsWith("Bearer rkh_", StringComparison.OrdinalIgnoreCase))
                 return ApiTokenAuthenticationHandler.SchemeName;
-            return JwtBearerDefaults.AuthenticationScheme;
+            return "Jwt";
         };
     })
-    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    // JWT-Handler unter eigenem Namen "Jwt" — NICHT "Bearer", sonst kollidiert er mit dem
+    // Policy-Scheme "Bearer" oben ("Scheme already exists: Bearer" → Startup-Crash).
+    .AddJwtBearer("Jwt", options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
