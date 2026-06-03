@@ -46,8 +46,8 @@ function makeComponent(): any {
     loadActiveGameLocal: () => null,
     saveActiveGameLocal: () => {},
     saveOfflinePool: () => {},
-    saveChainToken: () => {},
-    loadChainToken: () => 0,
+    saveChainSeed: () => {},
+    loadChainSeed: () => '',
     saveConfig: () => {},
     saveProgressToServer: () => {},
     saveProgressImmediate: () => {},
@@ -179,14 +179,31 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     c.ngOnDestroy();
   });
 
-  it('Fortsetzen stellt bei passendem Token das aktuelle Ketten-Puzzle wieder her', () => {
+  it('Fortsetzen stellt bei passendem Seed das aktuelle Ketten-Puzzle wieder her', () => {
     const c = makeComponent();
-    c['storage'].loadChainToken = () => 555;
+    c['storage'].loadChainSeed = () => 'seed-xyz';
     c['offlinePool'] = CHAIN.map(p => ({ ...p }));
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, chainToken: 555, maxRatingReached: 1100 };
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100 };
     c.resumeGame();
     expect(c.chainIndex).toBe(2);
     expect(c.puzzle.id).toBe(102);   // exakt dasselbe Puzzle wie vor dem Refresh
+    c.ngOnDestroy();
+  });
+
+  it('startGame vergibt einen eindeutigen Seed und schreibt Seed + Ketten-IDs in den Session-Record', () => {
+    const c = makeComponent();
+    const sessions: any[] = [];
+    c['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
+    c.startGame();
+    expect(c['seed']).toBeTruthy();
+    const seed = c['seed'];
+    // Lauf beenden (Game Over) → Session wird mit Seed + Ketten-IDs aufgezeichnet.
+    c.lives = 0;
+    c.continueAfterWrong();
+    expect(c.state).toBe('GAME_OVER');
+    expect(sessions.length).toBe(1);
+    expect(sessions[0].seed).toBe(seed);
+    expect(sessions[0].chainPuzzleIds).toBe('100,101,102');   // geordnete Ketten-IDs
     c.ngOnDestroy();
   });
 });

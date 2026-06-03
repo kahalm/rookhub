@@ -24,6 +24,14 @@ public class EndlessSession
     [MaxLength(100)]
     public string MistakeAtRatings { get; set; } = string.Empty;
 
+    /// <summary>Eindeutiger Seed des Gauntlet-Laufs (z.B. crypto.randomUUID) — identifiziert die Kette (Replay).</summary>
+    [MaxLength(64)]
+    public string? Seed { get; set; }
+
+    /// <summary>Geordnete Puzzle-IDs der gespielten Kette (CSV). Puzzles sind über die ID unveränderlich → exaktes Replay.</summary>
+    [Column(TypeName = "TEXT")]
+    public string? ChainPuzzleIds { get; set; }
+
     public bool IsArchived { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

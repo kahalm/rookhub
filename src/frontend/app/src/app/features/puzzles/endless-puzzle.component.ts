@@ -134,12 +134,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * Gauntlet-Kette: die beim Run-Start (serverseitig per getRandomBatch) generierte, vollständig
    * vordefinierte Puzzle-Folge entlang der ~logarithmischen Kurve. `chainIndex` zeigt auf das aktuell
    * gespielte Puzzle. Lösen UND Fehler rücken eine Stelle weiter (höher); ein Fehler kostet ein Leben.
-   * Die Kette liegt lokal (Offline/Refresh → exakt dasselbe Puzzle); `chainIndex`/`chainToken` werden
-   * zusätzlich im (synchronisierten) Spielstand abgelegt.
+   * Die Kette liegt lokal (Offline/Refresh → exakt dasselbe Puzzle); `chainIndex`/`seed` werden
+   * zusätzlich im (synchronisierten) Spielstand abgelegt, der Seed + die Ketten-IDs zusätzlich beim
+   * Session-Record am Server (für ein späteres Replay).
    */
   private chain: PuzzleDto[] = [];
   chainIndex = 0;
-  private chainToken = 0;
+  /** Eindeutiger Run-Seed (crypto.randomUUID) — identifiziert die Kette lokal + am Server. */
+  private seed = '';
   /** Lokal gecachte Kette (Offline-Start / Resume); identisch zu {@link chain} während eines Runs. */
   private offlinePool: PuzzleDto[] = [];
   reviewingWrongPuzzle = false;
@@ -330,7 +332,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.level = 0;
     this.solved = 0;
     this.chainIndex = 0;
-    this.chainToken = Date.now();
+    this.seed = this.newSeed();
     this._currentMinRating = this.config.startElo;
     this.maxRatingReached = this.config.startElo;
     this.isNewHighscore = false;
@@ -352,7 +354,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       // Offline-Start: vorab geladene Kette nutzen.
       this.chain = this.offlinePool;
       this.storage.saveOfflinePool(this.chain);
-      this.storage.saveChainToken(this.chainToken);
+      this.storage.saveChainSeed(this.seed);
       this.persistRun();
       this.loadCurrent();
     } else {
@@ -389,7 +391,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.chain = startIndex === 0 ? block : this.chain.concat(block);
         this.offlinePool = this.chain;
         this.storage.saveOfflinePool(this.chain);
-        this.storage.saveChainToken(this.chainToken);
+        this.storage.saveChainSeed(this.seed);
         this.persistRun();
         if (then) then();
       },
@@ -415,7 +417,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       next: pool => {
         this.offlinePool = pool || [];
         this.storage.saveOfflinePool(this.offlinePool);
-        this.storage.saveChainToken(0);   // Prefetch gehört zu keinem laufenden Run
+        this.storage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
       },
       error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
     });
@@ -425,6 +427,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.syncActiveGameToServer();
   }
 
+  /** Eindeutiger Seed für einen neuen Lauf (crypto.randomUUID, Fallback Zeit+Zufall). */
+  private newSeed(): string {
+    try {
+      const c = (globalThis as any).crypto;
+      if (c?.randomUUID) return c.randomUUID();
+    } catch {}
+    return `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+  }
+
   resumeGame(): void {
     if (!this.activeGameState) return;
     const g = this.activeGameState;
@@ -432,7 +443,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.solved = g.solved ?? 0;
     this.chainIndex = g.chainIndex ?? 0;
     this.level = g.level ?? this.chainIndex;
-    this.chainToken = g.chainToken ?? 0;
+    this.seed = g.seed ?? '';
     this._currentMinRating = g.currentMinRating ?? this.config.startElo;
     this.maxRatingReached = g.maxRatingReached ?? this._currentMinRating;
     this.sessionSeconds = g.sessionSeconds ?? 0;
@@ -451,7 +462,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Kette wiederherstellen: lokal nur, wenn der Token zu DIESEM Run passt (Refresh auf demselben
     // Gerät → exakt dasselbe Puzzle). Sonst (anderes Gerät / Cache überschrieben) die Kette von vorne
     // bis über die aktuelle Position neu generieren, damit chainIndex weiterhin korrekt zeigt.
-    const localOk = this.chainToken !== 0 && this.storage.loadChainToken() === this.chainToken
+    const localOk = !!this.seed && this.storage.loadChainSeed() === this.seed
       && this.offlinePool.length > this.chainIndex;
     if (localOk) {
       this.chain = this.offlinePool;
@@ -459,7 +470,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     } else if (navigator.onLine) {
       this.state = 'LOADING';
       this.chain = [];
-      this.chainToken = this.chainToken || Date.now();
+      this.seed = this.seed || this.newSeed();
       this.generateChainBlock(0, () => this.loadCurrent(), this.chainIndex + ENDLESS_CHAIN_BLOCK);
     } else if (this.offlinePool.length > this.chainIndex) {
       // Offline ohne passenden Token, aber genug Puzzles vorhanden → bestmöglich fortsetzen.
@@ -481,7 +492,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       totalSolved: g.solved ?? 0,
       maxRating: g.maxRatingReached ?? 0,
       durationSeconds: g.sessionSeconds ?? 0,
-      mistakeAtRatings: g.mistakes ?? []
+      mistakeAtRatings: g.mistakes ?? [],
+      // Seed aus dem Spielstand; die Kette liegt hier nur lokal (offlinePool), falls Token passt.
+      seed: g.seed ?? this.seed,
+      chainPuzzleIds: this.offlinePool.length && this.storage.loadChainSeed() === (g.seed ?? this.seed)
+        ? this.offlinePool.map(p => p.id).join(',') : undefined
     };
     this.storage.recordSessionToServer(session).subscribe(id => {
       if (id && this.authService.isLoggedIn) {
@@ -909,7 +924,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       solved: this.solved,
       level: this.level,
       chainIndex: this.chainIndex,
-      chainToken: this.chainToken,
+      seed: this.seed,
       currentMinRating: this._currentMinRating,
       maxRatingReached: this.maxRatingReached,
       sessionSeconds: this.sessionSeconds,
@@ -926,7 +941,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       totalSolved: this.solved,
       maxRating: this.maxRatingReached,
       durationSeconds: this.sessionSeconds,
-      mistakeAtRatings: [...this.currentSessionMistakes]
+      mistakeAtRatings: [...this.currentSessionMistakes],
+      // Seed + geordnete Ketten-IDs am Server persistieren → späteres Replay des Laufs.
+      seed: this.seed,
+      chainPuzzleIds: this.chain.map(p => p.id).join(',')
     };
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
     // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server für das Logging mitgeben,

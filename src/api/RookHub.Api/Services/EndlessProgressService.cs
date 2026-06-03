@@ -140,7 +140,9 @@ public class EndlessProgressService
             MaxRating = dto.MaxRating,
             DurationSeconds = dto.DurationSeconds,
             ConfigJson = dto.ConfigJson,
-            MistakeAtRatings = dto.MistakeAtRatings
+            MistakeAtRatings = dto.MistakeAtRatings,
+            Seed = dto.Seed,
+            ChainPuzzleIds = dto.ChainPuzzleIds
         };
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
@@ -166,7 +168,9 @@ public class EndlessProgressService
             MaxRating = dto.MaxRating,
             DurationSeconds = dto.DurationSeconds,
             ConfigJson = dto.ConfigJson,
-            MistakeAtRatings = dto.MistakeAtRatings
+            MistakeAtRatings = dto.MistakeAtRatings,
+            Seed = dto.Seed,
+            ChainPuzzleIds = dto.ChainPuzzleIds
         };
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
@@ -417,6 +421,8 @@ public class EndlessProgressService
         DurationSeconds = s.DurationSeconds,
         ConfigJson = s.ConfigJson,
         MistakeAtRatings = s.MistakeAtRatings,
+        Seed = s.Seed,
+        ChainPuzzleIds = s.ChainPuzzleIds,
         IsArchived = s.IsArchived
     };
 }

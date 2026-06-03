@@ -31,6 +31,8 @@ public class EndlessSessionDto
     public int DurationSeconds { get; set; }
     public string ConfigJson { get; set; } = string.Empty;
     public string MistakeAtRatings { get; set; } = string.Empty;
+    public string? Seed { get; set; }
+    public string? ChainPuzzleIds { get; set; }
     public bool IsArchived { get; set; }
 }
 
@@ -81,6 +83,14 @@ public class RecordEndlessSessionDto
 
     [MaxLength(100)]
     public string MistakeAtRatings { get; set; } = string.Empty;
+
+    /// <summary>Eindeutiger Seed des Gauntlet-Laufs (identifiziert die Kette für ein späteres Replay).</summary>
+    [MaxLength(64)]
+    public string? Seed { get; set; }
+
+    /// <summary>Geordnete Puzzle-IDs der gespielten Kette als CSV (für späteres Replay).</summary>
+    [MaxLength(20000)]
+    public string? ChainPuzzleIds { get; set; }
 
     /// <summary>Optional: einzelne Puzzles der Session (nur fürs Logging der Start-/Lösungszeit, nicht persistiert).</summary>
     public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();

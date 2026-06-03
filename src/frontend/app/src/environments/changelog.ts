@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.77.0';
+export const APP_VERSION = '0.78.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.0', date: '2026-06-03', changes: [
+    'Endlos-Gauntlet: jeder Lauf bekommt jetzt einen eindeutigen Seed; Seed + die geordneten Ketten-Puzzle-IDs werden beim Lauf-Ende am Server gespeichert (neue Spalten auf der Session). Damit ist die exakte Kette eines Laufs dauerhaft hinterlegt — Grundlage für ein späteres Replay.',
+  ]},
   { version: '0.77.0', date: '2026-06-03', changes: [
     'Endlos ist jetzt ein „Gauntlet": Beim Start wird die komplette Puzzle-Kette generiert und auf deinem Gerät abgelegt. Ein Seiten-Refresh oder „Fortsetzen" zeigt deshalb immer exakt dasselbe Puzzle — die Reihenfolge steht von Anfang an fest.',
     'Die Schwierigkeit folgt einer annähernd logarithmischen Kurve: schnell hoch bis zum 1. Schwellenwert (Ø erster Fehler, ~5 Puzzles), dann gemächlicher bis zum 2. Schwellenwert (Ø Maximum deiner letzten 5 Läufe, ~20 Puzzles), danach nur noch leicht ansteigend.',

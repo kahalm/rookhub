@@ -68,7 +68,7 @@ export class OfflinePrefetchService {
       this.puzzleService.getRandomBatch(windows, themes).subscribe({
         next: pool => {
           this.endlessStorage.saveOfflinePool(pool || []);
-          this.endlessStorage.saveChainToken(0);   // Prefetch gehört zu keinem laufenden Run
+          this.endlessStorage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
         },
         error: () => { /* offline/Fehler: ignorieren */ },
       });

@@ -193,6 +193,24 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordSession_PersistsSeedAndChainPuzzleIds()
+    {
+        var userId = await CreateUserAsync();
+        var dto = MakeSessionDto();
+        dto.Seed = "seed-abc-123";
+        dto.ChainPuzzleIds = "100,101,102";
+
+        var result = await _service.RecordSessionAsync(userId, dto);
+
+        Assert.Equal("seed-abc-123", result.Seed);
+        Assert.Equal("100,101,102", result.ChainPuzzleIds);
+        var db = await _db.EndlessSessions.FindAsync(result.Id);
+        Assert.NotNull(db);
+        Assert.Equal("seed-abc-123", db!.Seed);
+        Assert.Equal("100,101,102", db.ChainPuzzleIds);
+    }
+
+    [Fact]
     public async Task RecordSession_LogsEndlessSessionCompletedWithStats()
     {
         var userId = await CreateUserAsync();
