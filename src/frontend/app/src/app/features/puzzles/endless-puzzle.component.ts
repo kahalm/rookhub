@@ -547,15 +547,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       return;
     }
 
-    this.autoAdvanceTimer = setTimeout(() => {
-      this._currentMinRating += this.getCurrentStep();
-      this.level++;
-      this.loadPuzzle();
-    }, 800);
+    // Kurzer, sichtbarer Countdown bis zum nächsten Puzzle (wie Standard) — überspringbar
+    // per „Weiter"-Klick; Interaktion mit der Lösungs-Durchsicht bricht ihn ab.
+    this.startSolvedCountdown(() => this.continueAfterSolve());
   }
 
   continueAfterSolve(): void {
     this.reviewMode = false;
+    this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);  // pending Auto-Advance verwerfen
     this._currentMinRating += this.getCurrentStep();
     this.level++;
@@ -614,8 +613,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
+  reviewNext(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
+  reviewPrev(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;

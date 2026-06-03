@@ -343,7 +343,7 @@
                             </button>
                           } @else {
                             <button mat-raised-button color="primary" (click)="continueAfterSolve()">
-                              <mat-icon>arrow_forward</mat-icon> {{ 'endless.game.continue' | translate }}
+                              <mat-icon>arrow_forward</mat-icon> {{ 'endless.game.continue' | translate }}@if (solvedCountdown > 0) { ({{ solvedCountdown }})}
                             </button>
                           }
                         </div>

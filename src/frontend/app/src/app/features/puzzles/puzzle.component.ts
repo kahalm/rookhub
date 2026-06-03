@@ -80,8 +80,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
-  solvedCountdown = 0;
-  private countdownInterval?: ReturnType<typeof setInterval>;
   /** True wenn der User aufgegeben hat. Brett wird zurueckgesetzt damit er die Loesung
    *  selber durchspielen kann; im AWAITING/PLAYING/THINKING-State zeigt das Status-Panel
    *  einen Hinweis statt "Your turn!". Reset bei loadNext/retry. */
@@ -152,7 +150,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
     this.enterSolutionReview();
-    this.startSolvedCountdown();
+    this.startSolvedCountdown(() => this.loadNext());
   }
 
   protected override handleFailed(): void {
@@ -375,24 +373,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (e.key === 'ArrowRight') this.reviewNext();
   }
 
-  private startSolvedCountdown(): void {
-    this.solvedCountdown = 3;
-    this.countdownInterval = setInterval(() => {
-      this.solvedCountdown--;
-      if (this.solvedCountdown <= 0) {
-        this.stopCountdown();
-        this.loadNext();
-      }
-    }, 1000);
-  }
-
-  private stopCountdown(): void {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = undefined;
-    }
-    this.solvedCountdown = 0;
-  }
 
   reviewLastPuzzle(): void {
     // Direkt in den Analysemodus mit dem zuletzt gelösten Puzzle (Stellung + Zugfolge).

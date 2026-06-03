@@ -48,6 +48,11 @@ export abstract class BasePuzzleSolver {
   showSettings = false;
   private static readonly SETTINGS_OPEN_KEY = 'rookhub_puzzle_settings_open';
 
+  // ---- Auto-Advance nach dem Lösen: kurzer, sichtbarer, überspringbarer Countdown ----
+  solvedCountdown = 0;
+  private countdownInterval?: ReturnType<typeof setInterval>;
+  protected static readonly SOLVED_COUNTDOWN_SECONDS = 2;
+
   // ---- Visualisierungs-/Blindfold-Modus (0 = aus, 1-4 = aktiv) ----
   visualizationMode = 0;
   vizMoves: string[] = [];
@@ -122,6 +127,7 @@ export abstract class BasePuzzleSolver {
   protected setupSolver(fen: string, movesStr: string, startPly = 0): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.clearSolutionPlay();   // evtl. laufende Lösungs-Wiedergabe (nach Aufgeben) stoppen
+    this.stopCountdown();
     this.reviewMode = false;
     this.solverEpoch++;
     this.solutionMoves = movesStr.split(' ');
@@ -427,11 +433,35 @@ export abstract class BasePuzzleSolver {
     try { this.showSettings = localStorage.getItem(BasePuzzleSolver.SETTINGS_OPEN_KEY) === 'true'; } catch { /* ignore */ }
   }
 
+  // ===== Auto-Advance-Countdown =====
+  /** Kurzen Countdown bis zum nächsten Puzzle starten; `onElapsed` läuft bei 0. Jederzeit
+   *  per {@link stopCountdown} (z.B. „Weiter"-Klick oder Review-Interaktion) überspringbar. */
+  protected startSolvedCountdown(onElapsed: () => void): void {
+    this.stopCountdown();
+    this.solvedCountdown = BasePuzzleSolver.SOLVED_COUNTDOWN_SECONDS;
+    this.countdownInterval = setInterval(() => {
+      this.solvedCountdown--;
+      if (this.solvedCountdown <= 0) {
+        this.stopCountdown();
+        onElapsed();
+      }
+    }, 1000);
+  }
+
+  protected stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = undefined;
+    }
+    this.solvedCountdown = 0;
+  }
+
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */
   protected abortSolver(): void {
     this.aborted = true;
     this.solverEpoch++;                         // laufende Stockfish-Aufrufe verwerfen
     this.clearSolutionPlay();
+    this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     // endVisualizationHide raeumt auch den vizShowTimer auf — sonst feuert dessen
     // setTimeout-Callback nach Teardown/Puzzlewechsel.
