@@ -35,7 +35,7 @@ import { Key } from 'chessground/types';
 // THINKING = opponent responding (buttons visible, board locked)
 // PLAYING = user's turn after first move (buttons visible, board active)
 type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
-  | 'THINKING' | 'PLAYING' | 'CORRECT' | 'WRONG' | 'GAME_OVER' | 'EXHAUSTED';
+  | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'EXHAUSTED';
 
 interface EndlessPuzzleAttempt {
   puzzleNumber: number;
@@ -138,7 +138,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private puzzleStartTime = 0;
 
   // Zuletzt gelöstes Puzzle — für „Letztes Puzzle analysieren" (bleibt auch nach dem
-  // Auto-Advance auf das nächste Puzzle erhalten, da der CORRECT-Status nur kurz sichtbar ist).
+  // Auto-Advance auf das nächste Puzzle erhalten, da der SOLVED-Status nur kurz sichtbar ist).
   lastSolvedPuzzleId: number | null = null;
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
@@ -516,7 +516,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   private puzzleSolved(alternative: boolean): void {
     this.alternativeSolve = alternative;
-    this.state = 'CORRECT';
+    this.state = 'SOLVED';
     this.solved++;
     if (this.puzzle) {
       this.pushSessionPuzzle(true);
@@ -593,8 +593,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   showIntendedSolution(): void {
     if (!this.puzzle) return;
-    if (this.state === 'WRONG') this.reviewingWrongPuzzle = true;
-    this.state = 'CORRECT';
+    if (this.state === 'FAILED') this.reviewingWrongPuzzle = true;
+    this.state = 'SOLVED';
     this.reviewMode = true;
     this.reviewGoTo(0);
   }
@@ -635,7 +635,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    if (this.state !== 'CORRECT' && this.state !== 'WRONG') return;
+    if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }
@@ -654,7 +654,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.storage.saveActiveGameLocal(null);
       this.storage.saveProgressImmediate(this.config, this.highscore, null);
     }
-    this.state = 'WRONG';
+    this.state = 'FAILED';
     this.updateBoard();
     this.enterSolutionReview();
   }
@@ -702,7 +702,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
       this.storage.saveActiveGameLocal(null);
       this.storage.saveProgressImmediate(this.config, this.highscore, null);
-      this.state = 'WRONG';
+      this.state = 'FAILED';
       this.updateBoard();
       this.enterSolutionReview();
       return;
@@ -714,6 +714,18 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.abortSolver();
     this.gaveUp = true;
     this.loseLife();
+    // Wie Standard/Buch: die Lösung nach dem Aufgeben automatisch von vorne durchspielen.
+    this.playSolutionFromStart();
+  }
+
+  /** Dasselbe Puzzle erneut versuchen. Kostet KEIN (weiteres) Leben — der Fehlversuch hat
+   *  bereits eines gekostet. Nur sinnvoll, solange noch Leben übrig sind. */
+  retry(): void {
+    if (!this.puzzle || this.lives <= 0) return;
+    this.currentEval = '';
+    this.initialEval = '';
+    this.showEval = false;
+    this.setupPuzzle(this.puzzle);
   }
 
   private endGame(): void {

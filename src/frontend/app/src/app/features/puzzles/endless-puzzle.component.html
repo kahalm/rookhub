@@ -202,13 +202,13 @@
                 [check]="isCheck"
                 [boardTheme]="boardTheme"
                 [pieceSet]="pieceSet"
-                [visualization]="(state !== 'CORRECT' && state !== 'WRONG') ? visualizationMode : 0"
+                [visualization]="(state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
                 (moveMade)="onMoveMade($event)"
               />
             </div>
 
             <div class="info-section">
-              @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
+              @if (visualizationMode && state !== 'SOLVED' && state !== 'FAILED') {
                 <app-viz-card
                   [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
                   [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
@@ -326,7 +326,7 @@
                         </div>
                       </div>
                     }
-                    @case ('CORRECT') {
+                    @case ('SOLVED') {
                       <div class="status-center solved">
                         <mat-icon class="result-icon">check_circle</mat-icon>
                         @if (alternativeSolve) {
@@ -349,7 +349,7 @@
                         </div>
                       </div>
                     }
-                    @case ('WRONG') {
+                    @case ('FAILED') {
                       <div class="status-center failed">
                         @if (gaveUp) {
                           <mat-icon class="result-icon gave-up-icon">flag</mat-icon>
@@ -360,6 +360,9 @@
                         }
                         <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
                         <div class="wrong-actions">
+                          @if (!gaveUp && lives > 0) {
+                            <button mat-stroked-button (click)="retry()"><mat-icon>replay</mat-icon> {{ 'common.retry' | translate }}</button>
+                          }
                           <button mat-stroked-button (click)="analyzeCurrentPuzzle()">
                             <mat-icon>biotech</mat-icon> {{ 'endless.game.analyze' | translate }}
                           </button>

@@ -117,6 +117,8 @@ export abstract class BasePuzzleSolver {
    */
   protected setupSolver(fen: string, movesStr: string, startPly = 0): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.clearSolutionPlay();   // evtl. laufende Lösungs-Wiedergabe (nach Aufgeben) stoppen
+    this.reviewMode = false;
     this.solverEpoch++;
     this.solutionMoves = movesStr.split(' ');
     this.startPly = startPly;

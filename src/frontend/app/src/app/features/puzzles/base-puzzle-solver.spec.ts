@@ -37,3 +37,20 @@ describe('BasePuzzleSolver mouseslip after Stockfish error', () => {
     expect(solver.fen).toBe(afterSetup);
   }));
 });
+
+describe('BasePuzzleSolver playSolutionFromStart (geteiltes Aufgeben)', () => {
+  it('spielt die Lösung ab Zug 0 selbsttätig durch und stoppt am Ende', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // 4 Lösungszüge → reviewTotal = 4
+    tick(600);
+
+    (solver as unknown as { playSolutionFromStart(): void }).playSolutionFromStart();
+    expect(solver.reviewMode).toBeTrue();
+    expect(solver.reviewIndex).toBe(0);
+
+    tick(900); expect(solver.reviewIndex).toBe(1);
+    tick(900 * 3); expect(solver.reviewIndex).toBe(4);   // bis ans Ende
+    tick(900); expect(solver.reviewIndex).toBe(4);       // gestoppt, läuft nicht weiter
+  }));
+});
