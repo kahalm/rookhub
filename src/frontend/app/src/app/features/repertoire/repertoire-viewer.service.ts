@@ -1,3 +1,4 @@
+import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
 import { ParsedGame, START_FEN, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
@@ -11,6 +12,7 @@ export interface RepertoireLine {
   moveCount: number;
 }
 
+@Injectable()
 export class RepertoireViewerService {
   games: ParsedGame[] = [];
   lines: RepertoireLine[] = [];

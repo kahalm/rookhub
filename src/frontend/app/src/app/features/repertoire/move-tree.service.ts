@@ -1,3 +1,4 @@
+import { Injectable } from '@angular/core';
 import { ParsedGame, START_FEN, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
 export interface MoveTreeNode {
@@ -23,6 +24,7 @@ export interface Breadcrumb {
   node: MoveTreeNode;
 }
 
+@Injectable()
 export class MoveTreeService {
   private root: MoveTreeNode = this.createRoot();
   private current: MoveTreeNode = this.root;

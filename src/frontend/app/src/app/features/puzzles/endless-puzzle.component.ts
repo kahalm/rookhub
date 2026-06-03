@@ -20,7 +20,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { takeFromPool, takeNearestFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps } from './endless-prefetch.util';
+import { takeFromPool, takeNearestFromPool, buildEndlessRunWindows, autoFasttrackThresholds, fasttrackSteps, ENDLESS_RATING_WINDOW } from './endless-prefetch.util';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
@@ -48,9 +48,6 @@ interface EndlessPuzzleAttempt {
   startedAt: number;
   endedAt: number;
 }
-
-/** Breite des Rating-Fensters bei der Puzzleauswahl (früher = config.step). */
-const RATING_WINDOW = 40;
 
 @Component({
   selector: 'app-endless-puzzle',
@@ -238,7 +235,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // --- Config ---
 
   get currentMinRating(): number { return this._currentMinRating; }
-  get currentMaxRating(): number { return this._currentMinRating + RATING_WINDOW; }
+  get currentMaxRating(): number { return this._currentMinRating + ENDLESS_RATING_WINDOW; }
   get currentRating(): number { return this._currentMinRating; }
 
   get currentPhaseLabel(): string {
@@ -429,7 +426,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
 
     const min = this._currentMinRating;
-    const max = this._currentMinRating + RATING_WINDOW;
+    const max = this._currentMinRating + ENDLESS_RATING_WINDOW;
 
     // Offline: ausschließlich aus dem vorab geladenen Run-Pool bedienen.
     if (!navigator.onLine) {
@@ -501,7 +498,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const nextSolved = this.solved + 1;
     const nextStep = this.getStepForSolved(nextSolved);
     const min = this._currentMinRating + nextStep;
-    const max = min + RATING_WINDOW;
+    const max = min + ENDLESS_RATING_WINDOW;
     const themes = this.config.themes.trim() || undefined;
     this.puzzleService.getRandom(min, max, themes).subscribe({
       next: p => this.prefetchedPuzzle = p,

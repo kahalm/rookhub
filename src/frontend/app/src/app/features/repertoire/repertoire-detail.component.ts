@@ -26,6 +26,9 @@ type ViewMode = 'lines' | 'tree' | 'edit';
     TranslateModule, LoadingSpinnerComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
   ],
+  // Komponenten-bezogen (nicht providedIn:'root') — jede Instanz hat ihren eigenen
+  // Viewer-/Tree-Zustand; per DI statt `new` für Testbarkeit.
+  providers: [RepertoireViewerService, MoveTreeService],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -169,13 +172,12 @@ export class RepertoireDetailComponent implements OnInit {
   mode: ViewMode = 'lines';
   id!: number;
 
-  viewerService = new RepertoireViewerService();
-  treeService = new MoveTreeService();
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private http: HttpClient,
+    public viewerService: RepertoireViewerService,
+    public treeService: MoveTreeService,
   ) {}
 
   ngOnInit(): void {

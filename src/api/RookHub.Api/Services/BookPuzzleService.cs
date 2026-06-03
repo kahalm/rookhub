@@ -23,7 +23,7 @@ public class BookPuzzleService
     }
 
     private static readonly Regex SessionIdPattern =
-        new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
+        new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
     public async Task<BookPuzzleDto?> GetByIdAsync(int id)
     {

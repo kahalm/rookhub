@@ -150,7 +150,7 @@ public class PuzzleController : BaseApiController
         return Ok(new { claimed });
     }
 
-    private static readonly Regex SessionIdPattern = new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
     private static bool IsValidSessionId(string? sessionId)
         => !string.IsNullOrEmpty(sessionId) && sessionId.Length <= 36 && SessionIdPattern.IsMatch(sessionId);

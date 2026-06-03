@@ -11,7 +11,7 @@ namespace RookHub.Api.Controllers;
 [Route("api/endless")]
 public class EndlessController : BaseApiController
 {
-    private static readonly Regex SessionIdPattern = new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
     private readonly EndlessProgressService _service;
 
     public EndlessController(EndlessProgressService service) => _service = service;

@@ -13,8 +13,7 @@ public static class VisitorIdResolver
 {
     public const string HeaderName = "X-Visitor-Id";
 
-    // Identisch zur Anon-Session-Id-Validierung in Puzzle-/EndlessController.
-    private static readonly Regex SessionIdPattern = new(@"^[a-fA-F0-9\-]{1,36}$", RegexOptions.Compiled);
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
     /// <returns>
     /// "u:&lt;username&gt;" wenn authentifiziert; sonst "a:&lt;sessionId&gt;" wenn der Header
