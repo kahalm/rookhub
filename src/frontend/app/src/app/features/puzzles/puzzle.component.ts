@@ -122,16 +122,6 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
                         <mat-icon>analytics</mat-icon>
                         {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
                       </button>
-                      <button mat-button (click)="resetPuzzle()">
-                        <mat-icon>replay</mat-icon>
-                        {{ 'puzzles.actions.reset' | translate }}
-                      </button>
-                      @if (!mouseslipUsed) {
-                        <button mat-button (click)="mouseslip()">
-                          <mat-icon>mouse</mat-icon>
-                          {{ 'puzzles.actions.mouseslip' | translate }}
-                        </button>
-                      }
                       <button mat-button color="warn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
                         {{ 'puzzles.actions.giveUp' | translate }}
@@ -656,6 +646,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   ngOnInit(): void {
+    // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
+    try { this.showSettings = localStorage.getItem('rookhub_puzzle_settings_open') === 'true'; } catch {}
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.routePuzzleId = Number(idParam);
@@ -1026,6 +1019,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   toggleSettings(): void {
     this.showSettings = !this.showSettings;
+    try { localStorage.setItem('rookhub_puzzle_settings_open', String(this.showSettings)); } catch {}
     if (this.showSettings) {
       setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     }

@@ -183,6 +183,12 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
                   <div class="status-center">
                     <p class="status-text">{{ (gaveUp ? 'book.status.gaveUp' : 'book.status.yourTurn') | translate }}</p>
                     <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    <div class="play-actions">
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        {{ 'book.actions.giveUp' | translate }}
+                      </button>
+                    </div>
                   </div>
                 }
                 @case ('THINKING') {

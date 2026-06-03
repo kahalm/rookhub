@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.69.0';
+export const APP_VERSION = '0.70.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.70.0', date: '2026-06-03', changes: [
+    'Puzzle-Buttons konsistent (wie im Endlosmodus): „Aufgeben" ist jetzt von Anfang an verfügbar — auch beim Buch-Puzzle schon vor dem ersten Zug. „Zurücksetzen" und „Mausrutscher" erscheinen erst, nachdem ein Zug gemacht wurde (vorher waren sie beim Standard-Puzzle schon am Anfang da, obwohl es nichts zurückzusetzen gab).',
+    'Die Puzzle-Einstellungen/Filter (Zahnrad) bleiben jetzt offen, wenn du zum nächsten Puzzle wechselst (der Offen-Zustand wird gemerkt) — vorher klappten sie zu.',
+  ]},
   { version: '0.69.0', date: '2026-06-03', changes: [
     'Auch ohne Login zählen gelöste Buch-/Tagespuzzles jetzt mit: Ein anonym (nicht eingeloggt) gelöstes Buch-Puzzle wird über eine anonyme Sitzungs-ID erfasst (neuer Endpoint POST `/api/book-puzzles/{id}/attempt/anonymous`). In der Tagespuzzle-Anzeige auf Discord erscheinen eingeloggte Löser namentlich, anonyme als Anzahl („+N anonym"). Eingeloggte Solves bleiben wie bisher (namentlich, via `/attempt`).',
   ]},
