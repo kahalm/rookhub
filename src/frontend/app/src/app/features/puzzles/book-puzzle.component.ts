@@ -306,6 +306,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       return;
     }
 
+    const dateParam = this.route.snapshot.paramMap.get('date');
+    if (dateParam) {
+      this.loadDaily(dateParam);
+      return;
+    }
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.loadPuzzle(Number(idParam));
@@ -427,6 +433,25 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind, this.elapsedSeconds).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
+    });
+  }
+
+  /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */
+  private loadDaily(date: string): void {
+    this.state = 'LOADING';
+    this.stopTimer();
+    this.elapsedSeconds = 0;
+    this.alternativeSolve = false;
+    this.gaveUp = false;
+    this.puzzleService.getDailyPuzzle(date).subscribe({
+      next: puzzle => {
+        this.puzzle = puzzle;
+        this.setupPuzzle(puzzle);
+      },
+      error: () => {
+        this.state = 'LOADING';
+        this.puzzle = null;
+      }
     });
   }
 
