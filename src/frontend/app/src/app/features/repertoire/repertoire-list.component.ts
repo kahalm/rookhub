@@ -6,16 +6,18 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatChipsModule } from '@angular/material/chips';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
+import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
 
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -32,7 +34,14 @@ import { Repertoire } from '../../core/models';
           @for (rep of repertoires; track rep.id) {
             <mat-card>
               <mat-card-header>
-                <mat-card-title>{{ rep.name }}</mat-card-title>
+                <mat-card-title>
+                  {{ rep.name }}
+                  @if (rep.kind && rep.kind !== 0) {
+                    <mat-chip-set class="kind-chip-set">
+                      <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === 1" [class.kind-middlegame]="rep.kind === 2" [class.kind-endgame]="rep.kind === 3">{{ kindLabel(rep.kind) | translate }}</mat-chip>
+                    </mat-chip-set>
+                  }
+                </mat-card-title>
                 <mat-card-subtitle>{{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
@@ -54,6 +63,11 @@ import { Repertoire } from '../../core/models';
     .repertoire-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+    .kind-chip-set { display: inline-flex; margin-left: 8px; vertical-align: middle; }
+    .kind-chip { font-size: 0.72rem; min-height: 22px; }
+    .kind-chip.kind-opening { background-color: #1976d2; color: #fff; }
+    .kind-chip.kind-middlegame { background-color: #7b1fa2; color: #fff; }
+    .kind-chip.kind-endgame { background-color: #c62828; color: #fff; }
   `]
 })
 export class RepertoireListComponent implements OnInit {
@@ -61,6 +75,10 @@ export class RepertoireListComponent implements OnInit {
   loading = true;
 
   constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
+
+  kindLabel(kind: number): string {
+    return REPERTOIRE_KIND_LABELS[kind as RepertoireKind] ?? 'repertoire.kind.none';
+  }
 
   ngOnInit(): void {
     this.loadRepertoires();

@@ -65,20 +65,39 @@ try
         ?? throw new InvalidOperationException("JWT key not configured");
     if (Encoding.UTF8.GetBytes(jwtKey).Length < 32)
         throw new InvalidOperationException("JWT key must be at least 32 bytes for HMAC-SHA256");
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+    // Default-Scheme ist ein Policy-Scheme, das anhand des Bearer-Prefixes entscheidet:
+    // `rkh_…` → ApiToken-Handler (Personal Access Tokens fuer Maschinen-Clients),
+    // alles andere → JWT (User-Login). So koennen Endpoints transparent beides akzeptieren.
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = "Bearer";
+        options.DefaultChallengeScheme = "Bearer";
+    })
+    .AddPolicyScheme("Bearer", "JWT or ApiToken", options =>
+    {
+        options.ForwardDefaultSelector = ctx =>
         {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                ValidAudience = builder.Configuration["Jwt:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-            };
-        });
+            var auth = ctx.Request.Headers.Authorization.ToString();
+            if (auth.StartsWith("Bearer rkh_", StringComparison.OrdinalIgnoreCase))
+                return ApiTokenAuthenticationHandler.SchemeName;
+            return JwtBearerDefaults.AuthenticationScheme;
+        };
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    })
+    .AddScheme<ApiTokenAuthenticationOptions, ApiTokenAuthenticationHandler>(
+        ApiTokenAuthenticationHandler.SchemeName, _ => { });
 
     // Services
     builder.Services.AddScoped<AuthService>();
@@ -92,6 +111,7 @@ try
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
+    builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
     builder.Services.AddScoped<BookAdminService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
@@ -139,14 +159,15 @@ try
     // CORS policies
     builder.Services.AddCors(options =>
     {
-        // Policy for the Chrome extension (applied only to ExtensionController)
+        // Policy for the Chrome extension (applied only to ExtensionController).
+        // KEIN AllowCredentials: Auth laeuft ausschliesslich ueber Bearer-Token im
+        // Authorization-Header — Cookies werden vom Userscript nicht gebraucht und
+        // wuerden CSRF-Risiko schaffen, sollten weitere Origins hinzukommen.
         options.AddPolicy("ExtensionPolicy", policy =>
         {
-            policy.WithOrigins(
-                    "https://www.chess.com")
-                .WithMethods("GET", "POST")
-                .WithHeaders("Authorization", "Content-Type")
-                .AllowCredentials();
+            policy.WithOrigins("https://www.chess.com")
+                .WithMethods("GET")
+                .WithHeaders("Authorization", "Content-Type");
         });
         // Default policy for frontend
         options.AddDefaultPolicy(policy =>

@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
     public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();
+    public DbSet<UserApiToken> UserApiTokens => Set<UserApiToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -311,6 +312,17 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(d => d.BookPuzzleId)
              .OnDelete(DeleteBehavior.Restrict); // Buch-Loeschung soll Historie nicht killen
+        });
+
+        modelBuilder.Entity<UserApiToken>(e =>
+        {
+            // Unique-Index auf TokenHash → O(1)-Lookup bei jeder Authentifizierung.
+            e.HasIndex(t => t.TokenHash).IsUnique();
+            e.HasIndex(t => new { t.UserId, t.Name });
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -13,12 +13,47 @@ public class ProfileController : BaseApiController
     private readonly ProfileService _profileService;
     private readonly PlayerSearchService _playerSearchService;
     private readonly DiscordLinkService _discordLink;
+    private readonly ApiTokenService _apiTokens;
 
-    public ProfileController(ProfileService profileService, PlayerSearchService playerSearchService, DiscordLinkService discordLink)
+    public ProfileController(ProfileService profileService, PlayerSearchService playerSearchService, DiscordLinkService discordLink, ApiTokenService apiTokens)
     {
         _profileService = profileService;
         _playerSearchService = playerSearchService;
         _discordLink = discordLink;
+        _apiTokens = apiTokens;
+    }
+
+    // ── API-Tokens (Personal Access Tokens fuer Extensions / Skripte) ───────────────
+
+    [HttpGet("tokens")]
+    public async Task<ActionResult<List<ApiTokenDto>>> ListTokens()
+        => Ok(await _apiTokens.ListAsync(GetUserId()));
+
+    [HttpPost("tokens")]
+    public async Task<ActionResult<ApiTokenCreatedDto>> CreateToken([FromBody] CreateApiTokenDto dto)
+    {
+        try
+        {
+            return Ok(await _apiTokens.CreateAsync(GetUserId(), dto.Name, dto.Scope, dto.ExpiresInDays));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("tokens/{id}")]
+    public async Task<IActionResult> RevokeToken(int id)
+    {
+        try
+        {
+            await _apiTokens.RevokeAsync(GetUserId(), id);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet]

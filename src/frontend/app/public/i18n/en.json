@@ -136,6 +136,40 @@
       "linkFailed": "Could not link Discord account",
       "stashed": "Sign in or register to finish linking your Discord account."
     },
+    "tokens": {
+      "title": "Extension Tokens",
+      "subtitle": "Personal access tokens for machine clients (e.g. chess.com extension).",
+      "empty": "No tokens yet. Create one if you want to connect the chess.com extension.",
+      "create": "Create Token",
+      "revoke": "Revoke token",
+      "revokeConfirm": "Revoke token \"{{name}}\"? The client will no longer be able to connect.",
+      "revokeFailed": "Revoke failed",
+      "loadFailed": "Failed to load tokens",
+      "createFailed": "Failed to create token",
+      "never": "—",
+      "col": {
+        "name": "Name",
+        "prefix": "Prefix",
+        "created": "Created",
+        "lastUsed": "Last used",
+        "expires": "Expires"
+      },
+      "dialog": {
+        "title": "New Extension Token",
+        "name": "Name",
+        "nameHint": "e.g. \"Chess.com extension (laptop)\"",
+        "expires": "Expires",
+        "never": "never",
+        "days": "days",
+        "create": "Create"
+      },
+      "show": {
+        "title": "Token created",
+        "warning": "This token is shown ONLY now, once. Copy it into your extension — it cannot be retrieved later.",
+        "copy": "Copy",
+        "copied": "Copied to clipboard"
+      }
+    },
     "offline": {
       "title": "Offline",
       "hint": "Store puzzles on this device to keep solving without internet (per device).",
@@ -198,7 +232,14 @@
       "name": "Name",
       "description": "Description",
       "public": "Public",
+      "kind": "Category",
       "create": "Create"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Opening",
+      "middlegame": "Middlegame",
+      "endgame": "Endgame"
     },
     "lines": {
       "allLines": "All Lines",

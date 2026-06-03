@@ -117,4 +117,86 @@ public class RepertoireServiceTests : IDisposable
         var all = await _repertoireService.GetAllAsync(userId);
         Assert.Empty(all);
     }
+
+    [Fact]
+    public async Task CreateRepertoire_DefaultKindIsNone()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Default" });
+        Assert.Equal(Models.RepertoireKind.None, rep.Kind);
+    }
+
+    [Fact]
+    public async Task CreateRepertoire_AcceptsKind()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto
+        {
+            Name = "Sicilian",
+            Kind = Models.RepertoireKind.Opening
+        });
+        Assert.Equal(Models.RepertoireKind.Opening, rep.Kind);
+
+        var detail = await _repertoireService.GetByIdAsync(rep.Id, userId);
+        Assert.Equal(Models.RepertoireKind.Opening, detail.Kind);
+    }
+
+    [Fact]
+    public async Task UpdateRepertoire_ChangesKind()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "x" });
+
+        var updated = await _repertoireService.UpdateAsync(rep.Id, userId, new UpdateRepertoireDto
+        {
+            Kind = Models.RepertoireKind.Endgame
+        });
+        Assert.Equal(Models.RepertoireKind.Endgame, updated.Kind);
+
+        // Andere Felder unangetastet, wenn nicht im Update gesetzt
+        Assert.Equal("x", updated.Name);
+    }
+
+    [Fact]
+    public async Task GetExtensionListAsync_FiltersByKind()
+    {
+        var userId = await CreateUserAsync();
+        await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "open", Kind = Models.RepertoireKind.Opening });
+        await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "end", Kind = Models.RepertoireKind.Endgame });
+        await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "none" });
+
+        var all = await _repertoireService.GetExtensionListAsync(userId);
+        Assert.Equal(3, all.Count);
+
+        var openings = await _repertoireService.GetExtensionListAsync(userId, Models.RepertoireKind.Opening);
+        Assert.Single(openings);
+        Assert.Equal("open", openings[0].Name);
+        Assert.Equal(Models.RepertoireKind.Opening, openings[0].Kind);
+
+        var endgames = await _repertoireService.GetExtensionListAsync(userId, Models.RepertoireKind.Endgame);
+        Assert.Single(endgames);
+        Assert.Equal("end", endgames[0].Name);
+
+        var middlegames = await _repertoireService.GetExtensionListAsync(userId, Models.RepertoireKind.Middlegame);
+        Assert.Empty(middlegames);
+    }
+
+    [Fact]
+    public async Task GetExtensionListAsync_TotalSizeBytes_AggregatesFiles()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "x", Kind = Models.RepertoireKind.Opening });
+
+        // Direkt RepertoireFiles einfuegen (Upload-Validierung umgehen).
+        _db.RepertoireFiles.AddRange(
+            new Models.RepertoireFile { RepertoireId = rep.Id, FileName = "a.pgn", PgnContent = "[Event \"a\"]\n1. e4", FileSize = 100 },
+            new Models.RepertoireFile { RepertoireId = rep.Id, FileName = "b.pgn", PgnContent = "[Event \"b\"]\n1. d4", FileSize = 250 }
+        );
+        await _db.SaveChangesAsync();
+
+        var list = await _repertoireService.GetExtensionListAsync(userId, Models.RepertoireKind.Opening);
+        Assert.Single(list);
+        Assert.Equal(350, list[0].TotalSizeBytes);
+        Assert.Equal(2, list[0].FileCount);
+    }
 }
