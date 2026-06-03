@@ -208,8 +208,10 @@ public class AppDbContext : DbContext
              .HasForeignKey(a => a.BookPuzzleId)
              .OnDelete(DeleteBehavior.Restrict);
 
+            e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
             e.HasIndex(a => new { a.BookPuzzleId, a.AttemptedAt });
             e.HasIndex(a => new { a.BookPuzzleId, a.UserId });
+            e.HasIndex(a => new { a.BookPuzzleId, a.AnonymousSessionId });
         });
 
         modelBuilder.Entity<EndlessProgress>(e =>

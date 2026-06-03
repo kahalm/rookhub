@@ -101,6 +101,46 @@ public class BookPuzzleController : BaseApiController
         return Ok();
     }
 
+    private static readonly System.Text.RegularExpressions.Regex _SessionId =
+        new(@"^[a-fA-F0-9\-]{1,36}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>Anonymer (nicht eingeloggter) Lösungsversuch — zählt fürs Tagespuzzle mit,
+    /// erscheint aber namenlos. Nur Solves werden erfasst, je (Puzzle, Session) genau einmal
+    /// (gegen Spam + saubere Zählung).</summary>
+    [AllowAnonymous]
+    [HttpPost("{id}/attempt/anonymous")]
+    public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] RecordAnonymousBookAttemptDto dto)
+    {
+        if (!_SessionId.IsMatch(dto.SessionId ?? ""))
+            return BadRequest(new { message = "Invalid sessionId." });
+        if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
+            return NotFound(new { message = "Book puzzle not found." });
+
+        if (dto.Solved)
+        {
+            var exists = await _db.BookPuzzleAttempts.AnyAsync(
+                a => a.BookPuzzleId == id && a.AnonymousSessionId == dto.SessionId && a.Solved);
+            if (!exists)
+            {
+                var solvedAt = DateTime.UtcNow;
+                var timeSeconds = Math.Clamp(dto.TimeSeconds, 0, 86400);
+                _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
+                {
+                    BookPuzzleId = id,
+                    AnonymousSessionId = dto.SessionId,
+                    Solved = true,
+                    TimeSeconds = timeSeconds,
+                    AttemptedAt = solvedAt,
+                });
+                await _db.SaveChangesAsync();
+                _logger.LogInformation(
+                    "BookPuzzleAttempt: Anonymous solved book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
+                    id, solvedAt.AddSeconds(-timeSeconds), solvedAt, timeSeconds);
+            }
+        }
+        return Ok();
+    }
+
     /// <summary>
     /// Aggregierte Ergebnisse zu einem Buch-Puzzle (für die Tagespuzzle-Anzeige): wer hat gelöst
     /// (je User dedupliziert, mit Discord-Verknüpfung sofern vorhanden) + Versuchs-/Lösungszähler.
@@ -114,11 +154,17 @@ public class BookPuzzleController : BaseApiController
         if (DateTime.TryParse(since, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var sinceUtc))
             q = q.Where(a => a.AttemptedAt >= sinceUtc);
 
-        // Je User aggregieren (nur skalare Aggregate → EF-übersetzbar): wie oft gelöst?
-        var perUser = await q
+        // Eingeloggte: je User aggregieren (nur skalare Aggregate → EF-übersetzbar).
+        var perUser = await q.Where(a => a.UserId != null)
             .GroupBy(a => a.UserId)
-            .Select(g => new { UserId = g.Key, SolvedCount = g.Count(a => a.Solved) })
+            .Select(g => new { UserId = g.Key!.Value, SolvedCount = g.Count(a => a.Solved) })
             .ToListAsync();
+
+        // Anonyme: nur gelöste werden anonym erfasst → distinct Sessions = anonyme Löser.
+        var anonymousSolvedCount = await q.Where(a => a.AnonymousSessionId != null && a.Solved)
+            .Select(a => a.AnonymousSessionId).Distinct().CountAsync();
+        var anonymousAttempts = await q.Where(a => a.AnonymousSessionId != null)
+            .Select(a => a.AnonymousSessionId).Distinct().CountAsync();
 
         var userIds = perUser.Select(u => u.UserId).ToList();
         var names = await _db.AppUsers.Where(u => userIds.Contains(u.Id))
@@ -145,7 +191,8 @@ public class BookPuzzleController : BaseApiController
         return Ok(new BookPuzzleResultsDto
         {
             SolvedCount = solvers.Count,
-            AttemptCount = perUser.Count,
+            AnonymousSolvedCount = anonymousSolvedCount,
+            AttemptCount = perUser.Count + anonymousAttempts,
             Solvers = solvers
         });
     }

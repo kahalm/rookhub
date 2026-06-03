@@ -661,13 +661,22 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    * (Basis für die Tagespuzzle-Visualisierung auf Discord). Pro Puzzle nur einmal.
    */
   private recordBookAttempt(solved: boolean): void {
-    if (!this.standalone || this.bookAttemptRecorded || !this.puzzle || !this.auth.isLoggedIn) return;
+    if (!this.standalone || this.bookAttemptRecorded || !this.puzzle) return;
     this.bookAttemptRecorded = true;
-    const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-    const body = { solved, timeSeconds: this.elapsedSeconds };
-    if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-    this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds)
-      .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
+    if (this.auth.isLoggedIn) {
+      const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
+      const body = { solved, timeSeconds: this.elapsedSeconds };
+      if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds)
+        .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
+    } else if (solved) {
+      // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos).
+      const url = `/api/book-puzzles/${this.puzzle.id}/attempt/anonymous`;
+      const body = { solved, timeSeconds: this.elapsedSeconds, sessionId: this.puzzleService.ensureSessionId() };
+      if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
+      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.elapsedSeconds)
+        .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
+    }
   }
 
   ngOnInit(): void {

@@ -186,6 +186,13 @@ export class PuzzleService {
     return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds });
   }
 
+  /** Anonymer Buch-Puzzle-Solve (nicht eingeloggt) — zählt fürs Tagespuzzle namenlos mit. */
+  recordBookAttemptAnonymous(id: number, solved: boolean, timeSeconds: number): Observable<unknown> {
+    return this.http.post(`/api/book-puzzles/${id}/attempt/anonymous`, {
+      solved, timeSeconds, sessionId: this.ensureSessionId()
+    });
+  }
+
   getBookList(): Observable<BookInfoDto[]> {
     return this.http.get<BookInfoDto[]>('/api/book-puzzles/books');
   }

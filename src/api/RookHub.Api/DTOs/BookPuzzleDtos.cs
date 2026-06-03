@@ -6,6 +6,12 @@ public class RecordBookAttemptDto
     public int TimeSeconds { get; set; }
 }
 
+public class RecordAnonymousBookAttemptDto : RecordBookAttemptDto
+{
+    /// <summary>Anonyme Geräte-/Sitzungs-ID (gleiche wie bei Standard-Puzzle/Endless).</summary>
+    public string SessionId { get; set; } = string.Empty;
+}
+
 public class BookSolverDto
 {
     public string Name { get; set; } = string.Empty;
@@ -15,7 +21,10 @@ public class BookSolverDto
 
 public class BookPuzzleResultsDto
 {
+    /// <summary>Anzahl eingeloggter (namentlicher) Löser.</summary>
     public int SolvedCount { get; set; }
+    /// <summary>Anzahl anonymer Löser (distinct Sessions), die gelöst haben.</summary>
+    public int AnonymousSolvedCount { get; set; }
     public int AttemptCount { get; set; }
     public List<BookSolverDto> Solvers { get; set; } = new();
 }

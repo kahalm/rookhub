@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.68.1';
+export const APP_VERSION = '0.69.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.69.0', date: '2026-06-03', changes: [
+    'Auch ohne Login zählen gelöste Buch-/Tagespuzzles jetzt mit: Ein anonym (nicht eingeloggt) gelöstes Buch-Puzzle wird über eine anonyme Sitzungs-ID erfasst (neuer Endpoint POST `/api/book-puzzles/{id}/attempt/anonymous`). In der Tagespuzzle-Anzeige auf Discord erscheinen eingeloggte Löser namentlich, anonyme als Anzahl („+N anonym"). Eingeloggte Solves bleiben wie bisher (namentlich, via `/attempt`).',
+  ]},
   { version: '0.68.1', date: '2026-06-03', changes: [
     'Fix: Client-Diagnose-Endpoint loggt Routine-Heartbeats (z.B. Bot-Lebenszeichen) jetzt auf Info statt Warning — sonst lösten die regelmäßigen Heartbeats im Log-Watcher einen „warn_spike"-Fehlalarm aus. Echte Engine-Crash-/Hänger-Meldungen bleiben auf Warning.',
   ]},

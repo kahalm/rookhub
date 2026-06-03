@@ -177,6 +177,44 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAnonymousAttempt_CountsInResults_DedupedPerSession()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "anon.pgn:1", bookFileName: "anon.pgn");
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaa" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 5, SessionId = "aaaa" });  // gleiche Session → dedupe
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 7, SessionId = "bbbb" });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(2, res.AnonymousSolvedCount);   // aaaa + bbbb (aaaa nur 1×)
+        Assert.Equal(0, res.SolvedCount);            // keine eingeloggten
+        Assert.Empty(res.Solvers);
+        Assert.Equal(1, await _db.BookPuzzleAttempts.CountAsync(a => a.AnonymousSessionId == "aaaa"));
+    }
+
+    [Fact]
+    public async Task RecordAnonymousAttempt_InvalidSession_BadRequest()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "anon2.pgn:1", bookFileName: "anon2.pgn");
+        Assert.IsType<BadRequestObjectResult>(
+            await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, SessionId = "" }));
+    }
+
+    [Fact]
+    public async Task Results_CombineNamedAndAnonymous()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "mix.pgn:1", bookFileName: "mix.pgn");
+        var anna = await CreateUserAsync("anna2");
+        SetUser(anna.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 12 });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "ffff" });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(1, res.SolvedCount);            // anna2 (eingeloggt)
+        Assert.Equal(1, res.AnonymousSolvedCount);   // Session ffff
+        Assert.Equal(2, res.AttemptCount);           // 1 User + 1 anonyme Session
+    }
+
+    [Fact]
     public async Task GetById_ReturnsPuzzle()
     {
         var puzzle = await CreateBookPuzzleAsync();
