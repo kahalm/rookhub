@@ -32,7 +32,7 @@ import { SnackbarService } from '../../core/snackbar.service';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}">
+              <input matInput type="password" [(ngModel)]="password" name="password" required minlength="4">
               <mat-hint>{{ 'auth.register.passwordHint' | translate }}</mat-hint>
             </mat-form-field>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">

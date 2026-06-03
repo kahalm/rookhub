@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -13,7 +14,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, TranslateModule],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -30,6 +31,7 @@ import { SnackbarService } from '../../core/snackbar.service';
               <mat-label>{{ 'auth.login.passwordLabel' | translate }}</mat-label>
               <input matInput type="password" [(ngModel)]="password" name="password" required>
             </mat-form-field>
+            <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe">{{ 'auth.login.rememberMe' | translate }}</mat-checkbox>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
               {{ loading ? ('auth.login.submitting' | translate) : ('auth.login.submit' | translate) }}
             </button>
@@ -51,6 +53,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 export class LoginComponent {
   username = '';
   password = '';
+  rememberMe = false;
   loading = false;
 
   returnUrl: string;
@@ -67,7 +70,7 @@ export class LoginComponent {
 
   onSubmit(): void {
     this.loading = true;
-    this.auth.login(this.username, this.password).subscribe({
+    this.auth.login(this.username, this.password, this.rememberMe).subscribe({
       next: () => {
         this.router.navigateByUrl(this.returnUrl);
       },

@@ -81,6 +81,23 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_RememberMe_IssuesLongerLivedToken()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+
+        var normal = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123", RememberMe = false });
+        var remember = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123", RememberMe = true });
+
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var normalExp = handler.ReadJwtToken(normal.Token).ValidTo;
+        var rememberExp = handler.ReadJwtToken(remember.Token).ValidTo;
+
+        // Ohne „Eingeloggt bleiben": ~1 Tag; mit: ~30 Tage.
+        Assert.True(normalExp < DateTime.UtcNow.AddDays(2), "normales Token sollte ~1 Tag gültig sein");
+        Assert.True(rememberExp > DateTime.UtcNow.AddDays(20), "Remember-Me-Token sollte deutlich länger gültig sein");
+    }
+
+    [Fact]
     public async Task Login_InvalidPassword_Throws()
     {
         await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });

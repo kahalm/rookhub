@@ -95,14 +95,14 @@ public class AuthService
 
         return new AuthResponseDto
         {
-            Token = GenerateJwt(user),
+            Token = GenerateJwt(user, dto.RememberMe),
             Username = user.Username,
             UserId = user.Id,
             IsAdmin = user.IsAdmin
         };
     }
 
-    private string GenerateJwt(AppUser user)
+    private string GenerateJwt(AppUser user, bool rememberMe = false)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured")));
@@ -120,7 +120,8 @@ public class AuthService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(24),
+            // „Eingeloggt bleiben": 30 Tage, sonst 1 Tag.
+            expires: DateTime.UtcNow.AddDays(rememberMe ? 30 : 1),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 

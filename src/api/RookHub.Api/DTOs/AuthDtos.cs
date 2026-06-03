@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using RookHub.Api.Validation;
 
 namespace RookHub.Api.DTOs;
 
@@ -11,7 +10,8 @@ public class RegisterDto
     [Required, EmailAddress, MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, MinLength(8), MaxLength(1024), PasswordComplexity]
+    // Bewusst minimal: nur Mindestlänge (>= 4), keine Komplexitätsregeln.
+    [Required, MinLength(4), MaxLength(1024)]
     public string Password { get; set; } = string.Empty;
 }
 
@@ -22,6 +22,9 @@ public class LoginDto
 
     [Required]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>„Eingeloggt bleiben" — verlängert die Token-Gültigkeit (30 Tage statt 1 Tag).</summary>
+    public bool RememberMe { get; set; }
 }
 
 public class AuthResponseDto
