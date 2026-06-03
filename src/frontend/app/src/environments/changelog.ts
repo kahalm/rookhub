@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.71.1';
+export const APP_VERSION = '0.72.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.72.0', date: '2026-06-03', changes: [
+    'Die drei Puzzle-Modi (Standard, Buch/Tagespuzzle, Endlos) verhalten sich jetzt einheitlich:',
+    'Aufgeben spielt in allen Modi die Lösung von vorne durch (vorher sprang der Endlosmodus nur ans Ende).',
+    'Nach dem Lösen springt jeder Modus per kurzem, sichtbarem Countdown automatisch zum nächsten Puzzle — jederzeit per „Weiter" überspringbar (vorher: Standard 3s, Endlos sofort, Buch gar nicht).',
+    'Endlos: Nach „Analysieren" → „Zurück" geht es direkt beim nächsten Puzzle des laufenden Runs weiter statt in der Übersicht zu landen.',
+    'Endlos: Nach einem Fehlversuch gibt es jetzt „Wiederholen" (kostet kein weiteres Leben); Einstellungen (Brett-/Figurenthema + Visualisierung) sind auch während des Spiels erreichbar.',
+    'Buch-Puzzle hat jetzt — wie die anderen Modi — den „Bewertung anzeigen"-Knopf (Stockfish-Einschätzung).',
+    'Der „Mausrutscher"-Knopf und der gemerkte Offen-Zustand der Einstellungen verhalten sich nun in allen Modi gleich.',
+    'Unter der Haube: die gemeinsame Lösungs-/Review-/Countdown-Logik liegt jetzt zentral (weniger Duplikat), keine Funktionsänderung darüber hinaus.',
+  ]},
   { version: '0.71.1', date: '2026-06-03', changes: [
     'Fix (Betrieb): Der Docker-Healthcheck des Frontend-Containers prüft jetzt 127.0.0.1 statt localhost — sonst wurde der Container fälschlich als „unhealthy" gemeldet (busybox-wget wählte für „localhost" IPv6 ::1, wo nginx nicht lauscht). Reiner Healthcheck-Fix, keine Funktionsänderung an der App.',
   ]},
