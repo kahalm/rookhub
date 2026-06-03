@@ -1,0 +1,64 @@
+    .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    .full-width { width: 100%; }
+    .table-scroll { overflow-x: auto; }
+    .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
+    mat-card { margin-bottom: 1rem; }
+    .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
+    .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
+    .fav-icon:hover { color: #ffc107; }
+
+    .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
+    .team-link:hover { color: #0d47a1; }
+
+    .mobile-only { display: none; }
+    .player-cards { padding: 0.5rem 0; }
+    .player-card {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      cursor: pointer;
+    }
+    .player-card:hover { background: rgba(0,0,0,0.02); }
+    .player-main {
+      display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.95rem;
+    }
+    .player-snr { color: #888; min-width: 2rem; }
+    .player-title { font-weight: 600; color: #1565c0; }
+    .player-name { font-weight: 500; }
+    .player-details {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;
+      padding-left: 2.4rem; font-size: 0.82rem; color: #666;
+    }
+    .player-details span:not(:last-child)::after { content: "\\00b7"; margin-left: 0.5rem; }
+
+    .result-cell { white-space: nowrap; }
+
+    .pairing-cards { padding: 0.5rem 0; }
+    .pairing-card {
+      display: flex; gap: 0.75rem; padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.08); align-items: center;
+    }
+    .pairing-board { color: #888; min-width: 1.5rem; font-size: 0.85rem; }
+    .pairing-teams { flex: 1; min-width: 0; }
+    .pairing-team {
+      font-size: 0.93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .pairing-result { font-size: 0.82rem; color: #666; padding: 0.15rem 0; white-space: nowrap; }
+
+    @media (max-width: 768px) {
+      .detail-container { padding: 0.75rem; }
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+      .btn-label { display: none; }
+      .action-bar button, .action-bar a {
+        min-width: 0 !important; padding: 0 !important; width: 44px; height: 44px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
+      :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
+      :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
+      .player-details { padding-left: 1.5rem; }
+      .pairing-team { white-space: normal; }
+    }

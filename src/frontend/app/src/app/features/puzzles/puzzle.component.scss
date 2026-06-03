@@ -1,0 +1,84 @@
+    .puzzle-page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .puzzle-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+    .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
+    .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
+    .status-card { min-height: 120px; }
+    .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
+    .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
+    .timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
+    .result-icon { font-size: 48px; width: 48px; height: 48px; }
+    .solved .result-icon { color: #4caf50; }
+    .failed .result-icon { color: #f44336; }
+    .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
+    .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
+    .eval-item { display: flex; align-items: center; gap: 0.25rem; }
+    .eval-label { font-size: 0.8em; color: rgba(0,0,0,0.5); }
+    .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
+    .eval-arrow { color: rgba(0,0,0,0.4); }
+    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .elo-change { font-size: 1.2em; font-weight: bold; }
+    .elo-up { color: #4caf50; }
+    .elo-down { color: #f44336; }
+    .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
+    .rating-badge { font-weight: bold; font-size: 1.1em; }
+    .share-puzzle-btn { margin-top: 0.25rem; }
+    .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .theme-chip {
+      background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
+      font-size: 0.85em; white-space: nowrap;
+    }
+    .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
+    .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
+    .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
+    .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .filter-field { flex: 1; }
+    .viz-slider { margin-bottom: 0.75rem; }
+    .viz-slider label { font-size: 0.9em; font-weight: 500; }
+    .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
+    .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-card {}
+    .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .viz-card .viz-moves {
+      font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5;
+      background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word;
+    }
+    .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }
+    .viz-countdown { font-size: 0.9em; color: #e65100; font-weight: 500; margin-bottom: 0.25rem; }
+    .viz-show-btn {
+      margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500;
+      user-select: none; touch-action: manipulation;
+    }
+    .viz-show-btn:active { background: #e3f2fd; }
+    .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .review-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .review-counter { font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
+    .review-btn { width: 100%; height: 40px; font-size: 0.9em; }
+    .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
+    .endless-btn { width: 100%; height: 44px; font-size: 1em; }
+    .endless-btn mat-icon { margin-right: 0.25rem; }
+    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
+    .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+    .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
+    .status-card { position: relative; }
+    .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
+    .settings-gear.active { color: #1976d2; }
+    .theme-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .theme-chip.active { border-color: #1976d2; }
+    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
+    .tp-light, .tp-dark { flex: 1; }
+    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
+
+    @media (max-width: 768px) {
+      .puzzle-layout { flex-direction: column; }
+      .board-section { width: 100%; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }

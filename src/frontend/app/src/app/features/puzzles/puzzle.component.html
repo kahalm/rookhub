@@ -1,0 +1,366 @@
+    <div class="puzzle-page">
+      <div class="puzzle-layout">
+        <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
+          <app-puzzle-board
+            [fen]="boardFen"
+            [actualFen]="actualFen"
+            [orientation]="orientation"
+            [turnColor]="turnColor"
+            [dests]="dests"
+            [lastMove]="lastMove"
+            [viewOnly]="reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
+            [premovable]="state === 'THINKING'"
+            [check]="isCheck"
+            [boardTheme]="boardTheme"
+            [pieceSet]="pieceSet"
+            [visualization]="(state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
+            (moveMade)="onMoveMade($event)"
+          />
+        </div>
+
+        <div class="info-section">
+          @if (visualizationMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING' || state === 'SOLVED' || state === 'FAILED')) {
+            <mat-card class="viz-card">
+              <mat-card-content>
+                <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'puzzles.viz.title' | translate: { level: visualizationMode } }}</div>
+                @if (vizCountdownSeconds > 0) {
+                  <div class="viz-countdown">{{ 'puzzles.viz.countdown' | translate: { seconds: vizCountdownSeconds } }}</div>
+                }
+                <div class="viz-moves">{{ vizMoveText || ('puzzles.viz.noMoveYet' | translate) }}</div>
+                @if (vizPiecesHidden) {
+                  <button class="viz-show-btn" (click)="onVizShow()">
+                    {{ (vizShowPressed ? 'puzzles.viz.showing' : 'puzzles.viz.show') | translate }}
+                  </button>
+                }
+                <div class="viz-hint">{{ vizLevelDescription }}</div>
+              </mat-card-content>
+            </mat-card>
+          }
+          <mat-card class="status-card">
+            <mat-card-content>
+              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [title]="'puzzles.settings.tooltip' | translate">
+                <mat-icon>settings</mat-icon>
+              </button>
+              @switch (state) {
+                @case ('LOADING') {
+                  <div class="status-center">
+                    <mat-spinner diameter="40"></mat-spinner>
+                    <p>{{ 'puzzles.status.loading' | translate }}</p>
+                  </div>
+                }
+                @case ('ERROR') {
+                  <div class="status-center failed">
+                    <mat-icon class="result-icon">{{ offlineNoCache ? 'cloud_off' : 'error_outline' }}</mat-icon>
+                    <p class="status-text">{{ (offlineNoCache ? 'puzzles.status.offlineNoCache' : 'puzzles.status.loadFailed') | translate }}</p>
+                    <button mat-raised-button color="primary" (click)="loadNext()">
+                      <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+                    </button>
+                  </div>
+                }
+                @case ('SETUP') {
+                  <div class="status-center">
+                    <p class="status-text">{{ 'puzzles.status.watchOpponent' | translate }}</p>
+                  </div>
+                }
+                @case ('AWAITING_USER_MOVE') {
+                  <div class="status-center">
+                    <p class="status-text">{{ (gaveUp ? 'puzzles.status.gaveUpPlayOut' : 'puzzles.status.yourTurn') | translate }}</p>
+                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                        <span class="eval-arrow">→</span>
+                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                      </div>
+                    }
+                    <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                      </button>
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        {{ 'puzzles.actions.giveUp' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('THINKING') {
+                  <div class="status-center">
+                    <mat-spinner diameter="24"></mat-spinner>
+                    <p class="status-text">{{ 'puzzles.status.thinking' | translate }}</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                        <span class="eval-arrow">→</span>
+                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                      </div>
+                    }
+                    <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                      </button>
+                      <button mat-button (click)="resetPuzzle()">
+                        <mat-icon>replay</mat-icon>
+                        {{ 'puzzles.actions.reset' | translate }}
+                      </button>
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        {{ 'puzzles.actions.giveUp' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('PLAYING') {
+                  <div class="status-center">
+                    <p class="status-text">{{ (gaveUp ? 'puzzles.status.gaveUpPlayOut' : 'puzzles.status.yourTurn') | translate }}</p>
+                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    @if (showEval) {
+                      <div class="eval-compare">
+                        @if (evalLoading) {
+                          <mat-spinner diameter="16"></mat-spinner>
+                        } @else {
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                          <span class="eval-arrow">→</span>
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                        }
+                      </div>
+                    }
+                    <div class="play-actions">
+                      <button mat-button (click)="toggleEval()">
+                        <mat-icon>analytics</mat-icon>
+                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                      </button>
+                      <button mat-button (click)="resetPuzzle()">
+                        <mat-icon>replay</mat-icon>
+                        {{ 'puzzles.actions.reset' | translate }}
+                      </button>
+                      @if (!mouseslipUsed) {
+                        <button mat-button (click)="mouseslip()">
+                          <mat-icon>mouse</mat-icon>
+                          {{ 'puzzles.actions.mouseslip' | translate }}
+                        </button>
+                      }
+                      <button mat-button color="warn" (click)="giveUp()">
+                        <mat-icon>flag</mat-icon>
+                        {{ 'puzzles.actions.giveUp' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('SOLVED') {
+                  <div class="status-center solved">
+                    @if (gaveUp) {
+                      <mat-icon class="result-icon" style="color:#f44336">flag</mat-icon>
+                      <p class="status-text">{{ 'puzzles.result.solutionPlayedOut' | translate }}</p>
+                      <p class="alt-hint">{{ 'puzzles.result.tryYourselfNextTime' | translate }}</p>
+                    } @else if (alternativeSolve) {
+                      <mat-icon class="result-icon">check_circle</mat-icon>
+                      <p class="status-text">{{ 'puzzles.result.checkmate' | translate }}</p>
+                      <p class="alt-hint">{{ 'puzzles.result.alternativeSolution' | translate }}</p>
+                    } @else {
+                      <mat-icon class="result-icon">check_circle</mat-icon>
+                      <p class="status-text">{{ 'puzzles.result.correct' | translate }}</p>
+                    }
+                    @if (lastEloChange != null) {
+                      @if (gaveUp || lastEloChange < 0) {
+                        <span class="elo-change elo-down">{{ lastEloChange }}</span>
+                      } @else {
+                        <span class="elo-change elo-up">+{{ lastEloChange }}</span>
+                      }
+                    }
+                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                    <div class="solved-actions">
+                      <button mat-raised-button color="primary" (click)="loadNext()">
+                        {{ 'puzzles.actions.nextPuzzle' | translate }} @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
+                      </button>
+                      <button mat-button (click)="analyze()">
+                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+                @case ('FAILED') {
+                  <div class="status-center failed">
+                    <mat-icon class="result-icon">cancel</mat-icon>
+                    <p class="status-text">{{ 'puzzles.result.incorrect' | translate }}</p>
+                    @if (lastEloChange != null) {
+                      <span class="elo-change elo-down">{{ lastEloChange }}</span>
+                    }
+                    <div class="review-nav">
+                      <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"><mat-icon>chevron_left</mat-icon></button>
+                      <span class="review-counter">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                      <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"><mat-icon>chevron_right</mat-icon></button>
+                    </div>
+                    <div class="fail-actions">
+                      <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
+                      <button mat-button (click)="analyze()">
+                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
+                      </button>
+                      <button mat-raised-button color="primary" (click)="loadNext()">{{ 'puzzles.actions.nextPuzzle' | translate }}</button>
+                    </div>
+                  </div>
+                }
+              }
+            </mat-card-content>
+          </mat-card>
+
+          @if (puzzle) {
+            <mat-card class="info-card">
+              <mat-card-content>
+                <div class="puzzle-info">
+                  <span class="rating-badge">{{ 'puzzles.info.rating' | translate }}: {{ puzzle.rating }}</span>
+                  @if (puzzle.themes) {
+                    <div class="themes">
+                      @for (theme of puzzle.themes.split(' '); track theme) {
+                        <span class="theme-chip">{{ theme }}</span>
+                      }
+                    </div>
+                  }
+                  <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
+                    <mat-icon>share</mat-icon> {{ 'puzzles.actions.share' | translate }}
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          @if (stats) {
+            <mat-card class="stats-card">
+              <mat-card-header>
+                <mat-card-title>{{ 'puzzles.stats.title' | translate }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="stats-grid">
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.puzzleElo }}</span>
+                    <span class="stat-label">Elo</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.solved }}/{{ stats.totalAttempts }}</span>
+                    <span class="stat-label">{{ 'puzzles.stats.solved' | translate }}</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.accuracy }}%</span>
+                    <span class="stat-label">{{ 'puzzles.stats.accuracy' | translate }}</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.currentStreak }}</span>
+                    <span class="stat-label">{{ 'puzzles.stats.streak' | translate }}</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-value">{{ stats.bestStreak }}</span>
+                    <span class="stat-label">{{ 'puzzles.stats.best' | translate }}</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          @if (showSettings) {
+          <mat-card class="filter-card" #settingsPanel>
+            <mat-card-header>
+              <mat-card-title>{{ 'puzzles.filters.title' | translate }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="viz-slider">
+                <label>{{ 'puzzles.filters.visualization' | translate: { level: visualizationMode } }}</label>
+                <input type="range" min="0" max="4" step="1"
+                       [value]="visualizationMode"
+                       (input)="setVisualizationLevel(+$any($event.target).value)">
+                <div class="viz-level-desc">{{ vizLevelDescription }}</div>
+              </div>
+              <div class="filter-row">
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>{{ 'puzzles.filters.difficulty' | translate }}</mat-label>
+                  <mat-select [(ngModel)]="difficulty" (ngModelChange)="onDifficultyChange()">
+                    <mat-option value="sehr_leicht">{{ 'puzzles.difficulty.veryEasy' | translate }} (Elo −600)</mat-option>
+                    <mat-option value="leicht">{{ 'puzzles.difficulty.easy' | translate }} (Elo −300)</mat-option>
+                    <mat-option value="normal">{{ 'puzzles.difficulty.normal' | translate }} (Elo ±100)</mat-option>
+                    <mat-option value="schwer">{{ 'puzzles.difficulty.hard' | translate }} (Elo +300)</mat-option>
+                    <mat-option value="sehr_schwer">{{ 'puzzles.difficulty.veryHard' | translate }} (Elo +600)</mat-option>
+                  </mat-select>
+                  <mat-hint>{{ 'puzzles.filters.difficultyHint' | translate: { elo: stats?.puzzleElo ?? 1500 } }}</mat-hint>
+                </mat-form-field>
+              </div>
+              <div class="filter-row">
+                <mat-form-field appearance="outline" class="filter-field">
+                  <mat-label>Stockfish Depth</mat-label>
+                  <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
+                  <mat-hint>{{ 'puzzles.filters.depthHint' | translate }}</mat-hint>
+                </mat-form-field>
+              </div>
+              <div class="filter-actions">
+                @if (isLoggedIn) {
+                  <mat-slide-toggle [(ngModel)]="excludeSolved">{{ 'puzzles.filters.skipSolved' | translate }}</mat-slide-toggle>
+                }
+                <button mat-raised-button color="primary" (click)="loadNext()">{{ 'puzzles.actions.loadPuzzle' | translate }}</button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="theme-card">
+            <mat-card-content>
+              <div class="theme-label">{{ 'puzzles.theme.mode' | translate }}</div>
+              <div class="theme-chips">
+                <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="setThemeMode('fixed')">
+                  <mat-icon>palette</mat-icon><span class="theme-name">{{ 'puzzles.theme.modeNormal' | translate }}</span>
+                </div>
+                <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="setThemeMode('random')">
+                  <mat-icon>shuffle</mat-icon><span class="theme-name">{{ 'puzzles.theme.modeRandom' | translate }}</span>
+                </div>
+                <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="setThemeMode('crazy')">
+                  <mat-icon>auto_awesome</mat-icon><span class="theme-name">{{ 'puzzles.theme.modeCrazy' | translate }}</span>
+                </div>
+              </div>
+              @if (themeMode === 'fixed') {
+              <div class="theme-label" style="margin-top: 0.75rem;">{{ 'puzzles.theme.boardTheme' | translate }}</div>
+              <div class="theme-chips">
+                @for (t of boardThemes; track t.key) {
+                  <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
+                    @if (t.img) {
+                      <div class="theme-img" [style.backgroundImage]="'url(' + t.img + ')'"></div>
+                    } @else {
+                      <div class="theme-preview">
+                        <div class="tp-light" [style.background]="t.light"></div>
+                        <div class="tp-dark" [style.background]="t.dark"></div>
+                      </div>
+                    }
+                    <span class="theme-name">{{ t.name }}</span>
+                  </div>
+                }
+              </div>
+              <div class="theme-label" style="margin-top: 0.75rem;">{{ 'puzzles.theme.pieces' | translate }}</div>
+              <div class="theme-chips">
+                @for (p of pieceSets; track p.key) {
+                  <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
+                    <div class="piece-preview" [style.backgroundImage]="'url(' + p.preview + ')'"></div>
+                    <span class="theme-name">{{ p.name }}</span>
+                  </div>
+                }
+              </div>
+              }
+            </mat-card-content>
+          </mat-card>
+          }
+
+          @if (lastSolvedPuzzleId) {
+            <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
+              <mat-icon>history</mat-icon>
+              {{ 'puzzles.actions.reviewLast' | translate }}
+            </button>
+          }
+
+          <button mat-stroked-button color="accent" class="endless-btn" (click)="goEndless()">
+            <mat-icon>all_inclusive</mat-icon>
+            {{ 'puzzles.actions.endlessMode' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
