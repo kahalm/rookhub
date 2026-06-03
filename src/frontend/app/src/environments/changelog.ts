@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.68.0';
+export const APP_VERSION = '0.68.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.68.1', date: '2026-06-03', changes: [
+    'Fix: Client-Diagnose-Endpoint loggt Routine-Heartbeats (z.B. Bot-Lebenszeichen) jetzt auf Info statt Warning — sonst lösten die regelmäßigen Heartbeats im Log-Watcher einen „warn_spike"-Fehlalarm aus. Echte Engine-Crash-/Hänger-Meldungen bleiben auf Warning.',
+  ]},
   { version: '0.68.0', date: '2026-06-03', changes: [
     'Überwachung/Betrieb: Die API sendet jetzt alle 60 s ein „Heartbeat"-Lebenszeichen nach Elasticsearch (inkl. kurzem DB-Selbst-Check, Status healthy/degraded). Damit erkennt der Log-Watcher einen toten/hängenden Dienst an AUSBLEIBENDEN Heartbeats — statt Stille nicht von „gerade ruhig" unterscheiden zu können. Zusätzlich Docker-Healthchecks für API (/health), Frontend und Crawler (Container-Neustart bei Fehler). (Intervall via `Heartbeat:IntervalSeconds` konfigurierbar.)',
   ]},

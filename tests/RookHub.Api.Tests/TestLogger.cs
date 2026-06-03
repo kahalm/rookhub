@@ -9,6 +9,7 @@ namespace RookHub.Api.Tests;
 public class TestLogger<T> : ILogger<T>
 {
     public List<string> Messages { get; } = new();
+    public List<LogLevel> Levels { get; } = new();
 
     public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
 
@@ -16,7 +17,10 @@ public class TestLogger<T> : ILogger<T>
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
-        => Messages.Add(formatter(state, exception));
+    {
+        Messages.Add(formatter(state, exception));
+        Levels.Add(logLevel);
+    }
 
     private sealed class NoopScope : IDisposable
     {

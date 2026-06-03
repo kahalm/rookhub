@@ -34,7 +34,12 @@ public class ClientLogController : BaseApiController
         var userAgent = Truncate(Request.Headers.UserAgent.ToString(), 300);
         int? userId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : null;
 
-        _logger.LogWarning(
+        // Routine-Heartbeats auf Information; nur echte Diagnose-Events (Crash/Hänger) auf Warning,
+        // sonst lösen die häufigen Heartbeats einen warn_spike im log-watcher aus (Fehlalarm).
+        var level = kind.StartsWith("heartbeat", StringComparison.OrdinalIgnoreCase)
+            ? LogLevel.Information
+            : LogLevel.Warning;
+        _logger.Log(level,
             "ClientLog {ClientLogKind}: {ClientLogDetail} (url={ClientLogUrl} user={ClientLogUserId} ua={ClientLogUserAgent})",
             kind, detail, url, userId, userAgent);
 

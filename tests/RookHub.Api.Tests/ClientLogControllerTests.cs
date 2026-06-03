@@ -43,6 +43,19 @@ public class ClientLogControllerTests
     }
 
     [Fact]
+    public void Post_LogsHeartbeatAtInformation_RealEventsAtWarning()
+    {
+        var logger = new TestLogger<ClientLogController>();
+        var ctrl = CreateController(logger);
+
+        ctrl.Post(new ClientLogDto { Kind = "heartbeat_bot", Detail = "alive" });
+        ctrl.Post(new ClientLogDto { Kind = "engine_analysis_crash", Detail = "boom" });
+
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, logger.Levels[0]);   // Heartbeat = Routine
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, logger.Levels[1]);       // echter Crash = Warnung
+    }
+
+    [Fact]
     public void Post_StripsNewlines_NoLogForging()
     {
         var logger = new TestLogger<ClientLogController>();
