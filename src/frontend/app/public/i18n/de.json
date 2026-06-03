@@ -198,7 +198,14 @@
       "name": "Name",
       "description": "Beschreibung",
       "public": "Öffentlich",
+      "kind": "Kategorie",
       "create": "Erstellen"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Eröffnung",
+      "middlegame": "Mittelspiel",
+      "endgame": "Endspiel"
     },
     "lines": {
       "allLines": "Alle Linien",

@@ -198,7 +198,14 @@
       "name": "Name",
       "description": "Description",
       "public": "Public",
+      "kind": "Category",
       "create": "Create"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Opening",
+      "middlegame": "Middlegame",
+      "endgame": "Endgame"
     },
     "lines": {
       "allLines": "All Lines",

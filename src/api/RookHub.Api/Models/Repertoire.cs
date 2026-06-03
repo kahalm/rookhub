@@ -16,6 +16,10 @@ public class Repertoire
     public string? Description { get; set; }
 
     public bool IsPublic { get; set; }
+
+    /// <summary>Kategorie (z. B. Eroeffnung) — Default <see cref="RepertoireKind.None"/>.</summary>
+    public RepertoireKind Kind { get; set; } = RepertoireKind.None;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

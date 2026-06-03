@@ -101,12 +101,15 @@ export interface UserSearchResult {
 }
 
 // ── Repertoires ─────────────────────────────────────────────────────────
+// RepertoireKind ist in `core/repertoire.types.ts` definiert.
 
 export interface Repertoire {
   id: number;
   name: string;
   description: string | null;
   isPublic: boolean;
+  /** 0=None, 1=Opening, 2=Middlegame, 3=Endgame (siehe `RepertoireKind`). */
+  kind: number;
   fileCount: number;
   createdAt: string;
   updatedAt: string;
@@ -117,6 +120,7 @@ export interface RepertoireDetail {
   name: string;
   description: string | null;
   isPublic: boolean;
+  kind: number;
   files: RepertoireFile[];
   createdAt: string;
   updatedAt: string;

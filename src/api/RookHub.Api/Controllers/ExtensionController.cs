@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -16,10 +17,22 @@ public class ExtensionController : BaseApiController
 
     public ExtensionController(RepertoireService repertoireService) => _repertoireService = repertoireService;
 
+    /// <summary>
+    /// Repertoire-Liste fuer Extension-Clients. <paramref name="kind"/> akzeptiert die
+    /// String-Repraesentation von <see cref="RepertoireKind"/> (z. B. <c>opening</c>,
+    /// case-insensitive). Ohne Filter werden alle Kinds zurueckgegeben.
+    /// </summary>
     [HttpGet("repertoires")]
-    public async Task<ActionResult<List<ExtensionRepertoireDto>>> GetRepertoires()
+    public async Task<ActionResult<List<ExtensionRepertoireDto>>> GetRepertoires([FromQuery] string? kind = null)
     {
-        return Ok(await _repertoireService.GetExtensionListAsync(GetUserId()));
+        RepertoireKind? kindFilter = null;
+        if (!string.IsNullOrWhiteSpace(kind))
+        {
+            if (!Enum.TryParse<RepertoireKind>(kind, ignoreCase: true, out var parsed))
+                return BadRequest(new { message = "Invalid kind. Allowed: None, Opening, Middlegame, Endgame." });
+            kindFilter = parsed;
+        }
+        return Ok(await _repertoireService.GetExtensionListAsync(GetUserId(), kindFilter));
     }
 
     [HttpGet("repertoires/{id}/pgn")]

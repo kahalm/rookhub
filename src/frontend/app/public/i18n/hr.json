@@ -198,7 +198,14 @@
       "name": "Naziv",
       "description": "Opis",
       "public": "Javno",
+      "kind": "Kategorija",
       "create": "Stvori"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Otvaranje",
+      "middlegame": "Sredina partije",
+      "endgame": "Završnica"
     },
     "lines": {
       "allLines": "Sve linije",

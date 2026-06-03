@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.0';
+export const APP_VERSION = '0.78.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.1', date: '2026-06-03', changes: [
+    'Repertoire-Kategorie hinzu: Beim Anlegen wählst du jetzt eine Kategorie (Eröffnung / Mittelspiel / Endspiel / —). In der Liste wird die Kategorie als farbiger Chip neben dem Namen angezeigt. Backend-Feld `Repertoire.Kind` (Enum `None|Opening|Middlegame|Endgame`), Migration `AddRepertoireKind`. Vorbereitung für die chess.com-Extension, die per `GET /api/extension/repertoires?kind=opening` gezielt nur Eröffnungs-PGNs holen wird; der Endpoint liefert zusätzlich `totalSizeBytes` pro Repertoire als Hinweis für Client-side-Limits.',
+  ]},
   { version: '0.78.0', date: '2026-06-03', changes: [
     'Endlos-Gauntlet: jeder Lauf bekommt jetzt einen eindeutigen Seed; Seed + die geordneten Ketten-Puzzle-IDs werden beim Lauf-Ende am Server gespeichert (neue Spalten auf der Session). Damit ist die exakte Kette eines Laufs dauerhaft hinterlegt — Grundlage für ein späteres Replay.',
   ]},
