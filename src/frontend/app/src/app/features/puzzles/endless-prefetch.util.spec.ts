@@ -1,6 +1,7 @@
 import {
   computeRunSize, buildRunWindows, takeFromPool, takeNearestFromPool,
-  autoFasttrackThresholds, fasttrackSteps, stepForSolved, buildEndlessRunWindows
+  autoFasttrackThresholds, fasttrackSteps, stepForSolved, buildEndlessRunWindows,
+  chainRatingAt, buildChainWindows, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK
 } from './endless-prefetch.util';
 import { PuzzleDto } from './puzzle.service';
 
@@ -83,9 +84,11 @@ describe('autoFasttrackThresholds', () => {
     expect(autoFasttrackThresholds({ startElo: 700 }, [])).toEqual({ first: 1100, second: 1500 });
   });
 
-  it('averages recent mistake ratings but keeps the minimum defaults', () => {
-    // Mittelwerte (1300 / 1700) liegen über den Defaults (1100/1500) → werden genommen
-    const hist = [{ mistakeAtRatings: [1300, 1700] }, { mistakeAtRatings: [1300, 1700] }];
+  it('T1 = Ø erster Fehler, T2 = Ø Max-Rating der letzten 5 Runs', () => {
+    const hist = [
+      { mistakeAtRatings: [1300], maxRating: 1700 },
+      { mistakeAtRatings: [1300], maxRating: 1700 },
+    ];
     expect(autoFasttrackThresholds({ startElo: 700 }, hist)).toEqual({ first: 1300, second: 1700 });
   });
 
@@ -125,5 +128,48 @@ describe('buildEndlessRunWindows', () => {
     // Override macht Phase 1 sehr steil → erstes Fenster startet trotzdem bei startElo
     const w = buildEndlessRunWindows({ startElo: 700, fasttrackThreshold1: 1200 }, [], 3000, 1);
     expect(w[0]).toEqual({ minRating: 700, maxRating: 740 });
+  });
+});
+
+describe('chainRatingAt (Gauntlet-Kurve)', () => {
+  const start = 700, t1 = 1100, t2 = 1800;
+
+  it('trifft die Anker: Start bei 0, T1 bei ~5, T2 bei ~20', () => {
+    expect(chainRatingAt(0, start, t1, t2)).toBe(start);
+    expect(chainRatingAt(CHAIN_T1_INDEX, start, t1, t2)).toBe(t1);
+    expect(chainRatingAt(CHAIN_T2_INDEX, start, t1, t2)).toBe(t2);
+  });
+
+  it('steigt monoton und konkav (schnell, dann abflachend)', () => {
+    let prev = -1;
+    const deltas: number[] = [];
+    for (let n = 0; n <= CHAIN_T2_INDEX; n++) {
+      const r = chainRatingAt(n, start, t1, t2);
+      expect(r).toBeGreaterThanOrEqual(prev);
+      if (n > 0) deltas.push(r - prev);
+      prev = r;
+    }
+    // früher Schritt (Puzzle 1) deutlich größer als später (Richtung T2) → konkav
+    expect(deltas[0]).toBeGreaterThan(deltas[deltas.length - 1]);
+  });
+
+  it('drückt nach T2 nur noch leicht höher', () => {
+    expect(chainRatingAt(CHAIN_T2_INDEX + 2, start, t1, t2)).toBeGreaterThan(t2);
+    expect(chainRatingAt(CHAIN_T2_INDEX + 2, start, t1, t2)).toBeLessThan(t2 + 100);
+  });
+});
+
+describe('buildChainWindows', () => {
+  it('liefert einen Block zentrierter Fenster + respektiert startIndex und ratingMax', () => {
+    const w = buildChainWindows(700, 1100, 1800, 3000);
+    expect(w.length).toBe(ENDLESS_CHAIN_BLOCK);
+    expect(w[0]).toEqual({ minRating: 680, maxRating: 720 });          // Start 700 ±20
+    expect(w[CHAIN_T2_INDEX]).toEqual({ minRating: 1780, maxRating: 1820 }); // T2 1800 ±20
+
+    const next = buildChainWindows(700, 1100, 1800, 3000, ENDLESS_CHAIN_BLOCK, ENDLESS_CHAIN_BLOCK);
+    expect(next[0].minRating).toBeGreaterThan(w[w.length - 1].minRating);  // Folgeblock setzt höher an
+
+    const capped = buildChainWindows(2950, 3200, 3500, 3000);
+    expect(capped.every(x => x.minRating <= 3000)).toBeTrue();             // auf ratingMax geklemmt
   });
 });

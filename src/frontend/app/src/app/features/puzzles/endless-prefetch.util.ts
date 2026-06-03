@@ -5,15 +5,23 @@ export interface RatingWindow { minRating: number; maxRating: number; }
 export const FASTTRACK_SESSION_COUNT = 10;
 export const ENDLESS_RATING_WINDOW = 40;
 
+/** Kette (Gauntlet): Indizes der beiden Schwellen + Blockgröße. */
+export const CHAIN_T1_INDEX = 5;          // T1 (Ø erster Fehler) nach ~5 Puzzles erreicht
+export const CHAIN_T2_INDEX = 20;         // T2 (Ø Max der letzten 5 Runs) nach ~20 Puzzles erreicht
+export const CHAIN_FLAT_STEP = 15;        // ab T2: leichtes Plus je Puzzle (oberhalb des eigenen Maximums)
+export const ENDLESS_CHAIN_BLOCK = 30;    // Puzzles je generiertem Block
+
 /** Strukturelle Minimalformen (entkoppelt von EndlessConfig/EndlessSession). */
 interface FasttrackConfig { startElo: number; fasttrackThreshold1?: number; fasttrackThreshold2?: number; }
-interface FasttrackSession { mistakeAtRatings: number[]; }
+interface FasttrackSession { mistakeAtRatings: number[]; maxRating?: number; }
 
 export interface FasttrackSteps { phase1Step: number; phase2Step: number; }
 
 /**
- * Auto-Schwellen der beiden Fasttrack-Phasen aus der Fehler-Historie (Mittel der letzten Runs,
- * mindestens startElo+400 / +800). Identisch zur Live-Berechnung im Endless-Component.
+ * Schwellen der Ketten-Kurve aus der Historie:
+ * - T1 (`first`)  = Ø des ERSTEN Fehler-Ratings der letzten Runs (wie bisher), min. startElo+400.
+ * - T2 (`second`) = Ø des MAXIMAL-Ratings der letzten 5 Runs (das eigene Niveau), min. T1+200.
+ * Ohne (genügend) Historie: startElo+400 / +800.
  */
 export function autoFasttrackThresholds(
   config: FasttrackConfig,
@@ -22,13 +30,58 @@ export function autoFasttrackThresholds(
   const defaultFirst = config.startElo + 400;
   const defaultSecond = config.startElo + 800;
   const withMistakes = (history ?? []).filter(s => s.mistakeAtRatings.length > 0).slice(-FASTTRACK_SESSION_COUNT);
-  if (withMistakes.length === 0) return { first: defaultFirst, second: defaultSecond };
-  const avgFirst = Math.round(withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length);
-  const withSecond = withMistakes.filter(s => s.mistakeAtRatings.length >= 2);
-  const avgSecond = withSecond.length > 0
-    ? Math.round(withSecond.reduce((sum, s) => sum + s.mistakeAtRatings[1], 0) / withSecond.length)
-    : avgFirst + 100;
-  return { first: Math.max(defaultFirst, avgFirst), second: Math.max(defaultSecond, avgSecond) };
+  const avgFirst = withMistakes.length
+    ? Math.round(withMistakes.reduce((sum, s) => sum + s.mistakeAtRatings[0], 0) / withMistakes.length)
+    : defaultFirst;
+  const first = Math.max(defaultFirst, avgFirst);
+  // T2: Ø des Maximal-Ratings der letzten 5 Runs.
+  const last5Max = (history ?? []).filter(s => (s.maxRating ?? 0) > 0).slice(-5);
+  const avgMax = last5Max.length
+    ? Math.round(last5Max.reduce((sum, s) => sum + (s.maxRating ?? 0), 0) / last5Max.length)
+    : defaultSecond;
+  return { first, second: Math.max(first + 200, avgMax) };
+}
+
+/** Konkave Easing-Funktion [0,1]→[0,1] (schnell hoch, dann abflachend) — „annähernd logarithmisch". */
+function logEase(x: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  return Math.log(1 + x * (Math.E - 1));
+}
+
+/**
+ * Rating des n-ten Ketten-Puzzles (0-basiert) entlang der ~logarithmischen Kurve:
+ * startElo → T1 (bei ~{@link CHAIN_T1_INDEX}) → T2 (bei ~{@link CHAIN_T2_INDEX}), danach leicht über T2.
+ */
+export function chainRatingAt(n: number, startElo: number, t1: number, t2: number): number {
+  if (n <= 0) return startElo;
+  if (n < CHAIN_T1_INDEX)
+    return Math.round(startElo + (t1 - startElo) * logEase(n / CHAIN_T1_INDEX));
+  if (n < CHAIN_T2_INDEX)
+    return Math.round(t1 + (t2 - t1) * logEase((n - CHAIN_T1_INDEX) / (CHAIN_T2_INDEX - CHAIN_T1_INDEX)));
+  return Math.round(t2 + (n - CHAIN_T2_INDEX) * CHAIN_FLAT_STEP);
+}
+
+/**
+ * Baut die Rating-Fenster eines Ketten-Blocks (Gauntlet) für die absoluten Puzzle-Indizes
+ * [startIndex, startIndex+count). Jedes Fenster ist um die Kurven-Stelle zentriert (±Window/2),
+ * auf [0, ratingMax] geklemmt. Wird an getRandomBatch übergeben.
+ */
+export function buildChainWindows(
+  startElo: number,
+  t1: number,
+  t2: number,
+  ratingMax: number,
+  count = ENDLESS_CHAIN_BLOCK,
+  startIndex = 0,
+): RatingWindow[] {
+  const half = Math.round(ENDLESS_RATING_WINDOW / 2);
+  const windows: RatingWindow[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = Math.min(chainRatingAt(startIndex + i, startElo, t1, t2), ratingMax);
+    windows.push({ minRating: Math.max(0, r - half), maxRating: r + half });
+  }
+  return windows;
 }
 
 /** Schrittweite je Phase aus den (ggf. manuell überschriebenen) Schwellen. */
