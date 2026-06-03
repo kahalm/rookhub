@@ -65,20 +65,39 @@ try
         ?? throw new InvalidOperationException("JWT key not configured");
     if (Encoding.UTF8.GetBytes(jwtKey).Length < 32)
         throw new InvalidOperationException("JWT key must be at least 32 bytes for HMAC-SHA256");
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+    // Default-Scheme ist ein Policy-Scheme, das anhand des Bearer-Prefixes entscheidet:
+    // `rkh_…` → ApiToken-Handler (Personal Access Tokens fuer Maschinen-Clients),
+    // alles andere → JWT (User-Login). So koennen Endpoints transparent beides akzeptieren.
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = "Bearer";
+        options.DefaultChallengeScheme = "Bearer";
+    })
+    .AddPolicyScheme("Bearer", "JWT or ApiToken", options =>
+    {
+        options.ForwardDefaultSelector = ctx =>
         {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                ValidAudience = builder.Configuration["Jwt:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-            };
-        });
+            var auth = ctx.Request.Headers.Authorization.ToString();
+            if (auth.StartsWith("Bearer rkh_", StringComparison.OrdinalIgnoreCase))
+                return ApiTokenAuthenticationHandler.SchemeName;
+            return JwtBearerDefaults.AuthenticationScheme;
+        };
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    })
+    .AddScheme<ApiTokenAuthenticationOptions, ApiTokenAuthenticationHandler>(
+        ApiTokenAuthenticationHandler.SchemeName, _ => { });
 
     // Services
     builder.Services.AddScoped<AuthService>();
@@ -92,6 +111,7 @@ try
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
+    builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
     builder.Services.AddScoped<BookAdminService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
