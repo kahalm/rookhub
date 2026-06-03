@@ -7,6 +7,11 @@ RUN dotnet publish -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 
+# curl für den Docker-Healthcheck (GET /health); --no-install-recommends hält das Image schlank.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN adduser --disabled-password --no-create-home appuser
 
 WORKDIR /app

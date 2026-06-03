@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -145,6 +146,12 @@ public class EndlessProgressService
         await _db.SaveChangesAsync();
 
         LogSessionPuzzles(userId, dto.Puzzles);
+        // Strukturierter Event fuer Kibana: Runs/Tag, Ø/Max geloeste Puzzles, Max-Rating,
+        // Leaderboard (Cardinality/Terms auf fields.UserId). Analog zum PuzzleAttempt-Log.
+        _logger.LogInformation(
+            "EndlessSessionCompleted: User {UserId} solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
+            userId, dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
+
         await TrimSessionsAsync(userId: userId);
         return MapSessionDto(session);
     }
@@ -165,6 +172,10 @@ public class EndlessProgressService
         await _db.SaveChangesAsync();
 
         LogSessionPuzzles(null, dto.Puzzles);
+        _logger.LogInformation(
+            "EndlessSessionCompleted: Anonymous solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
+            dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
+
         await TrimSessionsAsync(anonymousSessionId: sessionId);
         return MapSessionDto(session);
     }

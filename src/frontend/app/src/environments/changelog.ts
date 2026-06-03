@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.66.1';
+export const APP_VERSION = '0.68.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.68.0', date: '2026-06-03', changes: [
+    'Überwachung/Betrieb: Die API sendet jetzt alle 60 s ein „Heartbeat"-Lebenszeichen nach Elasticsearch (inkl. kurzem DB-Selbst-Check, Status healthy/degraded). Damit erkennt der Log-Watcher einen toten/hängenden Dienst an AUSBLEIBENDEN Heartbeats — statt Stille nicht von „gerade ruhig" unterscheiden zu können. Zusätzlich Docker-Healthchecks für API (/health), Frontend und Crawler (Container-Neustart bei Fehler). (Intervall via `Heartbeat:IntervalSeconds` konfigurierbar.)',
+  ]},
+  { version: '0.67.0', date: '2026-06-03', changes: [
+    'Kibana-Dashboard stark erweitert (in Sektionen): Puzzle (Genauigkeit, Rating-Verteilung, Ø Zeit/Puzzle, Attempts je Viz-Level, Top-User nach Elo), Endless (Runs/Tag, Ø gelöste Puzzles, Max-Rating-Verteilung, Leaderboard), Kurse (Solves/Tag, je Buch, je User) und Betrieb (Feature-Nutzung nach Bereich, HTTP-Fehler über Zeit, langsamste Endpoints).',
+    'Neu „Unique Visits" statt der Login-Panels: eindeutige Besucher (eingeloggt via Username, anonym via Session-Id) als Metrik + Verlauf je Tag. „Recent Logs" zeigt jetzt Zeitstempel / Level / RequestPath / Message / Username.',
+    'API: neues Event EndlessSessionCompleted (Endless-Session-Zusammenfassung: gelöste Puzzles, Max-Rating, Dauer) und eine VisitorId auf jedem Request (Username wenn eingeloggt, sonst anonyme Session-Id via neuem X-Visitor-Id-Header). Die Kurs-Kennzahlen bauen auf dem bestehenden CoursePuzzleAttempt-Log (0.63.0) auf.',
+    'Dashboard-Deploy automatisiert: kibana-init ist jetzt ein gebautes Image (init-kibana.sh eingebacken) — Dashboard-Updates wandern beim `docker compose up -d --build` automatisch mit, ohne manuelles git pull / Container-Recreate.',
+  ]},
   { version: '0.66.1', date: '2026-06-02', changes: [
     'Sicherheit/Robustheit (Code-Review): Öffentliche Profile (per Username) geben keine sensiblen Daten mehr preis — nur noch Anzeigename + öffentliche Schach-IDs, KEINE Klarnamen/ChessResults-ID/Discord-Verknüpfung. Kurs-Lösungen können bei parallelem Speichern nicht mehr verloren gehen. Discord-Verknüpfung meldet eine Kollision jetzt sauber (statt Serverfehler). Analyse-Engine erkennt einen ausbleibenden Engine-Start jetzt auch in der Initialisierungsphase und startet automatisch neu (kein „Berechne…"-Festhängen mehr). Offline gelöste Endless-Puzzles werden nicht mehr verloren (lokal vorgemerkt + bei Reconnect synchronisiert). Offline-Fallback wählt ein Puzzle mit passendem Rating statt irgendeinem. Mehrere kleinere Härtungen (Rate-Limiting hinter Proxy, Log-Hygiene, defensivere Server-Aufrufe).',
   ]},

@@ -66,6 +66,12 @@ services:
       dockerfile: Dockerfile
     container_name: rookhub-crawler
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     network_mode: "service:gluetun"
     depends_on:
       mariadb:
@@ -85,6 +91,12 @@ services:
       dockerfile: Dockerfile
     container_name: rookhub-api
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     ports:
       - "${API_PORT}:8080"
     depends_on:
@@ -158,16 +170,16 @@ services:
 
   # ── Kibana Data Views Init (idle sidecar — bleibt running fuer Arcane) ────
   kibana-init:
-    image: curlimages/curl:latest
+    build:
+      context: .
+      dockerfile: kibana-init/Dockerfile
     container_name: rookhub-kibana-init
     restart: unless-stopped
     depends_on:
       kibana:
         condition: service_healthy
-    volumes:
-      - ./init-kibana.sh:/init-kibana.sh:ro
-    # Init laeuft bei jedem Start (idempotent), danach idle -> Container bleibt "running"
-    entrypoint: ["/bin/sh", "-c", "/init-kibana.sh; echo 'init done, idling'; exec tail -f /dev/null"]
+    # Image backt init-kibana.sh ein -> Dashboard wandert bei `up -d --build` automatisch mit
+    # (Script-Aenderung -> neues Image -> Recreate -> Re-Import, idempotent via overwrite=true).
     networks:
       - rookhub
 
@@ -178,6 +190,12 @@ services:
       dockerfile: Dockerfile
     container_name: rookhub-frontend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     ports:
       - "${FRONTEND_PORT}:8080"
     depends_on:
