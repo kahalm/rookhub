@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
 
@@ -56,7 +57,7 @@ public class CourseController : BaseApiController
             .Where(bp => bp.BookId == bookId)
             .OrderBy(bp => bp.Id)
             .ToListAsync();
-        return Ok(puzzles.Select(BookPuzzleController.MapToDto).ToList());
+        return Ok(puzzles.Select(BookPuzzleService.MapToDto).ToList());
     }
 
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
@@ -189,7 +190,7 @@ public class CourseController : BaseApiController
 
         return Ok(new CourseNextPuzzleDto
         {
-            Puzzle = puzzle == null ? null : BookPuzzleController.MapToDto(puzzle),
+            Puzzle = puzzle == null ? null : BookPuzzleService.MapToDto(puzzle),
             SolvedCount = solvedCount,
             Total = total,
             Completed = puzzle == null,

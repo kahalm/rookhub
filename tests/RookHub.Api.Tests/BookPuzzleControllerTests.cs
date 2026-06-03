@@ -7,6 +7,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -21,7 +22,7 @@ public class BookPuzzleControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new BookPuzzleController(_db, NullLogger<BookPuzzleController>.Instance);
+        _controller = new BookPuzzleController(new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance));
         SetUser(99);
     }
 
@@ -162,8 +163,8 @@ public class BookPuzzleControllerTests : IDisposable
     [Fact]
     public async Task RecordAttempt_LogsStartAndSolveTime()
     {
-        var logger = new TestLogger<BookPuzzleController>();
-        var controller = new BookPuzzleController(_db, logger) { ControllerContext = _controller.ControllerContext };
+        var logger = new TestLogger<BookPuzzleService>();
+        var controller = new BookPuzzleController(new BookPuzzleService(_db, logger)) { ControllerContext = _controller.ControllerContext };
         var p = await CreateBookPuzzleAsync(lineId: "log.pgn:1", bookFileName: "log.pgn");
 
         Assert.IsType<OkResult>(await controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 15 }));
