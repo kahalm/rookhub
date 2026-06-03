@@ -27,6 +27,8 @@ export const routes: Routes = [
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [courseAccessGuard] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
+  { path: 'privacy', loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent) },
+  { path: 'impressum', loadComponent: () => import('./features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'account-deletion', loadComponent: () => import('./features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
   { path: '**', redirectTo: '/dashboard' }
 ];

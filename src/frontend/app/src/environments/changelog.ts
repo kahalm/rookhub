@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.2';
+export const APP_VERSION = '0.78.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.3', date: '2026-06-03', changes: [
+    'Rechtliches: Neue öffentliche Seiten Datenschutzerklärung (/privacy) und Impressum (/impressum), verlinkt auf der Anmeldeseite. Pflicht-Voraussetzung für die Google-Play-Veröffentlichung. Hinweis: Die Betreiber-Angaben im Impressum sind noch Platzhalter und müssen vor dem Go-live eingetragen werden.',
+  ]},
   { version: '0.78.2', date: '2026-06-03', changes: [
     'Konto löschen (DSGVO): Du kannst dein Konto jetzt selbst löschen (Profil → „Konto löschen", mit Passwort-Bestätigung). Identität und persönliche Daten werden unwiderruflich entfernt und persönliche Inhalte (Repertoires, Turnier-Abos/-Favoriten, Freundschaften, Gruppen) gelöscht; anonymisierte Lösungs-Statistiken bleiben erhalten. Neue öffentliche Info-Seite /account-deletion. Voraussetzung für die Google-Play-Veröffentlichung.',
   ]},

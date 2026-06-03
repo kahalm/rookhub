@@ -41,10 +41,18 @@ import { SnackbarService } from '../../core/snackbar.service';
           <a mat-button routerLink="/register" [queryParams]="{ returnUrl: returnUrl }">{{ 'auth.login.registerLink' | translate }}</a>
         </mat-card-actions>
       </mat-card>
+      <div class="legal-links">
+        <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+        <span>·</span>
+        <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
+      </div>
     </div>
   `,
   styles: [`
-    .auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+    .auth-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 80vh; }
+    .legal-links { margin-top: 1rem; text-align: center; font-size: 0.8rem; }
+    .legal-links a { color: #90caf9; }
+    .legal-links span { color: #777; margin: 0 6px; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }
