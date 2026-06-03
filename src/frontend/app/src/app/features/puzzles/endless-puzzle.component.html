@@ -130,45 +130,8 @@
                   <div class="viz-level-desc">{{ vizLevelDescription }}</div>
                 </div>
                 <div class="theme-section">
-                  <div class="theme-label">{{ 'endless.config.mode' | translate }}</div>
-                  <div class="theme-chips">
-                    <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="setThemeMode('fixed')">
-                      <mat-icon>palette</mat-icon><span class="theme-name">{{ 'endless.config.modeNormal' | translate }}</span>
-                    </div>
-                    <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="setThemeMode('random')">
-                      <mat-icon>shuffle</mat-icon><span class="theme-name">{{ 'endless.config.modeRandom' | translate }}</span>
-                    </div>
-                    <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="setThemeMode('crazy')">
-                      <mat-icon>auto_awesome</mat-icon><span class="theme-name">{{ 'endless.config.modeCrazy' | translate }}</span>
-                    </div>
-                  </div>
-                  @if (themeMode === 'fixed') {
-                  <div class="theme-label" style="margin-top: 0.75rem;">{{ 'endless.config.boardTheme' | translate }}</div>
-                  <div class="theme-chips">
-                    @for (t of boardThemes; track t.key) {
-                      <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="setBoardTheme(t.key)">
-                        @if (t.img) {
-                          <div class="theme-img" [style.backgroundImage]="'url(' + t.img + ')'"></div>
-                        } @else {
-                          <div class="theme-preview">
-                            <div class="tp-light" [style.background]="t.light"></div>
-                            <div class="tp-dark" [style.background]="t.dark"></div>
-                          </div>
-                        }
-                        <span class="theme-name">{{ t.name }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="theme-label" style="margin-top: 0.75rem;">{{ 'endless.config.pieces' | translate }}</div>
-                  <div class="theme-chips">
-                    @for (p of pieceSets; track p.key) {
-                      <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="setPieceSet(p.key)">
-                        <div class="piece-preview" [style.backgroundImage]="'url(' + p.preview + ')'"></div>
-                        <span class="theme-name">{{ p.name }}</span>
-                      </div>
-                    }
-                  </div>
-                  }
+                  <app-theme-picker namespace="endless.config" [themeMode]="themeMode" [boardTheme]="boardTheme" [pieceSet]="pieceSet"
+                    (themeModeChanged)="setThemeMode($event)" (boardThemeChanged)="setBoardTheme($event)" (pieceSetChanged)="setPieceSet($event)" />
                 </div>
                 }
 

@@ -42,23 +42,9 @@
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }
-    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
-    .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
-    .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
     .status-card { position: relative; }
     .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
     .settings-gear.active { color: #1976d2; }
-    .theme-chip {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
-      transition: border-color 0.15s;
-    }
-    .theme-chip.active { border-color: #1976d2; }
-    .theme-chip:hover { background: rgba(0,0,0,0.04); }
-    .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
-    .tp-light, .tp-dark { flex: 1; }
-    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
 
     .course-card .course-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
     .course-card .course-mode-chip {
