@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.70.0';
+export const APP_VERSION = '0.71.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.71.0', date: '2026-06-03', changes: [
+    'Internes Code-Review/Refactoring (keine bewusste Funktionsänderung): die großen Puzzle-/Turnier-/Admin-Komponenten wurden in Templates/Styles + wiederverwendbare Bausteine aufgeteilt, die Hinweis-Meldungen (Snackbars) zentralisiert und die Buch-/Kurs-/Admin-Logik in eigene Services ausgelagert (schlankere, testbarere Controller). Verbessert Wartbarkeit; 223 Frontend- + 482 Backend-Tests grün.',
+    'Fix: Das Löschen eines Buchs entfernt jetzt auch die aufgezeichneten Tagespuzzle-/Buch-Versuche korrekt (vorher konnte es an einer Datenbank-Beziehung scheitern).',
+    'Fix: Anonymer Endless-Fortschritt wird je Sitzung eindeutig gespeichert (Unique-Index + Bereinigung etwaiger Alt-Duplikate).',
+    'Kleinigkeit: Die Brett-/Figuren-Auswahl im Einstellungs-Zahnrad sieht jetzt in allen Puzzle-Modi einheitlich aus (ein versehentlicher grauer Chip-Hintergrund im Standard-/Endlosmodus ist weg).',
+  ]},
   { version: '0.70.0', date: '2026-06-03', changes: [
     'Puzzle-Buttons konsistent (wie im Endlosmodus): „Aufgeben" ist jetzt von Anfang an verfügbar — auch beim Buch-Puzzle schon vor dem ersten Zug. „Zurücksetzen" und „Mausrutscher" erscheinen erst, nachdem ein Zug gemacht wurde (vorher waren sie beim Standard-Puzzle schon am Anfang da, obwohl es nichts zurückzusetzen gab).',
     'Die Puzzle-Einstellungen/Filter (Zahnrad) bleiben jetzt offen, wenn du zum nächsten Puzzle wechselst (der Offen-Zustand wird gemerkt) — vorher klappten sie zu.',
