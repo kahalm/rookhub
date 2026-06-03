@@ -21,6 +21,7 @@ import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription, TournamentFavorite } from '../../core/models';
+import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 
 @Component({
   selector: 'app-tournament-detail',
@@ -41,9 +42,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   teamsLoading = false;
   pairingsLoading = false;
 
-  playerColumns = ['fav', 'snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
-  teamColumns = ['fav', 'rank', 'name', 'points'];
-  pairingColumns = ['board', 'white', 'result', 'black'];
+  playerColumns = PLAYER_COLUMNS;
+  teamColumns = TEAM_COLUMNS;
+  pairingColumns = PAIRING_COLUMNS;
   showFavoritesOnly = false;
   favoriteSnrs: Set<number> = new Set();
   favoriteTeamSnrs: Set<number> = new Set();
@@ -340,24 +341,9 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
     this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
       next: (p) => {
-        // Detect team vs individual pairings based on data format
-        if (p.length > 0 && p[0].homeTeam !== undefined) {
-          this.hasTeamPairings = true;
-          this.pairings = p.map((item): DisplayPairing => ({
-            board: item.matchNumber,
-            white: item.homeTeam,
-            black: item.awayTeam,
-            result: item.homeScore != null ? `${item.homeScore} : ${item.awayScore}` : ''
-          }));
-        } else {
-          this.hasTeamPairings = false;
-          this.pairings = p.map((item): DisplayPairing => ({
-            board: item.boardNumber,
-            white: item.white,
-            black: item.black,
-            result: item.result ?? ''
-          }));
-        }
+        const { pairings, hasTeamPairings } = toDisplayPairings(p);
+        this.pairings = pairings;
+        this.hasTeamPairings = hasTeamPairings;
         this.pairingsLoading = false;
         this.refreshDisplayedPairings();
       },
@@ -366,18 +352,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   // --- Sorting ---
-
-  private sortData<T>(data: T[], sort: Sort): T[] {
-    if (!sort.active || sort.direction === '') return data;
-    const dir = sort.direction === 'asc' ? 1 : -1;
-    const key = sort.active === 'team' ? 'teamName' : sort.active === 'board' ? 'boardNumber' : sort.active;
-    return [...data].sort((a: any, b: any) => {
-      const valA = a[key] ?? '';
-      const valB = b[key] ?? '';
-      if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
-      return String(valA).localeCompare(String(valB)) * dir;
-    });
-  }
 
   // --- Favorites (server-side) ---
 
@@ -453,7 +427,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     if (this.showFavoritesOnly) {
       data = data.filter(p => this.favoriteSnrs.has(p.snr) || (p.teamName && this._favoriteTeamNames.has(p.teamName)));
     }
-    this.displayedPlayers = this.sortData(data, this.playerSort);
+    this.displayedPlayers = sortTableData(data, this.playerSort);
   }
 
   private refreshDisplayedTeams(): void {
@@ -461,7 +435,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     if (this.showFavoritesOnly) {
       data = data.filter(t => this._favoriteTeamNames.has(t.name));
     }
-    this.displayedTeams = this.sortData(data, this.teamSort);
+    this.displayedTeams = sortTableData(data, this.teamSort);
   }
 
   private refreshDisplayedPairings(): void {
@@ -473,7 +447,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         data = data.filter(p => this._favoriteNames.has(p.white) || this._favoriteNames.has(p.black));
       }
     }
-    this.displayedPairings = this.sortData(data, this.pairingSort);
+    this.displayedPairings = sortTableData(data, this.pairingSort);
   }
 
   private refreshAllDisplayed(): void {
