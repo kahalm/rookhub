@@ -246,21 +246,13 @@
 
             <div class="info-section">
               @if (visualizationMode && state !== 'CORRECT' && state !== 'WRONG') {
-                <mat-card class="viz-card">
-                  <mat-card-content>
-                    <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'endless.game.visualization' | translate:{ level: visualizationMode } }}</div>
-                    @if (vizCountdownSeconds > 0) {
-                      <div class="viz-countdown">{{ 'endless.game.vizCountdown' | translate:{ seconds: vizCountdownSeconds } }}</div>
-                    }
-                    <div class="viz-moves">{{ vizMoveText || ('endless.game.vizNoMove' | translate) }}</div>
-                    @if (vizPiecesHidden) {
-                      <button class="viz-show-btn" (click)="onVizShow()">
-                        {{ (vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate }}
-                      </button>
-                    }
-                    <div class="viz-hint">{{ vizLevelDescription }}</div>
-                  </mat-card-content>
-                </mat-card>
+                <app-viz-card
+                  [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
+                  [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+                  [vizLevelDescription]="vizLevelDescription"
+                  titleKey="endless.game.visualization" countdownKey="endless.game.vizCountdown" noMoveKey="endless.game.vizNoMove"
+                  showKey="endless.game.vizShow" showingKey="endless.game.vizShowing"
+                  (vizShowClicked)="onVizShow()" />
               }
               <mat-card class="status-card">
                 <mat-card-content>

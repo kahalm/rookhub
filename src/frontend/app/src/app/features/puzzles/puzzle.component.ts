@@ -15,6 +15,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
+import { VizCardComponent } from './viz-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
@@ -40,7 +41,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
-    MatChipsModule, MatSlideToggleModule, MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent
+    MatChipsModule, MatSlideToggleModule, MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],

@@ -20,21 +20,13 @@
 
         <div class="info-section">
           @if (visualizationMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING' || state === 'SOLVED' || state === 'FAILED')) {
-            <mat-card class="viz-card">
-              <mat-card-content>
-                <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'puzzles.viz.title' | translate: { level: visualizationMode } }}</div>
-                @if (vizCountdownSeconds > 0) {
-                  <div class="viz-countdown">{{ 'puzzles.viz.countdown' | translate: { seconds: vizCountdownSeconds } }}</div>
-                }
-                <div class="viz-moves">{{ vizMoveText || ('puzzles.viz.noMoveYet' | translate) }}</div>
-                @if (vizPiecesHidden) {
-                  <button class="viz-show-btn" (click)="onVizShow()">
-                    {{ (vizShowPressed ? 'puzzles.viz.showing' : 'puzzles.viz.show') | translate }}
-                  </button>
-                }
-                <div class="viz-hint">{{ vizLevelDescription }}</div>
-              </mat-card-content>
-            </mat-card>
+            <app-viz-card
+              [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
+              [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+              [vizLevelDescription]="vizLevelDescription"
+              titleKey="puzzles.viz.title" countdownKey="puzzles.viz.countdown" noMoveKey="puzzles.viz.noMoveYet"
+              showKey="puzzles.viz.show" showingKey="puzzles.viz.showing"
+              (vizShowClicked)="onVizShow()" />
           }
           <mat-card class="status-card">
             <mat-card-content>

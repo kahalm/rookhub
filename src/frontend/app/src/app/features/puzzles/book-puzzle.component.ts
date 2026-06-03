@@ -15,6 +15,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
+import { VizCardComponent } from './viz-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -39,7 +40,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, TranslateModule
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, TranslateModule
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],

@@ -92,21 +92,13 @@
             </mat-card>
           }
           @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
-            <mat-card class="viz-card">
-              <mat-card-content>
-                <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ 'book.viz.titleLevel' | translate: { level: visualizationMode } }}</div>
-                @if (vizCountdownSeconds > 0) {
-                  <div class="viz-countdown">{{ 'book.viz.countdown' | translate: { seconds: vizCountdownSeconds } }}</div>
-                }
-                <div class="viz-moves">{{ vizMoveText || ('book.viz.noMoveYet' | translate) }}</div>
-                @if (vizPiecesHidden) {
-                  <button class="viz-show-btn" (click)="onVizShow()">
-                    {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
-                  </button>
-                }
-                <div class="viz-hint">{{ vizLevelDescription }}</div>
-              </mat-card-content>
-            </mat-card>
+            <app-viz-card
+              [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
+              [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+              [vizLevelDescription]="vizLevelDescription"
+              titleKey="book.viz.titleLevel" countdownKey="book.viz.countdown" noMoveKey="book.viz.noMoveYet"
+              showKey="book.viz.show" showingKey="book.viz.showing"
+              (vizShowClicked)="onVizShow()" />
           }
           <mat-card class="status-card">
             <mat-card-content>

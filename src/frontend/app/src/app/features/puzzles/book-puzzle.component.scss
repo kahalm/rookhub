@@ -39,20 +39,6 @@
     .viz-slider label { font-size: 0.9em; font-weight: 500; }
     .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
     .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
-    .viz-card {}
-    .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
-    .viz-card .viz-moves {
-      font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5;
-      background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word;
-    }
-    .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }
-    .viz-countdown { font-size: 0.9em; color: #e65100; font-weight: 500; margin-bottom: 0.25rem; }
-    .viz-show-btn {
-      margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500;
-      user-select: none; touch-action: manipulation;
-    }
-    .viz-show-btn:active { background: #e3f2fd; }
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }
