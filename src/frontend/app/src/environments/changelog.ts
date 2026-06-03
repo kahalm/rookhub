@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.75.0';
+export const APP_VERSION = '0.76.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.76.0', date: '2026-06-03', changes: [
+    'Tagespuzzle wird persistiert: neuer Endpoint `GET /api/book-puzzles/daily/{yyyyMMdd|today}` (anonym) liefert das Tagespuzzle für ein UTC-Datum. Pro Tag eine Zeile in der neuen Tabelle `DailyPuzzles` (PK=Date, FK→BookPuzzle); ein Background-Service `DailyPuzzleScheduler` legt die heutige Zuordnung um 00:00 UTC an + holt verpasste Tage beim Start nach. On-Demand-Fallback wenn Scheduler offline war. `GetRandomAsync(pool="daily")` routet jetzt durch die persistierte Zuordnung — historische Tagespuzzles bleiben damit stabil, egal wie der `forDaily`-Pool sich später ändert. Migration `AddDailyPuzzleTable`, Book-Löschung räumt Historie ab.',
+  ]},
   { version: '0.75.0', date: '2026-06-03', changes: [
     'Tagespuzzle-Solver-Updates per Webhook: nach jedem Buch-/Tagespuzzle-Versuch feuert die API einen HMAC-signierten POST an den Schach-Bot — der aktualisiert den Discord-Post sofort statt erst nach ≤5 Minuten (vorheriges Polling-Modell). Neuer Service `SchachBotWebhookService`, fire-and-forget via vorhandene `BackgroundTaskQueue`. Konfig: `SchachBot__WebhookUrl` (z.B. http://schach-bot:9000/webhook/puzzle-attempt) + `SchachBot__WebhookSecret` (muss identisch zum Bot-`WEBHOOK_SECRET` sein). Beide leer = Webhook deaktiviert. Compose-Files (dev / dev.vpn / vpn) reichen `SCHACH_BOT_WEBHOOK_URL` und `SCHACH_BOT_WEBHOOK_SECRET` durch.',
   ]},

@@ -140,6 +140,9 @@ public class BookAdminService
         // schlägt SaveChanges bei einem Buch mit aufgezeichneten Solves mit FK-Fehler fehl.
         var puzzleIds = _db.BookPuzzles.Where(bp => bp.BookId == id).Select(bp => bp.Id);
         _db.BookPuzzleAttempts.RemoveRange(_db.BookPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
+        // DailyPuzzle hat eine Restrict-FK auf BookPuzzle → Historie verfaellt
+        // beim Buch-Loeschen mit. Sonst blockt der DB-Constraint die Loeschung.
+        _db.DailyPuzzles.RemoveRange(_db.DailyPuzzles.Where(d => puzzleIds.Contains(d.BookPuzzleId)));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         _db.Books.Remove(book);

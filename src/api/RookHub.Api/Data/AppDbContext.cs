@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
+    public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -299,6 +300,17 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<WeeklyPost>(e =>
         {
             e.HasIndex(w => w.ScheduledAt);
+        });
+
+        modelBuilder.Entity<DailyPuzzle>(e =>
+        {
+            // Date als PK: maximal ein Eintrag pro UTC-Tag, idempotente Insert-Race-Behandlung
+            // ueber den DB-eigenen Unique-Constraint.
+            e.HasKey(d => d.Date);
+            e.HasOne(d => d.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(d => d.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Restrict); // Buch-Loeschung soll Historie nicht killen
         });
     }
 }

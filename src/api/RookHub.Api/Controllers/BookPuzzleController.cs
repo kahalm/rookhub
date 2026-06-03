@@ -69,6 +69,31 @@ public class BookPuzzleController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>
+    /// Tagespuzzle fuer ein bestimmtes UTC-Datum. <paramref name="date"/> als <c>yyyyMMdd</c>
+    /// oder das Literal <c>today</c>. Zukuenftige Daten geben 400 zurueck; fuer heute und
+    /// vergangene Tage wird ggf. on-demand eine Zuordnung angelegt und persistiert.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("daily/{date}")]
+    public async Task<IActionResult> GetDaily(string date)
+    {
+        DateOnly parsed;
+        if (string.Equals(date, "today", StringComparison.OrdinalIgnoreCase))
+        {
+            parsed = DateOnly.FromDateTime(DateTime.UtcNow);
+        }
+        else if (!DateOnly.TryParseExact(date, "yyyyMMdd", null,
+                     System.Globalization.DateTimeStyles.None, out parsed))
+        {
+            return BadRequest(new { message = "date must be yyyyMMdd or 'today'." });
+        }
+
+        try { return Ok(await _service.GetOrAssignDailyAsync(parsed)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     [AllowAnonymous]
     [HttpGet("by-line-id")]
     public async Task<IActionResult> GetByLineId([FromQuery] string lineId)

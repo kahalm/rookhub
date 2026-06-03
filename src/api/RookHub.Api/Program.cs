@@ -101,6 +101,8 @@ try
     builder.Services.AddHostedService<RoundMonitorService>();
     // Periodisches Lebenszeichen nach ES (Standard 60 s) → log-watcher erkennt toten Dienst.
     builder.Services.AddHostedService<HeartbeatService>();
+    // Taegliche Tagespuzzle-Zuordnung um 00:00 UTC (siehe DailyPuzzles-Tabelle).
+    builder.Services.AddHostedService<DailyPuzzleScheduler>();
 
     // SchachBot-Webhook (Solver-Updates fuer Daily-Puzzle live an den Bot pushen).
     // URL + Secret optional → ohne Konfig stillschweigend deaktiviert.

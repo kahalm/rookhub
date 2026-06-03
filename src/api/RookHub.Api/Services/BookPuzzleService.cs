@@ -247,21 +247,19 @@ public class BookPuzzleService
                 query = query.Where(bp => !excludeIds.Contains(bp.Id));
         }
 
+        // Daily ist jetzt persistiert: einmal pro UTC-Tag wird ein Puzzle aus den
+        // forDaily-Buechern ausgewuerfelt und in DailyPuzzles gespeichert. Spaetere
+        // Aufrufe (heute oder rueckblickend) liefern denselben Eintrag.
+        if (pool == "daily" && !bookId.HasValue && string.IsNullOrWhiteSpace(exclude))
+        {
+            return await GetOrAssignDailyAsync(DateOnly.FromDateTime(DateTime.UtcNow));
+        }
+
         var count = await query.CountAsync();
         if (count == 0)
             throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
 
-        int index;
-        if (pool == "daily")
-        {
-            // Deterministisch: Tagesnummer (UTC) modulo Pool-Größe → gemeinsames Tagespuzzle.
-            var dayNumber = (long)(DateTime.UtcNow.Date - DateTime.UnixEpoch).TotalDays;
-            index = (int)(((dayNumber % count) + count) % count);
-        }
-        else
-        {
-            index = Random.Shared.Next(count);
-        }
+        var index = Random.Shared.Next(count);
 
         // FirstOrDefault statt First: schrumpft der Pool zwischen CountAsync und hier
         // (paralleler Import/Delete), zeigt Skip(index) sonst ins Leere -> FirstAsync
@@ -269,6 +267,68 @@ public class BookPuzzleService
         var puzzle = await query.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
         return MapToDto(puzzle);
+    }
+
+    /// <summary>
+    /// Liefert das Tagespuzzle fuer ein bestimmtes UTC-Datum.
+    ///
+    /// - Datum > heute → <see cref="InvalidOperationException"/> (400)
+    /// - Datum ≤ heute und bereits zugeordnet → gespeicherter Eintrag
+    /// - Datum ≤ heute und noch nicht zugeordnet → JETZT ausloesen, speichern, liefern
+    ///   (Race-safe: Unique-Constraint auf Date macht parallele Inserts idempotent)
+    /// </summary>
+    public async Task<BookPuzzleDto> GetOrAssignDailyAsync(DateOnly date)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (date > today)
+            throw new InvalidOperationException("Date is in the future.");
+
+        // 1) Vorhandene Zuordnung? Lade gleich das Puzzle mit Book mit.
+        var existing = await _db.DailyPuzzles
+            .Where(d => d.Date == date)
+            .Include(d => d.BookPuzzle!).ThenInclude(bp => bp.Book)
+            .FirstOrDefaultAsync();
+        if (existing?.BookPuzzle != null)
+            return MapToDto(existing.BookPuzzle);
+
+        // 2) Zufaelliges Puzzle aus dem forDaily-Pool.
+        var pool = _db.BookPuzzles.Include(bp => bp.Book)
+            .Where(bp => bp.Book != null && bp.Book.ForDaily);
+        var count = await pool.CountAsync();
+        if (count == 0)
+            throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+
+        var index = Random.Shared.Next(count);
+        var picked = await pool.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+
+        _db.DailyPuzzles.Add(new Models.DailyPuzzle
+        {
+            Date = date,
+            BookPuzzleId = picked.Id,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Race: parallel hat ein anderer Aufruf schon zugeordnet → die vorhandene
+            // Zeile lesen und das damals gewaehlte Puzzle liefern.
+            _db.ChangeTracker.Clear();
+            var raced = await _db.DailyPuzzles
+                .Where(d => d.Date == date)
+                .Include(d => d.BookPuzzle!).ThenInclude(bp => bp.Book)
+                .FirstOrDefaultAsync();
+            if (raced?.BookPuzzle != null)
+                return MapToDto(raced.BookPuzzle);
+            throw;
+        }
+
+        _logger.LogInformation("DailyPuzzle assigned: Date={Date} BookPuzzleId={Id}", date, picked.Id);
+        return MapToDto(picked);
     }
 
     /// <summary>Puzzle-Id zu einer LineId (Lookup für den schach-bot).</summary>
