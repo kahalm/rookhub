@@ -23,6 +23,60 @@ public class ProfileServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    private async Task<int> CreateUserWithPasswordAsync(string username, string password)
+    {
+        var user = new Models.AppUser
+        {
+            Username = username,
+            Email = $"{username}@example.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+            IsAdmin = true,
+            Profile = new Models.UserProfile { DisplayName = "Real Name", FideId = "12345", DiscordId = "d1", DiscordUsername = "real#1" }
+        };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    [Fact]
+    public async Task DeleteAccount_WrongPassword_Throws_AndKeepsData()
+    {
+        var id = await CreateUserWithPasswordAsync("delme1", "secret123");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _profileService.DeleteAccountAsync(id, "wrong-password"));
+        var user = await _db.AppUsers.Include(u => u.Profile).FirstAsync(u => u.Id == id);
+        Assert.Null(user.DeletedAt);
+        Assert.Equal("Real Name", user.Profile!.DisplayName);
+    }
+
+    [Fact]
+    public async Task DeleteAccount_CorrectPassword_Anonymizes_RemovesPersonal_KeepsStats()
+    {
+        var id = await CreateUserWithPasswordAsync("delme2", "secret123");
+        var other = await CreateUserWithPasswordAsync("frienduser", "x");
+        _db.Friendships.Add(new Models.Friendship { RequesterId = id, AddresseeId = other, Status = Models.FriendshipStatus.Accepted });
+        _db.EndlessSessions.Add(new Models.EndlessSession { UserId = id, Timestamp = 1, TotalSolved = 7 });
+        await _db.SaveChangesAsync();
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        var user = await _db.AppUsers.Include(u => u.Profile).FirstAsync(u => u.Id == id);
+        // Identität anonymisiert + Login gesperrt
+        Assert.NotNull(user.DeletedAt);
+        Assert.Equal($"deleted_{id}", user.Username);
+        Assert.Contains("@deleted.invalid", user.Email);
+        Assert.False(user.IsAdmin);
+        Assert.False(BCrypt.Net.BCrypt.Verify("secret123", user.PasswordHash));
+        // PII entfernt
+        Assert.Null(user.Profile!.DisplayName);
+        Assert.Null(user.Profile.FideId);
+        Assert.Null(user.Profile.DiscordId);
+        // persönliche Verknüpfung weg
+        Assert.False(await _db.Friendships.AnyAsync(f => f.RequesterId == id || f.AddresseeId == id));
+        // Statistik bleibt (anonym, unter der UserId)
+        Assert.True(await _db.EndlessSessions.AnyAsync(s => s.UserId == id && s.TotalSolved == 7));
+    }
+
     private async Task<int> CreateUserAsync(string username = "testuser")
     {
         var user = new Models.AppUser

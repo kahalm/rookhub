@@ -19,6 +19,10 @@ public class AppUser
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Gesetzt, wenn der Account gelöscht/anonymisiert wurde (DSGVO). Solche Accounts
+    /// können sich nicht mehr einloggen; PII ist entfernt, Solve-Statistik bleibt anonym erhalten.</summary>
+    public DateTime? DeletedAt { get; set; }
+
     public int PuzzleElo { get; set; } = 1500;
 
     public int? PuzzleEloViz1 { get; set; }  // Level 1 (Default: 1400)

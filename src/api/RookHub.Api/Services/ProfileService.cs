@@ -174,6 +174,56 @@ public class ProfileService
         return MapToDto(user);
     }
 
+    /// <summary>
+    /// Löscht den Account DSGVO-konform: Identität + PII werden anonymisiert (AppUser in-place,
+    /// Login dauerhaft gesperrt), persönliche Inhalte/Verknüpfungen entfernt, die Solve-Statistik
+    /// bleibt anonym (unter der UserId) erhalten. Verlangt das korrekte Passwort.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">User existiert nicht.</exception>
+    /// <exception cref="UnauthorizedAccessException">Passwort falsch.</exception>
+    public async Task DeleteAccountAsync(int userId, string password)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.Profile)
+            .FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        if (user.DeletedAt != null)
+            return; // bereits gelöscht -> idempotent
+
+        if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            throw new UnauthorizedAccessException("Password is incorrect.");
+
+        // 1) Persönliche Inhalte & Verknüpfungen hart entfernen (keine Statistik):
+        //    Freundschaften (FK Restrict -> müssen explizit weg), Repertoires (cascadet Dateien),
+        //    Turnier-Abos/-Favoriten/-Einstellungen, Gruppen-Mitgliedschaften.
+        _db.Friendships.RemoveRange(
+            await _db.Friendships.Where(f => f.RequesterId == userId || f.AddresseeId == userId).ToListAsync());
+        _db.Repertoires.RemoveRange(await _db.Repertoires.Where(r => r.UserId == userId).ToListAsync());
+        _db.TournamentSubscriptions.RemoveRange(await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync());
+        _db.TournamentFavorites.RemoveRange(await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync());
+        _db.TournamentUserSettings.RemoveRange(await _db.TournamentUserSettings.Where(s => s.UserId == userId).ToListAsync());
+        _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
+
+        // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
+        user.Username = $"deleted_{userId}";
+        user.Email = $"deleted_{userId}@deleted.invalid";
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
+        user.IsAdmin = false;
+        user.DeletedAt = DateTime.UtcNow;
+
+        // 3) Profil-PII entfernen (Statistik-Tabellen referenzieren weiterhin die UserId).
+        if (user.Profile is { } p)
+        {
+            p.FirstName = p.LastName = p.DisplayName = null;
+            p.FideId = p.ChessResultsId = p.ChessComUsername = p.LichessUsername = null;
+            p.DiscordId = p.DiscordUsername = null;
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("AccountDeleted: user {UserId} anonymized (stats retained).", userId);
+    }
+
     private static ProfileDto MapToDto(AppUser user) => new()
     {
         UserId = user.Id,

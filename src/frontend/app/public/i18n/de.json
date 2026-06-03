@@ -146,6 +146,35 @@
       "clear": "Cache leeren",
       "cleared": "Offline-Cache geleert",
       "pending": "{{count}} Lösungen warten auf Synchronisierung — sie werden automatisch hochgeladen, sobald du wieder online bist."
+    },
+    "delete": {
+      "title": "Konto löschen",
+      "hint": "Lösche dein Konto dauerhaft.",
+      "button": "Konto löschen",
+      "warn": "Achtung: Deine Identität und persönlichen Daten werden unwiderruflich entfernt. Bitte gib zur Bestätigung dein Passwort ein.",
+      "password": "Passwort",
+      "confirm": "Endgültig löschen",
+      "deleting": "Wird gelöscht...",
+      "done": "Dein Konto wurde gelöscht.",
+      "wrongPassword": "Passwort ist falsch.",
+      "failed": "Konto konnte nicht gelöscht werden.",
+      "moreInfo": "Mehr Informationen zur Konto-Löschung"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Konto löschen",
+      "intro": "Auf dieser Seite erfährst du, wie du dein RookHub-Konto löschst und was dabei mit deinen Daten passiert.",
+      "inAppTitle": "So löschst du dein Konto",
+      "inApp": "Melde dich in der App an und gehe zu Profil → „Konto löschen“. Dort bestätigst du mit deinem Passwort. Das Konto wird sofort gelöscht.",
+      "removedTitle": "Was entfernt wird",
+      "removed1": "Deine Identität und persönlichen Daten (Benutzername, E-Mail, Anzeige-/Klarname, FIDE-/ChessResults-ID, Chess.com-/Lichess-Name, Discord-Verknüpfung) sowie der Login-Zugang.",
+      "removed2": "Persönliche Inhalte und Verknüpfungen: Repertoires, Turnier-Abos/-Favoriten, Freundschaften und Gruppen-Mitgliedschaften.",
+      "keptTitle": "Was anonym erhalten bleibt",
+      "kept": "Aggregierte Lösungs-/Spielstatistiken (z. B. gelöste Puzzles) bleiben in anonymisierter, nicht auf dich rückführbarer Form erhalten.",
+      "contactTitle": "Kontakt",
+      "contact": "Für Lösch-Anfragen oder Fragen erreichst du uns unter",
+      "back": "Zurück zur Anmeldung"
     }
   },
   "friends": {

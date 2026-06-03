@@ -146,6 +146,35 @@
       "clear": "Isprazni predmemoriju",
       "cleared": "Offline predmemorija ispražnjena",
       "pending": "{{count}} rješenja čeka sinkronizaciju — automatski se učitavaju kad ponovno budete na mreži."
+    },
+    "delete": {
+      "title": "Brisanje računa",
+      "hint": "Trajno izbriši svoj račun.",
+      "button": "Izbriši račun",
+      "warn": "Upozorenje: tvoj identitet i osobni podaci bit će nepovratno uklonjeni. Za potvrdu unesi svoju lozinku.",
+      "password": "Lozinka",
+      "confirm": "Trajno izbriši",
+      "deleting": "Brisanje...",
+      "done": "Tvoj račun je izbrisan.",
+      "wrongPassword": "Lozinka nije točna.",
+      "failed": "Račun nije moguće izbrisati.",
+      "moreInfo": "Više o brisanju računa"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Brisanje računa",
+      "intro": "Na ovoj stranici saznaješ kako izbrisati svoj RookHub račun i što se događa s tvojim podacima.",
+      "inAppTitle": "Kako izbrisati račun",
+      "inApp": "Prijavi se u aplikaciju i idi na Profil → „Izbriši račun“. Potvrdi svojom lozinkom. Račun se odmah briše.",
+      "removedTitle": "Što se uklanja",
+      "removed1": "Tvoj identitet i osobni podaci (korisničko ime, e-pošta, prikazno/pravo ime, FIDE/ChessResults ID, Chess.com/Lichess ime, Discord poveznica) te pristup prijavi.",
+      "removed2": "Osobni sadržaj i poveznice: repertoari, pretplate/favoriti turnira, prijateljstva i članstva u grupama.",
+      "keptTitle": "Što ostaje anonimno",
+      "kept": "Agregirana statistika rješavanja/igre (npr. riješene zagonetke) zadržava se u anonimnom obliku koji se ne može povezati s tobom.",
+      "contactTitle": "Kontakt",
+      "contact": "Za zahtjeve za brisanje ili pitanja javi nam se na",
+      "back": "Natrag na prijavu"
     }
   },
   "friends": {

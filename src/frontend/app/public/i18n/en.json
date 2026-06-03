@@ -146,6 +146,35 @@
       "clear": "Clear cache",
       "cleared": "Offline cache cleared",
       "pending": "{{count}} solutions waiting to sync — they upload automatically when you're back online."
+    },
+    "delete": {
+      "title": "Delete account",
+      "hint": "Permanently delete your account.",
+      "button": "Delete account",
+      "warn": "Warning: your identity and personal data will be irreversibly removed. Please enter your password to confirm.",
+      "password": "Password",
+      "confirm": "Delete permanently",
+      "deleting": "Deleting...",
+      "done": "Your account has been deleted.",
+      "wrongPassword": "Password is incorrect.",
+      "failed": "Could not delete account.",
+      "moreInfo": "More about account deletion"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Delete account",
+      "intro": "This page explains how to delete your RookHub account and what happens to your data.",
+      "inAppTitle": "How to delete your account",
+      "inApp": "Sign in to the app and go to Profile → \"Delete account\". Confirm with your password. The account is deleted immediately.",
+      "removedTitle": "What is removed",
+      "removed1": "Your identity and personal data (username, email, display/real name, FIDE/ChessResults ID, Chess.com/Lichess name, Discord link) and login access.",
+      "removed2": "Personal content and links: repertoires, tournament subscriptions/favourites, friendships and group memberships.",
+      "keptTitle": "What is kept anonymously",
+      "kept": "Aggregated solving/play statistics (e.g. solved puzzles) are retained in anonymised form that cannot be traced back to you.",
+      "contactTitle": "Contact",
+      "contact": "For deletion requests or questions, reach us at",
+      "back": "Back to login"
     }
   },
   "friends": {

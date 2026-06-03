@@ -86,3 +86,10 @@ public class LinkDiscordDto
     [Required]
     public string Token { get; set; } = string.Empty;
 }
+
+/// <summary>Bestätigung für das Löschen des eigenen Accounts — verlangt das aktuelle Passwort.</summary>
+public class DeleteAccountDto
+{
+    [Required]
+    public string Password { get; set; } = string.Empty;
+}

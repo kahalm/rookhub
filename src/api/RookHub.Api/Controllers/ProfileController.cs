@@ -95,6 +95,28 @@ public class ProfileController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Löscht den eigenen Account (DSGVO): Identität/PII werden anonymisiert, die Solve-Statistik
+    /// bleibt anonym erhalten. Verlangt das aktuelle Passwort zur Bestätigung (401 bei falschem).
+    /// </summary>
+    [HttpDelete("account")]
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto)
+    {
+        try
+        {
+            await _profileService.DeleteAccountAsync(GetUserId(), dto?.Password ?? string.Empty);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new { message = "Password is incorrect." });
+        }
+    }
+
     [HttpGet("{username}")]
     [AllowAnonymous]
     public async Task<ActionResult<PublicProfileDto>> GetPublicProfile(string username)

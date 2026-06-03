@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.1';
+export const APP_VERSION = '0.78.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.78.2', date: '2026-06-03', changes: [
+    'Konto löschen (DSGVO): Du kannst dein Konto jetzt selbst löschen (Profil → „Konto löschen", mit Passwort-Bestätigung). Identität und persönliche Daten werden unwiderruflich entfernt und persönliche Inhalte (Repertoires, Turnier-Abos/-Favoriten, Freundschaften, Gruppen) gelöscht; anonymisierte Lösungs-Statistiken bleiben erhalten. Neue öffentliche Info-Seite /account-deletion. Voraussetzung für die Google-Play-Veröffentlichung.',
+  ]},
   { version: '0.78.1', date: '2026-06-03', changes: [
     'App-Vorbereitung: echte App-Icons (192/512 px + „maskable" für runde/adaptive Android-Icons) statt nur des kleinen Favicons; das Web-App-Manifest wurde vervollständigt (id/scope/lang/categories + apple-touch-icon). Damit ist RookHub eine sauber installierbare PWA — Grundlage für eine spätere Veröffentlichung im Google Play Store. Keine Änderung an Funktionen.',
   ]},

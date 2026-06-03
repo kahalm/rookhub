@@ -75,6 +75,16 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Löscht den eigenen Account (DSGVO): die Identität/PII wird serverseitig anonymisiert,
+   * die Solve-Statistik bleibt anonym erhalten. Verlangt das aktuelle Passwort. Bei Erfolg
+   * wird lokal ausgeloggt.
+   */
+  deleteAccount(password: string): Observable<void> {
+    return this.http.delete<void>('/api/profile/account', { body: { password } })
+      .pipe(tap(() => this.logout()));
+  }
+
   private storeUser(user: AuthResponse): void {
     localStorage.setItem('rookhub_user', JSON.stringify(user));
     this.currentUserSubject.next(user);

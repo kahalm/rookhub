@@ -86,6 +86,10 @@ public class AuthService
         if (user == null || !passwordOk)
             throw new UnauthorizedAccessException("Invalid username or password.");
 
+        // Gelöschte/anonymisierte Accounts können sich nicht mehr einloggen.
+        if (user.DeletedAt != null)
+            throw new UnauthorizedAccessException("Invalid username or password.");
+
         // Strukturierter Login-Event fuer Kibana: Logins/Tag (Count) + Unique Logins
         // (Cardinality auf fields.UserId). Nur bei erfolgreichem Login, analog zum
         // PuzzleAttempt-Log in PuzzleService. messageTemplate enthaelt "UserLogin".
