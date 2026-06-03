@@ -1,7 +1,7 @@
-import { Component, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -60,7 +60,7 @@ interface EndlessPuzzleAttempt {
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
 })
-export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy {
+export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy, OnInit {
   get screen(): 'config' | 'play' | 'gameover' | 'exhausted' {
     if (this.state === 'EXHAUSTED') return 'exhausted';
     if (this.state === 'GAME_OVER') return 'gameover';
@@ -151,6 +151,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     public authService: AuthService,
     private prefs: PreferencesService,
     public router: Router,
+    private route: ActivatedRoute,
     private dialog: MatDialog,
     private translate: TranslateService,
     private offline: OfflineService,
@@ -221,6 +222,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       error: () => {}
     });
     this.stockfish.init().catch(() => {});
+  }
+
+  ngOnInit(): void {
+    // Rückkehr aus dem Analysemodus (?resume=1): laufenden Run direkt fortsetzen statt in der
+    // Übersicht zu landen. Bei normalem Einstieg (kein resume-Param) bleibt der Resume-Banner,
+    // damit man Fortsetzen/Archivieren wählen kann. Der Konstruktor hat 0-Leben-Zombies bereits
+    // bereinigt → activeGameState != null bedeutet: noch Leben übrig.
+    if (this.route.snapshot.queryParamMap.get('resume') === '1' && this.activeGameState && this.state === 'CONFIG') {
+      this.resumeGame();
+    }
   }
 
   ngOnDestroy(): void {
@@ -572,7 +583,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         fen: this.puzzle.fen,
         moves: this.puzzle.moves.split(' ').filter(m => m).join(','),
         orientation: this.orientation,
-        from: '/puzzles/endless',
+        from: '/puzzles/endless?resume=1',   // Rückkehr setzt den laufenden Run fort (siehe ngOnInit)
       },
     });
   }
@@ -586,7 +597,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         fen: this.lastSolvedFen,
         moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
         orientation: this.lastSolvedOrientation,
-        from: '/puzzles/endless',
+        from: '/puzzles/endless?resume=1',   // Rückkehr setzt den laufenden Run fort (siehe ngOnInit)
       },
     });
   }

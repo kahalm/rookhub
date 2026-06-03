@@ -22,13 +22,14 @@ function makeComponent(): any {
     loadFromServer: () => ({ subscribe: () => {} }),   // async Merge: im Test no-op
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
+  const route: any = { snapshot: { queryParamMap: { get: () => null } } };
   const dialog: any = {};
   const translate: any = {};
   const offline: any = { puzzleCount: 0, endlessRuns: 0 };
   const snackBar: any = {};
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, dialog, translate, offline, snackBar, offlineQueue
+    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue
   );
 }
 
@@ -43,7 +44,7 @@ describe('EndlessPuzzleComponent analyse', () => {
     c.analyzeCurrentPuzzle();
 
     expect(c.router.navigate).toHaveBeenCalledWith(['/analysis'], {
-      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'black', from: '/puzzles/endless' },
+      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'black', from: '/puzzles/endless?resume=1' },
     });
   });
 
@@ -58,7 +59,7 @@ describe('EndlessPuzzleComponent analyse', () => {
     c.reviewLastPuzzle();
 
     expect(c.router.navigate).toHaveBeenCalledWith(['/analysis'], {
-      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'white', from: '/puzzles/endless' },
+      queryParams: { fen: PUZZLE.fen, moves: 'e2e4,e7e5,g1f3', orientation: 'white', from: '/puzzles/endless?resume=1' },
     });
   });
 
