@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.85.2';
+export const APP_VERSION = '0.85.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.3', date: '2026-06-04', changes: [
+    'Visualisierungs-Modus (Mobile): Ein Tap auf ein Feld zeichnet jetzt denselben prominenten grünen Kreis wie ein Rechtsklick auf Desktop — vorher war die Auswahl auf kleinen Brettern nur durch das dezente gelbliche „selected"-Highlight von chessground markiert, das unter dem Finger kaum zu sehen war. Der Kreis-Stroke ist gegenüber der Default-Brush verdickt (lineWidth 18 statt 10), damit er auch auf kleinen Handy-Brettern groß und gut sichtbar ist.',
+  ]},
   { version: '0.85.2', date: '2026-06-04', changes: [
     'Tagespuzzle-Fairness: Wer beim Tagespuzzle einen falschen Zug macht und „Zurücksetzen" oder „Mausrutscher" drückt — oder aufgibt — gilt für diesen Tag als nicht-gelöst, selbst wenn er es anschließend doch noch löst. Vorher konnte ein fehlgeschlagener erster Versuch durch einen späteren Solve „überschrieben" werden, sodass derselbe Tag gleichzeitig als gelöst und nicht-gelöst zählte. Server entscheidet jetzt per erstem Versuch je User; Discord-Solver-Liste zeigt den ersten Versuch.',
   ]},

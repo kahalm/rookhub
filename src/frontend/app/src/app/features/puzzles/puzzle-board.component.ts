@@ -170,23 +170,22 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   /**
-   * Markiert die Viz-Auswahl visuell. Kombiniert mehrere Mechanismen, damit das
-   * Highlight auf Mobile genauso prominent ist wie am Desktop:
-   *  - chessground selectSquare gibt der Square den vollflächigen „selected"-Hintergrund
-   *    (gelblich) — viel deutlicher als ein dünner Kreis-Stroke
-   *  - setShapes mit grünem Kreis als zusätzlicher Akzent (wie auf Desktop)
-   * Ohne selectSquare verschwand der dünne Kreis am Handy regelmäßig unter dem Finger.
+   * Markiert die Viz-Auswahl visuell als grünen Kreis um das Feld — visuell identisch
+   * zum Rechtsklick-Marker auf Desktop. Wir verdicken den Stroke gegenüber der
+   * chessground-Default-Brush (lineWidth 10 → 18), damit der Kreis auf kleinen
+   * Mobile-Brettern genauso prominent rüberkommt wie auf dem Desktop.
+   * Bewusst KEIN zusätzlicher `selectSquare`-Hintergrund: das gelbliche „selected"-
+   * Highlight war auf Mobile dezent und überlagerte zudem den Kreis, weshalb es
+   * der einzige sichtbare Marker zu werden drohte (User-Feedback).
    */
   private markVizSelection(key: Key): void {
     if (!this.ground) return;
-    this.ground.setShapes([{ orig: key, brush: 'green' }]);
-    try { this.ground.selectSquare(key, true); } catch { /* alte chessground-Version */ }
+    this.ground.setShapes([{ orig: key, brush: 'green', modifiers: { lineWidth: 18 } }]);
   }
 
   private clearVizSelection(): void {
     if (!this.ground) return;
     this.ground.setShapes([]);
-    try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
   }
 
   /** Erkennt einen Bauern-Promotion-Zug im Viz-Modus (anhand actualFen, nicht des frozen Bretts). */
