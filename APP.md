@@ -2,7 +2,7 @@
 
 Stand: 2026-06-03. (Persönliche TODO-Liste, nicht zwingend committed.)
 
-## Google Play / TWA — Code fertig, in 5 gestackten Branches gepusht (nicht gemergt)
+## Google Play / TWA — in master gemergt (0.83.0)
 
 In Reihenfolge mergen, **oder** einfach Branch 5 mergen (enthält 1–4):
 
@@ -13,13 +13,13 @@ In Reihenfolge mergen, **oder** einfach Branch 5 mergen (enthält 1–4):
 5. `feature/play-5-twa-android` (0.78.5) — TWA-Config + CI-AAB-Workflow
 
 ### Nur von dir zu erledigen
-- [ ] Branches reviewen + mergen (Push baut `:dev`; `:latest`/Prod ist tag-gated)
+- [x] Branches in master gemergt (0.83.0, mit origins parallelem Stand 0.82.4 vereint)
 - [ ] **Impressum/Betreiberdaten**: Name, Anschrift, UID, Kontakt-E-Mail zentral in `src/frontend/app/src/environments/operator.ts` (`OPERATOR`) eintragen — Platzhalter ersetzen (eine einzige Stelle, sprachneutral)
 - [ ] **Google-Play-Developer-Account** prüfen/anlegen (25 $; neue Privat-Accounts: 12 Tester / 14 Tage Closed-Test vor Production)
 - [ ] **Upload-Keystore** erzeugen (`keytool -genkeypair … -alias rookhub`) + **Play App Signing** aktivieren
 - [ ] CI-Secrets setzen: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`
 - [ ] **AAB bauen**: GitHub-Action „Build Android TWA" (manuell) **oder** lokal `bubblewrap build` **oder** PWABuilder.com
-- [ ] **SHA-256-Fingerprint** (aus Play App Signing) in `src/frontend/app/public/.well-known/assetlinks.json` eintragen (Platzhalter `REPLACE_WITH_PLAY_APP_SIGNING_SHA256`) + ausrollen
+- [x] SHA-256-Fingerprint in `assetlinks.json` — von origin bereits mit echtem Wert befüllt (Commit 0.82.3)
 - [ ] Play-Listing: Beschreibung, Icon 512, Feature-Graphic 1024×500, ≥2 Screenshots
 - [ ] **Datenschutz-URL** in der Play Console: `https://rookhub.oberschmid.homes/privacy`
 - [ ] **Data-Safety-Formular** ausfüllen (gemäß Datenschutzerklärung)
