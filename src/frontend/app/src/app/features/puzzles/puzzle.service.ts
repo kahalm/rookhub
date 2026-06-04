@@ -171,6 +171,11 @@ export class PuzzleService {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
   }
 
+  /** Tagespuzzle eines UTC-Datums (`yyyyMMdd` oder `today`) — stabil/teilbar via Datums-Link. */
+  getDailyPuzzle(date: string): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/daily/${date}`);
+  }
+
   /** Nächstes Puzzle im selben Buch (Standalone-Buch-Navigation). */
   getNextBookPuzzle(id: number): Observable<BookPuzzleDto> {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/next`);

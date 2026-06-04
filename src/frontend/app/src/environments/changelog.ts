@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.79.1';
+export const APP_VERSION = '0.83.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,27 +11,44 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: '0.79.1', date: '2026-06-04', changes: [
-    'Technisch: Die Impressum-Betreiberdaten (Name, Anschrift, UID, Kontakt-E-Mail) liegen jetzt zentral in einer Konfigurationsdatei statt in jeder der 25 Sprachdateien — vor dem Go-live nur noch an einer Stelle einzutragen. Keine sichtbare Änderung.',
+  { version: '0.83.0', date: '2026-06-04', changes: [
+    'Google-Play-Vorbereitung & Mehrsprachigkeit (großes Update):',
+    'Echte App-Icons (192/512 px + „maskable") + vervollständigtes Web-App-Manifest → RookHub ist eine sauber installierbare PWA.',
+    'Konto selbst löschen (DSGVO): Profil → „Konto löschen" mit Passwort-Bestätigung; Identität und persönliche Daten werden entfernt, anonymisierte Statistiken bleiben erhalten. Neue öffentliche Seite /account-deletion.',
+    'Neue öffentliche Rechtsseiten: Datenschutzerklärung (/privacy) und Impressum (/impressum), auf der Anmeldeseite verlinkt.',
+    '22 neue Sprachen — die App ist jetzt in 25 Sprachen verfügbar (u. a. Spanisch, Chinesisch, Hindi, Arabisch, Portugiesisch, Französisch, Russisch, Japanisch, Koreanisch …), inklusive Rechts-nach-links-Darstellung für Arabisch und Persisch.',
+    'Technische Grundlagen für die spätere Android-App im Google Play Store (Digital Asset Links, TWA-Build-Gerüst) und zentrale Konfiguration der Impressum-Betreiberdaten.',
   ]},
-  { version: '0.79.0', date: '2026-06-04', changes: [
-    '22 neue Sprachen — die App ist jetzt in 25 Sprachen verfügbar: zusätzlich zu Englisch/Deutsch/Kroatisch nun Spanisch, Chinesisch, Hindi, Arabisch, Portugiesisch, Französisch, Russisch, Japanisch, Indonesisch, Italienisch, Türkisch, Koreanisch, Vietnamesisch, Persisch, Polnisch, Ukrainisch, Rumänisch, Niederländisch, Griechisch, Ungarisch, Tschechisch und Schwedisch. Inkl. Rechts-nach-links-Darstellung für Arabisch und Persisch.',
-    'Lokalisierung vervollständigt: verbliebene unübersetzte UI-Texte (Navigations-Beschriftungen, „Stockfish-Tiefe") nachgezogen.',
+  { version: '0.82.2', date: '2026-06-04', changes: [
+    'Fix (Mobile, Visualisierungs-Modus): Wenn man im Viz-Modus (≥ Stufe 1) auf ein Feld tippte, war die Auswahl auf dem Handy kaum erkennbar — nur ein dünner Kreis-Stroke, der unter dem Finger oft verschwand. Jetzt wird das angetippte Feld zusätzlich vollflächig hervorgehoben (chessground-„selected", gelblich) und der grüne Kreis bleibt als zweiter Akzent. Chessgrounds eigene Interaktion ist im Viz-Modus abgeschaltet, damit der Tap nicht gleichzeitig die Auswahl wieder löscht.',
   ]},
-  { version: '0.78.5', date: '2026-06-03', changes: [
-    'App-Vorbereitung (technisch): TWA-Projektgerüst (Bubblewrap-Config twa/twa-manifest.json) + GitHub-Actions-Workflow zum Bauen des signierten Android-App-Bundles (AAB) für Google Play. Keine Änderung an der Web-App.',
+  { version: '0.82.1', date: '2026-06-04', changes: [
+    'Endlos-Config-Screen: „Weiterspielen / Lauf archivieren + Neu starten / Start"-Block sitzt jetzt ganz oben — sofort sichtbar ohne erst durch Start-Rating, Schwellenwerte, Visualisierung etc. zu scrollen. Die Config-Felder bleiben darunter zum Feintunen vor dem nächsten Lauf.',
   ]},
-  { version: '0.78.4', date: '2026-06-03', changes: [
-    'App-Vorbereitung (technisch): Digital Asset Links (/.well-known/assetlinks.json) hinterlegt — verknüpft die spätere Android-App (Google Play) mit der Domain und blendet die Browserleiste aus. Keine sichtbare Änderung; der App-Signatur-Fingerprint wird beim Play-Release eingetragen.',
+  { version: '0.82.0', date: '2026-06-04', changes: [
+    'Endlos: kompakte „Quick-Stats"-Pillen-Reihe direkt unter dem Brett — Puzzle-Rating, aktuelles Level und Herzen sind jetzt auch auf kleinen Handy-Screens ohne Scrollen sichtbar (vorher steckten diese Infos in der Stats-Karte unter Visualisierungs-/Status-Karte).',
   ]},
-  { version: '0.78.3', date: '2026-06-03', changes: [
-    'Rechtliches: Neue öffentliche Seiten Datenschutzerklärung (/privacy) und Impressum (/impressum), verlinkt auf der Anmeldeseite. Pflicht-Voraussetzung für die Google-Play-Veröffentlichung. Hinweis: Die Betreiber-Angaben im Impressum sind noch Platzhalter und müssen vor dem Go-live eingetragen werden.',
+  { version: '0.81.1', date: '2026-06-04', changes: [
+    'Fix (Mobile, Endlos): Nach dem Lösen sah die „Gelöst"-Karte unter dem Brett ungewohnt schmal aus, weil die Info-Sektion auf Mobile (flex-Spalte) ihre Breite vom Inhalt nahm statt 100 % zu spannen. Beide Sektionen (Brett + Status-Karte) werden jetzt im Mobile-Layout auf volle Breite gesetzt.',
   ]},
-  { version: '0.78.2', date: '2026-06-03', changes: [
-    'Konto löschen (DSGVO): Du kannst dein Konto jetzt selbst löschen (Profil → „Konto löschen", mit Passwort-Bestätigung). Identität und persönliche Daten werden unwiderruflich entfernt und persönliche Inhalte (Repertoires, Turnier-Abos/-Favoriten, Freundschaften, Gruppen) gelöscht; anonymisierte Lösungs-Statistiken bleiben erhalten. Neue öffentliche Info-Seite /account-deletion. Voraussetzung für die Google-Play-Veröffentlichung.',
+  { version: '0.81.0', date: '2026-06-03', changes: [
+    'Tagespuzzle-Ansicht (`/puzzles/daily/:date`): keine Buch-Navigation („Nächstes/Zufällig aus Buch") mehr, sondern Datums-Navigation — „Voriger Tag" immer, „Nächster Tag" nur, wenn man in der Vergangenheit ist (keine Zukunft). Browser-Vor/Zurück funktionieren ebenfalls.',
+    'Neuer Schnellzugriff „Tagespuzzle" auf der Dashboard-Puzzles-Karte (neben Lösen/Endlos) → öffnet das heutige Tagespuzzle.',
+  ]},
+  { version: '0.80.1', date: '2026-06-03', changes: [
+    'Fix (kritisch): Die API startete nicht mehr — beim Auth-Setup kollidierte der JWT-Handler mit dem Policy-Scheme „Bearer" (beide unter dem Namen „Bearer" registriert → „Scheme already exists: Bearer", Startup-Crash). Der JWT-Handler läuft jetzt unter dem Namen „Jwt"; das Policy-Scheme „Bearer" bleibt der Default und leitet je nach Token (`rkh_…` → ApiToken, sonst → JWT) weiter. Behebt den API-Ausfall seit dem Auth-/API-Token-Feature.',
+  ]},
+  { version: '0.80.0', date: '2026-06-03', changes: [
+    'Tagespuzzle ist jetzt über einen stabilen, datumsbasierten Link erreichbar: neue Route `/puzzles/daily/:date` (z.B. `/puzzles/daily/20260603`) lädt das Tagespuzzle des jeweiligen UTC-Datums. Der Schach-Bot verlinkt seine Tagespuzzle-Posts ab sofort dorthin (statt auf die wechselnde Puzzle-ID `/puzzles/book/{id}`) — derselbe Link zeigt dauerhaft auf das Tagespuzzle dieses Tages.',
+  ]},
+  { version: '0.79.1', date: '2026-06-03', changes: [
+    'Extension-Endpoint (`/api/extension/*`): Scope-Guard — ein API-Token darf den Endpoint nur nutzen, wenn `scope=extension` (sichert frühe Trennung von Maschinen-Token-Berechtigungen für künftige Scopes). JWT-User dürfen weiter wie bisher. CORS-Policy `AllowCredentials` raus (Auth läuft strikt über Bearer-Token im Header, Cookies nicht gebraucht); CORS auf `GET` reduziert.',
+  ]},
+  { version: '0.79.0', date: '2026-06-03', changes: [
+    'Extension-Tokens: Sektion „Extension-Tokens" im Profil zum Erstellen / Widerrufen persönlicher API-Tokens (rkh_…-Format, GitHub-PAT-Style). Beim Anlegen wird der Raw-Token einmalig im Modal mit Copy-Button und Warnhinweis gezeigt — danach nur noch der Prefix sichtbar. Optionaler Ablauf (30/90/365 Tage oder nie). Backend-Endpoints `GET/POST/DELETE /api/profile/tokens`. Vorbereitung für die chess.com-Tampermonkey-Erweiterung, die per Bearer-Token (Scope `extension`) auf `/api/extension/*` zugreifen wird.',
   ]},
   { version: '0.78.1', date: '2026-06-03', changes: [
-    'App-Vorbereitung: echte App-Icons (192/512 px + „maskable" für runde/adaptive Android-Icons) statt nur des kleinen Favicons; das Web-App-Manifest wurde vervollständigt (id/scope/lang/categories + apple-touch-icon). Damit ist RookHub eine sauber installierbare PWA — Grundlage für eine spätere Veröffentlichung im Google Play Store. Keine Änderung an Funktionen.',
+    'Repertoire-Kategorie hinzu: Beim Anlegen wählst du jetzt eine Kategorie (Eröffnung / Mittelspiel / Endspiel / —). In der Liste wird die Kategorie als farbiger Chip neben dem Namen angezeigt. Backend-Feld `Repertoire.Kind` (Enum `None|Opening|Middlegame|Endgame`), Migration `AddRepertoireKind`. Vorbereitung für die chess.com-Extension, die per `GET /api/extension/repertoires?kind=opening` gezielt nur Eröffnungs-PGNs holen wird; der Endpoint liefert zusätzlich `totalSizeBytes` pro Repertoire als Hinweis für Client-side-Limits.',
   ]},
   { version: '0.78.0', date: '2026-06-03', changes: [
     'Endlos-Gauntlet: jeder Lauf bekommt jetzt einen eindeutigen Seed; Seed + die geordneten Ketten-Puzzle-IDs werden beim Lauf-Ende am Server gespeichert (neue Spalten auf der Session). Damit ist die exakte Kette eines Laufs dauerhaft hinterlegt — Grundlage für ein späteres Replay.',

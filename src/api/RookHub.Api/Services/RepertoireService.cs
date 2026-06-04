@@ -38,6 +38,7 @@ public class RepertoireService
                 Name = r.Name,
                 Description = r.Description,
                 IsPublic = r.IsPublic,
+                Kind = r.Kind,
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt,
                 FileCount = r.Files.Count
@@ -58,6 +59,7 @@ public class RepertoireService
             Name = rep.Name,
             Description = rep.Description,
             IsPublic = rep.IsPublic,
+            Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
             Files = rep.Files.Select(f => new RepertoireFileDto
@@ -81,7 +83,8 @@ public class RepertoireService
             UserId = userId,
             Name = dto.Name,
             Description = dto.Description,
-            IsPublic = dto.IsPublic
+            IsPublic = dto.IsPublic,
+            Kind = dto.Kind
         };
 
         _db.Repertoires.Add(rep);
@@ -93,6 +96,7 @@ public class RepertoireService
             Name = rep.Name,
             Description = rep.Description,
             IsPublic = rep.IsPublic,
+            Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
             FileCount = 0
@@ -108,6 +112,7 @@ public class RepertoireService
         if (dto.Name != null) rep.Name = dto.Name;
         if (dto.Description != null) rep.Description = dto.Description;
         if (dto.IsPublic.HasValue) rep.IsPublic = dto.IsPublic.Value;
+        if (dto.Kind.HasValue) rep.Kind = dto.Kind.Value;
         rep.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -120,6 +125,7 @@ public class RepertoireService
             Name = rep.Name,
             Description = rep.Description,
             IsPublic = rep.IsPublic,
+            Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
             FileCount = fileCount
@@ -218,15 +224,23 @@ public class RepertoireService
         return string.Join("\n\n", rep.Files.Select(f => f.PgnContent));
     }
 
-    public async Task<List<ExtensionRepertoireDto>> GetExtensionListAsync(int userId)
+    /// <summary>
+    /// Liste der Repertoires fuer einen Extension-Client. <paramref name="kind"/> filtert auf
+    /// eine Kategorie (z. B. <see cref="RepertoireKind.Opening"/>); <c>null</c> = alle Kinds.
+    /// </summary>
+    public async Task<List<ExtensionRepertoireDto>> GetExtensionListAsync(int userId, RepertoireKind? kind = null)
     {
-        return await _db.Repertoires
-            .Where(r => r.UserId == userId)
+        var q = _db.Repertoires.Where(r => r.UserId == userId);
+        if (kind.HasValue)
+            q = q.Where(r => r.Kind == kind.Value);
+        return await q
             .Select(r => new ExtensionRepertoireDto
             {
                 Id = r.Id,
                 Name = r.Name,
-                FileCount = r.Files.Count
+                FileCount = r.Files.Count,
+                Kind = r.Kind,
+                TotalSizeBytes = r.Files.Sum(f => f.FileSize)
             })
             .ToListAsync();
     }

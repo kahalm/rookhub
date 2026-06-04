@@ -28,6 +28,7 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
           </mat-card-header>
           <mat-card-actions>
             <button mat-button routerLink="/puzzles">{{ 'dashboard.puzzles.solve' | translate }}</button>
+            <button mat-button routerLink="/puzzles/daily/today">{{ 'dashboard.puzzles.daily' | translate }}</button>
             <button mat-button routerLink="/puzzles/endless">{{ 'dashboard.puzzles.endless' | translate }}</button>
           </mat-card-actions>
         </mat-card>

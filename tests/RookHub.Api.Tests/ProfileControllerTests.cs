@@ -28,10 +28,70 @@ public class ProfileControllerTests : IDisposable
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
         // For controller tests, we pass a null-ish PlayerSearchService only for non-search tests
-        _controller = new ProfileController(_profileService, null!, DiscordTokenTestHelper.Service());
+        _controller = new ProfileController(_profileService, null!, DiscordTokenTestHelper.Service(),
+            new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance));
     }
 
     public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public async Task ListTokens_Empty_ForNewUser()
+    {
+        var u = await CreateUserAsync("u1");
+        SetUser(u.Id);
+        var result = (await _controller.ListTokens()).Result as OkObjectResult;
+        Assert.NotNull(result);
+        var list = Assert.IsType<List<ApiTokenDto>>(result.Value);
+        Assert.Empty(list);
+    }
+
+    [Fact]
+    public async Task CreateToken_ReturnsRawTokenOnce_AndAppearsInList()
+    {
+        var u = await CreateUserAsync("u2");
+        SetUser(u.Id);
+
+        var created = (await _controller.CreateToken(new CreateApiTokenDto { Name = "ext" })).Result as OkObjectResult;
+        Assert.NotNull(created);
+        var dto = Assert.IsType<ApiTokenCreatedDto>(created.Value);
+        Assert.StartsWith("rkh_", dto.RawToken);
+
+        var listResult = (await _controller.ListTokens()).Result as OkObjectResult;
+        var list = Assert.IsType<List<ApiTokenDto>>(listResult!.Value);
+        Assert.Single(list);
+        Assert.Equal("ext", list[0].Name);
+        Assert.Equal(dto.Prefix, list[0].Prefix);
+    }
+
+    [Fact]
+    public async Task CreateToken_InvalidScope_Returns400()
+    {
+        var u = await CreateUserAsync("u3");
+        SetUser(u.Id);
+        var bad = await _controller.CreateToken(new CreateApiTokenDto { Name = "x", Scope = "admin" });
+        Assert.IsType<BadRequestObjectResult>(bad.Result);
+    }
+
+    [Fact]
+    public async Task RevokeToken_RemovesAndReturns204_NotFoundForForeign()
+    {
+        var alice = await CreateUserAsync("alice");
+        var bob = await CreateUserAsync("bob");
+        SetUser(alice.Id);
+        var c = (await _controller.CreateToken(new CreateApiTokenDto { Name = "x" })).Result as OkObjectResult;
+        var dto = (ApiTokenCreatedDto)c!.Value!;
+
+        // Foreign user kann nicht widerrufen.
+        SetUser(bob.Id);
+        Assert.IsType<NotFoundResult>(await _controller.RevokeToken(dto.Id));
+
+        // Owner kann widerrufen.
+        SetUser(alice.Id);
+        Assert.IsType<NoContentResult>(await _controller.RevokeToken(dto.Id));
+
+        // Erneuter Revoke → 404.
+        Assert.IsType<NotFoundResult>(await _controller.RevokeToken(dto.Id));
+    }
 
     private void SetUser(int userId)
     {

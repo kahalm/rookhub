@@ -59,6 +59,31 @@
                 <mat-card-subtitle>{{ 'endless.config.subtitle' | translate }}</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
+                <!-- Aktions-Block direkt oben: Resume-Banner + Start-Button — sofort sichtbar,
+                     ohne erst durch alle Config-Felder zu scrollen. -->
+                @if (activeGameState && activeGameState.lives > 0) {
+                  <div class="resume-banner">
+                    <div class="resume-info">
+                      <mat-icon>pause_circle</mat-icon>
+                      <span>{{ 'endless.config.unfinishedRun' | translate:{ level: activeGameState.level + 1, solved: activeGameState.solved, lives: activeGameState.lives, max: activeGameState.maxRatingReached } }}</span>
+                    </div>
+                    <div class="resume-actions">
+                      <button mat-raised-button color="primary" class="start-btn" (click)="resumeGame()">
+                        <mat-icon>play_arrow</mat-icon>
+                        {{ 'endless.config.continue' | translate }}
+                      </button>
+                      <button mat-stroked-button color="warn" (click)="archiveAndStartNew()">
+                        <mat-icon>archive</mat-icon>
+                        {{ 'endless.config.archiveAndNew' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                }
+                <button mat-raised-button color="primary" class="start-btn start-btn-top" (click)="startGame()">
+                  <mat-icon>play_arrow</mat-icon>
+                  {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
+                </button>
+
                 <div class="config-fields">
                   <mat-form-field appearance="outline">
                     <mat-label>{{ 'endless.config.startRating' | translate }}</mat-label>
@@ -156,29 +181,6 @@
                   </p>
                 }
 
-                @if (activeGameState && activeGameState.lives > 0) {
-                  <div class="resume-banner">
-                    <div class="resume-info">
-                      <mat-icon>pause_circle</mat-icon>
-                      <span>{{ 'endless.config.unfinishedRun' | translate:{ level: activeGameState.level + 1, solved: activeGameState.solved, lives: activeGameState.lives, max: activeGameState.maxRatingReached } }}</span>
-                    </div>
-                    <div class="resume-actions">
-                      <button mat-raised-button color="primary" class="start-btn" (click)="resumeGame()">
-                        <mat-icon>play_arrow</mat-icon>
-                        {{ 'endless.config.continue' | translate }}
-                      </button>
-                      <button mat-stroked-button color="warn" (click)="archiveAndStartNew()">
-                        <mat-icon>archive</mat-icon>
-                        {{ 'endless.config.archiveAndNew' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                }
-
-                <button mat-raised-button color="primary" class="start-btn" (click)="startGame()">
-                  <mat-icon>play_arrow</mat-icon>
-                  {{ (activeGameState ? 'endless.config.newGame' : 'endless.config.start') | translate }}
-                </button>
               </mat-card-content>
             </mat-card>
           </div>
@@ -205,6 +207,21 @@
             </div>
 
             <div class="info-section">
+              @if (puzzle) {
+                <!-- Kompakte Mobile-Pillen: Rating / Level / Herzen direkt unter dem Brett
+                     sichtbar, ohne erst zur Stats-Card scrollen zu muessen. -->
+                <div class="quick-stats">
+                  <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
+                  <span class="qs-pill"><mat-icon>flag</mat-icon>Lv {{ level }}</span>
+                  <div class="qs-hearts">
+                    @for (i of [1,2,3]; track i) {
+                      <mat-icon class="heart-sm" [class.full]="i <= lives">
+                        {{ i <= lives ? 'favorite' : 'favorite_border' }}
+                      </mat-icon>
+                    }
+                  </div>
+                </div>
+              }
               @if (visualizationMode && state !== 'SOLVED' && state !== 'FAILED') {
                 <app-viz-card
                   [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"

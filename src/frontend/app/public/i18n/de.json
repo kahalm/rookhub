@@ -83,6 +83,7 @@
       "title": "Puzzles",
       "subtitle": "Elo {{elo}} | {{solved}} gelöst ({{accuracy}}%)",
       "solve": "Puzzles lösen",
+      "daily": "Tagespuzzle",
       "endless": "Endlos"
     },
     "subscriptions": {
@@ -136,6 +137,40 @@
       "linkConflict": "Dieses Discord-Konto ist bereits mit einem anderen RookHub-Benutzer verknüpft.",
       "linkFailed": "Discord-Konto konnte nicht verknüpft werden",
       "stashed": "Melde dich an oder registriere dich, um die Discord-Verknüpfung abzuschließen."
+    },
+    "tokens": {
+      "title": "Extension-Tokens",
+      "subtitle": "Persönliche Zugriffs-Tokens für Maschinen-Clients (z. B. chess.com-Extension).",
+      "empty": "Noch keine Tokens. Lege einen an, wenn du die chess.com-Extension verbinden willst.",
+      "create": "Token erstellen",
+      "revoke": "Token widerrufen",
+      "revokeConfirm": "Token \"{{name}}\" widerrufen? Damit kann der Client sich nicht mehr verbinden.",
+      "revokeFailed": "Widerrufen fehlgeschlagen",
+      "loadFailed": "Tokens konnten nicht geladen werden",
+      "createFailed": "Token konnte nicht erstellt werden",
+      "never": "—",
+      "col": {
+        "name": "Name",
+        "prefix": "Prefix",
+        "created": "Erstellt",
+        "lastUsed": "Zuletzt benutzt",
+        "expires": "Ablauf"
+      },
+      "dialog": {
+        "title": "Neuer Extension-Token",
+        "name": "Name",
+        "nameHint": "z. B. „Chess.com Extension (Laptop)\"",
+        "expires": "Ablauf",
+        "never": "nie",
+        "days": "Tage",
+        "create": "Erstellen"
+      },
+      "show": {
+        "title": "Token erstellt",
+        "warning": "Dieser Token wird NUR jetzt einmalig angezeigt. Kopiere ihn in deine Extension — danach ist er nicht mehr abrufbar.",
+        "copy": "Kopieren",
+        "copied": "In die Zwischenablage kopiert"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -267,7 +302,14 @@
       "name": "Name",
       "description": "Beschreibung",
       "public": "Öffentlich",
+      "kind": "Kategorie",
       "create": "Erstellen"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Eröffnung",
+      "middlegame": "Mittelspiel",
+      "endgame": "Endspiel"
     },
     "lines": {
       "allLines": "Alle Linien",
@@ -698,6 +740,8 @@
       "analyze": "Analysieren",
       "nextInBook": "Nächstes im Buch",
       "randomInBook": "Zufällig aus Buch",
+      "prevDaily": "Voriger Tag",
+      "nextDaily": "Nächster Tag",
       "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle"
     },

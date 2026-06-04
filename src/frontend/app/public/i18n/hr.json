@@ -83,6 +83,7 @@
       "title": "Zagonetke",
       "subtitle": "Elo {{elo}} | {{solved}} riješeno ({{accuracy}}%)",
       "solve": "Rješavaj zagonetke",
+      "daily": "Dnevna zagonetka",
       "endless": "Beskonačno"
     },
     "subscriptions": {
@@ -136,6 +137,40 @@
       "linkConflict": "Ovaj Discord račun već je povezan s drugim RookHub korisnikom.",
       "linkFailed": "Povezivanje Discord računa nije uspjelo",
       "stashed": "Prijavi se ili registriraj kako bi dovršio povezivanje Discord računa."
+    },
+    "tokens": {
+      "title": "Tokeni za proširenje",
+      "subtitle": "Osobni tokeni pristupa za strojne klijente (npr. chess.com proširenje).",
+      "empty": "Još nema tokena. Stvori jedan ako želiš povezati chess.com proširenje.",
+      "create": "Stvori token",
+      "revoke": "Opozovi token",
+      "revokeConfirm": "Opozvati token \"{{name}}\"? Klijent se više neće moći povezati.",
+      "revokeFailed": "Opoziv nije uspio",
+      "loadFailed": "Učitavanje tokena nije uspjelo",
+      "createFailed": "Stvaranje tokena nije uspjelo",
+      "never": "—",
+      "col": {
+        "name": "Naziv",
+        "prefix": "Prefiks",
+        "created": "Stvoreno",
+        "lastUsed": "Zadnje korišteno",
+        "expires": "Istječe"
+      },
+      "dialog": {
+        "title": "Novi token za proširenje",
+        "name": "Naziv",
+        "nameHint": "npr. \"Chess.com proširenje (laptop)\"",
+        "expires": "Istječe",
+        "never": "nikada",
+        "days": "dana",
+        "create": "Stvori"
+      },
+      "show": {
+        "title": "Token je stvoren",
+        "warning": "Ovaj token prikazuje se SAMO jednom, sada. Kopiraj ga u svoje proširenje — kasnije se ne može dohvatiti.",
+        "copy": "Kopiraj",
+        "copied": "Kopirano u međuspremnik"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -267,7 +302,14 @@
       "name": "Naziv",
       "description": "Opis",
       "public": "Javno",
+      "kind": "Kategorija",
       "create": "Stvori"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Otvaranje",
+      "middlegame": "Sredina partije",
+      "endgame": "Završnica"
     },
     "lines": {
       "allLines": "Sve linije",
@@ -698,6 +740,8 @@
       "analyze": "Analiziraj",
       "nextInBook": "Sljedeća u knjizi",
       "randomInBook": "Slučajna iz knjige",
+      "prevDaily": "Prethodni dan",
+      "nextDaily": "Sljedeći dan",
       "sharePuzzle": "Podijeli zagonetku",
       "backToPuzzle": "Natrag na zagonetku"
     },

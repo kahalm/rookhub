@@ -141,12 +141,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
     if (!this.vizFrom) {
       this.vizFrom = key;
-      this.ground.setShapes([{ orig: key, brush: 'green' }]);
+      this.markVizSelection(key);
       return;
     }
     if (key === this.vizFrom) {                    // gleiches Feld → Auswahl aufheben
       this.vizFrom = undefined;
-      this.ground.setShapes([]);
+      this.clearVizSelection();
       return;
     }
     const orig = this.vizFrom;
@@ -157,17 +157,37 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // (sonst verschwindet die Auswahl wirkungslos und der Spieler verliert die Orientierung).
     if (!this.isVizLegalMove(orig, key, promo)) {
       this.vizFrom = key;
-      this.ground.setShapes([{ orig: key, brush: 'green' }]);
+      this.markVizSelection(key);
       return;
     }
     this.vizFrom = undefined;
-    this.ground.setShapes([]);
+    this.clearVizSelection();
     if (promo) {
       this.showVizPromotionDialog(orig, key);
       return;
     }
     this.moveMade.emit({ orig, dest: key });
   };
+
+  /**
+   * Markiert die Viz-Auswahl visuell. Kombiniert mehrere Mechanismen, damit das
+   * Highlight auf Mobile genauso prominent ist wie am Desktop:
+   *  - chessground selectSquare gibt der Square den vollflächigen „selected"-Hintergrund
+   *    (gelblich) — viel deutlicher als ein dünner Kreis-Stroke
+   *  - setShapes mit grünem Kreis als zusätzlicher Akzent (wie auf Desktop)
+   * Ohne selectSquare verschwand der dünne Kreis am Handy regelmäßig unter dem Finger.
+   */
+  private markVizSelection(key: Key): void {
+    if (!this.ground) return;
+    this.ground.setShapes([{ orig: key, brush: 'green' }]);
+    try { this.ground.selectSquare(key, true); } catch { /* alte chessground-Version */ }
+  }
+
+  private clearVizSelection(): void {
+    if (!this.ground) return;
+    this.ground.setShapes([]);
+    try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
+  }
 
   /** Erkennt einen Bauern-Promotion-Zug im Viz-Modus (anhand actualFen, nicht des frozen Bretts). */
   private detectVizPromotion(orig: Key, dest: Key): boolean {
@@ -273,12 +293,15 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       coordinates: true,
       movable: {
         free: false,
-        color: this.viewOnly ? undefined : this.orientation,
-        dests: this.viewOnly ? undefined : this.dests,
+        // Im Viz-Modus chessgrounds eigene Interaktion abschalten — unser
+        // pointerdown-Capture übernimmt die Klicks. Sonst frisst chessground
+        // den Tap auf dem Handy und unsere Selection wird wieder geleert.
+        color: (this.viewOnly || this.visualization > 0) ? undefined : this.orientation,
+        dests: (this.viewOnly || this.visualization > 0) ? undefined : this.dests,
         showDests: true
       },
       premovable: {
-        enabled: this.premovable,
+        enabled: this.premovable && this.visualization === 0,
         showDests: true
       },
       // Pfeile/Kreise per Rechtsklick-Ziehen (wie im Analysemodus), auch im viewOnly-Zustand.
@@ -318,6 +341,13 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const isNowInteractive = !this.viewOnly && !this.premovable;
     const hasPremove = this.ground.state.premovable.current;
 
+    // Im Viz-Modus uebernimmt unser eigener `onVizPointer`-Handler die Klick-Erfassung.
+    // Wenn chessground gleichzeitig auch noch movable ist, kann ein Tap auf eine Figur
+    // chessgrounds Auswahl-Logik triggern und unsere Shapes/Selection sofort wieder
+    // ueberschreiben — am Handy hat das die Sichtbarkeit des Klicks zerstoert.
+    const vizActive = this.visualization > 0;
+    const interactionDisabled = this.viewOnly || vizActive;
+
     this.ground.set({
       fen: this.fen,
       orientation: this.orientation,
@@ -326,12 +356,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       lastMove: this.lastMove as Key[] | undefined,
       movable: {
         free: false,
-        color: this.viewOnly ? undefined : this.orientation,
-        dests: this.viewOnly ? undefined : this.dests,
+        color: interactionDisabled ? undefined : this.orientation,
+        dests: interactionDisabled ? undefined : this.dests,
         showDests: true
       },
       premovable: {
-        enabled: this.premovable
+        enabled: this.premovable && !vizActive
       }
     });
 
