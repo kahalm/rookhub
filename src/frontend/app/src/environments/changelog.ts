@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.82.1';
+export const APP_VERSION = '0.82.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.82.2', date: '2026-06-04', changes: [
+    'Fix (Mobile, Visualisierungs-Modus): Wenn man im Viz-Modus (≥ Stufe 1) auf ein Feld tippte, war die Auswahl auf dem Handy kaum erkennbar — nur ein dünner Kreis-Stroke, der unter dem Finger oft verschwand. Jetzt wird das angetippte Feld zusätzlich vollflächig hervorgehoben (chessground-„selected", gelblich) und der grüne Kreis bleibt als zweiter Akzent. Chessgrounds eigene Interaktion ist im Viz-Modus abgeschaltet, damit der Tap nicht gleichzeitig die Auswahl wieder löscht.',
+  ]},
   { version: '0.82.1', date: '2026-06-04', changes: [
     'Endlos-Config-Screen: „Weiterspielen / Lauf archivieren + Neu starten / Start"-Block sitzt jetzt ganz oben — sofort sichtbar ohne erst durch Start-Rating, Schwellenwerte, Visualisierung etc. zu scrollen. Die Config-Felder bleiben darunter zum Feintunen vor dem nächsten Lauf.',
   ]},
