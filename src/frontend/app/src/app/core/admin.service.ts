@@ -87,6 +87,16 @@ export interface AdminConfig {
   kibanaUrl: string;
 }
 
+/** Trainingsziel-Vorlage einer Gruppe (Tagesziele je Kategorie in Minuten + Wochenziel). */
+export interface GroupTrainingGoal {
+  puzzleMinutes: number;
+  bookMinutes: number;
+  playMinutes: number;
+  weeklyDaysTarget: number;
+  source: 'none' | 'group' | 'personal';
+  groupName: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private http: HttpClient) {}
@@ -160,5 +170,18 @@ export class AdminService {
 
   removeGroupMember(groupId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`/api/admin/groups/${groupId}/members/${userId}`);
+  }
+
+  // --- Trainingsziel-Vorlage je Gruppe ----------------------------------
+  getGroupTrainingGoal(groupId: number): Observable<GroupTrainingGoal> {
+    return this.http.get<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`);
+  }
+
+  setGroupTrainingGoal(groupId: number, goal: { puzzleMinutes: number; bookMinutes: number; playMinutes: number; weeklyDaysTarget: number }): Observable<GroupTrainingGoal> {
+    return this.http.put<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`, goal);
+  }
+
+  deleteGroupTrainingGoal(groupId: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/groups/${groupId}/training-goal`);
   }
 }

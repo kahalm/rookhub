@@ -29,6 +29,7 @@ import { LocaleService } from '../../core/locale.service';
           <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
+          <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
           <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
           @if (auth.isAdmin) {
             <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
@@ -51,6 +52,7 @@ import { LocaleService } from '../../core/locale.service';
           <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
+          <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
           <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
           @if (auth.isAdmin) {
             <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>

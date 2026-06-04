@@ -33,7 +33,8 @@
     "info": "Info",
     "account": "Konto",
     "analysis": "Analyse",
-    "stats": "Statistik"
+    "stats": "Statistik",
+    "trainingGoals": "Trainingsziele"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -877,6 +878,17 @@
         "loadMembers": "Mitglieder konnten nicht geladen werden",
         "addMember": "Hinzufügen fehlgeschlagen",
         "removeMember": "Entfernen fehlgeschlagen"
+      },
+      "goal": {
+        "title": "Trainingsziel-Vorlage",
+        "hint": "Mitglieder übernehmen diese Vorlage; sie können sie für sich anpassen.",
+        "saved": "Trainingsziel gespeichert.",
+        "cleared": "Trainingsziel-Vorlage entfernt.",
+        "clear": "Vorlage entfernen",
+        "errors": {
+          "load": "Trainingsziel konnte nicht geladen werden.",
+          "save": "Trainingsziel konnte nicht gespeichert werden."
+        }
       }
     },
     "logs": {
@@ -944,5 +956,33 @@
     "byRating": "Nach Rating (gelöst)",
     "byRatingHint": "Gelöste Puzzles je Rating-Band — Genauigkeit beim Überfahren.",
     "activity": "Aktivität"
+  },
+  "trainingGoals": {
+    "title": "Trainingsziele",
+    "intro": "Lege Tagesziele je Kategorie fest und verfolge deinen Fortschritt.",
+    "today": "Heute",
+    "setTitle": "Ziele festlegen",
+    "tracker": "Ziele-Tracker",
+    "min": "Min",
+    "weeklyDays": "Tage pro Woche",
+    "weekProgress": "{{done}} von {{target}} Tagen diese Woche",
+    "fromGroup": "Vorgabe aus deiner Gruppe „{{group}}\". Du kannst sie für dich anpassen.",
+    "personal": "Dein persönliches Ziel.",
+    "resetOverride": "Auf Gruppen-Vorgabe zurücksetzen",
+    "noGoalHint": "Noch keine Ziele gesetzt — lege unten deine Tagesziele fest.",
+    "playHint": "Die Spielzeit wird automatisch aus deinem verknüpften Lichess-/chess.com-Konto erfasst.",
+    "saved": "Ziele gespeichert.",
+    "resetDone": "Auf die Gruppen-Vorgabe zurückgesetzt.",
+    "error": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+    "status": {
+      "none": "Nicht erreicht",
+      "partial": "Teilweise erreicht",
+      "full": "Alle Ziele erreicht"
+    },
+    "cat": {
+      "puzzles": "Puzzles",
+      "book": "Buch / Kurs",
+      "play": "Spielen"
+    }
   }
 }

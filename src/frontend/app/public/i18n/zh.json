@@ -33,7 +33,8 @@
     "info": "信息",
     "account": "账户",
     "analysis": "分析",
-    "stats": "统计"
+    "stats": "统计",
+    "trainingGoals": "Training Goals"
   },
   "app": {
     "changelogTitle": "更新日志",
@@ -831,6 +832,17 @@
         "loadMembers": "加载成员失败",
         "addMember": "添加成员失败",
         "removeMember": "移除成员失败"
+      },
+      "goal": {
+        "title": "Training goal preset",
+        "hint": "Members inherit this preset; they can override it for themselves.",
+        "saved": "Training goal saved.",
+        "cleared": "Training goal preset removed.",
+        "clear": "Remove preset",
+        "errors": {
+          "load": "Could not load the training goal.",
+          "save": "Could not save the training goal."
+        }
       }
     },
     "logs": {
@@ -898,5 +910,33 @@
     "byRating": "按评分（已解）",
     "byRatingHint": "各评分段已解题数——悬停查看正确率。",
     "activity": "活跃度"
+  },
+  "trainingGoals": {
+    "title": "Training Goals",
+    "intro": "Set daily goals per category and track your progress.",
+    "today": "Today",
+    "setTitle": "Set your goals",
+    "tracker": "Goal tracker",
+    "min": "min",
+    "weeklyDays": "Days per week",
+    "weekProgress": "{{done}} of {{target}} days this week",
+    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
+    "personal": "Your personal goal.",
+    "resetOverride": "Reset to group preset",
+    "noGoalHint": "No goals set yet — set your daily targets below.",
+    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
+    "saved": "Goals saved.",
+    "resetDone": "Reset to the group preset.",
+    "error": "Could not save. Please try again.",
+    "status": {
+      "none": "Not reached",
+      "partial": "Partly reached",
+      "full": "All goals reached"
+    },
+    "cat": {
+      "puzzles": "Puzzles",
+      "book": "Book / Course",
+      "play": "Playing"
+    }
   }
 }

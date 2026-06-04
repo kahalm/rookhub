@@ -33,7 +33,8 @@
     "info": "Informacije",
     "account": "Račun",
     "analysis": "Analiza",
-    "stats": "Statistika"
+    "stats": "Statistika",
+    "trainingGoals": "Trening ciljevi"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -877,6 +878,17 @@
         "loadMembers": "Učitavanje članova nije uspjelo",
         "addMember": "Dodavanje nije uspjelo",
         "removeMember": "Uklanjanje nije uspjelo"
+      },
+      "goal": {
+        "title": "Predložak trening cilja",
+        "hint": "Članovi preuzimaju ovaj predložak; mogu ga prilagoditi za sebe.",
+        "saved": "Trening cilj spremljen.",
+        "cleared": "Predložak trening cilja uklonjen.",
+        "clear": "Ukloni predložak",
+        "errors": {
+          "load": "Trening cilj nije moguće učitati.",
+          "save": "Trening cilj nije moguće spremiti."
+        }
       }
     },
     "logs": {
@@ -944,5 +956,33 @@
     "byRating": "Po rejtingu (riješeno)",
     "byRatingHint": "Riješene zagonetke po rejting-rasponu — pređi mišem za točnost.",
     "activity": "Aktivnost"
+  },
+  "trainingGoals": {
+    "title": "Trening ciljevi",
+    "intro": "Postavi dnevne ciljeve po kategoriji i prati svoj napredak.",
+    "today": "Danas",
+    "setTitle": "Postavi ciljeve",
+    "tracker": "Praćenje ciljeva",
+    "min": "min",
+    "weeklyDays": "Dana tjedno",
+    "weekProgress": "{{done}} od {{target}} dana ovaj tjedan",
+    "fromGroup": "Zadano iz tvoje grupe „{{group}}\". Možeš ga prilagoditi za sebe.",
+    "personal": "Tvoj osobni cilj.",
+    "resetOverride": "Vrati na zadano grupe",
+    "noGoalHint": "Još nema postavljenih ciljeva — postavi dnevne ciljeve ispod.",
+    "playHint": "Vrijeme igranja automatski se bilježi s tvojeg povezanog Lichess/chess.com računa.",
+    "saved": "Ciljevi spremljeni.",
+    "resetDone": "Vraćeno na zadano grupe.",
+    "error": "Spremanje nije uspjelo. Pokušaj ponovno.",
+    "status": {
+      "none": "Nije postignuto",
+      "partial": "Djelomično postignuto",
+      "full": "Svi ciljevi postignuti"
+    },
+    "cat": {
+      "puzzles": "Zagonetke",
+      "book": "Knjiga / Tečaj",
+      "play": "Igranje"
+    }
   }
 }

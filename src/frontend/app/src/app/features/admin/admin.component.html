@@ -263,6 +263,43 @@
                       }
                     </mat-card-content>
                   </mat-card>
+
+                  <mat-card class="member-panel">
+                    <mat-card-header>
+                      <mat-card-title>{{ 'admin.groups.goal.title' | translate }}</mat-card-title>
+                      <mat-card-subtitle>{{ 'admin.groups.goal.hint' | translate }}</mat-card-subtitle>
+                    </mat-card-header>
+                    <mat-card-content>
+                      @if (goalLoading) {
+                        <app-loading-spinner />
+                      } @else {
+                        <div class="goal-fields">
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.cat.puzzles' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.puzzleMinutes" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.cat.book' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.bookMinutes" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.playMinutes" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>
+                            <input matInput type="number" min="0" max="7" [(ngModel)]="goalEdit.weeklyDaysTarget" />
+                          </mat-form-field>
+                        </div>
+                        <div class="goal-actions">
+                          <button mat-raised-button color="primary" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
+                          @if (goalHasTemplate) {
+                            <button mat-button (click)="clearGroupGoal()">{{ 'admin.groups.goal.clear' | translate }}</button>
+                          }
+                        </div>
+                      }
+                    </mat-card-content>
+                  </mat-card>
                 }
               </div>
             }

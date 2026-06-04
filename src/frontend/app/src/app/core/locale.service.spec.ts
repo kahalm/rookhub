@@ -15,8 +15,11 @@ describe('LocaleService', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('offers en, de and hr', () => {
-    expect(svc.languages.map(l => l.code)).toEqual(['en', 'de', 'hr']);
+  it('offers en, de and hr first, plus the worldwide languages', () => {
+    const codes = svc.languages.map(l => l.code);
+    expect(codes.slice(0, 3)).toEqual(['en', 'de', 'hr']);   // primäre Sprachen zuerst
+    expect(codes).toContain('es');                            // + weltweite Sprachen ergänzt (seit 0.79.0)
+    expect(codes.length).toBeGreaterThanOrEqual(3);
   });
 
   it('use() switches the language and persists it', () => {

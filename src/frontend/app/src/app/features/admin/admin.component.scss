@@ -62,3 +62,6 @@
 
     .log-table td { font-size: 0.85rem; }
     .log-table th { font-size: 0.8rem; font-weight: 600; }
+
+    .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 8px; }
+    .goal-actions { display: flex; gap: 8px; }

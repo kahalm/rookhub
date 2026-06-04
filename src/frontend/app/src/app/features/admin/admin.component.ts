@@ -15,7 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, RequestLog, Book, Group, GroupMember } from '../../core/admin.service';
+import { AdminService, AdminUser, RequestLog, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -65,6 +65,11 @@ export class AdminComponent implements OnInit {
   membersLoading = false;
   allUsers: AdminUser[] = [];
   addMemberUserId: number | null = null;
+
+  /** Trainingsziel-Vorlage der ausgewählten Gruppe (Tagesziele je Kategorie + Wochenziel). */
+  goalEdit = { puzzleMinutes: 0, bookMinutes: 0, playMinutes: 0, weeklyDaysTarget: 0 };
+  goalHasTemplate = false;
+  goalLoading = false;
 
   /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
   kibanaUrl = '';
@@ -325,6 +330,55 @@ export class AdminComponent implements OnInit {
     this.selectedGroup = group;
     this.addMemberUserId = null;
     this.loadMembers(group.id);
+    this.loadGroupGoal(group.id);
+  }
+
+  loadGroupGoal(groupId: number): void {
+    this.goalLoading = true;
+    this.adminService.getGroupTrainingGoal(groupId).subscribe({
+      next: g => {
+        this.goalHasTemplate = g.source === 'group';
+        this.goalEdit = {
+          puzzleMinutes: g.puzzleMinutes,
+          bookMinutes: g.bookMinutes,
+          playMinutes: g.playMinutes,
+          weeklyDaysTarget: g.weeklyDaysTarget,
+        };
+        this.goalLoading = false;
+      },
+      error: () => {
+        this.snackbar.info(this.translate.instant('admin.groups.goal.errors.load'));
+        this.goalLoading = false;
+      }
+    });
+  }
+
+  saveGroupGoal(): void {
+    if (!this.selectedGroup) return;
+    const clamp = (v: number, max: number) => Math.max(0, Math.min(max, Math.round(v || 0)));
+    const goal = {
+      puzzleMinutes: clamp(this.goalEdit.puzzleMinutes, 600),
+      bookMinutes: clamp(this.goalEdit.bookMinutes, 600),
+      playMinutes: clamp(this.goalEdit.playMinutes, 600),
+      weeklyDaysTarget: clamp(this.goalEdit.weeklyDaysTarget, 7),
+    };
+    this.adminService.setGroupTrainingGoal(this.selectedGroup.id, goal).subscribe({
+      next: () => { this.goalHasTemplate = true; this.snackbar.info(this.translate.instant('admin.groups.goal.saved')); },
+      error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),
+    });
+  }
+
+  clearGroupGoal(): void {
+    if (!this.selectedGroup) return;
+    const groupId = this.selectedGroup.id;
+    this.adminService.deleteGroupTrainingGoal(groupId).subscribe({
+      next: () => {
+        this.goalHasTemplate = false;
+        this.goalEdit = { puzzleMinutes: 0, bookMinutes: 0, playMinutes: 0, weeklyDaysTarget: 0 };
+        this.snackbar.info(this.translate.instant('admin.groups.goal.cleared'));
+      },
+      error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),
+    });
   }
 
   loadMembers(groupId: number): void {

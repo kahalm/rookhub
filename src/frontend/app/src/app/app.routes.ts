@@ -24,6 +24,7 @@ export const routes: Routes = [
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [adminGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent) },
   { path: 'stats', loadComponent: () => import('./features/stats/stats.component').then(m => m.StatsComponent), canActivate: [authGuard] },
+  { path: 'training-goals', loadComponent: () => import('./features/training-goals/training-goals.component').then(m => m.TrainingGoalsComponent), canActivate: [authGuard] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [courseAccessGuard] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [courseAccessGuard] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
