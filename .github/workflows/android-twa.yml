@@ -7,8 +7,6 @@ name: Build Android TWA (AAB)
 #   ANDROID_KEYSTORE_BASE64    - base64 -w0 android.keystore
 #   ANDROID_KEYSTORE_PASSWORD  - Keystore-Passwort
 #   ANDROID_KEY_PASSWORD       - Schlüssel-Passwort (Alias: rookhub)
-#
-# Hinweis: nicht in dieser Umgebung getestet; ggf. Bubblewrap-Version/Flags anpassen.
 
 on:
   workflow_dispatch:
@@ -28,8 +26,34 @@ jobs:
         with:
           node-version: '20'
 
+      # Android SDK bereitstellen + Lizenzen akzeptieren. Ohne SDK fällt Bubblewrap
+      # beim ersten Aufruf in einen interaktiven "JDK/SDK installieren?"-Prompt, der
+      # in der CI (kein TTY) hängt/fehlschlägt.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Install required Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
+
+      # Bubblewrap-Config vorab schreiben, damit es JDK + Android-SDK NICHT interaktiv
+      # nachinstallieren will. Pfade kommen aus setup-java (JAVA_HOME) und
+      # setup-android (ANDROID_SDK_ROOT/ANDROID_HOME).
+      - name: Configure Bubblewrap (use preinstalled JDK + SDK)
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          cat > "$HOME/.bubblewrap/config.json" <<EOF
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_SDK_ROOT}"
+          }
+          EOF
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
 
       - name: Restore signing keystore
         working-directory: twa
