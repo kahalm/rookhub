@@ -7,10 +7,12 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { LocaleService } from '../../core/locale.service';
+import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dialog.component';
 
 @Component({
   selector: 'app-navbar',
@@ -74,6 +76,7 @@ import { LocaleService } from '../../core/locale.service';
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
           <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
+          <button mat-menu-item (click)="openInstall()">{{ 'nav.installApp' | translate }}</button>
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
@@ -120,7 +123,12 @@ export class NavbarComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService) {}
+  constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService, private dialog: MatDialog) {}
+
+  /** Öffnet den Dialog mit Android-Installationsanleitung + APK-Download-Link. */
+  openInstall(): void {
+    this.dialog.open(AppInstallDialogComponent, { maxWidth: 480 });
+  }
 
   ngOnInit(): void {
     // Bei jedem Login/Logout neu bestimmen, ob das Kurse-Menü gezeigt wird. switchMap bricht

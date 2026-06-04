@@ -34,7 +34,8 @@
     "account": "Compte",
     "analysis": "Analyse",
     "stats": "Statistiques",
-    "trainingGoals": "Objectifs d'entraînement"
+    "trainingGoals": "Objectifs d'entraînement",
+    "installApp": "Install app (Android)"
   },
   "app": {
     "changelogTitle": "Journal des modifications",
@@ -989,5 +990,14 @@
     },
     "syncPlay": "Mettre à jour le temps de jeu",
     "syncDone": "Temps de jeu mis à jour."
+  },
+  "install": {
+    "title": "Install RookHub on Android",
+    "intro": "RookHub is available as an Android app. To install it:",
+    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
+    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
+    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
+    "download": "Download APK",
+    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
   }
 }

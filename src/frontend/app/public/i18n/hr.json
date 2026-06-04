@@ -34,7 +34,8 @@
     "account": "Račun",
     "analysis": "Analiza",
     "stats": "Statistika",
-    "trainingGoals": "Trening ciljevi"
+    "trainingGoals": "Trening ciljevi",
+    "installApp": "Instaliraj aplikaciju (Android)"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -966,5 +967,14 @@
     },
     "syncPlay": "Ažuriraj vrijeme igranja",
     "syncDone": "Vrijeme igranja ažurirano."
+  },
+  "install": {
+    "title": "Instaliraj RookHub na Android",
+    "intro": "RookHub je dostupan kao Android aplikacija. Kako instalirati:",
+    "step1": "Dolje dodirni „Preuzmi APK“ – najbolje izravno na svom Android uređaju.",
+    "step2": "Otvori preuzetu datoteku. Ako se zatraži, dopusti „Instalacija iz nepoznatih izvora“ za svoj preglednik.",
+    "step3": "Potvrdi instalaciju – gotovo. RookHub se pojavljuje kao aplikacija na uređaju.",
+    "download": "Preuzmi APK",
+    "iosNote": "Samo za Android. Na iPhoneu/iPadu: otvori stranicu u Safariju i preko „Podijeli → Dodaj na početni zaslon“ dodaj kao aplikaciju."
   }
 }
