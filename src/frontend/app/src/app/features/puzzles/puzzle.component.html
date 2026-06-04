@@ -42,9 +42,20 @@
                 }
                 @case ('ERROR') {
                   <div class="status-center failed">
-                    <mat-icon class="result-icon">{{ offlineNoCache ? 'cloud_off' : 'error_outline' }}</mat-icon>
-                    <p class="status-text">{{ (offlineNoCache ? 'puzzles.status.offlineNoCache' : 'puzzles.status.loadFailed') | translate }}</p>
-                    <button mat-raised-button color="primary" (click)="loadNext()">
+                    <mat-icon class="result-icon">{{ (offlineNoCache || offlinePoolExhausted) ? 'cloud_off' : 'error_outline' }}</mat-icon>
+                    <p class="status-text">
+                      {{ (offlinePoolExhausted
+                            ? 'puzzles.status.offlinePoolExhausted'
+                            : offlineNoCache
+                              ? 'puzzles.status.offlineNoCache'
+                              : 'puzzles.status.loadFailed') | translate }}
+                    </p>
+                    @if (offlinePoolExhausted) {
+                      <button mat-raised-button color="primary" (click)="replayLastPuzzle()">
+                        <mat-icon>replay</mat-icon> {{ 'puzzles.status.replayLast' | translate }}
+                      </button>
+                    }
+                    <button mat-raised-button [color]="offlinePoolExhausted ? '' : 'primary'" (click)="loadNext()">
                       <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
                     </button>
                   </div>

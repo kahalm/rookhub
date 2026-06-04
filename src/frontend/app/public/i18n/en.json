@@ -371,6 +371,8 @@
       "loading": "Loading puzzle…",
       "loadFailed": "Failed to load puzzle",
       "offlineNoCache": "You're offline and no puzzles are cached. Open this page once while online to save puzzles for offline play.",
+      "offlinePoolExhausted": "No more offline puzzles — you've played through all the cached ones. New puzzles will load as soon as you're back online.",
+      "replayLast": "Replay last puzzle",
       "watchOpponent": "Watch the opponent's move…",
       "yourTurn": "Your turn!",
       "gaveUpPlayOut": "Gave up — play the solution yourself.",
