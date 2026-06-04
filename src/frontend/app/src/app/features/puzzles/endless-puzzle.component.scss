@@ -187,7 +187,12 @@
     @media (max-width: 768px) {
       .endless-page { padding: 0.5rem; }
       .play-screen { flex-direction: column; }
-      .board-section { width: 100%; }
+      // .info-section explizit auf 100 % — der .play-screen-Container hat
+      // align-items: flex-start, daher streckt flex-direction: column das
+      // Element nicht automatisch auf cross-axis-100% (sondern auf
+      // min-content). Ohne diese Regel sah die Status-Karte mit „Gelöst"
+      // unter dem Brett nur so breit aus wie ihr Inhalt.
+      .board-section, .info-section { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .config-fields { grid-template-columns: 1fr; }
       .config-screen { padding-top: 0.5rem; }
