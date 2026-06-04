@@ -983,6 +983,8 @@
       "puzzles": "Zagonetke",
       "book": "Knjiga / Tečaj",
       "play": "Igranje"
-    }
+    },
+    "syncPlay": "Ažuriraj vrijeme igranja",
+    "syncDone": "Vrijeme igranja ažurirano."
   }
 }

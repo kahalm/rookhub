@@ -15,8 +15,13 @@ namespace RookHub.Api.Controllers;
 public class TrainingGoalController : BaseApiController
 {
     private readonly TrainingGoalService _service;
+    private readonly PlayTimeService _playTime;
 
-    public TrainingGoalController(TrainingGoalService service) => _service = service;
+    public TrainingGoalController(TrainingGoalService service, PlayTimeService playTime)
+    {
+        _service = service;
+        _playTime = playTime;
+    }
 
     /// <summary>Effektives Ziel des Users (persönlich &gt; Gruppen-Vorlage &gt; keins).</summary>
     [HttpGet]
@@ -42,4 +47,12 @@ public class TrainingGoalController : BaseApiController
     [HttpGet("tracker")]
     public async Task<ActionResult<TrackerResponseDto>> Tracker([FromQuery] int weeks = 27)
         => Ok(await _service.GetTrackerAsync(GetUserId(), weeks));
+
+    /// <summary>Externe Spielzeit (Lichess/chess.com) des eigenen Users jetzt synchronisieren.</summary>
+    [HttpPost("sync-play")]
+    public async Task<IActionResult> SyncPlay(CancellationToken ct)
+    {
+        await _playTime.SyncUserAsync(GetUserId(), ct);
+        return Ok(new { synced = true });
+    }
 }

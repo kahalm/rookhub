@@ -983,6 +983,8 @@
       "puzzles": "Puzzles",
       "book": "Buch / Kurs",
       "play": "Spielen"
-    }
+    },
+    "syncPlay": "Spielzeit aktualisieren",
+    "syncDone": "Spielzeit aktualisiert."
   }
 }

@@ -93,6 +93,11 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                   </div>
                 }
               </div>
+              @if ((today?.play?.targetMinutes ?? 0) > 0) {
+                <button mat-stroked-button class="sync-btn" (click)="syncPlayTime()" [disabled]="syncingPlay">
+                  <mat-icon>sync</mat-icon> {{ 'trainingGoals.syncPlay' | translate }}
+                </button>
+              }
             } @else {
               <p class="muted">{{ 'trainingGoals.noGoalHint' | translate }}</p>
             }
@@ -186,6 +191,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
     .cat-row mat-icon.met { color: #2e7d32; }
     .cat-name { flex: 1; }
     .cat-val { color: #555; font-variant-numeric: tabular-nums; }
+    .sync-btn { margin-top: 12px; }
     .source-hint { display: flex; align-items: center; gap: 6px; color: #555; }
     .inline { font-size: 18px; width: 18px; height: 18px; }
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 8px 0; }
@@ -206,6 +212,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
 export class TrainingGoalsComponent implements OnInit {
   loading = true;
   saving = false;
+  syncingPlay = false;
   goal: TrainingGoal | null = null;
   today: TodayProgress | null = null;
   tracker: GoalCell[][] = [];
@@ -270,6 +277,14 @@ export class TrainingGoalsComponent implements OnInit {
     this.service.deleteOverride().subscribe({
       next: () => { this.saving = false; this.snackbar.success(this.translate.instant('trainingGoals.resetDone')); this.reload(); },
       error: () => { this.saving = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
+    });
+  }
+
+  syncPlayTime(): void {
+    this.syncingPlay = true;
+    this.service.syncPlay().subscribe({
+      next: () => { this.syncingPlay = false; this.snackbar.success(this.translate.instant('trainingGoals.syncDone')); this.reload(); },
+      error: () => { this.syncingPlay = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
     });
   }
 

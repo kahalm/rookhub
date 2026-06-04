@@ -127,6 +127,15 @@ try
     // Taegliche Tagespuzzle-Zuordnung um 00:00 UTC (siehe DailyPuzzles-Tabelle).
     builder.Services.AddHostedService<DailyPuzzleScheduler>();
 
+    // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.
+    // chess.com verlangt einen aussagekraeftigen User-Agent, sonst 403.
+    builder.Services.AddHttpClient<PlayTimeService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(20);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub; training-goals)");
+    });
+    builder.Services.AddHostedService<PlayTimeSyncService>();
+
     // SchachBot-Webhook (Solver-Updates fuer Daily-Puzzle live an den Bot pushen).
     // URL + Secret optional → ohne Konfig stillschweigend deaktiviert.
     builder.Services.AddHttpClient<SchachBotWebhookService>(client =>

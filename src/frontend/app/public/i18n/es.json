@@ -937,6 +937,8 @@
       "puzzles": "Puzzles",
       "book": "Book / Course",
       "play": "Playing"
-    }
+    },
+    "syncPlay": "Update playing time",
+    "syncDone": "Playing time updated."
   }
 }
