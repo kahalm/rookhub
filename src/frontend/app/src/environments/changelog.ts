@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.85.0';
+export const APP_VERSION = '0.85.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.1', date: '2026-06-04', changes: [
+    'Fix (Admin): Der Logs-Tab im Admin-Screen warf in Prod „failed to load logs", weil die zugrundeliegende `RequestLogs`-Tabelle samt `/api/request-logs`-Endpoint längst entfernt war (Logs liegen in Elasticsearch/Kibana). Der verwaiste Tab inkl. Filter, Tabelle, State und i18n-Keys wurde entfernt — der Kibana-Dashboard-Link im Header bleibt die einzige Anlaufstelle für Request-Logs.',
+    'Admin: „Kibana-Dashboard"-Link öffnet jetzt direkt das RookHub-Logging-Dashboard statt nur die Kibana-Wurzel (Deep-Link auf `app/dashboards#/view/rookhub-logging-dashboard`). Env-Variable `KIBANA_URL` bleibt der Root — die Deep-Link-Zusammensetzung passiert serverseitig in `/api/admin/config`.',
+  ]},
   { version: '0.85.0', date: '2026-06-04', changes: [
     'Trainingsziel „Spielen" umgestellt: statt Spielzeit in Minuten/Tag zählt jetzt die Anzahl gespielter Rapid-/Classical-Partien pro Woche.',
     'Gezählt werden auf Lichess Rapid- und Classical-Partien, auf chess.com Rapid-Partien (chess.com hat keine eigene „Classical"-Kategorie). Bullet, Blitz und Korrespondenz/Daily zählen nicht.',

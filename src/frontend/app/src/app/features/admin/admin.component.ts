@@ -15,7 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, RequestLog, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
+import { AdminService, AdminUser, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -37,18 +37,6 @@ export class AdminComponent implements OnInit {
   usersTotalCount = 0;
   usersLoading = false;
   userColumns = ['id', 'username', 'email', 'isAdmin', 'groups', 'createdAt', 'actions'];
-
-  logs: RequestLog[] = [];
-  logsPage = 1;
-  logsPageSize = 50;
-  logsTotalCount = 0;
-  logsLoading = false;
-  logColumns = ['timestamp', 'method', 'path', 'statusCode', 'durationMs', 'userName', 'ipAddress'];
-
-  logFilterPath = '';
-  logFilterMethod = '';
-  logFilterStatus = '';
-  logFilterUser = '';
 
   books: Book[] = [];
   booksLoading = false;
@@ -78,7 +66,6 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
-    this.loadLogs();
     this.loadBooks();
     this.loadGroups();
     this.loadAllUsers();
@@ -103,65 +90,10 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  loadLogs(): void {
-    this.logsLoading = true;
-    const params: Record<string, string> = {
-      page: this.logsPage.toString(),
-      pageSize: this.logsPageSize.toString()
-    };
-    if (this.logFilterPath) params['path'] = this.logFilterPath;
-    if (this.logFilterMethod) params['method'] = this.logFilterMethod;
-    if (this.logFilterStatus) params['minStatus'] = this.logFilterStatus;
-    if (this.logFilterUser) params['userName'] = this.logFilterUser;
-
-    this.adminService.getRequestLogs(params).subscribe({
-      next: res => {
-        this.logs = res.items;
-        this.logsTotalCount = res.totalCount;
-        this.logsLoading = false;
-      },
-      error: () => {
-        this.snackbar.info(this.translate.instant('admin.logs.errors.load'));
-        this.logsLoading = false;
-      }
-    });
-  }
-
-  applyLogFilters(): void {
-    this.logsPage = 1;
-    this.loadLogs();
-  }
-
-  resetLogFilters(): void {
-    this.logFilterPath = '';
-    this.logFilterMethod = '';
-    this.logFilterStatus = '';
-    this.logFilterUser = '';
-    this.logsPage = 1;
-    this.loadLogs();
-  }
-
-  hasActiveLogFilters(): boolean {
-    return !!(this.logFilterPath || this.logFilterMethod || this.logFilterStatus || this.logFilterUser);
-  }
-
-  getStatusClass(code: number): string {
-    if (code >= 500) return 'server-error';
-    if (code >= 400) return 'client-error';
-    if (code >= 300) return 'redirect';
-    return 'ok';
-  }
-
   onUsersPageChange(event: PageEvent): void {
     this.usersPage = event.pageIndex + 1;
     this.usersPageSize = event.pageSize;
     this.loadUsers();
-  }
-
-  onLogsPageChange(event: PageEvent): void {
-    this.logsPage = event.pageIndex + 1;
-    this.logsPageSize = event.pageSize;
-    this.loadLogs();
   }
 
   toggleAdmin(user: AdminUser): void {

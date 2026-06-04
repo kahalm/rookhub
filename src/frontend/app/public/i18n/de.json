@@ -792,8 +792,7 @@
     "tabs": {
       "users": "Users",
       "books": "Bücher",
-      "groups": "Gruppen",
-      "logs": "Request Logs"
+      "groups": "Gruppen"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -891,28 +890,6 @@
         }
       }
     },
-    "logs": {
-      "all": "Alle",
-      "filter": "Filtern",
-      "reset": "Zurücksetzen",
-      "filtered": "(gefiltert)",
-      "entryCount": "{{count}} Einträge",
-      "status4xx": "4xx+ (Fehler)",
-      "status5xx": "5xx (Server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Zeit",
-        "method": "Methode",
-        "path": "Pfad",
-        "status": "Status",
-        "duration": "Dauer",
-        "user": "Benutzer",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Logs konnten nicht geladen werden"
-      }
-    }
   },
   "analysis": {
     "title": "Analyse",

@@ -792,8 +792,7 @@
     "tabs": {
       "users": "Users",
       "books": "Books",
-      "groups": "Groups",
-      "logs": "Request Logs"
+      "groups": "Groups"
     },
     "users": {
       "searchLabel": "Search users",
@@ -891,28 +890,6 @@
         }
       }
     },
-    "logs": {
-      "all": "All",
-      "filter": "Filter",
-      "reset": "Reset",
-      "filtered": "(filtered)",
-      "entryCount": "{{count}} entries",
-      "status4xx": "4xx+ (errors)",
-      "status5xx": "5xx (server)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Time",
-        "method": "Method",
-        "path": "Path",
-        "status": "Status",
-        "duration": "Duration",
-        "user": "User",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Failed to load logs"
-      }
-    }
   },
   "analysis": {
     "title": "Analysis",

@@ -792,8 +792,7 @@
     "tabs": {
       "users": "Korisnici",
       "books": "Knjige",
-      "groups": "Grupe",
-      "logs": "Zapisi zahtjeva"
+      "groups": "Grupe"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
@@ -891,28 +890,6 @@
         }
       }
     },
-    "logs": {
-      "all": "Sve",
-      "filter": "Filtriraj",
-      "reset": "Poništi",
-      "filtered": "(filtrirano)",
-      "entryCount": "{{count}} unosa",
-      "status4xx": "4xx+ (pogreške)",
-      "status5xx": "5xx (poslužitelj)",
-      "status2xx": "2xx+ (OK)",
-      "columns": {
-        "time": "Vrijeme",
-        "method": "Metoda",
-        "path": "Putanja",
-        "status": "Status",
-        "duration": "Trajanje",
-        "user": "Korisnik",
-        "ip": "IP"
-      },
-      "errors": {
-        "load": "Učitavanje zapisa nije uspjelo"
-      }
-    }
   },
   "analysis": {
     "title": "Analiza",

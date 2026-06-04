@@ -68,15 +68,15 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
-    public void GetConfig_ReturnsKibanaUrlFromConfig_TrimmedSlash()
+    public void GetConfig_ReturnsKibanaDashboardDeepLink_TrimmedSlash()
     {
         var result = _controller.GetConfig() as OkObjectResult;
 
         Assert.NotNull(result);
         var data = result.Value!;
         var kibanaUrl = (string)data.GetType().GetProperty("kibanaUrl")!.GetValue(data)!;
-        // Trailing slash gestrippt — der Konstruktor liest aus Config "https://kibana-test.example.com/".
-        Assert.Equal("https://kibana-test.example.com", kibanaUrl);
+        // Trailing slash am Root wird gestrippt; Deep-Link zeigt direkt aufs RookHub-Logging-Dashboard.
+        Assert.Equal("https://kibana-test.example.com/app/dashboards#/view/rookhub-logging-dashboard", kibanaUrl);
     }
 
     [Fact]

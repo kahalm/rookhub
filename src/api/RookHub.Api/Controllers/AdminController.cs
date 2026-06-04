@@ -27,10 +27,18 @@ public class AdminController : BaseApiController
     }
 
     /// <summary>Konfigurationswerte fürs Admin-UI (z. B. Kibana-Link aus dem Server-Env).</summary>
+    /// <remarks>
+    /// Der zurückgegebene <c>kibanaUrl</c> ist ein Deep-Link direkt auf das RookHub-Logging-Dashboard
+    /// (Saved-Object-ID <c>rookhub-logging-dashboard</c> aus <c>init-kibana.sh</c>), nicht auf die Kibana-Wurzel.
+    /// Env-Var bleibt der Kibana-Root.
+    /// </remarks>
     [HttpGet("config")]
     public IActionResult GetConfig()
     {
-        var kibanaUrl = (_config["Kibana:Url"] ?? string.Empty).TrimEnd('/');
+        var root = (_config["Kibana:Url"] ?? string.Empty).TrimEnd('/');
+        var kibanaUrl = string.IsNullOrEmpty(root)
+            ? string.Empty
+            : $"{root}/app/dashboards#/view/rookhub-logging-dashboard";
         return Ok(new { kibanaUrl });
     }
 

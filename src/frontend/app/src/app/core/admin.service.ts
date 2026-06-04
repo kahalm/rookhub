@@ -18,18 +18,6 @@ export interface PagedResult<T> {
   pageSize: number;
 }
 
-export interface RequestLog {
-  id: number;
-  timestamp: string;
-  method: string;
-  path: string;
-  queryString: string | null;
-  statusCode: number;
-  durationMs: number;
-  userName: string | null;
-  ipAddress: string | null;
-}
-
 export interface Book {
   id: number;
   fileName: string;
@@ -119,10 +107,6 @@ export class AdminService {
 
   toggleAdmin(id: number): Observable<AdminUser> {
     return this.http.post<AdminUser>(`/api/admin/users/${id}/toggle-admin`, {});
-  }
-
-  getRequestLogs(params: Record<string, string> = {}): Observable<PagedResult<RequestLog>> {
-    return this.http.get<PagedResult<RequestLog>>('/api/request-logs', { params });
   }
 
   // --- Buch-Puzzles -----------------------------------------------------
