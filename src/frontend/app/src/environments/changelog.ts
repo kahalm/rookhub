@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.82.3';
+export const APP_VERSION = '0.82.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.82.4', date: '2026-06-04', changes: [
+    'Android-TWA: Digital Asset Links unter `/.well-known/assetlinks.json` mit dem App-Signatur-Fingerprint ausgeliefert — verknüpft die installierte App mit der Domain, sodass die TWA ohne Browser-Adressleiste (full-screen) läuft.',
+  ]},
   { version: '0.82.3', date: '2026-06-04', changes: [
     'Standard-Puzzle Offline: Wenn der vorab gespeicherte Puzzle-Pool aufgebraucht ist (alle gespielt), sieht man jetzt einen klaren Hinweis „Keine neuen Offline-Puzzles mehr" mit einem Button „Letztes Puzzle nochmal spielen" — statt dem unklaren „nichts gespeichert"-Bildschirm bzw. dem stillen Wiederholen desselben Puzzles. Sobald man wieder online ist, lädt die Seite automatisch neue Puzzles nach.',
   ]},
