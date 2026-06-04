@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.82.0';
+export const APP_VERSION = '0.82.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.82.1', date: '2026-06-04', changes: [
+    'Endlos-Config-Screen: „Weiterspielen / Lauf archivieren + Neu starten / Start"-Block sitzt jetzt ganz oben — sofort sichtbar ohne erst durch Start-Rating, Schwellenwerte, Visualisierung etc. zu scrollen. Die Config-Felder bleiben darunter zum Feintunen vor dem nächsten Lauf.',
+  ]},
   { version: '0.82.0', date: '2026-06-04', changes: [
     'Endlos: kompakte „Quick-Stats"-Pillen-Reihe direkt unter dem Brett — Puzzle-Rating, aktuelles Level und Herzen sind jetzt auch auf kleinen Handy-Screens ohne Scrollen sichtbar (vorher steckten diese Infos in der Stats-Karte unter Visualisierungs-/Status-Karte).',
   ]},

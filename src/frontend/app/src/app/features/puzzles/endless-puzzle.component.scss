@@ -69,6 +69,9 @@
     .history-link { font-size: 0.85em; min-height: 0; padding: 0 8px; line-height: 28px; }
     .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
+    // Wenn der Start-Button OBEN steht (statt am Ende der Card): visueller Abstand
+    // nach unten, damit er sich klar von den Config-Feldern abhebt.
+    .start-btn-top { margin-bottom: 1.25rem; }
     .resume-banner {
       background: rgba(25,118,210,0.06); border: 1px solid rgba(25,118,210,0.2);
       border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
