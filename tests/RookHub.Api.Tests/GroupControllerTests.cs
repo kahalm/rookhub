@@ -4,6 +4,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -18,7 +19,7 @@ public class GroupControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new GroupController(_db);
+        _controller = new GroupController(_db, new TrainingGoalService(_db));
     }
 
     public void Dispose() => _db.Dispose();

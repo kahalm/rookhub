@@ -31,6 +31,10 @@ public class AppDbContext : DbContext
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
     public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();
     public DbSet<UserApiToken> UserApiTokens => Set<UserApiToken>();
+    public DbSet<GroupTrainingGoal> GroupTrainingGoals => Set<GroupTrainingGoal>();
+    public DbSet<UserTrainingGoal> UserTrainingGoals => Set<UserTrainingGoal>();
+    public DbSet<PlayTimeDaily> PlayTimeDailies => Set<PlayTimeDaily>();
+    public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -323,6 +327,44 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(t => t.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GroupTrainingGoal>(e =>
+        {
+            // Höchstens eine Vorlage je Gruppe.
+            e.HasIndex(g => g.GroupId).IsUnique();
+            e.HasOne(g => g.Group)
+             .WithMany()
+             .HasForeignKey(g => g.GroupId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserTrainingGoal>(e =>
+        {
+            // Höchstens ein persönlicher Override je User.
+            e.HasIndex(g => g.UserId).IsUnique();
+            e.HasOne(g => g.User)
+             .WithMany()
+             .HasForeignKey(g => g.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlayTimeDaily>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.UserId, p.Date, p.Platform }).IsUnique();
+        });
+
+        modelBuilder.Entity<PlayTimeSync>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.UserId, p.Platform }).IsUnique();
         });
     }
 }

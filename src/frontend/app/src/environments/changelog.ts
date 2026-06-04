@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.83.0';
+export const APP_VERSION = '0.84.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.84.0', date: '2026-06-04', changes: [
+    'Neuer Trainingsziele-Modus (Trainingsunterstützung für Schüler):',
+    'Eigene Tagesziele je Kategorie festlegen — Puzzles, Buch-/Kursstudie und Spielen (in Minuten) — plus Wochenziel (an wie vielen Tagen pro Woche alle Ziele erreicht werden sollen).',
+    'Coach/Admin kann pro Gruppe eine Ziel-Vorlage hinterlegen; Schüler übernehmen sie automatisch und dürfen sie für sich anpassen (oder auf die Vorlage zurücksetzen).',
+    'Zweiter Aktivitäts-Tracker als Kalender-Heatmap: pro Tag ein Stern, wenn alle Ziele erreicht wurden, ein Teil-Symbol bei teilweiser Erfüllung — zusätzlich zur bestehenden Puzzle-Heatmap.',
+    'Die Spielzeit auf Lichess/chess.com wird automatisch über die jeweilige öffentliche API erfasst (verknüpfter Benutzername vorausgesetzt) und in die Kategorie „Spielen" eingerechnet.',
+  ]},
   { version: '0.83.0', date: '2026-06-04', changes: [
     'Google-Play-Vorbereitung & Mehrsprachigkeit (großes Update):',
     'Echte App-Icons (192/512 px + „maskable") + vervollständigtes Web-App-Manifest → RookHub ist eine sauber installierbare PWA.',

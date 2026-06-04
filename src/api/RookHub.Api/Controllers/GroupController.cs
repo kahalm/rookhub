@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
 
@@ -13,7 +14,12 @@ namespace RookHub.Api.Controllers;
 public class GroupController : BaseApiController
 {
     private readonly AppDbContext _db;
-    public GroupController(AppDbContext db) => _db = db;
+    private readonly TrainingGoalService _goals;
+    public GroupController(AppDbContext db, TrainingGoalService goals)
+    {
+        _db = db;
+        _goals = goals;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetGroups()
@@ -82,9 +88,10 @@ public class GroupController : BaseApiController
         var group = await _db.Groups.FindAsync(id);
         if (group == null)
             return NotFound(new { message = "Group not found." });
-        // Mitgliedschaften + Buch-Freigaben explizit entfernen (FK-Cascade greift bei InMemory nicht).
+        // Mitgliedschaften + Buch-Freigaben + Ziel-Vorlage explizit entfernen (FK-Cascade greift bei InMemory nicht).
         _db.UserGroups.RemoveRange(_db.UserGroups.Where(ug => ug.GroupId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.GroupId == id));
+        _db.GroupTrainingGoals.RemoveRange(_db.GroupTrainingGoals.Where(g => g.GroupId == id));
         _db.Groups.Remove(group);
         await _db.SaveChangesAsync();
         return NoContent();
@@ -126,6 +133,34 @@ public class GroupController : BaseApiController
             return NotFound(new { message = "Membership not found." });
         _db.UserGroups.Remove(membership);
         await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    /// <summary>Trainingsziel-Vorlage der Gruppe (Source "none", falls keine gesetzt).</summary>
+    [HttpGet("{id}/training-goal")]
+    public async Task<IActionResult> GetTrainingGoal(int id)
+    {
+        if (!await _db.Groups.AnyAsync(g => g.Id == id))
+            return NotFound(new { message = "Group not found." });
+        return Ok(await _goals.GetGroupGoalAsync(id));
+    }
+
+    /// <summary>Trainingsziel-Vorlage der Gruppe setzen/aktualisieren.</summary>
+    [HttpPut("{id}/training-goal")]
+    public async Task<IActionResult> SetTrainingGoal(int id, [FromBody] TrainingGoalInputDto dto)
+    {
+        if (!await _db.Groups.AnyAsync(g => g.Id == id))
+            return NotFound(new { message = "Group not found." });
+        return Ok(await _goals.SetGroupGoalAsync(id, dto));
+    }
+
+    /// <summary>Trainingsziel-Vorlage der Gruppe entfernen.</summary>
+    [HttpDelete("{id}/training-goal")]
+    public async Task<IActionResult> DeleteTrainingGoal(int id)
+    {
+        if (!await _db.Groups.AnyAsync(g => g.Id == id))
+            return NotFound(new { message = "Group not found." });
+        await _goals.DeleteGroupGoalAsync(id);
         return NoContent();
     }
 }

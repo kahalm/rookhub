@@ -122,6 +122,18 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordResult_PersistsTimeSeconds_ForTrainingGoalTracking()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("Timed", 2);
+
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 42 });
+
+        var row = await _db.CoursePuzzleResults.SingleAsync(r => r.BookPuzzleId == ids[0]);
+        Assert.Equal(42, row.TimeSeconds);
+    }
+
+    [Fact]
     public async Task GetNext_Sequential_ReturnsFirstUnsolvedInOrder()
     {
         await CreateUserAsync();
@@ -451,7 +463,7 @@ public class CourseControllerTests : IDisposable
     [Fact]
     public async Task DeleteGroup_RemovesBookGroupAccess()
     {
-        var groupController = new GroupController(_db);
+        var groupController = new GroupController(_db, new TrainingGoalService(_db));
         SetUser(groupController, UserId);
         var groupId = await CreateGroupAsync("G");
         var (book, _) = await SeedBookAsync("B", 1);

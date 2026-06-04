@@ -20,4 +20,8 @@ public class CoursePuzzleResult
     public BookPuzzle? BookPuzzle { get; set; }
 
     public DateTime SolvedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Am Puzzle verbrachte Zeit in Sekunden (für die Buchstudie-Zeit im Trainingsziele-Tracker).
+    /// 0 für Altzeilen vor Einführung des Felds.</summary>
+    public int TimeSeconds { get; set; }
 }

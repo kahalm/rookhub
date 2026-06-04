@@ -207,6 +207,7 @@ public class CourseService
                     BookId = bookId,
                     BookPuzzleId = dto.BookPuzzleId,
                     SolvedAt = solvedAt,
+                    TimeSeconds = timeSeconds,
                 });
                 try
                 {
