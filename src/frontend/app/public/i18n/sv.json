@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Spara",
+    "cancel": "Avbryt",
+    "delete": "Ta bort",
+    "edit": "Redigera",
+    "add": "Lägg till",
+    "close": "Stäng",
+    "search": "Sök",
+    "back": "Tillbaka",
+    "retry": "Försök igen",
+    "loading": "Laddar…",
+    "ok": "OK",
+    "remove": "Ta bort"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "repertoires": "Repertoarer",
+    "tournaments": "Turneringar",
+    "friends": "Vänner",
+    "puzzles": "Uppgifter",
+    "weekly": "Veckoinlägg",
+    "courses": "Kurser",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Uppgiftshistorik",
+    "changelog": "Ändringslogg",
+    "logout": "Logga ut",
+    "login": "Logga in",
+    "register": "Registrera",
+    "language": "Språk",
+    "menu": "Meny",
+    "info": "Info",
+    "account": "Konto",
+    "analysis": "Analys",
+    "stats": "Statistik"
+  },
+  "app": {
+    "changelogTitle": "Ändringslogg",
+    "quickstartTitle": "Snabbstart",
+    "qs": {
+      "subscribeTitle": "Prenumerera",
+      "subscribeDesc": "Prenumerera på turneringar för snabb åtkomst till spelare, parningar och resultat.",
+      "monitorTitle": "Övervaka",
+      "monitorDesc": "Aktivera övervakning av en turnering — nya omgångar upptäcks och hämtas automatiskt.",
+      "favoritesTitle": "Favoriter",
+      "favoritesDesc": "Markera spelare eller lag som favoriter för snabb åtkomst i turneringsvyn.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Lägg till ditt ChessResults ID i din profil — kommande turneringar prenumereras automatiskt."
+    },
+    "feedback": "Feedback / Rapportera ett fel",
+    "updateAvailable": "En ny version är tillgänglig.",
+    "reload": "Ladda om"
+  },
+  "auth": {
+    "login": {
+      "title": "Logga in",
+      "usernameLabel": "Användarnamn",
+      "passwordLabel": "Lösenord",
+      "rememberMe": "Håll mig inloggad",
+      "submit": "Logga in",
+      "submitting": "Loggar in...",
+      "registerLink": "Har du inget konto? Registrera dig",
+      "failed": "Inloggningen misslyckades"
+    },
+    "register": {
+      "title": "Registrera",
+      "usernameLabel": "Användarnamn",
+      "emailLabel": "E-post",
+      "passwordLabel": "Lösenord",
+      "passwordHint": "Minst 4 tecken",
+      "submit": "Registrera",
+      "submitting": "Registrerar...",
+      "loginLink": "Har du redan ett konto? Logga in",
+      "failed": "Registreringen misslyckades"
+    }
+  },
+  "dashboard": {
+    "welcome": "Välkommen, {{username}}!",
+    "subscribedTournaments": "Prenumererade turneringar",
+    "subscribedAt": "Prenumererade {{date}}",
+    "puzzles": {
+      "title": "Uppgifter",
+      "subtitle": "Elo {{elo}} | {{solved}} lösta ({{accuracy}}%)",
+      "solve": "Lös uppgifter",
+      "endless": "Ändlöst"
+    },
+    "subscriptions": {
+      "title": "Turneringsprenumerationer",
+      "count": "{{count}} prenumerationer",
+      "browse": "Bläddra bland turneringar"
+    },
+    "friends": {
+      "title": "Vänner",
+      "count": "{{count}} vänner",
+      "manage": "Hantera vänner"
+    },
+    "repertoires": {
+      "title": "Repertoarer",
+      "count": "{{count}} repertoarer",
+      "viewAll": "Visa alla"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Parti",
+    "nav": {
+      "first": "Första draget",
+      "previous": "Föregående drag",
+      "next": "Nästa drag",
+      "last": "Sista draget"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Förnamn",
+    "lastName": "Efternamn",
+    "searchPlayer": "Sök spelare",
+    "noResults": "Inga resultat hittades.",
+    "displayName": "Visningsnamn",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com-användarnamn",
+    "lichessUsername": "Lichess-användarnamn",
+    "saving": "Sparar...",
+    "saved": "Profilen sparad",
+    "saveFailed": "Det gick inte att spara profilen",
+    "searchFailed": "Sökningen misslyckades",
+    "chessResultsApplied": "ChessResults-data tillämpades",
+    "fideApplied": "FIDE-data tillämpades",
+    "discord": {
+      "title": "Discord",
+      "hint": "Öppna en personlig länk från RookHub Discord-boten (dess /link-kommando eller ett uppgifts-DM) för att ansluta ditt Discord-konto.",
+      "unlink": "Koppla bort",
+      "unlinked": "Discord bortkopplat",
+      "linked": "Discord-konto anslutet",
+      "linkConflict": "Det här Discord-kontot är redan kopplat till en annan RookHub-användare.",
+      "linkFailed": "Det gick inte att ansluta Discord-kontot",
+      "stashed": "Logga in eller registrera dig för att slutföra kopplingen av ditt Discord-konto."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Spara uppgifter på den här enheten för att fortsätta lösa utan internet (per enhet).",
+      "puzzleCount": "Uppgifter offline",
+      "endlessRuns": "Ändlösa omgångar offline",
+      "cacheSize": "Cachestorlek",
+      "books": "{{count}} böcker",
+      "clear": "Rensa cache",
+      "cleared": "Offlinecachen rensad",
+      "pending": "{{count}} lösningar väntar på synkronisering — de laddas upp automatiskt när du är online igen."
+    },
+    "delete": {
+      "title": "Ta bort konto",
+      "hint": "Ta bort ditt konto permanent.",
+      "button": "Ta bort konto",
+      "warn": "Varning: din identitet och personliga data tas bort oåterkalleligt. Ange ditt lösenord för att bekräfta.",
+      "password": "Lösenord",
+      "confirm": "Ta bort permanent",
+      "deleting": "Tar bort...",
+      "done": "Ditt konto har tagits bort.",
+      "wrongPassword": "Lösenordet är felaktigt.",
+      "failed": "Det gick inte att ta bort kontot.",
+      "moreInfo": "Mer om kontoborttagning"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Ta bort konto",
+      "intro": "Den här sidan förklarar hur du tar bort ditt RookHub-konto och vad som händer med dina uppgifter.",
+      "inAppTitle": "Hur du tar bort ditt konto",
+      "inApp": "Logga in i appen och gå till Profil → \"Ta bort konto\". Bekräfta med ditt lösenord. Kontot tas bort omedelbart.",
+      "removedTitle": "Vad som tas bort",
+      "removed1": "Din identitet och personliga data (användarnamn, e-post, visnings-/riktigt namn, FIDE/ChessResults ID, Chess.com/Lichess-namn, Discord-länk) och inloggningsåtkomst.",
+      "removed2": "Personligt innehåll och länkar: repertoarer, turneringsprenumerationer/-favoriter, vänskaper och gruppmedlemskap.",
+      "keptTitle": "Vad som behålls anonymt",
+      "kept": "Aggregerad lösar-/spelstatistik (t.ex. lösta uppgifter) sparas i anonymiserad form som inte kan spåras tillbaka till dig.",
+      "contactTitle": "Kontakt",
+      "contact": "För borttagningsbegäranden eller frågor, kontakta oss på",
+      "back": "Tillbaka till inloggning"
+    },
+    "privacy": {
+      "title": "Integritetspolicy",
+      "updated": "Senast uppdaterad: 3 juni 2026",
+      "intro": "RookHub är en schackträningsplattform (uppgifter, ändlöst läge, kurser, repertoarer). Denna policy förklarar hur personuppgifter behandlas enligt GDPR.",
+      "controllerTitle": "Personuppgiftsansvarig",
+      "controller": "Personuppgiftsansvarig för databehandlingen är den operatör som anges i impressum",
+      "dataTitle": "Vilka uppgifter vi behandlar",
+      "dataIntro": "Beroende på din användning behandlar vi:",
+      "dataAccount": "Kontouppgifter: användarnamn, e-postadress, lösenord (lagrat enbart som hash).",
+      "dataProfile": "Profiluppgifter (valfritt): visnings-/riktigt namn, FIDE ID, ChessResults ID, Chess.com/Lichess-användarnamn, valfri Discord-länk.",
+      "dataUsage": "Användningsdata: lösta uppgifter, ändlöst/kursförlopp och statistik, spelbetyg, inloggningstidsstämplar.",
+      "dataTechnical": "Teknisk data: IP-adress, begärda endpoints med tidsstämplar och en pseudonym besökaridentifierare (räckviddsanalys) i serverloggar.",
+      "purposesTitle": "Ändamål och rättsliga grunder",
+      "purposes": "Tillhandahållande av konto och funktioner (uppfyllande av avtal, art. 6.1 b GDPR) samt driftsäkerhet, felanalys och räckviddsanalys via loggar (berättigat intresse, art. 6.1 f GDPR).",
+      "thirdTitle": "Mottagare / tredjepartstjänster",
+      "thirdIntro": "Uppgifter säljs inte. Beroende på din användning är följande tjänster inblandade:",
+      "thirdDiscord": "Discord: endast vid frivillig kontolänkning (Discord ID/namn) för visning i RookHub Discord-boten.",
+      "thirdChessresults": "chess-results.com: turneringsdata hämtas server-sidan när du anger ett ChessResults ID eller laddar turneringar.",
+      "thirdChesssites": "Chess.com / Lichess: endast de användarnamn du frivilligt anger; ingen automatisk dataöverföring.",
+      "thirdLogging": "Elasticsearch/Kibana: självhostad loggning/övervakning på vår infrastruktur.",
+      "thirdHosting": "Hosting: drivs på vår egen serverinfrastruktur med en TLS-omvänd proxy.",
+      "storageTitle": "Lokal lagring (cookies/storage)",
+      "storage": "Vi använder inga spårningscookies. Webbläsarlagring (localStorage) innehåller t.ex. din inloggningstoken, inställningar och — om aktiverat — offlineuppgifter. Dessa finns kvar på din enhet.",
+      "retentionTitle": "Lagring och radering",
+      "retention": "Kontouppgifter lagras tills du tar bort ditt konto. Du kan ta bort ditt konto när som helst — identitet och personuppgifter raderas, anonymiserad statistik behålls. Mer:",
+      "rightsTitle": "Dina rättigheter",
+      "rights": "Du har rätt till tillgång, rättelse, radering, begränsning, dataportabilitet och invändning, samt rätt att lämna in ett klagomål till en tillsynsmyndighet (i Österrike: Datenschutzbehörde).",
+      "contactTitle": "Kontakt",
+      "contact": "För integritetsfrågor, kontakta oss på",
+      "back": "Tillbaka till inloggning"
+    },
+    "impressum": {
+      "title": "Impressum",
+      "operatorTitle": "Tjänsteleverantör",
+      "name": "[NAMN / FÖRETAG — fyll i]",
+      "address": "[Adress — gata, postnummer, ort, land]",
+      "uid": "[Momsregistreringsnummer, om företag]",
+      "contactTitle": "Kontakt",
+      "contact": "E-post",
+      "disclaimer": "Obs: tjänsteleverantörens uppgifter är platshållare och måste ersättas med faktiska uppgifter innan publicering. Den här sidan är ett utkast och utgör inte juridisk rådgivning.",
+      "back": "Tillbaka till inloggning"
+    }
+  },
+  "friends": {
+    "title": "Vänner",
+    "searchUsers": "Sök användare",
+    "searchResults": "Sökresultat",
+    "tabs": {
+      "friends": "Vänner ({{count}})",
+      "requests": "Förfrågningar ({{count}})"
+    },
+    "empty": {
+      "friends": "Inga vänner ännu. Sök efter användare för att lägga till vänner!",
+      "requests": "Inga väntande förfrågningar."
+    },
+    "sentOn": "Skickad {{date}}",
+    "requestSent": "Vänförfrågan skickad",
+    "errors": {
+      "loadFriends": "Det gick inte att läsa in vänner",
+      "loadRequests": "Det gick inte att läsa in förfrågningar",
+      "search": "Sökningen misslyckades",
+      "sendRequest": "Det gick inte att skicka förfrågan",
+      "acceptRequest": "Det gick inte att acceptera förfrågan",
+      "declineRequest": "Det gick inte att avvisa förfrågan",
+      "removeFriend": "Det gick inte att ta bort vän"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Mina repertoarer",
+      "new": "Ny repertoar",
+      "fileCount": "{{count}} filer",
+      "public": "Offentlig",
+      "private": "Privat",
+      "noDescription": "Ingen beskrivning",
+      "open": "Öppna",
+      "empty": "Inga repertoarer ännu. Skapa en för att komma igång!",
+      "loadFailed": "Det gick inte att läsa in repertoarer",
+      "createFailed": "Det gick inte att skapa repertoar",
+      "deleteConfirm": "Ta bort den här repertoaren?",
+      "deleteFailed": "Det gick inte att ta bort repertoaren"
+    },
+    "detail": {
+      "noDescription": "Ingen beskrivning",
+      "modeLines": "Linjer",
+      "modeTree": "Träd",
+      "modeEdit": "Redigera"
+    },
+    "dialog": {
+      "title": "Ny repertoar",
+      "name": "Namn",
+      "description": "Beskrivning",
+      "public": "Offentlig",
+      "create": "Skapa"
+    },
+    "lines": {
+      "allLines": "Alla linjer",
+      "empty": "Inga linjer hittades i den här repertoaren."
+    },
+    "tree": {
+      "start": "Start",
+      "lineCount": "{{count}} linje",
+      "lineCountPlural": "{{count}} linjer",
+      "empty": "Slut på linjen — inga fler drag."
+    },
+    "edit": {
+      "uploadHint": "Dra och släpp PGN-filer här eller klicka för att ladda upp",
+      "files": "Filer ({{count}})",
+      "empty": "Inga filer ännu. Ladda upp PGN-filer för att komma igång!",
+      "filesSkipped": "{{count}} fil(er) hoppades över (endast .pgn, upp till 10 MB)",
+      "uploadSuccess": "{{count}} fil(er) uppladdade",
+      "uploadPartial": "{{ok}} uppladdade, {{failed}} misslyckades",
+      "downloadFailed": "Nedladdningen misslyckades",
+      "deleteConfirm": "Ta bort den här filen?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Uppdatera",
+      "subscribe": "Prenumerera",
+      "unsubscribe": "Avprenumerera",
+      "monitor": "Övervaka",
+      "monitoringUntil": "Övervakar till {{time}}",
+      "share": "Dela",
+      "subscribed": "Prenumererad!",
+      "unsubscribed": "Avprenumererad",
+      "failed": "Misslyckades",
+      "unsubscribeFailed": "Det gick inte att avprenumerera"
+    },
+    "tabs": {
+      "players": "Spelare ({{count}})",
+      "teams": "Lag ({{count}})",
+      "pairings": "Parningar"
+    },
+    "favoritesOnly": "Endast favoriter",
+    "favorites": {
+      "added": "{{name}} lagd till i favoriter",
+      "removed": "{{name}} borttagen från favoriter",
+      "addedShort": "{{name}} favoritmärkt",
+      "removedShort": "{{name}} borttagen"
+    },
+    "players": {
+      "snr": "Nr.",
+      "title": "Titel",
+      "name": "Namn",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Land",
+      "team": "Lag",
+      "club": "Klubb",
+      "boardShort": "Br."
+    },
+    "teams": {
+      "rank": "Placering",
+      "team": "Lag",
+      "points": "Poäng"
+    },
+    "pairings": {
+      "round": "Omgång",
+      "roundLabel": "Omgång {{round}}",
+      "board": "Bräde",
+      "white": "Vit",
+      "black": "Svart",
+      "home": "Hemma",
+      "away": "Borta",
+      "result": "Resultat"
+    },
+    "monitor": {
+      "stopped": "Övervakning stoppad",
+      "stopFailed": "Det gick inte att stoppa övervakningen",
+      "activated": "Övervakning aktiverad",
+      "activateFailed": "Det gick inte att aktivera övervakning",
+      "newRoundTitle": "Ny omgång tillgänglig!",
+      "newRoundBody": "Omgång {{round}} har publicerats.",
+      "newRoundSnack": "Ny omgång tillgänglig! Omgång {{round}}"
+    },
+    "list": {
+      "title": "Turneringar",
+      "importTitle": "Importera turnering",
+      "importSubtitle": "Ange ett chess-results.com-turnerings-ID för att hämta det",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "t.ex. 1234567",
+      "idHintPrefix": "Numret från chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Hämta",
+      "crawling": "Hämtar turnering {{id}}… Jobb #{{jobId}}",
+      "crawlerUnavailable": "Kunde inte ansluta till turneringshämtaren. Kontrollera att hämtartjänsten körs.",
+      "details": "Detaljer",
+      "hide": "Dölj",
+      "empty": "Inga turneringar hittades.",
+      "showHidden": "Visa {{count}} dolda",
+      "imported": "Turnering importerad!",
+      "crawlStartFailed": "Det gick inte att starta hämtning",
+      "crawlFailed": "Hämtningen misslyckades",
+      "crawlConnectionLost": "Tappade anslutningen till hämtningsjobbet"
+    },
+    "detail": {
+      "loadTournamentFailed": "Det gick inte att läsa in turnering",
+      "loadSubscriptionFailed": "Det gick inte att läsa in prenumerationsstatus",
+      "reloadTournamentFailed": "Det gick inte att ladda om turnering",
+      "refreshStartFailed": "Det gick inte att starta uppdatering",
+      "dataRefreshed": "Data uppdaterad!",
+      "refreshFailed": "Uppdateringen misslyckades",
+      "loadPlayersFailed": "Det gick inte att läsa in spelare",
+      "loadTeamsFailed": "Det gick inte att läsa in lag",
+      "loadPairingsFailed": "Det gick inte att läsa in parningar",
+      "loadTeamDetailsFailed": "Det gick inte att läsa in lagdetaljer"
+    },
+    "public": {
+      "notFound": "Turneringen hittades inte."
+    },
+    "share": {
+      "title": "Dela turnering",
+      "copyLink": "Kopiera länk",
+      "linkCopied": "Länk kopierad!",
+      "copyFailed": "Kopieringen misslyckades"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Laddar uppgift…",
+      "loadFailed": "Det gick inte att läsa in uppgiften",
+      "offlineNoCache": "Du är offline och inga uppgifter finns cachade. Öppna den här sidan en gång online för att spara uppgifter för offlinespel.",
+      "watchOpponent": "Se motståndarens drag…",
+      "yourTurn": "Din tur!",
+      "gaveUpPlayOut": "Gick upp — spela lösningen själv.",
+      "thinking": "Stockfish tänker…"
+    },
+    "result": {
+      "solutionPlayedOut": "Lösningen genomspelad.",
+      "tryYourselfNextTime": "Försök lösa det själv nästa gång!",
+      "checkmate": "Schackmatt!",
+      "alternativeSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
+      "correct": "Rätt!",
+      "incorrect": "Fel"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Nu",
+      "show": "Visa eval",
+      "hide": "Dölj eval"
+    },
+    "actions": {
+      "reset": "Återställ",
+      "mouseslip": "Råkade flytta",
+      "giveUp": "Ge upp",
+      "nextPuzzle": "Nästa uppgift",
+      "share": "Dela uppgift",
+      "loadPuzzle": "Ladda uppgift",
+      "reviewLast": "Granska senaste uppgiften",
+      "endlessMode": "Ändlöst läge",
+      "analyze": "Analysera"
+    },
+    "info": {
+      "rating": "Betyg"
+    },
+    "stats": {
+      "title": "Din statistik",
+      "solved": "Lösta",
+      "accuracy": "Träffsäkerhet",
+      "streak": "Svit",
+      "best": "Bäst"
+    },
+    "settings": {
+      "tooltip": "Inställningar"
+    },
+    "filters": {
+      "title": "Filter",
+      "visualization": "Visualisering: Nivå {{level}}",
+      "difficulty": "Svårighetsgrad",
+      "difficultyHint": "Uppgifter kring ditt Elo ({{elo}})",
+      "depthHint": "1 (svag) – 24 (stark)",
+      "skipSolved": "Hoppa över lösta"
+    },
+    "difficulty": {
+      "veryEasy": "Mycket lätt",
+      "easy": "Lätt",
+      "normal": "Normal",
+      "hard": "Svår",
+      "veryHard": "Mycket svår"
+    },
+    "theme": {
+      "mode": "Läge",
+      "modeNormal": "Normal",
+      "modeRandom": "Slumpmässig",
+      "modeCrazy": "Galen",
+      "boardTheme": "Brädtema",
+      "pieces": "Pjäser"
+    },
+    "viz": {
+      "title": "Visualisering (Nivå {{level}})",
+      "countdown": "Pjäser försvinner om {{seconds}}s…",
+      "noMoveYet": "Inget drag än — klicka på från-ruta → målruta.",
+      "show": "Visa",
+      "showing": "Visar…"
+    },
+    "share": {
+      "title": "Dela uppgift",
+      "copied": "Länk kopierad!",
+      "copyFailed": "Kopieringen misslyckades"
+    }
+  },
+  "courses": {
+    "title": "Kurser",
+    "intro": "Arbeta igenom en importerad bok uppgift för uppgift — sekventiellt eller slumpmässigt. Ditt framsteg sparas.",
+    "emptyHint": "Inga böcker importerade ännu. Importera böcker i adminpanelen under \"Böcker\".",
+    "puzzleCount": "{{count}} uppgifter",
+    "completed": "Kursen avslutad",
+    "sequential": "Sekventiell",
+    "random": "Slumpmässig",
+    "resetTooltip": "Återställ framsteg",
+    "resetConfirm": "Återställ framsteg för \"{{name}}\"?",
+    "loadFailed": "Kunde inte läsa in kurser",
+    "resetFailed": "Återställningen misslyckades",
+    "offlineSaveTooltip": "Spara bok offline",
+    "offlineRemoveTooltip": "Ta bort offlinekopia",
+    "offlineSaved": "\"{{name}}\" sparad offline ({{count}} uppgifter)",
+    "offlineRemoved": "\"{{name}}\" borttagen från offline",
+    "offlineFailed": "Kunde inte spara bok offline"
+  },
+  "weekly": {
+    "title": "Veckoinlägg",
+    "intro": "Veckans schackinlägg att spela igenom. Datum och tid anger när inlägget är schemalagt.",
+    "oClock": "",
+    "play": "Spela igenom",
+    "empty": "Inga veckoinlägg ännu.",
+    "deleteConfirm": "Ta bort veckoinlägg \"{{title}}\"?",
+    "created": "Veckoinlägg skapat",
+    "deleted": "Veckoinlägg borttaget",
+    "loadFailed": "Kunde inte läsa in veckoinlägg",
+    "uploadFailed": "Uppladdningen misslyckades",
+    "saveFailed": "Sparandet misslyckades",
+    "deleteFailed": "Borttagningen misslyckades",
+    "fields": {
+      "date": "Datum",
+      "time": "Tid",
+      "titleOptional": "Titel (valfritt)"
+    },
+    "columns": {
+      "scheduled": "Datum",
+      "title": "Titel",
+      "actions": "Åtgärder"
+    },
+    "upload": {
+      "title": "Ladda upp nytt veckoinlägg",
+      "choosePgn": "Välj PGN",
+      "titlePlaceholder": "från filnamn",
+      "create": "Skapa",
+      "hint": "Standard: senaste datum + 7 dagar, samma tid (annars 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Du är offline och ingen omgång finns cachad. Öppna Ändlöst en gång online för att spara uppgifter för offlinespel.",
+    "help": {
+      "title": "Ändlöst uppgiftsläge",
+      "gameplayHeading": "Så här fungerar det",
+      "gameplayP1": "Du löser schackuppgifter med ökande svårighetsgrad. Du börjar vid ett konfigurerbart betyg och arbetar dig uppåt. Betyget stiger automatiskt längs Fasttrack-faserna (se nedan).",
+      "gameplayP2": "Du har <strong>3 liv</strong>. Vid 0 liv är spelet slut.",
+      "movesHeading": "Drag och Stockfish",
+      "movesP1": "Varje uppgift har en <strong>avsedd lösning</strong> (en dragföljd). Så länge du spelar rätt drag följer du den lösningslinjen.",
+      "movesP2": "Om du spelar ett <strong>fel drag</strong>, tar <strong>Stockfish</strong> (en schackmotor) över den andra sidan. Du spelar då fritt mot Stockfish. Dess styrka kan ställas in via Stockfish-djupet.",
+      "movesItem1": "<strong>Schackmatt mot Stockfish</strong> räknas som alternativ lösning — inget liv förloras!",
+      "movesItem2": "<strong>Stockfish ger dig schackmatt</strong> — du förlorar ett liv",
+      "movesItem3": "Partiet mot Stockfish fortsätter ändlöst tills schackmatt eller Ge upp",
+      "buttonsHeading": "Knappar under spelet",
+      "buttonsShowEval": "<strong>Visa eval</strong> — Visar Stockfish-utvärderingen (Start vs. Nu)",
+      "buttonsReset": "<strong>Återställ</strong> — Återställer uppgiften, men kostar ett liv",
+      "buttonsMouseslip": "<strong>Råkade flytta</strong> — Ångrar det senaste felaktiga draget (en gång per uppgift, gratis)",
+      "buttonsGiveUp": "<strong>Ge upp</strong> — Ge vika, kostar ett liv",
+      "settingsHeading": "Inställningar",
+      "settingsStartRating": "<strong>Startbetyg</strong> — Uppgiftsbetyget du börjar på",
+      "settingsStockfishDepth": "<strong>Stockfish-djup</strong> — Motorstyrka (1 = mycket svag, 24 = maximal styrka)",
+      "settingsThemes": "<strong>Teman</strong> — Valfritt: enbart vissa taktiska teman (t.ex. \"gaffel nål\")",
+      "fasttrackHeading": "Svårighetsökning (Fasttrack)",
+      "fasttrackP1": "Ökningen anpassar sig efter dina tidigare prestationer: den analyserar dina senaste sessioner och beräknar betyget vid vilket du vanligtvis förlorar liv.",
+      "fasttrackPhase1": "<strong>Fas 1 (Uppgifter 1–5)</strong> — Snabb ökning upp till din 1:a tröskel",
+      "fasttrackPhase2": "<strong>Fas 2 (Uppgifter 6–10)</strong> — Ökning från 1:a till 2:a tröskel",
+      "fasttrackPhase3": "<strong>Fas 3 (från Uppgift 11)</strong> — Konstant steg om 20",
+      "fasttrackP2": "Tröskelvärdena (1:a/2:a tröskel) beräknas automatiskt men kan justeras manuellt. Klicka på \"Auto: …\" för att återställa värdet."
+    },
+    "config": {
+      "title": "Ändlöst uppgiftsläge",
+      "subtitle": "Tilltagande svårighetsgrad — hur långt kan du komma?",
+      "startRating": "Startbetyg",
+      "stockfishDepth": "Stockfish-djup",
+      "stockfishDepthHint": "1 (svag) – 24 (stark)",
+      "themes": "Teman (valfritt)",
+      "themesPlaceholder": "t.ex. gaffel nål",
+      "thresholdExplain": "Betyg där du vanligtvis förlorar liv. Justera för att hoppa över lättare uppgifter snabbare eller långsammare.",
+      "firstThreshold": "1:a tröskel",
+      "secondThreshold": "2:a tröskel",
+      "auto": "Auto: {{value}}",
+      "step": "Steg {{step}}",
+      "phase1Label": "Fas 1 (Nv 1–5)",
+      "phase2Label": "Fas 2 (Nv 6–10)",
+      "phase3Label": "Fas 3 (Nv 11+)",
+      "curveHint": "Betygskurva för gauntlet (fast när du börjar):",
+      "curvePuzzle": "Uppgift {{n}}",
+      "settings": "Inställningar",
+      "visualizationLevel": "Visualisering: Nivå {{level}}",
+      "mode": "Läge",
+      "modeNormal": "Normal",
+      "modeRandom": "Slumpmässig",
+      "modeCrazy": "Galen",
+      "boardTheme": "Brädtema",
+      "pieces": "Pjäser",
+      "highscore": "Rekord: {{rating}} betyg",
+      "sessionsPlayed": "{{count}} sessioner spelade",
+      "viewHistory": "Visa historik",
+      "unfinishedRun": "Oavslutad omgång: Nv {{level}} | {{solved}} lösta | {{lives}} liv | {{max}} max",
+      "continue": "Fortsätt",
+      "archiveAndNew": "Arkivera och nytt spel",
+      "newGame": "Nytt spel",
+      "start": "Starta"
+    },
+    "game": {
+      "visualization": "Visualisering (Nivå {{level}})",
+      "vizCountdown": "Pjäser försvinner om {{seconds}}s...",
+      "vizNoMove": "Inget drag än — klicka på från-ruta → målruta.",
+      "vizShow": "Visa",
+      "vizShowing": "Visar...",
+      "loadingPuzzle": "Laddar uppgift...",
+      "watchOpponent": "Se motståndarens drag...",
+      "yourTurn": "Din tur! Hitta det bästa draget.",
+      "yourMove": "Ditt drag...",
+      "opponentThinking": "Motståndaren tänker...",
+      "evalStart": "Start",
+      "evalNow": "Nu",
+      "showEval": "Visa eval",
+      "hideEval": "Dölj eval",
+      "reset": "Återställ",
+      "mouseslip": "Råkade flytta",
+      "giveUp": "Ge upp",
+      "checkmate": "Schackmatt!",
+      "alternativeSolution": "Alternativ lösning — uppgiften hade en annan avsedd linje.",
+      "correct": "Rätt!",
+      "wrong": "Fel!",
+      "gaveUp": "Gav upp",
+      "continue": "Fortsätt",
+      "analyze": "Analysera",
+      "reviewLast": "Analysera senaste uppgiften",
+      "puzzleRating": "Uppgiftsbetyg: {{rating}}",
+      "levelRange": "Nivå {{level}} ({{min}}–{{max}})",
+      "showTags": "Visa taggar",
+      "hideTags": "Dölj taggar",
+      "sharePuzzle": "Dela uppgift",
+      "statRating": "Betyg",
+      "statLevel": "Nivå",
+      "statSolved": "Lösta",
+      "statTime": "Tid",
+      "phaseLabel": "Fas {{phase}} (steg {{step}})"
+    },
+    "gameOver": {
+      "title": "Spelet slut",
+      "wonTitle": "Du vinner!",
+      "wonSubtitle": "Du klarade hela gauntlet.",
+      "wonText": "Kedjan är besegrad — starta en ny omgång för nästa utmaning.",
+      "exhaustedTitle": "Genomspelat!",
+      "exhaustedSubtitle": "Du har spelat igenom alla uppgiftsbetygsintervall.",
+      "areYouAStockfish": "Är du ett Stockfish?",
+      "maxRating": "Maxbetyg",
+      "puzzlesSolved": "Lösta uppgifter",
+      "livesLeft": "Kvarvarande liv",
+      "levelReached": "Uppnådd nivå",
+      "time": "Tid",
+      "livesLostAt": "Liv förlorade vid: {{ratings}}",
+      "puzzleReview": "Uppgiftsgranskning",
+      "newHighscore": "Nytt rekord!",
+      "archiving": "Arkiverar...",
+      "archiveRun": "Arkivera den här omgången",
+      "archived": "Arkiverad",
+      "playAgain": "Spela igen",
+      "backToPuzzles": "Tillbaka till uppgifter"
+    },
+    "history": {
+      "title": "Ändlös uppgiftshistorik",
+      "noSessions": "Inga sessioner spelade ännu.",
+      "startPlaying": "Börja spela",
+      "filterAll": "Alla",
+      "filterActive": "Aktiva",
+      "filterArchived": "Arkiverade",
+      "selected": "{{count}} valda",
+      "archive": "Arkivera",
+      "unarchive": "Avarkivera",
+      "noArchivedSessions": "Inga arkiverade sessioner.",
+      "noActiveSessions": "Inga aktiva sessioner.",
+      "colDate": "Datum",
+      "colMaxRating": "Maxbetyg",
+      "colSolved": "Lösta",
+      "colDuration": "Varaktighet",
+      "colConfig": "Konfiguration",
+      "colMistakes": "Misstag",
+      "backToEndless": "Tillbaka till ändlöst läge"
+    }
+  },
+  "book": {
+    "difficulty": "Svårighetsgrad",
+    "offlineUnavailable": "Den här boken är inte tillgänglig offline.",
+    "status": {
+      "loading": "Laddar uppgift...",
+      "watchOpponent": "Se motståndarens drag...",
+      "yourTurn": "Din tur! Hitta det bästa draget.",
+      "gaveUp": "Gav upp — spela igenom lösningen själv.",
+      "stockfishThinking": "Stockfish tänker...",
+      "yourMoveVsStockfish": "Ditt drag mot Stockfish...",
+      "correct": "Rätt!",
+      "incorrect": "Fel",
+      "gaveUpSolution": "Gav upp — här är lösningen",
+      "checkmate": "Schackmatt!",
+      "altSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
+      "fullGame": "Hela partiet"
+    },
+    "actions": {
+      "reset": "Återställ",
+      "giveUp": "Ge upp",
+      "mouseslip": "Råkade flytta",
+      "nextPuzzle": "Nästa uppgift",
+      "again": "Igen",
+      "skip": "Hoppa över",
+      "viewFullGame": "Visa hela partiet",
+      "analyze": "Analysera",
+      "nextInBook": "Nästa i boken",
+      "randomInBook": "Slumpmässig från boken",
+      "sharePuzzle": "Dela uppgift",
+      "backToPuzzle": "Tillbaka till uppgiften"
+    },
+    "settings": {
+      "title": "Inställningar",
+      "visualizationLevel": "Visualisering: Nivå {{level}}",
+      "stockfishDepth": "Stockfish-djup",
+      "depthHint": "1 (svag) – 24 (stark)",
+      "mode": "Läge",
+      "modeNormal": "Normal",
+      "modeRandom": "Slumpmässig",
+      "modeCrazy": "Galen",
+      "boardTheme": "Brädtema",
+      "pieces": "Pjäser"
+    },
+    "viz": {
+      "titleLevel": "Visualisering (Nivå {{level}})",
+      "countdown": "Pjäser försvinner om {{seconds}}s...",
+      "noMoveYet": "Inget drag än — klicka på från-ruta → målruta.",
+      "show": "Visa",
+      "showing": "Visar...",
+      "level0": "Normal — Dra och släpp",
+      "level1": "Blindfold — brädet fryst, drag som text",
+      "level2": "Brickor — pjäserna ersätts med brickor efter 3s",
+      "level3": "Mörkt — pjäserna ersätts med svarta marker efter 3s",
+      "level4": "Osynligt — pjäserna försvinner helt efter 3s"
+    },
+    "course": {
+      "backToCourses": "Till kursöversikt",
+      "sequential": "Sekventiell",
+      "random": "Slumpmässig",
+      "completed": "Kursen avslutad!",
+      "toOverview": "Till översikt"
+    },
+    "weekly": {
+      "backToWeekly": "Till veckoinläggsöversikt",
+      "label": "Veckoinlägg",
+      "noPuzzles": "Det här veckoinlägget innehåller inga spelbara uppgifter.",
+      "allSolved": "Alla uppgifter lösta!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Kibana-dashboard",
+    "tabs": {
+      "users": "Användare",
+      "books": "Böcker",
+      "groups": "Grupper",
+      "logs": "Begäranloggar"
+    },
+    "users": {
+      "searchLabel": "Sök användare",
+      "toggleAdmin": "Växla admin",
+      "deleteUser": "Ta bort användare",
+      "deleteConfirm": "Ta bort användaren \"{{username}}\"? Det går inte att ångra.",
+      "deleted": "Användaren \"{{username}}\" borttagen",
+      "nowAdmin": "{{username}} är nu admin",
+      "noLongerAdmin": "{{username}} är inte längre admin",
+      "columns": {
+        "id": "ID",
+        "username": "Användarnamn",
+        "email": "E-post",
+        "admin": "Admin",
+        "groups": "Grupper",
+        "created": "Skapad",
+        "actions": "Åtgärder"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in användare",
+        "toggleAdmin": "Det gick inte att växla admin",
+        "delete": "Det gick inte att ta bort användaren"
+      }
+    },
+    "books": {
+      "uploadPgn": "Ladda upp PGN(er)",
+      "importing": "Importerar…",
+      "poolHint": "Ange per bok i vilka pooler uppgifterna visas.",
+      "empty": "Inga böcker importerade ännu.",
+      "eloFrom": "från",
+      "eloTo": "till",
+      "adminOnly": "endast admin",
+      "deleteBook": "Ta bort bok",
+      "deleteConfirm": "Ta bort boken \"{{name}}\" med {{count}} uppgift(er)?",
+      "deleted": "Boken \"{{name}}\" borttagen",
+      "imported": "{{imported}} uppgift(er) importerade, {{skipped}} hoppades över",
+      "importedCount": "{{count}} uppgift(er) importerade",
+      "duplicatesCount": "{{count}} duplikat",
+      "invalidCount": "{{count}} ogiltiga",
+      "columns": {
+        "book": "Bok",
+        "puzzles": "Uppgifter",
+        "difficulty": "Svårighetsgrad",
+        "elo": "Elo från/till",
+        "daily": "Dagligen",
+        "random": "Slumpmässig",
+        "blind": "Blindfold",
+        "visibleFor": "Synlig för (kurser)",
+        "actions": "Åtgärder"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in böcker",
+        "import": "Importen misslyckades",
+        "save": "Sparandet misslyckades",
+        "saveGroups": "Uppdateringen av gruppåtkomst misslyckades",
+        "delete": "Borttagningen misslyckades"
+      }
+    },
+    "groups": {
+      "newGroup": "Ny grupp",
+      "namePlaceholder": "Namn",
+      "descriptionOptional": "Beskrivning (valfritt)",
+      "create": "Skapa",
+      "empty": "Inga grupper skapade ännu.",
+      "manageMembers": "Hantera medlemmar",
+      "deleteGroup": "Ta bort grupp",
+      "membersOf": "Medlemmar · {{name}}",
+      "addUser": "Lägg till användare",
+      "noMembers": "Inga medlemmar.",
+      "created": "Gruppen \"{{name}}\" skapad",
+      "deleteConfirm": "Ta bort gruppen \"{{name}}\"?",
+      "deleted": "Gruppen \"{{name}}\" borttagen",
+      "columns": {
+        "group": "Grupp",
+        "members": "Medlemmar",
+        "actions": "Åtgärder"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in grupper",
+        "create": "Det gick inte att skapa grupp",
+        "delete": "Borttagningen misslyckades",
+        "loadMembers": "Det gick inte att läsa in medlemmar",
+        "addMember": "Det gick inte att lägga till medlem",
+        "removeMember": "Det gick inte att ta bort medlem"
+      }
+    },
+    "logs": {
+      "all": "Alla",
+      "filter": "Filter",
+      "reset": "Återställ",
+      "filtered": "(filtrerade)",
+      "entryCount": "{{count}} poster",
+      "status4xx": "4xx+ (fel)",
+      "status5xx": "5xx (server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Tid",
+        "method": "Metod",
+        "path": "Sökväg",
+        "status": "Status",
+        "duration": "Varaktighet",
+        "user": "Användare",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in loggar"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analys",
+    "engine": "Motor",
+    "depth": "Djup",
+    "lines": "Linjer",
+    "maxDepth": "Maximalt djup",
+    "backToPuzzle": "Tillbaka till uppgiften",
+    "calculating": "Beräknar…",
+    "engineOff": "Motor av",
+    "start": "Start",
+    "flip": "Vänd brädet",
+    "reset": "Återställ",
+    "noMoves": "Inga drag ännu — spela drag på brädet.",
+    "fen": "FEN",
+    "loadFen": "Ladda FEN",
+    "copyFen": "Kopiera FEN",
+    "pgn": "PGN",
+    "loadPgn": "Ladda PGN"
+  },
+  "stats": {
+    "title": "Statistik",
+    "currentElo": "Uppgifts-Elo",
+    "totalSolved": "Lösta",
+    "attempts": "Försök",
+    "accuracy": "Träffsäkerhet",
+    "currentStreak": "Nuvarande svit",
+    "bestStreak": "Bästa svit",
+    "eloProgress": "Uppgifts-Elo-framsteg",
+    "level": "Nivå",
+    "allLevels": "Alla",
+    "noData": "Inga data ännu.",
+    "perLevel": "Elo per visualiseringsnivå",
+    "vizLevel": "Nivå",
+    "recentPuzzles": "Senaste uppgifter",
+    "date": "Datum",
+    "rating": "Betyg",
+    "result": "Resultat",
+    "time": "Tid",
+    "byTheme": "Per tema",
+    "byRating": "Per betyg (lösta)",
+    "byRatingHint": "Lösta uppgifter per betygsspann — håll muspekaren för träffsäkerhet.",
+    "activity": "Aktivitet"
+  }
+}

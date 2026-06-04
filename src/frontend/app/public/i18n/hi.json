@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "add": "जोड़ें",
+    "close": "बंद करें",
+    "search": "खोजें",
+    "back": "वापस",
+    "retry": "पुनः प्रयास करें",
+    "loading": "लोड हो रहा है…",
+    "ok": "ठीक है",
+    "remove": "हटाएं"
+  },
+  "nav": {
+    "dashboard": "डैशबोर्ड",
+    "repertoires": "रेपर्टोयर",
+    "tournaments": "टूर्नामेंट",
+    "friends": "मित्र",
+    "puzzles": "पहेलियाँ",
+    "weekly": "साप्ताहिक",
+    "courses": "पाठ्यक्रम",
+    "admin": "एडमिन",
+    "profile": "प्रोफ़ाइल",
+    "puzzleHistory": "पहेली इतिहास",
+    "changelog": "चेंजलॉग",
+    "logout": "लॉगआउट",
+    "login": "लॉगिन",
+    "register": "पंजीकरण",
+    "language": "भाषा",
+    "menu": "मेनू",
+    "info": "जानकारी",
+    "account": "खाता",
+    "analysis": "विश्लेषण",
+    "stats": "आँकड़े"
+  },
+  "app": {
+    "changelogTitle": "चेंजलॉग",
+    "quickstartTitle": "त्वरित शुरुआत",
+    "qs": {
+      "subscribeTitle": "सदस्यता लें",
+      "subscribeDesc": "खिलाड़ियों, पेयरिंग और परिणामों तक त्वरित पहुँच के लिए टूर्नामेंट की सदस्यता लें।",
+      "monitorTitle": "मॉनिटर",
+      "monitorDesc": "किसी टूर्नामेंट पर मॉनिटर चालू करें — नए राउंड स्वतः पहचाने और क्रॉल किए जाते हैं।",
+      "favoritesTitle": "पसंदीदा",
+      "favoritesDesc": "टूर्नामेंट दृश्य में त्वरित पहुँच के लिए खिलाड़ियों या टीमों को पसंदीदा में जोड़ें।",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "अपनी प्रोफ़ाइल में ChessResults ID जोड़ें — आगामी टूर्नामेंट में स्वतः सदस्यता हो जाती है।"
+    },
+    "feedback": "फीडबैक / बग रिपोर्ट करें",
+    "updateAvailable": "नया संस्करण उपलब्ध है।",
+    "reload": "पुनः लोड करें"
+  },
+  "auth": {
+    "login": {
+      "title": "लॉगिन",
+      "usernameLabel": "उपयोगकर्ता नाम",
+      "passwordLabel": "पासवर्ड",
+      "rememberMe": "लॉगिन में रहें",
+      "submit": "लॉगिन करें",
+      "submitting": "लॉगिन हो रहा है...",
+      "registerLink": "खाता नहीं है? पंजीकरण करें",
+      "failed": "लॉगिन विफल"
+    },
+    "register": {
+      "title": "पंजीकरण",
+      "usernameLabel": "उपयोगकर्ता नाम",
+      "emailLabel": "ईमेल",
+      "passwordLabel": "पासवर्ड",
+      "passwordHint": "कम से कम 4 अक्षर",
+      "submit": "पंजीकरण करें",
+      "submitting": "पंजीकरण हो रहा है...",
+      "loginLink": "पहले से खाता है? लॉगिन करें",
+      "failed": "पंजीकरण विफल"
+    }
+  },
+  "dashboard": {
+    "welcome": "स्वागत है, {{username}}!",
+    "subscribedTournaments": "सदस्यता वाले टूर्नामेंट",
+    "subscribedAt": "{{date}} को सदस्यता ली",
+    "puzzles": {
+      "title": "पहेलियाँ",
+      "subtitle": "Elo {{elo}} | {{solved}} हल ({{accuracy}}%)",
+      "solve": "पहेलियाँ हल करें",
+      "endless": "अनंत"
+    },
+    "subscriptions": {
+      "title": "टूर्नामेंट सदस्यताएँ",
+      "count": "{{count}} सदस्यताएँ",
+      "browse": "टूर्नामेंट देखें"
+    },
+    "friends": {
+      "title": "मित्र",
+      "count": "{{count}} मित्र",
+      "manage": "मित्र प्रबंधित करें"
+    },
+    "repertoires": {
+      "title": "रेपर्टोयर",
+      "count": "{{count}} रेपर्टोयर",
+      "viewAll": "सभी देखें"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "खेल",
+    "nav": {
+      "first": "पहली चाल",
+      "previous": "पिछली चाल",
+      "next": "अगली चाल",
+      "last": "अंतिम चाल"
+    }
+  },
+  "profile": {
+    "title": "प्रोफ़ाइल: {{username}}",
+    "firstName": "पहला नाम",
+    "lastName": "अंतिम नाम",
+    "searchPlayer": "खिलाड़ी खोजें",
+    "noResults": "कोई परिणाम नहीं मिला।",
+    "displayName": "प्रदर्शन नाम",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com उपयोगकर्ता नाम",
+    "lichessUsername": "Lichess उपयोगकर्ता नाम",
+    "saving": "सहेजा जा रहा है...",
+    "saved": "प्रोफ़ाइल सहेजी गई",
+    "saveFailed": "प्रोफ़ाइल सहेजने में विफल",
+    "searchFailed": "खोज विफल",
+    "chessResultsApplied": "ChessResults डेटा लागू किया गया",
+    "fideApplied": "FIDE डेटा लागू किया गया",
+    "discord": {
+      "title": "Discord",
+      "hint": "अपना Discord खाता जोड़ने के लिए RookHub Discord बॉट का व्यक्तिगत लिंक खोलें (इसकी /link कमांड या पहेली DM)।",
+      "unlink": "लिंक हटाएं",
+      "unlinked": "Discord अनलिंक किया गया",
+      "linked": "Discord खाता लिंक किया गया",
+      "linkConflict": "यह Discord खाता पहले से किसी अन्य RookHub उपयोगकर्ता से लिंक है।",
+      "linkFailed": "Discord खाता लिंक नहीं हो सका",
+      "stashed": "अपना Discord खाता लिंक करने के लिए साइन इन करें या पंजीकरण करें।"
+    },
+    "offline": {
+      "title": "ऑफ़लाइन",
+      "hint": "इंटरनेट के बिना पहेलियाँ हल करते रहने के लिए इस डिवाइस पर पहेलियाँ सहेजें (प्रति डिवाइस)।",
+      "puzzleCount": "ऑफ़लाइन पहेलियाँ",
+      "endlessRuns": "ऑफ़लाइन अनंत रन",
+      "cacheSize": "कैश आकार",
+      "books": "{{count}} किताबें",
+      "clear": "कैश साफ़ करें",
+      "cleared": "ऑफ़लाइन कैश साफ़ किया गया",
+      "pending": "{{count}} समाधान सिंक के लिए प्रतीक्षा में — ऑनलाइन होने पर स्वतः अपलोड होंगे।"
+    },
+    "delete": {
+      "title": "खाता हटाएं",
+      "hint": "अपना खाता स्थायी रूप से हटाएं।",
+      "button": "खाता हटाएं",
+      "warn": "चेतावनी: आपकी पहचान और व्यक्तिगत डेटा अपरिवर्तनीय रूप से हटा दिया जाएगा। पुष्टि करने के लिए अपना पासवर्ड दर्ज करें।",
+      "password": "पासवर्ड",
+      "confirm": "स्थायी रूप से हटाएं",
+      "deleting": "हटाया जा रहा है...",
+      "done": "आपका खाता हटा दिया गया है।",
+      "wrongPassword": "पासवर्ड गलत है।",
+      "failed": "खाता हटाने में विफल।",
+      "moreInfo": "खाता हटाने के बारे में अधिक जानकारी"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "खाता हटाएं",
+      "intro": "यह पृष्ठ बताता है कि अपना RookHub खाता कैसे हटाएं और आपके डेटा का क्या होता है।",
+      "inAppTitle": "अपना खाता कैसे हटाएं",
+      "inApp": "ऐप में साइन इन करें और प्रोफ़ाइल → \"खाता हटाएं\" पर जाएं। अपने पासवर्ड से पुष्टि करें। खाता तुरंत हटा दिया जाता है।",
+      "removedTitle": "क्या हटाया जाता है",
+      "removed1": "आपकी पहचान और व्यक्तिगत डेटा (उपयोगकर्ता नाम, ईमेल, प्रदर्शन/असली नाम, FIDE/ChessResults ID, Chess.com/Lichess नाम, Discord लिंक) और लॉगिन एक्सेस।",
+      "removed2": "व्यक्तिगत सामग्री और लिंक: रेपर्टोयर, टूर्नामेंट सदस्यताएँ/पसंदीदा, मित्रताएँ और समूह सदस्यताएँ।",
+      "keptTitle": "क्या गुमनाम रूप से रखा जाता है",
+      "kept": "समग्र हल करने/खेलने के आँकड़े (जैसे हल की गई पहेलियाँ) गुमनाम रूप में सुरक्षित रखे जाते हैं जिन्हें आप तक वापस नहीं ट्रेस किया जा सकता।",
+      "contactTitle": "संपर्क",
+      "contact": "हटाने के अनुरोध या प्रश्नों के लिए हम तक पहुँचें",
+      "back": "लॉगिन पर वापस"
+    },
+    "privacy": {
+      "title": "गोपनीयता नीति",
+      "updated": "अंतिम अपडेट: 3 जून 2026",
+      "intro": "RookHub एक शतरंज प्रशिक्षण प्लेटफ़ॉर्म है (पहेलियाँ, अनंत मोड, पाठ्यक्रम, रेपर्टोयर)। यह नीति बताती है कि GDPR के तहत व्यक्तिगत डेटा कैसे संसाधित किया जाता है।",
+      "controllerTitle": "नियंत्रक",
+      "controller": "डेटा प्रसंस्करण के लिए नियंत्रक इम्प्रिंट में नामित ऑपरेटर है",
+      "dataTitle": "हम कौन सा डेटा संसाधित करते हैं",
+      "dataIntro": "आपके उपयोग के आधार पर, हम संसाधित करते हैं:",
+      "dataAccount": "खाता डेटा: उपयोगकर्ता नाम, ईमेल पता, पासवर्ड (केवल हैश के रूप में संग्रहीत)।",
+      "dataProfile": "प्रोफ़ाइल डेटा (वैकल्पिक): प्रदर्शन/असली नाम, FIDE ID, ChessResults ID, Chess.com/Lichess उपयोगकर्ता नाम, वैकल्पिक Discord लिंक।",
+      "dataUsage": "उपयोग डेटा: हल की गई पहेलियाँ, अनंत/पाठ्यक्रम प्रगति और आँकड़े, खेल रेटिंग, लॉगिन टाइमस्टैम्प।",
+      "dataTechnical": "तकनीकी डेटा: IP पता, टाइमस्टैम्प के साथ अनुरोधित एंडपॉइंट और सर्वर लॉग में एक छद्म नाम आगंतुक पहचानकर्ता (पहुँच माप)।",
+      "purposesTitle": "उद्देश्य और कानूनी आधार",
+      "purposes": "खाता और सुविधाएँ प्रदान करना (अनुबंध का निष्पादन, अनु. 6(1)(b) GDPR) और साथ ही परिचालन सुरक्षा, त्रुटि विश्लेषण और लॉग के माध्यम से पहुँच माप (वैध हित, अनु. 6(1)(f) GDPR)।",
+      "thirdTitle": "प्राप्तकर्ता / तृतीय-पक्ष सेवाएँ",
+      "thirdIntro": "डेटा बेचा नहीं जाता। आपके उपयोग के आधार पर, निम्नलिखित सेवाएँ शामिल हैं:",
+      "thirdDiscord": "Discord: केवल स्वैच्छिक खाता लिंकिंग पर (Discord ID/नाम) RookHub Discord बॉट में प्रदर्शन के लिए।",
+      "thirdChessresults": "chess-results.com: जब आप ChessResults ID सेट करते हैं या टूर्नामेंट लोड करते हैं तो सर्वर-साइड टूर्नामेंट डेटा लाया जाता है।",
+      "thirdChesssites": "Chess.com / Lichess: केवल वे उपयोगकर्ता नाम जो आप स्वेच्छा से दर्ज करते हैं; कोई स्वचालित डेटा स्थानांतरण नहीं।",
+      "thirdLogging": "Elasticsearch/Kibana: हमारे बुनियादी ढाँचे पर स्वयं-होस्टेड लॉगिंग/मॉनिटरिंग।",
+      "thirdHosting": "होस्टिंग: TLS रिवर्स प्रॉक्सी के साथ हमारे अपने सर्वर बुनियादी ढाँचे पर संचालित।",
+      "storageTitle": "स्थानीय संग्रहण (कुकीज़/स्टोरेज)",
+      "storage": "हम ट्रैकिंग कुकीज़ का उपयोग नहीं करते। ब्राउज़र स्टोरेज (localStorage) में जैसे आपका लॉगिन टोकन, सेटिंग्स और — यदि सक्षम हो — ऑफ़लाइन पहेलियाँ होती हैं। ये आपके डिवाइस पर रहती हैं।",
+      "retentionTitle": "प्रतिधारण और हटाना",
+      "retention": "खाता डेटा तब तक संग्रहीत रहता है जब तक आप खाता नहीं हटाते। आप किसी भी समय खाता हटा सकते हैं — पहचान और व्यक्तिगत डेटा हटाया जाता है, गुमनाम आँकड़े रखे जाते हैं। अधिक:",
+      "rightsTitle": "आपके अधिकार",
+      "rights": "आपको पहुँच, सुधार, मिटाने, प्रतिबंध, डेटा पोर्टेबिलिटी और आपत्ति का अधिकार है, साथ ही किसी पर्यवेक्षी प्राधिकरण (ऑस्ट्रिया में: डेटा संरक्षण प्राधिकरण) के पास शिकायत दर्ज करने का अधिकार है।",
+      "contactTitle": "संपर्क",
+      "contact": "गोपनीयता प्रश्नों के लिए हम तक पहुँचें",
+      "back": "लॉगिन पर वापस"
+    },
+    "impressum": {
+      "title": "इम्प्रिंट",
+      "operatorTitle": "सेवा प्रदाता",
+      "name": "[नाम / कंपनी — कृपया भरें]",
+      "address": "[पता — सड़क, पिन कोड, शहर, देश]",
+      "uid": "[VAT ID, यदि कंपनी हो]",
+      "contactTitle": "संपर्क",
+      "contact": "ईमेल",
+      "disclaimer": "नोट: सेवा प्रदाता का विवरण प्लेसहोल्डर है और प्रकाशन से पहले वास्तविक डेटा से बदला जाना चाहिए। यह पृष्ठ एक मसौदा है और कानूनी सलाह नहीं है।",
+      "back": "लॉगिन पर वापस"
+    }
+  },
+  "friends": {
+    "title": "मित्र",
+    "searchUsers": "उपयोगकर्ता खोजें",
+    "searchResults": "खोज परिणाम",
+    "tabs": {
+      "friends": "मित्र ({{count}})",
+      "requests": "अनुरोध ({{count}})"
+    },
+    "empty": {
+      "friends": "अभी कोई मित्र नहीं। मित्र जोड़ने के लिए उपयोगकर्ता खोजें!",
+      "requests": "कोई लंबित अनुरोध नहीं।"
+    },
+    "sentOn": "{{date}} को भेजा",
+    "requestSent": "मित्र अनुरोध भेजा गया",
+    "errors": {
+      "loadFriends": "मित्र लोड करने में विफल",
+      "loadRequests": "अनुरोध लोड करने में विफल",
+      "search": "खोज विफल",
+      "sendRequest": "अनुरोध भेजने में विफल",
+      "acceptRequest": "अनुरोध स्वीकार करने में विफल",
+      "declineRequest": "अनुरोध अस्वीकार करने में विफल",
+      "removeFriend": "मित्र हटाने में विफल"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "मेरे रेपर्टोयर",
+      "new": "नया रेपर्टोयर",
+      "fileCount": "{{count}} फ़ाइलें",
+      "public": "सार्वजनिक",
+      "private": "निजी",
+      "noDescription": "कोई विवरण नहीं",
+      "open": "खोलें",
+      "empty": "अभी कोई रेपर्टोयर नहीं। शुरू करने के लिए एक बनाएं!",
+      "loadFailed": "रेपर्टोयर लोड करने में विफल",
+      "createFailed": "रेपर्टोयर बनाने में विफल",
+      "deleteConfirm": "यह रेपर्टोयर हटाएं?",
+      "deleteFailed": "रेपर्टोयर हटाने में विफल"
+    },
+    "detail": {
+      "noDescription": "कोई विवरण नहीं",
+      "modeLines": "लाइनें",
+      "modeTree": "ट्री",
+      "modeEdit": "संपादित करें"
+    },
+    "dialog": {
+      "title": "नया रेपर्टोयर",
+      "name": "नाम",
+      "description": "विवरण",
+      "public": "सार्वजनिक",
+      "create": "बनाएं"
+    },
+    "lines": {
+      "allLines": "सभी लाइनें",
+      "empty": "इस रेपर्टोयर में कोई लाइन नहीं मिली।"
+    },
+    "tree": {
+      "start": "शुरुआत",
+      "lineCount": "{{count}} लाइन",
+      "lineCountPlural": "{{count}} लाइनें",
+      "empty": "लाइन का अंत — आगे कोई चाल नहीं।"
+    },
+    "edit": {
+      "uploadHint": "PGN फ़ाइलें यहाँ खींचें और छोड़ें या अपलोड करने के लिए क्लिक करें",
+      "files": "फ़ाइलें ({{count}})",
+      "empty": "अभी कोई फ़ाइल नहीं। शुरू करने के लिए PGN फ़ाइलें अपलोड करें!",
+      "filesSkipped": "{{count}} फ़ाइल(ें) छोड़ी गईं (केवल .pgn, अधिकतम 10 MB)",
+      "uploadSuccess": "{{count}} फ़ाइल(ें) अपलोड की गईं",
+      "uploadPartial": "{{ok}} अपलोड, {{failed}} विफल",
+      "downloadFailed": "डाउनलोड विफल",
+      "deleteConfirm": "यह फ़ाइल हटाएं?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "रीफ्रेश करें",
+      "subscribe": "सदस्यता लें",
+      "unsubscribe": "सदस्यता रद्द करें",
+      "monitor": "मॉनिटर",
+      "monitoringUntil": "{{time}} तक मॉनिटरिंग",
+      "share": "साझा करें",
+      "subscribed": "सदस्यता ली!",
+      "unsubscribed": "सदस्यता रद्द की",
+      "failed": "विफल",
+      "unsubscribeFailed": "सदस्यता रद्द करने में विफल"
+    },
+    "tabs": {
+      "players": "खिलाड़ी ({{count}})",
+      "teams": "टीमें ({{count}})",
+      "pairings": "पेयरिंग"
+    },
+    "favoritesOnly": "केवल पसंदीदा",
+    "favorites": {
+      "added": "{{name}} पसंदीदा में जोड़ा गया",
+      "removed": "{{name}} पसंदीदा से हटाया गया",
+      "addedShort": "{{name}} पसंदीदा में",
+      "removedShort": "{{name}} हटाया गया"
+    },
+    "players": {
+      "snr": "क्र.सं.",
+      "title": "उपाधि",
+      "name": "नाम",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "देश",
+      "team": "टीम",
+      "club": "क्लब",
+      "boardShort": "बोर्ड"
+    },
+    "teams": {
+      "rank": "रैंक",
+      "team": "टीम",
+      "points": "अंक"
+    },
+    "pairings": {
+      "round": "राउंड",
+      "roundLabel": "राउंड {{round}}",
+      "board": "बोर्ड",
+      "white": "श्वेत",
+      "black": "श्याम",
+      "home": "होम",
+      "away": "अवे",
+      "result": "परिणाम"
+    },
+    "monitor": {
+      "stopped": "मॉनिटरिंग बंद हुई",
+      "stopFailed": "मॉनिटरिंग बंद करने में विफल",
+      "activated": "मॉनिटरिंग सक्रिय",
+      "activateFailed": "मॉनिटरिंग सक्रिय करने में विफल",
+      "newRoundTitle": "नया राउंड उपलब्ध!",
+      "newRoundBody": "राउंड {{round}} प्रकाशित हो गया है।",
+      "newRoundSnack": "नया राउंड उपलब्ध! राउंड {{round}}"
+    },
+    "list": {
+      "title": "टूर्नामेंट",
+      "importTitle": "टूर्नामेंट आयात करें",
+      "importSubtitle": "क्रॉल करने के लिए chess-results.com टूर्नामेंट ID दर्ज करें",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "जैसे 1234567",
+      "idHintPrefix": "chess-results.com/tnr से नंबर",
+      "idHintSuffix": ".aspx",
+      "crawl": "क्रॉल करें",
+      "crawling": "टूर्नामेंट {{id}} क्रॉल हो रहा है... जॉब #{{jobId}}",
+      "crawlerUnavailable": "टूर्नामेंट क्रॉलर से कनेक्ट नहीं हो सका। सुनिश्चित करें कि क्रॉलर सेवा चल रही है।",
+      "details": "विवरण",
+      "hide": "छुपाएं",
+      "empty": "कोई टूर्नामेंट नहीं मिला।",
+      "showHidden": "{{count}} छुपे हुए दिखाएं",
+      "imported": "टूर्नामेंट आयात किया!",
+      "crawlStartFailed": "क्रॉल शुरू करने में विफल",
+      "crawlFailed": "क्रॉल विफल",
+      "crawlConnectionLost": "क्रॉल जॉब से कनेक्शन खो गया"
+    },
+    "detail": {
+      "loadTournamentFailed": "टूर्नामेंट लोड करने में विफल",
+      "loadSubscriptionFailed": "सदस्यता स्थिति लोड करने में विफल",
+      "reloadTournamentFailed": "टूर्नामेंट पुनः लोड करने में विफल",
+      "refreshStartFailed": "रीफ्रेश शुरू करने में विफल",
+      "dataRefreshed": "डेटा रीफ्रेश हुआ!",
+      "refreshFailed": "रीफ्रेश विफल",
+      "loadPlayersFailed": "खिलाड़ी लोड करने में विफल",
+      "loadTeamsFailed": "टीमें लोड करने में विफल",
+      "loadPairingsFailed": "पेयरिंग लोड करने में विफल",
+      "loadTeamDetailsFailed": "टीम विवरण लोड करने में विफल"
+    },
+    "public": {
+      "notFound": "टूर्नामेंट नहीं मिला।"
+    },
+    "share": {
+      "title": "टूर्नामेंट साझा करें",
+      "copyLink": "लिंक कॉपी करें",
+      "linkCopied": "लिंक कॉपी हुआ!",
+      "copyFailed": "कॉपी विफल"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "पहेली लोड हो रही है…",
+      "loadFailed": "पहेली लोड करने में विफल",
+      "offlineNoCache": "आप ऑफ़लाइन हैं और कोई पहेली कैश नहीं है। ऑफ़लाइन खेलने के लिए ऑनलाइन रहते हुए एक बार यह पृष्ठ खोलें।",
+      "watchOpponent": "प्रतिद्वंद्वी की चाल देखें…",
+      "yourTurn": "आपकी बारी!",
+      "gaveUpPlayOut": "हार मान ली — स्वयं समाधान खेलें।",
+      "thinking": "Stockfish सोच रहा है…"
+    },
+    "result": {
+      "solutionPlayedOut": "समाधान खेला गया।",
+      "tryYourselfNextTime": "अगली बार स्वयं हल करने का प्रयास करें!",
+      "checkmate": "शतरंज!",
+      "alternativeSolution": "वैकल्पिक समाधान — पहेली में एक अलग इच्छित चाल क्रम था।",
+      "correct": "सही!",
+      "incorrect": "गलत"
+    },
+    "eval": {
+      "start": "शुरुआत",
+      "now": "अभी",
+      "show": "मूल्यांकन दिखाएं",
+      "hide": "मूल्यांकन छुपाएं"
+    },
+    "actions": {
+      "reset": "रीसेट",
+      "mouseslip": "माउस स्लिप",
+      "giveUp": "हार मानें",
+      "nextPuzzle": "अगली पहेली",
+      "share": "पहेली साझा करें",
+      "loadPuzzle": "पहेली लोड करें",
+      "reviewLast": "पिछली पहेली देखें",
+      "endlessMode": "अनंत मोड",
+      "analyze": "विश्लेषण करें"
+    },
+    "info": {
+      "rating": "रेटिंग"
+    },
+    "stats": {
+      "title": "आपके आँकड़े",
+      "solved": "हल किए",
+      "accuracy": "सटीकता",
+      "streak": "लगातार",
+      "best": "सर्वश्रेष्ठ"
+    },
+    "settings": {
+      "tooltip": "सेटिंग्स"
+    },
+    "filters": {
+      "title": "फ़िल्टर",
+      "visualization": "विज़ुअलाइज़ेशन: स्तर {{level}}",
+      "difficulty": "कठिनाई",
+      "difficultyHint": "आपके Elo ({{elo}}) के आसपास की पहेलियाँ",
+      "depthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
+      "skipSolved": "हल की गई छोड़ें"
+    },
+    "difficulty": {
+      "veryEasy": "बहुत आसान",
+      "easy": "आसान",
+      "normal": "सामान्य",
+      "hard": "कठिन",
+      "veryHard": "बहुत कठिन"
+    },
+    "theme": {
+      "mode": "मोड",
+      "modeNormal": "सामान्य",
+      "modeRandom": "यादृच्छिक",
+      "modeCrazy": "क्रेज़ी",
+      "boardTheme": "बोर्ड थीम",
+      "pieces": "मोहरे"
+    },
+    "viz": {
+      "title": "विज़ुअलाइज़ेशन (स्तर {{level}})",
+      "countdown": "मोहरे {{seconds}} सेकंड में गायब होंगे…",
+      "noMoveYet": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
+      "show": "दिखाएं",
+      "showing": "दिखाया जा रहा है…"
+    },
+    "share": {
+      "title": "पहेली साझा करें",
+      "copied": "लिंक कॉपी हुआ!",
+      "copyFailed": "कॉपी विफल"
+    }
+  },
+  "courses": {
+    "title": "पाठ्यक्रम",
+    "intro": "एक आयातित किताब की पहेलियाँ क्रमिक या यादृच्छिक रूप से हल करें। आपकी प्रगति सहेजी जाती है।",
+    "emptyHint": "अभी कोई किताब आयात नहीं हुई। एडमिन क्षेत्र में \"Books\" के अंतर्गत किताबें आयात करें।",
+    "puzzleCount": "{{count}} पहेलियाँ",
+    "completed": "पाठ्यक्रम पूर्ण",
+    "sequential": "क्रमिक",
+    "random": "यादृच्छिक",
+    "resetTooltip": "प्रगति रीसेट करें",
+    "resetConfirm": "\"{{name}}\" की प्रगति रीसेट करें?",
+    "loadFailed": "पाठ्यक्रम लोड नहीं हो सके",
+    "resetFailed": "रीसेट विफल",
+    "offlineSaveTooltip": "किताब ऑफ़लाइन सहेजें",
+    "offlineRemoveTooltip": "ऑफ़लाइन प्रति हटाएं",
+    "offlineSaved": "\"{{name}}\" ऑफ़लाइन सहेजी गई ({{count}} पहेलियाँ)",
+    "offlineRemoved": "\"{{name}}\" ऑफ़लाइन से हटाई गई",
+    "offlineFailed": "किताब ऑफ़लाइन सहेजने में विफल"
+  },
+  "weekly": {
+    "title": "साप्ताहिक",
+    "intro": "क्लिक करके देखने के लिए साप्ताहिक शतरंज पोस्ट। दिनांक और समय बताता है कि पोस्ट कब निर्धारित है।",
+    "oClock": "",
+    "play": "खेलकर देखें",
+    "empty": "अभी कोई साप्ताहिक पोस्ट नहीं।",
+    "deleteConfirm": "साप्ताहिक पोस्ट \"{{title}}\" हटाएं?",
+    "created": "साप्ताहिक पोस्ट बनाई गई",
+    "deleted": "साप्ताहिक पोस्ट हटाई गई",
+    "loadFailed": "साप्ताहिक पोस्ट लोड नहीं हो सकीं",
+    "uploadFailed": "अपलोड विफल",
+    "saveFailed": "सहेजना विफल",
+    "deleteFailed": "हटाना विफल",
+    "fields": {
+      "date": "दिनांक",
+      "time": "समय",
+      "titleOptional": "शीर्षक (वैकल्पिक)"
+    },
+    "columns": {
+      "scheduled": "दिनांक",
+      "title": "शीर्षक",
+      "actions": "क्रियाएँ"
+    },
+    "upload": {
+      "title": "नई साप्ताहिक पोस्ट अपलोड करें",
+      "choosePgn": "PGN चुनें",
+      "titlePlaceholder": "फ़ाइल नाम से",
+      "create": "बनाएं",
+      "hint": "डिफ़ॉल्ट: अंतिम दिनांक + 7 दिन, समान समय (अन्यथा 19:00)।"
+    }
+  },
+  "endless": {
+    "offlineNoCache": "आप ऑफ़लाइन हैं और कोई रन कैश नहीं है। ऑफ़लाइन खेलने के लिए ऑनलाइन रहते हुए एक बार Endless खोलें।",
+    "help": {
+      "title": "अनंत पहेली मोड",
+      "gameplayHeading": "यह कैसे काम करता है",
+      "gameplayP1": "आप बढ़ती कठिनाई की शतरंज पहेलियाँ हल करते हैं। आप एक निर्धारित रेटिंग से शुरू करते हैं और आगे बढ़ते हैं। रेटिंग Fasttrack चरणों के साथ स्वतः बढ़ती है (नीचे देखें)।",
+      "gameplayP2": "आपके पास <strong>3 जीवन</strong> हैं। 0 जीवन पर खेल समाप्त होता है।",
+      "movesHeading": "चालें और Stockfish",
+      "movesP1": "प्रत्येक पहेली का एक <strong>इच्छित समाधान</strong> होता है (चालों का एक क्रम)। जब तक आप सही चालें खेलते हैं, आप उस समाधान रेखा का अनुसरण करते हैं।",
+      "movesP2": "यदि आप <strong>गलत चाल</strong> खेलते हैं, तो <strong>Stockfish</strong> (एक शतरंज इंजन) दूसरी तरफ खेलने लगता है। फिर आप Stockfish के विरुद्ध स्वतंत्र रूप से खेलते हैं। इसकी ताकत Stockfish Depth से सेट की जा सकती है।",
+      "movesItem1": "<strong>Stockfish को मात देना</strong> वैकल्पिक समाधान माना जाता है — कोई जीवन नहीं जाता!",
+      "movesItem2": "<strong>Stockfish आपको मात देता है</strong> — एक जीवन जाता है",
+      "movesItem3": "Stockfish के विरुद्ध खेल मात या हार मानने तक अनंत जारी रहता है",
+      "buttonsHeading": "खेल के दौरान बटन",
+      "buttonsShowEval": "<strong>मूल्यांकन दिखाएं</strong> — Stockfish मूल्यांकन दिखाता है (शुरुआत बनाम अभी)",
+      "buttonsReset": "<strong>रीसेट</strong> — पहेली रीसेट करता है, लेकिन एक जीवन जाता है",
+      "buttonsMouseslip": "<strong>माउस स्लिप</strong> — अंतिम गलत चाल वापस लेता है (प्रति पहेली एक बार, मुफ्त)",
+      "buttonsGiveUp": "<strong>हार मानें</strong> — समर्पण, एक जीवन जाता है",
+      "settingsHeading": "सेटिंग्स",
+      "settingsStartRating": "<strong>प्रारंभिक रेटिंग</strong> — वह पहेली रेटिंग जिससे आप शुरू करते हैं",
+      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — इंजन की ताकत (1 = बहुत कमज़ोर, 24 = अधिकतम ताकत)",
+      "settingsThemes": "<strong>थीम</strong> — वैकल्पिक: केवल कुछ रणनीतिक थीम (जैसे \"fork pin\")",
+      "fasttrackHeading": "कठिनाई वृद्धि (Fasttrack)",
+      "fasttrackP1": "वृद्धि आपके पिछले प्रदर्शन के अनुसार होती है: यह आपके हालिया सत्रों का विश्लेषण करती है और उस रेटिंग की गणना करती है जहाँ आप सामान्यतः जीवन खोते हैं।",
+      "fasttrackPhase1": "<strong>चरण 1 (पहेली 1–5)</strong> — पहली सीमा तक तेज़ वृद्धि",
+      "fasttrackPhase2": "<strong>चरण 2 (पहेली 6–10)</strong> — पहली से दूसरी सीमा तक वृद्धि",
+      "fasttrackPhase3": "<strong>चरण 3 (पहेली 11 से)</strong> — 20 का स्थिर चरण",
+      "fasttrackP2": "सीमा मान (1ली/2री सीमा) स्वतः गणना किए जाते हैं लेकिन मैन्युअल रूप से समायोजित किए जा सकते हैं। मान रीसेट करने के लिए \"Auto: …\" क्लिक करें।"
+    },
+    "config": {
+      "title": "अनंत पहेली मोड",
+      "subtitle": "बढ़ती कठिनाई — आप कितना आगे जा सकते हैं?",
+      "startRating": "प्रारंभिक रेटिंग",
+      "stockfishDepth": "Stockfish Depth",
+      "stockfishDepthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
+      "themes": "थीम (वैकल्पिक)",
+      "themesPlaceholder": "जैसे fork pin",
+      "thresholdExplain": "वे रेटिंग जहाँ आप सामान्यतः जीवन खोते हैं। आसान पहेलियाँ तेज़ या धीरे छोड़ने के लिए समायोजित करें।",
+      "firstThreshold": "1ली सीमा",
+      "secondThreshold": "2री सीमा",
+      "auto": "Auto: {{value}}",
+      "step": "चरण {{step}}",
+      "phase1Label": "चरण 1 (Lv 1–5)",
+      "phase2Label": "चरण 2 (Lv 6–10)",
+      "phase3Label": "चरण 3 (Lv 11+)",
+      "curveHint": "गॉन्टलेट की रेटिंग वक्र (शुरू होने पर निश्चित):",
+      "curvePuzzle": "पहेली {{n}}",
+      "settings": "सेटिंग्स",
+      "visualizationLevel": "विज़ुअलाइज़ेशन: स्तर {{level}}",
+      "mode": "मोड",
+      "modeNormal": "सामान्य",
+      "modeRandom": "यादृच्छिक",
+      "modeCrazy": "क्रेज़ी",
+      "boardTheme": "बोर्ड थीम",
+      "pieces": "मोहरे",
+      "highscore": "हाईस्कोर: {{rating}} रेटिंग",
+      "sessionsPlayed": "{{count}} सत्र खेले",
+      "viewHistory": "इतिहास देखें",
+      "unfinishedRun": "अधूरा रन: Lv {{level}} | {{solved}} हल | {{lives}} जीवन | {{max}} अधिकतम",
+      "continue": "जारी रखें",
+      "archiveAndNew": "संग्रहित करें और नया खेल",
+      "newGame": "नया खेल",
+      "start": "शुरू करें"
+    },
+    "game": {
+      "visualization": "विज़ुअलाइज़ेशन (स्तर {{level}})",
+      "vizCountdown": "मोहरे {{seconds}} सेकंड में गायब होंगे...",
+      "vizNoMove": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
+      "vizShow": "दिखाएं",
+      "vizShowing": "दिखाया जा रहा है...",
+      "loadingPuzzle": "पहेली लोड हो रही है...",
+      "watchOpponent": "प्रतिद्वंद्वी की चाल देखें...",
+      "yourTurn": "आपकी बारी! सर्वश्रेष्ठ चाल खोजें।",
+      "yourMove": "आपकी चाल...",
+      "opponentThinking": "प्रतिद्वंद्वी सोच रहा है...",
+      "evalStart": "शुरुआत",
+      "evalNow": "अभी",
+      "showEval": "मूल्यांकन दिखाएं",
+      "hideEval": "मूल्यांकन छुपाएं",
+      "reset": "रीसेट",
+      "mouseslip": "माउस स्लिप",
+      "giveUp": "हार मानें",
+      "checkmate": "शतरंज!",
+      "alternativeSolution": "वैकल्पिक समाधान — पहेली में एक अलग इच्छित लाइन थी।",
+      "correct": "सही!",
+      "wrong": "गलत!",
+      "gaveUp": "हार माना",
+      "continue": "जारी रखें",
+      "analyze": "विश्लेषण करें",
+      "reviewLast": "पिछली पहेली का विश्लेषण करें",
+      "puzzleRating": "पहेली रेटिंग: {{rating}}",
+      "levelRange": "स्तर {{level}} ({{min}}–{{max}})",
+      "showTags": "टैग दिखाएं",
+      "hideTags": "टैग छुपाएं",
+      "sharePuzzle": "पहेली साझा करें",
+      "statRating": "रेटिंग",
+      "statLevel": "स्तर",
+      "statSolved": "हल किए",
+      "statTime": "समय",
+      "phaseLabel": "चरण {{phase}} (चरण {{step}})"
+    },
+    "gameOver": {
+      "title": "खेल समाप्त",
+      "wonTitle": "आप जीत गए!",
+      "wonSubtitle": "आपने पूरा गॉन्टलेट पार किया।",
+      "wonText": "श्रृंखला पूरी हो गई — अगली चुनौती के लिए नया रन शुरू करें।",
+      "exhaustedTitle": "खेला जा चुका!",
+      "exhaustedSubtitle": "आपने सभी पहेली रेटिंग श्रेणियाँ खेल लीं।",
+      "areYouAStockfish": "क्या आप Stockfish हैं?",
+      "maxRating": "अधिकतम रेटिंग",
+      "puzzlesSolved": "हल की गई पहेलियाँ",
+      "livesLeft": "बचे हुए जीवन",
+      "levelReached": "प्राप्त स्तर",
+      "time": "समय",
+      "livesLostAt": "जीवन खोए: {{ratings}}",
+      "puzzleReview": "पहेली समीक्षा",
+      "newHighscore": "नया हाईस्कोर!",
+      "archiving": "संग्रहित किया जा रहा है...",
+      "archiveRun": "यह रन संग्रहित करें",
+      "archived": "संग्रहित",
+      "playAgain": "फिर खेलें",
+      "backToPuzzles": "पहेलियों पर वापस"
+    },
+    "history": {
+      "title": "अनंत पहेली इतिहास",
+      "noSessions": "अभी कोई सत्र नहीं खेला।",
+      "startPlaying": "खेलना शुरू करें",
+      "filterAll": "सभी",
+      "filterActive": "सक्रिय",
+      "filterArchived": "संग्रहित",
+      "selected": "{{count}} चुने गए",
+      "archive": "संग्रहित करें",
+      "unarchive": "संग्रह से हटाएं",
+      "noArchivedSessions": "कोई संग्रहित सत्र नहीं।",
+      "noActiveSessions": "कोई सक्रिय सत्र नहीं।",
+      "colDate": "दिनांक",
+      "colMaxRating": "अधिकतम रेटिंग",
+      "colSolved": "हल किए",
+      "colDuration": "अवधि",
+      "colConfig": "कॉन्फ़िग",
+      "colMistakes": "गलतियाँ",
+      "backToEndless": "अनंत मोड पर वापस"
+    }
+  },
+  "book": {
+    "difficulty": "कठिनाई",
+    "offlineUnavailable": "यह किताब ऑफ़लाइन उपलब्ध नहीं है।",
+    "status": {
+      "loading": "पहेली लोड हो रही है...",
+      "watchOpponent": "प्रतिद्वंद्वी की चाल देखें...",
+      "yourTurn": "आपकी बारी! सर्वश्रेष्ठ चाल खोजें।",
+      "gaveUp": "हार मान ली — स्वयं समाधान खेलें।",
+      "stockfishThinking": "Stockfish सोच रहा है...",
+      "yourMoveVsStockfish": "Stockfish के विरुद्ध आपकी चाल...",
+      "correct": "सही!",
+      "incorrect": "गलत",
+      "gaveUpSolution": "हार मान ली — यह है समाधान",
+      "checkmate": "शतरंज!",
+      "altSolution": "वैकल्पिक समाधान — पहेली में एक अलग इच्छित चाल क्रम था।",
+      "fullGame": "पूरा खेल"
+    },
+    "actions": {
+      "reset": "रीसेट",
+      "giveUp": "हार मानें",
+      "mouseslip": "माउस स्लिप",
+      "nextPuzzle": "अगली पहेली",
+      "again": "फिर से",
+      "skip": "छोड़ें",
+      "viewFullGame": "पूरा खेल देखें",
+      "analyze": "विश्लेषण करें",
+      "nextInBook": "किताब में अगली",
+      "randomInBook": "किताब से यादृच्छिक",
+      "sharePuzzle": "पहेली साझा करें",
+      "backToPuzzle": "पहेली पर वापस"
+    },
+    "settings": {
+      "title": "सेटिंग्स",
+      "visualizationLevel": "विज़ुअलाइज़ेशन: स्तर {{level}}",
+      "stockfishDepth": "Stockfish Depth",
+      "depthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
+      "mode": "मोड",
+      "modeNormal": "सामान्य",
+      "modeRandom": "यादृच्छिक",
+      "modeCrazy": "क्रेज़ी",
+      "boardTheme": "बोर्ड थीम",
+      "pieces": "मोहरे"
+    },
+    "viz": {
+      "titleLevel": "विज़ुअलाइज़ेशन (स्तर {{level}})",
+      "countdown": "मोहरे {{seconds}} सेकंड में गायब होंगे...",
+      "noMoveYet": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
+      "show": "दिखाएं",
+      "showing": "दिखाया जा रहा है...",
+      "level0": "सामान्य — खींचें और छोड़ें",
+      "level1": "ब्लाइंडफोल्ड — बोर्ड जमा हुआ, चालें टेक्स्ट के रूप में",
+      "level2": "चेकर — मोहरे 3 सेकंड बाद चेकर से बदल जाते हैं",
+      "level3": "अंधकार — मोहरे 3 सेकंड बाद काले टोकन से बदल जाते हैं",
+      "level4": "अदृश्य — मोहरे 3 सेकंड बाद पूरी तरह गायब हो जाते हैं"
+    },
+    "course": {
+      "backToCourses": "पाठ्यक्रम अवलोकन पर",
+      "sequential": "क्रमिक",
+      "random": "यादृच्छिक",
+      "completed": "पाठ्यक्रम पूर्ण!",
+      "toOverview": "अवलोकन पर"
+    },
+    "weekly": {
+      "backToWeekly": "साप्ताहिक पोस्ट अवलोकन पर",
+      "label": "साप्ताहिक पोस्ट",
+      "noPuzzles": "इस साप्ताहिक पोस्ट में कोई खेलने योग्य पहेली नहीं है।",
+      "allSolved": "सभी पहेलियाँ हल!"
+    }
+  },
+  "admin": {
+    "title": "एडमिन",
+    "kibanaLink": "Kibana डैशबोर्ड",
+    "tabs": {
+      "users": "उपयोगकर्ता",
+      "books": "किताबें",
+      "groups": "समूह",
+      "logs": "अनुरोध लॉग"
+    },
+    "users": {
+      "searchLabel": "उपयोगकर्ता खोजें",
+      "toggleAdmin": "एडमिन टॉगल करें",
+      "deleteUser": "उपयोगकर्ता हटाएं",
+      "deleteConfirm": "उपयोगकर्ता \"{{username}}\" हटाएं? यह पूर्ववत नहीं किया जा सकता।",
+      "deleted": "उपयोगकर्ता \"{{username}}\" हटाया गया",
+      "nowAdmin": "{{username}} अब एडमिन है",
+      "noLongerAdmin": "{{username}} अब एडमिन नहीं है",
+      "columns": {
+        "id": "ID",
+        "username": "उपयोगकर्ता नाम",
+        "email": "ईमेल",
+        "admin": "एडमिन",
+        "groups": "समूह",
+        "created": "बनाया गया",
+        "actions": "क्रियाएँ"
+      },
+      "errors": {
+        "load": "उपयोगकर्ता लोड करने में विफल",
+        "toggleAdmin": "एडमिन टॉगल करने में विफल",
+        "delete": "उपयोगकर्ता हटाने में विफल"
+      }
+    },
+    "books": {
+      "uploadPgn": "PGN(s) अपलोड करें",
+      "importing": "आयात हो रहा है…",
+      "poolHint": "प्रत्येक किताब के लिए सेट करें कि पहेलियाँ किन पूल में दिखाई दें।",
+      "empty": "अभी कोई किताब आयात नहीं हुई।",
+      "eloFrom": "से",
+      "eloTo": "तक",
+      "adminOnly": "केवल एडमिन",
+      "deleteBook": "किताब हटाएं",
+      "deleteConfirm": "किताब \"{{name}}\" को {{count}} पहेली(यों) के साथ हटाएं?",
+      "deleted": "किताब \"{{name}}\" हटाई गई",
+      "imported": "{{imported}} पहेली(याँ) आयात हुईं, {{skipped}} छोड़ी गईं",
+      "importedCount": "{{count}} पहेली(याँ) आयात हुईं",
+      "duplicatesCount": "{{count}} डुप्लिकेट",
+      "invalidCount": "{{count}} अमान्य",
+      "columns": {
+        "book": "किताब",
+        "puzzles": "पहेलियाँ",
+        "difficulty": "कठिनाई",
+        "elo": "Elo से/तक",
+        "daily": "दैनिक",
+        "random": "यादृच्छिक",
+        "blind": "ब्लाइंड",
+        "visibleFor": "किसके लिए दृश्यमान (पाठ्यक्रम)",
+        "actions": "क्रियाएँ"
+      },
+      "errors": {
+        "load": "किताबें लोड करने में विफल",
+        "import": "आयात विफल",
+        "save": "सहेजना विफल",
+        "saveGroups": "समूह एक्सेस अपडेट विफल",
+        "delete": "हटाना विफल"
+      }
+    },
+    "groups": {
+      "newGroup": "नया समूह",
+      "namePlaceholder": "नाम",
+      "descriptionOptional": "विवरण (वैकल्पिक)",
+      "create": "बनाएं",
+      "empty": "अभी कोई समूह नहीं बनाया गया।",
+      "manageMembers": "सदस्य प्रबंधित करें",
+      "deleteGroup": "समूह हटाएं",
+      "membersOf": "सदस्य · {{name}}",
+      "addUser": "उपयोगकर्ता जोड़ें",
+      "noMembers": "कोई सदस्य नहीं।",
+      "created": "समूह \"{{name}}\" बनाया गया",
+      "deleteConfirm": "समूह \"{{name}}\" हटाएं?",
+      "deleted": "समूह \"{{name}}\" हटाया गया",
+      "columns": {
+        "group": "समूह",
+        "members": "सदस्य",
+        "actions": "क्रियाएँ"
+      },
+      "errors": {
+        "load": "समूह लोड करने में विफल",
+        "create": "समूह बनाने में विफल",
+        "delete": "हटाना विफल",
+        "loadMembers": "सदस्य लोड करने में विफल",
+        "addMember": "सदस्य जोड़ने में विफल",
+        "removeMember": "सदस्य हटाने में विफल"
+      }
+    },
+    "logs": {
+      "all": "सभी",
+      "filter": "फ़िल्टर",
+      "reset": "रीसेट",
+      "filtered": "(फ़िल्टर किया)",
+      "entryCount": "{{count}} प्रविष्टियाँ",
+      "status4xx": "4xx+ (त्रुटियाँ)",
+      "status5xx": "5xx (सर्वर)",
+      "status2xx": "2xx+ (ठीक है)",
+      "columns": {
+        "time": "समय",
+        "method": "विधि",
+        "path": "पथ",
+        "status": "स्थिति",
+        "duration": "अवधि",
+        "user": "उपयोगकर्ता",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "लॉग लोड करने में विफल"
+      }
+    }
+  },
+  "analysis": {
+    "title": "विश्लेषण",
+    "engine": "इंजन",
+    "depth": "गहराई",
+    "lines": "लाइनें",
+    "maxDepth": "अधिकतम गहराई",
+    "backToPuzzle": "पहेली पर वापस",
+    "calculating": "गणना हो रही है…",
+    "engineOff": "इंजन बंद",
+    "start": "शुरुआत",
+    "flip": "बोर्ड पलटें",
+    "reset": "रीसेट",
+    "noMoves": "अभी कोई चाल नहीं — बोर्ड पर चालें खेलें।",
+    "fen": "FEN",
+    "loadFen": "FEN लोड करें",
+    "copyFen": "FEN कॉपी करें",
+    "pgn": "PGN",
+    "loadPgn": "PGN लोड करें"
+  },
+  "stats": {
+    "title": "आँकड़े",
+    "currentElo": "पहेली Elo",
+    "totalSolved": "हल किए",
+    "attempts": "प्रयास",
+    "accuracy": "सटीकता",
+    "currentStreak": "वर्तमान लगातार",
+    "bestStreak": "सर्वश्रेष्ठ लगातार",
+    "eloProgress": "पहेली Elo प्रगति",
+    "level": "स्तर",
+    "allLevels": "सभी",
+    "noData": "अभी कोई डेटा नहीं।",
+    "perLevel": "विज़ुअलाइज़ेशन स्तर के अनुसार Elo",
+    "vizLevel": "स्तर",
+    "recentPuzzles": "हालिया पहेलियाँ",
+    "date": "दिनांक",
+    "rating": "रेटिंग",
+    "result": "परिणाम",
+    "time": "समय",
+    "byTheme": "थीम के अनुसार",
+    "byRating": "रेटिंग के अनुसार (हल किए)",
+    "byRatingHint": "रेटिंग बैंड के अनुसार हल की गई पहेलियाँ — सटीकता के लिए होवर करें।",
+    "activity": "गतिविधि"
+  }
+}

@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "back": "Retour",
+    "retry": "Réessayer",
+    "loading": "Chargement…",
+    "ok": "OK",
+    "remove": "Retirer"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "repertoires": "Répertoires",
+    "tournaments": "Tournois",
+    "friends": "Amis",
+    "puzzles": "Puzzles",
+    "weekly": "Hebdomadaire",
+    "courses": "Cours",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Historique des puzzles",
+    "changelog": "Journal des modifications",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "register": "Inscription",
+    "language": "Langue",
+    "menu": "Menu",
+    "info": "Info",
+    "account": "Compte",
+    "analysis": "Analyse",
+    "stats": "Statistiques"
+  },
+  "app": {
+    "changelogTitle": "Journal des modifications",
+    "quickstartTitle": "Démarrage rapide",
+    "qs": {
+      "subscribeTitle": "S'abonner",
+      "subscribeDesc": "Abonnez-vous à des tournois pour accéder rapidement aux joueurs, appariements et résultats.",
+      "monitorTitle": "Surveiller",
+      "monitorDesc": "Activez la surveillance sur un tournoi — les nouvelles rondes sont détectées et récupérées automatiquement.",
+      "favoritesTitle": "Favoris",
+      "favoritesDesc": "Marquez des joueurs ou des équipes comme favoris pour y accéder rapidement dans la vue du tournoi.",
+      "chessResultsTitle": "ID ChessResults",
+      "chessResultsDesc": "Ajoutez votre ID ChessResults dans votre profil — les tournois à venir sont abonnés automatiquement."
+    },
+    "feedback": "Commentaires / Signaler un bug",
+    "updateAvailable": "Une nouvelle version est disponible.",
+    "reload": "Recharger"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "usernameLabel": "Nom d'utilisateur",
+      "passwordLabel": "Mot de passe",
+      "rememberMe": "Rester connecté",
+      "submit": "Se connecter",
+      "submitting": "Connexion en cours...",
+      "registerLink": "Pas encore de compte ? S'inscrire",
+      "failed": "Échec de la connexion"
+    },
+    "register": {
+      "title": "Inscription",
+      "usernameLabel": "Nom d'utilisateur",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Mot de passe",
+      "passwordHint": "Au moins 4 caractères",
+      "submit": "S'inscrire",
+      "submitting": "Inscription en cours...",
+      "loginLink": "Vous avez déjà un compte ? Se connecter",
+      "failed": "Échec de l'inscription"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bienvenue, {{username}} !",
+    "subscribedTournaments": "Tournois abonnés",
+    "subscribedAt": "Abonné le {{date}}",
+    "puzzles": {
+      "title": "Puzzles",
+      "subtitle": "Elo {{elo}} | {{solved}} résolus ({{accuracy}}%)",
+      "solve": "Résoudre des puzzles",
+      "endless": "Infini"
+    },
+    "subscriptions": {
+      "title": "Abonnements aux tournois",
+      "count": "{{count}} abonnements",
+      "browse": "Parcourir les tournois"
+    },
+    "friends": {
+      "title": "Amis",
+      "count": "{{count}} amis",
+      "manage": "Gérer les amis"
+    },
+    "repertoires": {
+      "title": "Répertoires",
+      "count": "{{count}} répertoires",
+      "viewAll": "Voir tout"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partie",
+    "nav": {
+      "first": "Premier coup",
+      "previous": "Coup précédent",
+      "next": "Coup suivant",
+      "last": "Dernier coup"
+    }
+  },
+  "profile": {
+    "title": "Profil : {{username}}",
+    "firstName": "Prénom",
+    "lastName": "Nom de famille",
+    "searchPlayer": "Rechercher un joueur",
+    "noResults": "Aucun résultat trouvé.",
+    "displayName": "Nom affiché",
+    "fideId": "ID FIDE",
+    "chessResultsId": "ID ChessResults",
+    "chessComUsername": "Nom d'utilisateur Chess.com",
+    "lichessUsername": "Nom d'utilisateur Lichess",
+    "saving": "Enregistrement...",
+    "saved": "Profil enregistré",
+    "saveFailed": "Échec de l'enregistrement du profil",
+    "searchFailed": "Échec de la recherche",
+    "chessResultsApplied": "Données ChessResults appliquées",
+    "fideApplied": "Données FIDE appliquées",
+    "discord": {
+      "title": "Discord",
+      "hint": "Ouvrez un lien personnel du bot Discord RookHub (sa commande /link ou un message privé de puzzle) pour connecter votre compte Discord.",
+      "unlink": "Délier",
+      "unlinked": "Discord délié",
+      "linked": "Compte Discord lié",
+      "linkConflict": "Ce compte Discord est déjà lié à un autre utilisateur RookHub.",
+      "linkFailed": "Impossible de lier le compte Discord",
+      "stashed": "Connectez-vous ou inscrivez-vous pour terminer la liaison de votre compte Discord."
+    },
+    "offline": {
+      "title": "Hors ligne",
+      "hint": "Stockez des puzzles sur cet appareil pour continuer à jouer sans internet (par appareil).",
+      "puzzleCount": "Puzzles hors ligne",
+      "endlessRuns": "Parties infinies hors ligne",
+      "cacheSize": "Taille du cache",
+      "books": "{{count}} livres",
+      "clear": "Vider le cache",
+      "cleared": "Cache hors ligne vidé",
+      "pending": "{{count}} solutions en attente de synchronisation — elles seront envoyées automatiquement à la reconnexion."
+    },
+    "delete": {
+      "title": "Supprimer le compte",
+      "hint": "Supprimez définitivement votre compte.",
+      "button": "Supprimer le compte",
+      "warn": "Attention : votre identité et vos données personnelles seront supprimées de façon irréversible. Veuillez saisir votre mot de passe pour confirmer.",
+      "password": "Mot de passe",
+      "confirm": "Supprimer définitivement",
+      "deleting": "Suppression...",
+      "done": "Votre compte a été supprimé.",
+      "wrongPassword": "Mot de passe incorrect.",
+      "failed": "Impossible de supprimer le compte.",
+      "moreInfo": "En savoir plus sur la suppression de compte"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Supprimer le compte",
+      "intro": "Cette page explique comment supprimer votre compte RookHub et ce qui arrive à vos données.",
+      "inAppTitle": "Comment supprimer votre compte",
+      "inApp": "Connectez-vous à l'application et accédez à Profil → « Supprimer le compte ». Confirmez avec votre mot de passe. Le compte est supprimé immédiatement.",
+      "removedTitle": "Ce qui est supprimé",
+      "removed1": "Votre identité et vos données personnelles (nom d'utilisateur, e-mail, nom affiché/réel, ID FIDE/ChessResults, nom Chess.com/Lichess, lien Discord) et l'accès à la connexion.",
+      "removed2": "Contenus et liens personnels : répertoires, abonnements/favoris de tournois, amitiés et appartenances à des groupes.",
+      "keptTitle": "Ce qui est conservé de façon anonyme",
+      "kept": "Les statistiques agrégées de résolution/jeu (ex. puzzles résolus) sont conservées sous forme anonymisée ne permettant pas de vous identifier.",
+      "contactTitle": "Contact",
+      "contact": "Pour toute demande de suppression ou question, contactez-nous à",
+      "back": "Retour à la connexion"
+    },
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "updated": "Dernière mise à jour : 3 juin 2026",
+      "intro": "RookHub est une plateforme d'entraînement aux échecs (puzzles, mode infini, cours, répertoires). Cette politique explique comment les données personnelles sont traitées conformément au RGPD.",
+      "controllerTitle": "Responsable du traitement",
+      "controller": "Le responsable du traitement des données est l'opérateur désigné dans les mentions légales",
+      "dataTitle": "Données traitées",
+      "dataIntro": "Selon votre utilisation, nous traitons :",
+      "dataAccount": "Données de compte : nom d'utilisateur, adresse e-mail, mot de passe (stocké uniquement sous forme de hachage).",
+      "dataProfile": "Données de profil (facultatives) : nom affiché/réel, ID FIDE, ID ChessResults, nom d'utilisateur Chess.com/Lichess, lien Discord optionnel.",
+      "dataUsage": "Données d'utilisation : puzzles résolus, progression et statistiques de mode infini/cours, classement de jeu, horodatages de connexion.",
+      "dataTechnical": "Données techniques : adresse IP, endpoints consultés avec horodatages et identifiant visiteur pseudonymisé (mesure d'audience) dans les journaux serveur.",
+      "purposesTitle": "Finalités et bases légales",
+      "purposes": "Fourniture du compte et des fonctionnalités (exécution d'un contrat, art. 6(1)(b) RGPD) ainsi que sécurité opérationnelle, analyse des erreurs et mesure d'audience via les journaux (intérêt légitime, art. 6(1)(f) RGPD).",
+      "thirdTitle": "Destinataires / services tiers",
+      "thirdIntro": "Les données ne sont pas vendues. Selon votre utilisation, les services suivants interviennent :",
+      "thirdDiscord": "Discord : uniquement en cas de liaison volontaire de compte (ID/nom Discord) pour l'affichage dans le bot Discord RookHub.",
+      "thirdChessresults": "chess-results.com : les données de tournoi sont récupérées côté serveur lorsque vous définissez un ID ChessResults ou chargez des tournois.",
+      "thirdChesssites": "Chess.com / Lichess : uniquement les noms d'utilisateur que vous saisissez volontairement ; aucun transfert automatique de données.",
+      "thirdLogging": "Elasticsearch/Kibana : journalisation/surveillance auto-hébergée sur notre infrastructure.",
+      "thirdHosting": "Hébergement : exploité sur notre propre infrastructure serveur avec un proxy inverse TLS.",
+      "storageTitle": "Stockage local (cookies/stockage)",
+      "storage": "Nous n'utilisons pas de cookies de suivi. Le stockage du navigateur (localStorage) contient par exemple votre jeton de connexion, vos paramètres et — si activé — les puzzles hors ligne. Ces données restent sur votre appareil.",
+      "retentionTitle": "Conservation et suppression",
+      "retention": "Les données de compte sont conservées jusqu'à la suppression de votre compte. Vous pouvez supprimer votre compte à tout moment — l'identité et les données personnelles sont effacées, les statistiques anonymisées sont conservées. En savoir plus :",
+      "rightsTitle": "Vos droits",
+      "rights": "Vous disposez du droit d'accès, de rectification, d'effacement, de limitation, de portabilité et d'opposition, ainsi que du droit d'introduire une réclamation auprès d'une autorité de contrôle (en Autriche : l'Autorité de protection des données).",
+      "contactTitle": "Contact",
+      "contact": "Pour toute question relative à la confidentialité, contactez-nous à",
+      "back": "Retour à la connexion"
+    },
+    "impressum": {
+      "title": "Mentions légales",
+      "operatorTitle": "Prestataire de service",
+      "name": "[NOM / SOCIÉTÉ — à renseigner]",
+      "address": "[Adresse — rue, code postal, ville, pays]",
+      "uid": "[Numéro de TVA, si société]",
+      "contactTitle": "Contact",
+      "contact": "E-mail",
+      "disclaimer": "Remarque : les informations du prestataire de service sont des exemples et doivent être remplacées par les données réelles avant publication. Cette page est un brouillon et ne constitue pas un conseil juridique.",
+      "back": "Retour à la connexion"
+    }
+  },
+  "friends": {
+    "title": "Amis",
+    "searchUsers": "Rechercher des utilisateurs",
+    "searchResults": "Résultats de la recherche",
+    "tabs": {
+      "friends": "Amis ({{count}})",
+      "requests": "Demandes ({{count}})"
+    },
+    "empty": {
+      "friends": "Pas encore d'amis. Recherchez des utilisateurs pour en ajouter !",
+      "requests": "Aucune demande en attente."
+    },
+    "sentOn": "Envoyé le {{date}}",
+    "requestSent": "Demande d'ami envoyée",
+    "errors": {
+      "loadFriends": "Impossible de charger les amis",
+      "loadRequests": "Impossible de charger les demandes",
+      "search": "Échec de la recherche",
+      "sendRequest": "Impossible d'envoyer la demande",
+      "acceptRequest": "Impossible d'accepter la demande",
+      "declineRequest": "Impossible de refuser la demande",
+      "removeFriend": "Impossible de supprimer l'ami"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Mes répertoires",
+      "new": "Nouveau répertoire",
+      "fileCount": "{{count}} fichiers",
+      "public": "Public",
+      "private": "Privé",
+      "noDescription": "Pas de description",
+      "open": "Ouvrir",
+      "empty": "Aucun répertoire pour l'instant. Créez-en un pour commencer !",
+      "loadFailed": "Impossible de charger les répertoires",
+      "createFailed": "Impossible de créer le répertoire",
+      "deleteConfirm": "Supprimer ce répertoire ?",
+      "deleteFailed": "Impossible de supprimer le répertoire"
+    },
+    "detail": {
+      "noDescription": "Pas de description",
+      "modeLines": "Lignes",
+      "modeTree": "Arbre",
+      "modeEdit": "Modifier"
+    },
+    "dialog": {
+      "title": "Nouveau répertoire",
+      "name": "Nom",
+      "description": "Description",
+      "public": "Public",
+      "create": "Créer"
+    },
+    "lines": {
+      "allLines": "Toutes les lignes",
+      "empty": "Aucune ligne trouvée dans ce répertoire."
+    },
+    "tree": {
+      "start": "Début",
+      "lineCount": "{{count}} ligne",
+      "lineCountPlural": "{{count}} lignes",
+      "empty": "Fin de ligne — aucun autre coup."
+    },
+    "edit": {
+      "uploadHint": "Glissez-déposez des fichiers PGN ici ou cliquez pour téléverser",
+      "files": "Fichiers ({{count}})",
+      "empty": "Aucun fichier pour l'instant. Téléversez des fichiers PGN pour commencer !",
+      "filesSkipped": "{{count}} fichier(s) ignoré(s) (.pgn uniquement, jusqu'à 10 Mo)",
+      "uploadSuccess": "{{count}} fichier(s) téléversé(s)",
+      "uploadPartial": "{{ok}} téléversé(s), {{failed}} échoué(s)",
+      "downloadFailed": "Téléchargement échoué",
+      "deleteConfirm": "Supprimer ce fichier ?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Actualiser",
+      "subscribe": "S'abonner",
+      "unsubscribe": "Se désabonner",
+      "monitor": "Surveiller",
+      "monitoringUntil": "Surveillance jusqu'à {{time}}",
+      "share": "Partager",
+      "subscribed": "Abonné !",
+      "unsubscribed": "Désabonné",
+      "failed": "Échec",
+      "unsubscribeFailed": "Impossible de se désabonner"
+    },
+    "tabs": {
+      "players": "Joueurs ({{count}})",
+      "teams": "Équipes ({{count}})",
+      "pairings": "Appariements"
+    },
+    "favoritesOnly": "Favoris uniquement",
+    "favorites": {
+      "added": "{{name}} ajouté aux favoris",
+      "removed": "{{name}} retiré des favoris",
+      "addedShort": "{{name}} en favori",
+      "removedShort": "{{name}} retiré"
+    },
+    "players": {
+      "snr": "N°",
+      "title": "Titre",
+      "name": "Nom",
+      "fideId": "ID FIDE",
+      "elo": "Elo",
+      "country": "Pays",
+      "team": "Équipe",
+      "club": "Club",
+      "boardShort": "Éch."
+    },
+    "teams": {
+      "rank": "Rang",
+      "team": "Équipe",
+      "points": "Points"
+    },
+    "pairings": {
+      "round": "Ronde",
+      "roundLabel": "Ronde {{round}}",
+      "board": "Échiquier",
+      "white": "Blancs",
+      "black": "Noirs",
+      "home": "Domicile",
+      "away": "Extérieur",
+      "result": "Résultat"
+    },
+    "monitor": {
+      "stopped": "Surveillance arrêtée",
+      "stopFailed": "Impossible d'arrêter la surveillance",
+      "activated": "Surveillance activée",
+      "activateFailed": "Impossible d'activer la surveillance",
+      "newRoundTitle": "Nouvelle ronde disponible !",
+      "newRoundBody": "La ronde {{round}} a été publiée.",
+      "newRoundSnack": "Nouvelle ronde disponible ! Ronde {{round}}"
+    },
+    "list": {
+      "title": "Tournois",
+      "importTitle": "Importer un tournoi",
+      "importSubtitle": "Saisissez un ID de tournoi chess-results.com pour le récupérer",
+      "chessResultsId": "ID Chess-Results",
+      "idPlaceholder": "ex. 1234567",
+      "idHintPrefix": "Le numéro de chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Récupérer",
+      "crawling": "Récupération du tournoi {{id}}... Tâche n°{{jobId}}",
+      "crawlerUnavailable": "Impossible de se connecter au récupérateur de tournois. Assurez-vous que le service est en cours d'exécution.",
+      "details": "Détails",
+      "hide": "Masquer",
+      "empty": "Aucun tournoi trouvé.",
+      "showHidden": "Afficher {{count}} masqué(s)",
+      "imported": "Tournoi importé !",
+      "crawlStartFailed": "Impossible de démarrer la récupération",
+      "crawlFailed": "Récupération échouée",
+      "crawlConnectionLost": "Connexion perdue avec la tâche de récupération"
+    },
+    "detail": {
+      "loadTournamentFailed": "Impossible de charger le tournoi",
+      "loadSubscriptionFailed": "Impossible de charger le statut d'abonnement",
+      "reloadTournamentFailed": "Impossible de recharger le tournoi",
+      "refreshStartFailed": "Impossible de démarrer l'actualisation",
+      "dataRefreshed": "Données actualisées !",
+      "refreshFailed": "Actualisation échouée",
+      "loadPlayersFailed": "Impossible de charger les joueurs",
+      "loadTeamsFailed": "Impossible de charger les équipes",
+      "loadPairingsFailed": "Impossible de charger les appariements",
+      "loadTeamDetailsFailed": "Impossible de charger les détails de l'équipe"
+    },
+    "public": {
+      "notFound": "Tournoi introuvable."
+    },
+    "share": {
+      "title": "Partager le tournoi",
+      "copyLink": "Copier le lien",
+      "linkCopied": "Lien copié !",
+      "copyFailed": "Échec de la copie"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Chargement du puzzle…",
+      "loadFailed": "Impossible de charger le puzzle",
+      "offlineNoCache": "Vous êtes hors ligne et aucun puzzle n'est en cache. Ouvrez cette page une fois en ligne pour sauvegarder des puzzles pour le jeu hors ligne.",
+      "watchOpponent": "Observez le coup de l'adversaire…",
+      "yourTurn": "À vous de jouer !",
+      "gaveUpPlayOut": "Abandonné — jouez la solution vous-même.",
+      "thinking": "Stockfish réfléchit…"
+    },
+    "result": {
+      "solutionPlayedOut": "Solution jouée.",
+      "tryYourselfNextTime": "Essayez de le résoudre vous-même la prochaine fois !",
+      "checkmate": "Échec et mat !",
+      "alternativeSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
+      "correct": "Correct !",
+      "incorrect": "Incorrect"
+    },
+    "eval": {
+      "start": "Départ",
+      "now": "Maintenant",
+      "show": "Afficher l'évaluation",
+      "hide": "Masquer l'évaluation"
+    },
+    "actions": {
+      "reset": "Réinitialiser",
+      "mouseslip": "Glissement souris",
+      "giveUp": "Abandonner",
+      "nextPuzzle": "Puzzle suivant",
+      "share": "Partager le puzzle",
+      "loadPuzzle": "Charger le puzzle",
+      "reviewLast": "Revoir le dernier puzzle",
+      "endlessMode": "Mode infini",
+      "analyze": "Analyser"
+    },
+    "info": {
+      "rating": "Classement"
+    },
+    "stats": {
+      "title": "Vos statistiques",
+      "solved": "Résolus",
+      "accuracy": "Précision",
+      "streak": "Série",
+      "best": "Meilleur"
+    },
+    "settings": {
+      "tooltip": "Paramètres"
+    },
+    "filters": {
+      "title": "Filtres",
+      "visualization": "Visualisation : Niveau {{level}}",
+      "difficulty": "Difficulté",
+      "difficultyHint": "Puzzles autour de votre Elo ({{elo}})",
+      "depthHint": "1 (faible) – 24 (fort)",
+      "skipSolved": "Ignorer les résolus"
+    },
+    "difficulty": {
+      "veryEasy": "Très facile",
+      "easy": "Facile",
+      "normal": "Normal",
+      "hard": "Difficile",
+      "veryHard": "Très difficile"
+    },
+    "theme": {
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Aléatoire",
+      "modeCrazy": "Fou",
+      "boardTheme": "Thème de l'échiquier",
+      "pieces": "Pièces"
+    },
+    "viz": {
+      "title": "Visualisation (Niveau {{level}})",
+      "countdown": "Les pièces disparaissent dans {{seconds}}s…",
+      "noMoveYet": "Aucun coup — cliquez sur la case de départ puis la case cible.",
+      "show": "Afficher",
+      "showing": "Affichage…"
+    },
+    "share": {
+      "title": "Partager le puzzle",
+      "copied": "Lien copié !",
+      "copyFailed": "Échec de la copie"
+    }
+  },
+  "courses": {
+    "title": "Cours",
+    "intro": "Travaillez un livre importé puzzle par puzzle — de façon séquentielle ou aléatoire. Votre progression est sauvegardée.",
+    "emptyHint": "Aucun livre importé pour l'instant. Importez des livres dans la zone d'administration sous « Livres ».",
+    "puzzleCount": "{{count}} puzzles",
+    "completed": "Cours terminé",
+    "sequential": "Séquentiel",
+    "random": "Aléatoire",
+    "resetTooltip": "Réinitialiser la progression",
+    "resetConfirm": "Réinitialiser la progression de « {{name}} » ?",
+    "loadFailed": "Impossible de charger les cours",
+    "resetFailed": "Réinitialisation échouée",
+    "offlineSaveTooltip": "Sauvegarder le livre hors ligne",
+    "offlineRemoveTooltip": "Supprimer la copie hors ligne",
+    "offlineSaved": "« {{name}} » sauvegardé hors ligne ({{count}} puzzles)",
+    "offlineRemoved": "« {{name}} » supprimé du hors ligne",
+    "offlineFailed": "Impossible de sauvegarder le livre hors ligne"
+  },
+  "weekly": {
+    "title": "Hebdomadaire",
+    "intro": "Les posts d'échecs hebdomadaires à parcourir. La date et l'heure indiquent quand le post est planifié.",
+    "oClock": "",
+    "play": "Parcourir",
+    "empty": "Aucun post hebdomadaire pour l'instant.",
+    "deleteConfirm": "Supprimer le post hebdomadaire « {{title}} » ?",
+    "created": "Post hebdomadaire créé",
+    "deleted": "Post hebdomadaire supprimé",
+    "loadFailed": "Impossible de charger les posts hebdomadaires",
+    "uploadFailed": "Téléversement échoué",
+    "saveFailed": "Enregistrement échoué",
+    "deleteFailed": "Suppression échouée",
+    "fields": {
+      "date": "Date",
+      "time": "Heure",
+      "titleOptional": "Titre (facultatif)"
+    },
+    "columns": {
+      "scheduled": "Date",
+      "title": "Titre",
+      "actions": "Actions"
+    },
+    "upload": {
+      "title": "Téléverser un nouveau post hebdomadaire",
+      "choosePgn": "Choisir un PGN",
+      "titlePlaceholder": "à partir du nom de fichier",
+      "create": "Créer",
+      "hint": "Par défaut : dernière date + 7 jours, même heure (sinon 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Vous êtes hors ligne et aucune partie n'est en cache. Ouvrez le mode infini une fois en ligne pour sauvegarder des puzzles pour le jeu hors ligne.",
+    "help": {
+      "title": "Mode puzzle infini",
+      "gameplayHeading": "Comment ça marche",
+      "gameplayP1": "Vous résolvez des puzzles d'échecs de difficulté croissante. Vous commencez à un classement configurable et progressez. Le classement monte automatiquement selon les phases Fasttrack (voir ci-dessous).",
+      "gameplayP2": "Vous avez <strong>3 vies</strong>. À 0 vie, la partie est terminée.",
+      "movesHeading": "Coups et Stockfish",
+      "movesP1": "Chaque puzzle a une <strong>solution prévue</strong> (une séquence de coups). Tant que vous jouez les bons coups, vous suivez cette ligne.",
+      "movesP2": "Si vous jouez un <strong>mauvais coup</strong>, <strong>Stockfish</strong> (un moteur d'échecs) prend le contrôle de l'autre côté. Vous jouez alors librement contre Stockfish. Sa force peut être réglée via la Profondeur Stockfish.",
+      "movesItem1": "<strong>Faire mat à Stockfish</strong> compte comme une solution alternative — aucune vie perdue !",
+      "movesItem2": "<strong>Stockfish vous fait mat</strong> — vous perdez une vie",
+      "movesItem3": "La partie contre Stockfish continue indéfiniment jusqu'au mat ou à l'abandon",
+      "buttonsHeading": "Boutons pendant la partie",
+      "buttonsShowEval": "<strong>Afficher l'évaluation</strong> — Affiche l'évaluation Stockfish (Départ vs. Maintenant)",
+      "buttonsReset": "<strong>Réinitialiser</strong> — Réinitialise le puzzle, mais coûte une vie",
+      "buttonsMouseslip": "<strong>Glissement souris</strong> — Annule le dernier mauvais coup (une fois par puzzle, gratuit)",
+      "buttonsGiveUp": "<strong>Abandonner</strong> — Concéder, coûte une vie",
+      "settingsHeading": "Paramètres",
+      "settingsStartRating": "<strong>Classement de départ</strong> — Le classement de puzzle auquel vous commencez",
+      "settingsStockfishDepth": "<strong>Profondeur Stockfish</strong> — Force du moteur (1 = très faible, 24 = force maximale)",
+      "settingsThemes": "<strong>Thèmes</strong> — Facultatif : seulement certains thèmes tactiques (ex. « fourchette clouage »)",
+      "fasttrackHeading": "Augmentation de la difficulté (Fasttrack)",
+      "fasttrackP1": "L'augmentation s'adapte à vos performances passées : elle analyse vos sessions récentes et calcule le classement auquel vous perdez typiquement des vies.",
+      "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–5)</strong> — Augmentation rapide jusqu'à votre 1er seuil",
+      "fasttrackPhase2": "<strong>Phase 2 (Puzzles 6–10)</strong> — Augmentation du 1er au 2e seuil",
+      "fasttrackPhase3": "<strong>Phase 3 (à partir du puzzle 11)</strong> — Pas constant de 20",
+      "fasttrackP2": "Les valeurs de seuil (1er/2e seuil) sont calculées automatiquement mais peuvent être ajustées manuellement. Cliquez sur « Auto : … » pour réinitialiser la valeur."
+    },
+    "config": {
+      "title": "Mode puzzle infini",
+      "subtitle": "Difficulté progressive — jusqu'où pouvez-vous aller ?",
+      "startRating": "Classement de départ",
+      "stockfishDepth": "Profondeur Stockfish",
+      "stockfishDepthHint": "1 (faible) – 24 (fort)",
+      "themes": "Thèmes (facultatif)",
+      "themesPlaceholder": "ex. fourchette clouage",
+      "thresholdExplain": "Classements auxquels vous perdez typiquement des vies. Ajustez pour passer les puzzles faciles plus vite ou plus lentement.",
+      "firstThreshold": "1er seuil",
+      "secondThreshold": "2e seuil",
+      "auto": "Auto : {{value}}",
+      "step": "Pas {{step}}",
+      "phase1Label": "Phase 1 (Nv 1–5)",
+      "phase2Label": "Phase 2 (Nv 6–10)",
+      "phase3Label": "Phase 3 (Nv 11+)",
+      "curveHint": "Courbe de classement du gauntlet (fixée au démarrage) :",
+      "curvePuzzle": "Puzzle {{n}}",
+      "settings": "Paramètres",
+      "visualizationLevel": "Visualisation : Niveau {{level}}",
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Aléatoire",
+      "modeCrazy": "Fou",
+      "boardTheme": "Thème de l'échiquier",
+      "pieces": "Pièces",
+      "highscore": "Meilleur score : {{rating}} de classement",
+      "sessionsPlayed": "{{count}} parties jouées",
+      "viewHistory": "Voir l'historique",
+      "unfinishedRun": "Partie inachevée : Nv {{level}} | {{solved}} résolus | {{lives}} vies | {{max}} max",
+      "continue": "Continuer",
+      "archiveAndNew": "Archiver et nouvelle partie",
+      "newGame": "Nouvelle partie",
+      "start": "Démarrer"
+    },
+    "game": {
+      "visualization": "Visualisation (Niveau {{level}})",
+      "vizCountdown": "Les pièces disparaissent dans {{seconds}}s...",
+      "vizNoMove": "Aucun coup — cliquez sur la case de départ puis la case cible.",
+      "vizShow": "Afficher",
+      "vizShowing": "Affichage...",
+      "loadingPuzzle": "Chargement du puzzle...",
+      "watchOpponent": "Observez le coup de l'adversaire...",
+      "yourTurn": "À vous de jouer ! Trouvez le meilleur coup.",
+      "yourMove": "Votre coup...",
+      "opponentThinking": "L'adversaire réfléchit...",
+      "evalStart": "Départ",
+      "evalNow": "Maintenant",
+      "showEval": "Afficher l'évaluation",
+      "hideEval": "Masquer l'évaluation",
+      "reset": "Réinitialiser",
+      "mouseslip": "Glissement souris",
+      "giveUp": "Abandonner",
+      "checkmate": "Échec et mat !",
+      "alternativeSolution": "Solution alternative — le puzzle avait une ligne prévue différente.",
+      "correct": "Correct !",
+      "wrong": "Incorrect !",
+      "gaveUp": "Abandonné",
+      "continue": "Continuer",
+      "analyze": "Analyser",
+      "reviewLast": "Analyser le dernier puzzle",
+      "puzzleRating": "Classement du puzzle : {{rating}}",
+      "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
+      "showTags": "Afficher les tags",
+      "hideTags": "Masquer les tags",
+      "sharePuzzle": "Partager le puzzle",
+      "statRating": "Classement",
+      "statLevel": "Niveau",
+      "statSolved": "Résolus",
+      "statTime": "Temps",
+      "phaseLabel": "Phase {{phase}} (pas {{step}})"
+    },
+    "gameOver": {
+      "title": "Partie terminée",
+      "wonTitle": "Vous avez gagné !",
+      "wonSubtitle": "Vous avez terminé l'intégralité du gauntlet.",
+      "wonText": "La chaîne est battue — démarrez une nouvelle partie pour le prochain défi.",
+      "exhaustedTitle": "Épuisé !",
+      "exhaustedSubtitle": "Vous avez parcouru toutes les plages de classement des puzzles.",
+      "areYouAStockfish": "Êtes-vous un Stockfish ?",
+      "maxRating": "Classement maximum",
+      "puzzlesSolved": "Puzzles résolus",
+      "livesLeft": "Vies restantes",
+      "levelReached": "Niveau atteint",
+      "time": "Temps",
+      "livesLostAt": "Vies perdues à : {{ratings}}",
+      "puzzleReview": "Révision des puzzles",
+      "newHighscore": "Nouveau record !",
+      "archiving": "Archivage...",
+      "archiveRun": "Archiver cette partie",
+      "archived": "Archivé",
+      "playAgain": "Rejouer",
+      "backToPuzzles": "Retour aux puzzles"
+    },
+    "history": {
+      "title": "Historique du mode infini",
+      "noSessions": "Aucune partie jouée pour l'instant.",
+      "startPlaying": "Commencer à jouer",
+      "filterAll": "Tout",
+      "filterActive": "Actif",
+      "filterArchived": "Archivé",
+      "selected": "{{count}} sélectionné(s)",
+      "archive": "Archiver",
+      "unarchive": "Désarchiver",
+      "noArchivedSessions": "Aucune partie archivée.",
+      "noActiveSessions": "Aucune partie active.",
+      "colDate": "Date",
+      "colMaxRating": "Classement max",
+      "colSolved": "Résolus",
+      "colDuration": "Durée",
+      "colConfig": "Config",
+      "colMistakes": "Erreurs",
+      "backToEndless": "Retour au mode infini"
+    }
+  },
+  "book": {
+    "difficulty": "Difficulté",
+    "offlineUnavailable": "Ce livre n'est pas disponible hors ligne.",
+    "status": {
+      "loading": "Chargement du puzzle...",
+      "watchOpponent": "Observez le coup de l'adversaire...",
+      "yourTurn": "À vous de jouer ! Trouvez le meilleur coup.",
+      "gaveUp": "Abandonné — jouez la solution vous-même.",
+      "stockfishThinking": "Stockfish réfléchit...",
+      "yourMoveVsStockfish": "Votre coup contre Stockfish...",
+      "correct": "Correct !",
+      "incorrect": "Incorrect",
+      "gaveUpSolution": "Abandonné — voici la solution",
+      "checkmate": "Échec et mat !",
+      "altSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
+      "fullGame": "Partie complète"
+    },
+    "actions": {
+      "reset": "Réinitialiser",
+      "giveUp": "Abandonner",
+      "mouseslip": "Glissement souris",
+      "nextPuzzle": "Puzzle suivant",
+      "again": "Encore",
+      "skip": "Passer",
+      "viewFullGame": "Voir la partie complète",
+      "analyze": "Analyser",
+      "nextInBook": "Suivant dans le livre",
+      "randomInBook": "Aléatoire dans le livre",
+      "sharePuzzle": "Partager le puzzle",
+      "backToPuzzle": "Retour au puzzle"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "visualizationLevel": "Visualisation : Niveau {{level}}",
+      "stockfishDepth": "Profondeur Stockfish",
+      "depthHint": "1 (faible) – 24 (fort)",
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Aléatoire",
+      "modeCrazy": "Fou",
+      "boardTheme": "Thème de l'échiquier",
+      "pieces": "Pièces"
+    },
+    "viz": {
+      "titleLevel": "Visualisation (Niveau {{level}})",
+      "countdown": "Les pièces disparaissent dans {{seconds}}s...",
+      "noMoveYet": "Aucun coup — cliquez sur la case de départ puis la case cible.",
+      "show": "Afficher",
+      "showing": "Affichage...",
+      "level0": "Normal — Glisser-déposer",
+      "level1": "À l'aveugle — échiquier figé, coups en texte",
+      "level2": "Dames — les pièces sont remplacées par des dames après 3s",
+      "level3": "Sombre — les pièces sont remplacées par des jetons noirs après 3s",
+      "level4": "Invisible — les pièces disparaissent complètement après 3s"
+    },
+    "course": {
+      "backToCourses": "Vers la vue d'ensemble des cours",
+      "sequential": "Séquentiel",
+      "random": "Aléatoire",
+      "completed": "Cours terminé !",
+      "toOverview": "Vue d'ensemble"
+    },
+    "weekly": {
+      "backToWeekly": "Vers la vue d'ensemble hebdomadaire",
+      "label": "Post hebdomadaire",
+      "noPuzzles": "Ce post hebdomadaire ne contient aucun puzzle jouable.",
+      "allSolved": "Tous les puzzles résolus !"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Tableau de bord Kibana",
+    "tabs": {
+      "users": "Utilisateurs",
+      "books": "Livres",
+      "groups": "Groupes",
+      "logs": "Journaux des requêtes"
+    },
+    "users": {
+      "searchLabel": "Rechercher des utilisateurs",
+      "toggleAdmin": "Basculer admin",
+      "deleteUser": "Supprimer l'utilisateur",
+      "deleteConfirm": "Supprimer l'utilisateur « {{username}} » ? Cette action est irréversible.",
+      "deleted": "Utilisateur « {{username}} » supprimé",
+      "nowAdmin": "{{username}} est maintenant administrateur",
+      "noLongerAdmin": "{{username}} n'est plus administrateur",
+      "columns": {
+        "id": "ID",
+        "username": "Nom d'utilisateur",
+        "email": "E-mail",
+        "admin": "Admin",
+        "groups": "Groupes",
+        "created": "Créé le",
+        "actions": "Actions"
+      },
+      "errors": {
+        "load": "Impossible de charger les utilisateurs",
+        "toggleAdmin": "Impossible de basculer l'admin",
+        "delete": "Impossible de supprimer l'utilisateur"
+      }
+    },
+    "books": {
+      "uploadPgn": "Téléverser un ou des PGN",
+      "importing": "Importation…",
+      "poolHint": "Définissez par livre dans quels pools les puzzles apparaissent.",
+      "empty": "Aucun livre importé pour l'instant.",
+      "eloFrom": "de",
+      "eloTo": "à",
+      "adminOnly": "admin uniquement",
+      "deleteBook": "Supprimer le livre",
+      "deleteConfirm": "Supprimer le livre « {{name}} » avec {{count}} puzzle(s) ?",
+      "deleted": "Livre « {{name}} » supprimé",
+      "imported": "{{imported}} puzzle(s) importé(s), {{skipped}} ignoré(s)",
+      "importedCount": "{{count}} puzzle(s) importé(s)",
+      "duplicatesCount": "{{count}} doublon(s)",
+      "invalidCount": "{{count}} invalide(s)",
+      "columns": {
+        "book": "Livre",
+        "puzzles": "Puzzles",
+        "difficulty": "Difficulté",
+        "elo": "Elo de/à",
+        "daily": "Quotidien",
+        "random": "Aléatoire",
+        "blind": "À l'aveugle",
+        "visibleFor": "Visible pour (cours)",
+        "actions": "Actions"
+      },
+      "errors": {
+        "load": "Impossible de charger les livres",
+        "import": "Importation échouée",
+        "save": "Enregistrement échoué",
+        "saveGroups": "Mise à jour des accès de groupe échouée",
+        "delete": "Suppression échouée"
+      }
+    },
+    "groups": {
+      "newGroup": "Nouveau groupe",
+      "namePlaceholder": "Nom",
+      "descriptionOptional": "Description (facultatif)",
+      "create": "Créer",
+      "empty": "Aucun groupe créé pour l'instant.",
+      "manageMembers": "Gérer les membres",
+      "deleteGroup": "Supprimer le groupe",
+      "membersOf": "Membres · {{name}}",
+      "addUser": "Ajouter un utilisateur",
+      "noMembers": "Aucun membre.",
+      "created": "Groupe « {{name}} » créé",
+      "deleteConfirm": "Supprimer le groupe « {{name}} » ?",
+      "deleted": "Groupe « {{name}} » supprimé",
+      "columns": {
+        "group": "Groupe",
+        "members": "Membres",
+        "actions": "Actions"
+      },
+      "errors": {
+        "load": "Impossible de charger les groupes",
+        "create": "Impossible de créer le groupe",
+        "delete": "Suppression échouée",
+        "loadMembers": "Impossible de charger les membres",
+        "addMember": "Impossible d'ajouter le membre",
+        "removeMember": "Impossible de supprimer le membre"
+      }
+    },
+    "logs": {
+      "all": "Tout",
+      "filter": "Filtrer",
+      "reset": "Réinitialiser",
+      "filtered": "(filtré)",
+      "entryCount": "{{count}} entrées",
+      "status4xx": "4xx+ (erreurs)",
+      "status5xx": "5xx (serveur)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Heure",
+        "method": "Méthode",
+        "path": "Chemin",
+        "status": "Statut",
+        "duration": "Durée",
+        "user": "Utilisateur",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Impossible de charger les journaux"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analyse",
+    "engine": "Moteur",
+    "depth": "Profondeur",
+    "lines": "Lignes",
+    "maxDepth": "Profondeur max",
+    "backToPuzzle": "Retour au puzzle",
+    "calculating": "Calcul en cours…",
+    "engineOff": "Moteur désactivé",
+    "start": "Départ",
+    "flip": "Retourner l'échiquier",
+    "reset": "Réinitialiser",
+    "noMoves": "Aucun coup — jouez des coups sur l'échiquier.",
+    "fen": "FEN",
+    "loadFen": "Charger le FEN",
+    "copyFen": "Copier le FEN",
+    "pgn": "PGN",
+    "loadPgn": "Charger le PGN"
+  },
+  "stats": {
+    "title": "Statistiques",
+    "currentElo": "Elo puzzle",
+    "totalSolved": "Résolus",
+    "attempts": "Tentatives",
+    "accuracy": "Précision",
+    "currentStreak": "Série actuelle",
+    "bestStreak": "Meilleure série",
+    "eloProgress": "Progression de l'Elo puzzle",
+    "level": "Niveau",
+    "allLevels": "Tout",
+    "noData": "Pas encore de données.",
+    "perLevel": "Elo par niveau de visualisation",
+    "vizLevel": "Niveau",
+    "recentPuzzles": "Puzzles récents",
+    "date": "Date",
+    "rating": "Classement",
+    "result": "Résultat",
+    "time": "Temps",
+    "byTheme": "Par thème",
+    "byRating": "Par classement (résolus)",
+    "byRatingHint": "Puzzles résolus par tranche de classement — survolez pour voir la précision.",
+    "activity": "Activité"
+  }
+}

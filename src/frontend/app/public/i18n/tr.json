@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "add": "Ekle",
+    "close": "Kapat",
+    "search": "Ara",
+    "back": "Geri",
+    "retry": "Tekrar dene",
+    "loading": "Yükleniyor…",
+    "ok": "Tamam",
+    "remove": "Kaldır"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "repertoires": "Repertuarlar",
+    "tournaments": "Turnuvalar",
+    "friends": "Arkadaşlar",
+    "puzzles": "Problemler",
+    "weekly": "Haftalık",
+    "courses": "Kurslar",
+    "admin": "Yönetici",
+    "profile": "Profil",
+    "puzzleHistory": "Problem Geçmişi",
+    "changelog": "Değişiklikler",
+    "logout": "Çıkış",
+    "login": "Giriş",
+    "register": "Kayıt Ol",
+    "language": "Dil",
+    "menu": "Menü",
+    "info": "Bilgi",
+    "account": "Hesap",
+    "analysis": "Analiz",
+    "stats": "İstatistikler"
+  },
+  "app": {
+    "changelogTitle": "Değişiklikler",
+    "quickstartTitle": "Hızlı Başlangıç",
+    "qs": {
+      "subscribeTitle": "Abone Ol",
+      "subscribeDesc": "Oyunculara, eşleşmelere ve sonuçlara hızlı erişim için turnuvalara abone olun.",
+      "monitorTitle": "İzle",
+      "monitorDesc": "Bir turnuvada izlemeyi etkinleştirin — yeni turlar otomatik olarak algılanır ve taranır.",
+      "favoritesTitle": "Favoriler",
+      "favoritesDesc": "Turnuva görünümünde hızlı erişim için oyuncuları veya takımları favorilere ekleyin.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Profilinize ChessResults ID ekleyin — yaklaşan turnuvalar otomatik olarak abone edilir."
+    },
+    "feedback": "Geri bildirim / Hata bildir",
+    "updateAvailable": "Yeni bir sürüm mevcut.",
+    "reload": "Yenile"
+  },
+  "auth": {
+    "login": {
+      "title": "Giriş",
+      "usernameLabel": "Kullanıcı adı",
+      "passwordLabel": "Şifre",
+      "rememberMe": "Oturumumu açık tut",
+      "submit": "Giriş Yap",
+      "submitting": "Giriş yapılıyor...",
+      "registerLink": "Hesabınız yok mu? Kayıt olun",
+      "failed": "Giriş başarısız"
+    },
+    "register": {
+      "title": "Kayıt Ol",
+      "usernameLabel": "Kullanıcı adı",
+      "emailLabel": "E-posta",
+      "passwordLabel": "Şifre",
+      "passwordHint": "En az 4 karakter",
+      "submit": "Kayıt Ol",
+      "submitting": "Kayıt yapılıyor...",
+      "loginLink": "Zaten hesabınız var mı? Giriş yapın",
+      "failed": "Kayıt başarısız"
+    }
+  },
+  "dashboard": {
+    "welcome": "Hoş geldiniz, {{username}}!",
+    "subscribedTournaments": "Abone Olunan Turnuvalar",
+    "subscribedAt": "{{date}} tarihinde abone olundu",
+    "puzzles": {
+      "title": "Problemler",
+      "subtitle": "Elo {{elo}} | {{solved}} çözüldü (%{{accuracy}})",
+      "solve": "Problem Çöz",
+      "endless": "Sonsuz"
+    },
+    "subscriptions": {
+      "title": "Turnuva Abonelikleri",
+      "count": "{{count}} abonelik",
+      "browse": "Turnuvalara Göz At"
+    },
+    "friends": {
+      "title": "Arkadaşlar",
+      "count": "{{count}} arkadaş",
+      "manage": "Arkadaşları Yönet"
+    },
+    "repertoires": {
+      "title": "Repertuarlar",
+      "count": "{{count}} repertuar",
+      "viewAll": "Tümünü Gör"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Oyun",
+    "nav": {
+      "first": "İlk hamle",
+      "previous": "Önceki hamle",
+      "next": "Sonraki hamle",
+      "last": "Son hamle"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "searchPlayer": "Oyuncu ara",
+    "noResults": "Sonuç bulunamadı.",
+    "displayName": "Görünen ad",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com kullanıcı adı",
+    "lichessUsername": "Lichess kullanıcı adı",
+    "saving": "Kaydediliyor...",
+    "saved": "Profil kaydedildi",
+    "saveFailed": "Profil kaydedilemedi",
+    "searchFailed": "Arama başarısız",
+    "chessResultsApplied": "ChessResults verileri uygulandı",
+    "fideApplied": "FIDE verileri uygulandı",
+    "discord": {
+      "title": "Discord",
+      "hint": "Discord hesabınızı bağlamak için RookHub Discord botundan kişisel bir bağlantı açın (/link komutu veya bir problem DM'i).",
+      "unlink": "Bağlantıyı kes",
+      "unlinked": "Discord bağlantısı kesildi",
+      "linked": "Discord hesabı bağlandı",
+      "linkConflict": "Bu Discord hesabı zaten başka bir RookHub kullanıcısına bağlı.",
+      "linkFailed": "Discord hesabı bağlanamadı",
+      "stashed": "Discord hesabınızı bağlamayı tamamlamak için giriş yapın veya kayıt olun."
+    },
+    "offline": {
+      "title": "Çevrimdışı",
+      "hint": "İnternetsiz problem çözmeye devam etmek için bu cihazda problem saklayın (cihaz başına).",
+      "puzzleCount": "Çevrimdışı problemler",
+      "endlessRuns": "Çevrimdışı sonsuz turlar",
+      "cacheSize": "Önbellek boyutu",
+      "books": "{{count}} kitap",
+      "clear": "Önbelleği temizle",
+      "cleared": "Çevrimdışı önbellek temizlendi",
+      "pending": "{{count}} çözüm senkronizasyon bekliyor — tekrar çevrimiçi olduğunuzda otomatik yüklenir."
+    },
+    "delete": {
+      "title": "Hesabı sil",
+      "hint": "Hesabınızı kalıcı olarak silin.",
+      "button": "Hesabı sil",
+      "warn": "Uyarı: kimliğiniz ve kişisel verileriniz geri alınamaz şekilde silinecektir. Onaylamak için şifrenizi girin.",
+      "password": "Şifre",
+      "confirm": "Kalıcı olarak sil",
+      "deleting": "Siliniyor...",
+      "done": "Hesabınız silindi.",
+      "wrongPassword": "Şifre hatalı.",
+      "failed": "Hesap silinemedi.",
+      "moreInfo": "Hesap silme hakkında daha fazla bilgi"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Hesabı sil",
+      "intro": "Bu sayfa, RookHub hesabınızı nasıl sileceğinizi ve verilerinize ne olacağını açıklar.",
+      "inAppTitle": "Hesabınızı nasıl silersiniz",
+      "inApp": "Uygulamaya giriş yapın ve Profil → \"Hesabı sil\" bölümüne gidin. Şifrenizle onaylayın. Hesap hemen silinir.",
+      "removedTitle": "Neler silinir",
+      "removed1": "Kimliğiniz ve kişisel verileriniz (kullanıcı adı, e-posta, görünen/gerçek ad, FIDE/ChessResults ID, Chess.com/Lichess adı, Discord bağlantısı) ve giriş erişimi.",
+      "removed2": "Kişisel içerik ve bağlantılar: repertuarlar, turnuva abonelikleri/favorileri, arkadaşlıklar ve grup üyelikleri.",
+      "keptTitle": "Anonimleştirilerek saklananlar",
+      "kept": "Toplu çözme/oynama istatistikleri (örn. çözülen problemler) size geri izlenemeyen anonimleştirilmiş biçimde saklanır.",
+      "contactTitle": "İletişim",
+      "contact": "Silme talepleri veya sorular için bize ulaşın:",
+      "back": "Girişe dön"
+    },
+    "privacy": {
+      "title": "Gizlilik Politikası",
+      "updated": "Son güncelleme: 3 Haziran 2026",
+      "intro": "RookHub bir satranç antrenman platformudur (problemler, sonsuz mod, kurslar, repertuarlar). Bu politika, kişisel verilerin GDPR kapsamında nasıl işlendiğini açıklar.",
+      "controllerTitle": "Veri sorumlusu",
+      "controller": "Veri işlemenin sorumlusu, künye bilgilerinde belirtilen işletmecedir",
+      "dataTitle": "Hangi verileri işliyoruz",
+      "dataIntro": "Kullanımınıza bağlı olarak şu verileri işliyoruz:",
+      "dataAccount": "Hesap verileri: kullanıcı adı, e-posta adresi, şifre (yalnızca özet olarak saklanır).",
+      "dataProfile": "Profil verileri (isteğe bağlı): görünen/gerçek ad, FIDE ID, ChessResults ID, Chess.com/Lichess kullanıcı adı, isteğe bağlı Discord bağlantısı.",
+      "dataUsage": "Kullanım verileri: çözülen problemler, sonsuz/kurs ilerleme ve istatistikleri, oyun derecesi, giriş zaman damgaları.",
+      "dataTechnical": "Teknik veriler: IP adresi, zaman damgalı istek edilen uç noktalar ve sunucu günlüklerinde takma adlı ziyaretçi tanımlayıcısı (erişim ölçümü).",
+      "purposesTitle": "Amaçlar ve hukuki dayanaklar",
+      "purposes": "Hesap ve özelliklerin sağlanması (sözleşmenin ifası, GDPR Madde 6(1)(b)) ile günlükler aracılığıyla operasyonel güvenlik, hata analizi ve erişim ölçümü (meşru menfaat, GDPR Madde 6(1)(f)).",
+      "thirdTitle": "Alıcılar / üçüncü taraf hizmetler",
+      "thirdIntro": "Veriler satılmaz. Kullanımınıza bağlı olarak aşağıdaki hizmetler devreye girer:",
+      "thirdDiscord": "Discord: yalnızca gönüllü hesap bağlama sırasında (Discord ID/adı) RookHub Discord botunda görüntülenmek için.",
+      "thirdChessresults": "chess-results.com: ChessResults ID ayarladığınızda veya turnuvaları yüklediğinizde turnuva verileri sunucu tarafında çekilir.",
+      "thirdChesssites": "Chess.com / Lichess: yalnızca gönüllü olarak girdiğiniz kullanıcı adları; otomatik veri aktarımı yapılmaz.",
+      "thirdLogging": "Elasticsearch/Kibana: altyapımızda kendi barındırdığımız günlük kaydı/izleme.",
+      "thirdHosting": "Barındırma: TLS ters proxy ile kendi sunucu altyapımızda çalıştırılır.",
+      "storageTitle": "Yerel depolama (çerezler/depolama)",
+      "storage": "İzleme çerezi kullanmıyoruz. Tarayıcı depolaması (localStorage) giriş tokenınızı, ayarlarınızı ve etkinleştirilmişse çevrimdışı problemleri saklar. Bunlar cihazınızda kalır.",
+      "retentionTitle": "Saklama ve silme",
+      "retention": "Hesap verileri, hesabınızı silene kadar saklanır. Hesabınızı istediğiniz zaman silebilirsiniz — kimlik ve kişisel veriler kaldırılır, anonimleştirilmiş istatistikler saklanır. Daha fazla:",
+      "rightsTitle": "Haklarınız",
+      "rights": "Erişim, düzeltme, silme, kısıtlama, veri taşınabilirliği ve itiraz haklarına sahipsiniz; aynı zamanda bir denetim makamına (Avusturya'da: Veri Koruma Otoritesi) şikâyette bulunma hakkınız da vardır.",
+      "contactTitle": "İletişim",
+      "contact": "Gizlilik soruları için bize ulaşın:",
+      "back": "Girişe dön"
+    },
+    "impressum": {
+      "title": "Künye",
+      "operatorTitle": "Hizmet sağlayıcı",
+      "name": "[AD / ŞİRKET — lütfen doldurun]",
+      "address": "[Adres — sokak, posta kodu, şehir, ülke]",
+      "uid": "[KDV numarası, şirket ise]",
+      "contactTitle": "İletişim",
+      "contact": "E-posta",
+      "disclaimer": "Not: hizmet sağlayıcı bilgileri yer tutucudur ve yayından önce gerçek verilerle değiştirilmelidir. Bu sayfa taslak niteliğindedir ve hukuki tavsiye niteliği taşımaz.",
+      "back": "Girişe dön"
+    }
+  },
+  "friends": {
+    "title": "Arkadaşlar",
+    "searchUsers": "Kullanıcı ara",
+    "searchResults": "Arama sonuçları",
+    "tabs": {
+      "friends": "Arkadaşlar ({{count}})",
+      "requests": "İstekler ({{count}})"
+    },
+    "empty": {
+      "friends": "Henüz arkadaş yok. Arkadaş eklemek için kullanıcı arayın!",
+      "requests": "Bekleyen istek yok."
+    },
+    "sentOn": "{{date}} tarihinde gönderildi",
+    "requestSent": "Arkadaşlık isteği gönderildi",
+    "errors": {
+      "loadFriends": "Arkadaşlar yüklenemedi",
+      "loadRequests": "İstekler yüklenemedi",
+      "search": "Arama başarısız",
+      "sendRequest": "İstek gönderilemedi",
+      "acceptRequest": "İstek kabul edilemedi",
+      "declineRequest": "İstek reddedilemedi",
+      "removeFriend": "Arkadaş kaldırılamadı"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Repertuarlarım",
+      "new": "Yeni Repertuar",
+      "fileCount": "{{count}} dosya",
+      "public": "Herkese açık",
+      "private": "Gizli",
+      "noDescription": "Açıklama yok",
+      "open": "Aç",
+      "empty": "Henüz repertuar yok. Başlamak için bir tane oluşturun!",
+      "loadFailed": "Repertuarlar yüklenemedi",
+      "createFailed": "Repertuar oluşturulamadı",
+      "deleteConfirm": "Bu repertuar silinsin mi?",
+      "deleteFailed": "Repertuar silinemedi"
+    },
+    "detail": {
+      "noDescription": "Açıklama yok",
+      "modeLines": "Satırlar",
+      "modeTree": "Ağaç",
+      "modeEdit": "Düzenle"
+    },
+    "dialog": {
+      "title": "Yeni Repertuar",
+      "name": "Ad",
+      "description": "Açıklama",
+      "public": "Herkese açık",
+      "create": "Oluştur"
+    },
+    "lines": {
+      "allLines": "Tüm Satırlar",
+      "empty": "Bu repertuarda satır bulunamadı."
+    },
+    "tree": {
+      "start": "Başlangıç",
+      "lineCount": "{{count}} satır",
+      "lineCountPlural": "{{count}} satır",
+      "empty": "Satır sonu — daha fazla hamle yok."
+    },
+    "edit": {
+      "uploadHint": "PGN dosyalarını buraya sürükleyip bırakın veya yüklemek için tıklayın",
+      "files": "Dosyalar ({{count}})",
+      "empty": "Henüz dosya yok. Başlamak için PGN dosyası yükleyin!",
+      "filesSkipped": "{{count}} dosya atlandı (yalnızca .pgn, max 10 MB)",
+      "uploadSuccess": "{{count}} dosya yüklendi",
+      "uploadPartial": "{{ok}} yüklendi, {{failed}} başarısız",
+      "downloadFailed": "İndirme başarısız",
+      "deleteConfirm": "Bu dosya silinsin mi?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Yenile",
+      "subscribe": "Abone Ol",
+      "unsubscribe": "Aboneliği İptal Et",
+      "monitor": "İzle",
+      "monitoringUntil": "{{time}} saatine kadar izleniyor",
+      "share": "Paylaş",
+      "subscribed": "Abone olundu!",
+      "unsubscribed": "Abonelik iptal edildi",
+      "failed": "Başarısız",
+      "unsubscribeFailed": "Abonelik iptal edilemedi"
+    },
+    "tabs": {
+      "players": "Oyuncular ({{count}})",
+      "teams": "Takımlar ({{count}})",
+      "pairings": "Eşleşmeler"
+    },
+    "favoritesOnly": "Yalnızca favoriler",
+    "favorites": {
+      "added": "{{name}} favorilere eklendi",
+      "removed": "{{name}} favorilerden kaldırıldı",
+      "addedShort": "{{name}} favorilendi",
+      "removedShort": "{{name}} kaldırıldı"
+    },
+    "players": {
+      "snr": "No.",
+      "title": "Unvan",
+      "name": "Ad",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Ülke",
+      "team": "Takım",
+      "club": "Kulüp",
+      "boardShort": "Tahta"
+    },
+    "teams": {
+      "rank": "Sıra",
+      "team": "Takım",
+      "points": "Puan"
+    },
+    "pairings": {
+      "round": "Tur",
+      "roundLabel": "Tur {{round}}",
+      "board": "Tahta",
+      "white": "Beyaz",
+      "black": "Siyah",
+      "home": "Ev",
+      "away": "Deplasman",
+      "result": "Sonuç"
+    },
+    "monitor": {
+      "stopped": "İzleme durduruldu",
+      "stopFailed": "İzleme durdurulamadı",
+      "activated": "İzleme etkinleştirildi",
+      "activateFailed": "İzleme etkinleştirilemedi",
+      "newRoundTitle": "Yeni tur mevcut!",
+      "newRoundBody": "Tur {{round}} yayımlandı.",
+      "newRoundSnack": "Yeni tur mevcut! Tur {{round}}"
+    },
+    "list": {
+      "title": "Turnuvalar",
+      "importTitle": "Turnuva İçe Aktar",
+      "importSubtitle": "Taramak için chess-results.com turnuva ID girin",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "örn. 1234567",
+      "idHintPrefix": "chess-results.com/tnr'deki sayı",
+      "idHintSuffix": ".aspx",
+      "crawl": "Tara",
+      "crawling": "{{id}} turnuvası taranıyor... İş #{{jobId}}",
+      "crawlerUnavailable": "Turnuva tarayıcısına bağlanılamadı. Tarayıcı hizmetinin çalıştığından emin olun.",
+      "details": "Ayrıntılar",
+      "hide": "Gizle",
+      "empty": "Turnuva bulunamadı.",
+      "showHidden": "{{count}} gizleni göster",
+      "imported": "Turnuva içe aktarıldı!",
+      "crawlStartFailed": "Tarama başlatılamadı",
+      "crawlFailed": "Tarama başarısız",
+      "crawlConnectionLost": "Tarama işiyle bağlantı kesildi"
+    },
+    "detail": {
+      "loadTournamentFailed": "Turnuva yüklenemedi",
+      "loadSubscriptionFailed": "Abonelik durumu yüklenemedi",
+      "reloadTournamentFailed": "Turnuva yeniden yüklenemedi",
+      "refreshStartFailed": "Yenileme başlatılamadı",
+      "dataRefreshed": "Veriler yenilendi!",
+      "refreshFailed": "Yenileme başarısız",
+      "loadPlayersFailed": "Oyuncular yüklenemedi",
+      "loadTeamsFailed": "Takımlar yüklenemedi",
+      "loadPairingsFailed": "Eşleşmeler yüklenemedi",
+      "loadTeamDetailsFailed": "Takım ayrıntıları yüklenemedi"
+    },
+    "public": {
+      "notFound": "Turnuva bulunamadı."
+    },
+    "share": {
+      "title": "Turnuvayı paylaş",
+      "copyLink": "Bağlantıyı kopyala",
+      "linkCopied": "Bağlantı kopyalandı!",
+      "copyFailed": "Kopyalama başarısız"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Problem yükleniyor…",
+      "loadFailed": "Problem yüklenemedi",
+      "offlineNoCache": "Çevrimdışısınız ve önbelleğe alınmış problem yok. Çevrimdışı oynama için çevrimiçiyken bu sayfayı bir kez açın.",
+      "watchOpponent": "Rakibin hamlesini izleyin…",
+      "yourTurn": "Sıra sizde!",
+      "gaveUpPlayOut": "Vazgeçildi — çözümü kendiniz oynayın.",
+      "thinking": "Stockfish düşünüyor…"
+    },
+    "result": {
+      "solutionPlayedOut": "Çözüm oynandı.",
+      "tryYourselfNextTime": "Bir dahaki sefere kendiniz çözmeyi deneyin!",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
+      "correct": "Doğru!",
+      "incorrect": "Yanlış"
+    },
+    "eval": {
+      "start": "Başlangıç",
+      "now": "Şimdi",
+      "show": "Değerlendirmeyi Göster",
+      "hide": "Değerlendirmeyi Gizle"
+    },
+    "actions": {
+      "reset": "Sıfırla",
+      "mouseslip": "Fare kayması",
+      "giveUp": "Vazgeç",
+      "nextPuzzle": "Sonraki Problem",
+      "share": "Problemi Paylaş",
+      "loadPuzzle": "Problem Yükle",
+      "reviewLast": "Son problemi incele",
+      "endlessMode": "Sonsuz Mod",
+      "analyze": "Analiz Et"
+    },
+    "info": {
+      "rating": "Derece"
+    },
+    "stats": {
+      "title": "İstatistikleriniz",
+      "solved": "Çözüldü",
+      "accuracy": "İsabet",
+      "streak": "Seri",
+      "best": "En İyi"
+    },
+    "settings": {
+      "tooltip": "Ayarlar"
+    },
+    "filters": {
+      "title": "Filtreler",
+      "visualization": "Görselleştirme: Seviye {{level}}",
+      "difficulty": "Zorluk",
+      "difficultyHint": "Elo'nuz ({{elo}}) civarında problemler",
+      "depthHint": "1 (zayıf) – 24 (güçlü)",
+      "skipSolved": "Çözülenleri atla"
+    },
+    "difficulty": {
+      "veryEasy": "Çok kolay",
+      "easy": "Kolay",
+      "normal": "Normal",
+      "hard": "Zor",
+      "veryHard": "Çok zor"
+    },
+    "theme": {
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Rastgele",
+      "modeCrazy": "Çılgın",
+      "boardTheme": "Tahta Teması",
+      "pieces": "Taşlar"
+    },
+    "viz": {
+      "title": "Görselleştirme (Seviye {{level}})",
+      "countdown": "Taşlar {{seconds}} saniyede kayboluyor…",
+      "noMoveYet": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
+      "show": "Göster",
+      "showing": "Gösteriliyor…"
+    },
+    "share": {
+      "title": "Problemi Paylaş",
+      "copied": "Bağlantı kopyalandı!",
+      "copyFailed": "Kopyalama başarısız"
+    }
+  },
+  "courses": {
+    "title": "Kurslar",
+    "intro": "İçe aktarılan bir kitabı sıralı veya rastgele olarak problem problem çalışın. İlerlemeniz kaydedilir.",
+    "emptyHint": "Henüz kitap içe aktarılmamış. Yönetici alanında \"Kitaplar\" bölümünden kitap içe aktarın.",
+    "puzzleCount": "{{count}} problem",
+    "completed": "Kurs tamamlandı",
+    "sequential": "Sıralı",
+    "random": "Rastgele",
+    "resetTooltip": "İlerlemeyi sıfırla",
+    "resetConfirm": "\"{{name}}\" için ilerleme sıfırlansın mı?",
+    "loadFailed": "Kurslar yüklenemedi",
+    "resetFailed": "Sıfırlama başarısız",
+    "offlineSaveTooltip": "Kitabı çevrimdışı kaydet",
+    "offlineRemoveTooltip": "Çevrimdışı kopyayı kaldır",
+    "offlineSaved": "\"{{name}}\" çevrimdışı kaydedildi ({{count}} problem)",
+    "offlineRemoved": "\"{{name}}\" çevrimdışından kaldırıldı",
+    "offlineFailed": "Kitap çevrimdışı kaydedilemedi"
+  },
+  "weekly": {
+    "title": "Haftalık",
+    "intro": "Tıklayarak geçilebilecek haftalık satranç gönderileri. Tarih ve saat gönderinin planlandığı zamanı gösterir.",
+    "oClock": "",
+    "play": "Oynat",
+    "empty": "Henüz haftalık gönderi yok.",
+    "deleteConfirm": "\"{{title}}\" haftalık gönderisi silinsin mi?",
+    "created": "Haftalık gönderi oluşturuldu",
+    "deleted": "Haftalık gönderi silindi",
+    "loadFailed": "Haftalık gönderiler yüklenemedi",
+    "uploadFailed": "Yükleme başarısız",
+    "saveFailed": "Kaydetme başarısız",
+    "deleteFailed": "Silme başarısız",
+    "fields": {
+      "date": "Tarih",
+      "time": "Saat",
+      "titleOptional": "Başlık (isteğe bağlı)"
+    },
+    "columns": {
+      "scheduled": "Tarih",
+      "title": "Başlık",
+      "actions": "İşlemler"
+    },
+    "upload": {
+      "title": "Yeni haftalık gönderi yükle",
+      "choosePgn": "PGN Seç",
+      "titlePlaceholder": "dosya adından",
+      "create": "Oluştur",
+      "hint": "Varsayılan: son tarih + 7 gün, aynı saat (aksi hâlde 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Çevrimdışısınız ve önbelleğe alınmış tur yok. Çevrimdışı oynama için çevrimiçiyken Sonsuz'u bir kez açın.",
+    "help": {
+      "title": "Sonsuz Problem Modu",
+      "gameplayHeading": "Nasıl çalışır",
+      "gameplayP1": "Artan zorlukta satranç problemleri çözersiniz. Ayarlanabilir bir dereceden başlayıp yükselirsiniz. Derece, Hızlı Geçiş aşamaları boyunca otomatik olarak artar (aşağıya bakın).",
+      "gameplayP2": "<strong>3 canınız</strong> var. 0 canda oyun biter.",
+      "movesHeading": "Hamleler ve Stockfish",
+      "movesP1": "Her problemin bir <strong>amaçlanan çözümü</strong> (hamle dizisi) vardır. Doğru hamleleri oynadığınız sürece bu çözüm satırını takip edersiniz.",
+      "movesP2": "<strong>Yanlış hamle</strong> oynarsanız <strong>Stockfish</strong> (satranç motoru) karşı tarafı devralır. Ardından Stockfish'e karşı serbestçe oynarsınız. Gücü Stockfish Derinliği ile ayarlanabilir.",
+      "movesItem1": "<strong>Stockfish'i mat etmek</strong> alternatif çözüm sayılır — can kaybetmezsiniz!",
+      "movesItem2": "<strong>Stockfish sizi mat ederse</strong> — bir can kaybedersiniz",
+      "movesItem3": "Stockfish'e karşı oyun mat veya Vazgeç'e kadar sürer",
+      "buttonsHeading": "Oyun sırasındaki düğmeler",
+      "buttonsShowEval": "<strong>Değerlendirmeyi Göster</strong> — Stockfish değerlendirmesini gösterir (Başlangıç - Şimdi)",
+      "buttonsReset": "<strong>Sıfırla</strong> — Problemi sıfırlar, ancak bir can harcar",
+      "buttonsMouseslip": "<strong>Fare Kayması</strong> — Son yanlış hamleyi geri alır (problem başına bir kez, ücretsiz)",
+      "buttonsGiveUp": "<strong>Vazgeç</strong> — Teslim olur, bir can harcar",
+      "settingsHeading": "Ayarlar",
+      "settingsStartRating": "<strong>Başlangıç Derecesi</strong> — Başladığınız problem derecesi",
+      "settingsStockfishDepth": "<strong>Stockfish Derinliği</strong> — Motor gücü (1 = çok zayıf, 24 = maksimum güç)",
+      "settingsThemes": "<strong>Temalar</strong> — İsteğe bağlı: yalnızca belirli taktik temalar (örn. \"çatal bağlama\")",
+      "fasttrackHeading": "Zorluk artışı (Hızlı Geçiş)",
+      "fasttrackP1": "Artış geçmiş performansınıza göre uyarlanır: son oturumlarınızı analiz eder ve genellikle can kaybettiğiniz dereceyi hesaplar.",
+      "fasttrackPhase1": "<strong>Aşama 1 (Problem 1–5)</strong> — 1. eşiğe kadar hızlı artış",
+      "fasttrackPhase2": "<strong>Aşama 2 (Problem 6–10)</strong> — 1. eşikten 2. eşiğe artış",
+      "fasttrackPhase3": "<strong>Aşama 3 (Problem 11'den itibaren)</strong> — Sabit 20 adım",
+      "fasttrackP2": "Eşik değerleri (1./2. eşik) otomatik hesaplanır ancak manuel olarak ayarlanabilir. Değeri sıfırlamak için \"Otomatik: …\" düğmesine tıklayın."
+    },
+    "config": {
+      "title": "Sonsuz Problem Modu",
+      "subtitle": "Artan zorluk — ne kadar ileri gidebilirsiniz?",
+      "startRating": "Başlangıç Derecesi",
+      "stockfishDepth": "Stockfish Derinliği",
+      "stockfishDepthHint": "1 (zayıf) – 24 (güçlü)",
+      "themes": "Temalar (isteğe bağlı)",
+      "themesPlaceholder": "örn. çatal bağlama",
+      "thresholdExplain": "Genellikle can kaybettiğiniz dereceler. Daha kolay problemleri daha hızlı veya yavaş atlamak için ayarlayın.",
+      "firstThreshold": "1. Eşik",
+      "secondThreshold": "2. Eşik",
+      "auto": "Otomatik: {{value}}",
+      "step": "Adım {{step}}",
+      "phase1Label": "Aşama 1 (Sv. 1–5)",
+      "phase2Label": "Aşama 2 (Sv. 6–10)",
+      "phase3Label": "Aşama 3 (Sv. 11+)",
+      "curveHint": "Gauntlet'ın derece eğrisi (başladığınızda sabitlenir):",
+      "curvePuzzle": "Problem {{n}}",
+      "settings": "Ayarlar",
+      "visualizationLevel": "Görselleştirme: Seviye {{level}}",
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Rastgele",
+      "modeCrazy": "Çılgın",
+      "boardTheme": "Tahta Teması",
+      "pieces": "Taşlar",
+      "highscore": "En Yüksek Skor: {{rating}} Derece",
+      "sessionsPlayed": "{{count}} oturum oynandı",
+      "viewHistory": "Geçmişi Gör",
+      "unfinishedRun": "Tamamlanmamış tur: Sv. {{level}} | {{solved}} çözüldü | {{lives}} can | {{max}} maks.",
+      "continue": "Devam Et",
+      "archiveAndNew": "Arşivle ve Yeni Oyun",
+      "newGame": "Yeni Oyun",
+      "start": "Başla"
+    },
+    "game": {
+      "visualization": "Görselleştirme (Seviye {{level}})",
+      "vizCountdown": "Taşlar {{seconds}} saniyede kayboluyor...",
+      "vizNoMove": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
+      "vizShow": "Göster",
+      "vizShowing": "Gösteriliyor...",
+      "loadingPuzzle": "Problem yükleniyor...",
+      "watchOpponent": "Rakibin hamlesini izleyin...",
+      "yourTurn": "Sıra sizde! En iyi hamleyi bulun.",
+      "yourMove": "Hamleniz...",
+      "opponentThinking": "Rakip düşünüyor...",
+      "evalStart": "Başlangıç",
+      "evalNow": "Şimdi",
+      "showEval": "Değerlendirmeyi Göster",
+      "hideEval": "Değerlendirmeyi Gizle",
+      "reset": "Sıfırla",
+      "mouseslip": "Fare kayması",
+      "giveUp": "Vazgeç",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternatif çözüm — problemin farklı bir amaçlanan satırı vardı.",
+      "correct": "Doğru!",
+      "wrong": "Yanlış!",
+      "gaveUp": "Vazgeçildi",
+      "continue": "Devam Et",
+      "analyze": "Analiz Et",
+      "reviewLast": "Son problemi analiz et",
+      "puzzleRating": "Problem Derecesi: {{rating}}",
+      "levelRange": "Seviye {{level}} ({{min}}–{{max}})",
+      "showTags": "Etiketleri göster",
+      "hideTags": "Etiketleri gizle",
+      "sharePuzzle": "Problemi paylaş",
+      "statRating": "Derece",
+      "statLevel": "Seviye",
+      "statSolved": "Çözüldü",
+      "statTime": "Süre",
+      "phaseLabel": "Aşama {{phase}} (adım {{step}})"
+    },
+    "gameOver": {
+      "title": "Oyun Bitti",
+      "wonTitle": "Kazandınız!",
+      "wonSubtitle": "Tüm gauntlet'ı tamamladınız.",
+      "wonText": "Zincir yenildi — yeni zorluk için yeni tur başlatın.",
+      "exhaustedTitle": "Tükendi!",
+      "exhaustedSubtitle": "Tüm problem derece aralıklarını oynadınız.",
+      "areYouAStockfish": "Siz de bir Stockfish misiniz?",
+      "maxRating": "Maksimum Derece",
+      "puzzlesSolved": "Çözülen Problemler",
+      "livesLeft": "Kalan Canlar",
+      "levelReached": "Ulaşılan Seviye",
+      "time": "Süre",
+      "livesLostAt": "Can kaybedilen dereceler: {{ratings}}",
+      "puzzleReview": "Problem İncelemesi",
+      "newHighscore": "Yeni Rekor!",
+      "archiving": "Arşivleniyor...",
+      "archiveRun": "Bu Turu Arşivle",
+      "archived": "Arşivlendi",
+      "playAgain": "Tekrar Oyna",
+      "backToPuzzles": "Problemlere Dön"
+    },
+    "history": {
+      "title": "Sonsuz Problem Geçmişi",
+      "noSessions": "Henüz oturum oynanmadı.",
+      "startPlaying": "Oynamaya Başla",
+      "filterAll": "Tümü",
+      "filterActive": "Aktif",
+      "filterArchived": "Arşivlendi",
+      "selected": "{{count}} seçildi",
+      "archive": "Arşivle",
+      "unarchive": "Arşivden Çıkar",
+      "noArchivedSessions": "Arşivlenmiş oturum yok.",
+      "noActiveSessions": "Aktif oturum yok.",
+      "colDate": "Tarih",
+      "colMaxRating": "Maks. Derece",
+      "colSolved": "Çözüldü",
+      "colDuration": "Süre",
+      "colConfig": "Yapılandırma",
+      "colMistakes": "Hatalar",
+      "backToEndless": "Sonsuz Moda Dön"
+    }
+  },
+  "book": {
+    "difficulty": "Zorluk",
+    "offlineUnavailable": "Bu kitap çevrimdışı kullanılamaz.",
+    "status": {
+      "loading": "Problem yükleniyor...",
+      "watchOpponent": "Rakibin hamlesini izleyin...",
+      "yourTurn": "Sıra sizde! En iyi hamleyi bulun.",
+      "gaveUp": "Vazgeçildi — çözümü kendiniz oynayın.",
+      "stockfishThinking": "Stockfish düşünüyor...",
+      "yourMoveVsStockfish": "Stockfish'e karşı hamleniz...",
+      "correct": "Doğru!",
+      "incorrect": "Yanlış",
+      "gaveUpSolution": "Vazgeçildi — işte çözüm",
+      "checkmate": "Mat!",
+      "altSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
+      "fullGame": "Tam oyun"
+    },
+    "actions": {
+      "reset": "Sıfırla",
+      "giveUp": "Vazgeç",
+      "mouseslip": "Fare kayması",
+      "nextPuzzle": "Sonraki problem",
+      "again": "Tekrar",
+      "skip": "Atla",
+      "viewFullGame": "Tam oyunu gör",
+      "analyze": "Analiz Et",
+      "nextInBook": "Kitapta sonraki",
+      "randomInBook": "Kitaptan rastgele",
+      "sharePuzzle": "Problemi paylaş",
+      "backToPuzzle": "Probleme dön"
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "visualizationLevel": "Görselleştirme: Seviye {{level}}",
+      "stockfishDepth": "Stockfish Derinliği",
+      "depthHint": "1 (zayıf) – 24 (güçlü)",
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Rastgele",
+      "modeCrazy": "Çılgın",
+      "boardTheme": "Tahta Teması",
+      "pieces": "Taşlar"
+    },
+    "viz": {
+      "titleLevel": "Görselleştirme (Seviye {{level}})",
+      "countdown": "Taşlar {{seconds}} saniyede kayboluyor...",
+      "noMoveYet": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
+      "show": "Göster",
+      "showing": "Gösteriliyor...",
+      "level0": "Normal — Sürükle ve Bırak",
+      "level1": "Kör — tahta donmuş, hamleler metin olarak",
+      "level2": "Dama — taşlar 3 saniye sonra dama taşlarıyla değiştirilir",
+      "level3": "Karanlık — taşlar 3 saniye sonra siyah simgelerle değiştirilir",
+      "level4": "Görünmez — taşlar 3 saniye sonra tamamen kaybolur"
+    },
+    "course": {
+      "backToCourses": "Kurs genel bakışına git",
+      "sequential": "Sıralı",
+      "random": "Rastgele",
+      "completed": "Kurs tamamlandı!",
+      "toOverview": "Genel bakışa git"
+    },
+    "weekly": {
+      "backToWeekly": "Haftalık gönderi genel bakışına git",
+      "label": "Haftalık Gönderi",
+      "noPuzzles": "Bu haftalık gönderi oynanabilir problem içermiyor.",
+      "allSolved": "Tüm problemler çözüldü!"
+    }
+  },
+  "admin": {
+    "title": "Yönetici",
+    "kibanaLink": "Kibana panosu",
+    "tabs": {
+      "users": "Kullanıcılar",
+      "books": "Kitaplar",
+      "groups": "Gruplar",
+      "logs": "İstek Günlükleri"
+    },
+    "users": {
+      "searchLabel": "Kullanıcı ara",
+      "toggleAdmin": "Yönetici yetkisini değiştir",
+      "deleteUser": "Kullanıcıyı sil",
+      "deleteConfirm": "\"{{username}}\" kullanıcısı silinsin mi? Bu işlem geri alınamaz.",
+      "deleted": "\"{{username}}\" kullanıcısı silindi",
+      "nowAdmin": "{{username}} artık yönetici",
+      "noLongerAdmin": "{{username}} artık yönetici değil",
+      "columns": {
+        "id": "ID",
+        "username": "Kullanıcı adı",
+        "email": "E-posta",
+        "admin": "Yönetici",
+        "groups": "Gruplar",
+        "created": "Oluşturulma",
+        "actions": "İşlemler"
+      },
+      "errors": {
+        "load": "Kullanıcılar yüklenemedi",
+        "toggleAdmin": "Yönetici yetkisi değiştirilemedi",
+        "delete": "Kullanıcı silinemedi"
+      }
+    },
+    "books": {
+      "uploadPgn": "PGN Yükle",
+      "importing": "İçe aktarılıyor…",
+      "poolHint": "Problemlerin hangi havuzlarda görüneceğini her kitap için ayarlayın.",
+      "empty": "Henüz kitap içe aktarılmamış.",
+      "eloFrom": "başlangıç",
+      "eloTo": "bitiş",
+      "adminOnly": "yalnızca yönetici",
+      "deleteBook": "Kitabı sil",
+      "deleteConfirm": "{{count}} problem içeren \"{{name}}\" kitabı silinsin mi?",
+      "deleted": "\"{{name}}\" kitabı silindi",
+      "imported": "{{imported}} problem içe aktarıldı, {{skipped}} atlandı",
+      "importedCount": "{{count}} problem içe aktarıldı",
+      "duplicatesCount": "{{count}} yinelenen",
+      "invalidCount": "{{count}} geçersiz",
+      "columns": {
+        "book": "Kitap",
+        "puzzles": "Problemler",
+        "difficulty": "Zorluk",
+        "elo": "Elo başlangıç/bitiş",
+        "daily": "Günlük",
+        "random": "Rastgele",
+        "blind": "Kör",
+        "visibleFor": "Görünür (kurslar)",
+        "actions": "İşlemler"
+      },
+      "errors": {
+        "load": "Kitaplar yüklenemedi",
+        "import": "İçe aktarma başarısız",
+        "save": "Kaydetme başarısız",
+        "saveGroups": "Grup erişimi güncellenemedi",
+        "delete": "Silme başarısız"
+      }
+    },
+    "groups": {
+      "newGroup": "Yeni grup",
+      "namePlaceholder": "Ad",
+      "descriptionOptional": "Açıklama (isteğe bağlı)",
+      "create": "Oluştur",
+      "empty": "Henüz grup oluşturulmamış.",
+      "manageMembers": "Üyeleri yönet",
+      "deleteGroup": "Grubu sil",
+      "membersOf": "Üyeler · {{name}}",
+      "addUser": "Kullanıcı ekle",
+      "noMembers": "Üye yok.",
+      "created": "\"{{name}}\" grubu oluşturuldu",
+      "deleteConfirm": "\"{{name}}\" grubu silinsin mi?",
+      "deleted": "\"{{name}}\" grubu silindi",
+      "columns": {
+        "group": "Grup",
+        "members": "Üyeler",
+        "actions": "İşlemler"
+      },
+      "errors": {
+        "load": "Gruplar yüklenemedi",
+        "create": "Grup oluşturulamadı",
+        "delete": "Silme başarısız",
+        "loadMembers": "Üyeler yüklenemedi",
+        "addMember": "Üye eklenemedi",
+        "removeMember": "Üye kaldırılamadı"
+      }
+    },
+    "logs": {
+      "all": "Tümü",
+      "filter": "Filtrele",
+      "reset": "Sıfırla",
+      "filtered": "(filtrelenmiş)",
+      "entryCount": "{{count}} kayıt",
+      "status4xx": "4xx+ (hatalar)",
+      "status5xx": "5xx (sunucu)",
+      "status2xx": "2xx+ (Tamam)",
+      "columns": {
+        "time": "Saat",
+        "method": "Yöntem",
+        "path": "Yol",
+        "status": "Durum",
+        "duration": "Süre",
+        "user": "Kullanıcı",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Günlükler yüklenemedi"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analiz",
+    "engine": "Motor",
+    "depth": "Derinlik",
+    "lines": "Satırlar",
+    "maxDepth": "Maksimum derinlik",
+    "backToPuzzle": "Probleme dön",
+    "calculating": "Hesaplanıyor…",
+    "engineOff": "Motor kapalı",
+    "start": "Başlangıç",
+    "flip": "Tahtayı döndür",
+    "reset": "Sıfırla",
+    "noMoves": "Henüz hamle yok — tahtada hamle yapın.",
+    "fen": "FEN",
+    "loadFen": "FEN Yükle",
+    "copyFen": "FEN Kopyala",
+    "pgn": "PGN",
+    "loadPgn": "PGN Yükle"
+  },
+  "stats": {
+    "title": "İstatistikler",
+    "currentElo": "Problem Elo",
+    "totalSolved": "Çözüldü",
+    "attempts": "Denemeler",
+    "accuracy": "İsabet",
+    "currentStreak": "Mevcut seri",
+    "bestStreak": "En iyi seri",
+    "eloProgress": "Problem Elo ilerlemesi",
+    "level": "Seviye",
+    "allLevels": "Tümü",
+    "noData": "Henüz veri yok.",
+    "perLevel": "Görselleştirme seviyesine göre Elo",
+    "vizLevel": "Seviye",
+    "recentPuzzles": "Son problemler",
+    "date": "Tarih",
+    "rating": "Derece",
+    "result": "Sonuç",
+    "time": "Süre",
+    "byTheme": "Temaya göre",
+    "byRating": "Dereceye göre (çözülenler)",
+    "byRatingHint": "Derece bandına göre çözülen problemler — isabeti görmek için üzerine gelin.",
+    "activity": "Aktivite"
+  }
+}

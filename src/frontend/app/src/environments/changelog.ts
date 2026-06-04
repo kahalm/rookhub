@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.78.5';
+export const APP_VERSION = '0.79.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.79.0', date: '2026-06-04', changes: [
+    '22 neue Sprachen — die App ist jetzt in 25 Sprachen verfügbar: zusätzlich zu Englisch/Deutsch/Kroatisch nun Spanisch, Chinesisch, Hindi, Arabisch, Portugiesisch, Französisch, Russisch, Japanisch, Indonesisch, Italienisch, Türkisch, Koreanisch, Vietnamesisch, Persisch, Polnisch, Ukrainisch, Rumänisch, Niederländisch, Griechisch, Ungarisch, Tschechisch und Schwedisch. Inkl. Rechts-nach-links-Darstellung für Arabisch und Persisch.',
+    'Lokalisierung vervollständigt: verbliebene unübersetzte UI-Texte (Navigations-Beschriftungen, „Stockfish-Tiefe") nachgezogen.',
+  ]},
   { version: '0.78.5', date: '2026-06-03', changes: [
     'App-Vorbereitung (technisch): TWA-Projektgerüst (Bubblewrap-Config twa/twa-manifest.json) + GitHub-Actions-Workflow zum Bauen des signierten Android-App-Bundles (AAB) für Google Play. Keine Änderung an der Web-App.',
   ]},

@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "close": "关闭",
+    "search": "搜索",
+    "back": "返回",
+    "retry": "重试",
+    "loading": "加载中…",
+    "ok": "确定",
+    "remove": "移除"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "repertoires": "开局库",
+    "tournaments": "比赛",
+    "friends": "好友",
+    "puzzles": "战术题",
+    "weekly": "每周精选",
+    "courses": "课程",
+    "admin": "管理",
+    "profile": "个人资料",
+    "puzzleHistory": "战术题历史",
+    "changelog": "更新日志",
+    "logout": "退出登录",
+    "login": "登录",
+    "register": "注册",
+    "language": "语言",
+    "menu": "菜单",
+    "info": "信息",
+    "account": "账户",
+    "analysis": "分析",
+    "stats": "统计"
+  },
+  "app": {
+    "changelogTitle": "更新日志",
+    "quickstartTitle": "快速入门",
+    "qs": {
+      "subscribeTitle": "订阅",
+      "subscribeDesc": "订阅比赛，快速查看选手、配对和结果。",
+      "monitorTitle": "监控",
+      "monitorDesc": "开启比赛监控——新轮次将被自动检测和抓取。",
+      "favoritesTitle": "收藏",
+      "favoritesDesc": "在比赛视图中将选手或队伍标记为收藏，方便快速访问。",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "在个人资料中添加你的 ChessResults ID——即将到来的比赛将自动订阅。"
+    },
+    "feedback": "反馈 / 报告错误",
+    "updateAvailable": "有新版本可用。",
+    "reload": "重新加载"
+  },
+  "auth": {
+    "login": {
+      "title": "登录",
+      "usernameLabel": "用户名",
+      "passwordLabel": "密码",
+      "rememberMe": "保持登录",
+      "submit": "登录",
+      "submitting": "登录中…",
+      "registerLink": "没有账户？注册",
+      "failed": "登录失败"
+    },
+    "register": {
+      "title": "注册",
+      "usernameLabel": "用户名",
+      "emailLabel": "邮箱",
+      "passwordLabel": "密码",
+      "passwordHint": "至少 4 个字符",
+      "submit": "注册",
+      "submitting": "注册中…",
+      "loginLink": "已有账户？登录",
+      "failed": "注册失败"
+    }
+  },
+  "dashboard": {
+    "welcome": "欢迎，{{username}}！",
+    "subscribedTournaments": "已订阅比赛",
+    "subscribedAt": "订阅于 {{date}}",
+    "puzzles": {
+      "title": "战术题",
+      "subtitle": "Elo {{elo}} | 已解 {{solved}} 题（{{accuracy}}%）",
+      "solve": "做题",
+      "endless": "无尽模式"
+    },
+    "subscriptions": {
+      "title": "比赛订阅",
+      "count": "{{count}} 个订阅",
+      "browse": "浏览比赛"
+    },
+    "friends": {
+      "title": "好友",
+      "count": "{{count}} 位好友",
+      "manage": "管理好友"
+    },
+    "repertoires": {
+      "title": "开局库",
+      "count": "{{count}} 个开局库",
+      "viewAll": "查看全部"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "对局",
+    "nav": {
+      "first": "第一步",
+      "previous": "上一步",
+      "next": "下一步",
+      "last": "最后一步"
+    }
+  },
+  "profile": {
+    "title": "个人资料：{{username}}",
+    "firstName": "名",
+    "lastName": "姓",
+    "searchPlayer": "搜索棋手",
+    "noResults": "未找到结果。",
+    "displayName": "显示名称",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com 用户名",
+    "lichessUsername": "Lichess 用户名",
+    "saving": "保存中…",
+    "saved": "资料已保存",
+    "saveFailed": "保存资料失败",
+    "searchFailed": "搜索失败",
+    "chessResultsApplied": "已应用 ChessResults 数据",
+    "fideApplied": "已应用 FIDE 数据",
+    "discord": {
+      "title": "Discord",
+      "hint": "打开 RookHub Discord 机器人发来的个人链接（/link 命令或战术题私信）以连接你的 Discord 账户。",
+      "unlink": "取消关联",
+      "unlinked": "Discord 已解除关联",
+      "linked": "Discord 账户已关联",
+      "linkConflict": "该 Discord 账户已关联到另一个 RookHub 用户。",
+      "linkFailed": "无法关联 Discord 账户",
+      "stashed": "请登录或注册以完成 Discord 账户的关联。"
+    },
+    "offline": {
+      "title": "离线",
+      "hint": "在此设备上存储战术题，无需网络也可继续练习（按设备计）。",
+      "puzzleCount": "离线战术题",
+      "endlessRuns": "离线无尽记录",
+      "cacheSize": "缓存大小",
+      "books": "{{count}} 本书",
+      "clear": "清除缓存",
+      "cleared": "离线缓存已清除",
+      "pending": "{{count}} 条解题记录等待同步——联网后将自动上传。"
+    },
+    "delete": {
+      "title": "删除账户",
+      "hint": "永久删除你的账户。",
+      "button": "删除账户",
+      "warn": "警告：你的身份和个人数据将被不可逆地删除。请输入密码以确认。",
+      "password": "密码",
+      "confirm": "永久删除",
+      "deleting": "删除中…",
+      "done": "你的账户已被删除。",
+      "wrongPassword": "密码不正确。",
+      "failed": "无法删除账户。",
+      "moreInfo": "了解更多关于账户删除的信息"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "删除账户",
+      "intro": "本页面说明如何删除你的 RookHub 账户以及你的数据将如何处理。",
+      "inAppTitle": "如何删除账户",
+      "inApp": "登录应用，前往个人资料 → 「删除账户」。输入密码确认。账户将立即删除。",
+      "removedTitle": "将被删除的内容",
+      "removed1": "你的身份和个人数据（用户名、邮箱、显示名/真实姓名、FIDE/ChessResults ID、Chess.com/Lichess 用户名、Discord 关联）以及登录权限。",
+      "removed2": "个人内容与关联：开局库、比赛订阅/收藏、好友关系及群组成员资格。",
+      "keptTitle": "将以匿名形式保留的内容",
+      "kept": "聚合解题/游戏统计数据（如已解战术题数）将以匿名形式保留，无法追溯到你个人。",
+      "contactTitle": "联系方式",
+      "contact": "如需申请删除或有任何疑问，请联系我们：",
+      "back": "返回登录"
+    },
+    "privacy": {
+      "title": "隐私政策",
+      "updated": "最后更新：2026 年 6 月 3 日",
+      "intro": "RookHub 是一个国际象棋训练平台（战术题、无尽模式、课程、开局库）。本政策说明个人数据如何在 GDPR 框架下被处理。",
+      "controllerTitle": "数据控制者",
+      "controller": "数据处理的控制者为版权声明中所列的运营者",
+      "dataTitle": "我们处理哪些数据",
+      "dataIntro": "根据你的使用情况，我们可能处理以下数据：",
+      "dataAccount": "账户数据：用户名、邮箱地址、密码（仅以哈希形式存储）。",
+      "dataProfile": "个人资料数据（可选）：显示名/真实姓名、FIDE ID、ChessResults ID、Chess.com/Lichess 用户名、可选 Discord 关联。",
+      "dataUsage": "使用数据：已解战术题、无尽/课程进度与统计、游戏评分、登录时间戳。",
+      "dataTechnical": "技术数据：IP 地址、带时间戳的请求端点以及服务器日志中的匿名访客标识符（用于访问量统计）。",
+      "purposesTitle": "目的与法律依据",
+      "purposes": "提供账户和功能（合同履行，GDPR 第 6 条第 1 款 b 项），以及通过日志进行运营安全、错误分析和访问量统计（合法利益，GDPR 第 6 条第 1 款 f 项）。",
+      "thirdTitle": "接收方 / 第三方服务",
+      "thirdIntro": "我们不出售数据。根据使用情况，以下服务可能涉及：",
+      "thirdDiscord": "Discord：仅在自愿关联账户时使用（Discord ID/用户名），用于在 RookHub Discord 机器人中显示。",
+      "thirdChessresults": "chess-results.com：当你设置 ChessResults ID 或加载比赛时，比赛数据将在服务器端获取。",
+      "thirdChesssites": "Chess.com / Lichess：仅使用你自愿填写的用户名，不进行自动数据传输。",
+      "thirdLogging": "Elasticsearch/Kibana：自托管的日志/监控系统，运行在我们自己的基础设施上。",
+      "thirdHosting": "托管：运行在我们自己的服务器基础设施上，使用 TLS 反向代理。",
+      "storageTitle": "本地存储（Cookie/存储）",
+      "storage": "我们不使用追踪 Cookie。浏览器存储（localStorage）中存有登录令牌、设置以及（如已启用）离线战术题等内容，这些数据保留在你的设备上。",
+      "retentionTitle": "保留与删除",
+      "retention": "账户数据将保留至你删除账户为止。你可以随时删除账户——身份和个人数据将被移除，匿名统计数据将被保留。详情：",
+      "rightsTitle": "你的权利",
+      "rights": "你享有访问权、更正权、删除权、限制处理权、数据可携权和异议权，以及向监管机构投诉的权利（在奥地利：数据保护局）。",
+      "contactTitle": "联系方式",
+      "contact": "如有隐私相关问题，请联系我们：",
+      "back": "返回登录"
+    },
+    "impressum": {
+      "title": "版权声明",
+      "operatorTitle": "服务提供者",
+      "name": "[姓名 / 公司 — 请填写]",
+      "address": "[地址 — 街道、邮政编码、城市、国家]",
+      "uid": "[增值税识别号（如为公司）]",
+      "contactTitle": "联系方式",
+      "contact": "邮箱",
+      "disclaimer": "注意：服务提供者信息为占位符，在发布前必须替换为实际数据。本页为草稿，不构成法律建议。",
+      "back": "返回登录"
+    }
+  },
+  "friends": {
+    "title": "好友",
+    "searchUsers": "搜索用户",
+    "searchResults": "搜索结果",
+    "tabs": {
+      "friends": "好友（{{count}}）",
+      "requests": "请求（{{count}}）"
+    },
+    "empty": {
+      "friends": "暂无好友。搜索用户来添加好友吧！",
+      "requests": "暂无待处理请求。"
+    },
+    "sentOn": "发送于 {{date}}",
+    "requestSent": "好友请求已发送",
+    "errors": {
+      "loadFriends": "加载好友列表失败",
+      "loadRequests": "加载请求失败",
+      "search": "搜索失败",
+      "sendRequest": "发送请求失败",
+      "acceptRequest": "接受请求失败",
+      "declineRequest": "拒绝请求失败",
+      "removeFriend": "移除好友失败"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "我的开局库",
+      "new": "新建开局库",
+      "fileCount": "{{count}} 个文件",
+      "public": "公开",
+      "private": "私密",
+      "noDescription": "暂无描述",
+      "open": "打开",
+      "empty": "暂无开局库。创建一个开始吧！",
+      "loadFailed": "加载开局库失败",
+      "createFailed": "创建开局库失败",
+      "deleteConfirm": "删除此开局库？",
+      "deleteFailed": "删除开局库失败"
+    },
+    "detail": {
+      "noDescription": "暂无描述",
+      "modeLines": "变化线",
+      "modeTree": "树形图",
+      "modeEdit": "编辑"
+    },
+    "dialog": {
+      "title": "新建开局库",
+      "name": "名称",
+      "description": "描述",
+      "public": "公开",
+      "create": "创建"
+    },
+    "lines": {
+      "allLines": "所有变化线",
+      "empty": "此开局库中未找到变化线。"
+    },
+    "tree": {
+      "start": "开始",
+      "lineCount": "{{count}} 条变化线",
+      "lineCountPlural": "{{count}} 条变化线",
+      "empty": "变化线结束——没有后续走法。"
+    },
+    "edit": {
+      "uploadHint": "将 PGN 文件拖放到此处或点击上传",
+      "files": "文件（{{count}}）",
+      "empty": "暂无文件。上传 PGN 文件开始吧！",
+      "filesSkipped": "{{count}} 个文件已跳过（仅支持 .pgn，最大 10 MB）",
+      "uploadSuccess": "已上传 {{count}} 个文件",
+      "uploadPartial": "{{ok}} 个上传成功，{{failed}} 个失败",
+      "downloadFailed": "下载失败",
+      "deleteConfirm": "删除此文件？"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "刷新",
+      "subscribe": "订阅",
+      "unsubscribe": "取消订阅",
+      "monitor": "监控",
+      "monitoringUntil": "监控至 {{time}}",
+      "share": "分享",
+      "subscribed": "已订阅！",
+      "unsubscribed": "已取消订阅",
+      "failed": "操作失败",
+      "unsubscribeFailed": "取消订阅失败"
+    },
+    "tabs": {
+      "players": "选手（{{count}}）",
+      "teams": "队伍（{{count}}）",
+      "pairings": "配对"
+    },
+    "favoritesOnly": "仅显示收藏",
+    "favorites": {
+      "added": "{{name}} 已添加到收藏",
+      "removed": "{{name}} 已从收藏中移除",
+      "addedShort": "{{name}} 已收藏",
+      "removedShort": "{{name}} 已移除"
+    },
+    "players": {
+      "snr": "编号",
+      "title": "头衔",
+      "name": "姓名",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "国家",
+      "team": "队伍",
+      "club": "俱乐部",
+      "boardShort": "台"
+    },
+    "teams": {
+      "rank": "排名",
+      "team": "队伍",
+      "points": "积分"
+    },
+    "pairings": {
+      "round": "轮次",
+      "roundLabel": "第 {{round}} 轮",
+      "board": "棋台",
+      "white": "白方",
+      "black": "黑方",
+      "home": "主场",
+      "away": "客场",
+      "result": "结果"
+    },
+    "monitor": {
+      "stopped": "监控已停止",
+      "stopFailed": "停止监控失败",
+      "activated": "监控已启动",
+      "activateFailed": "启动监控失败",
+      "newRoundTitle": "新轮次已发布！",
+      "newRoundBody": "第 {{round}} 轮已发布。",
+      "newRoundSnack": "新轮次已发布！第 {{round}} 轮"
+    },
+    "list": {
+      "title": "比赛",
+      "importTitle": "导入比赛",
+      "importSubtitle": "输入 chess-results.com 比赛 ID 以抓取数据",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "例如：1234567",
+      "idHintPrefix": "来自 chess-results.com/tnr 的数字",
+      "idHintSuffix": ".aspx",
+      "crawl": "抓取",
+      "crawling": "正在抓取比赛 {{id}}… 任务 #{{jobId}}",
+      "crawlerUnavailable": "无法连接到比赛爬虫。请确认爬虫服务正在运行。",
+      "details": "详情",
+      "hide": "隐藏",
+      "empty": "未找到比赛。",
+      "showHidden": "显示 {{count}} 个已隐藏",
+      "imported": "比赛已导入！",
+      "crawlStartFailed": "启动抓取失败",
+      "crawlFailed": "抓取失败",
+      "crawlConnectionLost": "与抓取任务的连接已断开"
+    },
+    "detail": {
+      "loadTournamentFailed": "加载比赛失败",
+      "loadSubscriptionFailed": "加载订阅状态失败",
+      "reloadTournamentFailed": "重新加载比赛失败",
+      "refreshStartFailed": "启动刷新失败",
+      "dataRefreshed": "数据已刷新！",
+      "refreshFailed": "刷新失败",
+      "loadPlayersFailed": "加载选手失败",
+      "loadTeamsFailed": "加载队伍失败",
+      "loadPairingsFailed": "加载配对失败",
+      "loadTeamDetailsFailed": "加载队伍详情失败"
+    },
+    "public": {
+      "notFound": "未找到比赛。"
+    },
+    "share": {
+      "title": "分享比赛",
+      "copyLink": "复制链接",
+      "linkCopied": "链接已复制！",
+      "copyFailed": "复制失败"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "加载战术题中…",
+      "loadFailed": "加载战术题失败",
+      "offlineNoCache": "你处于离线状态且没有缓存的战术题。请在联网时打开此页面以保存战术题供离线使用。",
+      "watchOpponent": "观察对手的走法…",
+      "yourTurn": "轮到你了！",
+      "gaveUpPlayOut": "已放弃——请自行演示解法。",
+      "thinking": "Stockfish 正在思考…"
+    },
+    "result": {
+      "solutionPlayedOut": "解法已演示完毕。",
+      "tryYourselfNextTime": "下次试着自己解出来！",
+      "checkmate": "将死！",
+      "alternativeSolution": "替代解法——本题有不同的预期走法序列。",
+      "correct": "正确！",
+      "incorrect": "错误"
+    },
+    "eval": {
+      "start": "初始",
+      "now": "当前",
+      "show": "显示评估",
+      "hide": "隐藏评估"
+    },
+    "actions": {
+      "reset": "重置",
+      "mouseslip": "误操作",
+      "giveUp": "放弃",
+      "nextPuzzle": "下一题",
+      "share": "分享题目",
+      "loadPuzzle": "加载题目",
+      "reviewLast": "查看上一题",
+      "endlessMode": "无尽模式",
+      "analyze": "分析"
+    },
+    "info": {
+      "rating": "评分"
+    },
+    "stats": {
+      "title": "我的统计",
+      "solved": "已解",
+      "accuracy": "正确率",
+      "streak": "连续",
+      "best": "最佳"
+    },
+    "settings": {
+      "tooltip": "设置"
+    },
+    "filters": {
+      "title": "筛选",
+      "visualization": "可视化：第 {{level}} 级",
+      "difficulty": "难度",
+      "difficultyHint": "接近你的 Elo（{{elo}}）的题目",
+      "depthHint": "1（弱）– 24（强）",
+      "skipSolved": "跳过已解"
+    },
+    "difficulty": {
+      "veryEasy": "非常简单",
+      "easy": "简单",
+      "normal": "普通",
+      "hard": "困难",
+      "veryHard": "非常困难"
+    },
+    "theme": {
+      "mode": "模式",
+      "modeNormal": "普通",
+      "modeRandom": "随机",
+      "modeCrazy": "疯狂",
+      "boardTheme": "棋盘主题",
+      "pieces": "棋子"
+    },
+    "viz": {
+      "title": "可视化（第 {{level}} 级）",
+      "countdown": "棋子将在 {{seconds}} 秒后消失…",
+      "noMoveYet": "尚未落子——点击起始格 → 目标格。",
+      "show": "显示",
+      "showing": "显示中…"
+    },
+    "share": {
+      "title": "分享题目",
+      "copied": "链接已复制！",
+      "copyFailed": "复制失败"
+    }
+  },
+  "courses": {
+    "title": "课程",
+    "intro": "逐题练习导入的书本——按顺序或随机进行。你的进度将被保存。",
+    "emptyHint": "暂无导入的书本。请在管理区的「书本」中导入书本。",
+    "puzzleCount": "{{count}} 道题",
+    "completed": "课程已完成",
+    "sequential": "顺序",
+    "random": "随机",
+    "resetTooltip": "重置进度",
+    "resetConfirm": "重置「{{name}}」的进度？",
+    "loadFailed": "加载课程失败",
+    "resetFailed": "重置失败",
+    "offlineSaveTooltip": "离线保存书本",
+    "offlineRemoveTooltip": "移除离线副本",
+    "offlineSaved": "「{{name}}」已离线保存（{{count}} 道题）",
+    "offlineRemoved": "「{{name}}」已从离线中移除",
+    "offlineFailed": "无法离线保存书本"
+  },
+  "weekly": {
+    "title": "每周精选",
+    "intro": "每周国际象棋内容，点击逐步浏览。日期和时间表示发布计划时间。",
+    "oClock": "",
+    "play": "逐步播放",
+    "empty": "暂无每周内容。",
+    "deleteConfirm": "删除每周内容「{{title}}」？",
+    "created": "每周内容已创建",
+    "deleted": "每周内容已删除",
+    "loadFailed": "加载每周内容失败",
+    "uploadFailed": "上传失败",
+    "saveFailed": "保存失败",
+    "deleteFailed": "删除失败",
+    "fields": {
+      "date": "日期",
+      "time": "时间",
+      "titleOptional": "标题（可选）"
+    },
+    "columns": {
+      "scheduled": "日期",
+      "title": "标题",
+      "actions": "操作"
+    },
+    "upload": {
+      "title": "上传新的每周内容",
+      "choosePgn": "选择 PGN",
+      "titlePlaceholder": "来自文件名",
+      "create": "创建",
+      "hint": "默认：上次日期 + 7 天，相同时间（否则为 19:00）。"
+    }
+  },
+  "endless": {
+    "offlineNoCache": "你处于离线状态且没有缓存的记录。请在联网时打开无尽模式以保存题目供离线使用。",
+    "help": {
+      "title": "无尽战术题模式",
+      "gameplayHeading": "玩法说明",
+      "gameplayP1": "你将解答难度不断上升的国际象棋战术题。从可配置的评分开始逐步提升。评分将沿快速提升阶段自动上涨（见下文）。",
+      "gameplayP2": "你有 <strong>3 条命</strong>。命数归零时游戏结束。",
+      "movesHeading": "走法与 Stockfish",
+      "movesP1": "每道题都有<strong>预期解法</strong>（一系列走法）。只要你走出正确的走法，就会沿着该解法线推进。",
+      "movesP2": "如果你走出<strong>错误走法</strong>，<strong>Stockfish</strong>（国际象棋引擎）将接管另一方。你可以自由对弈 Stockfish，其棋力可通过 Stockfish 深度来设置。",
+      "movesItem1": "<strong>将死 Stockfish</strong> 视为替代解法——不扣命！",
+      "movesItem2": "<strong>被 Stockfish 将死</strong>——扣一条命",
+      "movesItem3": "与 Stockfish 的对局将持续到将死或放弃为止",
+      "buttonsHeading": "游戏中的按钮",
+      "buttonsShowEval": "<strong>显示评估</strong>——显示 Stockfish 评估（初始 vs. 当前）",
+      "buttonsReset": "<strong>重置</strong>——重置题目，但扣一条命",
+      "buttonsMouseslip": "<strong>误操作</strong>——撤销上一步错误走法（每题一次，免费）",
+      "buttonsGiveUp": "<strong>放弃</strong>——认负，扣一条命",
+      "settingsHeading": "设置",
+      "settingsStartRating": "<strong>起始评分</strong>——你开始时的题目评分",
+      "settingsStockfishDepth": "<strong>Stockfish 深度</strong>——引擎棋力（1 = 非常弱，24 = 最强）",
+      "settingsThemes": "<strong>主题</strong>——可选：仅限特定战术主题（例如「闪击 牵制」）",
+      "fasttrackHeading": "难度递增（快速提升）",
+      "fasttrackP1": "递增幅度根据你的历史表现自动调整：分析你近期的对局，计算你通常在哪个评分段失命。",
+      "fasttrackPhase1": "<strong>阶段 1（第 1–5 题）</strong>——快速提升至第 1 阈值",
+      "fasttrackPhase2": "<strong>阶段 2（第 6–10 题）</strong>——从第 1 阈值提升至第 2 阈值",
+      "fasttrackPhase3": "<strong>阶段 3（第 11 题起）</strong>——每步固定上涨 20",
+      "fasttrackP2": "阈值（第 1/第 2 阈值）自动计算，也可手动调整。点击「自动：…」以重置为自动值。"
+    },
+    "config": {
+      "title": "无尽战术题模式",
+      "subtitle": "难度递进——你能走多远？",
+      "startRating": "起始评分",
+      "stockfishDepth": "Stockfish 深度",
+      "stockfishDepthHint": "1（弱）– 24（强）",
+      "themes": "主题（可选）",
+      "themesPlaceholder": "例如：闪击 牵制",
+      "thresholdExplain": "你通常失命的评分段。调整以更快或更慢地跳过简单题目。",
+      "firstThreshold": "第 1 阈值",
+      "secondThreshold": "第 2 阈值",
+      "auto": "自动：{{value}}",
+      "step": "步长 {{step}}",
+      "phase1Label": "阶段 1（Lv 1–5）",
+      "phase2Label": "阶段 2（Lv 6–10）",
+      "phase3Label": "阶段 3（Lv 11+）",
+      "curveHint": "挑战赛的评分曲线（开始后固定）：",
+      "curvePuzzle": "第 {{n}} 题",
+      "settings": "设置",
+      "visualizationLevel": "可视化：第 {{level}} 级",
+      "mode": "模式",
+      "modeNormal": "普通",
+      "modeRandom": "随机",
+      "modeCrazy": "疯狂",
+      "boardTheme": "棋盘主题",
+      "pieces": "棋子",
+      "highscore": "最高分：{{rating}} 评分",
+      "sessionsPlayed": "已进行 {{count}} 场",
+      "viewHistory": "查看历史",
+      "unfinishedRun": "未完成记录：Lv {{level}} | 已解 {{solved}} 题 | {{lives}} 条命 | 最高 {{max}}",
+      "continue": "继续",
+      "archiveAndNew": "归档并开始新游戏",
+      "newGame": "新游戏",
+      "start": "开始"
+    },
+    "game": {
+      "visualization": "可视化（第 {{level}} 级）",
+      "vizCountdown": "棋子将在 {{seconds}} 秒后消失…",
+      "vizNoMove": "尚未落子——点击起始格 → 目标格。",
+      "vizShow": "显示",
+      "vizShowing": "显示中…",
+      "loadingPuzzle": "加载题目中…",
+      "watchOpponent": "观察对手的走法…",
+      "yourTurn": "轮到你了！找出最佳走法。",
+      "yourMove": "你的回合…",
+      "opponentThinking": "对手思考中…",
+      "evalStart": "初始",
+      "evalNow": "当前",
+      "showEval": "显示评估",
+      "hideEval": "隐藏评估",
+      "reset": "重置",
+      "mouseslip": "误操作",
+      "giveUp": "放弃",
+      "checkmate": "将死！",
+      "alternativeSolution": "替代解法——本题有不同的预期走法线。",
+      "correct": "正确！",
+      "wrong": "错误！",
+      "gaveUp": "已放弃",
+      "continue": "继续",
+      "analyze": "分析",
+      "reviewLast": "分析上一题",
+      "puzzleRating": "题目评分：{{rating}}",
+      "levelRange": "第 {{level}} 级（{{min}}–{{max}}）",
+      "showTags": "显示标签",
+      "hideTags": "隐藏标签",
+      "sharePuzzle": "分享题目",
+      "statRating": "评分",
+      "statLevel": "级别",
+      "statSolved": "已解",
+      "statTime": "用时",
+      "phaseLabel": "阶段 {{phase}}（步长 {{step}}）"
+    },
+    "gameOver": {
+      "title": "游戏结束",
+      "wonTitle": "你赢了！",
+      "wonSubtitle": "你通关了整个挑战赛。",
+      "wonText": "挑战已完成——开始新一局迎接下一个挑战。",
+      "exhaustedTitle": "全部完成！",
+      "exhaustedSubtitle": "你已经完成了所有评分段的题目。",
+      "areYouAStockfish": "你是 Stockfish 吗？",
+      "maxRating": "最高评分",
+      "puzzlesSolved": "已解题数",
+      "livesLeft": "剩余命数",
+      "levelReached": "到达级别",
+      "time": "用时",
+      "livesLostAt": "失命评分：{{ratings}}",
+      "puzzleReview": "题目回顾",
+      "newHighscore": "新纪录！",
+      "archiving": "归档中…",
+      "archiveRun": "归档本局",
+      "archived": "已归档",
+      "playAgain": "再玩一次",
+      "backToPuzzles": "返回战术题"
+    },
+    "history": {
+      "title": "无尽战术题历史",
+      "noSessions": "暂无游戏记录。",
+      "startPlaying": "开始游戏",
+      "filterAll": "全部",
+      "filterActive": "进行中",
+      "filterArchived": "已归档",
+      "selected": "已选 {{count}} 条",
+      "archive": "归档",
+      "unarchive": "取消归档",
+      "noArchivedSessions": "暂无已归档记录。",
+      "noActiveSessions": "暂无进行中记录。",
+      "colDate": "日期",
+      "colMaxRating": "最高评分",
+      "colSolved": "已解",
+      "colDuration": "时长",
+      "colConfig": "配置",
+      "colMistakes": "失误",
+      "backToEndless": "返回无尽模式"
+    }
+  },
+  "book": {
+    "difficulty": "难度",
+    "offlineUnavailable": "此书本无法离线使用。",
+    "status": {
+      "loading": "加载题目中…",
+      "watchOpponent": "观察对手的走法…",
+      "yourTurn": "轮到你了！找出最佳走法。",
+      "gaveUp": "已放弃——请自行演示解法。",
+      "stockfishThinking": "Stockfish 正在思考…",
+      "yourMoveVsStockfish": "对抗 Stockfish，轮到你走…",
+      "correct": "正确！",
+      "incorrect": "错误",
+      "gaveUpSolution": "已放弃——以下是解法",
+      "checkmate": "将死！",
+      "altSolution": "替代解法——本题有不同的预期走法序列。",
+      "fullGame": "完整对局"
+    },
+    "actions": {
+      "reset": "重置",
+      "giveUp": "放弃",
+      "mouseslip": "误操作",
+      "nextPuzzle": "下一题",
+      "again": "再来一次",
+      "skip": "跳过",
+      "viewFullGame": "查看完整对局",
+      "analyze": "分析",
+      "nextInBook": "书中下一题",
+      "randomInBook": "书中随机题",
+      "sharePuzzle": "分享题目",
+      "backToPuzzle": "返回题目"
+    },
+    "settings": {
+      "title": "设置",
+      "visualizationLevel": "可视化：第 {{level}} 级",
+      "stockfishDepth": "Stockfish 深度",
+      "depthHint": "1（弱）– 24（强）",
+      "mode": "模式",
+      "modeNormal": "普通",
+      "modeRandom": "随机",
+      "modeCrazy": "疯狂",
+      "boardTheme": "棋盘主题",
+      "pieces": "棋子"
+    },
+    "viz": {
+      "titleLevel": "可视化（第 {{level}} 级）",
+      "countdown": "棋子将在 {{seconds}} 秒后消失…",
+      "noMoveYet": "尚未落子——点击起始格 → 目标格。",
+      "show": "显示",
+      "showing": "显示中…",
+      "level0": "普通——拖放",
+      "level1": "盲棋——棋盘冻结，走法以文字显示",
+      "level2": "跳棋——棋子在 3 秒后替换为跳棋",
+      "level3": "暗棋——棋子在 3 秒后替换为黑色标记",
+      "level4": "隐形——棋子在 3 秒后完全消失"
+    },
+    "course": {
+      "backToCourses": "返回课程概览",
+      "sequential": "顺序",
+      "random": "随机",
+      "completed": "课程已完成！",
+      "toOverview": "返回概览"
+    },
+    "weekly": {
+      "backToWeekly": "返回每周内容概览",
+      "label": "每周精选",
+      "noPuzzles": "此每周内容中没有可播放的题目。",
+      "allSolved": "所有题目已完成！"
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "kibanaLink": "Kibana 仪表盘",
+    "tabs": {
+      "users": "用户",
+      "books": "书本",
+      "groups": "群组",
+      "logs": "请求日志"
+    },
+    "users": {
+      "searchLabel": "搜索用户",
+      "toggleAdmin": "切换管理员",
+      "deleteUser": "删除用户",
+      "deleteConfirm": "删除用户「{{username}}」？此操作无法撤销。",
+      "deleted": "用户「{{username}}」已删除",
+      "nowAdmin": "{{username}} 现在是管理员",
+      "noLongerAdmin": "{{username}} 不再是管理员",
+      "columns": {
+        "id": "ID",
+        "username": "用户名",
+        "email": "邮箱",
+        "admin": "管理员",
+        "groups": "群组",
+        "created": "创建时间",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "加载用户失败",
+        "toggleAdmin": "切换管理员失败",
+        "delete": "删除用户失败"
+      }
+    },
+    "books": {
+      "uploadPgn": "上传 PGN",
+      "importing": "导入中…",
+      "poolHint": "为每本书设置题目出现在哪些题库中。",
+      "empty": "暂无导入的书本。",
+      "eloFrom": "从",
+      "eloTo": "到",
+      "adminOnly": "仅管理员",
+      "deleteBook": "删除书本",
+      "deleteConfirm": "删除书本「{{name}}」（共 {{count}} 道题）？",
+      "deleted": "书本「{{name}}」已删除",
+      "imported": "已导入 {{imported}} 道题，跳过 {{skipped}} 道",
+      "importedCount": "已导入 {{count}} 道题",
+      "duplicatesCount": "{{count}} 个重复",
+      "invalidCount": "{{count}} 个无效",
+      "columns": {
+        "book": "书本",
+        "puzzles": "题目数",
+        "difficulty": "难度",
+        "elo": "Elo 范围",
+        "daily": "每日",
+        "random": "随机",
+        "blind": "盲棋",
+        "visibleFor": "可见范围（课程）",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "加载书本失败",
+        "import": "导入失败",
+        "save": "保存失败",
+        "saveGroups": "群组权限更新失败",
+        "delete": "删除失败"
+      }
+    },
+    "groups": {
+      "newGroup": "新建群组",
+      "namePlaceholder": "名称",
+      "descriptionOptional": "描述（可选）",
+      "create": "创建",
+      "empty": "暂无创建的群组。",
+      "manageMembers": "管理成员",
+      "deleteGroup": "删除群组",
+      "membersOf": "成员 · {{name}}",
+      "addUser": "添加用户",
+      "noMembers": "暂无成员。",
+      "created": "群组「{{name}}」已创建",
+      "deleteConfirm": "删除群组「{{name}}」？",
+      "deleted": "群组「{{name}}」已删除",
+      "columns": {
+        "group": "群组",
+        "members": "成员",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "加载群组失败",
+        "create": "创建群组失败",
+        "delete": "删除失败",
+        "loadMembers": "加载成员失败",
+        "addMember": "添加成员失败",
+        "removeMember": "移除成员失败"
+      }
+    },
+    "logs": {
+      "all": "全部",
+      "filter": "筛选",
+      "reset": "重置",
+      "filtered": "（已筛选）",
+      "entryCount": "{{count}} 条记录",
+      "status4xx": "4xx+（错误）",
+      "status5xx": "5xx（服务器）",
+      "status2xx": "2xx+（正常）",
+      "columns": {
+        "time": "时间",
+        "method": "方法",
+        "path": "路径",
+        "status": "状态",
+        "duration": "耗时",
+        "user": "用户",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "加载日志失败"
+      }
+    }
+  },
+  "analysis": {
+    "title": "分析",
+    "engine": "引擎",
+    "depth": "深度",
+    "lines": "变化线",
+    "maxDepth": "最大深度",
+    "backToPuzzle": "返回题目",
+    "calculating": "计算中…",
+    "engineOff": "引擎已关闭",
+    "start": "开始",
+    "flip": "翻转棋盘",
+    "reset": "重置",
+    "noMoves": "尚无走法——请在棋盘上落子。",
+    "fen": "FEN",
+    "loadFen": "加载 FEN",
+    "copyFen": "复制 FEN",
+    "pgn": "PGN",
+    "loadPgn": "加载 PGN"
+  },
+  "stats": {
+    "title": "统计",
+    "currentElo": "战术题 Elo",
+    "totalSolved": "已解",
+    "attempts": "尝试次数",
+    "accuracy": "正确率",
+    "currentStreak": "当前连续",
+    "bestStreak": "最佳连续",
+    "eloProgress": "战术题 Elo 进展",
+    "level": "级别",
+    "allLevels": "全部",
+    "noData": "暂无数据。",
+    "perLevel": "各可视化级别的 Elo",
+    "vizLevel": "级别",
+    "recentPuzzles": "近期题目",
+    "date": "日期",
+    "rating": "评分",
+    "result": "结果",
+    "time": "用时",
+    "byTheme": "按主题",
+    "byRating": "按评分（已解）",
+    "byRatingHint": "各评分段已解题数——悬停查看正确率。",
+    "activity": "活跃度"
+  }
+}

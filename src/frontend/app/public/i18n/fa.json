@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "add": "افزودن",
+    "close": "بستن",
+    "search": "جستجو",
+    "back": "بازگشت",
+    "retry": "تلاش مجدد",
+    "loading": "در حال بارگذاری…",
+    "ok": "تأیید",
+    "remove": "حذف"
+  },
+  "nav": {
+    "dashboard": "داشبورد",
+    "repertoires": "رپرتوارها",
+    "tournaments": "مسابقات",
+    "friends": "دوستان",
+    "puzzles": "تاکتیک‌ها",
+    "weekly": "هفتگی",
+    "courses": "دوره‌ها",
+    "admin": "مدیریت",
+    "profile": "پروفایل",
+    "puzzleHistory": "تاریخچه تاکتیک‌ها",
+    "changelog": "تغییرات",
+    "logout": "خروج",
+    "login": "ورود",
+    "register": "ثبت‌نام",
+    "language": "زبان",
+    "menu": "منو",
+    "info": "اطلاعات",
+    "account": "حساب کاربری",
+    "analysis": "تحلیل",
+    "stats": "آمار"
+  },
+  "app": {
+    "changelogTitle": "تغییرات",
+    "quickstartTitle": "شروع سریع",
+    "qs": {
+      "subscribeTitle": "اشتراک",
+      "subscribeDesc": "در مسابقات عضو شوید تا دسترسی سریع به بازیکنان، جفت‌بندی‌ها و نتایج داشته باشید.",
+      "monitorTitle": "پایش",
+      "monitorDesc": "پایش مسابقه را فعال کنید — دورهای جدید به‌صورت خودکار شناسایی و جمع‌آوری می‌شوند.",
+      "favoritesTitle": "موردعلاقه‌ها",
+      "favoritesDesc": "بازیکنان یا تیم‌ها را به‌عنوان موردعلاقه علامت‌گذاری کنید تا در نمای مسابقه دسترسی سریع داشته باشید.",
+      "chessResultsTitle": "شناسه ChessResults",
+      "chessResultsDesc": "شناسه ChessResults خود را در پروفایل اضافه کنید — مسابقات پیش‌رو به‌صورت خودکار عضو می‌شوند."
+    },
+    "feedback": "بازخورد / گزارش مشکل",
+    "updateAvailable": "نسخه جدیدی در دسترس است.",
+    "reload": "بارگذاری مجدد"
+  },
+  "auth": {
+    "login": {
+      "title": "ورود",
+      "usernameLabel": "نام کاربری",
+      "passwordLabel": "رمز عبور",
+      "rememberMe": "ورود خودکار",
+      "submit": "ورود",
+      "submitting": "در حال ورود...",
+      "registerLink": "حساب کاربری ندارید؟ ثبت‌نام کنید",
+      "failed": "ورود ناموفق بود"
+    },
+    "register": {
+      "title": "ثبت‌نام",
+      "usernameLabel": "نام کاربری",
+      "emailLabel": "ایمیل",
+      "passwordLabel": "رمز عبور",
+      "passwordHint": "حداقل ۴ کاراکتر",
+      "submit": "ثبت‌نام",
+      "submitting": "در حال ثبت‌نام...",
+      "loginLink": "قبلاً حساب دارید؟ وارد شوید",
+      "failed": "ثبت‌نام ناموفق بود"
+    }
+  },
+  "dashboard": {
+    "welcome": "خوش آمدید، {{username}}!",
+    "subscribedTournaments": "مسابقات عضو شده",
+    "subscribedAt": "عضویت در {{date}}",
+    "puzzles": {
+      "title": "تاکتیک‌ها",
+      "subtitle": "Elo {{elo}} | {{solved}} حل شده ({{accuracy}}٪)",
+      "solve": "حل تاکتیک",
+      "endless": "بی‌پایان"
+    },
+    "subscriptions": {
+      "title": "اشتراک مسابقات",
+      "count": "{{count}} اشتراک",
+      "browse": "مرور مسابقات"
+    },
+    "friends": {
+      "title": "دوستان",
+      "count": "{{count}} دوست",
+      "manage": "مدیریت دوستان"
+    },
+    "repertoires": {
+      "title": "رپرتوارها",
+      "count": "{{count}} رپرتوار",
+      "viewAll": "مشاهده همه"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "بازی",
+    "nav": {
+      "first": "اولین حرکت",
+      "previous": "حرکت قبلی",
+      "next": "حرکت بعدی",
+      "last": "آخرین حرکت"
+    }
+  },
+  "profile": {
+    "title": "پروفایل: {{username}}",
+    "firstName": "نام",
+    "lastName": "نام خانوادگی",
+    "searchPlayer": "جستجوی بازیکن",
+    "noResults": "نتیجه‌ای یافت نشد.",
+    "displayName": "نام نمایشی",
+    "fideId": "شناسه FIDE",
+    "chessResultsId": "شناسه ChessResults",
+    "chessComUsername": "نام کاربری Chess.com",
+    "lichessUsername": "نام کاربری Lichess",
+    "saving": "در حال ذخیره...",
+    "saved": "پروفایل ذخیره شد",
+    "saveFailed": "ذخیره پروفایل ناموفق بود",
+    "searchFailed": "جستجو ناموفق بود",
+    "chessResultsApplied": "داده‌های ChessResults اعمال شد",
+    "fideApplied": "داده‌های FIDE اعمال شد",
+    "discord": {
+      "title": "Discord",
+      "hint": "یک لینک شخصی از ربات Discord RookHub (دستور /link یا یک پیام خصوصی تاکتیک) باز کنید تا حساب Discord خود را متصل کنید.",
+      "unlink": "قطع اتصال",
+      "unlinked": "Discord قطع شد",
+      "linked": "حساب Discord متصل شد",
+      "linkConflict": "این حساب Discord قبلاً به کاربر دیگری در RookHub متصل شده است.",
+      "linkFailed": "اتصال حساب Discord ناموفق بود",
+      "stashed": "وارد شوید یا ثبت‌نام کنید تا اتصال Discord خود را کامل کنید."
+    },
+    "offline": {
+      "title": "آفلاین",
+      "hint": "تاکتیک‌ها را روی این دستگاه ذخیره کنید تا بدون اینترنت به حل آن‌ها ادامه دهید (مختص هر دستگاه).",
+      "puzzleCount": "تاکتیک‌های آفلاین",
+      "endlessRuns": "بازی‌های بی‌پایان آفلاین",
+      "cacheSize": "حجم حافظه",
+      "books": "{{count}} کتاب",
+      "clear": "پاک‌سازی حافظه",
+      "cleared": "حافظه آفلاین پاک شد",
+      "pending": "{{count}} پاسخ در انتظار همگام‌سازی — هنگام اتصال مجدد به‌صورت خودکار ارسال می‌شوند."
+    },
+    "delete": {
+      "title": "حذف حساب",
+      "hint": "حساب کاربری شما به‌طور دائمی حذف می‌شود.",
+      "button": "حذف حساب",
+      "warn": "هشدار: هویت و داده‌های شخصی شما به‌طور غیرقابل بازگشت حذف می‌شوند. لطفاً رمز عبور خود را برای تأیید وارد کنید.",
+      "password": "رمز عبور",
+      "confirm": "حذف دائمی",
+      "deleting": "در حال حذف...",
+      "done": "حساب شما حذف شد.",
+      "wrongPassword": "رمز عبور نادرست است.",
+      "failed": "حذف حساب ناموفق بود.",
+      "moreInfo": "اطلاعات بیشتر درباره حذف حساب"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "حذف حساب",
+      "intro": "این صفحه توضیح می‌دهد که چگونه حساب RookHub خود را حذف کنید و با داده‌هایتان چه اتفاقی می‌افتد.",
+      "inAppTitle": "نحوه حذف حساب",
+      "inApp": "وارد برنامه شوید و به پروفایل → «حذف حساب» بروید. با رمز عبور تأیید کنید. حساب بلافاصله حذف می‌شود.",
+      "removedTitle": "چه چیزی حذف می‌شود",
+      "removed1": "هویت و داده‌های شخصی شما (نام کاربری، ایمیل، نام نمایشی/واقعی، شناسه FIDE/ChessResults، نام Chess.com/Lichess، لینک Discord) و دسترسی ورود.",
+      "removed2": "محتوا و لینک‌های شخصی: رپرتوارها، اشتراک‌ها/موردعلاقه‌های مسابقات، دوستی‌ها و عضویت در گروه‌ها.",
+      "keptTitle": "چه چیزی به‌صورت ناشناس نگه داشته می‌شود",
+      "kept": "آمار کلی حل‌کردن/بازی (مثلاً تاکتیک‌های حل‌شده) در قالب ناشناس که قابل ردیابی به شما نیست، نگه داشته می‌شود.",
+      "contactTitle": "تماس",
+      "contact": "برای درخواست‌های حذف یا سؤالات، با ما تماس بگیرید",
+      "back": "بازگشت به ورود"
+    },
+    "privacy": {
+      "title": "سیاست حفظ حریم خصوصی",
+      "updated": "آخرین به‌روزرسانی: ۳ ژوئن ۲۰۲۶",
+      "intro": "RookHub یک پلتفرم آموزش شطرنج (تاکتیک‌ها، حالت بی‌پایان، دوره‌ها، رپرتوارها) است. این سیاست توضیح می‌دهد که داده‌های شخصی چگونه طبق GDPR پردازش می‌شوند.",
+      "controllerTitle": "کنترل‌کننده داده",
+      "controller": "کنترل‌کننده پردازش داده، اپراتور ذکر شده در بخش حقوقی است",
+      "dataTitle": "چه داده‌هایی پردازش می‌کنیم",
+      "dataIntro": "بسته به نحوه استفاده شما، داده‌های زیر را پردازش می‌کنیم:",
+      "dataAccount": "داده‌های حساب: نام کاربری، آدرس ایمیل، رمز عبور (فقط به‌صورت هش ذخیره می‌شود).",
+      "dataProfile": "داده‌های پروفایل (اختیاری): نام نمایشی/واقعی، شناسه FIDE، شناسه ChessResults، نام کاربری Chess.com/Lichess، لینک اختیاری Discord.",
+      "dataUsage": "داده‌های استفاده: تاکتیک‌های حل‌شده، پیشرفت بی‌پایان/دوره‌ها و آمار، رتبه بازی، زمان‌بندی ورود.",
+      "dataTechnical": "داده‌های فنی: آدرس IP، نقاط پایانی درخواست‌شده با زمان‌بندی و یک شناسه بازدیدکننده مستعار (اندازه‌گیری بازدید) در لاگ‌های سرور.",
+      "purposesTitle": "اهداف و مبانی قانونی",
+      "purposes": "ارائه حساب و قابلیت‌ها (اجرای قرارداد، ماده ۶(۱)(ب) GDPR) و همچنین امنیت عملیاتی، تحلیل خطا و اندازه‌گیری بازدید از طریق لاگ‌ها (منافع مشروع، ماده ۶(۱)(و) GDPR).",
+      "thirdTitle": "دریافت‌کنندگان / سرویس‌های شخص ثالث",
+      "thirdIntro": "داده‌ها فروخته نمی‌شوند. بسته به استفاده شما، سرویس‌های زیر درگیر هستند:",
+      "thirdDiscord": "Discord: فقط در صورت اتصال داوطلبانه حساب (شناسه/نام Discord) برای نمایش در ربات Discord RookHub.",
+      "thirdChessresults": "chess-results.com: داده‌های مسابقات هنگام تنظیم شناسه ChessResults یا بارگذاری مسابقات از سمت سرور دریافت می‌شوند.",
+      "thirdChesssites": "Chess.com / Lichess: فقط نام‌های کاربری که داوطلبانه وارد می‌کنید؛ هیچ انتقال داده خودکاری وجود ندارد.",
+      "thirdLogging": "Elasticsearch/Kibana: لاگ‌گیری/پایش خودمیزبانی شده در زیرساخت ما.",
+      "thirdHosting": "میزبانی: روی زیرساخت سرور اختصاصی ما با پروکسی معکوس TLS اجرا می‌شود.",
+      "storageTitle": "ذخیره‌سازی محلی (کوکی‌ها/storage)",
+      "storage": "ما از کوکی‌های ردیابی استفاده نمی‌کنیم. ذخیره‌سازی مرورگر (localStorage) شامل توکن ورود، تنظیمات و — در صورت فعال بودن — تاکتیک‌های آفلاین است. این‌ها روی دستگاه شما باقی می‌مانند.",
+      "retentionTitle": "نگهداری و حذف",
+      "retention": "داده‌های حساب تا زمانی که حساب خود را حذف کنید، ذخیره می‌شوند. می‌توانید حساب خود را در هر زمانی حذف کنید — هویت و داده‌های شخصی حذف می‌شوند، آمار ناشناس نگه داشته می‌شود. بیشتر:",
+      "rightsTitle": "حقوق شما",
+      "rights": "شما حق دسترسی، اصلاح، پاک‌سازی، محدودیت، انتقال داده و اعتراض، و همچنین حق شکایت به مرجع نظارتی (در اتریش: مرجع حفاظت از داده‌ها) دارید.",
+      "contactTitle": "تماس",
+      "contact": "برای سؤالات حریم خصوصی، با ما تماس بگیرید",
+      "back": "بازگشت به ورود"
+    },
+    "impressum": {
+      "title": "اطلاعات حقوقی",
+      "operatorTitle": "ارائه‌دهنده خدمات",
+      "name": "[نام / شرکت — لطفاً تکمیل کنید]",
+      "address": "[آدرس — خیابان، کد پستی، شهر، کشور]",
+      "uid": "[شناسه مالیاتی، در صورت شرکت بودن]",
+      "contactTitle": "تماس",
+      "contact": "ایمیل",
+      "disclaimer": "توجه: مشخصات ارائه‌دهنده خدمات موقتی هستند و باید قبل از انتشار با داده‌های واقعی جایگزین شوند. این صفحه پیش‌نویس است و مشاوره حقوقی محسوب نمی‌شود.",
+      "back": "بازگشت به ورود"
+    }
+  },
+  "friends": {
+    "title": "دوستان",
+    "searchUsers": "جستجوی کاربران",
+    "searchResults": "نتایج جستجو",
+    "tabs": {
+      "friends": "دوستان ({{count}})",
+      "requests": "درخواست‌ها ({{count}})"
+    },
+    "empty": {
+      "friends": "هنوز دوستی ندارید. کاربران را جستجو کنید تا دوست اضافه کنید!",
+      "requests": "درخواست در انتظاری وجود ندارد."
+    },
+    "sentOn": "ارسال شده در {{date}}",
+    "requestSent": "درخواست دوستی ارسال شد",
+    "errors": {
+      "loadFriends": "بارگذاری دوستان ناموفق بود",
+      "loadRequests": "بارگذاری درخواست‌ها ناموفق بود",
+      "search": "جستجو ناموفق بود",
+      "sendRequest": "ارسال درخواست ناموفق بود",
+      "acceptRequest": "پذیرش درخواست ناموفق بود",
+      "declineRequest": "رد درخواست ناموفق بود",
+      "removeFriend": "حذف دوست ناموفق بود"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "رپرتوارهای من",
+      "new": "رپرتوار جدید",
+      "fileCount": "{{count}} فایل",
+      "public": "عمومی",
+      "private": "خصوصی",
+      "noDescription": "بدون توضیحات",
+      "open": "باز کردن",
+      "empty": "هنوز رپرتواری ندارید. یکی بسازید تا شروع کنید!",
+      "loadFailed": "بارگذاری رپرتوارها ناموفق بود",
+      "createFailed": "ساخت رپرتوار ناموفق بود",
+      "deleteConfirm": "این رپرتوار حذف شود؟",
+      "deleteFailed": "حذف رپرتوار ناموفق بود"
+    },
+    "detail": {
+      "noDescription": "بدون توضیحات",
+      "modeLines": "خطوط",
+      "modeTree": "درخت",
+      "modeEdit": "ویرایش"
+    },
+    "dialog": {
+      "title": "رپرتوار جدید",
+      "name": "نام",
+      "description": "توضیحات",
+      "public": "عمومی",
+      "create": "ایجاد"
+    },
+    "lines": {
+      "allLines": "همه خطوط",
+      "empty": "خطی در این رپرتوار یافت نشد."
+    },
+    "tree": {
+      "start": "شروع",
+      "lineCount": "{{count}} خط",
+      "lineCountPlural": "{{count}} خط",
+      "empty": "پایان خط — حرکت بیشتری وجود ندارد."
+    },
+    "edit": {
+      "uploadHint": "فایل‌های PGN را اینجا بکشید و رها کنید یا برای آپلود کلیک کنید",
+      "files": "فایل‌ها ({{count}})",
+      "empty": "هنوز فایلی وجود ندارد. فایل‌های PGN آپلود کنید تا شروع کنید!",
+      "filesSkipped": "{{count}} فایل نادیده گرفته شد (فقط .pgn، حداکثر ۱۰ مگابایت)",
+      "uploadSuccess": "{{count}} فایل آپلود شد",
+      "uploadPartial": "{{ok}} آپلود شد، {{failed}} ناموفق",
+      "downloadFailed": "دانلود ناموفق بود",
+      "deleteConfirm": "این فایل حذف شود؟"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "بازآوری",
+      "subscribe": "عضویت",
+      "unsubscribe": "لغو عضویت",
+      "monitor": "پایش",
+      "monitoringUntil": "پایش تا {{time}}",
+      "share": "اشتراک‌گذاری",
+      "subscribed": "عضو شدید!",
+      "unsubscribed": "عضویت لغو شد",
+      "failed": "ناموفق",
+      "unsubscribeFailed": "لغو عضویت ناموفق بود"
+    },
+    "tabs": {
+      "players": "بازیکنان ({{count}})",
+      "teams": "تیم‌ها ({{count}})",
+      "pairings": "جفت‌بندی‌ها"
+    },
+    "favoritesOnly": "فقط موردعلاقه‌ها",
+    "favorites": {
+      "added": "{{name}} به موردعلاقه‌ها اضافه شد",
+      "removed": "{{name}} از موردعلاقه‌ها حذف شد",
+      "addedShort": "{{name}} موردعلاقه شد",
+      "removedShort": "{{name}} حذف شد"
+    },
+    "players": {
+      "snr": "شماره",
+      "title": "عنوان",
+      "name": "نام",
+      "fideId": "شناسه FIDE",
+      "elo": "Elo",
+      "country": "کشور",
+      "team": "تیم",
+      "club": "باشگاه",
+      "boardShort": "میز"
+    },
+    "teams": {
+      "rank": "رتبه",
+      "team": "تیم",
+      "points": "امتیاز"
+    },
+    "pairings": {
+      "round": "دور",
+      "roundLabel": "دور {{round}}",
+      "board": "میز",
+      "white": "سفید",
+      "black": "سیاه",
+      "home": "خانگی",
+      "away": "مهمان",
+      "result": "نتیجه"
+    },
+    "monitor": {
+      "stopped": "پایش متوقف شد",
+      "stopFailed": "توقف پایش ناموفق بود",
+      "activated": "پایش فعال شد",
+      "activateFailed": "فعال‌سازی پایش ناموفق بود",
+      "newRoundTitle": "دور جدید موجود است!",
+      "newRoundBody": "دور {{round}} منتشر شد.",
+      "newRoundSnack": "دور جدید موجود است! دور {{round}}"
+    },
+    "list": {
+      "title": "مسابقات",
+      "importTitle": "وارد کردن مسابقه",
+      "importSubtitle": "شناسه مسابقه chess-results.com را برای جمع‌آوری وارد کنید",
+      "chessResultsId": "شناسه Chess-Results",
+      "idPlaceholder": "مثلاً ۱۲۳۴۵۶۷",
+      "idHintPrefix": "عدد از chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "جمع‌آوری",
+      "crawling": "جمع‌آوری مسابقه {{id}}... کار #{{jobId}}",
+      "crawlerUnavailable": "اتصال به جمع‌آورنده مسابقات برقرار نشد. اطمینان حاصل کنید که سرویس جمع‌آورنده در حال اجراست.",
+      "details": "جزئیات",
+      "hide": "پنهان کردن",
+      "empty": "مسابقه‌ای یافت نشد.",
+      "showHidden": "نمایش {{count}} پنهان‌شده",
+      "imported": "مسابقه وارد شد!",
+      "crawlStartFailed": "شروع جمع‌آوری ناموفق بود",
+      "crawlFailed": "جمع‌آوری ناموفق بود",
+      "crawlConnectionLost": "اتصال به کار جمع‌آوری قطع شد"
+    },
+    "detail": {
+      "loadTournamentFailed": "بارگذاری مسابقه ناموفق بود",
+      "loadSubscriptionFailed": "بارگذاری وضعیت اشتراک ناموفق بود",
+      "reloadTournamentFailed": "بارگذاری مجدد مسابقه ناموفق بود",
+      "refreshStartFailed": "شروع بازآوری ناموفق بود",
+      "dataRefreshed": "داده‌ها بازآوری شدند!",
+      "refreshFailed": "بازآوری ناموفق بود",
+      "loadPlayersFailed": "بارگذاری بازیکنان ناموفق بود",
+      "loadTeamsFailed": "بارگذاری تیم‌ها ناموفق بود",
+      "loadPairingsFailed": "بارگذاری جفت‌بندی‌ها ناموفق بود",
+      "loadTeamDetailsFailed": "بارگذاری جزئیات تیم ناموفق بود"
+    },
+    "public": {
+      "notFound": "مسابقه یافت نشد."
+    },
+    "share": {
+      "title": "اشتراک‌گذاری مسابقه",
+      "copyLink": "کپی لینک",
+      "linkCopied": "لینک کپی شد!",
+      "copyFailed": "کپی ناموفق بود"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "در حال بارگذاری تاکتیک…",
+      "loadFailed": "بارگذاری تاکتیک ناموفق بود",
+      "offlineNoCache": "شما آفلاین هستید و تاکتیکی ذخیره نشده است. برای ذخیره تاکتیک‌ها برای بازی آفلاین، این صفحه را یک‌بار در حالت آنلاین باز کنید.",
+      "watchOpponent": "حرکت حریف را تماشا کنید…",
+      "yourTurn": "نوبت شماست!",
+      "gaveUpPlayOut": "تسلیم شدید — خودتان راه‌حل را بازی کنید.",
+      "thinking": "Stockfish در حال فکر کردن است…"
+    },
+    "result": {
+      "solutionPlayedOut": "راه‌حل بازی شد.",
+      "tryYourselfNextTime": "شاید دفعه بعد خودتان حل کنید!",
+      "checkmate": "کیش و مات!",
+      "alternativeSolution": "راه‌حل جایگزین — این تاکتیک دنباله حرکات متفاوتی داشت.",
+      "correct": "درست!",
+      "incorrect": "نادرست"
+    },
+    "eval": {
+      "start": "شروع",
+      "now": "اکنون",
+      "show": "نمایش ارزیابی",
+      "hide": "پنهان کردن ارزیابی"
+    },
+    "actions": {
+      "reset": "بازنشانی",
+      "mouseslip": "لغزش موس",
+      "giveUp": "تسلیم شدن",
+      "nextPuzzle": "تاکتیک بعدی",
+      "share": "اشتراک‌گذاری تاکتیک",
+      "loadPuzzle": "بارگذاری تاکتیک",
+      "reviewLast": "مرور آخرین تاکتیک",
+      "endlessMode": "حالت بی‌پایان",
+      "analyze": "تحلیل"
+    },
+    "info": {
+      "rating": "رتبه"
+    },
+    "stats": {
+      "title": "آمار شما",
+      "solved": "حل‌شده",
+      "accuracy": "دقت",
+      "streak": "رشته",
+      "best": "بهترین"
+    },
+    "settings": {
+      "tooltip": "تنظیمات"
+    },
+    "filters": {
+      "title": "فیلترها",
+      "visualization": "تجسم: سطح {{level}}",
+      "difficulty": "سختی",
+      "difficultyHint": "تاکتیک‌هایی در محدوده Elo شما ({{elo}})",
+      "depthHint": "۱ (ضعیف) – ۲۴ (قوی)",
+      "skipSolved": "نادیده گرفتن حل‌شده‌ها"
+    },
+    "difficulty": {
+      "veryEasy": "خیلی آسان",
+      "easy": "آسان",
+      "normal": "معمولی",
+      "hard": "سخت",
+      "veryHard": "خیلی سخت"
+    },
+    "theme": {
+      "mode": "حالت",
+      "modeNormal": "معمولی",
+      "modeRandom": "تصادفی",
+      "modeCrazy": "دیوانه‌وار",
+      "boardTheme": "قالب صفحه",
+      "pieces": "مهره‌ها"
+    },
+    "viz": {
+      "title": "تجسم (سطح {{level}})",
+      "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند…",
+      "noMoveYet": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
+      "show": "نمایش",
+      "showing": "در حال نمایش…"
+    },
+    "share": {
+      "title": "اشتراک‌گذاری تاکتیک",
+      "copied": "لینک کپی شد!",
+      "copyFailed": "کپی ناموفق بود"
+    }
+  },
+  "courses": {
+    "title": "دوره‌ها",
+    "intro": "کتاب وارد شده را تاکتیک به تاکتیک کار کنید — به‌ترتیب یا تصادفی. پیشرفت شما ذخیره می‌شود.",
+    "emptyHint": "هنوز کتابی وارد نشده است. کتاب‌ها را در بخش مدیریت زیر «کتاب‌ها» وارد کنید.",
+    "puzzleCount": "{{count}} تاکتیک",
+    "completed": "دوره تکمیل شد",
+    "sequential": "ترتیبی",
+    "random": "تصادفی",
+    "resetTooltip": "بازنشانی پیشرفت",
+    "resetConfirm": "پیشرفت «{{name}}» بازنشانی شود؟",
+    "loadFailed": "بارگذاری دوره‌ها ناموفق بود",
+    "resetFailed": "بازنشانی ناموفق بود",
+    "offlineSaveTooltip": "ذخیره کتاب به‌صورت آفلاین",
+    "offlineRemoveTooltip": "حذف نسخه آفلاین",
+    "offlineSaved": "«{{name}}» آفلاین ذخیره شد ({{count}} تاکتیک)",
+    "offlineRemoved": "«{{name}}» از آفلاین حذف شد",
+    "offlineFailed": "ذخیره کتاب به‌صورت آفلاین ناموفق بود"
+  },
+  "weekly": {
+    "title": "هفتگی",
+    "intro": "پست‌های هفتگی شطرنج برای مرور. تاریخ و ساعت زمان برنامه‌ریزی شده پست را نشان می‌دهد.",
+    "oClock": "",
+    "play": "بازی کردن",
+    "empty": "هنوز پستی هفتگی وجود ندارد.",
+    "deleteConfirm": "پست هفتگی «{{title}}» حذف شود؟",
+    "created": "پست هفتگی ایجاد شد",
+    "deleted": "پست هفتگی حذف شد",
+    "loadFailed": "بارگذاری پست‌های هفتگی ناموفق بود",
+    "uploadFailed": "آپلود ناموفق بود",
+    "saveFailed": "ذخیره ناموفق بود",
+    "deleteFailed": "حذف ناموفق بود",
+    "fields": {
+      "date": "تاریخ",
+      "time": "ساعت",
+      "titleOptional": "عنوان (اختیاری)"
+    },
+    "columns": {
+      "scheduled": "تاریخ",
+      "title": "عنوان",
+      "actions": "عملیات"
+    },
+    "upload": {
+      "title": "آپلود پست هفتگی جدید",
+      "choosePgn": "انتخاب PGN",
+      "titlePlaceholder": "از نام فایل",
+      "create": "ایجاد",
+      "hint": "پیش‌فرض: آخرین تاریخ + ۷ روز، همان ساعت (در غیر این صورت ۱۹:۰۰)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "شما آفلاین هستید و هیچ بازی‌ای ذخیره نشده است. یک‌بار در حالت آنلاین بی‌پایان را باز کنید تا تاکتیک‌ها برای بازی آفلاین ذخیره شوند.",
+    "help": {
+      "title": "حالت تاکتیک بی‌پایان",
+      "gameplayHeading": "نحوه کار",
+      "gameplayP1": "تاکتیک‌های شطرنج با سختی فزاینده حل می‌کنید. از یک رتبه قابل تنظیم شروع می‌کنید و راه خود را بالا می‌برید. رتبه به‌طور خودکار در طول فازهای Fasttrack افزایش می‌یابد (ببینید زیر).",
+      "gameplayP2": "شما <strong>۳ زندگی</strong> دارید. در ۰ زندگی بازی تمام می‌شود.",
+      "movesHeading": "حرکات و Stockfish",
+      "movesP1": "هر تاکتیک یک <strong>راه‌حل مقصود</strong> (دنباله‌ای از حرکات) دارد. تا زمانی که حرکات درست را بازی می‌کنید، از آن دنباله پیروی می‌کنید.",
+      "movesP2": "اگر یک <strong>حرکت اشتباه</strong> بازی کنید، <strong>Stockfish</strong> (موتور شطرنج) طرف مقابل را به عهده می‌گیرد. سپس آزادانه در برابر Stockfish بازی می‌کنید. قدرت آن از طریق عمق Stockfish قابل تنظیم است.",
+      "movesItem1": "<strong>کیش و مات کردن Stockfish</strong> به‌عنوان راه‌حل جایگزین حساب می‌شود — زندگی از دست نمی‌دهید!",
+      "movesItem2": "<strong>Stockfish شما را کیش و مات کند</strong> — یک زندگی از دست می‌دهید",
+      "movesItem3": "بازی در برابر Stockfish تا کیش و مات یا تسلیم شدن ادامه می‌یابد",
+      "buttonsHeading": "دکمه‌ها در طول بازی",
+      "buttonsShowEval": "<strong>نمایش ارزیابی</strong> — ارزیابی Stockfish را نشان می‌دهد (شروع در مقابل اکنون)",
+      "buttonsReset": "<strong>بازنشانی</strong> — تاکتیک را بازنشانی می‌کند اما یک زندگی هزینه دارد",
+      "buttonsMouseslip": "<strong>لغزش موس</strong> — آخرین حرکت اشتباه را لغو می‌کند (یک‌بار در هر تاکتیک، رایگان)",
+      "buttonsGiveUp": "<strong>تسلیم شدن</strong> — تسلیم، یک زندگی هزینه دارد",
+      "settingsHeading": "تنظیمات",
+      "settingsStartRating": "<strong>رتبه شروع</strong> — رتبه تاکتیکی که از آن شروع می‌کنید",
+      "settingsStockfishDepth": "<strong>عمق Stockfish</strong> — قدرت موتور (۱ = خیلی ضعیف، ۲۴ = حداکثر قدرت)",
+      "settingsThemes": "<strong>موضوعات</strong> — اختیاری: فقط موضوعات تاکتیکی خاص (مثلاً «fork pin»)",
+      "fasttrackHeading": "افزایش سختی (Fasttrack)",
+      "fasttrackP1": "افزایش بر اساس عملکرد گذشته شما تنظیم می‌شود: جلسات اخیر شما را تحلیل می‌کند و رتبه‌ای که معمولاً زندگی از دست می‌دهید را محاسبه می‌کند.",
+      "fasttrackPhase1": "<strong>فاز ۱ (تاکتیک‌های ۱–۵)</strong> — افزایش سریع تا آستانه اول شما",
+      "fasttrackPhase2": "<strong>فاز ۲ (تاکتیک‌های ۶–۱۰)</strong> — افزایش از آستانه اول تا دوم",
+      "fasttrackPhase3": "<strong>فاز ۳ (از تاکتیک ۱۱ به بعد)</strong> — گام ثابت ۲۰",
+      "fasttrackP2": "مقادیر آستانه (آستانه اول/دوم) به‌صورت خودکار محاسبه می‌شوند اما می‌توان آن‌ها را به‌صورت دستی تنظیم کرد. روی «خودکار: …» کلیک کنید تا مقدار بازنشانی شود."
+    },
+    "config": {
+      "title": "حالت تاکتیک بی‌پایان",
+      "subtitle": "سختی فزاینده — تا کجا می‌توانید بروید؟",
+      "startRating": "رتبه شروع",
+      "stockfishDepth": "عمق Stockfish",
+      "stockfishDepthHint": "۱ (ضعیف) – ۲۴ (قوی)",
+      "themes": "موضوعات (اختیاری)",
+      "themesPlaceholder": "مثلاً fork pin",
+      "thresholdExplain": "رتبه‌هایی که معمولاً زندگی از دست می‌دهید. برای رد شدن سریع‌تر یا کندتر از تاکتیک‌های آسان‌تر تنظیم کنید.",
+      "firstThreshold": "آستانه اول",
+      "secondThreshold": "آستانه دوم",
+      "auto": "خودکار: {{value}}",
+      "step": "گام {{step}}",
+      "phase1Label": "فاز ۱ (سطح ۱–۵)",
+      "phase2Label": "فاز ۲ (سطح ۶–۱۰)",
+      "phase3Label": "فاز ۳ (سطح ۱۱+)",
+      "curveHint": "منحنی رتبه (هنگام شروع ثابت می‌شود):",
+      "curvePuzzle": "تاکتیک {{n}}",
+      "settings": "تنظیمات",
+      "visualizationLevel": "تجسم: سطح {{level}}",
+      "mode": "حالت",
+      "modeNormal": "معمولی",
+      "modeRandom": "تصادفی",
+      "modeCrazy": "دیوانه‌وار",
+      "boardTheme": "قالب صفحه",
+      "pieces": "مهره‌ها",
+      "highscore": "بهترین رکورد: رتبه {{rating}}",
+      "sessionsPlayed": "{{count}} جلسه بازی شده",
+      "viewHistory": "مشاهده تاریخچه",
+      "unfinishedRun": "بازی ناتمام: سطح {{level}} | {{solved}} حل‌شده | {{lives}} زندگی | {{max}} حداکثر",
+      "continue": "ادامه",
+      "archiveAndNew": "بایگانی و بازی جدید",
+      "newGame": "بازی جدید",
+      "start": "شروع"
+    },
+    "game": {
+      "visualization": "تجسم (سطح {{level}})",
+      "vizCountdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
+      "vizNoMove": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
+      "vizShow": "نمایش",
+      "vizShowing": "در حال نمایش...",
+      "loadingPuzzle": "در حال بارگذاری تاکتیک...",
+      "watchOpponent": "حرکت حریف را تماشا کنید...",
+      "yourTurn": "نوبت شماست! بهترین حرکت را پیدا کنید.",
+      "yourMove": "حرکت شما...",
+      "opponentThinking": "حریف در حال فکر کردن است...",
+      "evalStart": "شروع",
+      "evalNow": "اکنون",
+      "showEval": "نمایش ارزیابی",
+      "hideEval": "پنهان کردن ارزیابی",
+      "reset": "بازنشانی",
+      "mouseslip": "لغزش موس",
+      "giveUp": "تسلیم شدن",
+      "checkmate": "کیش و مات!",
+      "alternativeSolution": "راه‌حل جایگزین — این تاکتیک دنباله متفاوتی داشت.",
+      "correct": "درست!",
+      "wrong": "اشتباه!",
+      "gaveUp": "تسلیم شدید",
+      "continue": "ادامه",
+      "analyze": "تحلیل",
+      "reviewLast": "تحلیل آخرین تاکتیک",
+      "puzzleRating": "رتبه تاکتیک: {{rating}}",
+      "levelRange": "سطح {{level}} ({{min}}–{{max}})",
+      "showTags": "نمایش برچسب‌ها",
+      "hideTags": "پنهان کردن برچسب‌ها",
+      "sharePuzzle": "اشتراک‌گذاری تاکتیک",
+      "statRating": "رتبه",
+      "statLevel": "سطح",
+      "statSolved": "حل‌شده",
+      "statTime": "زمان",
+      "phaseLabel": "فاز {{phase}} (گام {{step}})"
+    },
+    "gameOver": {
+      "title": "بازی تمام شد",
+      "wonTitle": "برنده شدید!",
+      "wonSubtitle": "تمام چالش‌ها را پشت سر گذاشتید.",
+      "wonText": "زنجیر شکست — یک بازی جدید برای چالش بعدی شروع کنید.",
+      "exhaustedTitle": "تمام شد!",
+      "exhaustedSubtitle": "تمام محدوده‌های رتبه تاکتیک را بازی کردید.",
+      "areYouAStockfish": "آیا شما یک Stockfish هستید؟",
+      "maxRating": "حداکثر رتبه",
+      "puzzlesSolved": "تاکتیک‌های حل‌شده",
+      "livesLeft": "زندگی باقی‌مانده",
+      "levelReached": "سطح رسیده",
+      "time": "زمان",
+      "livesLostAt": "زندگی از دست رفته در: {{ratings}}",
+      "puzzleReview": "مرور تاکتیک",
+      "newHighscore": "رکورد جدید!",
+      "archiving": "در حال بایگانی...",
+      "archiveRun": "بایگانی این بازی",
+      "archived": "بایگانی شد",
+      "playAgain": "بازی مجدد",
+      "backToPuzzles": "بازگشت به تاکتیک‌ها"
+    },
+    "history": {
+      "title": "تاریخچه تاکتیک بی‌پایان",
+      "noSessions": "هنوز جلسه‌ای بازی نشده است.",
+      "startPlaying": "شروع بازی",
+      "filterAll": "همه",
+      "filterActive": "فعال",
+      "filterArchived": "بایگانی‌شده",
+      "selected": "{{count}} انتخاب شده",
+      "archive": "بایگانی",
+      "unarchive": "خروج از بایگانی",
+      "noArchivedSessions": "جلسه بایگانی‌شده‌ای وجود ندارد.",
+      "noActiveSessions": "جلسه فعالی وجود ندارد.",
+      "colDate": "تاریخ",
+      "colMaxRating": "حداکثر رتبه",
+      "colSolved": "حل‌شده",
+      "colDuration": "مدت زمان",
+      "colConfig": "تنظیمات",
+      "colMistakes": "اشتباهات",
+      "backToEndless": "بازگشت به حالت بی‌پایان"
+    }
+  },
+  "book": {
+    "difficulty": "سختی",
+    "offlineUnavailable": "این کتاب به‌صورت آفلاین در دسترس نیست.",
+    "status": {
+      "loading": "در حال بارگذاری تاکتیک...",
+      "watchOpponent": "حرکت حریف را تماشا کنید...",
+      "yourTurn": "نوبت شماست! بهترین حرکت را پیدا کنید.",
+      "gaveUp": "تسلیم شدید — خودتان راه‌حل را بازی کنید.",
+      "stockfishThinking": "Stockfish در حال فکر کردن است...",
+      "yourMoveVsStockfish": "حرکت شما در برابر Stockfish...",
+      "correct": "درست!",
+      "incorrect": "نادرست",
+      "gaveUpSolution": "تسلیم شدید — این راه‌حل است",
+      "checkmate": "کیش و مات!",
+      "altSolution": "راه‌حل جایگزین — این تاکتیک دنباله حرکات متفاوتی داشت.",
+      "fullGame": "بازی کامل"
+    },
+    "actions": {
+      "reset": "بازنشانی",
+      "giveUp": "تسلیم شدن",
+      "mouseslip": "لغزش موس",
+      "nextPuzzle": "تاکتیک بعدی",
+      "again": "دوباره",
+      "skip": "رد کردن",
+      "viewFullGame": "مشاهده بازی کامل",
+      "analyze": "تحلیل",
+      "nextInBook": "بعدی در کتاب",
+      "randomInBook": "تصادفی از کتاب",
+      "sharePuzzle": "اشتراک‌گذاری تاکتیک",
+      "backToPuzzle": "بازگشت به تاکتیک"
+    },
+    "settings": {
+      "title": "تنظیمات",
+      "visualizationLevel": "تجسم: سطح {{level}}",
+      "stockfishDepth": "عمق Stockfish",
+      "depthHint": "۱ (ضعیف) – ۲۴ (قوی)",
+      "mode": "حالت",
+      "modeNormal": "معمولی",
+      "modeRandom": "تصادفی",
+      "modeCrazy": "دیوانه‌وار",
+      "boardTheme": "قالب صفحه",
+      "pieces": "مهره‌ها"
+    },
+    "viz": {
+      "titleLevel": "تجسم (سطح {{level}})",
+      "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
+      "noMoveYet": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
+      "show": "نمایش",
+      "showing": "در حال نمایش...",
+      "level0": "معمولی — کشیدن و رها کردن",
+      "level1": "کور — صفحه ثابت، حرکات به‌صورت متن",
+      "level2": "دامه — مهره‌ها بعد از ۳ ثانیه با دامه جایگزین می‌شوند",
+      "level3": "تاریک — مهره‌ها بعد از ۳ ثانیه با نشانه‌های سیاه جایگزین می‌شوند",
+      "level4": "نامرئی — مهره‌ها بعد از ۳ ثانیه کاملاً ناپدید می‌شوند"
+    },
+    "course": {
+      "backToCourses": "به نمای کلی دوره",
+      "sequential": "ترتیبی",
+      "random": "تصادفی",
+      "completed": "دوره تکمیل شد!",
+      "toOverview": "به نمای کلی"
+    },
+    "weekly": {
+      "backToWeekly": "به نمای کلی پست‌های هفتگی",
+      "label": "پست هفتگی",
+      "noPuzzles": "این پست هفتگی شامل تاکتیک قابل بازی نیست.",
+      "allSolved": "همه تاکتیک‌ها حل شدند!"
+    }
+  },
+  "admin": {
+    "title": "مدیریت",
+    "kibanaLink": "داشبورد Kibana",
+    "tabs": {
+      "users": "کاربران",
+      "books": "کتاب‌ها",
+      "groups": "گروه‌ها",
+      "logs": "لاگ‌های درخواست"
+    },
+    "users": {
+      "searchLabel": "جستجوی کاربران",
+      "toggleAdmin": "تغییر وضعیت مدیر",
+      "deleteUser": "حذف کاربر",
+      "deleteConfirm": "کاربر «{{username}}» حذف شود؟ این عمل قابل برگشت نیست.",
+      "deleted": "کاربر «{{username}}» حذف شد",
+      "nowAdmin": "{{username}} اکنون مدیر است",
+      "noLongerAdmin": "{{username}} دیگر مدیر نیست",
+      "columns": {
+        "id": "شناسه",
+        "username": "نام کاربری",
+        "email": "ایمیل",
+        "admin": "مدیر",
+        "groups": "گروه‌ها",
+        "created": "ایجاد شده",
+        "actions": "عملیات"
+      },
+      "errors": {
+        "load": "بارگذاری کاربران ناموفق بود",
+        "toggleAdmin": "تغییر وضعیت مدیر ناموفق بود",
+        "delete": "حذف کاربر ناموفق بود"
+      }
+    },
+    "books": {
+      "uploadPgn": "آپلود PGN(ها)",
+      "importing": "در حال وارد کردن…",
+      "poolHint": "برای هر کتاب مشخص کنید تاکتیک‌ها در کدام مخازن نمایش داده شوند.",
+      "empty": "هنوز کتابی وارد نشده است.",
+      "eloFrom": "از",
+      "eloTo": "تا",
+      "adminOnly": "فقط مدیر",
+      "deleteBook": "حذف کتاب",
+      "deleteConfirm": "کتاب «{{name}}» با {{count}} تاکتیک حذف شود؟",
+      "deleted": "کتاب «{{name}}» حذف شد",
+      "imported": "{{imported}} تاکتیک وارد شد، {{skipped}} نادیده گرفته شد",
+      "importedCount": "{{count}} تاکتیک وارد شد",
+      "duplicatesCount": "{{count}} تکراری",
+      "invalidCount": "{{count}} نامعتبر",
+      "columns": {
+        "book": "کتاب",
+        "puzzles": "تاکتیک‌ها",
+        "difficulty": "سختی",
+        "elo": "Elo از/تا",
+        "daily": "روزانه",
+        "random": "تصادفی",
+        "blind": "کور",
+        "visibleFor": "قابل مشاهده برای (دوره‌ها)",
+        "actions": "عملیات"
+      },
+      "errors": {
+        "load": "بارگذاری کتاب‌ها ناموفق بود",
+        "import": "وارد کردن ناموفق بود",
+        "save": "ذخیره ناموفق بود",
+        "saveGroups": "به‌روزرسانی دسترسی گروه ناموفق بود",
+        "delete": "حذف ناموفق بود"
+      }
+    },
+    "groups": {
+      "newGroup": "گروه جدید",
+      "namePlaceholder": "نام",
+      "descriptionOptional": "توضیحات (اختیاری)",
+      "create": "ایجاد",
+      "empty": "هنوز گروهی ایجاد نشده است.",
+      "manageMembers": "مدیریت اعضا",
+      "deleteGroup": "حذف گروه",
+      "membersOf": "اعضا · {{name}}",
+      "addUser": "افزودن کاربر",
+      "noMembers": "عضوی وجود ندارد.",
+      "created": "گروه «{{name}}» ایجاد شد",
+      "deleteConfirm": "گروه «{{name}}» حذف شود؟",
+      "deleted": "گروه «{{name}}» حذف شد",
+      "columns": {
+        "group": "گروه",
+        "members": "اعضا",
+        "actions": "عملیات"
+      },
+      "errors": {
+        "load": "بارگذاری گروه‌ها ناموفق بود",
+        "create": "ایجاد گروه ناموفق بود",
+        "delete": "حذف ناموفق بود",
+        "loadMembers": "بارگذاری اعضا ناموفق بود",
+        "addMember": "افزودن عضو ناموفق بود",
+        "removeMember": "حذف عضو ناموفق بود"
+      }
+    },
+    "logs": {
+      "all": "همه",
+      "filter": "فیلتر",
+      "reset": "بازنشانی",
+      "filtered": "(فیلترشده)",
+      "entryCount": "{{count}} ورودی",
+      "status4xx": "4xx+ (خطاها)",
+      "status5xx": "5xx (سرور)",
+      "status2xx": "2xx+ (موفق)",
+      "columns": {
+        "time": "زمان",
+        "method": "روش",
+        "path": "مسیر",
+        "status": "وضعیت",
+        "duration": "مدت",
+        "user": "کاربر",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "بارگذاری لاگ‌ها ناموفق بود"
+      }
+    }
+  },
+  "analysis": {
+    "title": "تحلیل",
+    "engine": "موتور",
+    "depth": "عمق",
+    "lines": "خطوط",
+    "maxDepth": "حداکثر عمق",
+    "backToPuzzle": "بازگشت به تاکتیک",
+    "calculating": "در حال محاسبه…",
+    "engineOff": "موتور خاموش",
+    "start": "شروع",
+    "flip": "چرخاندن صفحه",
+    "reset": "بازنشانی",
+    "noMoves": "هنوز حرکتی انجام نشده — روی صفحه حرکت کنید.",
+    "fen": "FEN",
+    "loadFen": "بارگذاری FEN",
+    "copyFen": "کپی FEN",
+    "pgn": "PGN",
+    "loadPgn": "بارگذاری PGN"
+  },
+  "stats": {
+    "title": "آمار",
+    "currentElo": "Elo تاکتیک",
+    "totalSolved": "حل‌شده",
+    "attempts": "تلاش‌ها",
+    "accuracy": "دقت",
+    "currentStreak": "رشته فعلی",
+    "bestStreak": "بهترین رشته",
+    "eloProgress": "پیشرفت Elo تاکتیک",
+    "level": "سطح",
+    "allLevels": "همه",
+    "noData": "هنوز داده‌ای وجود ندارد.",
+    "perLevel": "Elo به ازای سطح تجسم",
+    "vizLevel": "سطح",
+    "recentPuzzles": "تاکتیک‌های اخیر",
+    "date": "تاریخ",
+    "rating": "رتبه",
+    "result": "نتیجه",
+    "time": "زمان",
+    "byTheme": "بر اساس موضوع",
+    "byRating": "بر اساس رتبه (حل‌شده)",
+    "byRatingHint": "تاکتیک‌های حل‌شده در هر بازه رتبه — برای دقت نگه دارید.",
+    "activity": "فعالیت"
+  }
+}

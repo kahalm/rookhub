@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Edit",
+    "add": "Tambah",
+    "close": "Tutup",
+    "search": "Cari",
+    "back": "Kembali",
+    "retry": "Coba lagi",
+    "loading": "Memuat…",
+    "ok": "OK",
+    "remove": "Hapus"
+  },
+  "nav": {
+    "dashboard": "Dasbor",
+    "repertoires": "Repertoir",
+    "tournaments": "Turnamen",
+    "friends": "Teman",
+    "puzzles": "Puzzle",
+    "weekly": "Mingguan",
+    "courses": "Kursus",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Riwayat Puzzle",
+    "changelog": "Catatan Perubahan",
+    "logout": "Keluar",
+    "login": "Masuk",
+    "register": "Daftar",
+    "language": "Bahasa",
+    "menu": "Menu",
+    "info": "Info",
+    "account": "Akun",
+    "analysis": "Analisis",
+    "stats": "Statistik"
+  },
+  "app": {
+    "changelogTitle": "Catatan Perubahan",
+    "quickstartTitle": "Mulai Cepat",
+    "qs": {
+      "subscribeTitle": "Berlangganan",
+      "subscribeDesc": "Berlangganan turnamen untuk akses cepat ke pemain, pasangan, dan hasil.",
+      "monitorTitle": "Pantau",
+      "monitorDesc": "Aktifkan pemantauan pada turnamen — babak baru terdeteksi dan di-crawl secara otomatis.",
+      "favoritesTitle": "Favorit",
+      "favoritesDesc": "Tandai pemain atau tim sebagai favorit untuk akses cepat di tampilan turnamen.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Tambahkan ChessResults ID Anda di profil — turnamen mendatang akan dilanggani secara otomatis."
+    },
+    "feedback": "Umpan balik / Laporkan bug",
+    "updateAvailable": "Versi baru tersedia.",
+    "reload": "Muat ulang"
+  },
+  "auth": {
+    "login": {
+      "title": "Masuk",
+      "usernameLabel": "Nama pengguna",
+      "passwordLabel": "Kata sandi",
+      "rememberMe": "Tetap masuk",
+      "submit": "Masuk",
+      "submitting": "Sedang masuk...",
+      "registerLink": "Belum punya akun? Daftar",
+      "failed": "Gagal masuk"
+    },
+    "register": {
+      "title": "Daftar",
+      "usernameLabel": "Nama pengguna",
+      "emailLabel": "Email",
+      "passwordLabel": "Kata sandi",
+      "passwordHint": "Minimal 4 karakter",
+      "submit": "Daftar",
+      "submitting": "Sedang mendaftar...",
+      "loginLink": "Sudah punya akun? Masuk",
+      "failed": "Pendaftaran gagal"
+    }
+  },
+  "dashboard": {
+    "welcome": "Selamat datang, {{username}}!",
+    "subscribedTournaments": "Turnamen yang Dilanggani",
+    "subscribedAt": "Dilanggani {{date}}",
+    "puzzles": {
+      "title": "Puzzle",
+      "subtitle": "Elo {{elo}} | {{solved}} diselesaikan ({{accuracy}}%)",
+      "solve": "Selesaikan Puzzle",
+      "endless": "Tanpa Batas"
+    },
+    "subscriptions": {
+      "title": "Langganan Turnamen",
+      "count": "{{count}} langganan",
+      "browse": "Jelajahi Turnamen"
+    },
+    "friends": {
+      "title": "Teman",
+      "count": "{{count}} teman",
+      "manage": "Kelola Teman"
+    },
+    "repertoires": {
+      "title": "Repertoir",
+      "count": "{{count}} repertoir",
+      "viewAll": "Lihat Semua"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Permainan",
+    "nav": {
+      "first": "Langkah pertama",
+      "previous": "Langkah sebelumnya",
+      "next": "Langkah berikutnya",
+      "last": "Langkah terakhir"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Nama depan",
+    "lastName": "Nama belakang",
+    "searchPlayer": "Cari pemain",
+    "noResults": "Tidak ada hasil.",
+    "displayName": "Nama tampilan",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Nama pengguna Chess.com",
+    "lichessUsername": "Nama pengguna Lichess",
+    "saving": "Menyimpan...",
+    "saved": "Profil tersimpan",
+    "saveFailed": "Gagal menyimpan profil",
+    "searchFailed": "Pencarian gagal",
+    "chessResultsApplied": "Data ChessResults diterapkan",
+    "fideApplied": "Data FIDE diterapkan",
+    "discord": {
+      "title": "Discord",
+      "hint": "Buka tautan pribadi dari bot Discord RookHub (perintah /link atau DM puzzle) untuk menghubungkan akun Discord Anda.",
+      "unlink": "Putuskan tautan",
+      "unlinked": "Discord diputus",
+      "linked": "Akun Discord terhubung",
+      "linkConflict": "Akun Discord ini sudah terhubung ke pengguna RookHub lain.",
+      "linkFailed": "Gagal menghubungkan akun Discord",
+      "stashed": "Masuk atau daftar untuk menyelesaikan penghubungan akun Discord Anda."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Simpan puzzle di perangkat ini agar tetap bisa bermain tanpa internet (per perangkat).",
+      "puzzleCount": "Puzzle offline",
+      "endlessRuns": "Sesi tanpa batas offline",
+      "cacheSize": "Ukuran cache",
+      "books": "{{count}} buku",
+      "clear": "Hapus cache",
+      "cleared": "Cache offline dihapus",
+      "pending": "{{count}} solusi menunggu sinkronisasi — akan diunggah otomatis saat Anda kembali online."
+    },
+    "delete": {
+      "title": "Hapus akun",
+      "hint": "Hapus akun Anda secara permanen.",
+      "button": "Hapus akun",
+      "warn": "Peringatan: identitas dan data pribadi Anda akan dihapus secara permanen. Masukkan kata sandi untuk konfirmasi.",
+      "password": "Kata sandi",
+      "confirm": "Hapus secara permanen",
+      "deleting": "Menghapus...",
+      "done": "Akun Anda telah dihapus.",
+      "wrongPassword": "Kata sandi salah.",
+      "failed": "Gagal menghapus akun.",
+      "moreInfo": "Lebih lanjut tentang penghapusan akun"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Hapus akun",
+      "intro": "Halaman ini menjelaskan cara menghapus akun RookHub Anda dan apa yang terjadi pada data Anda.",
+      "inAppTitle": "Cara menghapus akun",
+      "inApp": "Masuk ke aplikasi dan buka Profil → \"Hapus akun\". Konfirmasi dengan kata sandi Anda. Akun dihapus segera.",
+      "removedTitle": "Yang dihapus",
+      "removed1": "Identitas dan data pribadi Anda (nama pengguna, email, nama tampilan/asli, FIDE/ChessResults ID, nama Chess.com/Lichess, tautan Discord) dan akses masuk.",
+      "removed2": "Konten dan tautan pribadi: repertoir, langganan/favorit turnamen, pertemanan dan keanggotaan grup.",
+      "keptTitle": "Yang disimpan secara anonim",
+      "kept": "Statistik penyelesaian/bermain agregat (misalnya puzzle yang diselesaikan) disimpan dalam bentuk anonim yang tidak dapat ditelusuri kembali ke Anda.",
+      "contactTitle": "Kontak",
+      "contact": "Untuk permintaan penghapusan atau pertanyaan, hubungi kami di",
+      "back": "Kembali ke halaman masuk"
+    },
+    "privacy": {
+      "title": "Kebijakan Privasi",
+      "updated": "Terakhir diperbarui: 3 Juni 2026",
+      "intro": "RookHub adalah platform pelatihan catur (puzzle, mode tanpa batas, kursus, repertoir). Kebijakan ini menjelaskan bagaimana data pribadi diproses berdasarkan GDPR.",
+      "controllerTitle": "Pengendali",
+      "controller": "Pengendali pemrosesan data adalah operator yang disebutkan dalam imprint",
+      "dataTitle": "Data yang kami proses",
+      "dataIntro": "Tergantung penggunaan Anda, kami memproses:",
+      "dataAccount": "Data akun: nama pengguna, alamat email, kata sandi (disimpan hanya sebagai hash).",
+      "dataProfile": "Data profil (opsional): nama tampilan/asli, FIDE ID, ChessResults ID, nama pengguna Chess.com/Lichess, tautan Discord opsional.",
+      "dataUsage": "Data penggunaan: puzzle yang diselesaikan, progres dan statistik endless/kursus, rating bermain, waktu masuk.",
+      "dataTechnical": "Data teknis: alamat IP, endpoint yang diminta beserta waktu dan pengenal pengunjung pseudonim (pengukuran jangkauan) dalam log server.",
+      "purposesTitle": "Tujuan & dasar hukum",
+      "purposes": "Menyediakan akun dan fitur (pelaksanaan kontrak, Pasal 6(1)(b) GDPR) serta keamanan operasional, analisis kesalahan dan pengukuran jangkauan melalui log (kepentingan sah, Pasal 6(1)(f) GDPR).",
+      "thirdTitle": "Penerima / layanan pihak ketiga",
+      "thirdIntro": "Data tidak dijual. Tergantung penggunaan Anda, layanan berikut terlibat:",
+      "thirdDiscord": "Discord: hanya saat penghubungan akun secara sukarela (Discord ID/nama) untuk ditampilkan di bot Discord RookHub.",
+      "thirdChessresults": "chess-results.com: data turnamen diambil di sisi server saat Anda menetapkan ChessResults ID atau memuat turnamen.",
+      "thirdChesssites": "Chess.com / Lichess: hanya nama pengguna yang Anda masukkan secara sukarela; tidak ada transfer data otomatis.",
+      "thirdLogging": "Elasticsearch/Kibana: logging/monitoring yang dihosting sendiri di infrastruktur kami.",
+      "thirdHosting": "Hosting: dioperasikan pada infrastruktur server kami sendiri dengan reverse proxy TLS.",
+      "storageTitle": "Penyimpanan lokal (cookie/storage)",
+      "storage": "Kami tidak menggunakan cookie pelacak. Penyimpanan browser (localStorage) menyimpan misalnya token masuk, pengaturan, dan — jika diaktifkan — puzzle offline. Ini tetap di perangkat Anda.",
+      "retentionTitle": "Retensi & penghapusan",
+      "retention": "Data akun disimpan sampai Anda menghapus akun. Anda dapat menghapus akun kapan saja — identitas dan data pribadi dihapus, statistik anonim dipertahankan. Selengkapnya:",
+      "rightsTitle": "Hak Anda",
+      "rights": "Anda berhak atas akses, koreksi, penghapusan, pembatasan, portabilitas data dan keberatan, serta hak untuk mengajukan keluhan ke otoritas pengawas (di Austria: Otoritas Perlindungan Data).",
+      "contactTitle": "Kontak",
+      "contact": "Untuk pertanyaan privasi, hubungi kami di",
+      "back": "Kembali ke halaman masuk"
+    },
+    "impressum": {
+      "title": "Imprint",
+      "operatorTitle": "Penyedia layanan",
+      "name": "[NAMA / PERUSAHAAN — harap isi]",
+      "address": "[Alamat — jalan, kode pos, kota, negara]",
+      "uid": "[Nomor PPN, jika perusahaan]",
+      "contactTitle": "Kontak",
+      "contact": "Email",
+      "disclaimer": "Catatan: detail penyedia layanan adalah placeholder dan harus diganti dengan data aktual sebelum dipublikasikan. Halaman ini adalah draf dan bukan merupakan nasihat hukum.",
+      "back": "Kembali ke halaman masuk"
+    }
+  },
+  "friends": {
+    "title": "Teman",
+    "searchUsers": "Cari pengguna",
+    "searchResults": "Hasil pencarian",
+    "tabs": {
+      "friends": "Teman ({{count}})",
+      "requests": "Permintaan ({{count}})"
+    },
+    "empty": {
+      "friends": "Belum ada teman. Cari pengguna untuk menambah teman!",
+      "requests": "Tidak ada permintaan yang tertunda."
+    },
+    "sentOn": "Dikirim {{date}}",
+    "requestSent": "Permintaan pertemanan terkirim",
+    "errors": {
+      "loadFriends": "Gagal memuat daftar teman",
+      "loadRequests": "Gagal memuat permintaan",
+      "search": "Pencarian gagal",
+      "sendRequest": "Gagal mengirim permintaan",
+      "acceptRequest": "Gagal menerima permintaan",
+      "declineRequest": "Gagal menolak permintaan",
+      "removeFriend": "Gagal menghapus teman"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Repertoir Saya",
+      "new": "Repertoir Baru",
+      "fileCount": "{{count}} berkas",
+      "public": "Publik",
+      "private": "Privat",
+      "noDescription": "Tidak ada deskripsi",
+      "open": "Buka",
+      "empty": "Belum ada repertoir. Buat satu untuk memulai!",
+      "loadFailed": "Gagal memuat repertoir",
+      "createFailed": "Gagal membuat repertoir",
+      "deleteConfirm": "Hapus repertoir ini?",
+      "deleteFailed": "Gagal menghapus repertoir"
+    },
+    "detail": {
+      "noDescription": "Tidak ada deskripsi",
+      "modeLines": "Baris",
+      "modeTree": "Pohon",
+      "modeEdit": "Edit"
+    },
+    "dialog": {
+      "title": "Repertoir Baru",
+      "name": "Nama",
+      "description": "Deskripsi",
+      "public": "Publik",
+      "create": "Buat"
+    },
+    "lines": {
+      "allLines": "Semua Baris",
+      "empty": "Tidak ada baris dalam repertoir ini."
+    },
+    "tree": {
+      "start": "Mulai",
+      "lineCount": "{{count}} baris",
+      "lineCountPlural": "{{count}} baris",
+      "empty": "Akhir baris — tidak ada langkah selanjutnya."
+    },
+    "edit": {
+      "uploadHint": "Seret & lepas berkas PGN di sini atau klik untuk mengunggah",
+      "files": "Berkas ({{count}})",
+      "empty": "Belum ada berkas. Unggah berkas PGN untuk memulai!",
+      "filesSkipped": "{{count}} berkas dilewati (hanya .pgn, hingga 10 MB)",
+      "uploadSuccess": "{{count}} berkas diunggah",
+      "uploadPartial": "{{ok}} diunggah, {{failed}} gagal",
+      "downloadFailed": "Unduhan gagal",
+      "deleteConfirm": "Hapus berkas ini?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Perbarui",
+      "subscribe": "Langganan",
+      "unsubscribe": "Berhenti langganan",
+      "monitor": "Pantau",
+      "monitoringUntil": "Memantau hingga {{time}}",
+      "share": "Bagikan",
+      "subscribed": "Dilanggani!",
+      "unsubscribed": "Langganan dibatalkan",
+      "failed": "Gagal",
+      "unsubscribeFailed": "Gagal berhenti langganan"
+    },
+    "tabs": {
+      "players": "Pemain ({{count}})",
+      "teams": "Tim ({{count}})",
+      "pairings": "Pasangan"
+    },
+    "favoritesOnly": "Hanya favorit",
+    "favorites": {
+      "added": "{{name}} ditambahkan ke favorit",
+      "removed": "{{name}} dihapus dari favorit",
+      "addedShort": "{{name}} difavoritkan",
+      "removedShort": "{{name}} dihapus"
+    },
+    "players": {
+      "snr": "No.",
+      "title": "Gelar",
+      "name": "Nama",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Negara",
+      "team": "Tim",
+      "club": "Klub",
+      "boardShort": "Pap."
+    },
+    "teams": {
+      "rank": "Peringkat",
+      "team": "Tim",
+      "points": "Poin"
+    },
+    "pairings": {
+      "round": "Babak",
+      "roundLabel": "Babak {{round}}",
+      "board": "Papan",
+      "white": "Putih",
+      "black": "Hitam",
+      "home": "Kandang",
+      "away": "Tandang",
+      "result": "Hasil"
+    },
+    "monitor": {
+      "stopped": "Pemantauan dihentikan",
+      "stopFailed": "Gagal menghentikan pemantauan",
+      "activated": "Pemantauan diaktifkan",
+      "activateFailed": "Gagal mengaktifkan pemantauan",
+      "newRoundTitle": "Babak baru tersedia!",
+      "newRoundBody": "Babak {{round}} telah diterbitkan.",
+      "newRoundSnack": "Babak baru tersedia! Babak {{round}}"
+    },
+    "list": {
+      "title": "Turnamen",
+      "importTitle": "Impor Turnamen",
+      "importSubtitle": "Masukkan ID turnamen chess-results.com untuk di-crawl",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "mis. 1234567",
+      "idHintPrefix": "Angka dari chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Crawl",
+      "crawling": "Men-crawl turnamen {{id}}... Job #{{jobId}}",
+      "crawlerUnavailable": "Tidak dapat terhubung ke crawler turnamen. Pastikan layanan crawler sedang berjalan.",
+      "details": "Detail",
+      "hide": "Sembunyikan",
+      "empty": "Tidak ada turnamen ditemukan.",
+      "showHidden": "Tampilkan {{count}} yang tersembunyi",
+      "imported": "Turnamen berhasil diimpor!",
+      "crawlStartFailed": "Gagal memulai crawl",
+      "crawlFailed": "Crawl gagal",
+      "crawlConnectionLost": "Koneksi ke pekerjaan crawl terputus"
+    },
+    "detail": {
+      "loadTournamentFailed": "Gagal memuat turnamen",
+      "loadSubscriptionFailed": "Gagal memuat status langganan",
+      "reloadTournamentFailed": "Gagal memuat ulang turnamen",
+      "refreshStartFailed": "Gagal memulai pembaruan",
+      "dataRefreshed": "Data diperbarui!",
+      "refreshFailed": "Pembaruan gagal",
+      "loadPlayersFailed": "Gagal memuat pemain",
+      "loadTeamsFailed": "Gagal memuat tim",
+      "loadPairingsFailed": "Gagal memuat pasangan",
+      "loadTeamDetailsFailed": "Gagal memuat detail tim"
+    },
+    "public": {
+      "notFound": "Turnamen tidak ditemukan."
+    },
+    "share": {
+      "title": "Bagikan turnamen",
+      "copyLink": "Salin tautan",
+      "linkCopied": "Tautan disalin!",
+      "copyFailed": "Gagal menyalin"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Memuat puzzle…",
+      "loadFailed": "Gagal memuat puzzle",
+      "offlineNoCache": "Anda offline dan tidak ada puzzle yang tersimpan. Buka halaman ini sekali saat online untuk menyimpan puzzle untuk bermain offline.",
+      "watchOpponent": "Perhatikan langkah lawan…",
+      "yourTurn": "Giliran Anda!",
+      "gaveUpPlayOut": "Menyerah — mainkan solusinya sendiri.",
+      "thinking": "Stockfish sedang berpikir…"
+    },
+    "result": {
+      "solutionPlayedOut": "Solusi dimainkan.",
+      "tryYourselfNextTime": "Coba selesaikan sendiri lain kali!",
+      "checkmate": "Skakmat!",
+      "alternativeSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
+      "correct": "Benar!",
+      "incorrect": "Salah"
+    },
+    "eval": {
+      "start": "Mulai",
+      "now": "Sekarang",
+      "show": "Tampilkan Eval",
+      "hide": "Sembunyikan Eval"
+    },
+    "actions": {
+      "reset": "Ulang",
+      "mouseslip": "Salah klik",
+      "giveUp": "Menyerah",
+      "nextPuzzle": "Puzzle Berikutnya",
+      "share": "Bagikan Puzzle",
+      "loadPuzzle": "Muat Puzzle",
+      "reviewLast": "Tinjau puzzle terakhir",
+      "endlessMode": "Mode Tanpa Batas",
+      "analyze": "Analisis"
+    },
+    "info": {
+      "rating": "Rating"
+    },
+    "stats": {
+      "title": "Statistik Anda",
+      "solved": "Diselesaikan",
+      "accuracy": "Akurasi",
+      "streak": "Streak",
+      "best": "Terbaik"
+    },
+    "settings": {
+      "tooltip": "Pengaturan"
+    },
+    "filters": {
+      "title": "Filter",
+      "visualization": "Visualisasi: Level {{level}}",
+      "difficulty": "Kesulitan",
+      "difficultyHint": "Puzzle di sekitar Elo Anda ({{elo}})",
+      "depthHint": "1 (lemah) – 24 (kuat)",
+      "skipSolved": "Lewati yang sudah diselesaikan"
+    },
+    "difficulty": {
+      "veryEasy": "Sangat mudah",
+      "easy": "Mudah",
+      "normal": "Normal",
+      "hard": "Sulit",
+      "veryHard": "Sangat sulit"
+    },
+    "theme": {
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Acak",
+      "modeCrazy": "Gila",
+      "boardTheme": "Tema Papan",
+      "pieces": "Bidak"
+    },
+    "viz": {
+      "title": "Visualisasi (Level {{level}})",
+      "countdown": "Bidak menghilang dalam {{seconds}}d…",
+      "noMoveYet": "Belum ada langkah — klik kotak asal → kotak tujuan.",
+      "show": "Tampilkan",
+      "showing": "Menampilkan…"
+    },
+    "share": {
+      "title": "Bagikan Puzzle",
+      "copied": "Tautan disalin!",
+      "copyFailed": "Gagal menyalin"
+    }
+  },
+  "courses": {
+    "title": "Kursus",
+    "intro": "Kerjakan buku yang diimpor puzzle demi puzzle — secara berurutan atau acak. Progres Anda disimpan.",
+    "emptyHint": "Belum ada buku yang diimpor. Impor buku di area admin di bawah \"Buku\".",
+    "puzzleCount": "{{count}} puzzle",
+    "completed": "Kursus selesai",
+    "sequential": "Berurutan",
+    "random": "Acak",
+    "resetTooltip": "Reset progres",
+    "resetConfirm": "Reset progres untuk \"{{name}}\"?",
+    "loadFailed": "Gagal memuat kursus",
+    "resetFailed": "Reset gagal",
+    "offlineSaveTooltip": "Simpan buku offline",
+    "offlineRemoveTooltip": "Hapus salinan offline",
+    "offlineSaved": "\"{{name}}\" disimpan offline ({{count}} puzzle)",
+    "offlineRemoved": "\"{{name}}\" dihapus dari offline",
+    "offlineFailed": "Gagal menyimpan buku offline"
+  },
+  "weekly": {
+    "title": "Mingguan",
+    "intro": "Posting catur mingguan untuk dimainkan. Tanggal & waktu menunjukkan kapan posting dijadwalkan.",
+    "oClock": "",
+    "play": "Mainkan",
+    "empty": "Belum ada posting mingguan.",
+    "deleteConfirm": "Hapus posting mingguan “{{title}}”?",
+    "created": "Posting mingguan dibuat",
+    "deleted": "Posting mingguan dihapus",
+    "loadFailed": "Gagal memuat posting mingguan",
+    "uploadFailed": "Unggahan gagal",
+    "saveFailed": "Gagal menyimpan",
+    "deleteFailed": "Penghapusan gagal",
+    "fields": {
+      "date": "Tanggal",
+      "time": "Waktu",
+      "titleOptional": "Judul (opsional)"
+    },
+    "columns": {
+      "scheduled": "Tanggal",
+      "title": "Judul",
+      "actions": "Tindakan"
+    },
+    "upload": {
+      "title": "Unggah posting mingguan baru",
+      "choosePgn": "Pilih PGN",
+      "titlePlaceholder": "dari nama berkas",
+      "create": "Buat",
+      "hint": "Default: tanggal terakhir + 7 hari, waktu yang sama (jika tidak ada 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Anda offline dan tidak ada sesi yang tersimpan. Buka Mode Tanpa Batas sekali saat online untuk menyimpan puzzle untuk bermain offline.",
+    "help": {
+      "title": "Mode Puzzle Tanpa Batas",
+      "gameplayHeading": "Cara bermain",
+      "gameplayP1": "Anda menyelesaikan puzzle catur dengan tingkat kesulitan yang meningkat. Anda mulai pada rating yang dapat dikonfigurasi dan terus naik. Rating naik otomatis melalui fase Fasttrack (lihat di bawah).",
+      "gameplayP2": "Anda memiliki <strong>3 nyawa</strong>. Permainan berakhir ketika nyawa habis.",
+      "movesHeading": "Langkah & Stockfish",
+      "movesP1": "Setiap puzzle memiliki <strong>solusi yang dimaksud</strong> (urutan langkah). Selama Anda memainkan langkah yang benar, Anda mengikuti jalur solusi tersebut.",
+      "movesP2": "Jika Anda memainkan <strong>langkah yang salah</strong>, <strong>Stockfish</strong> (mesin catur) mengambil alih sisi lain. Anda kemudian bermain bebas melawan Stockfish. Kekuatannya dapat diatur melalui Kedalaman Stockfish.",
+      "movesItem1": "<strong>Skakmat Stockfish</strong> dihitung sebagai solusi alternatif — nyawa tidak berkurang!",
+      "movesItem2": "<strong>Stockfish skakmat Anda</strong> — Anda kehilangan satu nyawa",
+      "movesItem3": "Permainan melawan Stockfish berlanjut tanpa batas hingga skakmat atau Menyerah",
+      "buttonsHeading": "Tombol selama permainan",
+      "buttonsShowEval": "<strong>Tampilkan Eval</strong> — Menampilkan evaluasi Stockfish (Awal vs. Sekarang)",
+      "buttonsReset": "<strong>Ulang</strong> — Mengulang puzzle, tetapi menghabiskan satu nyawa",
+      "buttonsMouseslip": "<strong>Salah klik</strong> — Membatalkan langkah salah terakhir (sekali per puzzle, gratis)",
+      "buttonsGiveUp": "<strong>Menyerah</strong> — Menyerah, menghabiskan satu nyawa",
+      "settingsHeading": "Pengaturan",
+      "settingsStartRating": "<strong>Rating Awal</strong> — Rating puzzle tempat Anda memulai",
+      "settingsStockfishDepth": "<strong>Kedalaman Stockfish</strong> — Kekuatan mesin (1 = sangat lemah, 24 = kekuatan maksimum)",
+      "settingsThemes": "<strong>Tema</strong> — Opsional: hanya tema taktis tertentu (mis. \"garpu pin\")",
+      "fasttrackHeading": "Peningkatan kesulitan (Fasttrack)",
+      "fasttrackP1": "Peningkatan disesuaikan dengan performa masa lalu Anda: menganalisis sesi terkini dan menghitung rating di mana Anda biasanya kehilangan nyawa.",
+      "fasttrackPhase1": "<strong>Fase 1 (Puzzle 1–5)</strong> — Peningkatan cepat hingga ambang batas ke-1",
+      "fasttrackPhase2": "<strong>Fase 2 (Puzzle 6–10)</strong> — Peningkatan dari ambang batas ke-1 ke ke-2",
+      "fasttrackPhase3": "<strong>Fase 3 (mulai Puzzle 11)</strong> — Langkah konstan sebesar 20",
+      "fasttrackP2": "Nilai ambang batas (ke-1/ke-2) dihitung otomatis tetapi dapat disesuaikan secara manual. Klik \"Otomatis: …\" untuk mereset nilainya."
+    },
+    "config": {
+      "title": "Mode Puzzle Tanpa Batas",
+      "subtitle": "Kesulitan progresif — seberapa jauh Anda bisa?",
+      "startRating": "Rating Awal",
+      "stockfishDepth": "Kedalaman Stockfish",
+      "stockfishDepthHint": "1 (lemah) – 24 (kuat)",
+      "themes": "Tema (opsional)",
+      "themesPlaceholder": "mis. garpu pin",
+      "thresholdExplain": "Rating di mana Anda biasanya kehilangan nyawa. Sesuaikan untuk melewati puzzle yang lebih mudah lebih cepat atau lebih lambat.",
+      "firstThreshold": "Ambang Batas ke-1",
+      "secondThreshold": "Ambang Batas ke-2",
+      "auto": "Otomatis: {{value}}",
+      "step": "Langkah {{step}}",
+      "phase1Label": "Fase 1 (Lv 1–5)",
+      "phase2Label": "Fase 2 (Lv 6–10)",
+      "phase3Label": "Fase 3 (Lv 11+)",
+      "curveHint": "Kurva rating dari gauntlet (tetap saat Anda mulai):",
+      "curvePuzzle": "Puzzle {{n}}",
+      "settings": "Pengaturan",
+      "visualizationLevel": "Visualisasi: Level {{level}}",
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Acak",
+      "modeCrazy": "Gila",
+      "boardTheme": "Tema Papan",
+      "pieces": "Bidak",
+      "highscore": "Skor tertinggi: Rating {{rating}}",
+      "sessionsPlayed": "{{count}} sesi dimainkan",
+      "viewHistory": "Lihat Riwayat",
+      "unfinishedRun": "Sesi belum selesai: Lv {{level}} | {{solved}} diselesaikan | {{lives}} nyawa | {{max}} maks",
+      "continue": "Lanjutkan",
+      "archiveAndNew": "Arsipkan & Permainan Baru",
+      "newGame": "Permainan Baru",
+      "start": "Mulai"
+    },
+    "game": {
+      "visualization": "Visualisasi (Level {{level}})",
+      "vizCountdown": "Bidak menghilang dalam {{seconds}}d...",
+      "vizNoMove": "Belum ada langkah — klik kotak asal → kotak tujuan.",
+      "vizShow": "Tampilkan",
+      "vizShowing": "Menampilkan...",
+      "loadingPuzzle": "Memuat puzzle...",
+      "watchOpponent": "Perhatikan langkah lawan...",
+      "yourTurn": "Giliran Anda! Temukan langkah terbaik.",
+      "yourMove": "Langkah Anda...",
+      "opponentThinking": "Lawan sedang berpikir...",
+      "evalStart": "Mulai",
+      "evalNow": "Sekarang",
+      "showEval": "Tampilkan Eval",
+      "hideEval": "Sembunyikan Eval",
+      "reset": "Ulang",
+      "mouseslip": "Salah klik",
+      "giveUp": "Menyerah",
+      "checkmate": "Skakmat!",
+      "alternativeSolution": "Solusi alternatif — puzzle memiliki jalur yang berbeda dari yang dimaksud.",
+      "correct": "Benar!",
+      "wrong": "Salah!",
+      "gaveUp": "Menyerah",
+      "continue": "Lanjutkan",
+      "analyze": "Analisis",
+      "reviewLast": "Analisis puzzle terakhir",
+      "puzzleRating": "Rating Puzzle: {{rating}}",
+      "levelRange": "Level {{level}} ({{min}}–{{max}})",
+      "showTags": "Tampilkan tag",
+      "hideTags": "Sembunyikan tag",
+      "sharePuzzle": "Bagikan puzzle",
+      "statRating": "Rating",
+      "statLevel": "Level",
+      "statSolved": "Diselesaikan",
+      "statTime": "Waktu",
+      "phaseLabel": "Fase {{phase}} (langkah {{step}})"
+    },
+    "gameOver": {
+      "title": "Permainan Selesai",
+      "wonTitle": "Anda menang!",
+      "wonSubtitle": "Anda menyelesaikan seluruh gauntlet.",
+      "wonText": "Rantai berhasil dikalahkan – mulai sesi baru untuk tantangan berikutnya.",
+      "exhaustedTitle": "Semua dimainkan!",
+      "exhaustedSubtitle": "Anda telah memainkan semua rentang rating puzzle.",
+      "areYouAStockfish": "Apakah Anda Stockfish?",
+      "maxRating": "Rating Tertinggi",
+      "puzzlesSolved": "Puzzle Diselesaikan",
+      "livesLeft": "Nyawa Tersisa",
+      "levelReached": "Level Tercapai",
+      "time": "Waktu",
+      "livesLostAt": "Nyawa hilang di: {{ratings}}",
+      "puzzleReview": "Tinjauan Puzzle",
+      "newHighscore": "Skor Tertinggi Baru!",
+      "archiving": "Mengarsipkan...",
+      "archiveRun": "Arsipkan Sesi Ini",
+      "archived": "Diarsipkan",
+      "playAgain": "Main Lagi",
+      "backToPuzzles": "Kembali ke Puzzle"
+    },
+    "history": {
+      "title": "Riwayat Puzzle Tanpa Batas",
+      "noSessions": "Belum ada sesi yang dimainkan.",
+      "startPlaying": "Mulai Bermain",
+      "filterAll": "Semua",
+      "filterActive": "Aktif",
+      "filterArchived": "Diarsipkan",
+      "selected": "{{count}} dipilih",
+      "archive": "Arsipkan",
+      "unarchive": "Batalkan arsip",
+      "noArchivedSessions": "Tidak ada sesi yang diarsipkan.",
+      "noActiveSessions": "Tidak ada sesi aktif.",
+      "colDate": "Tanggal",
+      "colMaxRating": "Rating Tertinggi",
+      "colSolved": "Diselesaikan",
+      "colDuration": "Durasi",
+      "colConfig": "Konfigurasi",
+      "colMistakes": "Kesalahan",
+      "backToEndless": "Kembali ke Mode Tanpa Batas"
+    }
+  },
+  "book": {
+    "difficulty": "Kesulitan",
+    "offlineUnavailable": "Buku ini tidak tersedia offline.",
+    "status": {
+      "loading": "Memuat puzzle...",
+      "watchOpponent": "Perhatikan langkah lawan...",
+      "yourTurn": "Giliran Anda! Temukan langkah terbaik.",
+      "gaveUp": "Menyerah — mainkan solusinya sendiri.",
+      "stockfishThinking": "Stockfish sedang berpikir...",
+      "yourMoveVsStockfish": "Langkah Anda melawan Stockfish...",
+      "correct": "Benar!",
+      "incorrect": "Salah",
+      "gaveUpSolution": "Menyerah — ini solusinya",
+      "checkmate": "Skakmat!",
+      "altSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
+      "fullGame": "Permainan penuh"
+    },
+    "actions": {
+      "reset": "Ulang",
+      "giveUp": "Menyerah",
+      "mouseslip": "Salah klik",
+      "nextPuzzle": "Puzzle berikutnya",
+      "again": "Lagi",
+      "skip": "Lewati",
+      "viewFullGame": "Lihat permainan penuh",
+      "analyze": "Analisis",
+      "nextInBook": "Berikutnya dalam buku",
+      "randomInBook": "Acak dari buku",
+      "sharePuzzle": "Bagikan puzzle",
+      "backToPuzzle": "Kembali ke puzzle"
+    },
+    "settings": {
+      "title": "Pengaturan",
+      "visualizationLevel": "Visualisasi: Level {{level}}",
+      "stockfishDepth": "Kedalaman Stockfish",
+      "depthHint": "1 (lemah) – 24 (kuat)",
+      "mode": "Mode",
+      "modeNormal": "Normal",
+      "modeRandom": "Acak",
+      "modeCrazy": "Gila",
+      "boardTheme": "Tema Papan",
+      "pieces": "Bidak"
+    },
+    "viz": {
+      "titleLevel": "Visualisasi (Level {{level}})",
+      "countdown": "Bidak menghilang dalam {{seconds}}d...",
+      "noMoveYet": "Belum ada langkah — klik kotak asal → kotak tujuan.",
+      "show": "Tampilkan",
+      "showing": "Menampilkan...",
+      "level0": "Normal — Seret & Lepas",
+      "level1": "Blindfold — papan beku, langkah sebagai teks",
+      "level2": "Checker — bidak diganti dengan checker setelah 3 detik",
+      "level3": "Gelap — bidak diganti dengan token hitam setelah 3 detik",
+      "level4": "Tak terlihat — bidak menghilang sepenuhnya setelah 3 detik"
+    },
+    "course": {
+      "backToCourses": "Ke ikhtisar kursus",
+      "sequential": "Berurutan",
+      "random": "Acak",
+      "completed": "Kursus selesai!",
+      "toOverview": "Ke ikhtisar"
+    },
+    "weekly": {
+      "backToWeekly": "Ke ikhtisar posting mingguan",
+      "label": "Posting Mingguan",
+      "noPuzzles": "Posting mingguan ini tidak berisi puzzle yang bisa dimainkan.",
+      "allSolved": "Semua puzzle diselesaikan!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Dasbor Kibana",
+    "tabs": {
+      "users": "Pengguna",
+      "books": "Buku",
+      "groups": "Grup",
+      "logs": "Log Permintaan"
+    },
+    "users": {
+      "searchLabel": "Cari pengguna",
+      "toggleAdmin": "Alihkan admin",
+      "deleteUser": "Hapus pengguna",
+      "deleteConfirm": "Hapus pengguna \"{{username}}\"? Tindakan ini tidak dapat dibatalkan.",
+      "deleted": "Pengguna \"{{username}}\" dihapus",
+      "nowAdmin": "{{username}} sekarang adalah admin",
+      "noLongerAdmin": "{{username}} bukan lagi admin",
+      "columns": {
+        "id": "ID",
+        "username": "Nama pengguna",
+        "email": "Email",
+        "admin": "Admin",
+        "groups": "Grup",
+        "created": "Dibuat",
+        "actions": "Tindakan"
+      },
+      "errors": {
+        "load": "Gagal memuat pengguna",
+        "toggleAdmin": "Gagal mengalihkan admin",
+        "delete": "Gagal menghapus pengguna"
+      }
+    },
+    "books": {
+      "uploadPgn": "Unggah PGN",
+      "importing": "Mengimpor…",
+      "poolHint": "Atur per buku di pool mana puzzle muncul.",
+      "empty": "Belum ada buku yang diimpor.",
+      "eloFrom": "dari",
+      "eloTo": "hingga",
+      "adminOnly": "hanya admin",
+      "deleteBook": "Hapus buku",
+      "deleteConfirm": "Hapus buku \"{{name}}\" dengan {{count}} puzzle?",
+      "deleted": "Buku \"{{name}}\" dihapus",
+      "imported": "{{imported}} puzzle diimpor, {{skipped}} dilewati",
+      "importedCount": "{{count}} puzzle diimpor",
+      "duplicatesCount": "{{count}} duplikat",
+      "invalidCount": "{{count}} tidak valid",
+      "columns": {
+        "book": "Buku",
+        "puzzles": "Puzzle",
+        "difficulty": "Kesulitan",
+        "elo": "Elo dari/hingga",
+        "daily": "Harian",
+        "random": "Acak",
+        "blind": "Blind",
+        "visibleFor": "Terlihat untuk (kursus)",
+        "actions": "Tindakan"
+      },
+      "errors": {
+        "load": "Gagal memuat buku",
+        "import": "Impor gagal",
+        "save": "Gagal menyimpan",
+        "saveGroups": "Pembaruan akses grup gagal",
+        "delete": "Penghapusan gagal"
+      }
+    },
+    "groups": {
+      "newGroup": "Grup baru",
+      "namePlaceholder": "Nama",
+      "descriptionOptional": "Deskripsi (opsional)",
+      "create": "Buat",
+      "empty": "Belum ada grup yang dibuat.",
+      "manageMembers": "Kelola anggota",
+      "deleteGroup": "Hapus grup",
+      "membersOf": "Anggota · {{name}}",
+      "addUser": "Tambah pengguna",
+      "noMembers": "Tidak ada anggota.",
+      "created": "Grup \"{{name}}\" dibuat",
+      "deleteConfirm": "Hapus grup \"{{name}}\"?",
+      "deleted": "Grup \"{{name}}\" dihapus",
+      "columns": {
+        "group": "Grup",
+        "members": "Anggota",
+        "actions": "Tindakan"
+      },
+      "errors": {
+        "load": "Gagal memuat grup",
+        "create": "Gagal membuat grup",
+        "delete": "Penghapusan gagal",
+        "loadMembers": "Gagal memuat anggota",
+        "addMember": "Gagal menambah anggota",
+        "removeMember": "Gagal menghapus anggota"
+      }
+    },
+    "logs": {
+      "all": "Semua",
+      "filter": "Filter",
+      "reset": "Reset",
+      "filtered": "(difilter)",
+      "entryCount": "{{count}} entri",
+      "status4xx": "4xx+ (kesalahan)",
+      "status5xx": "5xx (server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Waktu",
+        "method": "Metode",
+        "path": "Jalur",
+        "status": "Status",
+        "duration": "Durasi",
+        "user": "Pengguna",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Gagal memuat log"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analisis",
+    "engine": "Mesin",
+    "depth": "Kedalaman",
+    "lines": "Jalur",
+    "maxDepth": "Kedalaman maks",
+    "backToPuzzle": "Kembali ke puzzle",
+    "calculating": "Menghitung…",
+    "engineOff": "Mesin mati",
+    "start": "Mulai",
+    "flip": "Balik papan",
+    "reset": "Ulang",
+    "noMoves": "Belum ada langkah — mainkan langkah di papan.",
+    "fen": "FEN",
+    "loadFen": "Muat FEN",
+    "copyFen": "Salin FEN",
+    "pgn": "PGN",
+    "loadPgn": "Muat PGN"
+  },
+  "stats": {
+    "title": "Statistik",
+    "currentElo": "Puzzle Elo",
+    "totalSolved": "Diselesaikan",
+    "attempts": "Percobaan",
+    "accuracy": "Akurasi",
+    "currentStreak": "Streak saat ini",
+    "bestStreak": "Streak terbaik",
+    "eloProgress": "Progres Puzzle Elo",
+    "level": "Level",
+    "allLevels": "Semua",
+    "noData": "Belum ada data.",
+    "perLevel": "Elo per level visualisasi",
+    "vizLevel": "Level",
+    "recentPuzzles": "Puzzle terbaru",
+    "date": "Tanggal",
+    "rating": "Rating",
+    "result": "Hasil",
+    "time": "Waktu",
+    "byTheme": "Berdasarkan tema",
+    "byRating": "Berdasarkan rating (diselesaikan)",
+    "byRatingHint": "Puzzle yang diselesaikan per band rating — arahkan kursor untuk akurasi.",
+    "activity": "Aktivitas"
+  }
+}

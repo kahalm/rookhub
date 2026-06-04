@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "add": "Dodaj",
+    "close": "Zamknij",
+    "search": "Szukaj",
+    "back": "Wróć",
+    "retry": "Ponów",
+    "loading": "Ładowanie…",
+    "ok": "OK",
+    "remove": "Usuń"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "repertoires": "Repertuary",
+    "tournaments": "Turnieje",
+    "friends": "Znajomi",
+    "puzzles": "Zadania",
+    "weekly": "Tygodniowy",
+    "courses": "Kursy",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Historia zadań",
+    "changelog": "Changelog",
+    "logout": "Wyloguj",
+    "login": "Zaloguj",
+    "register": "Zarejestruj",
+    "language": "Język",
+    "menu": "Menu",
+    "info": "Info",
+    "account": "Konto",
+    "analysis": "Analiza",
+    "stats": "Statystyki"
+  },
+  "app": {
+    "changelogTitle": "Changelog",
+    "quickstartTitle": "Szybki start",
+    "qs": {
+      "subscribeTitle": "Subskrybuj",
+      "subscribeDesc": "Subskrybuj turnieje, aby mieć szybki dostęp do zawodników, par i wyników.",
+      "monitorTitle": "Monitoruj",
+      "monitorDesc": "Włącz monitorowanie turnieju — nowe rundy są wykrywane i pobierane automatycznie.",
+      "favoritesTitle": "Ulubione",
+      "favoritesDesc": "Oznacz zawodników lub drużyny jako ulubione, aby mieć do nich szybki dostęp w widoku turnieju.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Dodaj swój ChessResults ID w profilu — nadchodzące turnieje będą subskrybowane automatycznie."
+    },
+    "feedback": "Opinia / Zgłoś błąd",
+    "updateAvailable": "Dostępna jest nowa wersja.",
+    "reload": "Odśwież"
+  },
+  "auth": {
+    "login": {
+      "title": "Logowanie",
+      "usernameLabel": "Nazwa użytkownika",
+      "passwordLabel": "Hasło",
+      "rememberMe": "Pozostań zalogowany",
+      "submit": "Zaloguj",
+      "submitting": "Logowanie...",
+      "registerLink": "Nie masz konta? Zarejestruj się",
+      "failed": "Logowanie nie powiodło się"
+    },
+    "register": {
+      "title": "Rejestracja",
+      "usernameLabel": "Nazwa użytkownika",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Hasło",
+      "passwordHint": "Co najmniej 4 znaki",
+      "submit": "Zarejestruj",
+      "submitting": "Rejestracja...",
+      "loginLink": "Masz już konto? Zaloguj się",
+      "failed": "Rejestracja nie powiodła się"
+    }
+  },
+  "dashboard": {
+    "welcome": "Witaj, {{username}}!",
+    "subscribedTournaments": "Subskrybowane turnieje",
+    "subscribedAt": "Subskrybowany {{date}}",
+    "puzzles": {
+      "title": "Zadania",
+      "subtitle": "Elo {{elo}} | {{solved}} rozwiązanych ({{accuracy}}%)",
+      "solve": "Rozwiązuj zadania",
+      "endless": "Tryb nieskończony"
+    },
+    "subscriptions": {
+      "title": "Subskrypcje turniejów",
+      "count": "{{count}} subskrypcji",
+      "browse": "Przeglądaj turnieje"
+    },
+    "friends": {
+      "title": "Znajomi",
+      "count": "{{count}} znajomych",
+      "manage": "Zarządzaj znajomymi"
+    },
+    "repertoires": {
+      "title": "Repertuary",
+      "count": "{{count}} repertuarów",
+      "viewAll": "Zobacz wszystkie"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partia",
+    "nav": {
+      "first": "Pierwszy ruch",
+      "previous": "Poprzedni ruch",
+      "next": "Następny ruch",
+      "last": "Ostatni ruch"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "searchPlayer": "Szukaj zawodnika",
+    "noResults": "Brak wyników.",
+    "displayName": "Nazwa wyświetlana",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Nazwa użytkownika Chess.com",
+    "lichessUsername": "Nazwa użytkownika Lichess",
+    "saving": "Zapisywanie...",
+    "saved": "Profil zapisany",
+    "saveFailed": "Nie udało się zapisać profilu",
+    "searchFailed": "Wyszukiwanie nie powiodło się",
+    "chessResultsApplied": "Dane ChessResults zastosowane",
+    "fideApplied": "Dane FIDE zastosowane",
+    "discord": {
+      "title": "Discord",
+      "hint": "Otwórz osobisty link z bota Discord RookHub (polecenie /link lub wiadomość DM z zadaniem), aby połączyć swoje konto Discord.",
+      "unlink": "Odłącz",
+      "unlinked": "Discord odłączony",
+      "linked": "Konto Discord połączone",
+      "linkConflict": "To konto Discord jest już połączone z innym użytkownikiem RookHub.",
+      "linkFailed": "Nie udało się połączyć konta Discord",
+      "stashed": "Zaloguj się lub zarejestruj, aby dokończyć łączenie konta Discord."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Zapisz zadania na tym urządzeniu, aby rozwiązywać je bez internetu (per urządzenie).",
+      "puzzleCount": "Zadania offline",
+      "endlessRuns": "Tryby nieskończone offline",
+      "cacheSize": "Rozmiar pamięci podręcznej",
+      "books": "{{count}} książek",
+      "clear": "Wyczyść pamięć podręczną",
+      "cleared": "Pamięć podręczna offline wyczyszczona",
+      "pending": "{{count}} rozwiązań oczekuje na synchronizację — zostaną przesłane automatycznie po przywróceniu połączenia."
+    },
+    "delete": {
+      "title": "Usuń konto",
+      "hint": "Trwale usuń swoje konto.",
+      "button": "Usuń konto",
+      "warn": "Uwaga: Twoja tożsamość i dane osobowe zostaną nieodwracalnie usunięte. Wprowadź hasło, aby potwierdzić.",
+      "password": "Hasło",
+      "confirm": "Usuń trwale",
+      "deleting": "Usuwanie...",
+      "done": "Twoje konto zostało usunięte.",
+      "wrongPassword": "Hasło jest nieprawidłowe.",
+      "failed": "Nie udało się usunąć konta.",
+      "moreInfo": "Więcej o usuwaniu konta"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Usuń konto",
+      "intro": "Ta strona wyjaśnia, jak usunąć konto RookHub i co dzieje się z Twoimi danymi.",
+      "inAppTitle": "Jak usunąć konto",
+      "inApp": "Zaloguj się do aplikacji i przejdź do Profil → „Usuń konto”. Potwierdź hasłem. Konto zostanie natychmiast usunięte.",
+      "removedTitle": "Co zostaje usunięte",
+      "removed1": "Twoja tożsamość i dane osobowe (nazwa użytkownika, e-mail, nazwa wyświetlana/prawdziwe imię i nazwisko, FIDE/ChessResults ID, nazwa Chess.com/Lichess, połączenie Discord) oraz dostęp do konta.",
+      "removed2": "Treści osobiste i powiązania: repertuary, subskrypcje/ulubione turniejów, znajomości i członkostwa w grupach.",
+      "keptTitle": "Co jest zachowane anonimowo",
+      "kept": "Zagregowane statystyki rozwiązywania/gry (np. rozwiązane zadania) są przechowywane w zanonimizowanej formie, której nie można powiązać z Twoją osobą.",
+      "contactTitle": "Kontakt",
+      "contact": "W sprawie usunięcia danych lub pytań skontaktuj się z nami pod adresem",
+      "back": "Wróć do logowania"
+    },
+    "privacy": {
+      "title": "Polityka prywatności",
+      "updated": "Ostatnia aktualizacja: 3 czerwca 2026",
+      "intro": "RookHub to platforma treningowa do szachów (zadania, tryb nieskończony, kursy, repertuary). Niniejsza polityka wyjaśnia, jak dane osobowe są przetwarzane zgodnie z RODO.",
+      "controllerTitle": "Administrator danych",
+      "controller": "Administratorem danych jest operator wskazany w stopce redakcyjnej",
+      "dataTitle": "Jakie dane przetwarzamy",
+      "dataIntro": "W zależności od sposobu korzystania przetwarzamy:",
+      "dataAccount": "Dane konta: nazwa użytkownika, adres e-mail, hasło (przechowywane wyłącznie jako skrót).",
+      "dataProfile": "Dane profilu (opcjonalne): nazwa wyświetlana/prawdziwe imię i nazwisko, FIDE ID, ChessResults ID, nazwa Chess.com/Lichess, opcjonalne połączenie Discord.",
+      "dataUsage": "Dane użytkowania: rozwiązane zadania, postęp i statystyki trybu nieskończonego/kursów, ocena gry, znaczniki czasu logowania.",
+      "dataTechnical": "Dane techniczne: adres IP, żądane endpointy ze znacznikami czasu oraz pseudonimowy identyfikator odwiedzającego (pomiar zasięgu) w logach serwera.",
+      "purposesTitle": "Cele i podstawy prawne",
+      "purposes": "Świadczenie konta i funkcji (wykonanie umowy, art. 6 ust. 1 lit. b RODO) oraz bezpieczeństwo operacyjne, analiza błędów i pomiar zasięgu za pośrednictwem logów (prawnie uzasadniony interes, art. 6 ust. 1 lit. f RODO).",
+      "thirdTitle": "Odbiorcy / usługi zewnętrzne",
+      "thirdIntro": "Dane nie są sprzedawane. W zależności od sposobu korzystania korzystamy z następujących usług:",
+      "thirdDiscord": "Discord: wyłącznie przy dobrowolnym łączeniu konta (Discord ID/nazwa) do wyświetlania w bocie Discord RookHub.",
+      "thirdChessresults": "chess-results.com: dane turniejowe są pobierane po stronie serwera, gdy ustawisz ChessResults ID lub wczytujesz turnieje.",
+      "thirdChesssites": "Chess.com / Lichess: wyłącznie nazwy użytkowników, które dobrowolnie podajesz; brak automatycznej transmisji danych.",
+      "thirdLogging": "Elasticsearch/Kibana: własne logowanie/monitorowanie na naszej infrastrukturze.",
+      "thirdHosting": "Hosting: działamy na własnej infrastrukturze serwerowej z odwrotnym serwerem proxy TLS.",
+      "storageTitle": "Lokalne przechowywanie (cookies/storage)",
+      "storage": "Nie używamy plików cookie do śledzenia. Pamięć przeglądarki (localStorage) przechowuje m.in. token logowania, ustawienia i — jeśli włączono — zadania offline. Dane te pozostają na Twoim urządzeniu.",
+      "retentionTitle": "Przechowywanie i usuwanie",
+      "retention": "Dane konta są przechowywane do czasu usunięcia konta. Możesz usunąć konto w dowolnym momencie — tożsamość i dane osobowe są usuwane, anonimowe statystyki są zachowywane. Więcej:",
+      "rightsTitle": "Twoje prawa",
+      "rights": "Przysługuje Ci prawo dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych i sprzeciwu, a także prawo do wniesienia skargi do organu nadzorczego (w Austrii: Urząd Ochrony Danych).",
+      "contactTitle": "Kontakt",
+      "contact": "W sprawach dotyczących prywatności skontaktuj się z nami pod adresem",
+      "back": "Wróć do logowania"
+    },
+    "impressum": {
+      "title": "Stopka redakcyjna",
+      "operatorTitle": "Usługodawca",
+      "name": "[IMIĘ I NAZWISKO / FIRMA — proszę uzupełnić]",
+      "address": "[Adres — ulica, kod pocztowy, miasto, kraj]",
+      "uid": "[NIP/VAT, jeśli firma]",
+      "contactTitle": "Kontakt",
+      "contact": "E-mail",
+      "disclaimer": "Uwaga: dane usługodawcy są placeholderami i muszą zostać zastąpione rzeczywistymi danymi przed publikacją. Ta strona jest szkicem i nie stanowi porady prawnej.",
+      "back": "Wróć do logowania"
+    }
+  },
+  "friends": {
+    "title": "Znajomi",
+    "searchUsers": "Szukaj użytkowników",
+    "searchResults": "Wyniki wyszukiwania",
+    "tabs": {
+      "friends": "Znajomi ({{count}})",
+      "requests": "Zaproszenia ({{count}})"
+    },
+    "empty": {
+      "friends": "Nie masz jeszcze znajomych. Wyszukaj użytkowników, aby dodać znajomych!",
+      "requests": "Brak oczekujących zaproszeń."
+    },
+    "sentOn": "Wysłano {{date}}",
+    "requestSent": "Zaproszenie do znajomych wysłane",
+    "errors": {
+      "loadFriends": "Nie udało się załadować znajomych",
+      "loadRequests": "Nie udało się załadować zaproszeń",
+      "search": "Wyszukiwanie nie powiodło się",
+      "sendRequest": "Nie udało się wysłać zaproszenia",
+      "acceptRequest": "Nie udało się zaakceptować zaproszenia",
+      "declineRequest": "Nie udało się odrzucić zaproszenia",
+      "removeFriend": "Nie udało się usunąć znajomego"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Moje repertuary",
+      "new": "Nowy repertuar",
+      "fileCount": "{{count}} plików",
+      "public": "Publiczny",
+      "private": "Prywatny",
+      "noDescription": "Brak opisu",
+      "open": "Otwórz",
+      "empty": "Nie masz jeszcze żadnych repertuarów. Utwórz pierwszy!",
+      "loadFailed": "Nie udało się załadować repertuarów",
+      "createFailed": "Nie udało się utworzyć repertuaru",
+      "deleteConfirm": "Usunąć ten repertuar?",
+      "deleteFailed": "Nie udało się usunąć repertuaru"
+    },
+    "detail": {
+      "noDescription": "Brak opisu",
+      "modeLines": "Linie",
+      "modeTree": "Drzewo",
+      "modeEdit": "Edytuj"
+    },
+    "dialog": {
+      "title": "Nowy repertuar",
+      "name": "Nazwa",
+      "description": "Opis",
+      "public": "Publiczny",
+      "create": "Utwórz"
+    },
+    "lines": {
+      "allLines": "Wszystkie linie",
+      "empty": "W tym repertuarze nie znaleziono żadnych linii."
+    },
+    "tree": {
+      "start": "Start",
+      "lineCount": "{{count}} linia",
+      "lineCountPlural": "{{count}} linie",
+      "empty": "Koniec linii — brak dalszych ruchów."
+    },
+    "edit": {
+      "uploadHint": "Przeciągnij i upuść pliki PGN lub kliknij, aby przesłać",
+      "files": "Pliki ({{count}})",
+      "empty": "Brak plików. Prześlij pliki PGN, aby zacząć!",
+      "filesSkipped": "{{count}} plik(ów) pominięto (tylko .pgn, maks. 10 MB)",
+      "uploadSuccess": "{{count}} plik(ów) przesłano",
+      "uploadPartial": "{{ok}} przesłano, {{failed}} nie powiodło się",
+      "downloadFailed": "Pobieranie nie powiodło się",
+      "deleteConfirm": "Usunąć ten plik?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Odśwież",
+      "subscribe": "Subskrybuj",
+      "unsubscribe": "Anuluj subskrypcję",
+      "monitor": "Monitoruj",
+      "monitoringUntil": "Monitorowanie do {{time}}",
+      "share": "Udostępnij",
+      "subscribed": "Subskrybowano!",
+      "unsubscribed": "Anulowano subskrypcję",
+      "failed": "Błąd",
+      "unsubscribeFailed": "Nie udało się anulować subskrypcji"
+    },
+    "tabs": {
+      "players": "Zawodnicy ({{count}})",
+      "teams": "Drużyny ({{count}})",
+      "pairings": "Pary"
+    },
+    "favoritesOnly": "Tylko ulubione",
+    "favorites": {
+      "added": "{{name}} dodano do ulubionych",
+      "removed": "{{name}} usunięto z ulubionych",
+      "addedShort": "{{name}} dodano",
+      "removedShort": "{{name}} usunięto"
+    },
+    "players": {
+      "snr": "Nr",
+      "title": "Tytuł",
+      "name": "Nazwa",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Kraj",
+      "team": "Drużyna",
+      "club": "Klub",
+      "boardShort": "Szach."
+    },
+    "teams": {
+      "rank": "Miejsce",
+      "team": "Drużyna",
+      "points": "Punkty"
+    },
+    "pairings": {
+      "round": "Runda",
+      "roundLabel": "Runda {{round}}",
+      "board": "Szachownica",
+      "white": "Białe",
+      "black": "Czarne",
+      "home": "Gospodarz",
+      "away": "Gość",
+      "result": "Wynik"
+    },
+    "monitor": {
+      "stopped": "Monitorowanie zatrzymane",
+      "stopFailed": "Nie udało się zatrzymać monitorowania",
+      "activated": "Monitorowanie aktywowane",
+      "activateFailed": "Nie udało się aktywować monitorowania",
+      "newRoundTitle": "Dostępna nowa runda!",
+      "newRoundBody": "Opublikowano rundę {{round}}.",
+      "newRoundSnack": "Dostępna nowa runda! Runda {{round}}"
+    },
+    "list": {
+      "title": "Turnieje",
+      "importTitle": "Importuj turniej",
+      "importSubtitle": "Podaj ID turnieju z chess-results.com, aby go pobrać",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "np. 1234567",
+      "idHintPrefix": "Numer z chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Pobierz",
+      "crawling": "Pobieranie turnieju {{id}}... Zadanie #{{jobId}}",
+      "crawlerUnavailable": "Nie można połączyć się z crawlerem turniejów. Upewnij się, że usługa crawlera działa.",
+      "details": "Szczegóły",
+      "hide": "Ukryj",
+      "empty": "Nie znaleziono turniejów.",
+      "showHidden": "Pokaż {{count}} ukrytych",
+      "imported": "Turniej zaimportowany!",
+      "crawlStartFailed": "Nie udało się uruchomić pobierania",
+      "crawlFailed": "Pobieranie nie powiodło się",
+      "crawlConnectionLost": "Utracono połączenie z zadaniem pobierania"
+    },
+    "detail": {
+      "loadTournamentFailed": "Nie udało się załadować turnieju",
+      "loadSubscriptionFailed": "Nie udało się załadować statusu subskrypcji",
+      "reloadTournamentFailed": "Nie udało się ponownie załadować turnieju",
+      "refreshStartFailed": "Nie udało się uruchomić odświeżania",
+      "dataRefreshed": "Dane odświeżone!",
+      "refreshFailed": "Odświeżanie nie powiodło się",
+      "loadPlayersFailed": "Nie udało się załadować zawodników",
+      "loadTeamsFailed": "Nie udało się załadować drużyn",
+      "loadPairingsFailed": "Nie udało się załadować par",
+      "loadTeamDetailsFailed": "Nie udało się załadować szczegółów drużyny"
+    },
+    "public": {
+      "notFound": "Nie znaleziono turnieju."
+    },
+    "share": {
+      "title": "Udostępnij turniej",
+      "copyLink": "Kopiuj link",
+      "linkCopied": "Link skopiowany!",
+      "copyFailed": "Kopiowanie nie powiodło się"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Ładowanie zadania…",
+      "loadFailed": "Nie udało się załadować zadania",
+      "offlineNoCache": "Jesteś offline i nie ma zapisanych zadań. Otwórz tę stronę online, aby zapisać zadania do gry offline.",
+      "watchOpponent": "Obserwuj ruch przeciwnika…",
+      "yourTurn": "Twój ruch!",
+      "gaveUpPlayOut": "Poddano — zagraj rozwiązanie samodzielnie.",
+      "thinking": "Stockfish myśli…"
+    },
+    "result": {
+      "solutionPlayedOut": "Rozwiązanie zagrane.",
+      "tryYourselfNextTime": "Następnym razem spróbuj sam!",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
+      "correct": "Poprawnie!",
+      "incorrect": "Niepoprawnie"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Teraz",
+      "show": "Pokaż ocenę",
+      "hide": "Ukryj ocenę"
+    },
+    "actions": {
+      "reset": "Resetuj",
+      "mouseslip": "Pomyłka myszy",
+      "giveUp": "Poddaj się",
+      "nextPuzzle": "Następne zadanie",
+      "share": "Udostępnij zadanie",
+      "loadPuzzle": "Załaduj zadanie",
+      "reviewLast": "Przejrzyj ostatnie zadanie",
+      "endlessMode": "Tryb nieskończony",
+      "analyze": "Analizuj"
+    },
+    "info": {
+      "rating": "Ocena"
+    },
+    "stats": {
+      "title": "Twoje statystyki",
+      "solved": "Rozwiązane",
+      "accuracy": "Dokładność",
+      "streak": "Seria",
+      "best": "Najlepsza"
+    },
+    "settings": {
+      "tooltip": "Ustawienia"
+    },
+    "filters": {
+      "title": "Filtry",
+      "visualization": "Wizualizacja: poziom {{level}}",
+      "difficulty": "Trudność",
+      "difficultyHint": "Zadania w okolicach Twojego Elo ({{elo}})",
+      "depthHint": "1 (słabe) – 24 (silne)",
+      "skipSolved": "Pomijaj rozwiązane"
+    },
+    "difficulty": {
+      "veryEasy": "Bardzo łatwe",
+      "easy": "Łatwe",
+      "normal": "Normalne",
+      "hard": "Trudne",
+      "veryHard": "Bardzo trudne"
+    },
+    "theme": {
+      "mode": "Tryb",
+      "modeNormal": "Normalny",
+      "modeRandom": "Losowy",
+      "modeCrazy": "Szalony",
+      "boardTheme": "Motyw szachownicy",
+      "pieces": "Bierki"
+    },
+    "viz": {
+      "title": "Wizualizacja (poziom {{level}})",
+      "countdown": "Bierki znikają za {{seconds}}s…",
+      "noMoveYet": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
+      "show": "Pokaż",
+      "showing": "Wyświetlanie…"
+    },
+    "share": {
+      "title": "Udostępnij zadanie",
+      "copied": "Link skopiowany!",
+      "copyFailed": "Kopiowanie nie powiodło się"
+    }
+  },
+  "courses": {
+    "title": "Kursy",
+    "intro": "Przerabiaj zaimportowaną książkę zadanie po zadaniu — kolejno lub losowo. Postęp jest zapisywany.",
+    "emptyHint": "Nie zaimportowano jeszcze żadnych książek. Importuj książki w panelu admina w sekcji „Książki”.",
+    "puzzleCount": "{{count}} zadań",
+    "completed": "Kurs ukończony",
+    "sequential": "Kolejno",
+    "random": "Losowo",
+    "resetTooltip": "Resetuj postęp",
+    "resetConfirm": "Zresetować postęp dla „{{name}}”?",
+    "loadFailed": "Nie udało się załadować kursów",
+    "resetFailed": "Reset nie powiódł się",
+    "offlineSaveTooltip": "Zapisz książkę offline",
+    "offlineRemoveTooltip": "Usuń kopię offline",
+    "offlineSaved": "„{{name}}” zapisano offline ({{count}} zadań)",
+    "offlineRemoved": "„{{name}}” usunięto z trybu offline",
+    "offlineFailed": "Nie udało się zapisać książki offline"
+  },
+  "weekly": {
+    "title": "Tygodniowy",
+    "intro": "Tygodniowe posty szachowe do przeglądania. Data i godzina wskazują zaplanowany czas publikacji.",
+    "oClock": "",
+    "play": "Przegraj",
+    "empty": "Brak tygodniowych postów.",
+    "deleteConfirm": "Usunąć tygodniowy post „{{title}}”?",
+    "created": "Tygodniowy post utworzony",
+    "deleted": "Tygodniowy post usunięty",
+    "loadFailed": "Nie udało się załadować tygodniowych postów",
+    "uploadFailed": "Przesyłanie nie powiodło się",
+    "saveFailed": "Zapisanie nie powiodło się",
+    "deleteFailed": "Usunięcie nie powiodło się",
+    "fields": {
+      "date": "Data",
+      "time": "Godzina",
+      "titleOptional": "Tytuł (opcjonalny)"
+    },
+    "columns": {
+      "scheduled": "Data",
+      "title": "Tytuł",
+      "actions": "Akcje"
+    },
+    "upload": {
+      "title": "Prześlij nowy tygodniowy post",
+      "choosePgn": "Wybierz PGN",
+      "titlePlaceholder": "z nazwy pliku",
+      "create": "Utwórz",
+      "hint": "Domyślnie: ostatnia data + 7 dni, ta sama godzina (w przeciwnym razie 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Jesteś offline i nie ma zapisanego trybu nieskończonego. Otwórz tryb nieskończony online, aby zapisać zadania do gry offline.",
+    "help": {
+      "title": "Tryb nieskończonych zadań",
+      "gameplayHeading": "Jak to działa",
+      "gameplayP1": "Rozwiązujesz zadania szachowe o rosnącym poziomie trudności. Zaczynasz od konfigurowalnej oceny i piętrzysz się w górę. Ocena rośnie automatycznie wraz z fazami Fasttrack (patrz poniżej).",
+      "gameplayP2": "Masz <strong>3 życia</strong>. Po utracie wszystkich gra się kończy.",
+      "movesHeading": "Ruchy i Stockfish",
+      "movesP1": "Każde zadanie ma <strong>zamierzone rozwiązanie</strong> (sekwencję ruchów). Dopóki grasz prawidłowe ruchy, podążasz tą linią rozwiązania.",
+      "movesP2": "Jeśli zagrasz <strong>zły ruch</strong>, <strong>Stockfish</strong> (silnik szachowy) przejmuje stronę przeciwnika. Następnie grasz swobodnie przeciwko Stockfishowi. Jego siłę można ustawić poprzez głębokość Stockfisha.",
+      "movesItem1": "<strong>Zamatowanie Stockfisha</strong> liczy się jako alternatywne rozwiązanie — bez utraty życia!",
+      "movesItem2": "<strong>Stockfish daje Ci mata</strong> — tracisz życie",
+      "movesItem3": "Gra przeciwko Stockfishowi trwa nieskończenie aż do mata lub poddania się",
+      "buttonsHeading": "Przyciski podczas gry",
+      "buttonsShowEval": "<strong>Pokaż ocenę</strong> — Wyświetla ocenę Stockfisha (Start i Teraz)",
+      "buttonsReset": "<strong>Resetuj</strong> — Resetuje zadanie, ale kosztuje życie",
+      "buttonsMouseslip": "<strong>Pomyłka myszy</strong> — Cofa ostatni błędny ruch (raz na zadanie, bezpłatnie)",
+      "buttonsGiveUp": "<strong>Poddaj się</strong> — Kapitulacja, kosztuje życie",
+      "settingsHeading": "Ustawienia",
+      "settingsStartRating": "<strong>Ocena startowa</strong> — Ocena zadań, od której zaczynasz",
+      "settingsStockfishDepth": "<strong>Głębokość Stockfisha</strong> — Siła silnika (1 = bardzo słaby, 24 = maksymalna siła)",
+      "settingsThemes": "<strong>Motywy</strong> — Opcjonalnie: tylko określone motywy taktyczne (np. „widelec szpila”)",
+      "fasttrackHeading": "Wzrost trudności (Fasttrack)",
+      "fasttrackP1": "Wzrost dostosowuje się do Twoich ostatnich wyników: analizuje ostatnie sesje i oblicza ocenę, przy której zazwyczaj tracisz życia.",
+      "fasttrackPhase1": "<strong>Faza 1 (zadania 1–5)</strong> — Szybki wzrost do Twojego 1. progu",
+      "fasttrackPhase2": "<strong>Faza 2 (zadania 6–10)</strong> — Wzrost od 1. do 2. progu",
+      "fasttrackPhase3": "<strong>Faza 3 (od zadania 11)</strong> — Stały krok o 20",
+      "fasttrackP2": "Wartości progów (1./2. próg) są obliczane automatycznie, ale można je dostosować ręcznie. Kliknij „Auto: …”, aby zresetować wartość."
+    },
+    "config": {
+      "title": "Tryb nieskończonych zadań",
+      "subtitle": "Rosnąca trudność — jak daleko zajdziesz?",
+      "startRating": "Ocena startowa",
+      "stockfishDepth": "Głębokość Stockfisha",
+      "stockfishDepthHint": "1 (słabe) – 24 (silne)",
+      "themes": "Motywy (opcjonalnie)",
+      "themesPlaceholder": "np. widelec szpila",
+      "thresholdExplain": "Oceny, przy których zazwyczaj tracisz życia. Dostosuj, aby szybciej lub wolniej pomijać łatwiejsze zadania.",
+      "firstThreshold": "1. próg",
+      "secondThreshold": "2. próg",
+      "auto": "Auto: {{value}}",
+      "step": "Krok {{step}}",
+      "phase1Label": "Faza 1 (Poz. 1–5)",
+      "phase2Label": "Faza 2 (Poz. 6–10)",
+      "phase3Label": "Faza 3 (Poz. 11+)",
+      "curveHint": "Krzywa ocen (ustalana przy starcie):",
+      "curvePuzzle": "Zadanie {{n}}",
+      "settings": "Ustawienia",
+      "visualizationLevel": "Wizualizacja: poziom {{level}}",
+      "mode": "Tryb",
+      "modeNormal": "Normalny",
+      "modeRandom": "Losowy",
+      "modeCrazy": "Szalony",
+      "boardTheme": "Motyw szachownicy",
+      "pieces": "Bierki",
+      "highscore": "Rekord: {{rating}} Elo",
+      "sessionsPlayed": "Rozegrane sesje: {{count}}",
+      "viewHistory": "Zobacz historię",
+      "unfinishedRun": "Niedokończona gra: Poz. {{level}} | {{solved}} rozwiązanych | {{lives}} życia | maks. {{max}}",
+      "continue": "Kontynuuj",
+      "archiveAndNew": "Archiwizuj i nowa gra",
+      "newGame": "Nowa gra",
+      "start": "Start"
+    },
+    "game": {
+      "visualization": "Wizualizacja (poziom {{level}})",
+      "vizCountdown": "Bierki znikają za {{seconds}}s...",
+      "vizNoMove": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
+      "vizShow": "Pokaż",
+      "vizShowing": "Wyświetlanie...",
+      "loadingPuzzle": "Ładowanie zadania...",
+      "watchOpponent": "Obserwuj ruch przeciwnika...",
+      "yourTurn": "Twój ruch! Znajdź najlepszy ruch.",
+      "yourMove": "Twój ruch...",
+      "opponentThinking": "Przeciwnik myśli...",
+      "evalStart": "Start",
+      "evalNow": "Teraz",
+      "showEval": "Pokaż ocenę",
+      "hideEval": "Ukryj ocenę",
+      "reset": "Resetuj",
+      "mouseslip": "Pomyłka myszy",
+      "giveUp": "Poddaj się",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną linię.",
+      "correct": "Poprawnie!",
+      "wrong": "Błędnie!",
+      "gaveUp": "Poddano",
+      "continue": "Kontynuuj",
+      "analyze": "Analizuj",
+      "reviewLast": "Analizuj ostatnie zadanie",
+      "puzzleRating": "Ocena zadania: {{rating}}",
+      "levelRange": "Poziom {{level}} ({{min}}–{{max}})",
+      "showTags": "Pokaż tagi",
+      "hideTags": "Ukryj tagi",
+      "sharePuzzle": "Udostępnij zadanie",
+      "statRating": "Ocena",
+      "statLevel": "Poziom",
+      "statSolved": "Rozwiązane",
+      "statTime": "Czas",
+      "phaseLabel": "Faza {{phase}} (krok {{step}})"
+    },
+    "gameOver": {
+      "title": "Koniec gry",
+      "wonTitle": "Wygrałeś!",
+      "wonSubtitle": "Ukończyłeś cały gauntlet.",
+      "wonText": "Łańcuch pokonany — zacznij nową grę, by stawić czoła kolejnemu wyzwaniu.",
+      "exhaustedTitle": "Wyczerpano!",
+      "exhaustedSubtitle": "Przerobiłeś wszystkie zakresy ocen zadań.",
+      "areYouAStockfish": "Czy jesteś Stockfishem?",
+      "maxRating": "Maks. ocena",
+      "puzzlesSolved": "Rozwiązane zadania",
+      "livesLeft": "Pozostałe życia",
+      "levelReached": "Osiągnięty poziom",
+      "time": "Czas",
+      "livesLostAt": "Życia utracone przy: {{ratings}}",
+      "puzzleReview": "Przegląd zadań",
+      "newHighscore": "Nowy rekord!",
+      "archiving": "Archiwizowanie...",
+      "archiveRun": "Archiwizuj tę grę",
+      "archived": "Zarchiwizowano",
+      "playAgain": "Zagraj ponownie",
+      "backToPuzzles": "Wróć do zadań"
+    },
+    "history": {
+      "title": "Historia trybu nieskończonego",
+      "noSessions": "Brak rozegranych sesji.",
+      "startPlaying": "Zacznij grać",
+      "filterAll": "Wszystkie",
+      "filterActive": "Aktywne",
+      "filterArchived": "Zarchiwizowane",
+      "selected": "Wybrano: {{count}}",
+      "archive": "Archiwizuj",
+      "unarchive": "Przywróć z archiwum",
+      "noArchivedSessions": "Brak zarchiwizowanych sesji.",
+      "noActiveSessions": "Brak aktywnych sesji.",
+      "colDate": "Data",
+      "colMaxRating": "Maks. ocena",
+      "colSolved": "Rozwiązane",
+      "colDuration": "Czas trwania",
+      "colConfig": "Konfiguracja",
+      "colMistakes": "Błędy",
+      "backToEndless": "Wróć do trybu nieskończonego"
+    }
+  },
+  "book": {
+    "difficulty": "Trudność",
+    "offlineUnavailable": "Ta książka nie jest dostępna offline.",
+    "status": {
+      "loading": "Ładowanie zadania...",
+      "watchOpponent": "Obserwuj ruch przeciwnika...",
+      "yourTurn": "Twój ruch! Znajdź najlepszy ruch.",
+      "gaveUp": "Poddano — zagraj rozwiązanie samodzielnie.",
+      "stockfishThinking": "Stockfish myśli...",
+      "yourMoveVsStockfish": "Twój ruch przeciwko Stockfishowi...",
+      "correct": "Poprawnie!",
+      "incorrect": "Niepoprawnie",
+      "gaveUpSolution": "Poddano — oto rozwiązanie",
+      "checkmate": "Mat!",
+      "altSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
+      "fullGame": "Pełna partia"
+    },
+    "actions": {
+      "reset": "Resetuj",
+      "giveUp": "Poddaj się",
+      "mouseslip": "Pomyłka myszy",
+      "nextPuzzle": "Następne zadanie",
+      "again": "Jeszcze raz",
+      "skip": "Pomiń",
+      "viewFullGame": "Obejrzyj pełną partię",
+      "analyze": "Analizuj",
+      "nextInBook": "Następne w książce",
+      "randomInBook": "Losowe z książki",
+      "sharePuzzle": "Udostępnij zadanie",
+      "backToPuzzle": "Wróć do zadania"
+    },
+    "settings": {
+      "title": "Ustawienia",
+      "visualizationLevel": "Wizualizacja: poziom {{level}}",
+      "stockfishDepth": "Głębokość Stockfisha",
+      "depthHint": "1 (słabe) – 24 (silne)",
+      "mode": "Tryb",
+      "modeNormal": "Normalny",
+      "modeRandom": "Losowy",
+      "modeCrazy": "Szalony",
+      "boardTheme": "Motyw szachownicy",
+      "pieces": "Bierki"
+    },
+    "viz": {
+      "titleLevel": "Wizualizacja (poziom {{level}})",
+      "countdown": "Bierki znikają za {{seconds}}s...",
+      "noMoveYet": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
+      "show": "Pokaż",
+      "showing": "Wyświetlanie...",
+      "level0": "Normalny — przeciągnij i upuść",
+      "level1": "Na ślepo — szachownica zamrożona, ruchy jako tekst",
+      "level2": "Warcaby — bierki zastępowane warcabami po 3s",
+      "level3": "Ciemny — bierki zastępowane czarnymi żetonami po 3s",
+      "level4": "Niewidoczny — bierki całkowicie znikają po 3s"
+    },
+    "course": {
+      "backToCourses": "Do przeglądu kursu",
+      "sequential": "Kolejno",
+      "random": "Losowo",
+      "completed": "Kurs ukończony!",
+      "toOverview": "Do przeglądu"
+    },
+    "weekly": {
+      "backToWeekly": "Do przeglądu tygodniowych postów",
+      "label": "Tygodniowy post",
+      "noPuzzles": "Ten tygodniowy post nie zawiera zadań do rozwiązania.",
+      "allSolved": "Wszystkie zadania rozwiązane!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Panel Kibana",
+    "tabs": {
+      "users": "Użytkownicy",
+      "books": "Książki",
+      "groups": "Grupy",
+      "logs": "Logi żądań"
+    },
+    "users": {
+      "searchLabel": "Szukaj użytkowników",
+      "toggleAdmin": "Przełącz admina",
+      "deleteUser": "Usuń użytkownika",
+      "deleteConfirm": "Usunąć użytkownika „{{username}}”? Tej operacji nie można cofnąć.",
+      "deleted": "Użytkownik „{{username}}” usunięty",
+      "nowAdmin": "{{username}} jest teraz adminem",
+      "noLongerAdmin": "{{username}} nie jest już adminem",
+      "columns": {
+        "id": "ID",
+        "username": "Nazwa użytkownika",
+        "email": "E-mail",
+        "admin": "Admin",
+        "groups": "Grupy",
+        "created": "Utworzono",
+        "actions": "Akcje"
+      },
+      "errors": {
+        "load": "Nie udało się załadować użytkowników",
+        "toggleAdmin": "Nie udało się zmienić statusu admina",
+        "delete": "Nie udało się usunąć użytkownika"
+      }
+    },
+    "books": {
+      "uploadPgn": "Prześlij PGN",
+      "importing": "Importowanie…",
+      "poolHint": "Ustaw dla każdej książki, w których pulach pojawiają się zadania.",
+      "empty": "Nie zaimportowano jeszcze żadnych książek.",
+      "eloFrom": "od",
+      "eloTo": "do",
+      "adminOnly": "tylko admin",
+      "deleteBook": "Usuń książkę",
+      "deleteConfirm": "Usunąć książkę „{{name}}” z {{count}} zadaniem/zadaniami?",
+      "deleted": "Książka „{{name}}” usunięta",
+      "imported": "{{imported}} zadanie/zadania zaimportowane, {{skipped}} pominięto",
+      "importedCount": "{{count}} zadanie/zadania zaimportowane",
+      "duplicatesCount": "{{count}} duplikat(ów)",
+      "invalidCount": "{{count}} nieprawidłowych",
+      "columns": {
+        "book": "Książka",
+        "puzzles": "Zadania",
+        "difficulty": "Trudność",
+        "elo": "Elo od/do",
+        "daily": "Dzienne",
+        "random": "Losowe",
+        "blind": "Na ślepo",
+        "visibleFor": "Widoczna dla (kursy)",
+        "actions": "Akcje"
+      },
+      "errors": {
+        "load": "Nie udało się załadować książek",
+        "import": "Import nie powiódł się",
+        "save": "Zapisanie nie powiodło się",
+        "saveGroups": "Aktualizacja dostępu grup nie powiodła się",
+        "delete": "Usunięcie nie powiodło się"
+      }
+    },
+    "groups": {
+      "newGroup": "Nowa grupa",
+      "namePlaceholder": "Nazwa",
+      "descriptionOptional": "Opis (opcjonalny)",
+      "create": "Utwórz",
+      "empty": "Nie utworzono jeszcze żadnych grup.",
+      "manageMembers": "Zarządzaj członkami",
+      "deleteGroup": "Usuń grupę",
+      "membersOf": "Członkowie · {{name}}",
+      "addUser": "Dodaj użytkownika",
+      "noMembers": "Brak członków.",
+      "created": "Grupa „{{name}}” utworzona",
+      "deleteConfirm": "Usunąć grupę „{{name}}”?",
+      "deleted": "Grupa „{{name}}” usunięta",
+      "columns": {
+        "group": "Grupa",
+        "members": "Członkowie",
+        "actions": "Akcje"
+      },
+      "errors": {
+        "load": "Nie udało się załadować grup",
+        "create": "Nie udało się utworzyć grupy",
+        "delete": "Usunięcie nie powiodło się",
+        "loadMembers": "Nie udało się załadować członków",
+        "addMember": "Nie udało się dodać członka",
+        "removeMember": "Nie udało się usunąć członka"
+      }
+    },
+    "logs": {
+      "all": "Wszystkie",
+      "filter": "Filtr",
+      "reset": "Resetuj",
+      "filtered": "(przefiltrowane)",
+      "entryCount": "{{count}} wpisów",
+      "status4xx": "4xx+ (błędy)",
+      "status5xx": "5xx (serwer)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Czas",
+        "method": "Metoda",
+        "path": "Ścieżka",
+        "status": "Status",
+        "duration": "Czas trwania",
+        "user": "Użytkownik",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Nie udało się załadować logów"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analiza",
+    "engine": "Silnik",
+    "depth": "Głębokość",
+    "lines": "Linie",
+    "maxDepth": "Maks. głębokość",
+    "backToPuzzle": "Wróć do zadania",
+    "calculating": "Obliczanie…",
+    "engineOff": "Silnik wyłączony",
+    "start": "Start",
+    "flip": "Obróć szachownicę",
+    "reset": "Resetuj",
+    "noMoves": "Brak ruchów — zagraj ruchy na szachownicy.",
+    "fen": "FEN",
+    "loadFen": "Załaduj FEN",
+    "copyFen": "Kopiuj FEN",
+    "pgn": "PGN",
+    "loadPgn": "Załaduj PGN"
+  },
+  "stats": {
+    "title": "Statystyki",
+    "currentElo": "Elo zadań",
+    "totalSolved": "Rozwiązane",
+    "attempts": "Próby",
+    "accuracy": "Dokładność",
+    "currentStreak": "Obecna seria",
+    "bestStreak": "Najlepsza seria",
+    "eloProgress": "Postęp Elo zadań",
+    "level": "Poziom",
+    "allLevels": "Wszystkie",
+    "noData": "Brak danych.",
+    "perLevel": "Elo na poziom wizualizacji",
+    "vizLevel": "Poziom",
+    "recentPuzzles": "Ostatnie zadania",
+    "date": "Data",
+    "rating": "Ocena",
+    "result": "Wynik",
+    "time": "Czas",
+    "byTheme": "Według motywu",
+    "byRating": "Według oceny (rozwiązane)",
+    "byRatingHint": "Rozwiązane zadania na pasmo ocen — najedź, aby zobaczyć dokładność.",
+    "activity": "Aktywność"
+  }
+}

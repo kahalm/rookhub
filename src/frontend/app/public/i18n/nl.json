@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "add": "Toevoegen",
+    "close": "Sluiten",
+    "search": "Zoeken",
+    "back": "Terug",
+    "retry": "Opnieuw proberen",
+    "loading": "Laden…",
+    "ok": "OK",
+    "remove": "Verwijderen"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "repertoires": "Repertoires",
+    "tournaments": "Toernooien",
+    "friends": "Vrienden",
+    "puzzles": "Puzzels",
+    "weekly": "Wekelijks",
+    "courses": "Cursussen",
+    "admin": "Beheer",
+    "profile": "Profiel",
+    "puzzleHistory": "Puzzelgeschiedenis",
+    "changelog": "Changelog",
+    "logout": "Uitloggen",
+    "login": "Inloggen",
+    "register": "Registreren",
+    "language": "Taal",
+    "menu": "Menu",
+    "info": "Info",
+    "account": "Account",
+    "analysis": "Analyse",
+    "stats": "Statistieken"
+  },
+  "app": {
+    "changelogTitle": "Changelog",
+    "quickstartTitle": "Snelstart",
+    "qs": {
+      "subscribeTitle": "Abonneren",
+      "subscribeDesc": "Abonneer op toernooien voor snelle toegang tot spelers, koppelingen en resultaten.",
+      "monitorTitle": "Monitoren",
+      "monitorDesc": "Schakel de monitor in voor een toernooi — nieuwe ronden worden automatisch gedetecteerd en gecrawld.",
+      "favoritesTitle": "Favorieten",
+      "favoritesDesc": "Markeer spelers of teams als favoriet voor snelle toegang in de toernooiweergave.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Voeg je ChessResults ID toe in je profiel — aankomende toernooien worden automatisch geabonneerd."
+    },
+    "feedback": "Feedback / Bug melden",
+    "updateAvailable": "Er is een nieuwe versie beschikbaar.",
+    "reload": "Herladen"
+  },
+  "auth": {
+    "login": {
+      "title": "Inloggen",
+      "usernameLabel": "Gebruikersnaam",
+      "passwordLabel": "Wachtwoord",
+      "rememberMe": "Ingelogd blijven",
+      "submit": "Inloggen",
+      "submitting": "Bezig met inloggen...",
+      "registerLink": "Nog geen account? Registreren",
+      "failed": "Inloggen mislukt"
+    },
+    "register": {
+      "title": "Registreren",
+      "usernameLabel": "Gebruikersnaam",
+      "emailLabel": "E-mailadres",
+      "passwordLabel": "Wachtwoord",
+      "passwordHint": "Minimaal 4 tekens",
+      "submit": "Registreren",
+      "submitting": "Bezig met registreren...",
+      "loginLink": "Al een account? Inloggen",
+      "failed": "Registratie mislukt"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welkom, {{username}}!",
+    "subscribedTournaments": "Geabonneerde toernooien",
+    "subscribedAt": "Geabonneerd op {{date}}",
+    "puzzles": {
+      "title": "Puzzels",
+      "subtitle": "Elo {{elo}} | {{solved}} opgelost ({{accuracy}}%)",
+      "solve": "Puzzels oplossen",
+      "endless": "Eindeloos"
+    },
+    "subscriptions": {
+      "title": "Toernooi-abonnementen",
+      "count": "{{count}} abonnementen",
+      "browse": "Toernooien bekijken"
+    },
+    "friends": {
+      "title": "Vrienden",
+      "count": "{{count}} vrienden",
+      "manage": "Vrienden beheren"
+    },
+    "repertoires": {
+      "title": "Repertoires",
+      "count": "{{count}} repertoires",
+      "viewAll": "Alles bekijken"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partij",
+    "nav": {
+      "first": "Eerste zet",
+      "previous": "Vorige zet",
+      "next": "Volgende zet",
+      "last": "Laatste zet"
+    }
+  },
+  "profile": {
+    "title": "Profiel: {{username}}",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "searchPlayer": "Speler zoeken",
+    "noResults": "Geen resultaten gevonden.",
+    "displayName": "Weergavenaam",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com gebruikersnaam",
+    "lichessUsername": "Lichess gebruikersnaam",
+    "saving": "Opslaan...",
+    "saved": "Profiel opgeslagen",
+    "saveFailed": "Profiel opslaan mislukt",
+    "searchFailed": "Zoeken mislukt",
+    "chessResultsApplied": "ChessResults-gegevens toegepast",
+    "fideApplied": "FIDE-gegevens toegepast",
+    "discord": {
+      "title": "Discord",
+      "hint": "Open een persoonlijke link van de RookHub Discord-bot (het /link-commando of een puzzel-DM) om je Discord-account te koppelen.",
+      "unlink": "Ontkoppelen",
+      "unlinked": "Discord ontkoppeld",
+      "linked": "Discord-account gekoppeld",
+      "linkConflict": "Dit Discord-account is al gekoppeld aan een andere RookHub-gebruiker.",
+      "linkFailed": "Discord-account koppelen mislukt",
+      "stashed": "Log in of registreer om het koppelen van je Discord-account te voltooien."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Sla puzzels op dit apparaat op om te blijven oefenen zonder internet (per apparaat).",
+      "puzzleCount": "Puzzels offline",
+      "endlessRuns": "Eindeloze sessies offline",
+      "cacheSize": "Cachegrootte",
+      "books": "{{count}} boeken",
+      "clear": "Cache leegmaken",
+      "cleared": "Offline-cache geleegd",
+      "pending": "{{count}} oplossingen wachten op synchronisatie — ze worden automatisch geüpload zodra je weer online bent."
+    },
+    "delete": {
+      "title": "Account verwijderen",
+      "hint": "Verwijder je account permanent.",
+      "button": "Account verwijderen",
+      "warn": "Waarschuwing: je identiteit en persoonlijke gegevens worden onomkeerbaar verwijderd. Voer je wachtwoord in ter bevestiging.",
+      "password": "Wachtwoord",
+      "confirm": "Permanent verwijderen",
+      "deleting": "Verwijderen...",
+      "done": "Je account is verwijderd.",
+      "wrongPassword": "Wachtwoord is onjuist.",
+      "failed": "Account verwijderen mislukt.",
+      "moreInfo": "Meer over accountverwijdering"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Account verwijderen",
+      "intro": "Op deze pagina wordt uitgelegd hoe je je RookHub-account verwijdert en wat er met je gegevens gebeurt.",
+      "inAppTitle": "Hoe verwijder je je account",
+      "inApp": "Log in op de app en ga naar Profiel → \"Account verwijderen\". Bevestig met je wachtwoord. Het account wordt onmiddellijk verwijderd.",
+      "removedTitle": "Wat wordt verwijderd",
+      "removed1": "Je identiteit en persoonlijke gegevens (gebruikersnaam, e-mailadres, weergave-/echte naam, FIDE/ChessResults ID, Chess.com/Lichess-naam, Discord-koppeling) en toegang tot het account.",
+      "removed2": "Persoonlijke inhoud en koppelingen: repertoires, toernooi-abonnementen/-favorieten, vriendschappen en groepslidmaatschappen.",
+      "keptTitle": "Wat anoniem bewaard blijft",
+      "kept": "Geaggregeerde statistieken over oplossen/spelen (bijv. opgeloste puzzels) worden bewaard in geanonimiseerde vorm die niet naar u te herleiden is.",
+      "contactTitle": "Contact",
+      "contact": "Voor verzoeken tot verwijdering of vragen kunt u ons bereiken via",
+      "back": "Terug naar inloggen"
+    },
+    "privacy": {
+      "title": "Privacybeleid",
+      "updated": "Laatst bijgewerkt: 3 juni 2026",
+      "intro": "RookHub is een schaaktrainingsplatform (puzzels, eindeloze modus, cursussen, repertoires). Dit beleid legt uit hoe persoonsgegevens worden verwerkt onder de AVG.",
+      "controllerTitle": "Verwerkingsverantwoordelijke",
+      "controller": "De verwerkingsverantwoordelijke is de exploitant vermeld in het impressum",
+      "dataTitle": "Welke gegevens wij verwerken",
+      "dataIntro": "Afhankelijk van uw gebruik verwerken wij:",
+      "dataAccount": "Accountgegevens: gebruikersnaam, e-mailadres, wachtwoord (alleen als hash opgeslagen).",
+      "dataProfile": "Profielgegevens (optioneel): weergave-/echte naam, FIDE ID, ChessResults ID, Chess.com/Lichess-gebruikersnaam, optionele Discord-koppeling.",
+      "dataUsage": "Gebruiksgegevens: opgeloste puzzels, voortgang en statistieken van eindeloze modus/cursussen, speelrating, inlogtijdstippen.",
+      "dataTechnical": "Technische gegevens: IP-adres, opgevraagde endpoints met tijdstippen en een pseudonieme bezoekersidentificator (bereiksmeting) in serverlogboeken.",
+      "purposesTitle": "Doeleinden & juridische grondslagen",
+      "purposes": "Het verlenen van het account en de functies (uitvoering van een overeenkomst, art. 6 lid 1 sub b AVG) alsmede operationele beveiliging, foutanalyse en bereiksmeting via logboeken (gerechtvaardigd belang, art. 6 lid 1 sub f AVG).",
+      "thirdTitle": "Ontvangers / diensten van derden",
+      "thirdIntro": "Gegevens worden niet verkocht. Afhankelijk van uw gebruik zijn de volgende diensten betrokken:",
+      "thirdDiscord": "Discord: alleen bij vrijwillige accountkoppeling (Discord ID/naam) voor weergave in de RookHub Discord-bot.",
+      "thirdChessresults": "chess-results.com: toernooigegevens worden server-side opgehaald wanneer u een ChessResults ID instelt of toernooien laadt.",
+      "thirdChesssites": "Chess.com / Lichess: alleen de gebruikersnamen die u vrijwillig invoert; geen automatische gegevensoverdracht.",
+      "thirdLogging": "Elasticsearch/Kibana: zelfgehoste logging/monitoring op onze infrastructuur.",
+      "thirdHosting": "Hosting: beheerd op onze eigen serverinfrastructuur met een TLS reverse proxy.",
+      "storageTitle": "Lokale opslag (cookies/storage)",
+      "storage": "Wij gebruiken geen trackingcookies. Browseropslag (localStorage) bevat bijv. uw inlogtoken, instellingen en — indien ingeschakeld — offline puzzels. Deze blijven op uw apparaat.",
+      "retentionTitle": "Bewaartermijn & verwijdering",
+      "retention": "Accountgegevens worden bewaard totdat u uw account verwijdert. U kunt uw account op elk moment verwijderen — identiteit en persoonlijke gegevens worden verwijderd, geanonimiseerde statistieken blijven bewaard. Meer:",
+      "rightsTitle": "Uw rechten",
+      "rights": "U heeft het recht op inzage, rectificatie, verwijdering, beperking, gegevensoverdraagbaarheid en bezwaar, alsmede het recht een klacht in te dienen bij een toezichthoudende autoriteit (in Oostenrijk: de Datenschutzbehörde).",
+      "contactTitle": "Contact",
+      "contact": "Voor privacyvragen kunt u ons bereiken via",
+      "back": "Terug naar inloggen"
+    },
+    "impressum": {
+      "title": "Impressum",
+      "operatorTitle": "Dienstverlener",
+      "name": "[NAAM / BEDRIJF — invullen]",
+      "address": "[Adres — straat, postcode, plaats, land]",
+      "uid": "[BTW-nummer, indien bedrijf]",
+      "contactTitle": "Contact",
+      "contact": "E-mail",
+      "disclaimer": "Let op: de gegevens van de dienstverlener zijn plaatsaanduidingen en moeten vóór publicatie worden vervangen door de werkelijke gegevens. Deze pagina is een concept en vormt geen juridisch advies.",
+      "back": "Terug naar inloggen"
+    }
+  },
+  "friends": {
+    "title": "Vrienden",
+    "searchUsers": "Gebruikers zoeken",
+    "searchResults": "Zoekresultaten",
+    "tabs": {
+      "friends": "Vrienden ({{count}})",
+      "requests": "Verzoeken ({{count}})"
+    },
+    "empty": {
+      "friends": "Nog geen vrienden. Zoek gebruikers om vrienden toe te voegen!",
+      "requests": "Geen openstaande verzoeken."
+    },
+    "sentOn": "Verzonden op {{date}}",
+    "requestSent": "Vriendschapsverzoek verzonden",
+    "errors": {
+      "loadFriends": "Vrienden laden mislukt",
+      "loadRequests": "Verzoeken laden mislukt",
+      "search": "Zoeken mislukt",
+      "sendRequest": "Verzoek verzenden mislukt",
+      "acceptRequest": "Verzoek accepteren mislukt",
+      "declineRequest": "Verzoek weigeren mislukt",
+      "removeFriend": "Vriend verwijderen mislukt"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Mijn repertoires",
+      "new": "Nieuw repertoire",
+      "fileCount": "{{count}} bestanden",
+      "public": "Openbaar",
+      "private": "Privé",
+      "noDescription": "Geen beschrijving",
+      "open": "Openen",
+      "empty": "Nog geen repertoires. Maak er een aan om te beginnen!",
+      "loadFailed": "Repertoires laden mislukt",
+      "createFailed": "Repertoire aanmaken mislukt",
+      "deleteConfirm": "Dit repertoire verwijderen?",
+      "deleteFailed": "Repertoire verwijderen mislukt"
+    },
+    "detail": {
+      "noDescription": "Geen beschrijving",
+      "modeLines": "Lijnen",
+      "modeTree": "Boom",
+      "modeEdit": "Bewerken"
+    },
+    "dialog": {
+      "title": "Nieuw repertoire",
+      "name": "Naam",
+      "description": "Beschrijving",
+      "public": "Openbaar",
+      "create": "Aanmaken"
+    },
+    "lines": {
+      "allLines": "Alle lijnen",
+      "empty": "Geen lijnen gevonden in dit repertoire."
+    },
+    "tree": {
+      "start": "Begin",
+      "lineCount": "{{count}} lijn",
+      "lineCountPlural": "{{count}} lijnen",
+      "empty": "Einde van de lijn — geen verdere zetten."
+    },
+    "edit": {
+      "uploadHint": "Sleep PGN-bestanden hierheen of klik om te uploaden",
+      "files": "Bestanden ({{count}})",
+      "empty": "Nog geen bestanden. Upload PGN-bestanden om te beginnen!",
+      "filesSkipped": "{{count}} bestand(en) overgeslagen (alleen .pgn, max. 10 MB)",
+      "uploadSuccess": "{{count}} bestand(en) geüpload",
+      "uploadPartial": "{{ok}} geüpload, {{failed}} mislukt",
+      "downloadFailed": "Downloaden mislukt",
+      "deleteConfirm": "Dit bestand verwijderen?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Vernieuwen",
+      "subscribe": "Abonneren",
+      "unsubscribe": "Afmelden",
+      "monitor": "Monitoren",
+      "monitoringUntil": "Monitoren tot {{time}}",
+      "share": "Delen",
+      "subscribed": "Geabonneerd!",
+      "unsubscribed": "Afgemeld",
+      "failed": "Mislukt",
+      "unsubscribeFailed": "Afmelden mislukt"
+    },
+    "tabs": {
+      "players": "Spelers ({{count}})",
+      "teams": "Teams ({{count}})",
+      "pairings": "Indeling"
+    },
+    "favoritesOnly": "Alleen favorieten",
+    "favorites": {
+      "added": "{{name}} toegevoegd aan favorieten",
+      "removed": "{{name}} verwijderd uit favorieten",
+      "addedShort": "{{name}} als favoriet gemarkeerd",
+      "removedShort": "{{name}} verwijderd"
+    },
+    "players": {
+      "snr": "Nr.",
+      "title": "Titel",
+      "name": "Naam",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Land",
+      "team": "Team",
+      "club": "Club",
+      "boardShort": "Bd."
+    },
+    "teams": {
+      "rank": "Rang",
+      "team": "Team",
+      "points": "Punten"
+    },
+    "pairings": {
+      "round": "Ronde",
+      "roundLabel": "Ronde {{round}}",
+      "board": "Bord",
+      "white": "Wit",
+      "black": "Zwart",
+      "home": "Thuis",
+      "away": "Uit",
+      "result": "Resultaat"
+    },
+    "monitor": {
+      "stopped": "Monitoren gestopt",
+      "stopFailed": "Monitoren stoppen mislukt",
+      "activated": "Monitoren geactiveerd",
+      "activateFailed": "Monitoren activeren mislukt",
+      "newRoundTitle": "Nieuwe ronde beschikbaar!",
+      "newRoundBody": "Ronde {{round}} is gepubliceerd.",
+      "newRoundSnack": "Nieuwe ronde beschikbaar! Ronde {{round}}"
+    },
+    "list": {
+      "title": "Toernooien",
+      "importTitle": "Toernooi importeren",
+      "importSubtitle": "Voer een chess-results.com toernooi-ID in om het te crawlen",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "bijv. 1234567",
+      "idHintPrefix": "Het getal van chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Crawlen",
+      "crawling": "Toernooi {{id}} crawlen... Taak #{{jobId}}",
+      "crawlerUnavailable": "Geen verbinding met de toernooi-crawler. Controleer of de crawler actief is.",
+      "details": "Details",
+      "hide": "Verbergen",
+      "empty": "Geen toernooien gevonden.",
+      "showHidden": "{{count}} verborgen tonen",
+      "imported": "Toernooi geïmporteerd!",
+      "crawlStartFailed": "Crawl starten mislukt",
+      "crawlFailed": "Crawlen mislukt",
+      "crawlConnectionLost": "Verbinding met crawltaak verbroken"
+    },
+    "detail": {
+      "loadTournamentFailed": "Toernooi laden mislukt",
+      "loadSubscriptionFailed": "Abonnementsstatus laden mislukt",
+      "reloadTournamentFailed": "Toernooi herladen mislukt",
+      "refreshStartFailed": "Vernieuwen starten mislukt",
+      "dataRefreshed": "Gegevens vernieuwd!",
+      "refreshFailed": "Vernieuwen mislukt",
+      "loadPlayersFailed": "Spelers laden mislukt",
+      "loadTeamsFailed": "Teams laden mislukt",
+      "loadPairingsFailed": "Indeling laden mislukt",
+      "loadTeamDetailsFailed": "Teamdetails laden mislukt"
+    },
+    "public": {
+      "notFound": "Toernooi niet gevonden."
+    },
+    "share": {
+      "title": "Toernooi delen",
+      "copyLink": "Link kopiëren",
+      "linkCopied": "Link gekopieerd!",
+      "copyFailed": "Kopiëren mislukt"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Puzzel laden…",
+      "loadFailed": "Puzzel laden mislukt",
+      "offlineNoCache": "Je bent offline en er zijn geen puzzels in de cache. Open deze pagina eenmaal online om puzzels op te slaan voor offline spelen.",
+      "watchOpponent": "Kijk de zet van de tegenstander…",
+      "yourTurn": "Jij bent aan de beurt!",
+      "gaveUpPlayOut": "Opgegeven — speel de oplossing zelf door.",
+      "thinking": "Stockfish denkt…"
+    },
+    "result": {
+      "solutionPlayedOut": "Oplossing doorgespeeld.",
+      "tryYourselfNextTime": "Volgende keer zelf proberen!",
+      "checkmate": "Schaakmat!",
+      "alternativeSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
+      "correct": "Correct!",
+      "incorrect": "Onjuist"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Nu",
+      "show": "Evaluatie tonen",
+      "hide": "Evaluatie verbergen"
+    },
+    "actions": {
+      "reset": "Opnieuw",
+      "mouseslip": "Muisfout",
+      "giveUp": "Opgeven",
+      "nextPuzzle": "Volgende puzzel",
+      "share": "Puzzel delen",
+      "loadPuzzle": "Puzzel laden",
+      "reviewLast": "Laatste puzzel bekijken",
+      "endlessMode": "Eindeloze modus",
+      "analyze": "Analyseren"
+    },
+    "info": {
+      "rating": "Rating"
+    },
+    "stats": {
+      "title": "Jouw statistieken",
+      "solved": "Opgelost",
+      "accuracy": "Nauwkeurigheid",
+      "streak": "Reeks",
+      "best": "Best"
+    },
+    "settings": {
+      "tooltip": "Instellingen"
+    },
+    "filters": {
+      "title": "Filters",
+      "visualization": "Visualisatie: niveau {{level}}",
+      "difficulty": "Moeilijkheidsgraad",
+      "difficultyHint": "Puzzels rond je Elo ({{elo}})",
+      "depthHint": "1 (zwak) – 24 (sterk)",
+      "skipSolved": "Opgeloste overslaan"
+    },
+    "difficulty": {
+      "veryEasy": "Zeer gemakkelijk",
+      "easy": "Gemakkelijk",
+      "normal": "Normaal",
+      "hard": "Moeilijk",
+      "veryHard": "Zeer moeilijk"
+    },
+    "theme": {
+      "mode": "Modus",
+      "modeNormal": "Normaal",
+      "modeRandom": "Willekeurig",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Bordthema",
+      "pieces": "Stukken"
+    },
+    "viz": {
+      "title": "Visualisatie (niveau {{level}})",
+      "countdown": "Stukken verdwijnen over {{seconds}}s…",
+      "noMoveYet": "Nog geen zet — klik op het startvak → doelvak.",
+      "show": "Tonen",
+      "showing": "Tonen…"
+    },
+    "share": {
+      "title": "Puzzel delen",
+      "copied": "Link gekopieerd!",
+      "copyFailed": "Kopiëren mislukt"
+    }
+  },
+  "courses": {
+    "title": "Cursussen",
+    "intro": "Werk een geïmporteerd boek puzzel voor puzzel door — opeenvolgend of willekeurig. Je voortgang wordt opgeslagen.",
+    "emptyHint": "Nog geen boeken geïmporteerd. Importeer boeken in het beheergebied onder \"Boeken\".",
+    "puzzleCount": "{{count}} puzzels",
+    "completed": "Cursus voltooid",
+    "sequential": "Opeenvolgend",
+    "random": "Willekeurig",
+    "resetTooltip": "Voortgang resetten",
+    "resetConfirm": "Voortgang resetten voor \"{{name}}\"?",
+    "loadFailed": "Cursussen laden mislukt",
+    "resetFailed": "Resetten mislukt",
+    "offlineSaveTooltip": "Boek offline opslaan",
+    "offlineRemoveTooltip": "Offline kopie verwijderen",
+    "offlineSaved": "\"{{name}}\" offline opgeslagen ({{count}} puzzels)",
+    "offlineRemoved": "\"{{name}}\" verwijderd uit offline",
+    "offlineFailed": "Boek offline opslaan mislukt"
+  },
+  "weekly": {
+    "title": "Wekelijks",
+    "intro": "De wekelijkse schaakberichten om doorheen te klikken. Datum en tijd geven aan wanneer het bericht gepland staat.",
+    "oClock": "",
+    "play": "Doorspelen",
+    "empty": "Nog geen wekelijkse berichten.",
+    "deleteConfirm": "Wekelijks bericht \"{{title}}\" verwijderen?",
+    "created": "Wekelijks bericht aangemaakt",
+    "deleted": "Wekelijks bericht verwijderd",
+    "loadFailed": "Wekelijkse berichten laden mislukt",
+    "uploadFailed": "Uploaden mislukt",
+    "saveFailed": "Opslaan mislukt",
+    "deleteFailed": "Verwijderen mislukt",
+    "fields": {
+      "date": "Datum",
+      "time": "Tijd",
+      "titleOptional": "Titel (optioneel)"
+    },
+    "columns": {
+      "scheduled": "Datum",
+      "title": "Titel",
+      "actions": "Acties"
+    },
+    "upload": {
+      "title": "Nieuw wekelijks bericht uploaden",
+      "choosePgn": "PGN kiezen",
+      "titlePlaceholder": "uit bestandsnaam",
+      "create": "Aanmaken",
+      "hint": "Standaard: laatste datum + 7 dagen, zelfde tijd (anders 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Je bent offline en er is geen sessie in de cache. Open Eindeloos eenmaal online om puzzels op te slaan voor offline spelen.",
+    "help": {
+      "title": "Eindeloze puzzelmodus",
+      "gameplayHeading": "Hoe het werkt",
+      "gameplayP1": "Je lost schaakpuzzels op van toenemende moeilijkheid. Je begint bij een instelbare rating en werkt je omhoog. De rating stijgt automatisch via de Fasttrack-fasen (zie hieronder).",
+      "gameplayP2": "Je hebt <strong>3 levens</strong>. Bij 0 levens is het spel voorbij.",
+      "movesHeading": "Zetten & Stockfish",
+      "movesP1": "Elke puzzel heeft een <strong>bedoelde oplossing</strong> (een reeks zetten). Zolang je de juiste zetten speelt, volg je die oplossingslijn.",
+      "movesP2": "Als je een <strong>verkeerde zet</strong> speelt, neemt <strong>Stockfish</strong> (een schaakprogramma) de andere kant over. Je speelt dan vrij verder tegen Stockfish. De sterkte is instelbaar via de Stockfish-diepte.",
+      "movesItem1": "<strong>Stockfish schaakmat zetten</strong> telt als alternatieve oplossing — geen leven verloren!",
+      "movesItem2": "<strong>Stockfish zet jou schaakmat</strong> — je verliest een leven",
+      "movesItem3": "De partij tegen Stockfish gaat eindeloos door totdat er schaakmat is of je opgeeft",
+      "buttonsHeading": "Knoppen tijdens het spel",
+      "buttonsShowEval": "<strong>Evaluatie tonen</strong> — Toont de Stockfish-evaluatie (Start vs. Nu)",
+      "buttonsReset": "<strong>Opnieuw</strong> — Reset de puzzel, maar kost een leven",
+      "buttonsMouseslip": "<strong>Muisfout</strong> — Maakt de laatste verkeerde zet ongedaan (eénmalig per puzzel, gratis)",
+      "buttonsGiveUp": "<strong>Opgeven</strong> — Geef op, kost een leven",
+      "settingsHeading": "Instellingen",
+      "settingsStartRating": "<strong>Startrating</strong> — De puzzelrating waarmee je begint",
+      "settingsStockfishDepth": "<strong>Stockfish-diepte</strong> — Motorsterkte (1 = zeer zwak, 24 = maximale sterkte)",
+      "settingsThemes": "<strong>Thema's</strong> — Optioneel: alleen bepaalde tactische thema's (bijv. \"vork pen\")",
+      "fasttrackHeading": "Moeilijkheidstoename (Fasttrack)",
+      "fasttrackP1": "De toename past zich aan je eerdere prestaties aan: het analyseert je recente sessies en berekent de rating waarbij je doorgaans levens verliest.",
+      "fasttrackPhase1": "<strong>Fase 1 (puzzels 1–5)</strong> — Snelle toename tot je 1e drempelwaarde",
+      "fasttrackPhase2": "<strong>Fase 2 (puzzels 6–10)</strong> — Toename van de 1e naar de 2e drempelwaarde",
+      "fasttrackPhase3": "<strong>Fase 3 (vanaf puzzel 11)</strong> — Vaste stap van 20",
+      "fasttrackP2": "De drempelwaarden (1e/2e drempel) worden automatisch berekend maar kunnen handmatig worden aangepast. Klik op \"Auto: …\" om de waarde te resetten."
+    },
+    "config": {
+      "title": "Eindeloze puzzelmodus",
+      "subtitle": "Toenemende moeilijkheid — hoe ver kom jij?",
+      "startRating": "Startrating",
+      "stockfishDepth": "Stockfish-diepte",
+      "stockfishDepthHint": "1 (zwak) – 24 (sterk)",
+      "themes": "Thema's (optioneel)",
+      "themesPlaceholder": "bijv. vork pen",
+      "thresholdExplain": "Ratings waarbij je doorgaans levens verliest. Pas aan om makkelijkere puzzels sneller of langzamer over te slaan.",
+      "firstThreshold": "1e drempelwaarde",
+      "secondThreshold": "2e drempelwaarde",
+      "auto": "Auto: {{value}}",
+      "step": "Stap {{step}}",
+      "phase1Label": "Fase 1 (Nv 1–5)",
+      "phase2Label": "Fase 2 (Nv 6–10)",
+      "phase3Label": "Fase 3 (Nv 11+)",
+      "curveHint": "Ratingcurve van de gauntlet (vastgesteld bij de start):",
+      "curvePuzzle": "Puzzel {{n}}",
+      "settings": "Instellingen",
+      "visualizationLevel": "Visualisatie: niveau {{level}}",
+      "mode": "Modus",
+      "modeNormal": "Normaal",
+      "modeRandom": "Willekeurig",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Bordthema",
+      "pieces": "Stukken",
+      "highscore": "Highscore: {{rating}} rating",
+      "sessionsPlayed": "{{count}} sessies gespeeld",
+      "viewHistory": "Geschiedenis bekijken",
+      "unfinishedRun": "Onafgemaakte sessie: Nv {{level}} | {{solved}} opgelost | {{lives}} levens | {{max}} max",
+      "continue": "Doorgaan",
+      "archiveAndNew": "Archiveren & nieuw spel",
+      "newGame": "Nieuw spel",
+      "start": "Starten"
+    },
+    "game": {
+      "visualization": "Visualisatie (niveau {{level}})",
+      "vizCountdown": "Stukken verdwijnen over {{seconds}}s...",
+      "vizNoMove": "Nog geen zet — klik op het startvak → doelvak.",
+      "vizShow": "Tonen",
+      "vizShowing": "Tonen...",
+      "loadingPuzzle": "Puzzel laden...",
+      "watchOpponent": "Kijk de zet van de tegenstander...",
+      "yourTurn": "Jij bent aan de beurt! Vind de beste zet.",
+      "yourMove": "Jouw zet...",
+      "opponentThinking": "Tegenstander denkt na...",
+      "evalStart": "Start",
+      "evalNow": "Nu",
+      "showEval": "Evaluatie tonen",
+      "hideEval": "Evaluatie verbergen",
+      "reset": "Opnieuw",
+      "mouseslip": "Muisfout",
+      "giveUp": "Opgeven",
+      "checkmate": "Schaakmat!",
+      "alternativeSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde lijn.",
+      "correct": "Correct!",
+      "wrong": "Fout!",
+      "gaveUp": "Opgegeven",
+      "continue": "Doorgaan",
+      "analyze": "Analyseren",
+      "reviewLast": "Laatste puzzel analyseren",
+      "puzzleRating": "Puzzelrating: {{rating}}",
+      "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
+      "showTags": "Labels tonen",
+      "hideTags": "Labels verbergen",
+      "sharePuzzle": "Puzzel delen",
+      "statRating": "Rating",
+      "statLevel": "Niveau",
+      "statSolved": "Opgelost",
+      "statTime": "Tijd",
+      "phaseLabel": "Fase {{phase}} (stap {{step}})"
+    },
+    "gameOver": {
+      "title": "Spel voorbij",
+      "wonTitle": "Je hebt gewonnen!",
+      "wonSubtitle": "Je hebt de volledige gauntlet doorstaan.",
+      "wonText": "De keten is verslagen — start een nieuwe sessie voor de volgende uitdaging.",
+      "exhaustedTitle": "Uitgespeeld!",
+      "exhaustedSubtitle": "Je hebt alle puzzelratingbereiken doorgespeeld.",
+      "areYouAStockfish": "Ben jij een Stockfish?",
+      "maxRating": "Maximale rating",
+      "puzzlesSolved": "Opgeloste puzzels",
+      "livesLeft": "Resterende levens",
+      "levelReached": "Bereikt niveau",
+      "time": "Tijd",
+      "livesLostAt": "Levens verloren bij: {{ratings}}",
+      "puzzleReview": "Puzzelreview",
+      "newHighscore": "Nieuwe highscore!",
+      "archiving": "Archiveren...",
+      "archiveRun": "Sessie archiveren",
+      "archived": "Gearchiveerd",
+      "playAgain": "Opnieuw spelen",
+      "backToPuzzles": "Terug naar puzzels"
+    },
+    "history": {
+      "title": "Eindeloze puzzelgeschiedenis",
+      "noSessions": "Nog geen sessies gespeeld.",
+      "startPlaying": "Begin met spelen",
+      "filterAll": "Alle",
+      "filterActive": "Actief",
+      "filterArchived": "Gearchiveerd",
+      "selected": "{{count}} geselecteerd",
+      "archive": "Archiveren",
+      "unarchive": "Uit archief halen",
+      "noArchivedSessions": "Geen gearchiveerde sessies.",
+      "noActiveSessions": "Geen actieve sessies.",
+      "colDate": "Datum",
+      "colMaxRating": "Maximale rating",
+      "colSolved": "Opgelost",
+      "colDuration": "Duur",
+      "colConfig": "Configuratie",
+      "colMistakes": "Fouten",
+      "backToEndless": "Terug naar eindeloze modus"
+    }
+  },
+  "book": {
+    "difficulty": "Moeilijkheidsgraad",
+    "offlineUnavailable": "Dit boek is niet offline beschikbaar.",
+    "status": {
+      "loading": "Puzzel laden...",
+      "watchOpponent": "Kijk de zet van de tegenstander...",
+      "yourTurn": "Jij bent aan de beurt! Vind de beste zet.",
+      "gaveUp": "Opgegeven — speel de oplossing zelf door.",
+      "stockfishThinking": "Stockfish denkt...",
+      "yourMoveVsStockfish": "Jouw zet tegen Stockfish...",
+      "correct": "Correct!",
+      "incorrect": "Onjuist",
+      "gaveUpSolution": "Opgegeven — dit is de oplossing",
+      "checkmate": "Schaakmat!",
+      "altSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
+      "fullGame": "Volledige partij"
+    },
+    "actions": {
+      "reset": "Opnieuw",
+      "giveUp": "Opgeven",
+      "mouseslip": "Muisfout",
+      "nextPuzzle": "Volgende puzzel",
+      "again": "Nogmaals",
+      "skip": "Overslaan",
+      "viewFullGame": "Volledige partij bekijken",
+      "analyze": "Analyseren",
+      "nextInBook": "Volgende in boek",
+      "randomInBook": "Willekeurig uit boek",
+      "sharePuzzle": "Puzzel delen",
+      "backToPuzzle": "Terug naar puzzel"
+    },
+    "settings": {
+      "title": "Instellingen",
+      "visualizationLevel": "Visualisatie: niveau {{level}}",
+      "stockfishDepth": "Stockfish-diepte",
+      "depthHint": "1 (zwak) – 24 (sterk)",
+      "mode": "Modus",
+      "modeNormal": "Normaal",
+      "modeRandom": "Willekeurig",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Bordthema",
+      "pieces": "Stukken"
+    },
+    "viz": {
+      "titleLevel": "Visualisatie (niveau {{level}})",
+      "countdown": "Stukken verdwijnen over {{seconds}}s...",
+      "noMoveYet": "Nog geen zet — klik op het startvak → doelvak.",
+      "show": "Tonen",
+      "showing": "Tonen...",
+      "level0": "Normaal — slepen & neerzetten",
+      "level1": "Blind — bord bevroren, zetten als tekst",
+      "level2": "Dam — stukken worden na 3s vervangen door damschijven",
+      "level3": "Donker — stukken worden na 3s vervangen door zwarte fiches",
+      "level4": "Onzichtbaar — stukken verdwijnen volledig na 3s"
+    },
+    "course": {
+      "backToCourses": "Naar cursusoverzicht",
+      "sequential": "Opeenvolgend",
+      "random": "Willekeurig",
+      "completed": "Cursus voltooid!",
+      "toOverview": "Naar overzicht"
+    },
+    "weekly": {
+      "backToWeekly": "Naar overzicht wekelijkse berichten",
+      "label": "Wekelijks bericht",
+      "noPuzzles": "Dit wekelijkse bericht bevat geen speelbare puzzels.",
+      "allSolved": "Alle puzzels opgelost!"
+    }
+  },
+  "admin": {
+    "title": "Beheer",
+    "kibanaLink": "Kibana-dashboard",
+    "tabs": {
+      "users": "Gebruikers",
+      "books": "Boeken",
+      "groups": "Groepen",
+      "logs": "Verzoeklogboeken"
+    },
+    "users": {
+      "searchLabel": "Gebruikers zoeken",
+      "toggleAdmin": "Beheerdersrol wisselen",
+      "deleteUser": "Gebruiker verwijderen",
+      "deleteConfirm": "Gebruiker \"{{username}}\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "deleted": "Gebruiker \"{{username}}\" verwijderd",
+      "nowAdmin": "{{username}} is nu beheerder",
+      "noLongerAdmin": "{{username}} is niet langer beheerder",
+      "columns": {
+        "id": "ID",
+        "username": "Gebruikersnaam",
+        "email": "E-mailadres",
+        "admin": "Beheerder",
+        "groups": "Groepen",
+        "created": "Aangemaakt",
+        "actions": "Acties"
+      },
+      "errors": {
+        "load": "Gebruikers laden mislukt",
+        "toggleAdmin": "Beheerdersrol wisselen mislukt",
+        "delete": "Gebruiker verwijderen mislukt"
+      }
+    },
+    "books": {
+      "uploadPgn": "PGN('s) uploaden",
+      "importing": "Importeren…",
+      "poolHint": "Stel per boek in welke pools de puzzels in verschijnen.",
+      "empty": "Nog geen boeken geïmporteerd.",
+      "eloFrom": "van",
+      "eloTo": "tot",
+      "adminOnly": "alleen beheerder",
+      "deleteBook": "Boek verwijderen",
+      "deleteConfirm": "Boek \"{{name}}\" met {{count}} puzzel(s) verwijderen?",
+      "deleted": "Boek \"{{name}}\" verwijderd",
+      "imported": "{{imported}} puzzel(s) geïmporteerd, {{skipped}} overgeslagen",
+      "importedCount": "{{count}} puzzel(s) geïmporteerd",
+      "duplicatesCount": "{{count}} duplicaat/duplicaten",
+      "invalidCount": "{{count}} ongeldig",
+      "columns": {
+        "book": "Boek",
+        "puzzles": "Puzzels",
+        "difficulty": "Moeilijkheidsgraad",
+        "elo": "Elo van/tot",
+        "daily": "Dagelijks",
+        "random": "Willekeurig",
+        "blind": "Blind",
+        "visibleFor": "Zichtbaar voor (cursussen)",
+        "actions": "Acties"
+      },
+      "errors": {
+        "load": "Boeken laden mislukt",
+        "import": "Importeren mislukt",
+        "save": "Opslaan mislukt",
+        "saveGroups": "Groepstoegang bijwerken mislukt",
+        "delete": "Verwijderen mislukt"
+      }
+    },
+    "groups": {
+      "newGroup": "Nieuwe groep",
+      "namePlaceholder": "Naam",
+      "descriptionOptional": "Beschrijving (optioneel)",
+      "create": "Aanmaken",
+      "empty": "Nog geen groepen aangemaakt.",
+      "manageMembers": "Leden beheren",
+      "deleteGroup": "Groep verwijderen",
+      "membersOf": "Leden · {{name}}",
+      "addUser": "Gebruiker toevoegen",
+      "noMembers": "Geen leden.",
+      "created": "Groep \"{{name}}\" aangemaakt",
+      "deleteConfirm": "Groep \"{{name}}\" verwijderen?",
+      "deleted": "Groep \"{{name}}\" verwijderd",
+      "columns": {
+        "group": "Groep",
+        "members": "Leden",
+        "actions": "Acties"
+      },
+      "errors": {
+        "load": "Groepen laden mislukt",
+        "create": "Groep aanmaken mislukt",
+        "delete": "Verwijderen mislukt",
+        "loadMembers": "Leden laden mislukt",
+        "addMember": "Lid toevoegen mislukt",
+        "removeMember": "Lid verwijderen mislukt"
+      }
+    },
+    "logs": {
+      "all": "Alle",
+      "filter": "Filteren",
+      "reset": "Resetten",
+      "filtered": "(gefilterd)",
+      "entryCount": "{{count}} vermeldingen",
+      "status4xx": "4xx+ (fouten)",
+      "status5xx": "5xx (server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Tijd",
+        "method": "Methode",
+        "path": "Pad",
+        "status": "Status",
+        "duration": "Duur",
+        "user": "Gebruiker",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Logboeken laden mislukt"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analyse",
+    "engine": "Motor",
+    "depth": "Diepte",
+    "lines": "Lijnen",
+    "maxDepth": "Maximale diepte",
+    "backToPuzzle": "Terug naar puzzel",
+    "calculating": "Berekenen…",
+    "engineOff": "Motor uit",
+    "start": "Start",
+    "flip": "Bord omdraaien",
+    "reset": "Opnieuw",
+    "noMoves": "Nog geen zetten — speel zetten op het bord.",
+    "fen": "FEN",
+    "loadFen": "FEN laden",
+    "copyFen": "FEN kopiëren",
+    "pgn": "PGN",
+    "loadPgn": "PGN laden"
+  },
+  "stats": {
+    "title": "Statistieken",
+    "currentElo": "Puzzel-Elo",
+    "totalSolved": "Opgelost",
+    "attempts": "Pogingen",
+    "accuracy": "Nauwkeurigheid",
+    "currentStreak": "Huidige reeks",
+    "bestStreak": "Beste reeks",
+    "eloProgress": "Puzzel-Elo-verloop",
+    "level": "Niveau",
+    "allLevels": "Alle",
+    "noData": "Nog geen gegevens.",
+    "perLevel": "Elo per visualisatieniveau",
+    "vizLevel": "Niveau",
+    "recentPuzzles": "Recente puzzels",
+    "date": "Datum",
+    "rating": "Rating",
+    "result": "Resultaat",
+    "time": "Tijd",
+    "byTheme": "Per thema",
+    "byRating": "Per rating (opgelost)",
+    "byRatingHint": "Opgeloste puzzels per ratingband — wijs aan voor nauwkeurigheid.",
+    "activity": "Activiteit"
+  }
+}

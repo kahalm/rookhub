@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "close": "閉じる",
+    "search": "検索",
+    "back": "戻る",
+    "retry": "再試行",
+    "loading": "読み込み中…",
+    "ok": "OK",
+    "remove": "削除"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "repertoires": "レパートリー",
+    "tournaments": "トーナメント",
+    "friends": "フレンド",
+    "puzzles": "パズル",
+    "weekly": "週刊",
+    "courses": "コース",
+    "admin": "管理",
+    "profile": "プロフィール",
+    "puzzleHistory": "パズル履歴",
+    "changelog": "変更履歴",
+    "logout": "ログアウト",
+    "login": "ログイン",
+    "register": "登録",
+    "language": "言語",
+    "menu": "メニュー",
+    "info": "情報",
+    "account": "アカウント",
+    "analysis": "解析",
+    "stats": "統計"
+  },
+  "app": {
+    "changelogTitle": "変更履歴",
+    "quickstartTitle": "クイックスタート",
+    "qs": {
+      "subscribeTitle": "サブスクライブ",
+      "subscribeDesc": "トーナメントをサブスクライブして、選手・対戦・結果にすばやくアクセスしましょう。",
+      "monitorTitle": "モニター",
+      "monitorDesc": "トーナメントのモニターを有効にすると、新しいラウンドが自動的に検出・取得されます。",
+      "favoritesTitle": "お気に入り",
+      "favoritesDesc": "選手やチームをお気に入りに登録して、トーナメント画面からすばやくアクセスできます。",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "プロフィールに ChessResults ID を設定すると、今後のトーナメントが自動でサブスクライブされます。"
+    },
+    "feedback": "フィードバック / バグを報告",
+    "updateAvailable": "新しいバージョンが利用可能です。",
+    "reload": "再読み込み"
+  },
+  "auth": {
+    "login": {
+      "title": "ログイン",
+      "usernameLabel": "ユーザー名",
+      "passwordLabel": "パスワード",
+      "rememberMe": "ログインを維持する",
+      "submit": "ログイン",
+      "submitting": "ログイン中...",
+      "registerLink": "アカウントをお持ちでない方は登録",
+      "failed": "ログインに失敗しました"
+    },
+    "register": {
+      "title": "登録",
+      "usernameLabel": "ユーザー名",
+      "emailLabel": "メールアドレス",
+      "passwordLabel": "パスワード",
+      "passwordHint": "4文字以上",
+      "submit": "登録",
+      "submitting": "登録中...",
+      "loginLink": "すでにアカウントをお持ちの方はログイン",
+      "failed": "登録に失敗しました"
+    }
+  },
+  "dashboard": {
+    "welcome": "ようこそ、{{username}}さん！",
+    "subscribedTournaments": "サブスクライブ中のトーナメント",
+    "subscribedAt": "{{date}} にサブスクライブ",
+    "puzzles": {
+      "title": "パズル",
+      "subtitle": "Elo {{elo}} | {{solved}} 問正解 ({{accuracy}}%)",
+      "solve": "パズルを解く",
+      "endless": "エンドレス"
+    },
+    "subscriptions": {
+      "title": "トーナメント購読",
+      "count": "{{count}} 件",
+      "browse": "トーナメントを探す"
+    },
+    "friends": {
+      "title": "フレンド",
+      "count": "{{count}} 人",
+      "manage": "フレンドを管理"
+    },
+    "repertoires": {
+      "title": "レパートリー",
+      "count": "{{count}} 件",
+      "viewAll": "すべて表示"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "対局",
+    "nav": {
+      "first": "最初の手",
+      "previous": "前の手",
+      "next": "次の手",
+      "last": "最後の手"
+    }
+  },
+  "profile": {
+    "title": "プロフィール: {{username}}",
+    "firstName": "名",
+    "lastName": "姓",
+    "searchPlayer": "選手を検索",
+    "noResults": "結果が見つかりませんでした。",
+    "displayName": "表示名",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Chess.com ユーザー名",
+    "lichessUsername": "Lichess ユーザー名",
+    "saving": "保存中...",
+    "saved": "プロフィールを保存しました",
+    "saveFailed": "プロフィールの保存に失敗しました",
+    "searchFailed": "検索に失敗しました",
+    "chessResultsApplied": "ChessResults のデータを適用しました",
+    "fideApplied": "FIDE のデータを適用しました",
+    "discord": {
+      "title": "Discord",
+      "hint": "RookHub Discord ボットの個人リンク（/link コマンドまたはパズルの DM）を開いて Discord アカウントを連携してください。",
+      "unlink": "連携解除",
+      "unlinked": "Discord の連携を解除しました",
+      "linked": "Discord アカウントを連携しました",
+      "linkConflict": "この Discord アカウントはすでに別の RookHub ユーザーに連携されています。",
+      "linkFailed": "Discord アカウントを連携できませんでした",
+      "stashed": "Discord アカウントの連携を完了するには、サインインまたは登録してください。"
+    },
+    "offline": {
+      "title": "オフライン",
+      "hint": "このデバイスにパズルを保存して、インターネットなしで解き続けられます（デバイスごと）。",
+      "puzzleCount": "オフライン パズル数",
+      "endlessRuns": "オフライン エンドレス ラン",
+      "cacheSize": "キャッシュ サイズ",
+      "books": "{{count}} 冊",
+      "clear": "キャッシュをクリア",
+      "cleared": "オフライン キャッシュをクリアしました",
+      "pending": "{{count}} 件の解答がオンラインへの同期を待っています — オンライン復帰時に自動でアップロードされます。"
+    },
+    "delete": {
+      "title": "アカウント削除",
+      "hint": "アカウントを完全に削除します。",
+      "button": "アカウントを削除",
+      "warn": "警告: あなたのIDと個人データは元に戻せない形で削除されます。確認するためにパスワードを入力してください。",
+      "password": "パスワード",
+      "confirm": "完全に削除する",
+      "deleting": "削除中...",
+      "done": "アカウントを削除しました。",
+      "wrongPassword": "パスワードが正しくありません。",
+      "failed": "アカウントを削除できませんでした。",
+      "moreInfo": "アカウント削除について詳しく"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "アカウント削除",
+      "intro": "このページでは、RookHub アカウントの削除方法とデータに関する取り扱いを説明します。",
+      "inAppTitle": "アカウントの削除方法",
+      "inApp": "アプリにサインインし、プロフィール → 「アカウントを削除」に進んでください。パスワードで確認するとアカウントは即時削除されます。",
+      "removedTitle": "削除されるもの",
+      "removed1": "お客様の ID および個人データ（ユーザー名、メールアドレス、表示名/実名、FIDE/ChessResults ID、Chess.com/Lichess ユーザー名、Discord 連携）とログインアクセス。",
+      "removed2": "個人コンテンツおよびリンク: レパートリー、トーナメント購読/お気に入り、フレンド関係およびグループメンバーシップ。",
+      "keptTitle": "匿名で保持されるもの",
+      "kept": "集計された解答/プレイ統計（例: 解いたパズル数）は、あなたに追跡できない匿名化された形式で保持されます。",
+      "contactTitle": "お問い合わせ",
+      "contact": "削除リクエストやご質問は、以下までお問い合わせください",
+      "back": "ログインに戻る"
+    },
+    "privacy": {
+      "title": "プライバシーポリシー",
+      "updated": "最終更新: 2026年6月3日",
+      "intro": "RookHub はチェストレーニングプラットフォームです（パズル、エンドレスモード、コース、レパートリー）。本ポリシーでは、GDPR に基づく個人データの取り扱いを説明します。",
+      "controllerTitle": "管理者",
+      "controller": "データ処理の管理者はインプリントに記載された運営者です",
+      "dataTitle": "処理するデータ",
+      "dataIntro": "ご利用状況に応じて、以下のデータを処理します。",
+      "dataAccount": "アカウントデータ: ユーザー名、メールアドレス、パスワード（ハッシュのみ保存）。",
+      "dataProfile": "プロフィールデータ（任意）: 表示名/実名、FIDE ID、ChessResults ID、Chess.com/Lichess ユーザー名、任意の Discord 連携。",
+      "dataUsage": "利用データ: 解いたパズル、エンドレス/コースの進捗と統計、プレイレーティング、ログイン日時。",
+      "dataTechnical": "技術データ: IP アドレス、タイムスタンプ付きリクエストエンドポイント、およびサーバーログ内の仮名化された訪問者識別子（到達測定用）。",
+      "purposesTitle": "目的と法的根拠",
+      "purposes": "アカウントおよび機能の提供（契約履行、GDPR 第6条(1)(b)）、並びに運用セキュリティ、エラー分析、ログによる到達測定（正当な利益、GDPR 第6条(1)(f)）。",
+      "thirdTitle": "受信者 / 第三者サービス",
+      "thirdIntro": "データは販売されません。ご利用状況に応じて、以下のサービスが関与します。",
+      "thirdDiscord": "Discord: RookHub Discord ボットでの表示のために任意のアカウント連携（Discord ID/名前）を行った場合のみ。",
+      "thirdChessresults": "chess-results.com: ChessResults ID を設定するか、トーナメントを読み込む際にサーバーサイドでトーナメントデータを取得します。",
+      "thirdChesssites": "Chess.com / Lichess: 任意で入力したユーザー名のみ。自動データ転送は行いません。",
+      "thirdLogging": "Elasticsearch/Kibana: 自社インフラ上でのセルフホスティングによるロギング/モニタリング。",
+      "thirdHosting": "ホスティング: TLS リバースプロキシを備えた自社サーバーインフラで運営。",
+      "storageTitle": "ローカルストレージ（Cookie/ストレージ）",
+      "storage": "トラッキング Cookie は使用しません。ブラウザのストレージ（localStorage）には、ログイントークン、設定、および有効にした場合はオフラインパズルなどが保存されます。これらはお客様のデバイスに留まります。",
+      "retentionTitle": "保持期間と削除",
+      "retention": "アカウントデータはアカウントを削除するまで保存されます。アカウントはいつでも削除でき、ID と個人データは削除され、匿名化された統計は保持されます。詳細:",
+      "rightsTitle": "お客様の権利",
+      "rights": "アクセス権、訂正権、消去権、制限権、データポータビリティ権、異議申立権、および監督機関への申立権（オーストリアでは: データ保護局）をお持ちです。",
+      "contactTitle": "お問い合わせ",
+      "contact": "プライバシーに関するご質問は、以下までお問い合わせください",
+      "back": "ログインに戻る"
+    },
+    "impressum": {
+      "title": "インプリント",
+      "operatorTitle": "サービス提供者",
+      "name": "[名前 / 会社名 — 記入してください]",
+      "address": "[住所 — 番地、郵便番号、市区町村、国]",
+      "uid": "[VAT ID（法人の場合）]",
+      "contactTitle": "お問い合わせ",
+      "contact": "メール",
+      "disclaimer": "注意: サービス提供者の詳細はプレースホルダーであり、公開前に実際のデータに置き換える必要があります。このページは草案であり、法的助言を構成するものではありません。",
+      "back": "ログインに戻る"
+    }
+  },
+  "friends": {
+    "title": "フレンド",
+    "searchUsers": "ユーザーを検索",
+    "searchResults": "検索結果",
+    "tabs": {
+      "friends": "フレンド ({{count}})",
+      "requests": "リクエスト ({{count}})"
+    },
+    "empty": {
+      "friends": "まだフレンドがいません。ユーザーを検索してフレンドを追加しましょう！",
+      "requests": "未処理のリクエストはありません。"
+    },
+    "sentOn": "{{date}} に送信",
+    "requestSent": "フレンドリクエストを送信しました",
+    "errors": {
+      "loadFriends": "フレンドの読み込みに失敗しました",
+      "loadRequests": "リクエストの読み込みに失敗しました",
+      "search": "検索に失敗しました",
+      "sendRequest": "リクエストの送信に失敗しました",
+      "acceptRequest": "リクエストの承認に失敗しました",
+      "declineRequest": "リクエストの拒否に失敗しました",
+      "removeFriend": "フレンドの削除に失敗しました"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "マイレパートリー",
+      "new": "新規レパートリー",
+      "fileCount": "{{count}} ファイル",
+      "public": "公開",
+      "private": "非公開",
+      "noDescription": "説明なし",
+      "open": "開く",
+      "empty": "レパートリーがまだありません。作成して始めましょう！",
+      "loadFailed": "レパートリーの読み込みに失敗しました",
+      "createFailed": "レパートリーの作成に失敗しました",
+      "deleteConfirm": "このレパートリーを削除しますか？",
+      "deleteFailed": "レパートリーの削除に失敗しました"
+    },
+    "detail": {
+      "noDescription": "説明なし",
+      "modeLines": "ライン",
+      "modeTree": "ツリー",
+      "modeEdit": "編集"
+    },
+    "dialog": {
+      "title": "新規レパートリー",
+      "name": "名前",
+      "description": "説明",
+      "public": "公開",
+      "create": "作成"
+    },
+    "lines": {
+      "allLines": "全ライン",
+      "empty": "このレパートリーにラインが見つかりません。"
+    },
+    "tree": {
+      "start": "開始",
+      "lineCount": "{{count}} ライン",
+      "lineCountPlural": "{{count}} ライン",
+      "empty": "ラインの終端 — これ以上の手がありません。"
+    },
+    "edit": {
+      "uploadHint": "PGN ファイルをここにドラッグ＆ドロップするか、クリックしてアップロード",
+      "files": "ファイル ({{count}})",
+      "empty": "ファイルがまだありません。PGN ファイルをアップロードして始めましょう！",
+      "filesSkipped": "{{count}} 個のファイルをスキップしました（.pgn のみ、最大 10 MB）",
+      "uploadSuccess": "{{count}} 個のファイルをアップロードしました",
+      "uploadPartial": "{{ok}} 件成功、{{failed}} 件失敗",
+      "downloadFailed": "ダウンロードに失敗しました",
+      "deleteConfirm": "このファイルを削除しますか？"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "更新",
+      "subscribe": "サブスクライブ",
+      "unsubscribe": "サブスクライブ解除",
+      "monitor": "モニター",
+      "monitoringUntil": "{{time}} までモニター中",
+      "share": "共有",
+      "subscribed": "サブスクライブしました！",
+      "unsubscribed": "サブスクライブを解除しました",
+      "failed": "失敗",
+      "unsubscribeFailed": "サブスクライブの解除に失敗しました"
+    },
+    "tabs": {
+      "players": "選手 ({{count}})",
+      "teams": "チーム ({{count}})",
+      "pairings": "対戦"
+    },
+    "favoritesOnly": "お気に入りのみ",
+    "favorites": {
+      "added": "{{name}} をお気に入りに追加しました",
+      "removed": "{{name}} をお気に入りから削除しました",
+      "addedShort": "{{name}} をお気に入りに追加",
+      "removedShort": "{{name}} を削除"
+    },
+    "players": {
+      "snr": "No.",
+      "title": "称号",
+      "name": "名前",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "国",
+      "team": "チーム",
+      "club": "クラブ",
+      "boardShort": "盤"
+    },
+    "teams": {
+      "rank": "順位",
+      "team": "チーム",
+      "points": "ポイント"
+    },
+    "pairings": {
+      "round": "ラウンド",
+      "roundLabel": "ラウンド {{round}}",
+      "board": "盤",
+      "white": "白",
+      "black": "黒",
+      "home": "ホーム",
+      "away": "アウェイ",
+      "result": "結果"
+    },
+    "monitor": {
+      "stopped": "モニターを停止しました",
+      "stopFailed": "モニターの停止に失敗しました",
+      "activated": "モニターを開始しました",
+      "activateFailed": "モニターの開始に失敗しました",
+      "newRoundTitle": "新しいラウンドが利用可能です！",
+      "newRoundBody": "ラウンド {{round}} が公開されました。",
+      "newRoundSnack": "新しいラウンドが利用可能です！ ラウンド {{round}}"
+    },
+    "list": {
+      "title": "トーナメント",
+      "importTitle": "トーナメントをインポート",
+      "importSubtitle": "chess-results.com のトーナメント ID を入力してクロールします",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "例: 1234567",
+      "idHintPrefix": "chess-results.com/tnr の番号",
+      "idHintSuffix": ".aspx",
+      "crawl": "クロール",
+      "crawling": "トーナメント {{id}} をクロール中... ジョブ #{{jobId}}",
+      "crawlerUnavailable": "トーナメントクローラーに接続できませんでした。クローラーサービスが起動しているか確認してください。",
+      "details": "詳細",
+      "hide": "非表示",
+      "empty": "トーナメントが見つかりません。",
+      "showHidden": "非表示の {{count}} 件を表示",
+      "imported": "トーナメントをインポートしました！",
+      "crawlStartFailed": "クロールの開始に失敗しました",
+      "crawlFailed": "クロールに失敗しました",
+      "crawlConnectionLost": "クロールジョブへの接続が切れました"
+    },
+    "detail": {
+      "loadTournamentFailed": "トーナメントの読み込みに失敗しました",
+      "loadSubscriptionFailed": "サブスクライブ状態の読み込みに失敗しました",
+      "reloadTournamentFailed": "トーナメントの再読み込みに失敗しました",
+      "refreshStartFailed": "更新の開始に失敗しました",
+      "dataRefreshed": "データを更新しました！",
+      "refreshFailed": "更新に失敗しました",
+      "loadPlayersFailed": "選手の読み込みに失敗しました",
+      "loadTeamsFailed": "チームの読み込みに失敗しました",
+      "loadPairingsFailed": "対戦の読み込みに失敗しました",
+      "loadTeamDetailsFailed": "チーム詳細の読み込みに失敗しました"
+    },
+    "public": {
+      "notFound": "トーナメントが見つかりません。"
+    },
+    "share": {
+      "title": "トーナメントを共有",
+      "copyLink": "リンクをコピー",
+      "linkCopied": "リンクをコピーしました！",
+      "copyFailed": "コピーに失敗しました"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "パズルを読み込み中…",
+      "loadFailed": "パズルの読み込みに失敗しました",
+      "offlineNoCache": "オフラインで、パズルのキャッシュがありません。オンライン中にこのページを一度開いて、オフライン用のパズルを保存してください。",
+      "watchOpponent": "相手の手を確認してください…",
+      "yourTurn": "あなたの番です！",
+      "gaveUpPlayOut": "あきらめました — 自分で解答を指してみてください。",
+      "thinking": "Stockfish が考えています…"
+    },
+    "result": {
+      "solutionPlayedOut": "解答を再生しました。",
+      "tryYourselfNextTime": "次回は自分で解いてみましょう！",
+      "checkmate": "チェックメイト！",
+      "alternativeSolution": "別の解答 — このパズルには異なる想定手順がありました。",
+      "correct": "正解！",
+      "incorrect": "不正解"
+    },
+    "eval": {
+      "start": "開始",
+      "now": "現在",
+      "show": "評価を表示",
+      "hide": "評価を非表示"
+    },
+    "actions": {
+      "reset": "リセット",
+      "mouseslip": "マウスミス",
+      "giveUp": "あきらめる",
+      "nextPuzzle": "次のパズル",
+      "share": "パズルを共有",
+      "loadPuzzle": "パズルを読み込む",
+      "reviewLast": "最後のパズルを確認",
+      "endlessMode": "エンドレスモード",
+      "analyze": "解析"
+    },
+    "info": {
+      "rating": "レーティング"
+    },
+    "stats": {
+      "title": "あなたの統計",
+      "solved": "正解数",
+      "accuracy": "正解率",
+      "streak": "連続正解",
+      "best": "最高"
+    },
+    "settings": {
+      "tooltip": "設定"
+    },
+    "filters": {
+      "title": "フィルター",
+      "visualization": "可視化: レベル {{level}}",
+      "difficulty": "難易度",
+      "difficultyHint": "あなたの Elo ({{elo}}) 前後のパズル",
+      "depthHint": "1（弱）〜 24（強）",
+      "skipSolved": "解済みをスキップ"
+    },
+    "difficulty": {
+      "veryEasy": "とても簡単",
+      "easy": "簡単",
+      "normal": "普通",
+      "hard": "難しい",
+      "veryHard": "とても難しい"
+    },
+    "theme": {
+      "mode": "モード",
+      "modeNormal": "ノーマル",
+      "modeRandom": "ランダム",
+      "modeCrazy": "クレイジー",
+      "boardTheme": "盤のテーマ",
+      "pieces": "駒"
+    },
+    "viz": {
+      "title": "可視化（レベル {{level}}）",
+      "countdown": "{{seconds}} 秒後に駒が消えます…",
+      "noMoveYet": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
+      "show": "表示",
+      "showing": "表示中…"
+    },
+    "share": {
+      "title": "パズルを共有",
+      "copied": "リンクをコピーしました！",
+      "copyFailed": "コピーに失敗しました"
+    }
+  },
+  "courses": {
+    "title": "コース",
+    "intro": "インポートされたブックのパズルを順番またはランダムに解いていきましょう。進捗は保存されます。",
+    "emptyHint": "ブックがまだインポートされていません。管理画面の「ブック」からインポートしてください。",
+    "puzzleCount": "{{count}} 問",
+    "completed": "コース完了",
+    "sequential": "順番に",
+    "random": "ランダム",
+    "resetTooltip": "進捗をリセット",
+    "resetConfirm": "「{{name}}」の進捗をリセットしますか？",
+    "loadFailed": "コースの読み込みに失敗しました",
+    "resetFailed": "リセットに失敗しました",
+    "offlineSaveTooltip": "ブックをオフラインで保存",
+    "offlineRemoveTooltip": "オフラインコピーを削除",
+    "offlineSaved": "「{{name}}」をオフラインで保存しました（{{count}} 問）",
+    "offlineRemoved": "「{{name}}」のオフラインコピーを削除しました",
+    "offlineFailed": "ブックをオフラインで保存できませんでした"
+  },
+  "weekly": {
+    "title": "週刊",
+    "intro": "毎週のチェス投稿を順番に閲覧できます。日時は投稿の予定時刻を表します。",
+    "oClock": "",
+    "play": "再生する",
+    "empty": "週刊投稿がまだありません。",
+    "deleteConfirm": "週刊投稿「{{title}}」を削除しますか？",
+    "created": "週刊投稿を作成しました",
+    "deleted": "週刊投稿を削除しました",
+    "loadFailed": "週刊投稿の読み込みに失敗しました",
+    "uploadFailed": "アップロードに失敗しました",
+    "saveFailed": "保存に失敗しました",
+    "deleteFailed": "削除に失敗しました",
+    "fields": {
+      "date": "日付",
+      "time": "時刻",
+      "titleOptional": "タイトル（任意）"
+    },
+    "columns": {
+      "scheduled": "日付",
+      "title": "タイトル",
+      "actions": "操作"
+    },
+    "upload": {
+      "title": "新しい週刊投稿をアップロード",
+      "choosePgn": "PGN を選択",
+      "titlePlaceholder": "ファイル名から",
+      "create": "作成",
+      "hint": "デフォルト: 最後の日付 + 7日、同じ時刻（未設定の場合は 19:00）。"
+    }
+  },
+  "endless": {
+    "offlineNoCache": "オフラインで、ランのキャッシュがありません。オンライン中に一度エンドレスを開いて、オフライン用のパズルを保存してください。",
+    "help": {
+      "title": "エンドレスパズルモード",
+      "gameplayHeading": "遊び方",
+      "gameplayP1": "難易度が上がっていくチェスパズルを解きます。設定可能なレーティングからスタートし、ファストトラックフェーズ（下記参照）に沿ってレーティングが自動的に上昇します。",
+      "gameplayP2": "<strong>3つのライフ</strong>があります。0になるとゲームオーバーです。",
+      "movesHeading": "手と Stockfish",
+      "movesP1": "各パズルには<strong>想定された解答</strong>（手の連続）があります。正しい手を指している限り、その解答ラインに沿って進みます。",
+      "movesP2": "<strong>間違った手</strong>を指すと、<strong>Stockfish</strong>（チェスエンジン）が相手を引き継ぎます。その後、Stockfish に対して自由に指し続けます。強さは Stockfish の深さで設定できます。",
+      "movesItem1": "<strong>Stockfish をチェックメイトすると</strong>、別の解答として認められ、ライフを失いません！",
+      "movesItem2": "<strong>Stockfish にチェックメイトされると</strong>、ライフを失います",
+      "movesItem3": "Stockfish との対局はチェックメイトまたはあきらめるまで続きます",
+      "buttonsHeading": "ゲーム中のボタン",
+      "buttonsShowEval": "<strong>評価を表示</strong> — Stockfish の評価（開始時 vs. 現在）を表示します",
+      "buttonsReset": "<strong>リセット</strong> — パズルをリセットしますが、ライフを1つ消費します",
+      "buttonsMouseslip": "<strong>マウスミス</strong> — 最後の間違った手を取り消します（1パズルにつき1回、無料）",
+      "buttonsGiveUp": "<strong>あきらめる</strong> — 降参します。ライフを消費します",
+      "settingsHeading": "設定",
+      "settingsStartRating": "<strong>スタートレーティング</strong> — パズルを開始するレーティング",
+      "settingsStockfishDepth": "<strong>Stockfish の深さ</strong> — エンジンの強さ（1 = 非常に弱い、24 = 最大強度）",
+      "settingsThemes": "<strong>テーマ</strong> — オプション: 特定の戦術テーマのみ（例: 「fork pin」）",
+      "fasttrackHeading": "難易度の上昇（ファストトラック）",
+      "fasttrackP1": "上昇は過去のパフォーマンスに基づいて調整されます。直近のセッションを分析し、通常ライフを失うレーティングを計算します。",
+      "fasttrackPhase1": "<strong>フェーズ 1（パズル 1〜5）</strong> — 第1閾値まで急速に上昇",
+      "fasttrackPhase2": "<strong>フェーズ 2（パズル 6〜10）</strong> — 第1閾値から第2閾値まで上昇",
+      "fasttrackPhase3": "<strong>フェーズ 3（パズル 11 以降）</strong> — 20 ずつ一定のステップ",
+      "fasttrackP2": "閾値（第1/第2）は自動で計算されますが、手動で調整することもできます。「自動: …」をクリックして値をリセットしてください。"
+    },
+    "config": {
+      "title": "エンドレスパズルモード",
+      "subtitle": "難易度が上昇し続けます — どこまで行けるか？",
+      "startRating": "スタートレーティング",
+      "stockfishDepth": "Stockfish の深さ",
+      "stockfishDepthHint": "1（弱）〜 24（強）",
+      "themes": "テーマ（任意）",
+      "themesPlaceholder": "例: fork pin",
+      "thresholdExplain": "通常ライフを失うレーティングです。調整してより簡単なパズルを速くまたはゆっくりスキップできます。",
+      "firstThreshold": "第1閾値",
+      "secondThreshold": "第2閾値",
+      "auto": "自動: {{value}}",
+      "step": "ステップ {{step}}",
+      "phase1Label": "フェーズ 1（Lv 1〜5）",
+      "phase2Label": "フェーズ 2（Lv 6〜10）",
+      "phase3Label": "フェーズ 3（Lv 11+）",
+      "curveHint": "ガントレットのレーティング曲線（開始時に固定されます）:",
+      "curvePuzzle": "パズル {{n}}",
+      "settings": "設定",
+      "visualizationLevel": "可視化: レベル {{level}}",
+      "mode": "モード",
+      "modeNormal": "ノーマル",
+      "modeRandom": "ランダム",
+      "modeCrazy": "クレイジー",
+      "boardTheme": "盤のテーマ",
+      "pieces": "駒",
+      "highscore": "ハイスコア: {{rating}} レーティング",
+      "sessionsPlayed": "{{count}} セッションプレイ済み",
+      "viewHistory": "履歴を見る",
+      "unfinishedRun": "未完了のラン: Lv {{level}} | {{solved}} 問正解 | ライフ {{lives}} | 最高 {{max}}",
+      "continue": "続ける",
+      "archiveAndNew": "アーカイブして新規ゲーム",
+      "newGame": "新規ゲーム",
+      "start": "スタート"
+    },
+    "game": {
+      "visualization": "可視化（レベル {{level}}）",
+      "vizCountdown": "{{seconds}} 秒後に駒が消えます...",
+      "vizNoMove": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
+      "vizShow": "表示",
+      "vizShowing": "表示中...",
+      "loadingPuzzle": "パズルを読み込み中...",
+      "watchOpponent": "相手の手を確認してください...",
+      "yourTurn": "あなたの番！最善手を見つけましょう。",
+      "yourMove": "あなたの手...",
+      "opponentThinking": "相手が考えています...",
+      "evalStart": "開始",
+      "evalNow": "現在",
+      "showEval": "評価を表示",
+      "hideEval": "評価を非表示",
+      "reset": "リセット",
+      "mouseslip": "マウスミス",
+      "giveUp": "あきらめる",
+      "checkmate": "チェックメイト！",
+      "alternativeSolution": "別の解答 — このパズルには異なる想定ラインがありました。",
+      "correct": "正解！",
+      "wrong": "不正解！",
+      "gaveUp": "あきらめました",
+      "continue": "続ける",
+      "analyze": "解析",
+      "reviewLast": "最後のパズルを解析",
+      "puzzleRating": "パズルレーティング: {{rating}}",
+      "levelRange": "レベル {{level}} ({{min}}〜{{max}})",
+      "showTags": "タグを表示",
+      "hideTags": "タグを非表示",
+      "sharePuzzle": "パズルを共有",
+      "statRating": "レーティング",
+      "statLevel": "レベル",
+      "statSolved": "正解数",
+      "statTime": "時間",
+      "phaseLabel": "フェーズ {{phase}}（ステップ {{step}}）"
+    },
+    "gameOver": {
+      "title": "ゲームオーバー",
+      "wonTitle": "勝利！",
+      "wonSubtitle": "ガントレットを制覇しました。",
+      "wonText": "チェーンを打ち破りました — 次の挑戦のために新しいランを始めましょう。",
+      "exhaustedTitle": "完全制覇！",
+      "exhaustedSubtitle": "すべてのパズルレーティング範囲をプレイし終えました。",
+      "areYouAStockfish": "あなたは Stockfish ですか？",
+      "maxRating": "最高レーティング",
+      "puzzlesSolved": "正解パズル数",
+      "livesLeft": "残りライフ",
+      "levelReached": "到達レベル",
+      "time": "時間",
+      "livesLostAt": "ライフを失ったレーティング: {{ratings}}",
+      "puzzleReview": "パズルの復習",
+      "newHighscore": "新記録！",
+      "archiving": "アーカイブ中...",
+      "archiveRun": "このランをアーカイブ",
+      "archived": "アーカイブしました",
+      "playAgain": "もう一度プレイ",
+      "backToPuzzles": "パズルに戻る"
+    },
+    "history": {
+      "title": "エンドレスパズル履歴",
+      "noSessions": "まだセッションがありません。",
+      "startPlaying": "プレイを始める",
+      "filterAll": "すべて",
+      "filterActive": "アクティブ",
+      "filterArchived": "アーカイブ済み",
+      "selected": "{{count}} 件選択",
+      "archive": "アーカイブ",
+      "unarchive": "アーカイブ解除",
+      "noArchivedSessions": "アーカイブ済みのセッションはありません。",
+      "noActiveSessions": "アクティブなセッションはありません。",
+      "colDate": "日付",
+      "colMaxRating": "最高レーティング",
+      "colSolved": "正解数",
+      "colDuration": "所要時間",
+      "colConfig": "設定",
+      "colMistakes": "ミス",
+      "backToEndless": "エンドレスモードに戻る"
+    }
+  },
+  "book": {
+    "difficulty": "難易度",
+    "offlineUnavailable": "このブックはオフラインで利用できません。",
+    "status": {
+      "loading": "パズルを読み込み中...",
+      "watchOpponent": "相手の手を確認してください...",
+      "yourTurn": "あなたの番！最善手を見つけましょう。",
+      "gaveUp": "あきらめました — 自分で解答を指してみてください。",
+      "stockfishThinking": "Stockfish が考えています...",
+      "yourMoveVsStockfish": "Stockfish に対してあなたの手...",
+      "correct": "正解！",
+      "incorrect": "不正解",
+      "gaveUpSolution": "あきらめました — 解答はこちらです",
+      "checkmate": "チェックメイト！",
+      "altSolution": "別の解答 — このパズルには異なる想定手順がありました。",
+      "fullGame": "全対局"
+    },
+    "actions": {
+      "reset": "リセット",
+      "giveUp": "あきらめる",
+      "mouseslip": "マウスミス",
+      "nextPuzzle": "次のパズル",
+      "again": "もう一度",
+      "skip": "スキップ",
+      "viewFullGame": "全対局を見る",
+      "analyze": "解析",
+      "nextInBook": "ブックの次へ",
+      "randomInBook": "ブックからランダム",
+      "sharePuzzle": "パズルを共有",
+      "backToPuzzle": "パズルに戻る"
+    },
+    "settings": {
+      "title": "設定",
+      "visualizationLevel": "可視化: レベル {{level}}",
+      "stockfishDepth": "Stockfish の深さ",
+      "depthHint": "1（弱）〜 24（強）",
+      "mode": "モード",
+      "modeNormal": "ノーマル",
+      "modeRandom": "ランダム",
+      "modeCrazy": "クレイジー",
+      "boardTheme": "盤のテーマ",
+      "pieces": "駒"
+    },
+    "viz": {
+      "titleLevel": "可視化（レベル {{level}}）",
+      "countdown": "{{seconds}} 秒後に駒が消えます...",
+      "noMoveYet": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
+      "show": "表示",
+      "showing": "表示中...",
+      "level0": "ノーマル — ドラッグ＆ドロップ",
+      "level1": "ブラインドフォールド — 盤が固定され、手がテキストで表示",
+      "level2": "チェッカー — 3秒後に駒がチェッカーに置き換わります",
+      "level3": "ダーク — 3秒後に駒が黒いトークンに置き換わります",
+      "level4": "インビジブル — 3秒後に駒が完全に消えます"
+    },
+    "course": {
+      "backToCourses": "コース一覧へ",
+      "sequential": "順番に",
+      "random": "ランダム",
+      "completed": "コース完了！",
+      "toOverview": "一覧へ"
+    },
+    "weekly": {
+      "backToWeekly": "週刊投稿一覧へ",
+      "label": "週刊投稿",
+      "noPuzzles": "この週刊投稿には再生可能なパズルが含まれていません。",
+      "allSolved": "すべてのパズルを解きました！"
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "kibanaLink": "Kibana ダッシュボード",
+    "tabs": {
+      "users": "ユーザー",
+      "books": "ブック",
+      "groups": "グループ",
+      "logs": "リクエストログ"
+    },
+    "users": {
+      "searchLabel": "ユーザーを検索",
+      "toggleAdmin": "管理者権限の切り替え",
+      "deleteUser": "ユーザーを削除",
+      "deleteConfirm": "ユーザー「{{username}}」を削除しますか？この操作は元に戻せません。",
+      "deleted": "ユーザー「{{username}}」を削除しました",
+      "nowAdmin": "{{username}} が管理者になりました",
+      "noLongerAdmin": "{{username}} は管理者ではなくなりました",
+      "columns": {
+        "id": "ID",
+        "username": "ユーザー名",
+        "email": "メールアドレス",
+        "admin": "管理者",
+        "groups": "グループ",
+        "created": "作成日",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "ユーザーの読み込みに失敗しました",
+        "toggleAdmin": "管理者権限の切り替えに失敗しました",
+        "delete": "ユーザーの削除に失敗しました"
+      }
+    },
+    "books": {
+      "uploadPgn": "PGN をアップロード",
+      "importing": "インポート中…",
+      "poolHint": "ブックごとにパズルが表示されるプールを設定します。",
+      "empty": "ブックがまだインポートされていません。",
+      "eloFrom": "から",
+      "eloTo": "まで",
+      "adminOnly": "管理者のみ",
+      "deleteBook": "ブックを削除",
+      "deleteConfirm": "ブック「{{name}}」（{{count}} 問）を削除しますか？",
+      "deleted": "ブック「{{name}}」を削除しました",
+      "imported": "{{imported}} 問インポート済み、{{skipped}} 問スキップ",
+      "importedCount": "{{count}} 問インポートしました",
+      "duplicatesCount": "重複 {{count}} 件",
+      "invalidCount": "無効 {{count}} 件",
+      "columns": {
+        "book": "ブック",
+        "puzzles": "パズル数",
+        "difficulty": "難易度",
+        "elo": "Elo 範囲",
+        "daily": "デイリー",
+        "random": "ランダム",
+        "blind": "ブラインド",
+        "visibleFor": "表示対象（コース）",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "ブックの読み込みに失敗しました",
+        "import": "インポートに失敗しました",
+        "save": "保存に失敗しました",
+        "saveGroups": "グループアクセスの更新に失敗しました",
+        "delete": "削除に失敗しました"
+      }
+    },
+    "groups": {
+      "newGroup": "新規グループ",
+      "namePlaceholder": "名前",
+      "descriptionOptional": "説明（任意）",
+      "create": "作成",
+      "empty": "グループがまだ作成されていません。",
+      "manageMembers": "メンバーを管理",
+      "deleteGroup": "グループを削除",
+      "membersOf": "メンバー · {{name}}",
+      "addUser": "ユーザーを追加",
+      "noMembers": "メンバーがいません。",
+      "created": "グループ「{{name}}」を作成しました",
+      "deleteConfirm": "グループ「{{name}}」を削除しますか？",
+      "deleted": "グループ「{{name}}」を削除しました",
+      "columns": {
+        "group": "グループ",
+        "members": "メンバー数",
+        "actions": "操作"
+      },
+      "errors": {
+        "load": "グループの読み込みに失敗しました",
+        "create": "グループの作成に失敗しました",
+        "delete": "削除に失敗しました",
+        "loadMembers": "メンバーの読み込みに失敗しました",
+        "addMember": "メンバーの追加に失敗しました",
+        "removeMember": "メンバーの削除に失敗しました"
+      }
+    },
+    "logs": {
+      "all": "すべて",
+      "filter": "フィルター",
+      "reset": "リセット",
+      "filtered": "（フィルター中）",
+      "entryCount": "{{count}} 件",
+      "status4xx": "4xx+（エラー）",
+      "status5xx": "5xx（サーバー）",
+      "status2xx": "2xx+（OK）",
+      "columns": {
+        "time": "時刻",
+        "method": "メソッド",
+        "path": "パス",
+        "status": "ステータス",
+        "duration": "応答時間",
+        "user": "ユーザー",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "ログの読み込みに失敗しました"
+      }
+    }
+  },
+  "analysis": {
+    "title": "解析",
+    "engine": "エンジン",
+    "depth": "深さ",
+    "lines": "候補手",
+    "maxDepth": "最大深さ",
+    "backToPuzzle": "パズルに戻る",
+    "calculating": "計算中…",
+    "engineOff": "エンジン オフ",
+    "start": "開始",
+    "flip": "盤を反転",
+    "reset": "リセット",
+    "noMoves": "まだ手がありません — 盤上で手を指してください。",
+    "fen": "FEN",
+    "loadFen": "FEN を読み込む",
+    "copyFen": "FEN をコピー",
+    "pgn": "PGN",
+    "loadPgn": "PGN を読み込む"
+  },
+  "stats": {
+    "title": "統計",
+    "currentElo": "パズル Elo",
+    "totalSolved": "正解数",
+    "attempts": "試行数",
+    "accuracy": "正解率",
+    "currentStreak": "現在の連続正解",
+    "bestStreak": "最高連続正解",
+    "eloProgress": "パズル Elo の推移",
+    "level": "レベル",
+    "allLevels": "すべて",
+    "noData": "データがまだありません。",
+    "perLevel": "可視化レベルごとの Elo",
+    "vizLevel": "レベル",
+    "recentPuzzles": "最近のパズル",
+    "date": "日付",
+    "rating": "レーティング",
+    "result": "結果",
+    "time": "時間",
+    "byTheme": "テーマ別",
+    "byRating": "レーティング別（正解数）",
+    "byRatingHint": "レーティング帯ごとの正解数 — ホバーで正解率を確認。",
+    "activity": "アクティビティ"
+  }
+}

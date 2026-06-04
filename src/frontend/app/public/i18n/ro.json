@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Salvează",
+    "cancel": "Anulează",
+    "delete": "Șterge",
+    "edit": "Editează",
+    "add": "Adaugă",
+    "close": "Închide",
+    "search": "Caută",
+    "back": "Înapoi",
+    "retry": "Reîncearcă",
+    "loading": "Se încarcă…",
+    "ok": "OK",
+    "remove": "Elimină"
+  },
+  "nav": {
+    "dashboard": "Panou principal",
+    "repertoires": "Repertorii",
+    "tournaments": "Turnee",
+    "friends": "Prieteni",
+    "puzzles": "Probleme",
+    "weekly": "Săptămânal",
+    "courses": "Cursuri",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Istoricul problemelor",
+    "changelog": "Jurnal de modificări",
+    "logout": "Deconectare",
+    "login": "Conectare",
+    "register": "Înregistrare",
+    "language": "Limbă",
+    "menu": "Meniu",
+    "info": "Info",
+    "account": "Cont",
+    "analysis": "Analiză",
+    "stats": "Statistici"
+  },
+  "app": {
+    "changelogTitle": "Jurnal de modificări",
+    "quickstartTitle": "Ghid rapid",
+    "qs": {
+      "subscribeTitle": "Abonare",
+      "subscribeDesc": "Abonează-te la turnee pentru acces rapid la jucători, perechi și rezultate.",
+      "monitorTitle": "Monitorizare",
+      "monitorDesc": "Activează monitorizarea unui turneu — rundele noi sunt detectate și preluate automat.",
+      "favoritesTitle": "Favorite",
+      "favoritesDesc": "Marchează jucători sau echipe ca favorite pentru acces rapid în vizualizarea turneului.",
+      "chessResultsTitle": "ID ChessResults",
+      "chessResultsDesc": "Adaugă ID-ul tău ChessResults în profil — turneele viitoare sunt abonate automat."
+    },
+    "feedback": "Feedback / Raportează o eroare",
+    "updateAvailable": "O versiune nouă este disponibilă.",
+    "reload": "Reîncarcă"
+  },
+  "auth": {
+    "login": {
+      "title": "Conectare",
+      "usernameLabel": "Nume utilizator",
+      "passwordLabel": "Parolă",
+      "rememberMe": "Rămâi conectat",
+      "submit": "Conectare",
+      "submitting": "Se conectează...",
+      "registerLink": "Nu ai cont? Înregistrează-te",
+      "failed": "Conectare eșuată"
+    },
+    "register": {
+      "title": "Înregistrare",
+      "usernameLabel": "Nume utilizator",
+      "emailLabel": "Email",
+      "passwordLabel": "Parolă",
+      "passwordHint": "Cel puțin 4 caractere",
+      "submit": "Înregistrare",
+      "submitting": "Se înregistrează...",
+      "loginLink": "Ai deja un cont? Conectează-te",
+      "failed": "Înregistrare eșuată"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bun venit, {{username}}!",
+    "subscribedTournaments": "Turnee abonate",
+    "subscribedAt": "Abonat {{date}}",
+    "puzzles": {
+      "title": "Probleme",
+      "subtitle": "Elo {{elo}} | {{solved}} rezolvate ({{accuracy}}%)",
+      "solve": "Rezolvă probleme",
+      "endless": "Infinit"
+    },
+    "subscriptions": {
+      "title": "Abonamente la turnee",
+      "count": "{{count}} abonamente",
+      "browse": "Explorează turnee"
+    },
+    "friends": {
+      "title": "Prieteni",
+      "count": "{{count}} prieteni",
+      "manage": "Gestionează prieteni"
+    },
+    "repertoires": {
+      "title": "Repertorii",
+      "count": "{{count}} repertorii",
+      "viewAll": "Vezi toate"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partidă",
+    "nav": {
+      "first": "Prima mutare",
+      "previous": "Mutarea anterioară",
+      "next": "Mutarea următoare",
+      "last": "Ultima mutare"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Prenume",
+    "lastName": "Nume de familie",
+    "searchPlayer": "Caută jucător",
+    "noResults": "Niciun rezultat găsit.",
+    "displayName": "Nume afișat",
+    "fideId": "ID FIDE",
+    "chessResultsId": "ID ChessResults",
+    "chessComUsername": "Nume utilizator Chess.com",
+    "lichessUsername": "Nume utilizator Lichess",
+    "saving": "Se salvează...",
+    "saved": "Profil salvat",
+    "saveFailed": "Salvarea profilului a eșuat",
+    "searchFailed": "Căutarea a eșuat",
+    "chessResultsApplied": "Date ChessResults aplicate",
+    "fideApplied": "Date FIDE aplicate",
+    "discord": {
+      "title": "Discord",
+      "hint": "Deschide un link personal de la botul RookHub de pe Discord (comanda /link sau un DM cu o problemă) pentru a-ți conecta contul Discord.",
+      "unlink": "Deconectează",
+      "unlinked": "Discord deconectat",
+      "linked": "Cont Discord conectat",
+      "linkConflict": "Acest cont Discord este deja conectat la un alt utilizator RookHub.",
+      "linkFailed": "Conectarea contului Discord a eșuat",
+      "stashed": "Conectează-te sau înregistrează-te pentru a finaliza conectarea contului Discord."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Stochează probleme pe acest dispozitiv pentru a continua rezolvarea fără internet (per dispozitiv).",
+      "puzzleCount": "Probleme offline",
+      "endlessRuns": "Sesiuni infinite offline",
+      "cacheSize": "Dimensiune cache",
+      "books": "{{count}} cărți",
+      "clear": "Golește cache",
+      "cleared": "Cache offline golit",
+      "pending": "{{count}} soluții așteaptă sincronizarea — vor fi încărcate automat când ești din nou online."
+    },
+    "delete": {
+      "title": "Șterge cont",
+      "hint": "Șterge permanent contul tău.",
+      "button": "Șterge cont",
+      "warn": "Avertisment: identitatea și datele tale personale vor fi eliminate ireversibil. Te rugăm să introduci parola pentru confirmare.",
+      "password": "Parolă",
+      "confirm": "Șterge permanent",
+      "deleting": "Se șterge...",
+      "done": "Contul tău a fost șters.",
+      "wrongPassword": "Parola este incorectă.",
+      "failed": "Ștergerea contului a eșuat.",
+      "moreInfo": "Mai multe despre ștergerea contului"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Șterge cont",
+      "intro": "Această pagină explică cum să ștergi contul RookHub și ce se întâmplă cu datele tale.",
+      "inAppTitle": "Cum să ștergi contul",
+      "inApp": "Conectează-te la aplicație și mergi la Profil → „Șterge cont“. Confirmă cu parola ta. Contul este șters imediat.",
+      "removedTitle": "Ce este eliminat",
+      "removed1": "Identitatea și datele tale personale (nume utilizator, email, nume afișat/real, ID FIDE/ChessResults, nume Chess.com/Lichess, link Discord) și accesul la cont.",
+      "removed2": "Conținut personal și legături: repertorii, abonamente/favorite la turnee, prietenii și apartenența la grupuri.",
+      "keptTitle": "Ce este păstrat anonim",
+      "kept": "Statisticile agregate de rezolvare/joc (de ex. probleme rezolvate) sunt păstrate în formă anonimizată care nu poate fi asociată cu tine.",
+      "contactTitle": "Contact",
+      "contact": "Pentru cereri de ștergere sau întrebări, ne poți contacta la",
+      "back": "Înapoi la conectare"
+    },
+    "privacy": {
+      "title": "Politică de confidențialitate",
+      "updated": "Ultima actualizare: 3 iunie 2026",
+      "intro": "RookHub este o platformă de antrenament la șah (probleme, mod infinit, cursuri, repertorii). Această politică explică modul în care sunt prelucrate datele personale în conformitate cu GDPR.",
+      "controllerTitle": "Operator",
+      "controller": "Operatorul pentru prelucrarea datelor este operatorul menționat în imprint",
+      "dataTitle": "Ce date prelucrăm",
+      "dataIntro": "În funcție de utilizare, prelucrăm:",
+      "dataAccount": "Date de cont: nume utilizator, adresă de email, parolă (stocată doar ca hash).",
+      "dataProfile": "Date de profil (opționale): nume afișat/real, ID FIDE, ID ChessResults, nume utilizator Chess.com/Lichess, link Discord opțional.",
+      "dataUsage": "Date de utilizare: probleme rezolvate, progres și statistici infinite/curs, rating de joc, marcaje de timp la conectare.",
+      "dataTechnical": "Date tehnice: adresă IP, endpoint-uri solicitate cu marcaje de timp și un identificator de vizitator pseudonim (măsurarea audiențe) în jurnalele serverului.",
+      "purposesTitle": "Scopuri și temeiuri legale",
+      "purposes": "Furnizarea contului și a funcțiilor (executarea unui contract, art. 6 alin. (1) lit. (b) GDPR), precum și securitate operațională, analiză a erorilor și măsurarea audienței prin jurnale (interes legitim, art. 6 alin. (1) lit. (f) GDPR).",
+      "thirdTitle": "Destinatari / servicii terțe",
+      "thirdIntro": "Datele nu sunt vândute. În funcție de utilizare, sunt implicate următoarele servicii:",
+      "thirdDiscord": "Discord: doar la conectarea voluntară a contului (ID Discord/nume) pentru afișare în botul RookHub de pe Discord.",
+      "thirdChessresults": "chess-results.com: datele de turneu sunt preluate pe server atunci când setezi un ID ChessResults sau încarci turnee.",
+      "thirdChesssites": "Chess.com / Lichess: doar numele de utilizator pe care le introduci voluntar; niciun transfer automat de date.",
+      "thirdLogging": "Elasticsearch/Kibana: jurnalizare/monitorizare auto-găzduită pe infrastructura noastră.",
+      "thirdHosting": "Găzduire: operată pe propria infrastructură de servere cu un proxy TLS invers.",
+      "storageTitle": "Stocare locală (cookie-uri/stocare)",
+      "storage": "Nu folosim cookie-uri de urmărire. Stocarea browserului (localStorage) conține de ex. tokenul de conectare, setările și — dacă este activat — probleme offline. Acestea rămân pe dispozitivul tău.",
+      "retentionTitle": "Retenție și ștergere",
+      "retention": "Datele contului sunt stocate până când ștergi contul. Poți șterge contul oricând — identitatea și datele personale sunt eliminate, statisticile anonimizate sunt păstrate. Mai multe:",
+      "rightsTitle": "Drepturile tale",
+      "rights": "Ai dreptul la acces, rectificare, ștergere, restricție, portabilitatea datelor și opoziție, precum și dreptul de a depune o plângere la o autoritate de supraveghere (în Austria: Autoritatea pentru Protecția Datelor).",
+      "contactTitle": "Contact",
+      "contact": "Pentru întrebări legate de confidențialitate, ne poți contacta la",
+      "back": "Înapoi la conectare"
+    },
+    "impressum": {
+      "title": "Imprint",
+      "operatorTitle": "Furnizor de servicii",
+      "name": "[NUME / COMPANIE — vă rugăm să completați]",
+      "address": "[Adresă — stradă, cod poștal, oraș, țară]",
+      "uid": "[CUI, dacă este o companie]",
+      "contactTitle": "Contact",
+      "contact": "Email",
+      "disclaimer": "Notă: datele furnizorului de servicii sunt marcatori de substituție și trebuie înlocuite cu datele reale înainte de publicare. Această pagină este un proiect și nu constituie consultanță juridică.",
+      "back": "Înapoi la conectare"
+    }
+  },
+  "friends": {
+    "title": "Prieteni",
+    "searchUsers": "Caută utilizatori",
+    "searchResults": "Rezultate căutare",
+    "tabs": {
+      "friends": "Prieteni ({{count}})",
+      "requests": "Cereri ({{count}})"
+    },
+    "empty": {
+      "friends": "Niciun prieten încă. Caută utilizatori pentru a adăuga prieteni!",
+      "requests": "Nicio cerere în așteptare."
+    },
+    "sentOn": "Trimis {{date}}",
+    "requestSent": "Cerere de prietenie trimisă",
+    "errors": {
+      "loadFriends": "Încărcarea prietenilor a eșuat",
+      "loadRequests": "Încărcarea cererilor a eșuat",
+      "search": "Căutarea a eșuat",
+      "sendRequest": "Trimiterea cererii a eșuat",
+      "acceptRequest": "Acceptarea cererii a eșuat",
+      "declineRequest": "Refuzarea cererii a eșuat",
+      "removeFriend": "Eliminarea prietenului a eșuat"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Repertoriile mele",
+      "new": "Repertoriu nou",
+      "fileCount": "{{count}} fișiere",
+      "public": "Public",
+      "private": "Privat",
+      "noDescription": "Fără descriere",
+      "open": "Deschide",
+      "empty": "Niciun repertoriu încă. Creează unul pentru a începe!",
+      "loadFailed": "Încărcarea repertoriilor a eșuat",
+      "createFailed": "Crearea repertoriului a eșuat",
+      "deleteConfirm": "Ștergi acest repertoriu?",
+      "deleteFailed": "Ștergerea repertoriului a eșuat"
+    },
+    "detail": {
+      "noDescription": "Fără descriere",
+      "modeLines": "Linii",
+      "modeTree": "Arbore",
+      "modeEdit": "Editare"
+    },
+    "dialog": {
+      "title": "Repertoriu nou",
+      "name": "Nume",
+      "description": "Descriere",
+      "public": "Public",
+      "create": "Creează"
+    },
+    "lines": {
+      "allLines": "Toate liniile",
+      "empty": "Nicio linie găsită în acest repertoriu."
+    },
+    "tree": {
+      "start": "Start",
+      "lineCount": "{{count}} linie",
+      "lineCountPlural": "{{count}} linii",
+      "empty": "Sfârșitul liniei — nicio mutare ulterioară."
+    },
+    "edit": {
+      "uploadHint": "Trage și plasează fișiere PGN aici sau apasă pentru a încărca",
+      "files": "Fișiere ({{count}})",
+      "empty": "Niciun fișier încă. Încarcă fișiere PGN pentru a începe!",
+      "filesSkipped": "{{count}} fișier(e) omis(e) (doar .pgn, până la 10 MB)",
+      "uploadSuccess": "{{count}} fișier(e) încărcat(e)",
+      "uploadPartial": "{{ok}} încărcate, {{failed}} eșuate",
+      "downloadFailed": "Descărcarea a eșuat",
+      "deleteConfirm": "Ștergi acest fișier?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Reîmprospătează",
+      "subscribe": "Abonează-te",
+      "unsubscribe": "Dezabonează-te",
+      "monitor": "Monitorizare",
+      "monitoringUntil": "Monitorizare până la {{time}}",
+      "share": "Distribuie",
+      "subscribed": "Abonat!",
+      "unsubscribed": "Dezabonat",
+      "failed": "Eșuat",
+      "unsubscribeFailed": "Dezabonarea a eșuat"
+    },
+    "tabs": {
+      "players": "Jucători ({{count}})",
+      "teams": "Echipe ({{count}})",
+      "pairings": "Perechi"
+    },
+    "favoritesOnly": "Doar favorite",
+    "favorites": {
+      "added": "{{name}} adăugat la favorite",
+      "removed": "{{name}} eliminat din favorite",
+      "addedShort": "{{name}} adăugat la favorite",
+      "removedShort": "{{name}} eliminat"
+    },
+    "players": {
+      "snr": "Nr.",
+      "title": "Titlu",
+      "name": "Nume",
+      "fideId": "ID FIDE",
+      "elo": "Elo",
+      "country": "Țară",
+      "team": "Echipă",
+      "club": "Club",
+      "boardShort": "Tbl."
+    },
+    "teams": {
+      "rank": "Clasament",
+      "team": "Echipă",
+      "points": "Puncte"
+    },
+    "pairings": {
+      "round": "Rundă",
+      "roundLabel": "Runda {{round}}",
+      "board": "Tablă",
+      "white": "Alb",
+      "black": "Negru",
+      "home": "Acasă",
+      "away": "Deplasare",
+      "result": "Rezultat"
+    },
+    "monitor": {
+      "stopped": "Monitorizare oprită",
+      "stopFailed": "Oprirea monitorizării a eșuat",
+      "activated": "Monitorizare activată",
+      "activateFailed": "Activarea monitorizării a eșuat",
+      "newRoundTitle": "Rundă nouă disponibilă!",
+      "newRoundBody": "Runda {{round}} a fost publicată.",
+      "newRoundSnack": "Rundă nouă disponibilă! Runda {{round}}"
+    },
+    "list": {
+      "title": "Turnee",
+      "importTitle": "Importă turneu",
+      "importSubtitle": "Introdu un ID de turneu de pe chess-results.com pentru preluare",
+      "chessResultsId": "ID Chess-Results",
+      "idPlaceholder": "ex. 1234567",
+      "idHintPrefix": "Numărul din chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Preia date",
+      "crawling": "Se preiau datele turneului {{id}}... Job #{{jobId}}",
+      "crawlerUnavailable": "Nu s-a putut conecta la serviciul de preluare date. Asigură-te că serviciul rulează.",
+      "details": "Detalii",
+      "hide": "Ascunde",
+      "empty": "Niciun turneu găsit.",
+      "showHidden": "Arată {{count}} ascunse",
+      "imported": "Turneu importat!",
+      "crawlStartFailed": "Pornirea preluării a eșuat",
+      "crawlFailed": "Preluarea a eșuat",
+      "crawlConnectionLost": "Conexiunea la jobul de preluare a fost pierdută"
+    },
+    "detail": {
+      "loadTournamentFailed": "Încărcarea turneului a eșuat",
+      "loadSubscriptionFailed": "Încărcarea stării abonamentului a eșuat",
+      "reloadTournamentFailed": "Reîncărcarea turneului a eșuat",
+      "refreshStartFailed": "Pornirea reîmprospătării a eșuat",
+      "dataRefreshed": "Date reîmprospătate!",
+      "refreshFailed": "Reîmprospătarea a eșuat",
+      "loadPlayersFailed": "Încărcarea jucătorilor a eșuat",
+      "loadTeamsFailed": "Încărcarea echipelor a eșuat",
+      "loadPairingsFailed": "Încărcarea perechilor a eșuat",
+      "loadTeamDetailsFailed": "Încărcarea detaliilor echipei a eșuat"
+    },
+    "public": {
+      "notFound": "Turneul nu a fost găsit."
+    },
+    "share": {
+      "title": "Distribuie turneul",
+      "copyLink": "Copiază link",
+      "linkCopied": "Link copiat!",
+      "copyFailed": "Copierea a eșuat"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Se încarcă problema…",
+      "loadFailed": "Încărcarea problemei a eșuat",
+      "offlineNoCache": "Ești offline și nicio problemă nu este salvată în cache. Deschide această pagină o dată cu internet pentru a salva probleme pentru joc offline.",
+      "watchOpponent": "Urmărește mutarea adversarului…",
+      "yourTurn": "Rândul tău!",
+      "gaveUpPlayOut": "Ai renunțat — joacă singur soluția.",
+      "thinking": "Stockfish gândește…"
+    },
+    "result": {
+      "solutionPlayedOut": "Soluție jucată.",
+      "tryYourselfNextTime": "Poate o rezolvi singur data viitoare!",
+      "checkmate": "Șah mat!",
+      "alternativeSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
+      "correct": "Corect!",
+      "incorrect": "Incorect"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Acum",
+      "show": "Arată evaluarea",
+      "hide": "Ascunde evaluarea"
+    },
+    "actions": {
+      "reset": "Resetează",
+      "mouseslip": "Alunecare mouse",
+      "giveUp": "Renunță",
+      "nextPuzzle": "Problema următoare",
+      "share": "Distribuie problema",
+      "loadPuzzle": "Încarcă problema",
+      "reviewLast": "Analizează ultima problemă",
+      "endlessMode": "Mod infinit",
+      "analyze": "Analizează"
+    },
+    "info": {
+      "rating": "Rating"
+    },
+    "stats": {
+      "title": "Statisticile tale",
+      "solved": "Rezolvate",
+      "accuracy": "Precizie",
+      "streak": "Serie",
+      "best": "Record"
+    },
+    "settings": {
+      "tooltip": "Setări"
+    },
+    "filters": {
+      "title": "Filtre",
+      "visualization": "Vizualizare: Nivel {{level}}",
+      "difficulty": "Dificultate",
+      "difficultyHint": "Probleme în jurul Elo-ului tău ({{elo}})",
+      "depthHint": "1 (slab) – 24 (puternic)",
+      "skipSolved": "Omite rezolvate"
+    },
+    "difficulty": {
+      "veryEasy": "Foarte ușor",
+      "easy": "Ușor",
+      "normal": "Normal",
+      "hard": "Dificil",
+      "veryHard": "Foarte dificil"
+    },
+    "theme": {
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Aleatoriu",
+      "modeCrazy": "Nebunesc",
+      "boardTheme": "Temă tablă",
+      "pieces": "Piese"
+    },
+    "viz": {
+      "title": "Vizualizare (Nivel {{level}})",
+      "countdown": "Piesele dispar în {{seconds}}s…",
+      "noMoveYet": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
+      "show": "Arată",
+      "showing": "Se afișează…"
+    },
+    "share": {
+      "title": "Distribuie problema",
+      "copied": "Link copiat!",
+      "copyFailed": "Copierea a eșuat"
+    }
+  },
+  "courses": {
+    "title": "Cursuri",
+    "intro": "Parcurge o carte importată problemă cu problemă — secvențial sau aleatoriu. Progresul este salvat.",
+    "emptyHint": "Nicio carte importată încă. Importă cărți în zona de admin la „Cărți“.",
+    "puzzleCount": "{{count}} probleme",
+    "completed": "Curs finalizat",
+    "sequential": "Secvențial",
+    "random": "Aleatoriu",
+    "resetTooltip": "Resetează progresul",
+    "resetConfirm": "Resetezi progresul pentru „{{name}}“?",
+    "loadFailed": "Cursurile nu au putut fi încărcate",
+    "resetFailed": "Resetarea a eșuat",
+    "offlineSaveTooltip": "Salvează cartea offline",
+    "offlineRemoveTooltip": "Elimină copia offline",
+    "offlineSaved": "„{{name}}“ salvată offline ({{count}} probleme)",
+    "offlineRemoved": "„{{name}}“ eliminată din offline",
+    "offlineFailed": "Cartea nu a putut fi salvată offline"
+  },
+  "weekly": {
+    "title": "Săptămânal",
+    "intro": "Postările săptămânale de șah pentru parcurgere. Data și ora indică momentul programat al postării.",
+    "oClock": "",
+    "play": "Parcurge",
+    "empty": "Nicio postare săptămânală încă.",
+    "deleteConfirm": "Ștergi postarea săptămânală „{{title}}“?",
+    "created": "Postare săptămânală creată",
+    "deleted": "Postare săptămânală ștearsă",
+    "loadFailed": "Postările săptămânale nu au putut fi încărcate",
+    "uploadFailed": "Încărcarea a eșuat",
+    "saveFailed": "Salvarea a eșuat",
+    "deleteFailed": "Ștergerea a eșuat",
+    "fields": {
+      "date": "Dată",
+      "time": "Oră",
+      "titleOptional": "Titlu (opțional)"
+    },
+    "columns": {
+      "scheduled": "Dată",
+      "title": "Titlu",
+      "actions": "Acțiuni"
+    },
+    "upload": {
+      "title": "Încarcă postare săptămânală nouă",
+      "choosePgn": "Alege PGN",
+      "titlePlaceholder": "din numele fișierului",
+      "create": "Creează",
+      "hint": "Implicit: ultima dată + 7 zile, aceeași oră (altfel 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Ești offline și niciun run nu este salvat în cache. Deschide modul Infinit o dată cu internet pentru a salva probleme pentru joc offline.",
+    "help": {
+      "title": "Mod probleme infinite",
+      "gameplayHeading": "Cum funcționează",
+      "gameplayP1": "Rezolvi probleme de șah cu dificultate crescătoare. Pornești de la un rating configurabil și urci treptat. Ratingul crește automat de-a lungul fazelor Fasttrack (vezi mai jos).",
+      "gameplayP2": "Ai <strong>3 vieți</strong>. La 0 vieți jocul se termină.",
+      "movesHeading": "Mutări și Stockfish",
+      "movesP1": "Fiecare problemă are o <strong>soluție intenționată</strong> (o secvență de mutări). Cât timp joci mutările corecte, urmezi linia soluției.",
+      "movesP2": "Dacă joci o <strong>mutare greșită</strong>, <strong>Stockfish</strong> (un motor de șah) preia cealaltă parte. Joci liber împotriva Stockfish. Puterea acestuia poate fi setată prin adâncimea Stockfish.",
+      "movesItem1": "<strong>Șah mat dat lui Stockfish</strong> contează ca soluție alternativă — nicio viață pierdută!",
+      "movesItem2": "<strong>Stockfish îți dă șah mat</strong> — pierzi o viață",
+      "movesItem3": "Jocul împotriva Stockfish continuă la infinit până la șah mat sau Renunță",
+      "buttonsHeading": "Butoane în timpul jocului",
+      "buttonsShowEval": "<strong>Arată evaluarea</strong> — Afișează evaluarea Stockfish (Start vs. Acum)",
+      "buttonsReset": "<strong>Resetează</strong> — Resetează problema, dar costă o viață",
+      "buttonsMouseslip": "<strong>Alunecare mouse</strong> — Anulează ultima mutare greșită (o dată per problemă, gratuit)",
+      "buttonsGiveUp": "<strong>Renunță</strong> — Cedează, costă o viață",
+      "settingsHeading": "Setări",
+      "settingsStartRating": "<strong>Rating de start</strong> — Ratingul problemelor de la care pornești",
+      "settingsStockfishDepth": "<strong>Adâncime Stockfish</strong> — Puterea motorului (1 = foarte slab, 24 = putere maximă)",
+      "settingsThemes": "<strong>Teme</strong> — Opțional: doar anumite teme tactice (ex. „furculiță ac“)",
+      "fasttrackHeading": "Creșterea dificultății (Fasttrack)",
+      "fasttrackP1": "Creșterea se adaptează la performanța ta anterioară: analizează sesiunile recente și calculează ratingul la care pierzi de obicei vieți.",
+      "fasttrackPhase1": "<strong>Faza 1 (Problemele 1–5)</strong> — Creștere rapidă până la primul prag",
+      "fasttrackPhase2": "<strong>Faza 2 (Problemele 6–10)</strong> — Creștere de la primul la al doilea prag",
+      "fasttrackPhase3": "<strong>Faza 3 (de la Problema 11)</strong> — Pas constant de 20",
+      "fasttrackP2": "Valorile pragului (primul/al doilea prag) sunt calculate automat, dar pot fi ajustate manual. Apasă „Auto: …“ pentru a reseta valoarea."
+    },
+    "config": {
+      "title": "Mod probleme infinite",
+      "subtitle": "Dificultate progresivă — cât de departe poți ajunge?",
+      "startRating": "Rating de start",
+      "stockfishDepth": "Adâncime Stockfish",
+      "stockfishDepthHint": "1 (slab) – 24 (puternic)",
+      "themes": "Teme (opțional)",
+      "themesPlaceholder": "ex. furculiță ac",
+      "thresholdExplain": "Ratinguri la care pierzi de obicei vieți. Ajustează pentru a sări peste probleme mai ușoare mai rapid sau mai lent.",
+      "firstThreshold": "Primul prag",
+      "secondThreshold": "Al doilea prag",
+      "auto": "Auto: {{value}}",
+      "step": "Pas {{step}}",
+      "phase1Label": "Faza 1 (Niv 1–5)",
+      "phase2Label": "Faza 2 (Niv 6–10)",
+      "phase3Label": "Faza 3 (Niv 11+)",
+      "curveHint": "Curba de rating a gauntlet-ului (fixă la pornire):",
+      "curvePuzzle": "Problema {{n}}",
+      "settings": "Setări",
+      "visualizationLevel": "Vizualizare: Nivel {{level}}",
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Aleatoriu",
+      "modeCrazy": "Nebunesc",
+      "boardTheme": "Temă tablă",
+      "pieces": "Piese",
+      "highscore": "Record: Rating {{rating}}",
+      "sessionsPlayed": "{{count}} sesiuni jucate",
+      "viewHistory": "Vezi istoricul",
+      "unfinishedRun": "Run nefinalizat: Niv {{level}} | {{solved}} rezolvate | {{lives}} vieți | {{max}} max",
+      "continue": "Continuă",
+      "archiveAndNew": "Arhivează și joc nou",
+      "newGame": "Joc nou",
+      "start": "Start"
+    },
+    "game": {
+      "visualization": "Vizualizare (Nivel {{level}})",
+      "vizCountdown": "Piesele dispar în {{seconds}}s...",
+      "vizNoMove": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
+      "vizShow": "Arată",
+      "vizShowing": "Se afișează...",
+      "loadingPuzzle": "Se încarcă problema...",
+      "watchOpponent": "Urmărește mutarea adversarului...",
+      "yourTurn": "Rândul tău! Găsește cea mai bună mutare.",
+      "yourMove": "Mutarea ta...",
+      "opponentThinking": "Adversarul gândește...",
+      "evalStart": "Start",
+      "evalNow": "Acum",
+      "showEval": "Arată evaluarea",
+      "hideEval": "Ascunde evaluarea",
+      "reset": "Resetează",
+      "mouseslip": "Alunecare mouse",
+      "giveUp": "Renunță",
+      "checkmate": "Șah mat!",
+      "alternativeSolution": "Soluție alternativă — problema avea o altă linie intenționată.",
+      "correct": "Corect!",
+      "wrong": "Greșit!",
+      "gaveUp": "Ai renunțat",
+      "continue": "Continuă",
+      "analyze": "Analizează",
+      "reviewLast": "Analizează ultima problemă",
+      "puzzleRating": "Rating problemă: {{rating}}",
+      "levelRange": "Nivel {{level}} ({{min}}–{{max}})",
+      "showTags": "Arată etichete",
+      "hideTags": "Ascunde etichete",
+      "sharePuzzle": "Distribuie problema",
+      "statRating": "Rating",
+      "statLevel": "Nivel",
+      "statSolved": "Rezolvate",
+      "statTime": "Timp",
+      "phaseLabel": "Faza {{phase}} (pas {{step}})"
+    },
+    "gameOver": {
+      "title": "Joc terminat",
+      "wonTitle": "Ai câștigat!",
+      "wonSubtitle": "Ai parcurs întregul gauntlet.",
+      "wonText": "Lanțul a fost bătut — pornește un run nou pentru următoarea provocare.",
+      "exhaustedTitle": "Epuizat!",
+      "exhaustedSubtitle": "Ai parcurs toate intervalele de rating ale problemelor.",
+      "areYouAStockfish": "Ești un Stockfish?",
+      "maxRating": "Rating maxim",
+      "puzzlesSolved": "Probleme rezolvate",
+      "livesLeft": "Vieți rămase",
+      "levelReached": "Nivel atins",
+      "time": "Timp",
+      "livesLostAt": "Vieți pierdute la: {{ratings}}",
+      "puzzleReview": "Recenzie probleme",
+      "newHighscore": "Record nou!",
+      "archiving": "Se arhivează...",
+      "archiveRun": "Arhivează acest run",
+      "archived": "Arhivat",
+      "playAgain": "Joacă din nou",
+      "backToPuzzles": "Înapoi la probleme"
+    },
+    "history": {
+      "title": "Istoricul problemelor infinite",
+      "noSessions": "Nicio sesiune jucată încă.",
+      "startPlaying": "Începe să joci",
+      "filterAll": "Toate",
+      "filterActive": "Active",
+      "filterArchived": "Arhivate",
+      "selected": "{{count}} selectate",
+      "archive": "Arhivează",
+      "unarchive": "Dezarhivează",
+      "noArchivedSessions": "Nicio sesiune arhivată.",
+      "noActiveSessions": "Nicio sesiune activă.",
+      "colDate": "Dată",
+      "colMaxRating": "Rating maxim",
+      "colSolved": "Rezolvate",
+      "colDuration": "Durată",
+      "colConfig": "Configurare",
+      "colMistakes": "Greșeli",
+      "backToEndless": "Înapoi la modul infinit"
+    }
+  },
+  "book": {
+    "difficulty": "Dificultate",
+    "offlineUnavailable": "Această carte nu este disponibilă offline.",
+    "status": {
+      "loading": "Se încarcă problema...",
+      "watchOpponent": "Urmărește mutarea adversarului...",
+      "yourTurn": "Rândul tău! Găsește cea mai bună mutare.",
+      "gaveUp": "Ai renunțat — joacă singur soluția.",
+      "stockfishThinking": "Stockfish gândește...",
+      "yourMoveVsStockfish": "Mutarea ta împotriva Stockfish...",
+      "correct": "Corect!",
+      "incorrect": "Incorect",
+      "gaveUpSolution": "Ai renunțat — iată soluția",
+      "checkmate": "Șah mat!",
+      "altSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
+      "fullGame": "Partida completă"
+    },
+    "actions": {
+      "reset": "Resetează",
+      "giveUp": "Renunță",
+      "mouseslip": "Alunecare mouse",
+      "nextPuzzle": "Problema următoare",
+      "again": "Din nou",
+      "skip": "Sari",
+      "viewFullGame": "Vezi partida completă",
+      "analyze": "Analizează",
+      "nextInBook": "Următoarea din carte",
+      "randomInBook": "Aleatorie din carte",
+      "sharePuzzle": "Distribuie problema",
+      "backToPuzzle": "Înapoi la problemă"
+    },
+    "settings": {
+      "title": "Setări",
+      "visualizationLevel": "Vizualizare: Nivel {{level}}",
+      "stockfishDepth": "Adâncime Stockfish",
+      "depthHint": "1 (slab) – 24 (puternic)",
+      "mode": "Mod",
+      "modeNormal": "Normal",
+      "modeRandom": "Aleatoriu",
+      "modeCrazy": "Nebunesc",
+      "boardTheme": "Temă tablă",
+      "pieces": "Piese"
+    },
+    "viz": {
+      "titleLevel": "Vizualizare (Nivel {{level}})",
+      "countdown": "Piesele dispar în {{seconds}}s...",
+      "noMoveYet": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
+      "show": "Arată",
+      "showing": "Se afișează...",
+      "level0": "Normal — Trage și plasează",
+      "level1": "Orb — tablă înghețată, mutări ca text",
+      "level2": "Dame — piesele sunt înlocuite cu dame după 3s",
+      "level3": "Întunecat — piesele sunt înlocuite cu jetoane negre după 3s",
+      "level4": "Invizibil — piesele dispar complet după 3s"
+    },
+    "course": {
+      "backToCourses": "La prezentarea generală a cursurilor",
+      "sequential": "Secvențial",
+      "random": "Aleatoriu",
+      "completed": "Curs finalizat!",
+      "toOverview": "La prezentarea generală"
+    },
+    "weekly": {
+      "backToWeekly": "La prezentarea generală a postărilor săptămânale",
+      "label": "Postare săptămânală",
+      "noPuzzles": "Această postare săptămânală nu conține probleme de jucat.",
+      "allSolved": "Toate problemele rezolvate!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Panou Kibana",
+    "tabs": {
+      "users": "Utilizatori",
+      "books": "Cărți",
+      "groups": "Grupuri",
+      "logs": "Jurnale cereri"
+    },
+    "users": {
+      "searchLabel": "Caută utilizatori",
+      "toggleAdmin": "Comută admin",
+      "deleteUser": "Șterge utilizator",
+      "deleteConfirm": "Ștergi utilizatorul „{{username}}“? Această acțiune nu poate fi anulată.",
+      "deleted": "Utilizatorul „{{username}}“ șters",
+      "nowAdmin": "{{username}} este acum admin",
+      "noLongerAdmin": "{{username}} nu mai este admin",
+      "columns": {
+        "id": "ID",
+        "username": "Nume utilizator",
+        "email": "Email",
+        "admin": "Admin",
+        "groups": "Grupuri",
+        "created": "Creat",
+        "actions": "Acțiuni"
+      },
+      "errors": {
+        "load": "Încărcarea utilizatorilor a eșuat",
+        "toggleAdmin": "Comutarea adminului a eșuat",
+        "delete": "Ștergerea utilizatorului a eșuat"
+      }
+    },
+    "books": {
+      "uploadPgn": "Încarcă PGN(uri)",
+      "importing": "Se importă…",
+      "poolHint": "Setează per carte în ce pool-uri apar problemele.",
+      "empty": "Nicio carte importată încă.",
+      "eloFrom": "de la",
+      "eloTo": "până la",
+      "adminOnly": "doar admin",
+      "deleteBook": "Șterge cartea",
+      "deleteConfirm": "Ștergi cartea „{{name}}“ cu {{count}} problemă/probleme?",
+      "deleted": "Cartea „{{name}}“ ștearsă",
+      "imported": "{{imported}} problemă/probleme importată/importate, {{skipped}} omisă/omise",
+      "importedCount": "{{count}} problemă/probleme importată/importate",
+      "duplicatesCount": "{{count}} duplicat(e)",
+      "invalidCount": "{{count}} invalid(e)",
+      "columns": {
+        "book": "Carte",
+        "puzzles": "Probleme",
+        "difficulty": "Dificultate",
+        "elo": "Elo de la/până la",
+        "daily": "Zilnic",
+        "random": "Aleatoriu",
+        "blind": "Orb",
+        "visibleFor": "Vizibil pentru (cursuri)",
+        "actions": "Acțiuni"
+      },
+      "errors": {
+        "load": "Încărcarea cărților a eșuat",
+        "import": "Importul a eșuat",
+        "save": "Salvarea a eșuat",
+        "saveGroups": "Actualizarea accesului grupului a eșuat",
+        "delete": "Ștergerea a eșuat"
+      }
+    },
+    "groups": {
+      "newGroup": "Grup nou",
+      "namePlaceholder": "Nume",
+      "descriptionOptional": "Descriere (opțional)",
+      "create": "Creează",
+      "empty": "Niciun grup creat încă.",
+      "manageMembers": "Gestionează membri",
+      "deleteGroup": "Șterge grupul",
+      "membersOf": "Membri · {{name}}",
+      "addUser": "Adaugă utilizator",
+      "noMembers": "Niciun membru.",
+      "created": "Grupul „{{name}}“ creat",
+      "deleteConfirm": "Ștergi grupul „{{name}}“?",
+      "deleted": "Grupul „{{name}}“ șters",
+      "columns": {
+        "group": "Grup",
+        "members": "Membri",
+        "actions": "Acțiuni"
+      },
+      "errors": {
+        "load": "Încărcarea grupurilor a eșuat",
+        "create": "Crearea grupului a eșuat",
+        "delete": "Ștergerea a eșuat",
+        "loadMembers": "Încărcarea membrilor a eșuat",
+        "addMember": "Adăugarea membrului a eșuat",
+        "removeMember": "Eliminarea membrului a eșuat"
+      }
+    },
+    "logs": {
+      "all": "Toate",
+      "filter": "Filtrează",
+      "reset": "Resetează",
+      "filtered": "(filtrat)",
+      "entryCount": "{{count}} înregistrări",
+      "status4xx": "4xx+ (erori)",
+      "status5xx": "5xx (server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Timp",
+        "method": "Metodă",
+        "path": "Cale",
+        "status": "Status",
+        "duration": "Durată",
+        "user": "Utilizator",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Încărcarea jurnalelor a eșuat"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analiză",
+    "engine": "Motor",
+    "depth": "Adâncime",
+    "lines": "Linii",
+    "maxDepth": "Adâncime maximă",
+    "backToPuzzle": "Înapoi la problemă",
+    "calculating": "Se calculează…",
+    "engineOff": "Motor oprit",
+    "start": "Start",
+    "flip": "Întoarce tabla",
+    "reset": "Resetează",
+    "noMoves": "Nicio mutare încă — joacă mutări pe tablă.",
+    "fen": "FEN",
+    "loadFen": "Încarcă FEN",
+    "copyFen": "Copiază FEN",
+    "pgn": "PGN",
+    "loadPgn": "Încarcă PGN"
+  },
+  "stats": {
+    "title": "Statistici",
+    "currentElo": "Elo probleme",
+    "totalSolved": "Rezolvate",
+    "attempts": "Încercări",
+    "accuracy": "Precizie",
+    "currentStreak": "Serie curentă",
+    "bestStreak": "Cea mai bună serie",
+    "eloProgress": "Progres Elo probleme",
+    "level": "Nivel",
+    "allLevels": "Toate",
+    "noData": "Nicio dată încă.",
+    "perLevel": "Elo per nivel de vizualizare",
+    "vizLevel": "Nivel",
+    "recentPuzzles": "Probleme recente",
+    "date": "Dată",
+    "rating": "Rating",
+    "result": "Rezultat",
+    "time": "Timp",
+    "byTheme": "Pe temă",
+    "byRating": "Pe rating (rezolvate)",
+    "byRatingHint": "Probleme rezolvate per bandă de rating — plasează cursorul pentru precizie.",
+    "activity": "Activitate"
+  }
+}

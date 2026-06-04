@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "close": "إغلاق",
+    "search": "بحث",
+    "back": "رجوع",
+    "retry": "إعادة المحاولة",
+    "loading": "جارٍ التحميل…",
+    "ok": "موافق",
+    "remove": "إزالة"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "repertoires": "المخزون",
+    "tournaments": "البطولات",
+    "friends": "الأصدقاء",
+    "puzzles": "الألغاز",
+    "weekly": "أسبوعي",
+    "courses": "الدورات",
+    "admin": "الإدارة",
+    "profile": "الملف الشخصي",
+    "puzzleHistory": "سجل الألغاز",
+    "changelog": "سجل التغييرات",
+    "logout": "تسجيل الخروج",
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "language": "اللغة",
+    "menu": "القائمة",
+    "info": "معلومات",
+    "account": "الحساب",
+    "analysis": "التحليل",
+    "stats": "الإحصائيات"
+  },
+  "app": {
+    "changelogTitle": "سجل التغييرات",
+    "quickstartTitle": "البداية السريعة",
+    "qs": {
+      "subscribeTitle": "الاشتراك",
+      "subscribeDesc": "اشترك في البطولات للوصول السريع إلى اللاعبين والمواجهات والنتائج.",
+      "monitorTitle": "المراقبة",
+      "monitorDesc": "فعّل المراقبة على بطولة — تُكتشف الجولات الجديدة وتُزحف تلقائياً.",
+      "favoritesTitle": "المفضلة",
+      "favoritesDesc": "ضع علامة على اللاعبين أو الفرق كمفضلة للوصول السريع في عرض البطولة.",
+      "chessResultsTitle": "رقم ChessResults",
+      "chessResultsDesc": "أضف رقم ChessResults الخاص بك في ملفك الشخصي — يتم الاشتراك في البطولات القادمة تلقائياً."
+    },
+    "feedback": "ملاحظات / الإبلاغ عن خطأ",
+    "updateAvailable": "يتوفر إصدار جديد.",
+    "reload": "إعادة تحميل"
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "usernameLabel": "اسم المستخدم",
+      "passwordLabel": "كلمة المرور",
+      "rememberMe": "البقاء مسجلاً",
+      "submit": "تسجيل الدخول",
+      "submitting": "جارٍ تسجيل الدخول...",
+      "registerLink": "ليس لديك حساب؟ سجّل الآن",
+      "failed": "فشل تسجيل الدخول"
+    },
+    "register": {
+      "title": "إنشاء حساب",
+      "usernameLabel": "اسم المستخدم",
+      "emailLabel": "البريد الإلكتروني",
+      "passwordLabel": "كلمة المرور",
+      "passwordHint": "4 أحرف على الأقل",
+      "submit": "إنشاء حساب",
+      "submitting": "جارٍ التسجيل...",
+      "loginLink": "لديك حساب بالفعل؟ سجّل دخولك",
+      "failed": "فشل التسجيل"
+    }
+  },
+  "dashboard": {
+    "welcome": "مرحباً، {{username}}!",
+    "subscribedTournaments": "البطولات المشترك بها",
+    "subscribedAt": "اشترك في {{date}}",
+    "puzzles": {
+      "title": "الألغاز",
+      "subtitle": "Elo {{elo}} | {{solved}} محلول ({{accuracy}}%)",
+      "solve": "حل الألغاز",
+      "endless": "لا نهاية"
+    },
+    "subscriptions": {
+      "title": "اشتراكات البطولة",
+      "count": "{{count}} اشتراك",
+      "browse": "تصفح البطولات"
+    },
+    "friends": {
+      "title": "الأصدقاء",
+      "count": "{{count}} صديق",
+      "manage": "إدارة الأصدقاء"
+    },
+    "repertoires": {
+      "title": "المخزون",
+      "count": "{{count}} مخزون",
+      "viewAll": "عرض الكل"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "لعبة",
+    "nav": {
+      "first": "الحركة الأولى",
+      "previous": "الحركة السابقة",
+      "next": "الحركة التالية",
+      "last": "الحركة الأخيرة"
+    }
+  },
+  "profile": {
+    "title": "الملف الشخصي: {{username}}",
+    "firstName": "الاسم الأول",
+    "lastName": "اسم العائلة",
+    "searchPlayer": "البحث عن لاعب",
+    "noResults": "لم يتم العثور على نتائج.",
+    "displayName": "اسم العرض",
+    "fideId": "رقم FIDE",
+    "chessResultsId": "رقم ChessResults",
+    "chessComUsername": "اسم مستخدم Chess.com",
+    "lichessUsername": "اسم مستخدم Lichess",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم حفظ الملف الشخصي",
+    "saveFailed": "فشل حفظ الملف الشخصي",
+    "searchFailed": "فشل البحث",
+    "chessResultsApplied": "تم تطبيق بيانات ChessResults",
+    "fideApplied": "تم تطبيق بيانات FIDE",
+    "discord": {
+      "title": "Discord",
+      "hint": "افتح رابطاً شخصياً من بوت RookHub على Discord (أمر /link أو رسالة لغز خاصة) لربط حساب Discord الخاص بك.",
+      "unlink": "إلغاء الربط",
+      "unlinked": "تم إلغاء ربط Discord",
+      "linked": "تم ربط حساب Discord",
+      "linkConflict": "حساب Discord هذا مرتبط بالفعل بمستخدم RookHub آخر.",
+      "linkFailed": "تعذّر ربط حساب Discord",
+      "stashed": "سجّل دخولك أو أنشئ حساباً لإتمام ربط حساب Discord."
+    },
+    "offline": {
+      "title": "غير متصل",
+      "hint": "احفظ الألغاز على هذا الجهاز لمواصلة الحل بدون إنترنت (لكل جهاز).",
+      "puzzleCount": "الألغاز غير المتصلة",
+      "endlessRuns": "جولات لا نهاية غير متصلة",
+      "cacheSize": "حجم الذاكرة المؤقتة",
+      "books": "{{count}} كتاب",
+      "clear": "مسح الذاكرة المؤقتة",
+      "cleared": "تم مسح الذاكرة المؤقتة غير المتصلة",
+      "pending": "{{count}} حل في انتظار المزامنة — سيتم رفعه تلقائياً عند عودتك للاتصال."
+    },
+    "delete": {
+      "title": "حذف الحساب",
+      "hint": "حذف حسابك نهائياً.",
+      "button": "حذف الحساب",
+      "warn": "تحذير: ستُحذف هويتك وبياناتك الشخصية بشكل لا رجعة فيه. أدخل كلمة المرور للتأكيد.",
+      "password": "كلمة المرور",
+      "confirm": "حذف نهائي",
+      "deleting": "جارٍ الحذف...",
+      "done": "تم حذف حسابك.",
+      "wrongPassword": "كلمة المرور غير صحيحة.",
+      "failed": "تعذّر حذف الحساب.",
+      "moreInfo": "مزيد من المعلومات حول حذف الحساب"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "حذف الحساب",
+      "intro": "توضّح هذه الصفحة كيفية حذف حساب RookHub الخاص بك وما يحدث لبياناتك.",
+      "inAppTitle": "كيفية حذف حسابك",
+      "inApp": "سجّل دخولك إلى التطبيق وانتقل إلى الملف الشخصي ← \"حذف الحساب\". أكّد بكلمة المرور. يُحذف الحساب فوراً.",
+      "removedTitle": "ما يتم حذفه",
+      "removed1": "هويتك وبياناتك الشخصية (اسم المستخدم، البريد الإلكتروني، اسم العرض/الاسم الحقيقي، رقم FIDE/ChessResults، اسم Chess.com/Lichess، رابط Discord) وصلاحية تسجيل الدخول.",
+      "removed2": "المحتوى الشخصي والروابط: المخزون واشتراكات البطولة/المفضلة والصداقات وعضوية المجموعات.",
+      "keptTitle": "ما يُحتفظ به بشكل مجهول",
+      "kept": "تُحتفظ إحصائيات الحل/اللعب المجمّعة (مثل الألغاز المحلولة) في صورة مجهولة الهوية لا يمكن ربطها بك.",
+      "contactTitle": "التواصل",
+      "contact": "لطلبات الحذف أو الاستفسارات، تواصل معنا على",
+      "back": "العودة إلى تسجيل الدخول"
+    },
+    "privacy": {
+      "title": "سياسة الخصوصية",
+      "updated": "آخر تحديث: 3 يونيو 2026",
+      "intro": "RookHub منصة لتدريب الشطرنج (ألغاز، وضع لا نهاية، دورات، مخزون). توضّح هذه السياسة كيفية معالجة البيانات الشخصية وفق اللائحة الأوروبية لحماية البيانات (GDPR).",
+      "controllerTitle": "المتحكم في البيانات",
+      "controller": "المتحكم في معالجة البيانات هو المشغّل المذكور في الإشعار القانوني",
+      "dataTitle": "البيانات التي نعالجها",
+      "dataIntro": "بحسب استخدامك، نعالج:",
+      "dataAccount": "بيانات الحساب: اسم المستخدم، عنوان البريد الإلكتروني، كلمة المرور (مخزّنة كـhash فقط).",
+      "dataProfile": "بيانات الملف الشخصي (اختيارية): اسم العرض/الاسم الحقيقي، رقم FIDE، رقم ChessResults، اسم مستخدم Chess.com/Lichess، رابط Discord اختياري.",
+      "dataUsage": "بيانات الاستخدام: الألغاز المحلولة، تقدم الدورات/اللا نهاية وإحصائياتها، تقييم اللعب، توقيتات تسجيل الدخول.",
+      "dataTechnical": "البيانات التقنية: عنوان IP، نقاط النهاية المطلوبة مع الطوابع الزمنية ومعرّف زائر مستعار (قياس الوصول) في سجلات الخادم.",
+      "purposesTitle": "الأغراض والأسس القانونية",
+      "purposes": "توفير الحساب والميزات (تنفيذ العقد، المادة 6(1)(ب) من GDPR) والأمن التشغيلي وتحليل الأخطاء وقياس الوصول عبر السجلات (المصلحة المشروعة، المادة 6(1)(و) من GDPR).",
+      "thirdTitle": "المستلمون / الخدمات الخارجية",
+      "thirdIntro": "لا تُباع البيانات. بحسب استخدامك، تشارك الخدمات التالية:",
+      "thirdDiscord": "Discord: عند ربط الحساب طوعاً فقط (معرّف Discord/الاسم) للعرض في بوت RookHub على Discord.",
+      "thirdChessresults": "chess-results.com: تُجلب بيانات البطولة من جانب الخادم عند تعيين رقم ChessResults أو تحميل البطولات.",
+      "thirdChesssites": "Chess.com / Lichess: أسماء المستخدمين التي تدخلها طوعاً فقط؛ لا نقل بيانات تلقائي.",
+      "thirdLogging": "Elasticsearch/Kibana: تسجيل/مراقبة ذاتية الاستضافة على بنيتنا التحتية.",
+      "thirdHosting": "الاستضافة: تعمل على بنيتنا التحتية الخاصة بالخوادم مع وكيل عكسي TLS.",
+      "storageTitle": "التخزين المحلي (ملفات تعريف الارتباط/التخزين)",
+      "storage": "لا نستخدم ملفات تعريف ارتباط للتتبع. يحتفظ تخزين المتصفح (localStorage) بمثل رمز تسجيل الدخول والإعدادات و— إذا كان مفعّلاً — الألغاز غير المتصلة. تبقى هذه البيانات على جهازك.",
+      "retentionTitle": "الاحتفاظ والحذف",
+      "retention": "تُخزَّن بيانات الحساب حتى تحذفه. يمكنك حذف حسابك في أي وقت — تُزال الهوية والبيانات الشخصية، وتُحتفظ بالإحصائيات المجهولة. مزيد من المعلومات:",
+      "rightsTitle": "حقوقك",
+      "rights": "لديك الحق في الوصول والتصحيح والمسح والتقييد وقابلية نقل البيانات والاعتراض، فضلاً عن الحق في تقديم شكوى إلى هيئة إشرافية (في النمسا: هيئة حماية البيانات).",
+      "contactTitle": "التواصل",
+      "contact": "لأسئلة الخصوصية، تواصل معنا على",
+      "back": "العودة إلى تسجيل الدخول"
+    },
+    "impressum": {
+      "title": "الإشعار القانوني",
+      "operatorTitle": "مزوّد الخدمة",
+      "name": "[الاسم / الشركة — يرجى التعبئة]",
+      "address": "[العنوان — الشارع، الرمز البريدي، المدينة، الدولة]",
+      "uid": "[الرقم الضريبي، إذا كانت شركة]",
+      "contactTitle": "التواصل",
+      "contact": "البريد الإلكتروني",
+      "disclaimer": "ملاحظة: تفاصيل مزوّد الخدمة عبارة عن عناصر نائبة يجب استبدالها بالبيانات الفعلية قبل النشر. هذه الصفحة مسوّدة ولا تُعدّ استشارة قانونية.",
+      "back": "العودة إلى تسجيل الدخول"
+    }
+  },
+  "friends": {
+    "title": "الأصدقاء",
+    "searchUsers": "البحث عن مستخدمين",
+    "searchResults": "نتائج البحث",
+    "tabs": {
+      "friends": "الأصدقاء ({{count}})",
+      "requests": "الطلبات ({{count}})"
+    },
+    "empty": {
+      "friends": "لا أصدقاء بعد. ابحث عن مستخدمين لإضافة أصدقاء!",
+      "requests": "لا طلبات معلّقة."
+    },
+    "sentOn": "أُرسل في {{date}}",
+    "requestSent": "تم إرسال طلب الصداقة",
+    "errors": {
+      "loadFriends": "فشل تحميل الأصدقاء",
+      "loadRequests": "فشل تحميل الطلبات",
+      "search": "فشل البحث",
+      "sendRequest": "فشل إرسال الطلب",
+      "acceptRequest": "فشل قبول الطلب",
+      "declineRequest": "فشل رفض الطلب",
+      "removeFriend": "فشل إزالة الصديق"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "مخزوني",
+      "new": "مخزون جديد",
+      "fileCount": "{{count}} ملف",
+      "public": "عام",
+      "private": "خاص",
+      "noDescription": "لا يوجد وصف",
+      "open": "فتح",
+      "empty": "لا مخزون بعد. أنشئ واحداً للبدء!",
+      "loadFailed": "فشل تحميل المخزون",
+      "createFailed": "فشل إنشاء المخزون",
+      "deleteConfirm": "حذف هذا المخزون؟",
+      "deleteFailed": "فشل حذف المخزون"
+    },
+    "detail": {
+      "noDescription": "لا يوجد وصف",
+      "modeLines": "الخطوط",
+      "modeTree": "الشجرة",
+      "modeEdit": "تعديل"
+    },
+    "dialog": {
+      "title": "مخزون جديد",
+      "name": "الاسم",
+      "description": "الوصف",
+      "public": "عام",
+      "create": "إنشاء"
+    },
+    "lines": {
+      "allLines": "جميع الخطوط",
+      "empty": "لم يتم العثور على خطوط في هذا المخزون."
+    },
+    "tree": {
+      "start": "البداية",
+      "lineCount": "{{count}} خط",
+      "lineCountPlural": "{{count}} خطوط",
+      "empty": "نهاية الخط — لا حركات إضافية."
+    },
+    "edit": {
+      "uploadHint": "اسحب وأفلت ملفات PGN هنا أو انقر للرفع",
+      "files": "الملفات ({{count}})",
+      "empty": "لا ملفات بعد. ارفع ملفات PGN للبدء!",
+      "filesSkipped": "تم تخطي {{count}} ملف (PGN فقط، حتى 10 MB)",
+      "uploadSuccess": "تم رفع {{count}} ملف",
+      "uploadPartial": "{{ok}} مرفوع، {{failed}} فشل",
+      "downloadFailed": "فشل التنزيل",
+      "deleteConfirm": "حذف هذا الملف؟"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "تحديث",
+      "subscribe": "اشتراك",
+      "unsubscribe": "إلغاء الاشتراك",
+      "monitor": "مراقبة",
+      "monitoringUntil": "مراقبة حتى {{time}}",
+      "share": "مشاركة",
+      "subscribed": "تم الاشتراك!",
+      "unsubscribed": "تم إلغاء الاشتراك",
+      "failed": "فشل",
+      "unsubscribeFailed": "فشل إلغاء الاشتراك"
+    },
+    "tabs": {
+      "players": "اللاعبون ({{count}})",
+      "teams": "الفرق ({{count}})",
+      "pairings": "المواجهات"
+    },
+    "favoritesOnly": "المفضلة فقط",
+    "favorites": {
+      "added": "تمت إضافة {{name}} إلى المفضلة",
+      "removed": "تمت إزالة {{name}} من المفضلة",
+      "addedShort": "{{name}} في المفضلة",
+      "removedShort": "تمت إزالة {{name}}"
+    },
+    "players": {
+      "snr": "رقم",
+      "title": "اللقب",
+      "name": "الاسم",
+      "fideId": "رقم FIDE",
+      "elo": "Elo",
+      "country": "الدولة",
+      "team": "الفريق",
+      "club": "النادي",
+      "boardShort": "لوحة"
+    },
+    "teams": {
+      "rank": "الترتيب",
+      "team": "الفريق",
+      "points": "النقاط"
+    },
+    "pairings": {
+      "round": "الجولة",
+      "roundLabel": "الجولة {{round}}",
+      "board": "اللوحة",
+      "white": "الأبيض",
+      "black": "الأسود",
+      "home": "الداخل",
+      "away": "الخارج",
+      "result": "النتيجة"
+    },
+    "monitor": {
+      "stopped": "توقفت المراقبة",
+      "stopFailed": "فشل إيقاف المراقبة",
+      "activated": "تم تفعيل المراقبة",
+      "activateFailed": "فشل تفعيل المراقبة",
+      "newRoundTitle": "جولة جديدة متاحة!",
+      "newRoundBody": "تم نشر الجولة {{round}}.",
+      "newRoundSnack": "جولة جديدة متاحة! الجولة {{round}}"
+    },
+    "list": {
+      "title": "البطولات",
+      "importTitle": "استيراد بطولة",
+      "importSubtitle": "أدخل رقم بطولة من chess-results.com لزحفها",
+      "chessResultsId": "رقم Chess-Results",
+      "idPlaceholder": "مثال: 1234567",
+      "idHintPrefix": "الرقم من chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "زحف",
+      "crawling": "جارٍ زحف البطولة {{id}}... المهمة #{{jobId}}",
+      "crawlerUnavailable": "تعذّر الاتصال بزاحف البطولة. تأكد من تشغيل خدمة الزاحف.",
+      "details": "التفاصيل",
+      "hide": "إخفاء",
+      "empty": "لم يتم العثور على بطولات.",
+      "showHidden": "عرض {{count}} مخفي",
+      "imported": "تم استيراد البطولة!",
+      "crawlStartFailed": "فشل بدء الزحف",
+      "crawlFailed": "فشل الزحف",
+      "crawlConnectionLost": "انقطع الاتصال بمهمة الزحف"
+    },
+    "detail": {
+      "loadTournamentFailed": "فشل تحميل البطولة",
+      "loadSubscriptionFailed": "فشل تحميل حالة الاشتراك",
+      "reloadTournamentFailed": "فشل إعادة تحميل البطولة",
+      "refreshStartFailed": "فشل بدء التحديث",
+      "dataRefreshed": "تم تحديث البيانات!",
+      "refreshFailed": "فشل التحديث",
+      "loadPlayersFailed": "فشل تحميل اللاعبين",
+      "loadTeamsFailed": "فشل تحميل الفرق",
+      "loadPairingsFailed": "فشل تحميل المواجهات",
+      "loadTeamDetailsFailed": "فشل تحميل تفاصيل الفريق"
+    },
+    "public": {
+      "notFound": "البطولة غير موجودة."
+    },
+    "share": {
+      "title": "مشاركة البطولة",
+      "copyLink": "نسخ الرابط",
+      "linkCopied": "تم نسخ الرابط!",
+      "copyFailed": "فشل النسخ"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "جارٍ تحميل اللغز…",
+      "loadFailed": "فشل تحميل اللغز",
+      "offlineNoCache": "أنت غير متصل ولا توجد ألغاز مخزّنة. افتح هذه الصفحة مرة وأنت متصل لحفظ الألغاز للعب غير المتصل.",
+      "watchOpponent": "راقب حركة الخصم…",
+      "yourTurn": "دورك!",
+      "gaveUpPlayOut": "استسلمت — العب الحل بنفسك.",
+      "thinking": "Stockfish يفكّر…"
+    },
+    "result": {
+      "solutionPlayedOut": "تم تنفيذ الحل.",
+      "tryYourselfNextTime": "حاول حله بنفسك في المرة القادمة!",
+      "checkmate": "كش ملك!",
+      "alternativeSolution": "حل بديل — كان اللغز يحتوي على تسلسل حركات مقصود مختلف.",
+      "correct": "صحيح!",
+      "incorrect": "خاطئ"
+    },
+    "eval": {
+      "start": "البداية",
+      "now": "الآن",
+      "show": "إظهار التقييم",
+      "hide": "إخفاء التقييم"
+    },
+    "actions": {
+      "reset": "إعادة تعيين",
+      "mouseslip": "انزلاق الفأرة",
+      "giveUp": "الاستسلام",
+      "nextPuzzle": "اللغز التالي",
+      "share": "مشاركة اللغز",
+      "loadPuzzle": "تحميل اللغز",
+      "reviewLast": "مراجعة اللغز الأخير",
+      "endlessMode": "وضع لا نهاية",
+      "analyze": "تحليل"
+    },
+    "info": {
+      "rating": "التقييم"
+    },
+    "stats": {
+      "title": "إحصائياتك",
+      "solved": "محلول",
+      "accuracy": "الدقة",
+      "streak": "السلسلة",
+      "best": "الأفضل"
+    },
+    "settings": {
+      "tooltip": "الإعدادات"
+    },
+    "filters": {
+      "title": "الفلاتر",
+      "visualization": "التصوير الذهني: المستوى {{level}}",
+      "difficulty": "الصعوبة",
+      "difficultyHint": "ألغاز حول Elo الخاص بك ({{elo}})",
+      "depthHint": "1 (ضعيف) – 24 (قوي)",
+      "skipSolved": "تخطي المحلولة"
+    },
+    "difficulty": {
+      "veryEasy": "سهل جداً",
+      "easy": "سهل",
+      "normal": "عادي",
+      "hard": "صعب",
+      "veryHard": "صعب جداً"
+    },
+    "theme": {
+      "mode": "الوضع",
+      "modeNormal": "عادي",
+      "modeRandom": "عشوائي",
+      "modeCrazy": "مجنون",
+      "boardTheme": "مظهر اللوحة",
+      "pieces": "القطع"
+    },
+    "viz": {
+      "title": "التصوير الذهني (المستوى {{level}})",
+      "countdown": "القطع تختفي في {{seconds}} ثانية…",
+      "noMoveYet": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
+      "show": "إظهار",
+      "showing": "جارٍ الإظهار…"
+    },
+    "share": {
+      "title": "مشاركة اللغز",
+      "copied": "تم نسخ الرابط!",
+      "copyFailed": "فشل النسخ"
+    }
+  },
+  "courses": {
+    "title": "الدورات",
+    "intro": "اعمل في كتاب مستورد لغزاً تلو لغز — بالتسلسل أو بشكل عشوائي. يتم حفظ تقدمك.",
+    "emptyHint": "لم يتم استيراد كتب بعد. استورد كتباً في منطقة الإدارة تحت \"الكتب\".",
+    "puzzleCount": "{{count}} لغز",
+    "completed": "اكتملت الدورة",
+    "sequential": "تسلسلي",
+    "random": "عشوائي",
+    "resetTooltip": "إعادة تعيين التقدم",
+    "resetConfirm": "إعادة تعيين التقدم لـ \"{{name}}\"؟",
+    "loadFailed": "تعذّر تحميل الدورات",
+    "resetFailed": "فشل إعادة التعيين",
+    "offlineSaveTooltip": "حفظ الكتاب غير المتصل",
+    "offlineRemoveTooltip": "إزالة النسخة غير المتصلة",
+    "offlineSaved": "تم حفظ \"{{name}}\" غير المتصل ({{count}} لغز)",
+    "offlineRemoved": "تمت إزالة \"{{name}}\" من غير المتصل",
+    "offlineFailed": "تعذّر حفظ الكتاب غير المتصل"
+  },
+  "weekly": {
+    "title": "أسبوعي",
+    "intro": "منشورات الشطرنج الأسبوعية للتصفح. يشير التاريخ والوقت إلى موعد نشر المنشور.",
+    "oClock": "",
+    "play": "العب",
+    "empty": "لا منشورات أسبوعية بعد.",
+    "deleteConfirm": "حذف المنشور الأسبوعي \"{{title}}\"؟",
+    "created": "تم إنشاء المنشور الأسبوعي",
+    "deleted": "تم حذف المنشور الأسبوعي",
+    "loadFailed": "تعذّر تحميل المنشورات الأسبوعية",
+    "uploadFailed": "فشل الرفع",
+    "saveFailed": "فشل الحفظ",
+    "deleteFailed": "فشل الحذف",
+    "fields": {
+      "date": "التاريخ",
+      "time": "الوقت",
+      "titleOptional": "العنوان (اختياري)"
+    },
+    "columns": {
+      "scheduled": "التاريخ",
+      "title": "العنوان",
+      "actions": "الإجراءات"
+    },
+    "upload": {
+      "title": "رفع منشور أسبوعي جديد",
+      "choosePgn": "اختر PGN",
+      "titlePlaceholder": "من اسم الملف",
+      "create": "إنشاء",
+      "hint": "الافتراضي: آخر تاريخ + 7 أيام، نفس الوقت (وإلا 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "أنت غير متصل ولا يوجد جولة مخزّنة. افتح وضع لا نهاية مرة وأنت متصل لحفظ الألغاز للعب غير المتصل.",
+    "help": {
+      "title": "وضع الألغاز اللانهائي",
+      "gameplayHeading": "كيف يعمل",
+      "gameplayP1": "تحل ألغاز شطرنج بصعوبة متصاعدة. تبدأ بتقييم قابل للتهيئة وتشق طريقك للأعلى. يرتفع التقييم تلقائياً على مراحل Fasttrack (انظر أدناه).",
+      "gameplayP2": "لديك <strong>3 أرواح</strong>. عند نفاد الأرواح تنتهي اللعبة.",
+      "movesHeading": "الحركات و Stockfish",
+      "movesP1": "لكل لغز <strong>حل مقصود</strong> (تسلسل من الحركات). طالما تلعب الحركات الصحيحة، تتبع خط الحل.",
+      "movesP2": "إذا لعبت <strong>حركة خاطئة</strong>، يتولى <strong>Stockfish</strong> (محرك شطرنج) الجانب الآخر. تلعب بعدها بحرية ضد Stockfish. يمكن ضبط قوته عبر عمق Stockfish.",
+      "movesItem1": "<strong>كش ملك Stockfish</strong> يُعدّ حلاً بديلاً — لا تخسر روحاً!",
+      "movesItem2": "<strong>Stockfish يكش ملكك</strong> — تخسر روحاً",
+      "movesItem3": "تستمر اللعبة ضد Stockfish إلى ما لا نهاية حتى الكش ملك أو الاستسلام",
+      "buttonsHeading": "الأزرار أثناء اللعبة",
+      "buttonsShowEval": "<strong>إظهار التقييم</strong> — يعرض تقييم Stockfish (البداية مقابل الآن)",
+      "buttonsReset": "<strong>إعادة تعيين</strong> — يعيد تعيين اللغز مقابل روح",
+      "buttonsMouseslip": "<strong>انزلاق الفأرة</strong> — يتراجع عن آخر حركة خاطئة (مرة لكل لغز، مجاناً)",
+      "buttonsGiveUp": "<strong>الاستسلام</strong> — الإقرار بالهزيمة، يكلف روحاً",
+      "settingsHeading": "الإعدادات",
+      "settingsStartRating": "<strong>تقييم البداية</strong> — تقييم اللغز الذي تبدأ منه",
+      "settingsStockfishDepth": "<strong>عمق Stockfish</strong> — قوة المحرك (1 = ضعيف جداً، 24 = أقصى قوة)",
+      "settingsThemes": "<strong>المواضيع</strong> — اختياري: مواضيع تكتيكية معينة فقط (مثل \"شوكة تثبيت\")",
+      "fasttrackHeading": "زيادة الصعوبة (Fasttrack)",
+      "fasttrackP1": "تتكيف الزيادة مع أدائك السابق: تحلّل جلساتك الأخيرة وتحسب التقييم الذي تخسر عنده الأرواح عادةً.",
+      "fasttrackPhase1": "<strong>المرحلة 1 (الألغاز 1–5)</strong> — زيادة سريعة حتى العتبة الأولى",
+      "fasttrackPhase2": "<strong>المرحلة 2 (الألغاز 6–10)</strong> — زيادة من العتبة الأولى إلى الثانية",
+      "fasttrackPhase3": "<strong>المرحلة 3 (من اللغز 11)</strong> — خطوة ثابتة مقدارها 20",
+      "fasttrackP2": "تُحسب قيم العتبة (الأولى/الثانية) تلقائياً لكن يمكن ضبطها يدوياً. انقر \"تلقائي: …\" لإعادة تعيين القيمة."
+    },
+    "config": {
+      "title": "وضع الألغاز اللانهائي",
+      "subtitle": "صعوبة متصاعدة — إلى أي مدى يمكنك الذهاب؟",
+      "startRating": "تقييم البداية",
+      "stockfishDepth": "عمق Stockfish",
+      "stockfishDepthHint": "1 (ضعيف) – 24 (قوي)",
+      "themes": "المواضيع (اختياري)",
+      "themesPlaceholder": "مثال: شوكة تثبيت",
+      "thresholdExplain": "التقييمات التي تخسر عندها الأرواح عادةً. اضبطها لتخطي الألغاز الأسهل بشكل أسرع أو أبطأ.",
+      "firstThreshold": "العتبة الأولى",
+      "secondThreshold": "العتبة الثانية",
+      "auto": "تلقائي: {{value}}",
+      "step": "خطوة {{step}}",
+      "phase1Label": "المرحلة 1 (Lv 1–5)",
+      "phase2Label": "المرحلة 2 (Lv 6–10)",
+      "phase3Label": "المرحلة 3 (Lv 11+)",
+      "curveHint": "منحنى التقييم للمسابقة (ثابت عند البدء):",
+      "curvePuzzle": "اللغز {{n}}",
+      "settings": "الإعدادات",
+      "visualizationLevel": "التصوير الذهني: المستوى {{level}}",
+      "mode": "الوضع",
+      "modeNormal": "عادي",
+      "modeRandom": "عشوائي",
+      "modeCrazy": "مجنون",
+      "boardTheme": "مظهر اللوحة",
+      "pieces": "القطع",
+      "highscore": "أعلى نتيجة: تقييم {{rating}}",
+      "sessionsPlayed": "{{count}} جلسة ملعوبة",
+      "viewHistory": "عرض السجل",
+      "unfinishedRun": "جولة غير مكتملة: Lv {{level}} | {{solved}} محلول | {{lives}} أرواح | {{max}} الأقصى",
+      "continue": "متابعة",
+      "archiveAndNew": "أرشفة وجولة جديدة",
+      "newGame": "لعبة جديدة",
+      "start": "ابدأ"
+    },
+    "game": {
+      "visualization": "التصوير الذهني (المستوى {{level}})",
+      "vizCountdown": "القطع تختفي في {{seconds}} ثانية...",
+      "vizNoMove": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
+      "vizShow": "إظهار",
+      "vizShowing": "جارٍ الإظهار...",
+      "loadingPuzzle": "جارٍ تحميل اللغز...",
+      "watchOpponent": "راقب حركة الخصم...",
+      "yourTurn": "دورك! ابحث عن أفضل حركة.",
+      "yourMove": "حركتك...",
+      "opponentThinking": "الخصم يفكّر...",
+      "evalStart": "البداية",
+      "evalNow": "الآن",
+      "showEval": "إظهار التقييم",
+      "hideEval": "إخفاء التقييم",
+      "reset": "إعادة تعيين",
+      "mouseslip": "انزلاق الفأرة",
+      "giveUp": "الاستسلام",
+      "checkmate": "كش ملك!",
+      "alternativeSolution": "حل بديل — كان اللغز يحتوي على خط مقصود مختلف.",
+      "correct": "صحيح!",
+      "wrong": "خاطئ!",
+      "gaveUp": "استسلم",
+      "continue": "متابعة",
+      "analyze": "تحليل",
+      "reviewLast": "تحليل اللغز الأخير",
+      "puzzleRating": "تقييم اللغز: {{rating}}",
+      "levelRange": "المستوى {{level}} ({{min}}–{{max}})",
+      "showTags": "إظهار العلامات",
+      "hideTags": "إخفاء العلامات",
+      "sharePuzzle": "مشاركة اللغز",
+      "statRating": "التقييم",
+      "statLevel": "المستوى",
+      "statSolved": "محلول",
+      "statTime": "الوقت",
+      "phaseLabel": "المرحلة {{phase}} (خطوة {{step}})"
+    },
+    "gameOver": {
+      "title": "انتهت اللعبة",
+      "wonTitle": "فزت!",
+      "wonSubtitle": "اجتزت المسابقة بالكامل.",
+      "wonText": "تم التغلب على السلسلة — ابدأ جولة جديدة للتحدي التالي.",
+      "exhaustedTitle": "انتهت الجولة!",
+      "exhaustedSubtitle": "لعبت خلال جميع نطاقات تقييم الألغاز.",
+      "areYouAStockfish": "هل أنت Stockfish؟",
+      "maxRating": "أعلى تقييم",
+      "puzzlesSolved": "الألغاز المحلولة",
+      "livesLeft": "الأرواح المتبقية",
+      "levelReached": "المستوى المبلوغ",
+      "time": "الوقت",
+      "livesLostAt": "خُسرت الأرواح عند: {{ratings}}",
+      "puzzleReview": "مراجعة الألغاز",
+      "newHighscore": "رقم قياسي جديد!",
+      "archiving": "جارٍ الأرشفة...",
+      "archiveRun": "أرشفة هذه الجولة",
+      "archived": "تمت الأرشفة",
+      "playAgain": "اللعب مجدداً",
+      "backToPuzzles": "العودة إلى الألغاز"
+    },
+    "history": {
+      "title": "سجل الألغاز اللانهائية",
+      "noSessions": "لم يتم لعب أي جلسات بعد.",
+      "startPlaying": "ابدأ اللعب",
+      "filterAll": "الكل",
+      "filterActive": "نشط",
+      "filterArchived": "مؤرشف",
+      "selected": "{{count}} محدد",
+      "archive": "أرشفة",
+      "unarchive": "إلغاء الأرشفة",
+      "noArchivedSessions": "لا جلسات مؤرشفة.",
+      "noActiveSessions": "لا جلسات نشطة.",
+      "colDate": "التاريخ",
+      "colMaxRating": "أعلى تقييم",
+      "colSolved": "محلول",
+      "colDuration": "المدة",
+      "colConfig": "الإعداد",
+      "colMistakes": "الأخطاء",
+      "backToEndless": "العودة إلى وضع لا نهاية"
+    }
+  },
+  "book": {
+    "difficulty": "الصعوبة",
+    "offlineUnavailable": "هذا الكتاب غير متاح غير المتصل.",
+    "status": {
+      "loading": "جارٍ تحميل اللغز...",
+      "watchOpponent": "راقب حركة الخصم...",
+      "yourTurn": "دورك! ابحث عن أفضل حركة.",
+      "gaveUp": "استسلمت — العب الحل بنفسك.",
+      "stockfishThinking": "Stockfish يفكّر...",
+      "yourMoveVsStockfish": "حركتك ضد Stockfish...",
+      "correct": "صحيح!",
+      "incorrect": "خاطئ",
+      "gaveUpSolution": "استسلمت — إليك الحل",
+      "checkmate": "كش ملك!",
+      "altSolution": "حل بديل — كان اللغز يحتوي على تسلسل حركات مقصود مختلف.",
+      "fullGame": "اللعبة الكاملة"
+    },
+    "actions": {
+      "reset": "إعادة تعيين",
+      "giveUp": "الاستسلام",
+      "mouseslip": "انزلاق الفأرة",
+      "nextPuzzle": "اللغز التالي",
+      "again": "مجدداً",
+      "skip": "تخطي",
+      "viewFullGame": "عرض اللعبة الكاملة",
+      "analyze": "تحليل",
+      "nextInBook": "التالي في الكتاب",
+      "randomInBook": "عشوائي من الكتاب",
+      "sharePuzzle": "مشاركة اللغز",
+      "backToPuzzle": "العودة إلى اللغز"
+    },
+    "settings": {
+      "title": "الإعدادات",
+      "visualizationLevel": "التصوير الذهني: المستوى {{level}}",
+      "stockfishDepth": "عمق Stockfish",
+      "depthHint": "1 (ضعيف) – 24 (قوي)",
+      "mode": "الوضع",
+      "modeNormal": "عادي",
+      "modeRandom": "عشوائي",
+      "modeCrazy": "مجنون",
+      "boardTheme": "مظهر اللوحة",
+      "pieces": "القطع"
+    },
+    "viz": {
+      "titleLevel": "التصوير الذهني (المستوى {{level}})",
+      "countdown": "القطع تختفي في {{seconds}} ثانية...",
+      "noMoveYet": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
+      "show": "إظهار",
+      "showing": "جارٍ الإظهار...",
+      "level0": "عادي — سحب وإفلات",
+      "level1": "أعمى — اللوحة مجمّدة، الحركات كنص",
+      "level2": "شطرنج الدامة — تُستبدل القطع بأحجار الدامة بعد 3 ثوانٍ",
+      "level3": "مظلم — تُستبدل القطع برموز سوداء بعد 3 ثوانٍ",
+      "level4": "غير مرئي — تختفي القطع كلياً بعد 3 ثوانٍ"
+    },
+    "course": {
+      "backToCourses": "إلى نظرة عامة على الدورات",
+      "sequential": "تسلسلي",
+      "random": "عشوائي",
+      "completed": "اكتملت الدورة!",
+      "toOverview": "إلى النظرة العامة"
+    },
+    "weekly": {
+      "backToWeekly": "إلى نظرة عامة على المنشورات الأسبوعية",
+      "label": "المنشور الأسبوعي",
+      "noPuzzles": "لا يحتوي هذا المنشور الأسبوعي على ألغاز قابلة للعب.",
+      "allSolved": "تم حل جميع الألغاز!"
+    }
+  },
+  "admin": {
+    "title": "الإدارة",
+    "kibanaLink": "لوحة تحكم Kibana",
+    "tabs": {
+      "users": "المستخدمون",
+      "books": "الكتب",
+      "groups": "المجموعات",
+      "logs": "سجلات الطلبات"
+    },
+    "users": {
+      "searchLabel": "البحث عن مستخدمين",
+      "toggleAdmin": "تبديل الإدارة",
+      "deleteUser": "حذف المستخدم",
+      "deleteConfirm": "حذف المستخدم \"{{username}}\"؟ لا يمكن التراجع عن ذلك.",
+      "deleted": "تم حذف المستخدم \"{{username}}\"",
+      "nowAdmin": "{{username}} أصبح مسؤولاً الآن",
+      "noLongerAdmin": "{{username}} لم يعد مسؤولاً",
+      "columns": {
+        "id": "المعرّف",
+        "username": "اسم المستخدم",
+        "email": "البريد الإلكتروني",
+        "admin": "مسؤول",
+        "groups": "المجموعات",
+        "created": "تاريخ الإنشاء",
+        "actions": "الإجراءات"
+      },
+      "errors": {
+        "load": "فشل تحميل المستخدمين",
+        "toggleAdmin": "فشل تبديل الإدارة",
+        "delete": "فشل حذف المستخدم"
+      }
+    },
+    "books": {
+      "uploadPgn": "رفع PGN",
+      "importing": "جارٍ الاستيراد…",
+      "poolHint": "حدد لكل كتاب في أي مجموعات تظهر الألغاز.",
+      "empty": "لم يتم استيراد كتب بعد.",
+      "eloFrom": "من",
+      "eloTo": "إلى",
+      "adminOnly": "الإدارة فقط",
+      "deleteBook": "حذف الكتاب",
+      "deleteConfirm": "حذف الكتاب \"{{name}}\" مع {{count}} لغز؟",
+      "deleted": "تم حذف الكتاب \"{{name}}\"",
+      "imported": "تم استيراد {{imported}} لغز، تم تخطي {{skipped}}",
+      "importedCount": "تم استيراد {{count}} لغز",
+      "duplicatesCount": "{{count}} مكرر",
+      "invalidCount": "{{count}} غير صالح",
+      "columns": {
+        "book": "الكتاب",
+        "puzzles": "الألغاز",
+        "difficulty": "الصعوبة",
+        "elo": "Elo من/إلى",
+        "daily": "يومي",
+        "random": "عشوائي",
+        "blind": "أعمى",
+        "visibleFor": "مرئي لـ (الدورات)",
+        "actions": "الإجراءات"
+      },
+      "errors": {
+        "load": "فشل تحميل الكتب",
+        "import": "فشل الاستيراد",
+        "save": "فشل الحفظ",
+        "saveGroups": "فشل تحديث صلاحية المجموعة",
+        "delete": "فشل الحذف"
+      }
+    },
+    "groups": {
+      "newGroup": "مجموعة جديدة",
+      "namePlaceholder": "الاسم",
+      "descriptionOptional": "الوصف (اختياري)",
+      "create": "إنشاء",
+      "empty": "لم يتم إنشاء مجموعات بعد.",
+      "manageMembers": "إدارة الأعضاء",
+      "deleteGroup": "حذف المجموعة",
+      "membersOf": "الأعضاء · {{name}}",
+      "addUser": "إضافة مستخدم",
+      "noMembers": "لا أعضاء.",
+      "created": "تم إنشاء المجموعة \"{{name}}\"",
+      "deleteConfirm": "حذف المجموعة \"{{name}}\"؟",
+      "deleted": "تم حذف المجموعة \"{{name}}\"",
+      "columns": {
+        "group": "المجموعة",
+        "members": "الأعضاء",
+        "actions": "الإجراءات"
+      },
+      "errors": {
+        "load": "فشل تحميل المجموعات",
+        "create": "فشل إنشاء المجموعة",
+        "delete": "فشل الحذف",
+        "loadMembers": "فشل تحميل الأعضاء",
+        "addMember": "فشل إضافة العضو",
+        "removeMember": "فشل إزالة العضو"
+      }
+    },
+    "logs": {
+      "all": "الكل",
+      "filter": "فلتر",
+      "reset": "إعادة تعيين",
+      "filtered": "(مفلتر)",
+      "entryCount": "{{count}} إدخال",
+      "status4xx": "4xx+ (أخطاء)",
+      "status5xx": "5xx (خادم)",
+      "status2xx": "2xx+ (ناجح)",
+      "columns": {
+        "time": "الوقت",
+        "method": "الطريقة",
+        "path": "المسار",
+        "status": "الحالة",
+        "duration": "المدة",
+        "user": "المستخدم",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "فشل تحميل السجلات"
+      }
+    }
+  },
+  "analysis": {
+    "title": "التحليل",
+    "engine": "المحرك",
+    "depth": "العمق",
+    "lines": "الخطوط",
+    "maxDepth": "أقصى عمق",
+    "backToPuzzle": "العودة إلى اللغز",
+    "calculating": "جارٍ الحساب…",
+    "engineOff": "المحرك متوقف",
+    "start": "ابدأ",
+    "flip": "قلب اللوحة",
+    "reset": "إعادة تعيين",
+    "noMoves": "لا حركات بعد — العب على اللوحة.",
+    "fen": "FEN",
+    "loadFen": "تحميل FEN",
+    "copyFen": "نسخ FEN",
+    "pgn": "PGN",
+    "loadPgn": "تحميل PGN"
+  },
+  "stats": {
+    "title": "الإحصائيات",
+    "currentElo": "Elo الألغاز",
+    "totalSolved": "محلول",
+    "attempts": "المحاولات",
+    "accuracy": "الدقة",
+    "currentStreak": "السلسلة الحالية",
+    "bestStreak": "أفضل سلسلة",
+    "eloProgress": "تقدم Elo الألغاز",
+    "level": "المستوى",
+    "allLevels": "الكل",
+    "noData": "لا بيانات بعد.",
+    "perLevel": "Elo لكل مستوى تصوير ذهني",
+    "vizLevel": "المستوى",
+    "recentPuzzles": "الألغاز الأخيرة",
+    "date": "التاريخ",
+    "rating": "التقييم",
+    "result": "النتيجة",
+    "time": "الوقت",
+    "byTheme": "حسب الموضوع",
+    "byRating": "حسب التقييم (محلول)",
+    "byRatingHint": "الألغاز المحلولة لكل نطاق تقييم — مرّر للدقة.",
+    "activity": "النشاط"
+  }
+}

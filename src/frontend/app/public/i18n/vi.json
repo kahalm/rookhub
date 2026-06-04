@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "add": "Thêm",
+    "close": "Đóng",
+    "search": "Tìm kiếm",
+    "back": "Quay lại",
+    "retry": "Thử lại",
+    "loading": "Đang tải…",
+    "ok": "OK",
+    "remove": "Gỡ bỏ"
+  },
+  "nav": {
+    "dashboard": "Tổng quan",
+    "repertoires": "Kho repertoire",
+    "tournaments": "Giải đấu",
+    "friends": "Bạn bè",
+    "puzzles": "Bài tập",
+    "weekly": "Tuần này",
+    "courses": "Khóa học",
+    "admin": "Quản trị",
+    "profile": "Hồ sơ",
+    "puzzleHistory": "Lịch sử bài tập",
+    "changelog": "Nhật ký thay đổi",
+    "logout": "Đăng xuất",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "language": "Ngôn ngữ",
+    "menu": "Menu",
+    "info": "Thông tin",
+    "account": "Tài khoản",
+    "analysis": "Phân tích",
+    "stats": "Thống kê"
+  },
+  "app": {
+    "changelogTitle": "Nhật ký thay đổi",
+    "quickstartTitle": "Bắt đầu nhanh",
+    "qs": {
+      "subscribeTitle": "Đăng ký theo dõi",
+      "subscribeDesc": "Đăng ký theo dõi giải đấu để truy cập nhanh danh sách người chơi, lịch thi đấu và kết quả.",
+      "monitorTitle": "Theo dõi",
+      "monitorDesc": "Bật tính năng theo dõi cho một giải đấu — các vòng mới sẽ được phát hiện và cập nhật tự động.",
+      "favoritesTitle": "Yêu thích",
+      "favoritesDesc": "Đánh dấu người chơi hoặc đội yêu thích để truy cập nhanh trong giao diện giải đấu.",
+      "chessResultsTitle": "ID ChessResults",
+      "chessResultsDesc": "Thêm ID ChessResults vào hồ sơ — các giải đấu sắp tới sẽ được đăng ký theo dõi tự động."
+    },
+    "feedback": "Phản hồi / Báo lỗi",
+    "updateAvailable": "Có phiên bản mới.",
+    "reload": "Tải lại"
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "usernameLabel": "Tên người dùng",
+      "passwordLabel": "Mật khẩu",
+      "rememberMe": "Duy trì đăng nhập",
+      "submit": "Đăng nhập",
+      "submitting": "Đang đăng nhập...",
+      "registerLink": "Chưa có tài khoản? Đăng ký",
+      "failed": "Đăng nhập thất bại"
+    },
+    "register": {
+      "title": "Đăng ký",
+      "usernameLabel": "Tên người dùng",
+      "emailLabel": "Email",
+      "passwordLabel": "Mật khẩu",
+      "passwordHint": "Ít nhất 4 ký tự",
+      "submit": "Đăng ký",
+      "submitting": "Đang đăng ký...",
+      "loginLink": "Đã có tài khoản? Đăng nhập",
+      "failed": "Đăng ký thất bại"
+    }
+  },
+  "dashboard": {
+    "welcome": "Chào mừng, {{username}}!",
+    "subscribedTournaments": "Giải đấu đang theo dõi",
+    "subscribedAt": "Đã đăng ký {{date}}",
+    "puzzles": {
+      "title": "Bài tập",
+      "subtitle": "Elo {{elo}} | {{solved}} đã giải ({{accuracy}}%)",
+      "solve": "Giải bài tập",
+      "endless": "Vô tận"
+    },
+    "subscriptions": {
+      "title": "Giải đấu theo dõi",
+      "count": "{{count}} giải đấu",
+      "browse": "Duyệt giải đấu"
+    },
+    "friends": {
+      "title": "Bạn bè",
+      "count": "{{count}} bạn bè",
+      "manage": "Quản lý bạn bè"
+    },
+    "repertoires": {
+      "title": "Kho repertoire",
+      "count": "{{count}} repertoire",
+      "viewAll": "Xem tất cả"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Ván cờ",
+    "nav": {
+      "first": "Nước đầu tiên",
+      "previous": "Nước trước",
+      "next": "Nước tiếp theo",
+      "last": "Nước cuối cùng"
+    }
+  },
+  "profile": {
+    "title": "Hồ sơ: {{username}}",
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "searchPlayer": "Tìm kiếm người chơi",
+    "noResults": "Không tìm thấy kết quả.",
+    "displayName": "Tên hiển thị",
+    "fideId": "ID FIDE",
+    "chessResultsId": "ID ChessResults",
+    "chessComUsername": "Tên người dùng Chess.com",
+    "lichessUsername": "Tên người dùng Lichess",
+    "saving": "Đang lưu...",
+    "saved": "Đã lưu hồ sơ",
+    "saveFailed": "Lưu hồ sơ thất bại",
+    "searchFailed": "Tìm kiếm thất bại",
+    "chessResultsApplied": "Đã áp dụng dữ liệu ChessResults",
+    "fideApplied": "Đã áp dụng dữ liệu FIDE",
+    "discord": {
+      "title": "Discord",
+      "hint": "Mở một liên kết cá nhân từ bot RookHub trên Discord (lệnh /link hoặc tin nhắn bài tập) để kết nối tài khoản Discord của bạn.",
+      "unlink": "Hủy liên kết",
+      "unlinked": "Đã hủy liên kết Discord",
+      "linked": "Đã liên kết tài khoản Discord",
+      "linkConflict": "Tài khoản Discord này đã được liên kết với người dùng RookHub khác.",
+      "linkFailed": "Không thể liên kết tài khoản Discord",
+      "stashed": "Đăng nhập hoặc đăng ký để hoàn tất liên kết tài khoản Discord của bạn."
+    },
+    "offline": {
+      "title": "Ngoại tuyến",
+      "hint": "Lưu bài tập trên thiết bị này để tiếp tục giải khi không có internet (theo từng thiết bị).",
+      "puzzleCount": "Bài tập ngoại tuyến",
+      "endlessRuns": "Lần chơi vô tận ngoại tuyến",
+      "cacheSize": "Kích thước bộ nhớ đệm",
+      "books": "{{count}} cuốn sách",
+      "clear": "Xóa bộ nhớ đệm",
+      "cleared": "Đã xóa bộ nhớ đệm ngoại tuyến",
+      "pending": "{{count}} kết quả đang chờ đồng bộ — sẽ tự động tải lên khi bạn kết nối lại."
+    },
+    "delete": {
+      "title": "Xóa tài khoản",
+      "hint": "Xóa vĩnh viễn tài khoản của bạn.",
+      "button": "Xóa tài khoản",
+      "warn": "Cảnh báo: danh tính và dữ liệu cá nhân của bạn sẽ bị xóa không thể khôi phục. Vui lòng nhập mật khẩu để xác nhận.",
+      "password": "Mật khẩu",
+      "confirm": "Xóa vĩnh viễn",
+      "deleting": "Đang xóa...",
+      "done": "Tài khoản của bạn đã được xóa.",
+      "wrongPassword": "Mật khẩu không đúng.",
+      "failed": "Không thể xóa tài khoản.",
+      "moreInfo": "Thêm thông tin về việc xóa tài khoản"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Xóa tài khoản",
+      "intro": "Trang này giải thích cách xóa tài khoản RookHub và những gì xảy ra với dữ liệu của bạn.",
+      "inAppTitle": "Cách xóa tài khoản",
+      "inApp": "Đăng nhập vào ứng dụng và vào Hồ sơ → \"Xóa tài khoản\". Xác nhận bằng mật khẩu. Tài khoản sẽ bị xóa ngay lập tức.",
+      "removedTitle": "Những gì bị xóa",
+      "removed1": "Danh tính và dữ liệu cá nhân của bạn (tên người dùng, email, tên hiển thị/tên thật, ID FIDE/ChessResults, tên Chess.com/Lichess, liên kết Discord) và quyền truy cập đăng nhập.",
+      "removed2": "Nội dung và liên kết cá nhân: kho repertoire, đăng ký/yêu thích giải đấu, quan hệ bạn bè và thành viên nhóm.",
+      "keptTitle": "Những gì được giữ lại ẩn danh",
+      "kept": "Thống kê giải bài tổng hợp (ví dụ: bài đã giải) được lưu giữ ở dạng ẩn danh không thể truy nguyên về bạn.",
+      "contactTitle": "Liên hệ",
+      "contact": "Để yêu cầu xóa hoặc đặt câu hỏi, hãy liên hệ với chúng tôi tại",
+      "back": "Quay lại đăng nhập"
+    },
+    "privacy": {
+      "title": "Chính sách bảo mật",
+      "updated": "Cập nhật lần cuối: ngày 3 tháng 6 năm 2026",
+      "intro": "RookHub là nền tảng luyện tập cờ vua (bài tập, chế độ vô tận, khóa học, repertoire). Chính sách này giải thích cách xử lý dữ liệu cá nhân theo GDPR.",
+      "controllerTitle": "Người kiểm soát dữ liệu",
+      "controller": "Người kiểm soát việc xử lý dữ liệu là nhà điều hành được đề cập trong phần ghi chú pháp lý",
+      "dataTitle": "Dữ liệu chúng tôi xử lý",
+      "dataIntro": "Tùy thuộc vào cách sử dụng, chúng tôi xử lý:",
+      "dataAccount": "Dữ liệu tài khoản: tên người dùng, địa chỉ email, mật khẩu (chỉ lưu dưới dạng mã băm).",
+      "dataProfile": "Dữ liệu hồ sơ (tùy chọn): tên hiển thị/tên thật, ID FIDE, ID ChessResults, tên người dùng Chess.com/Lichess, liên kết Discord tùy chọn.",
+      "dataUsage": "Dữ liệu sử dụng: bài đã giải, tiến trình và thống kê khóa học/vô tận, xếp hạng, dấu thời gian đăng nhập.",
+      "dataTechnical": "Dữ liệu kỹ thuật: địa chỉ IP, các endpoint được yêu cầu với dấu thời gian và mã định danh khách truy cập bút danh (đo lường lượt truy cập) trong nhật ký máy chủ.",
+      "purposesTitle": "Mục đích & cơ sở pháp lý",
+      "purposes": "Cung cấp tài khoản và tính năng (thực hiện hợp đồng, Điều 6(1)(b) GDPR) cũng như bảo mật vận hành, phân tích lỗi và đo lường lượt truy cập qua nhật ký (lợi ích hợp pháp, Điều 6(1)(f) GDPR).",
+      "thirdTitle": "Người nhận / dịch vụ bên thứ ba",
+      "thirdIntro": "Dữ liệu không được bán. Tùy thuộc vào cách sử dụng, các dịch vụ sau có liên quan:",
+      "thirdDiscord": "Discord: chỉ khi liên kết tài khoản tự nguyện (ID Discord/tên) để hiển thị trong bot Discord của RookHub.",
+      "thirdChessresults": "chess-results.com: dữ liệu giải đấu được lấy phía máy chủ khi bạn đặt ID ChessResults hoặc tải giải đấu.",
+      "thirdChesssites": "Chess.com / Lichess: chỉ tên người dùng bạn tự nguyện nhập; không có chuyển dữ liệu tự động.",
+      "thirdLogging": "Elasticsearch/Kibana: ghi nhật ký/giám sát tự lưu trữ trên cơ sở hạ tầng của chúng tôi.",
+      "thirdHosting": "Lưu trữ: vận hành trên cơ sở hạ tầng máy chủ riêng với proxy ngược TLS.",
+      "storageTitle": "Lưu trữ cục bộ (cookie/storage)",
+      "storage": "Chúng tôi không sử dụng cookie theo dõi. Bộ nhớ trình duyệt (localStorage) lưu trữ ví dụ: token đăng nhập, cài đặt và — nếu được bật — bài tập ngoại tuyến. Những dữ liệu này vẫn ở trên thiết bị của bạn.",
+      "retentionTitle": "Lưu giữ & xóa",
+      "retention": "Dữ liệu tài khoản được lưu trữ cho đến khi bạn xóa tài khoản. Bạn có thể xóa tài khoản bất cứ lúc nào — danh tính và dữ liệu cá nhân bị xóa, thống kê ẩn danh được giữ lại. Thêm:",
+      "rightsTitle": "Quyền của bạn",
+      "rights": "Bạn có quyền truy cập, chỉnh sửa, xóa, hạn chế, di chuyển dữ liệu và phản đối, cũng như quyền khiếu nại lên cơ quan giám sát (tại Áo: Cơ quan Bảo vệ Dữ liệu).",
+      "contactTitle": "Liên hệ",
+      "contact": "Để giải đáp thắc mắc về quyền riêng tư, hãy liên hệ với chúng tôi tại",
+      "back": "Quay lại đăng nhập"
+    },
+    "impressum": {
+      "title": "Thông tin pháp lý",
+      "operatorTitle": "Nhà cung cấp dịch vụ",
+      "name": "[TÊN / CÔNG TY — vui lòng điền vào]",
+      "address": "[Địa chỉ — đường, mã bưu chính, thành phố, quốc gia]",
+      "uid": "[Mã số thuế, nếu là công ty]",
+      "contactTitle": "Liên hệ",
+      "contact": "Email",
+      "disclaimer": "Lưu ý: thông tin nhà cung cấp dịch vụ là các ký tự giữ chỗ và phải được thay thế bằng dữ liệu thực tế trước khi xuất bản. Trang này là bản nháp và không cấu thành tư vấn pháp lý.",
+      "back": "Quay lại đăng nhập"
+    }
+  },
+  "friends": {
+    "title": "Bạn bè",
+    "searchUsers": "Tìm kiếm người dùng",
+    "searchResults": "Kết quả tìm kiếm",
+    "tabs": {
+      "friends": "Bạn bè ({{count}})",
+      "requests": "Lời mời ({{count}})"
+    },
+    "empty": {
+      "friends": "Chưa có bạn bè. Tìm kiếm người dùng để thêm bạn!",
+      "requests": "Không có lời mời nào đang chờ."
+    },
+    "sentOn": "Đã gửi {{date}}",
+    "requestSent": "Đã gửi lời mời kết bạn",
+    "errors": {
+      "loadFriends": "Không thể tải danh sách bạn bè",
+      "loadRequests": "Không thể tải lời mời",
+      "search": "Tìm kiếm thất bại",
+      "sendRequest": "Không thể gửi lời mời",
+      "acceptRequest": "Không thể chấp nhận lời mời",
+      "declineRequest": "Không thể từ chối lời mời",
+      "removeFriend": "Không thể xóa bạn bè"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Kho repertoire của tôi",
+      "new": "Repertoire mới",
+      "fileCount": "{{count}} tệp",
+      "public": "Công khai",
+      "private": "Riêng tư",
+      "noDescription": "Không có mô tả",
+      "open": "Mở",
+      "empty": "Chưa có repertoire. Tạo một cái để bắt đầu!",
+      "loadFailed": "Không thể tải kho repertoire",
+      "createFailed": "Không thể tạo repertoire",
+      "deleteConfirm": "Xóa repertoire này?",
+      "deleteFailed": "Không thể xóa repertoire"
+    },
+    "detail": {
+      "noDescription": "Không có mô tả",
+      "modeLines": "Đường nước",
+      "modeTree": "Cây nước",
+      "modeEdit": "Chỉnh sửa"
+    },
+    "dialog": {
+      "title": "Repertoire mới",
+      "name": "Tên",
+      "description": "Mô tả",
+      "public": "Công khai",
+      "create": "Tạo"
+    },
+    "lines": {
+      "allLines": "Tất cả đường nước",
+      "empty": "Không tìm thấy đường nước nào trong repertoire này."
+    },
+    "tree": {
+      "start": "Bắt đầu",
+      "lineCount": "{{count}} đường nước",
+      "lineCountPlural": "{{count}} đường nước",
+      "empty": "Hết đường nước — không có nước đi tiếp theo."
+    },
+    "edit": {
+      "uploadHint": "Kéo & thả tệp PGN vào đây hoặc nhấp để tải lên",
+      "files": "Tệp ({{count}})",
+      "empty": "Chưa có tệp. Tải lên tệp PGN để bắt đầu!",
+      "filesSkipped": "{{count}} tệp bị bỏ qua (chỉ .pgn, tối đa 10 MB)",
+      "uploadSuccess": "Đã tải lên {{count}} tệp",
+      "uploadPartial": "Đã tải lên {{ok}}, {{failed}} thất bại",
+      "downloadFailed": "Tải xuống thất bại",
+      "deleteConfirm": "Xóa tệp này?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Làm mới",
+      "subscribe": "Đăng ký",
+      "unsubscribe": "Hủy đăng ký",
+      "monitor": "Theo dõi",
+      "monitoringUntil": "Đang theo dõi đến {{time}}",
+      "share": "Chia sẻ",
+      "subscribed": "Đã đăng ký!",
+      "unsubscribed": "Đã hủy đăng ký",
+      "failed": "Thất bại",
+      "unsubscribeFailed": "Hủy đăng ký thất bại"
+    },
+    "tabs": {
+      "players": "Người chơi ({{count}})",
+      "teams": "Đội ({{count}})",
+      "pairings": "Lịch thi đấu"
+    },
+    "favoritesOnly": "Chỉ yêu thích",
+    "favorites": {
+      "added": "Đã thêm {{name}} vào yêu thích",
+      "removed": "Đã xóa {{name}} khỏi yêu thích",
+      "addedShort": "Đã yêu thích {{name}}",
+      "removedShort": "Đã xóa {{name}}"
+    },
+    "players": {
+      "snr": "STT",
+      "title": "Danh hiệu",
+      "name": "Tên",
+      "fideId": "ID FIDE",
+      "elo": "Elo",
+      "country": "Quốc gia",
+      "team": "Đội",
+      "club": "Câu lạc bộ",
+      "boardShort": "Bàn"
+    },
+    "teams": {
+      "rank": "Hạng",
+      "team": "Đội",
+      "points": "Điểm"
+    },
+    "pairings": {
+      "round": "Vòng",
+      "roundLabel": "Vòng {{round}}",
+      "board": "Bàn",
+      "white": "Trắng",
+      "black": "Đen",
+      "home": "Chủ nhà",
+      "away": "Khách",
+      "result": "Kết quả"
+    },
+    "monitor": {
+      "stopped": "Đã dừng theo dõi",
+      "stopFailed": "Không thể dừng theo dõi",
+      "activated": "Đã kích hoạt theo dõi",
+      "activateFailed": "Không thể kích hoạt theo dõi",
+      "newRoundTitle": "Có vòng mới!",
+      "newRoundBody": "Vòng {{round}} đã được công bố.",
+      "newRoundSnack": "Có vòng mới! Vòng {{round}}"
+    },
+    "list": {
+      "title": "Giải đấu",
+      "importTitle": "Nhập giải đấu",
+      "importSubtitle": "Nhập ID giải đấu từ chess-results.com để thu thập dữ liệu",
+      "chessResultsId": "ID Chess-Results",
+      "idPlaceholder": "ví dụ: 1234567",
+      "idHintPrefix": "Số từ chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Thu thập dữ liệu",
+      "crawling": "Đang thu thập giải đấu {{id}}... Công việc #{{jobId}}",
+      "crawlerUnavailable": "Không thể kết nối đến bộ thu thập giải đấu. Hãy đảm bảo dịch vụ thu thập đang chạy.",
+      "details": "Chi tiết",
+      "hide": "Ẩn",
+      "empty": "Không tìm thấy giải đấu.",
+      "showHidden": "Hiển thị {{count}} ẩn",
+      "imported": "Đã nhập giải đấu!",
+      "crawlStartFailed": "Không thể bắt đầu thu thập",
+      "crawlFailed": "Thu thập thất bại",
+      "crawlConnectionLost": "Mất kết nối đến công việc thu thập"
+    },
+    "detail": {
+      "loadTournamentFailed": "Không thể tải giải đấu",
+      "loadSubscriptionFailed": "Không thể tải trạng thái đăng ký",
+      "reloadTournamentFailed": "Không thể tải lại giải đấu",
+      "refreshStartFailed": "Không thể bắt đầu làm mới",
+      "dataRefreshed": "Đã làm mới dữ liệu!",
+      "refreshFailed": "Làm mới thất bại",
+      "loadPlayersFailed": "Không thể tải danh sách người chơi",
+      "loadTeamsFailed": "Không thể tải danh sách đội",
+      "loadPairingsFailed": "Không thể tải lịch thi đấu",
+      "loadTeamDetailsFailed": "Không thể tải chi tiết đội"
+    },
+    "public": {
+      "notFound": "Không tìm thấy giải đấu."
+    },
+    "share": {
+      "title": "Chia sẻ giải đấu",
+      "copyLink": "Sao chép liên kết",
+      "linkCopied": "Đã sao chép liên kết!",
+      "copyFailed": "Sao chép thất bại"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Đang tải bài tập…",
+      "loadFailed": "Không thể tải bài tập",
+      "offlineNoCache": "Bạn đang ngoại tuyến và chưa có bài tập nào được lưu. Mở trang này khi có kết nối để lưu bài tập cho lần chơi ngoại tuyến.",
+      "watchOpponent": "Xem nước đi của đối thủ…",
+      "yourTurn": "Đến lượt bạn!",
+      "gaveUpPlayOut": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải.",
+      "thinking": "Stockfish đang suy nghĩ…"
+    },
+    "result": {
+      "solutionPlayedOut": "Đã thực hiện xong lời giải.",
+      "tryYourselfNextTime": "Lần sau hãy thử tự giải nhé!",
+      "checkmate": "Chiếu hết!",
+      "alternativeSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
+      "correct": "Đúng rồi!",
+      "incorrect": "Sai rồi"
+    },
+    "eval": {
+      "start": "Ban đầu",
+      "now": "Hiện tại",
+      "show": "Hiển thị đánh giá",
+      "hide": "Ẩn đánh giá"
+    },
+    "actions": {
+      "reset": "Đặt lại",
+      "mouseslip": "Trượt chuột",
+      "giveUp": "Bỏ cuộc",
+      "nextPuzzle": "Bài tập tiếp theo",
+      "share": "Chia sẻ bài tập",
+      "loadPuzzle": "Tải bài tập",
+      "reviewLast": "Xem lại bài tập trước",
+      "endlessMode": "Chế độ vô tận",
+      "analyze": "Phân tích"
+    },
+    "info": {
+      "rating": "Xếp hạng"
+    },
+    "stats": {
+      "title": "Thống kê của bạn",
+      "solved": "Đã giải",
+      "accuracy": "Độ chính xác",
+      "streak": "Chuỗi hiện tại",
+      "best": "Tốt nhất"
+    },
+    "settings": {
+      "tooltip": "Cài đặt"
+    },
+    "filters": {
+      "title": "Bộ lọc",
+      "visualization": "Trực quan hóa: Cấp {{level}}",
+      "difficulty": "Độ khó",
+      "difficultyHint": "Bài tập xung quanh Elo của bạn ({{elo}})",
+      "depthHint": "1 (yếu) – 24 (mạnh)",
+      "skipSolved": "Bỏ qua đã giải"
+    },
+    "difficulty": {
+      "veryEasy": "Rất dễ",
+      "easy": "Dễ",
+      "normal": "Bình thường",
+      "hard": "Khó",
+      "veryHard": "Rất khó"
+    },
+    "theme": {
+      "mode": "Chế độ",
+      "modeNormal": "Bình thường",
+      "modeRandom": "Ngẫu nhiên",
+      "modeCrazy": "Điên rồ",
+      "boardTheme": "Giao diện bàn cờ",
+      "pieces": "Quân cờ"
+    },
+    "viz": {
+      "title": "Trực quan hóa (Cấp {{level}})",
+      "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s…",
+      "noMoveYet": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
+      "show": "Hiển thị",
+      "showing": "Đang hiển thị…"
+    },
+    "share": {
+      "title": "Chia sẻ bài tập",
+      "copied": "Đã sao chép liên kết!",
+      "copyFailed": "Sao chép thất bại"
+    }
+  },
+  "courses": {
+    "title": "Khóa học",
+    "intro": "Giải từng bài tập từ sách đã nhập — theo thứ tự hoặc ngẫu nhiên. Tiến trình của bạn được lưu lại.",
+    "emptyHint": "Chưa có sách nào được nhập. Hãy nhập sách trong khu vực quản trị mục \"Sách\".",
+    "puzzleCount": "{{count}} bài tập",
+    "completed": "Đã hoàn thành khóa học",
+    "sequential": "Theo thứ tự",
+    "random": "Ngẫu nhiên",
+    "resetTooltip": "Đặt lại tiến trình",
+    "resetConfirm": "Đặt lại tiến trình cho \"{{name}}\"?",
+    "loadFailed": "Không thể tải khóa học",
+    "resetFailed": "Đặt lại thất bại",
+    "offlineSaveTooltip": "Lưu sách ngoại tuyến",
+    "offlineRemoveTooltip": "Xóa bản sao ngoại tuyến",
+    "offlineSaved": "Đã lưu \"{{name}}\" ngoại tuyến ({{count}} bài tập)",
+    "offlineRemoved": "Đã xóa \"{{name}}\" khỏi bộ nhớ ngoại tuyến",
+    "offlineFailed": "Không thể lưu sách ngoại tuyến"
+  },
+  "weekly": {
+    "title": "Tuần này",
+    "intro": "Các bài đăng cờ vua hàng tuần để xem qua. Ngày & giờ cho biết khi nào bài đăng được lên lịch.",
+    "oClock": "",
+    "play": "Xem qua",
+    "empty": "Chưa có bài đăng hàng tuần.",
+    "deleteConfirm": "Xóa bài đăng hàng tuần “{{title}}”?",
+    "created": "Đã tạo bài đăng hàng tuần",
+    "deleted": "Đã xóa bài đăng hàng tuần",
+    "loadFailed": "Không thể tải bài đăng hàng tuần",
+    "uploadFailed": "Tải lên thất bại",
+    "saveFailed": "Lưu thất bại",
+    "deleteFailed": "Xóa thất bại",
+    "fields": {
+      "date": "Ngày",
+      "time": "Giờ",
+      "titleOptional": "Tiêu đề (tùy chọn)"
+    },
+    "columns": {
+      "scheduled": "Ngày",
+      "title": "Tiêu đề",
+      "actions": "Thao tác"
+    },
+    "upload": {
+      "title": "Tải lên bài đăng hàng tuần mới",
+      "choosePgn": "Chọn PGN",
+      "titlePlaceholder": "từ tên tệp",
+      "create": "Tạo",
+      "hint": "Mặc định: ngày cuối cùng + 7 ngày, cùng giờ (nếu không có thì 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Bạn đang ngoại tuyến và không có lần chơi nào được lưu. Mở Vô Tận khi có kết nối để lưu bài tập cho lần chơi ngoại tuyến.",
+    "help": {
+      "title": "Chế độ bài tập vô tận",
+      "gameplayHeading": "Cách thức hoạt động",
+      "gameplayP1": "Bạn giải các bài tập cờ vua với độ khó tăng dần. Bạn bắt đầu ở xếp hạng có thể cấu hình và tiến dần lên. Xếp hạng tự động tăng theo các giai đoạn Fasttrack (xem bên dưới).",
+      "gameplayP2": "Bạn có <strong>3 mạng</strong>. Khi hết mạng, trò chơi kết thúc.",
+      "movesHeading": "Nước đi & Stockfish",
+      "movesP1": "Mỗi bài tập có một <strong>lời giải dự kiến</strong> (một chuỗi nước đi). Miễn là bạn đi đúng, bạn đang theo dõi đường lời giải đó.",
+      "movesP2": "Nếu bạn đi <strong>nước sai</strong>, <strong>Stockfish</strong> (một công cụ cờ vua) tiếp quản bên kia. Bạn sau đó chơi tự do chống lại Stockfish. Sức mạnh của nó có thể được đặt qua Độ sâu Stockfish.",
+      "movesItem1": "<strong>Chiếu hết Stockfish</strong> được tính là lời giải thay thế — không mất mạng!",
+      "movesItem2": "<strong>Stockfish chiếu hết bạn</strong> — bạn mất một mạng",
+      "movesItem3": "Trận đấu với Stockfish tiếp tục vô tận cho đến khi chiếu hết hoặc bỏ cuộc",
+      "buttonsHeading": "Các nút trong trò chơi",
+      "buttonsShowEval": "<strong>Hiển thị đánh giá</strong> — Hiển thị đánh giá của Stockfish (Ban đầu so với Hiện tại)",
+      "buttonsReset": "<strong>Đặt lại</strong> — Đặt lại bài tập, nhưng mất một mạng",
+      "buttonsMouseslip": "<strong>Trượt chuột</strong> — Hoàn tác nước sai cuối cùng (một lần mỗi bài tập, miễn phí)",
+      "buttonsGiveUp": "<strong>Bỏ cuộc</strong> — Chịu thua, mất một mạng",
+      "settingsHeading": "Cài đặt",
+      "settingsStartRating": "<strong>Xếp hạng khởi đầu</strong> — Xếp hạng bài tập bạn bắt đầu",
+      "settingsStockfishDepth": "<strong>Độ sâu Stockfish</strong> — Sức mạnh công cụ (1 = rất yếu, 24 = tối đa)",
+      "settingsThemes": "<strong>Chủ đề</strong> — Tùy chọn: chỉ các chủ đề chiến thuật nhất định (ví dụ: \"nĩa ghim\")",
+      "fasttrackHeading": "Tăng độ khó (Fasttrack)",
+      "fasttrackP1": "Mức tăng thích nghi theo hiệu suất gần đây của bạn: nó phân tích các phiên chơi gần đây và tính toán xếp hạng mà bạn thường mất mạng.",
+      "fasttrackPhase1": "<strong>Giai đoạn 1 (Bài 1–5)</strong> — Tăng nhanh đến ngưỡng thứ 1",
+      "fasttrackPhase2": "<strong>Giai đoạn 2 (Bài 6–10)</strong> — Tăng từ ngưỡng thứ 1 đến thứ 2",
+      "fasttrackPhase3": "<strong>Giai đoạn 3 (từ Bài 11)</strong> — Bước tăng cố định là 20",
+      "fasttrackP2": "Các giá trị ngưỡng (ngưỡng 1/2) được tính tự động nhưng có thể điều chỉnh thủ công. Nhấp \"Tự động: …\" để đặt lại giá trị."
+    },
+    "config": {
+      "title": "Chế độ bài tập vô tận",
+      "subtitle": "Độ khó tăng dần — bạn có thể đi bao xa?",
+      "startRating": "Xếp hạng khởi đầu",
+      "stockfishDepth": "Độ sâu Stockfish",
+      "stockfishDepthHint": "1 (yếu) – 24 (mạnh)",
+      "themes": "Chủ đề (tùy chọn)",
+      "themesPlaceholder": "ví dụ: nĩa ghim",
+      "thresholdExplain": "Xếp hạng mà bạn thường mất mạng. Điều chỉnh để bỏ qua bài dễ hơn nhanh hoặc chậm hơn.",
+      "firstThreshold": "Ngưỡng thứ 1",
+      "secondThreshold": "Ngưỡng thứ 2",
+      "auto": "Tự động: {{value}}",
+      "step": "Bước {{step}}",
+      "phase1Label": "Giai đoạn 1 (Lv 1–5)",
+      "phase2Label": "Giai đoạn 2 (Lv 6–10)",
+      "phase3Label": "Giai đoạn 3 (Lv 11+)",
+      "curveHint": "Đường cong xếp hạng của thử thách (cố định khi bắt đầu):",
+      "curvePuzzle": "Bài {{n}}",
+      "settings": "Cài đặt",
+      "visualizationLevel": "Trực quan hóa: Cấp {{level}}",
+      "mode": "Chế độ",
+      "modeNormal": "Bình thường",
+      "modeRandom": "Ngẫu nhiên",
+      "modeCrazy": "Điên rồ",
+      "boardTheme": "Giao diện bàn cờ",
+      "pieces": "Quân cờ",
+      "highscore": "Điểm cao nhất: Xếp hạng {{rating}}",
+      "sessionsPlayed": "{{count}} phiên đã chơi",
+      "viewHistory": "Xem lịch sử",
+      "unfinishedRun": "Lần chơi dở dang: Lv {{level}} | {{solved}} đã giải | {{lives}} mạng | {{max}} tối đa",
+      "continue": "Tiếp tục",
+      "archiveAndNew": "Lưu trữ & Trò chơi mới",
+      "newGame": "Trò chơi mới",
+      "start": "Bắt đầu"
+    },
+    "game": {
+      "visualization": "Trực quan hóa (Cấp {{level}})",
+      "vizCountdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
+      "vizNoMove": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
+      "vizShow": "Hiển thị",
+      "vizShowing": "Đang hiển thị...",
+      "loadingPuzzle": "Đang tải bài tập...",
+      "watchOpponent": "Xem nước đi của đối thủ...",
+      "yourTurn": "Đến lượt bạn! Tìm nước đi tốt nhất.",
+      "yourMove": "Nước đi của bạn...",
+      "opponentThinking": "Đối thủ đang suy nghĩ...",
+      "evalStart": "Ban đầu",
+      "evalNow": "Hiện tại",
+      "showEval": "Hiển thị đánh giá",
+      "hideEval": "Ẩn đánh giá",
+      "reset": "Đặt lại",
+      "mouseslip": "Trượt chuột",
+      "giveUp": "Bỏ cuộc",
+      "checkmate": "Chiếu hết!",
+      "alternativeSolution": "Lời giải thay thế — bài tập có đường lời giải dự kiến khác.",
+      "correct": "Đúng rồi!",
+      "wrong": "Sai rồi!",
+      "gaveUp": "Đã bỏ cuộc",
+      "continue": "Tiếp tục",
+      "analyze": "Phân tích",
+      "reviewLast": "Phân tích bài tập trước",
+      "puzzleRating": "Xếp hạng bài tập: {{rating}}",
+      "levelRange": "Cấp {{level}} ({{min}}–{{max}})",
+      "showTags": "Hiển thị thẻ",
+      "hideTags": "Ẩn thẻ",
+      "sharePuzzle": "Chia sẻ bài tập",
+      "statRating": "Xếp hạng",
+      "statLevel": "Cấp",
+      "statSolved": "Đã giải",
+      "statTime": "Thời gian",
+      "phaseLabel": "Giai đoạn {{phase}} (bước {{step}})"
+    },
+    "gameOver": {
+      "title": "Trò chơi kết thúc",
+      "wonTitle": "Bạn thắng!",
+      "wonSubtitle": "Bạn đã vượt qua toàn bộ thử thách.",
+      "wonText": "Chuỗi đã bị đánh bại – hãy bắt đầu lần chơi mới cho thử thách tiếp theo.",
+      "exhaustedTitle": "Đã chơi hết!",
+      "exhaustedSubtitle": "Bạn đã chơi qua tất cả các dải xếp hạng bài tập.",
+      "areYouAStockfish": "Bạn có phải là Stockfish không?",
+      "maxRating": "Xếp hạng tối đa",
+      "puzzlesSolved": "Bài tập đã giải",
+      "livesLeft": "Mạng còn lại",
+      "levelReached": "Cấp đạt được",
+      "time": "Thời gian",
+      "livesLostAt": "Mất mạng tại: {{ratings}}",
+      "puzzleReview": "Xem lại bài tập",
+      "newHighscore": "Kỷ lục mới!",
+      "archiving": "Đang lưu trữ...",
+      "archiveRun": "Lưu trữ lần chơi này",
+      "archived": "Đã lưu trữ",
+      "playAgain": "Chơi lại",
+      "backToPuzzles": "Quay lại bài tập"
+    },
+    "history": {
+      "title": "Lịch sử bài tập vô tận",
+      "noSessions": "Chưa có phiên nào được chơi.",
+      "startPlaying": "Bắt đầu chơi",
+      "filterAll": "Tất cả",
+      "filterActive": "Đang hoạt động",
+      "filterArchived": "Đã lưu trữ",
+      "selected": "{{count}} đã chọn",
+      "archive": "Lưu trữ",
+      "unarchive": "Khôi phục",
+      "noArchivedSessions": "Không có phiên nào đã lưu trữ.",
+      "noActiveSessions": "Không có phiên nào đang hoạt động.",
+      "colDate": "Ngày",
+      "colMaxRating": "Xếp hạng tối đa",
+      "colSolved": "Đã giải",
+      "colDuration": "Thời lượng",
+      "colConfig": "Cấu hình",
+      "colMistakes": "Sai lầm",
+      "backToEndless": "Quay lại chế độ vô tận"
+    }
+  },
+  "book": {
+    "difficulty": "Độ khó",
+    "offlineUnavailable": "Cuốn sách này không có sẵn ngoại tuyến.",
+    "status": {
+      "loading": "Đang tải bài tập...",
+      "watchOpponent": "Xem nước đi của đối thủ...",
+      "yourTurn": "Đến lượt bạn! Tìm nước đi tốt nhất.",
+      "gaveUp": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải.",
+      "stockfishThinking": "Stockfish đang suy nghĩ...",
+      "yourMoveVsStockfish": "Nước đi của bạn chống lại Stockfish...",
+      "correct": "Đúng rồi!",
+      "incorrect": "Sai rồi",
+      "gaveUpSolution": "Đã bỏ cuộc — đây là lời giải",
+      "checkmate": "Chiếu hết!",
+      "altSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
+      "fullGame": "Toàn bộ ván cờ"
+    },
+    "actions": {
+      "reset": "Đặt lại",
+      "giveUp": "Bỏ cuộc",
+      "mouseslip": "Trượt chuột",
+      "nextPuzzle": "Bài tập tiếp theo",
+      "again": "Làm lại",
+      "skip": "Bỏ qua",
+      "viewFullGame": "Xem toàn bộ ván cờ",
+      "analyze": "Phân tích",
+      "nextInBook": "Tiếp theo trong sách",
+      "randomInBook": "Ngẫu nhiên từ sách",
+      "sharePuzzle": "Chia sẻ bài tập",
+      "backToPuzzle": "Quay lại bài tập"
+    },
+    "settings": {
+      "title": "Cài đặt",
+      "visualizationLevel": "Trực quan hóa: Cấp {{level}}",
+      "stockfishDepth": "Độ sâu Stockfish",
+      "depthHint": "1 (yếu) – 24 (mạnh)",
+      "mode": "Chế độ",
+      "modeNormal": "Bình thường",
+      "modeRandom": "Ngẫu nhiên",
+      "modeCrazy": "Điên rồ",
+      "boardTheme": "Giao diện bàn cờ",
+      "pieces": "Quân cờ"
+    },
+    "viz": {
+      "titleLevel": "Trực quan hóa (Cấp {{level}})",
+      "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
+      "noMoveYet": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
+      "show": "Hiển thị",
+      "showing": "Đang hiển thị...",
+      "level0": "Bình thường — Kéo & Thả",
+      "level1": "Bịt mắt — bàn cờ đóng băng, nước đi hiển thị dạng văn bản",
+      "level2": "Quân nhỏ — quân cờ được thay bằng các ô nhỏ sau 3 giây",
+      "level3": "Tối — quân cờ được thay bằng các ô đen sau 3 giây",
+      "level4": "Vô hình — quân cờ biến mất hoàn toàn sau 3 giây"
+    },
+    "course": {
+      "backToCourses": "Đến tổng quan khóa học",
+      "sequential": "Theo thứ tự",
+      "random": "Ngẫu nhiên",
+      "completed": "Đã hoàn thành khóa học!",
+      "toOverview": "Đến tổng quan"
+    },
+    "weekly": {
+      "backToWeekly": "Đến tổng quan bài đăng hàng tuần",
+      "label": "Bài đăng hàng tuần",
+      "noPuzzles": "Bài đăng hàng tuần này không có bài tập nào có thể chơi.",
+      "allSolved": "Đã giải tất cả bài tập!"
+    }
+  },
+  "admin": {
+    "title": "Quản trị",
+    "kibanaLink": "Bảng điều khiển Kibana",
+    "tabs": {
+      "users": "Người dùng",
+      "books": "Sách",
+      "groups": "Nhóm",
+      "logs": "Nhật ký yêu cầu"
+    },
+    "users": {
+      "searchLabel": "Tìm kiếm người dùng",
+      "toggleAdmin": "Chuyển đổi quyền admin",
+      "deleteUser": "Xóa người dùng",
+      "deleteConfirm": "Xóa người dùng \"{{username}}\"? Không thể hoàn tác.",
+      "deleted": "Đã xóa người dùng \"{{username}}\"",
+      "nowAdmin": "{{username}} hiện là admin",
+      "noLongerAdmin": "{{username}} không còn là admin",
+      "columns": {
+        "id": "ID",
+        "username": "Tên người dùng",
+        "email": "Email",
+        "admin": "Admin",
+        "groups": "Nhóm",
+        "created": "Ngày tạo",
+        "actions": "Thao tác"
+      },
+      "errors": {
+        "load": "Không thể tải người dùng",
+        "toggleAdmin": "Không thể chuyển đổi quyền admin",
+        "delete": "Không thể xóa người dùng"
+      }
+    },
+    "books": {
+      "uploadPgn": "Tải lên PGN",
+      "importing": "Đang nhập…",
+      "poolHint": "Đặt cho từng sách xem bài tập xuất hiện trong bộ nào.",
+      "empty": "Chưa có sách nào được nhập.",
+      "eloFrom": "từ",
+      "eloTo": "đến",
+      "adminOnly": "chỉ admin",
+      "deleteBook": "Xóa sách",
+      "deleteConfirm": "Xóa sách \"{{name}}\" với {{count}} bài tập?",
+      "deleted": "Đã xóa sách \"{{name}}\"",
+      "imported": "Đã nhập {{imported}} bài tập, bỏ qua {{skipped}}",
+      "importedCount": "Đã nhập {{count}} bài tập",
+      "duplicatesCount": "{{count}} trùng lặp",
+      "invalidCount": "{{count}} không hợp lệ",
+      "columns": {
+        "book": "Sách",
+        "puzzles": "Bài tập",
+        "difficulty": "Độ khó",
+        "elo": "Elo từ/đến",
+        "daily": "Hàng ngày",
+        "random": "Ngẫu nhiên",
+        "blind": "Bịt mắt",
+        "visibleFor": "Hiển thị cho (khóa học)",
+        "actions": "Thao tác"
+      },
+      "errors": {
+        "load": "Không thể tải sách",
+        "import": "Nhập thất bại",
+        "save": "Lưu thất bại",
+        "saveGroups": "Cập nhật quyền truy cập nhóm thất bại",
+        "delete": "Xóa thất bại"
+      }
+    },
+    "groups": {
+      "newGroup": "Nhóm mới",
+      "namePlaceholder": "Tên",
+      "descriptionOptional": "Mô tả (tùy chọn)",
+      "create": "Tạo",
+      "empty": "Chưa có nhóm nào được tạo.",
+      "manageMembers": "Quản lý thành viên",
+      "deleteGroup": "Xóa nhóm",
+      "membersOf": "Thành viên · {{name}}",
+      "addUser": "Thêm người dùng",
+      "noMembers": "Không có thành viên.",
+      "created": "Đã tạo nhóm \"{{name}}\"",
+      "deleteConfirm": "Xóa nhóm \"{{name}}\"?",
+      "deleted": "Đã xóa nhóm \"{{name}}\"",
+      "columns": {
+        "group": "Nhóm",
+        "members": "Thành viên",
+        "actions": "Thao tác"
+      },
+      "errors": {
+        "load": "Không thể tải nhóm",
+        "create": "Không thể tạo nhóm",
+        "delete": "Xóa thất bại",
+        "loadMembers": "Không thể tải thành viên",
+        "addMember": "Không thể thêm thành viên",
+        "removeMember": "Không thể xóa thành viên"
+      }
+    },
+    "logs": {
+      "all": "Tất cả",
+      "filter": "Lọc",
+      "reset": "Đặt lại",
+      "filtered": "(đã lọc)",
+      "entryCount": "{{count}} mục",
+      "status4xx": "4xx+ (lỗi)",
+      "status5xx": "5xx (máy chủ)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Thời gian",
+        "method": "Phương thức",
+        "path": "Đường dẫn",
+        "status": "Trạng thái",
+        "duration": "Thời lượng",
+        "user": "Người dùng",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Không thể tải nhật ký"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Phân tích",
+    "engine": "Công cụ",
+    "depth": "Độ sâu",
+    "lines": "Đường biến",
+    "maxDepth": "Độ sâu tối đa",
+    "backToPuzzle": "Quay lại bài tập",
+    "calculating": "Đang tính toán…",
+    "engineOff": "Công cụ tắt",
+    "start": "Bắt đầu",
+    "flip": "Lật bàn cờ",
+    "reset": "Đặt lại",
+    "noMoves": "Chưa có nước đi — hãy đi nước trên bàn cờ.",
+    "fen": "FEN",
+    "loadFen": "Tải FEN",
+    "copyFen": "Sao chép FEN",
+    "pgn": "PGN",
+    "loadPgn": "Tải PGN"
+  },
+  "stats": {
+    "title": "Thống kê",
+    "currentElo": "Elo bài tập",
+    "totalSolved": "Đã giải",
+    "attempts": "Lần thử",
+    "accuracy": "Độ chính xác",
+    "currentStreak": "Chuỗi hiện tại",
+    "bestStreak": "Chuỗi tốt nhất",
+    "eloProgress": "Tiến trình Elo bài tập",
+    "level": "Cấp",
+    "allLevels": "Tất cả",
+    "noData": "Chưa có dữ liệu.",
+    "perLevel": "Elo theo cấp trực quan hóa",
+    "vizLevel": "Cấp",
+    "recentPuzzles": "Bài tập gần đây",
+    "date": "Ngày",
+    "rating": "Xếp hạng",
+    "result": "Kết quả",
+    "time": "Thời gian",
+    "byTheme": "Theo chủ đề",
+    "byRating": "Theo xếp hạng (đã giải)",
+    "byRatingHint": "Bài tập đã giải theo dải xếp hạng — di chuột để xem độ chính xác.",
+    "activity": "Hoạt động"
+  }
+}

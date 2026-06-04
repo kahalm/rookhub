@@ -275,7 +275,7 @@
               </div>
               <div class="filter-row">
                 <mat-form-field appearance="outline" class="filter-field">
-                  <mat-label>Stockfish Depth</mat-label>
+                  <mat-label>{{ 'puzzles.filters.stockfishDepth' | translate }}</mat-label>
                   <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
                   <mat-hint>{{ 'puzzles.filters.depthHint' | translate }}</mat-hint>
                 </mat-form-field>

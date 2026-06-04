@@ -1,0 +1,905 @@
+{
+  "common": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "delete": "Smazat",
+    "edit": "Upravit",
+    "add": "Přidat",
+    "close": "Zavřít",
+    "search": "Hledat",
+    "back": "Zpět",
+    "retry": "Zkusit znovu",
+    "loading": "Načítám…",
+    "ok": "OK",
+    "remove": "Odebrat"
+  },
+  "nav": {
+    "dashboard": "Přehled",
+    "repertoires": "Repertoáry",
+    "tournaments": "Turnaje",
+    "friends": "Přátelé",
+    "puzzles": "Úlohy",
+    "weekly": "Týdenní",
+    "courses": "Kurzy",
+    "admin": "Admin",
+    "profile": "Profil",
+    "puzzleHistory": "Historie úloh",
+    "changelog": "Changelog",
+    "logout": "Odhlásit",
+    "login": "Přihlásit",
+    "register": "Registrovat",
+    "language": "Jazyk",
+    "menu": "Nabídka",
+    "info": "Informace",
+    "account": "Účet",
+    "analysis": "Analýza",
+    "stats": "Statistiky"
+  },
+  "app": {
+    "changelogTitle": "Changelog",
+    "quickstartTitle": "Rychlý start",
+    "qs": {
+      "subscribeTitle": "Přihlásit se k odběru",
+      "subscribeDesc": "Přihlaste se k turnajům pro rychlý přístup k hráčům, párování a výsledkům.",
+      "monitorTitle": "Monitor",
+      "monitorDesc": "Zapněte monitor na turnaji – nová kola jsou automaticky detekována a načítána.",
+      "favoritesTitle": "Oblíbení",
+      "favoritesDesc": "Označte hráče nebo týmy jako oblíbené pro rychlý přístup v zobrazení turnaje.",
+      "chessResultsTitle": "ChessResults ID",
+      "chessResultsDesc": "Přidejte své ChessResults ID do profilu – nadcházející turnaje budou automaticky přihlášeny k odběru."
+    },
+    "feedback": "Zpětná vazba / Nahlásit chybu",
+    "updateAvailable": "Je k dispozici nová verze.",
+    "reload": "Obnovit"
+  },
+  "auth": {
+    "login": {
+      "title": "Přihlášení",
+      "usernameLabel": "Uživatelské jméno",
+      "passwordLabel": "Heslo",
+      "rememberMe": "Zůstat přihlášen",
+      "submit": "Přihlásit",
+      "submitting": "Přihlašuji...",
+      "registerLink": "Nemáte účet? Registrujte se",
+      "failed": "Přihlášení se nezdařilo"
+    },
+    "register": {
+      "title": "Registrace",
+      "usernameLabel": "Uživatelské jméno",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Heslo",
+      "passwordHint": "Alespoň 4 znaky",
+      "submit": "Registrovat",
+      "submitting": "Registruji...",
+      "loginLink": "Máte již účet? Přihlaste se",
+      "failed": "Registrace se nezdařila"
+    }
+  },
+  "dashboard": {
+    "welcome": "Vítejte, {{username}}!",
+    "subscribedTournaments": "Přihlášené turnaje",
+    "subscribedAt": "Přihlášeno {{date}}",
+    "puzzles": {
+      "title": "Úlohy",
+      "subtitle": "Elo {{elo}} | {{solved}} vyřešeno ({{accuracy}}%)",
+      "solve": "Řešit úlohy",
+      "endless": "Nekonečný mód"
+    },
+    "subscriptions": {
+      "title": "Odběry turnajů",
+      "count": "{{count}} odběrů",
+      "browse": "Procházet turnaje"
+    },
+    "friends": {
+      "title": "Přátelé",
+      "count": "{{count}} přátel",
+      "manage": "Spravovat přátele"
+    },
+    "repertoires": {
+      "title": "Repertoáry",
+      "count": "{{count}} repertoárů",
+      "viewAll": "Zobrazit vše"
+    }
+  },
+  "pgnViewer": {
+    "gameLabel": "Partie",
+    "nav": {
+      "first": "První tah",
+      "previous": "Předchozí tah",
+      "next": "Další tah",
+      "last": "Poslední tah"
+    }
+  },
+  "profile": {
+    "title": "Profil: {{username}}",
+    "firstName": "Jméno",
+    "lastName": "Příjmení",
+    "searchPlayer": "Hledat hráče",
+    "noResults": "Žádné výsledky.",
+    "displayName": "Zobrazované jméno",
+    "fideId": "FIDE ID",
+    "chessResultsId": "ChessResults ID",
+    "chessComUsername": "Uživatelské jméno na Chess.com",
+    "lichessUsername": "Uživatelské jméno na Lichess",
+    "saving": "Ukládám...",
+    "saved": "Profil uložen",
+    "saveFailed": "Uložení profilu se nezdařilo",
+    "searchFailed": "Hledání se nezdařilo",
+    "chessResultsApplied": "Data z ChessResults byla použita",
+    "fideApplied": "Data z FIDE byla použita",
+    "discord": {
+      "title": "Discord",
+      "hint": "Otevřete osobní odkaz z RookHub Discord bota (příkaz /link nebo puzzle DM) pro propojení vašeho Discord účtu.",
+      "unlink": "Odpojit",
+      "unlinked": "Discord odpojen",
+      "linked": "Discord účet propojen",
+      "linkConflict": "Tento Discord účet je již propojen s jiným uživatelem RookHub.",
+      "linkFailed": "Propojení Discord účtu se nezdařilo",
+      "stashed": "Přihlaste se nebo se registrujte pro dokončení propojení Discord účtu."
+    },
+    "offline": {
+      "title": "Offline",
+      "hint": "Uložte úlohy do tohoto zařízení a řešte je bez internetu (na každém zařízení zvlášť).",
+      "puzzleCount": "Úlohy offline",
+      "endlessRuns": "Nekonečné běhy offline",
+      "cacheSize": "Velikost mezipaměti",
+      "books": "{{count}} knih",
+      "clear": "Vymazat mezipaměť",
+      "cleared": "Offline mezipaměť vymazána",
+      "pending": "{{count}} řešení čeká na synchronizaci – nahrají se automaticky, jakmile budete zpět online."
+    },
+    "delete": {
+      "title": "Smazat účet",
+      "hint": "Trvale smazat váš účet.",
+      "button": "Smazat účet",
+      "warn": "Upozornění: vaše identita a osobní údaje budou nevratně odstraněny. Pro potvrzení zadejte heslo.",
+      "password": "Heslo",
+      "confirm": "Smazat trvale",
+      "deleting": "Mažu...",
+      "done": "Váš účet byl smazán.",
+      "wrongPassword": "Heslo je nesprávné.",
+      "failed": "Smazání účtu se nezdařilo.",
+      "moreInfo": "Více o smazání účtu"
+    }
+  },
+  "legal": {
+    "accountDeletion": {
+      "title": "Smazat účet",
+      "intro": "Tato stránka vysvětluje, jak smazat váš RookHub účet a co se stane s vašimi daty.",
+      "inAppTitle": "Jak smazat váš účet",
+      "inApp": "Přihlaste se do aplikace a přejděte do Profil → Smazat účet. Potvrďte heslem. Účet je okamžitě smazán.",
+      "removedTitle": "Co je odstraněno",
+      "removed1": "Vaše identita a osobní údaje (uživatelské jméno, e-mail, zobrazované/skutečné jméno, FIDE/ChessResults ID, Chess.com/Lichess jméno, Discord odkaz) a přístup k přihlášení.",
+      "removed2": "Osobní obsah a vazby: repertoáry, odběry/oblíbené turnaje, přátelství a členství ve skupinách.",
+      "keptTitle": "Co je uchováno anonymně",
+      "kept": "Souhrnné statistiky řešení/hraní (např. vyřešené úlohy) jsou uchovány v anonymizované podobě, kterou nelze zpětně přiřadit k vám.",
+      "contactTitle": "Kontakt",
+      "contact": "Pro žádosti o smazání nebo dotazy nás kontaktujte na",
+      "back": "Zpět na přihlášení"
+    },
+    "privacy": {
+      "title": "Zásady ochrany osobních údajů",
+      "updated": "Poslední aktualizace: 3. června 2026",
+      "intro": "RookHub je platforma pro šachový trénink (úlohy, nekonečný mód, kurzy, repertoáry). Tyto zásady vysvětlují, jak jsou osobní údaje zpracovávány v souladu s GDPR.",
+      "controllerTitle": "Správce",
+      "controller": "Správcem zpracování osobních údajů je provozovatel uvedený v impresu",
+      "dataTitle": "Jaké údaje zpracováváme",
+      "dataIntro": "V závislosti na vašem používání zpracováváme:",
+      "dataAccount": "Údaje účtu: uživatelské jméno, e-mailová adresa, heslo (uloženo pouze jako hash).",
+      "dataProfile": "Profilové údaje (volitelné): zobrazované/skutečné jméno, FIDE ID, ChessResults ID, uživatelské jméno Chess.com/Lichess, volitelný Discord odkaz.",
+      "dataUsage": "Údaje o využívání: vyřešené úlohy, postup a statistiky nekonečného/kursového režimu, herní hodnocení, časová razítka přihlášení.",
+      "dataTechnical": "Technické údaje: IP adresa, požadované endpointy s časovými razítky a pseudonymní identifikátor návštěvníka (měření dosahu) v protokolech serveru.",
+      "purposesTitle": "Účely a právní základy",
+      "purposes": "Poskytování účtu a funkcí (plnění smlouvy, čl. 6 odst. 1 písm. b) GDPR) a provozní bezpečnost, analýza chyb a měření dosahu prostřednictvím protokolů (oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR).",
+      "thirdTitle": "Příjemci / služby třetích stran",
+      "thirdIntro": "Data nejsou prodávána. V závislosti na vašem používání jsou zapojeny následující služby:",
+      "thirdDiscord": "Discord: pouze při dobrovolném propojení účtu (Discord ID/jméno) pro zobrazení v RookHub Discord botu.",
+      "thirdChessresults": "chess-results.com: turnajová data jsou načítána na straně serveru, pokud nastavíte ChessResults ID nebo načítáte turnaje.",
+      "thirdChesssites": "Chess.com / Lichess: pouze uživatelská jména, která dobrovolně zadáte; žádný automatický přenos dat.",
+      "thirdLogging": "Elasticsearch/Kibana: vlastní hostování protokolů/monitoringu na naší infrastruktuře.",
+      "thirdHosting": "Hosting: provozováno na vlastní serverové infrastruktuře s TLS reverzním proxy.",
+      "storageTitle": "Lokální úložiště (cookies/storage)",
+      "storage": "Nepoužíváme sledovací cookies. Prohlížečové úložiště (localStorage) uchovává např. přihlašovací token, nastavení a – je-li povoleno – offline úlohy. Tato data zůstávají na vašem zařízení.",
+      "retentionTitle": "Uchovávání a mazání",
+      "retention": "Údaje účtu jsou uchovávány do doby, kdy svůj účet smažete. Svůj účet můžete kdykoli smazat – identita a osobní údaje jsou odstraněny, anonymizované statistiky jsou zachovány. Více:",
+      "rightsTitle": "Vaše práva",
+      "rights": "Máte právo na přístup, opravu, výmaz, omezení zpracování, přenositelnost dat a námitku, jakož i právo podat stížnost u dozorového úřadu (v Rakousku: Datenschutzbehörde).",
+      "contactTitle": "Kontakt",
+      "contact": "Pro dotazy ohledně ochrany osobních údajů nás kontaktujte na",
+      "back": "Zpět na přihlášení"
+    },
+    "impressum": {
+      "title": "Impressum",
+      "operatorTitle": "Poskytovatel služby",
+      "name": "[JMÉNO / SPOLEČNOST — doplňte]",
+      "address": "[Adresa — ulice, PSČ, město, stát]",
+      "uid": "[DIČ, pokud jde o společnost]",
+      "contactTitle": "Kontakt",
+      "contact": "E-mail",
+      "disclaimer": "Poznámka: údaje poskytovatele služby jsou zástupné a musí být před zveřejněním nahrazeny skutečnými údaji. Tato stránka je návrh a nepředstavuje právní poradenství.",
+      "back": "Zpět na přihlášení"
+    }
+  },
+  "friends": {
+    "title": "Přátelé",
+    "searchUsers": "Hledat uživatele",
+    "searchResults": "Výsledky hledání",
+    "tabs": {
+      "friends": "Přátelé ({{count}})",
+      "requests": "Žádosti ({{count}})"
+    },
+    "empty": {
+      "friends": "Zatím žádní přátelé. Hledejte uživatele a přidejte si přátele!",
+      "requests": "Žádné nevyřízené žádosti."
+    },
+    "sentOn": "Odesláno {{date}}",
+    "requestSent": "Žádost o přátelství odeslána",
+    "errors": {
+      "loadFriends": "Načtení přátel se nezdařilo",
+      "loadRequests": "Načtení žádostí se nezdařilo",
+      "search": "Hledání se nezdařilo",
+      "sendRequest": "Odeslání žádosti se nezdařilo",
+      "acceptRequest": "Přijetí žádosti se nezdařilo",
+      "declineRequest": "Odmítnutí žádosti se nezdařilo",
+      "removeFriend": "Odebrání přítele se nezdařilo"
+    }
+  },
+  "repertoire": {
+    "list": {
+      "title": "Moje repertoáry",
+      "new": "Nový repertoár",
+      "fileCount": "{{count}} souborů",
+      "public": "Veřejný",
+      "private": "Soukromý",
+      "noDescription": "Bez popisu",
+      "open": "Otevřít",
+      "empty": "Zatím žádné repertoáry. Vytvořte jeden a začněte!",
+      "loadFailed": "Načtení repertoárů se nezdařilo",
+      "createFailed": "Vytvoření repertoáru se nezdařilo",
+      "deleteConfirm": "Smazat tento repertoár?",
+      "deleteFailed": "Smazání repertoáru se nezdařilo"
+    },
+    "detail": {
+      "noDescription": "Bez popisu",
+      "modeLines": "Linie",
+      "modeTree": "Strom",
+      "modeEdit": "Upravit"
+    },
+    "dialog": {
+      "title": "Nový repertoár",
+      "name": "Název",
+      "description": "Popis",
+      "public": "Veřejný",
+      "create": "Vytvořit"
+    },
+    "lines": {
+      "allLines": "Všechny linie",
+      "empty": "V tomto repertoáru nebyly nalezeny žádné linie."
+    },
+    "tree": {
+      "start": "Start",
+      "lineCount": "{{count}} linie",
+      "lineCountPlural": "{{count}} linií",
+      "empty": "Konec linie – žádné další tahy."
+    },
+    "edit": {
+      "uploadHint": "Přetáhněte soubory PGN sem nebo klikněte pro nahrání",
+      "files": "Soubory ({{count}})",
+      "empty": "Zatím žádné soubory. Nahrajte soubory PGN a začněte!",
+      "filesSkipped": "{{count}} soubor(ů) přeskočen (pouze .pgn, max. 10 MB)",
+      "uploadSuccess": "{{count}} soubor(ů) nahráno",
+      "uploadPartial": "{{ok}} nahráno, {{failed}} selhalo",
+      "downloadFailed": "Stažení se nezdařilo",
+      "deleteConfirm": "Smazat tento soubor?"
+    }
+  },
+  "tournaments": {
+    "actions": {
+      "chessResults": "Chess-Results",
+      "refresh": "Obnovit",
+      "subscribe": "Přihlásit se k odběru",
+      "unsubscribe": "Odhlásit se z odběru",
+      "monitor": "Monitor",
+      "monitoringUntil": "Monitorováno do {{time}}",
+      "share": "Sdílet",
+      "subscribed": "Přihlášeno!",
+      "unsubscribed": "Odhlášeno",
+      "failed": "Selhalo",
+      "unsubscribeFailed": "Odhlášení se nezdařilo"
+    },
+    "tabs": {
+      "players": "Hráči ({{count}})",
+      "teams": "Týmy ({{count}})",
+      "pairings": "Párování"
+    },
+    "favoritesOnly": "Pouze oblíbení",
+    "favorites": {
+      "added": "{{name}} přidán do oblíbených",
+      "removed": "{{name}} odebrán z oblíbených",
+      "addedShort": "{{name}} přidán do oblíbených",
+      "removedShort": "{{name}} odebrán"
+    },
+    "players": {
+      "snr": "Č.",
+      "title": "Titul",
+      "name": "Jméno",
+      "fideId": "FIDE ID",
+      "elo": "Elo",
+      "country": "Stát",
+      "team": "Tým",
+      "club": "Klub",
+      "boardShort": "Šach."
+    },
+    "teams": {
+      "rank": "Pořadí",
+      "team": "Tým",
+      "points": "Body"
+    },
+    "pairings": {
+      "round": "Kolo",
+      "roundLabel": "Kolo {{round}}",
+      "board": "Šachovnice",
+      "white": "Bílý",
+      "black": "Černý",
+      "home": "Domácí",
+      "away": "Hosté",
+      "result": "Výsledek"
+    },
+    "monitor": {
+      "stopped": "Monitorování zastaveno",
+      "stopFailed": "Zastavení monitorování se nezdařilo",
+      "activated": "Monitorování aktivováno",
+      "activateFailed": "Aktivace monitorování se nezdařila",
+      "newRoundTitle": "Nové kolo k dispozici!",
+      "newRoundBody": "Kolo {{round}} bylo zveřejněno.",
+      "newRoundSnack": "Nové kolo k dispozici! Kolo {{round}}"
+    },
+    "list": {
+      "title": "Turnaje",
+      "importTitle": "Importovat turnaj",
+      "importSubtitle": "Zadejte ID turnaje z chess-results.com pro jeho načtení",
+      "chessResultsId": "Chess-Results ID",
+      "idPlaceholder": "např. 1234567",
+      "idHintPrefix": "Číslo z chess-results.com/tnr",
+      "idHintSuffix": ".aspx",
+      "crawl": "Načíst",
+      "crawling": "Načítám turnaj {{id}}... Úloha č. {{jobId}}",
+      "crawlerUnavailable": "Nelze se připojit k modulu pro načítání turnajů. Ujistěte se, že je služba spuštěna.",
+      "details": "Podrobnosti",
+      "hide": "Skrýt",
+      "empty": "Žádné turnaje nenalezeny.",
+      "showHidden": "Zobrazit {{count}} skrytých",
+      "imported": "Turnaj importován!",
+      "crawlStartFailed": "Spuštění načítání se nezdařilo",
+      "crawlFailed": "Načítání selhalo",
+      "crawlConnectionLost": "Připojení k úloze načítání bylo přerušeno"
+    },
+    "detail": {
+      "loadTournamentFailed": "Načtení turnaje se nezdařilo",
+      "loadSubscriptionFailed": "Načtení stavu odběru se nezdařilo",
+      "reloadTournamentFailed": "Opětovné načtení turnaje se nezdařilo",
+      "refreshStartFailed": "Spuštění obnovy se nezdařilo",
+      "dataRefreshed": "Data obnovena!",
+      "refreshFailed": "Obnova selhala",
+      "loadPlayersFailed": "Načtení hráčů se nezdařilo",
+      "loadTeamsFailed": "Načtení týmů se nezdařilo",
+      "loadPairingsFailed": "Načtení párování se nezdařilo",
+      "loadTeamDetailsFailed": "Načtení podrobností o týmu se nezdařilo"
+    },
+    "public": {
+      "notFound": "Turnaj nebyl nalezen."
+    },
+    "share": {
+      "title": "Sdílet turnaj",
+      "copyLink": "Kopírovat odkaz",
+      "linkCopied": "Odkaz zkopírován!",
+      "copyFailed": "Kopírování selhalo"
+    }
+  },
+  "puzzles": {
+    "status": {
+      "loading": "Načítám úlohu…",
+      "loadFailed": "Načtení úlohy se nezdařilo",
+      "offlineNoCache": "Jste offline a žádné úlohy nejsou uloženy v mezipaměti. Otevřete tuto stránku jednou online, abyste si uložili úlohy pro hraní offline.",
+      "watchOpponent": "Sledujte tah soupeře…",
+      "yourTurn": "Jste na tahu!",
+      "gaveUpPlayOut": "Vzdali jste se – zahrajte řešení sami.",
+      "thinking": "Stockfish přemýšlí…"
+    },
+    "result": {
+      "solutionPlayedOut": "Řešení bylo zahráno.",
+      "tryYourselfNextTime": "Příště to zkuste vyřešit sami!",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
+      "correct": "Správně!",
+      "incorrect": "Nesprávně"
+    },
+    "eval": {
+      "start": "Start",
+      "now": "Nyní",
+      "show": "Zobrazit hodnocení",
+      "hide": "Skrýt hodnocení"
+    },
+    "actions": {
+      "reset": "Resetovat",
+      "mouseslip": "Překlep myší",
+      "giveUp": "Vzdát se",
+      "nextPuzzle": "Další úloha",
+      "share": "Sdílet úlohu",
+      "loadPuzzle": "Načíst úlohu",
+      "reviewLast": "Přezkoumat poslední úlohu",
+      "endlessMode": "Nekonečný mód",
+      "analyze": "Analyzovat"
+    },
+    "info": {
+      "rating": "Hodnocení"
+    },
+    "stats": {
+      "title": "Vaše statistiky",
+      "solved": "Vyřešeno",
+      "accuracy": "Přesnost",
+      "streak": "Série",
+      "best": "Nejlepší"
+    },
+    "settings": {
+      "tooltip": "Nastavení"
+    },
+    "filters": {
+      "title": "Filtry",
+      "visualization": "Vizualizace: Úroveň {{level}}",
+      "difficulty": "Obtížnost",
+      "difficultyHint": "Úlohy kolem vašeho Elo ({{elo}})",
+      "depthHint": "1 (slabý) – 24 (silný)",
+      "skipSolved": "Přeskočit vyřešené"
+    },
+    "difficulty": {
+      "veryEasy": "Velmi lehká",
+      "easy": "Lehká",
+      "normal": "Normální",
+      "hard": "Těžká",
+      "veryHard": "Velmi těžká"
+    },
+    "theme": {
+      "mode": "Mód",
+      "modeNormal": "Normální",
+      "modeRandom": "Náhodný",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Téma šachovnice",
+      "pieces": "Figurky"
+    },
+    "viz": {
+      "title": "Vizualizace (Úroveň {{level}})",
+      "countdown": "Figurky zmizí za {{seconds}}s…",
+      "noMoveYet": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
+      "show": "Zobrazit",
+      "showing": "Zobrazuji…"
+    },
+    "share": {
+      "title": "Sdílet úlohu",
+      "copied": "Odkaz zkopírován!",
+      "copyFailed": "Kopírování selhalo"
+    }
+  },
+  "courses": {
+    "title": "Kurzy",
+    "intro": "Procházejte importovanou knihu úlohu po úloze – postupně nebo náhodně. Váš postup je uložen.",
+    "emptyHint": "Zatím žádné knihy nebyly importovány. Importujte knihy v admin sekci pod položkou \"Knihy\".",
+    "puzzleCount": "{{count}} úloh",
+    "completed": "Kurz dokončen",
+    "sequential": "Postupně",
+    "random": "Náhodně",
+    "resetTooltip": "Resetovat postup",
+    "resetConfirm": "Resetovat postup pro \"{{name}}\"?",
+    "loadFailed": "Načtení kurzů se nezdařilo",
+    "resetFailed": "Reset se nezdařil",
+    "offlineSaveTooltip": "Uložit knihu offline",
+    "offlineRemoveTooltip": "Odebrat offline kopii",
+    "offlineSaved": "\"{{name}}\" uloženo offline ({{count}} úloh)",
+    "offlineRemoved": "\"{{name}}\" odebráno z offline",
+    "offlineFailed": "Uložení knihy offline se nezdařilo"
+  },
+  "weekly": {
+    "title": "Týdenní",
+    "intro": "Týdenní šachové příspěvky k procházení. Datum a čas ukazují, kdy je příspěvek naplánován.",
+    "oClock": "",
+    "play": "Přehrát",
+    "empty": "Zatím žádné týdenní příspěvky.",
+    "deleteConfirm": "Smazat týdenní příspěvek \"{{title}}\"?",
+    "created": "Týdenní příspěvek vytvořen",
+    "deleted": "Týdenní příspěvek smazán",
+    "loadFailed": "Načtení týdenních příspěvků se nezdařilo",
+    "uploadFailed": "Nahrávání selhalo",
+    "saveFailed": "Uložení selhalo",
+    "deleteFailed": "Smazání selhalo",
+    "fields": {
+      "date": "Datum",
+      "time": "Čas",
+      "titleOptional": "Název (volitelné)"
+    },
+    "columns": {
+      "scheduled": "Datum",
+      "title": "Název",
+      "actions": "Akce"
+    },
+    "upload": {
+      "title": "Nahrát nový týdenní příspěvek",
+      "choosePgn": "Vybrat PGN",
+      "titlePlaceholder": "z názvu souboru",
+      "create": "Vytvořit",
+      "hint": "Výchozí: poslední datum + 7 dní, stejný čas (jinak 19:00)."
+    }
+  },
+  "endless": {
+    "offlineNoCache": "Jste offline a žádný běh není uložen v mezipaměti. Otevřete Nekonečný mód jednou online, abyste si uložili úlohy pro offline hraní.",
+    "help": {
+      "title": "Nekonečný mód úloh",
+      "gameplayHeading": "Jak to funguje",
+      "gameplayP1": "Řešíte šachové úlohy narůstající obtížnosti. Začínáte na nastavitelném hodnocení a postupujete výše. Hodnocení automaticky roste podél fází Fasttrack (viz níže).",
+      "gameplayP2": "Máte <strong>3 životy</strong>. Při 0 životech je hra ukončena.",
+      "movesHeading": "Tahy a Stockfish",
+      "movesP1": "Každá úloha má <strong>zamýšlené řešení</strong> (sekvenci tahů). Pokud hrajete správné tahy, sledujete tuto linii řešení.",
+      "movesP2": "Zahrajete-li <strong>špatný tah</strong>, převezme druhou stranu <strong>Stockfish</strong> (šachový engine). Poté hrajete volně proti Stockfishi. Jeho sílu lze nastavit přes Hloubku Stockfishe.",
+      "movesItem1": "<strong>Mat Stockfishe</strong> se počítá jako alternativní řešení – žádný ztracený život!",
+      "movesItem2": "<strong>Stockfish vás dá mat</strong> – ztratíte život",
+      "movesItem3": "Hra proti Stockfishi pokračuje donekonečna až do matu nebo vzdání se",
+      "buttonsHeading": "Tlačítka během hry",
+      "buttonsShowEval": "<strong>Zobrazit hodnocení</strong> – Zobrazí hodnocení Stockfishe (Start vs. Nyní)",
+      "buttonsReset": "<strong>Reset</strong> – Resetuje úlohu, ale stojí život",
+      "buttonsMouseslip": "<strong>Překlep myší</strong> – Vrátí poslední špatný tah (jednou za úlohu, zdarma)",
+      "buttonsGiveUp": "<strong>Vzdát se</strong> – Vzdát se, stojí život",
+      "settingsHeading": "Nastavení",
+      "settingsStartRating": "<strong>Počáteční hodnocení</strong> – Hodnocení úloh, na kterém začínáte",
+      "settingsStockfishDepth": "<strong>Hloubka Stockfishe</strong> – Síla enginu (1 = velmi slabý, 24 = maximální síla)",
+      "settingsThemes": "<strong>Témata</strong> – Volitelné: pouze určitá taktická témata (např. \"vidlička špendlík\")",
+      "fasttrackHeading": "Zvyšování obtížnosti (Fasttrack)",
+      "fasttrackP1": "Zvyšování se přizpůsobuje vašemu minulému výkonu: analyzuje vaše nedávné sezení a vypočítá hodnocení, při kterém obvykle ztrácíte životy.",
+      "fasttrackPhase1": "<strong>Fáze 1 (Úlohy 1–5)</strong> – Rychlý nárůst k 1. prahu",
+      "fasttrackPhase2": "<strong>Fáze 2 (Úlohy 6–10)</strong> – Nárůst od 1. ke 2. prahu",
+      "fasttrackPhase3": "<strong>Fáze 3 (od Úlohy 11)</strong> – Konstantní krok 20",
+      "fasttrackP2": "Prahové hodnoty (1./2. práh) se počítají automaticky, ale lze je nastavit ručně. Klikněte na \"Auto: …\" pro resetování hodnoty."
+    },
+    "config": {
+      "title": "Nekonečný mód úloh",
+      "subtitle": "Postupná obtížnost – jak daleko dojdete?",
+      "startRating": "Počáteční hodnocení",
+      "stockfishDepth": "Hloubka Stockfishe",
+      "stockfishDepthHint": "1 (slabý) – 24 (silný)",
+      "themes": "Témata (volitelné)",
+      "themesPlaceholder": "např. vidlička špendlík",
+      "thresholdExplain": "Hodnocení, při kterých obvykle ztrácíte životy. Upravte pro rychlejší nebo pomalejší přeskočení lehčích úloh.",
+      "firstThreshold": "1. práh",
+      "secondThreshold": "2. práh",
+      "auto": "Auto: {{value}}",
+      "step": "Krok {{step}}",
+      "phase1Label": "Fáze 1 (Úr. 1–5)",
+      "phase2Label": "Fáze 2 (Úr. 6–10)",
+      "phase3Label": "Fáze 3 (Úr. 11+)",
+      "curveHint": "Křivka hodnocení gauntletu (pevná při spuštění):",
+      "curvePuzzle": "Úloha {{n}}",
+      "settings": "Nastavení",
+      "visualizationLevel": "Vizualizace: Úroveň {{level}}",
+      "mode": "Mód",
+      "modeNormal": "Normální",
+      "modeRandom": "Náhodný",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Téma šachovnice",
+      "pieces": "Figurky",
+      "highscore": "Highscore: {{rating}} hodnocení",
+      "sessionsPlayed": "{{count}} sezení odehráno",
+      "viewHistory": "Zobrazit historii",
+      "unfinishedRun": "Nedokončený běh: Úr. {{level}} | {{solved}} vyřešeno | {{lives}} životů | {{max}} max",
+      "continue": "Pokračovat",
+      "archiveAndNew": "Archivovat a nová hra",
+      "newGame": "Nová hra",
+      "start": "Start"
+    },
+    "game": {
+      "visualization": "Vizualizace (Úroveň {{level}})",
+      "vizCountdown": "Figurky zmizí za {{seconds}}s...",
+      "vizNoMove": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
+      "vizShow": "Zobrazit",
+      "vizShowing": "Zobrazuji...",
+      "loadingPuzzle": "Načítám úlohu...",
+      "watchOpponent": "Sledujte tah soupeře...",
+      "yourTurn": "Jste na tahu! Najděte nejlepší tah.",
+      "yourMove": "Váš tah...",
+      "opponentThinking": "Soupeř přemýšlí...",
+      "evalStart": "Start",
+      "evalNow": "Nyní",
+      "showEval": "Zobrazit hodnocení",
+      "hideEval": "Skrýt hodnocení",
+      "reset": "Resetovat",
+      "mouseslip": "Překlep myší",
+      "giveUp": "Vzdát se",
+      "checkmate": "Mat!",
+      "alternativeSolution": "Alternativní řešení – úloha měla jinou zamýšlenou linii.",
+      "correct": "Správně!",
+      "wrong": "Špatně!",
+      "gaveUp": "Vzdáno",
+      "continue": "Pokračovat",
+      "analyze": "Analyzovat",
+      "reviewLast": "Analyzovat poslední úlohu",
+      "puzzleRating": "Hodnocení úlohy: {{rating}}",
+      "levelRange": "Úroveň {{level}} ({{min}}–{{max}})",
+      "showTags": "Zobrazit štítky",
+      "hideTags": "Skrýt štítky",
+      "sharePuzzle": "Sdílet úlohu",
+      "statRating": "Hodnocení",
+      "statLevel": "Úroveň",
+      "statSolved": "Vyřešeno",
+      "statTime": "Čas",
+      "phaseLabel": "Fáze {{phase}} (krok {{step}})"
+    },
+    "gameOver": {
+      "title": "Konec hry",
+      "wonTitle": "Vyhráli jste!",
+      "wonSubtitle": "Prošli jste celým gauntletem.",
+      "wonText": "Série je poražena – začněte nový běh pro další výzvu.",
+      "exhaustedTitle": "Všechno odehráno!",
+      "exhaustedSubtitle": "Prošli jste všemi rozsahy hodnocení úloh.",
+      "areYouAStockfish": "Jste Stockfish?",
+      "maxRating": "Max. hodnocení",
+      "puzzlesSolved": "Vyřešených úloh",
+      "livesLeft": "Zbývající životy",
+      "levelReached": "Dosažená úroveň",
+      "time": "Čas",
+      "livesLostAt": "Životy ztraceny při: {{ratings}}",
+      "puzzleReview": "Přehled úloh",
+      "newHighscore": "Nový highscore!",
+      "archiving": "Archivuji...",
+      "archiveRun": "Archivovat tento běh",
+      "archived": "Archivováno",
+      "playAgain": "Hrát znovu",
+      "backToPuzzles": "Zpět na úlohy"
+    },
+    "history": {
+      "title": "Historie nekonečného módu",
+      "noSessions": "Zatím žádná sezení.",
+      "startPlaying": "Začít hrát",
+      "filterAll": "Vše",
+      "filterActive": "Aktivní",
+      "filterArchived": "Archivovaná",
+      "selected": "{{count}} vybráno",
+      "archive": "Archivovat",
+      "unarchive": "Obnovit z archivu",
+      "noArchivedSessions": "Žádná archivovaná sezení.",
+      "noActiveSessions": "Žádná aktivní sezení.",
+      "colDate": "Datum",
+      "colMaxRating": "Max. hodnocení",
+      "colSolved": "Vyřešeno",
+      "colDuration": "Trvání",
+      "colConfig": "Konfigurace",
+      "colMistakes": "Chyby",
+      "backToEndless": "Zpět na nekonečný mód"
+    }
+  },
+  "book": {
+    "difficulty": "Obtížnost",
+    "offlineUnavailable": "Tato kniha není dostupná offline.",
+    "status": {
+      "loading": "Načítám úlohu...",
+      "watchOpponent": "Sledujte tah soupeře...",
+      "yourTurn": "Jste na tahu! Najděte nejlepší tah.",
+      "gaveUp": "Vzdali jste se – sami si zahrajte řešení.",
+      "stockfishThinking": "Stockfish přemýšlí...",
+      "yourMoveVsStockfish": "Váš tah proti Stockfishi...",
+      "correct": "Správně!",
+      "incorrect": "Nesprávně",
+      "gaveUpSolution": "Vzdáno – zde je řešení",
+      "checkmate": "Mat!",
+      "altSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
+      "fullGame": "Celá partie"
+    },
+    "actions": {
+      "reset": "Resetovat",
+      "giveUp": "Vzdát se",
+      "mouseslip": "Překlep myší",
+      "nextPuzzle": "Další úloha",
+      "again": "Znovu",
+      "skip": "Přeskočit",
+      "viewFullGame": "Zobrazit celou partii",
+      "analyze": "Analyzovat",
+      "nextInBook": "Další v knize",
+      "randomInBook": "Náhodně z knihy",
+      "sharePuzzle": "Sdílet úlohu",
+      "backToPuzzle": "Zpět na úlohu"
+    },
+    "settings": {
+      "title": "Nastavení",
+      "visualizationLevel": "Vizualizace: Úroveň {{level}}",
+      "stockfishDepth": "Hloubka Stockfishe",
+      "depthHint": "1 (slabý) – 24 (silný)",
+      "mode": "Mód",
+      "modeNormal": "Normální",
+      "modeRandom": "Náhodný",
+      "modeCrazy": "Crazy",
+      "boardTheme": "Téma šachovnice",
+      "pieces": "Figurky"
+    },
+    "viz": {
+      "titleLevel": "Vizualizace (Úroveň {{level}})",
+      "countdown": "Figurky zmizí za {{seconds}}s...",
+      "noMoveYet": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
+      "show": "Zobrazit",
+      "showing": "Zobrazuji...",
+      "level0": "Normální – Drag & Drop",
+      "level1": "Naslepo – šachovnice zmrazena, tahy jako text",
+      "level2": "Dáma – figurky jsou po 3s nahrazeny dámskými kameny",
+      "level3": "Tma – figurky jsou po 3s nahrazeny černými žetony",
+      "level4": "Neviditelné – figurky po 3s zcela zmizí"
+    },
+    "course": {
+      "backToCourses": "Na přehled kurzů",
+      "sequential": "Postupně",
+      "random": "Náhodně",
+      "completed": "Kurz dokončen!",
+      "toOverview": "Na přehled"
+    },
+    "weekly": {
+      "backToWeekly": "Na přehled týdenních příspěvků",
+      "label": "Týdenní příspěvek",
+      "noPuzzles": "Tento týdenní příspěvek neobsahuje žádné hratelné úlohy.",
+      "allSolved": "Všechny úlohy vyřešeny!"
+    }
+  },
+  "admin": {
+    "title": "Admin",
+    "kibanaLink": "Kibana dashboard",
+    "tabs": {
+      "users": "Uživatelé",
+      "books": "Knihy",
+      "groups": "Skupiny",
+      "logs": "Protokoly požadavků"
+    },
+    "users": {
+      "searchLabel": "Hledat uživatele",
+      "toggleAdmin": "Přepnout admin",
+      "deleteUser": "Smazat uživatele",
+      "deleteConfirm": "Smazat uživatele \"{{username}}\"? Tuto akci nelze vrátit zpět.",
+      "deleted": "Uživatel \"{{username}}\" smazán",
+      "nowAdmin": "{{username}} je nyní admin",
+      "noLongerAdmin": "{{username}} již není admin",
+      "columns": {
+        "id": "ID",
+        "username": "Uživatelské jméno",
+        "email": "E-mail",
+        "admin": "Admin",
+        "groups": "Skupiny",
+        "created": "Vytvořeno",
+        "actions": "Akce"
+      },
+      "errors": {
+        "load": "Načtení uživatelů se nezdařilo",
+        "toggleAdmin": "Přepnutí admina se nezdařilo",
+        "delete": "Smazání uživatele se nezdařilo"
+      }
+    },
+    "books": {
+      "uploadPgn": "Nahrát PGN(y)",
+      "importing": "Importuji…",
+      "poolHint": "Nastavte pro každou knihu, ve kterých poolech se úlohy zobrazují.",
+      "empty": "Zatím žádné knihy nebyly importovány.",
+      "eloFrom": "od",
+      "eloTo": "do",
+      "adminOnly": "pouze admin",
+      "deleteBook": "Smazat knihu",
+      "deleteConfirm": "Smazat knihu \"{{name}}\" s {{count}} úlohou/úlohami?",
+      "deleted": "Kniha \"{{name}}\" smazána",
+      "imported": "{{imported}} úloha/úlohy importována/importovány, {{skipped}} přeskočeno",
+      "importedCount": "{{count}} úloha/úlohy importována/importovány",
+      "duplicatesCount": "{{count}} duplicitních",
+      "invalidCount": "{{count}} neplatných",
+      "columns": {
+        "book": "Kniha",
+        "puzzles": "Úlohy",
+        "difficulty": "Obtížnost",
+        "elo": "Elo od/do",
+        "daily": "Denní",
+        "random": "Náhodný",
+        "blind": "Naslepo",
+        "visibleFor": "Viditelné pro (kurzy)",
+        "actions": "Akce"
+      },
+      "errors": {
+        "load": "Načtení knih se nezdařilo",
+        "import": "Import se nezdařil",
+        "save": "Uložení selhalo",
+        "saveGroups": "Aktualizace přístupu skupin selhala",
+        "delete": "Smazání selhalo"
+      }
+    },
+    "groups": {
+      "newGroup": "Nová skupina",
+      "namePlaceholder": "Název",
+      "descriptionOptional": "Popis (volitelné)",
+      "create": "Vytvořit",
+      "empty": "Zatím žádné skupiny nebyly vytvořeny.",
+      "manageMembers": "Spravovat členy",
+      "deleteGroup": "Smazat skupinu",
+      "membersOf": "Členové · {{name}}",
+      "addUser": "Přidat uživatele",
+      "noMembers": "Žádní členové.",
+      "created": "Skupina \"{{name}}\" vytvořena",
+      "deleteConfirm": "Smazat skupinu \"{{name}}\"?",
+      "deleted": "Skupina \"{{name}}\" smazána",
+      "columns": {
+        "group": "Skupina",
+        "members": "Členové",
+        "actions": "Akce"
+      },
+      "errors": {
+        "load": "Načtení skupin se nezdařilo",
+        "create": "Vytvoření skupiny se nezdařilo",
+        "delete": "Smazání selhalo",
+        "loadMembers": "Načtení členů se nezdařilo",
+        "addMember": "Přidání člena se nezdařilo",
+        "removeMember": "Odebrání člena se nezdařilo"
+      }
+    },
+    "logs": {
+      "all": "Vše",
+      "filter": "Filtr",
+      "reset": "Resetovat",
+      "filtered": "(filtrováno)",
+      "entryCount": "{{count}} záznamů",
+      "status4xx": "4xx+ (chyby)",
+      "status5xx": "5xx (server)",
+      "status2xx": "2xx+ (OK)",
+      "columns": {
+        "time": "Čas",
+        "method": "Metoda",
+        "path": "Cesta",
+        "status": "Stav",
+        "duration": "Trvání",
+        "user": "Uživatel",
+        "ip": "IP"
+      },
+      "errors": {
+        "load": "Načtení protokolů se nezdařilo"
+      }
+    }
+  },
+  "analysis": {
+    "title": "Analýza",
+    "engine": "Engine",
+    "depth": "Hloubka",
+    "lines": "Linie",
+    "maxDepth": "Max. hloubka",
+    "backToPuzzle": "Zpět na úlohu",
+    "calculating": "Počítám…",
+    "engineOff": "Engine vypnut",
+    "start": "Start",
+    "flip": "Otočit šachovnici",
+    "reset": "Resetovat",
+    "noMoves": "Zatím žádné tahy – zahrajte tahy na šachovnici.",
+    "fen": "FEN",
+    "loadFen": "Načíst FEN",
+    "copyFen": "Kopírovat FEN",
+    "pgn": "PGN",
+    "loadPgn": "Načíst PGN"
+  },
+  "stats": {
+    "title": "Statistiky",
+    "currentElo": "Puzzle Elo",
+    "totalSolved": "Vyřešeno",
+    "attempts": "Pokusy",
+    "accuracy": "Přesnost",
+    "currentStreak": "Aktuální série",
+    "bestStreak": "Nejlepší série",
+    "eloProgress": "Vývoj Puzzle Elo",
+    "level": "Úroveň",
+    "allLevels": "Vše",
+    "noData": "Zatím žádná data.",
+    "perLevel": "Elo podle úrovně vizualizace",
+    "vizLevel": "Úroveň",
+    "recentPuzzles": "Nedávné úlohy",
+    "date": "Datum",
+    "rating": "Hodnocení",
+    "result": "Výsledek",
+    "time": "Čas",
+    "byTheme": "Podle tématu",
+    "byRating": "Podle hodnocení (vyřešeno)",
+    "byRatingHint": "Vyřešené úlohy podle pásma hodnocení – najeďte myší pro přesnost.",
+    "activity": "Aktivita"
+  }
+}

@@ -40,7 +40,7 @@ import { LocaleService } from '../../core/locale.service';
             <button mat-button routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </div>
-        <button mat-icon-button class="mobile-menu-btn" [matMenuTriggerFor]="navMenu" aria-label="Menu">
+        <button mat-icon-button class="mobile-menu-btn" [matMenuTriggerFor]="navMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
         <mat-menu #navMenu="matMenu">
@@ -62,10 +62,10 @@ import { LocaleService } from '../../core/locale.service';
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </mat-menu>
-        <button mat-icon-button [matMenuTriggerFor]="langMenu" aria-label="Language">
+        <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
-        <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="Account">
+        <button mat-icon-button [matMenuTriggerFor]="userMenu" [attr.aria-label]="'nav.account' | translate">
           <mat-icon>account_circle</mat-icon>
         </button>
         <mat-menu #userMenu="matMenu">
@@ -78,10 +78,10 @@ import { LocaleService } from '../../core/locale.service';
       } @else {
         <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
         <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-        <button mat-icon-button (click)="quickstartClick.emit()" aria-label="Info">
+        <button mat-icon-button (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
           <mat-icon>info_outline</mat-icon>
         </button>
-        <button mat-icon-button [matMenuTriggerFor]="langMenu" aria-label="Language">
+        <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
         <button mat-button routerLink="/login">{{ 'nav.login' | translate }}</button>
