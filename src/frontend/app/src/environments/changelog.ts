@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.86.0';
+export const APP_VERSION = '0.86.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.86.1', date: '2026-06-04', changes: [
+    'Android-TWA: Dev-Variante hinzugefügt. Neben dem Prod-Build gegen `rookhub.oberschmid.homes` lässt sich jetzt parallel ein Dev-Build gegen `rookhub-dev.oberschmid.homes` bauen — eigene Package-Id (`…rookhub.dev`), eigener App-Name („RookHub Dev"), parallel zur Prod-App auf demselben Telefon installierbar. CI-Workflow „Build Android TWA" fragt jetzt eine `variant`-Auswahl (prod/dev) ab und lädt das Artefakt entsprechend benannt hoch. `assetlinks.json` listet beide Package-Ids mit demselben Keystore-Fingerprint, sodass ohne Browser-Adressleiste auch im Dev-Build gestartet wird.',
+  ]},
   { version: '0.86.0', date: '2026-06-04', changes: [
     'RookHub gibt es jetzt als Android-App: im Konto-Menü (Profilbild oben rechts) führt „App installieren (Android)" zu einer kurzen Anleitung mit Download-Link zur APK.',
     'Der Download-Link zeigt immer auf die neueste veröffentlichte Version.',
