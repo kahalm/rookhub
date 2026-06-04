@@ -14,7 +14,7 @@ In Reihenfolge mergen, **oder** einfach Branch 5 mergen (enthält 1–4):
 
 ### Nur von dir zu erledigen
 - [ ] Branches reviewen + mergen (Push baut `:dev`; `:latest`/Prod ist tag-gated)
-- [ ] **Impressum**: echte Betreiberdaten (Name / Anschrift / UID) in `src/frontend/app/public/i18n/de.json` + `en.json` unter `legal.impressum.*` eintragen (Platzhalter ersetzen)
+- [ ] **Impressum/Betreiberdaten**: Name, Anschrift, UID, Kontakt-E-Mail zentral in `src/frontend/app/src/environments/operator.ts` (`OPERATOR`) eintragen — Platzhalter ersetzen (eine einzige Stelle, sprachneutral)
 - [ ] **Google-Play-Developer-Account** prüfen/anlegen (25 $; neue Privat-Accounts: 12 Tester / 14 Tage Closed-Test vor Production)
 - [ ] **Upload-Keystore** erzeugen (`keytool -genkeypair … -alias rookhub`) + **Play App Signing** aktivieren
 - [ ] CI-Secrets setzen: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`

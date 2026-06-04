@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Imprint",
       "operatorTitle": "Furnizor de servicii",
-      "name": "[NUME / COMPANIE — vă rugăm să completați]",
-      "address": "[Adresă — stradă, cod poștal, oraș, țară]",
-      "uid": "[CUI, dacă este o companie]",
       "contactTitle": "Contact",
       "contact": "Email",
       "disclaimer": "Notă: datele furnizorului de servicii sunt marcatori de substituție și trebuie înlocuite cu datele reale înainte de publicare. Această pagină este un proiect și nu constituie consultanță juridică.",

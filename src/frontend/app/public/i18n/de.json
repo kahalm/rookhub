@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impressum",
       "operatorTitle": "Diensteanbieter",
-      "name": "[NAME / FIRMA — bitte eintragen]",
-      "address": "[Anschrift — Straße, PLZ, Ort, Land]",
-      "uid": "[UID-Nummer, falls Unternehmen]",
       "contactTitle": "Kontakt",
       "contact": "E-Mail",
       "disclaimer": "Hinweis: Die Angaben zum Diensteanbieter sind Platzhalter und vor Veröffentlichung durch die tatsächlichen Daten zu ersetzen. Diese Seite ist ein Entwurf und ersetzt keine Rechtsberatung.",

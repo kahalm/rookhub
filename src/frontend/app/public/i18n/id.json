@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Imprint",
       "operatorTitle": "Penyedia layanan",
-      "name": "[NAMA / PERUSAHAAN — harap isi]",
-      "address": "[Alamat — jalan, kode pos, kota, negara]",
-      "uid": "[Nomor PPN, jika perusahaan]",
       "contactTitle": "Kontak",
       "contact": "Email",
       "disclaimer": "Catatan: detail penyedia layanan adalah placeholder dan harus diganti dengan data aktual sebelum dipublikasikan. Halaman ini adalah draf dan bukan merupakan nasihat hukum.",

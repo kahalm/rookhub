@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { OPERATOR } from '../../../environments/operator';
 
 /**
  * Impressum (AT: §5 ECG / §25 MedienG). Route: /impressum
- * ACHTUNG: Betreiber-Identität (Name/Anschrift/UID) sind PLATZHALTER — vor dem
- * Go-live durch echte Daten ersetzen (legal.impressum.* in den i18n-Dateien).
+ * Betreiber-Identität (Name/Anschrift/UID/E-Mail) kommt aus der sprachneutralen
+ * Config `environments/operator.ts` — PLATZHALTER, vor dem Go-live ausfüllen.
+ * Die i18n-Dateien liefern nur noch die Beschriftungen.
  */
 @Component({
   selector: 'app-impressum',
@@ -20,15 +22,15 @@ import { TranslateModule } from '@ngx-translate/core';
         <mat-card-content>
           <h4>{{ 'legal.impressum.operatorTitle' | translate }}</h4>
           <p>
-            {{ 'legal.impressum.name' | translate }}<br>
-            {{ 'legal.impressum.address' | translate }}<br>
-            {{ 'legal.impressum.uid' | translate }}
+            {{ operator.name }}<br>
+            {{ operator.address }}
+            @if (operator.vatId) { <br>{{ operator.vatId }} }
           </p>
 
           <h4>{{ 'legal.impressum.contactTitle' | translate }}</h4>
           <p>
             {{ 'legal.impressum.contact' | translate }}:
-            <a href="mailto:p.oberschmid@cp-solutions.at">p.oberschmid&#64;cp-solutions.at</a>
+            <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
           </p>
 
           <p class="muted">{{ 'legal.impressum.disclaimer' | translate }}</p>
@@ -47,4 +49,6 @@ import { TranslateModule } from '@ngx-translate/core';
     .back { margin-top: 1.5rem; }
   `]
 })
-export class ImpressumComponent {}
+export class ImpressumComponent {
+  readonly operator = OPERATOR;
+}

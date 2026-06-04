@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impresum",
       "operatorTitle": "Pružatelj usluge",
-      "name": "[IME / TVRTKA — molimo popunite]",
-      "address": "[Adresa — ulica, poštanski broj, grad, država]",
-      "uid": "[PDV broj, ako je tvrtka]",
       "contactTitle": "Kontakt",
       "contact": "E-pošta",
       "disclaimer": "Napomena: podaci o pružatelju usluge su rezervirana mjesta i moraju biti zamijenjeni stvarnim podacima prije objave. Ova stranica je nacrt i ne predstavlja pravni savjet.",

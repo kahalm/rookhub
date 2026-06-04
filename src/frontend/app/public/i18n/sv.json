@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impressum",
       "operatorTitle": "Tjänsteleverantör",
-      "name": "[NAMN / FÖRETAG — fyll i]",
-      "address": "[Adress — gata, postnummer, ort, land]",
-      "uid": "[Momsregistreringsnummer, om företag]",
       "contactTitle": "Kontakt",
       "contact": "E-post",
       "disclaimer": "Obs: tjänsteleverantörens uppgifter är platshållare och måste ersättas med faktiska uppgifter innan publicering. Den här sidan är ett utkast och utgör inte juridisk rådgivning.",

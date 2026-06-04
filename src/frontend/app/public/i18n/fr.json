@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Mentions légales",
       "operatorTitle": "Prestataire de service",
-      "name": "[NOM / SOCIÉTÉ — à renseigner]",
-      "address": "[Adresse — rue, code postal, ville, pays]",
-      "uid": "[Numéro de TVA, si société]",
       "contactTitle": "Contact",
       "contact": "E-mail",
       "disclaimer": "Remarque : les informations du prestataire de service sont des exemples et doivent être remplacées par les données réelles avant publication. Cette page est un brouillon et ne constitue pas un conseil juridique.",

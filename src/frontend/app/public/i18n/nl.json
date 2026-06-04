@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impressum",
       "operatorTitle": "Dienstverlener",
-      "name": "[NAAM / BEDRIJF — invullen]",
-      "address": "[Adres — straat, postcode, plaats, land]",
-      "uid": "[BTW-nummer, indien bedrijf]",
       "contactTitle": "Contact",
       "contact": "E-mail",
       "disclaimer": "Let op: de gegevens van de dienstverlener zijn plaatsaanduidingen en moeten vóór publicatie worden vervangen door de werkelijke gegevens. Deze pagina is een concept en vormt geen juridisch advies.",

@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impronta",
       "operatorTitle": "Fornitore del servizio",
-      "name": "[NOME / AZIENDA — da compilare]",
-      "address": "[Indirizzo — via, CAP, città, paese]",
-      "uid": "[Partita IVA, se azienda]",
       "contactTitle": "Contatto",
       "contact": "Email",
       "disclaimer": "Nota: i dati del fornitore del servizio sono segnaposto e devono essere sostituiti con i dati reali prima della pubblicazione. Questa pagina è una bozza e non costituisce consulenza legale.",

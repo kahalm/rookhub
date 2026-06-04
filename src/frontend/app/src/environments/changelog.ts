@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.79.0';
+export const APP_VERSION = '0.79.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.79.1', date: '2026-06-04', changes: [
+    'Technisch: Die Impressum-Betreiberdaten (Name, Anschrift, UID, Kontakt-E-Mail) liegen jetzt zentral in einer Konfigurationsdatei statt in jeder der 25 Sprachdateien — vor dem Go-live nur noch an einer Stelle einzutragen. Keine sichtbare Änderung.',
+  ]},
   { version: '0.79.0', date: '2026-06-04', changes: [
     '22 neue Sprachen — die App ist jetzt in 25 Sprachen verfügbar: zusätzlich zu Englisch/Deutsch/Kroatisch nun Spanisch, Chinesisch, Hindi, Arabisch, Portugiesisch, Französisch, Russisch, Japanisch, Indonesisch, Italienisch, Türkisch, Koreanisch, Vietnamesisch, Persisch, Polnisch, Ukrainisch, Rumänisch, Niederländisch, Griechisch, Ungarisch, Tschechisch und Schwedisch. Inkl. Rechts-nach-links-Darstellung für Arabisch und Persisch.',
     'Lokalisierung vervollständigt: verbliebene unübersetzte UI-Texte (Navigations-Beschriftungen, „Stockfish-Tiefe") nachgezogen.',

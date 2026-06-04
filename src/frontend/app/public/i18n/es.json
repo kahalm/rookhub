@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Aviso legal",
       "operatorTitle": "Proveedor del servicio",
-      "name": "[NOMBRE / EMPRESA — por favor, completa]",
-      "address": "[Dirección — calle, código postal, ciudad, país]",
-      "uid": "[NIF/IVA, si es empresa]",
       "contactTitle": "Contacto",
       "contact": "Correo electrónico",
       "disclaimer": "Nota: los datos del proveedor del servicio son marcadores de posición y deben sustituirse por los datos reales antes de la publicación. Esta página es un borrador y no constituye asesoramiento jurídico.",

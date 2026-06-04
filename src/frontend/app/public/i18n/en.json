@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Imprint",
       "operatorTitle": "Service provider",
-      "name": "[NAME / COMPANY — please fill in]",
-      "address": "[Address — street, postal code, city, country]",
-      "uid": "[VAT ID, if a company]",
       "contactTitle": "Contact",
       "contact": "Email",
       "disclaimer": "Note: the service provider details are placeholders and must be replaced with the actual data before publication. This page is a draft and does not constitute legal advice.",

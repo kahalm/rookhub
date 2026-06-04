@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { OPERATOR } from '../../../environments/operator';
 
 /**
  * Öffentlich (ohne Login) erreichbare Info-Seite zur Konto-Löschung — erfüllt die
@@ -37,7 +38,7 @@ import { TranslateModule } from '@ngx-translate/core';
           <h4>{{ 'legal.accountDeletion.contactTitle' | translate }}</h4>
           <p>
             {{ 'legal.accountDeletion.contact' | translate }}:
-            <a href="mailto:p.oberschmid@cp-solutions.at">p.oberschmid&#64;cp-solutions.at</a>
+            <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
           </p>
 
           <p class="back"><a routerLink="/login">{{ 'legal.accountDeletion.back' | translate }}</a></p>
@@ -53,4 +54,6 @@ import { TranslateModule } from '@ngx-translate/core';
     .back { margin-top: 1.5rem; }
   `]
 })
-export class AccountDeletionComponent {}
+export class AccountDeletionComponent {
+  readonly operator = OPERATOR;
+}

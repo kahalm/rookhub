@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Aviso Legal",
       "operatorTitle": "Prestador do serviço",
-      "name": "[NOME / EMPRESA — preencher]",
-      "address": "[Morada — rua, código postal, cidade, país]",
-      "uid": "[NIF/NIPC, se empresa]",
       "contactTitle": "Contacto",
       "contact": "Email",
       "disclaimer": "Nota: os dados do prestador do serviço são marcadores de posição e devem ser substituídos pelos dados reais antes da publicação. Esta página é um rascunho e não constitui aconselhamento jurídico.",

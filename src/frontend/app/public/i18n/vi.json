@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Thông tin pháp lý",
       "operatorTitle": "Nhà cung cấp dịch vụ",
-      "name": "[TÊN / CÔNG TY — vui lòng điền vào]",
-      "address": "[Địa chỉ — đường, mã bưu chính, thành phố, quốc gia]",
-      "uid": "[Mã số thuế, nếu là công ty]",
       "contactTitle": "Liên hệ",
       "contact": "Email",
       "disclaimer": "Lưu ý: thông tin nhà cung cấp dịch vụ là các ký tự giữ chỗ và phải được thay thế bằng dữ liệu thực tế trước khi xuất bản. Trang này là bản nháp và không cấu thành tư vấn pháp lý.",

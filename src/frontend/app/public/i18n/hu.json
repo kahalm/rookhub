@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impresszum",
       "operatorTitle": "Szolgáltató",
-      "name": "[NÉV / CÉG — kérjük töltse ki]",
-      "address": "[Cím — utca, irányítószám, város, ország]",
-      "uid": "[Adószám, ha cég]",
       "contactTitle": "Kapcsolat",
       "contact": "E-mail",
       "disclaimer": "Megjegyzés: a szolgáltatói adatok helyőrzők, amelyeket a közzététel előtt a tényleges adatokkal kell felváltani. Ez az oldal tervezet és nem minősül jogi tanácsadásnak.",

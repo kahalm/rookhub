@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Stopka redakcyjna",
       "operatorTitle": "Usługodawca",
-      "name": "[IMIĘ I NAZWISKO / FIRMA — proszę uzupełnić]",
-      "address": "[Adres — ulica, kod pocztowy, miasto, kraj]",
-      "uid": "[NIP/VAT, jeśli firma]",
       "contactTitle": "Kontakt",
       "contact": "E-mail",
       "disclaimer": "Uwaga: dane usługodawcy są placeholderami i muszą zostać zastąpione rzeczywistymi danymi przed publikacją. Ta strona jest szkicem i nie stanowi porady prawnej.",

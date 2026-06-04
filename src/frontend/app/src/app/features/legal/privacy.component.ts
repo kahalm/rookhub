@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { OPERATOR } from '../../../environments/operator';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -56,7 +57,7 @@ import { TranslateModule } from '@ngx-translate/core';
           <p>{{ 'legal.privacy.rights' | translate }}</p>
 
           <h4>{{ 'legal.privacy.contactTitle' | translate }}</h4>
-          <p>{{ 'legal.privacy.contact' | translate }}: <a href="mailto:p.oberschmid@cp-solutions.at">p.oberschmid&#64;cp-solutions.at</a></p>
+          <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + operator.email">{{ operator.email }}</a></p>
 
           <p class="back"><a routerLink="/login">{{ 'legal.privacy.back' | translate }}</a></p>
         </mat-card-content>
@@ -72,4 +73,6 @@ import { TranslateModule } from '@ngx-translate/core';
     .back { margin-top: 1.5rem; }
   `]
 })
-export class PrivacyComponent {}
+export class PrivacyComponent {
+  readonly operator = OPERATOR;
+}

@@ -211,9 +211,6 @@
     "impressum": {
       "title": "Impressum",
       "operatorTitle": "Poskytovatel služby",
-      "name": "[JMÉNO / SPOLEČNOST — doplňte]",
-      "address": "[Adresa — ulice, PSČ, město, stát]",
-      "uid": "[DIČ, pokud jde o společnost]",
       "contactTitle": "Kontakt",
       "contact": "E-mail",
       "disclaimer": "Poznámka: údaje poskytovatele služby jsou zástupné a musí být před zveřejněním nahrazeny skutečnými údaji. Tato stránka je návrh a nepředstavuje právní poradenství.",
