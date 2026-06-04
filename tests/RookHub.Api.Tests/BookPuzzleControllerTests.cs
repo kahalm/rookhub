@@ -216,6 +216,36 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetResults_FirstAttemptDecidesSolverState()
+    {
+        // Daily-Fairness: nach einem fehlgeschlagenen ersten Versuch zählt ein späterer Solve
+        // nicht mehr als Lösung. Umgekehrt: solve-zuerst → spätere Fehlversuche ändern den Status nicht.
+        var p = await CreateBookPuzzleAsync(lineId: "fair.pgn:1", bookFileName: "fair.pgn");
+        var dora = await CreateUserAsync("dora");   // fail → solve → DARF NICHT als Löser zählen
+        var eve = await CreateUserAsync("eve");     // solve → fail → bleibt Löser
+        var finn = await CreateUserAsync("finn");   // nur solve → Löser
+
+        SetUser(dora.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 8 });
+        await Task.Delay(10);                       // monotone Reihenfolge sicherstellen
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 14 });
+
+        SetUser(eve.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 30 });
+        await Task.Delay(10);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = false, TimeSeconds = 2 });
+
+        SetUser(finn.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 19 });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(2, res.SolvedCount);                              // eve + finn
+        Assert.DoesNotContain(res.Solvers, s => s.Name == "dora");
+        Assert.Contains(res.Solvers, s => s.Name == "eve");
+        Assert.Contains(res.Solvers, s => s.Name == "finn");
+    }
+
+    [Fact]
     public async Task GetById_ReturnsPuzzle()
     {
         var puzzle = await CreateBookPuzzleAsync();

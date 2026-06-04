@@ -666,9 +666,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   resetPuzzle(): void {
     if (!this.puzzle) return;
+    // Daily-Fairness: ein Reset nach mindestens einem gespielten Zug verbraucht den Tag.
+    // Der erste Versuch zählt, spätere Solves auf demselben Tagespuzzle ändern das nicht mehr.
+    if (this.isDaily && this.moveLog.length > 0) this.recordBookAttempt(false);
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.setupPuzzle(this.puzzle);
+  }
+
+  override mouseslip(): void {
+    // Im Tagespuzzle ist der „Mausrutscher" kein straffreier Undo: der Tag gilt damit als verbraucht.
+    if (this.isDaily && !this.mouseslipUsed && !this.onSolutionPath) this.recordBookAttempt(false);
+    super.mouseslip();
   }
 
   private startTimer(): void {

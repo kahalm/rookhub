@@ -173,10 +173,17 @@ public class BookPuzzleService
         if (DateTime.TryParse(since, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var sinceUtc))
             q = q.Where(a => a.AttemptedAt >= sinceUtc);
 
-        // Eingeloggte: je User aggregieren (nur skalare Aggregate → EF-übersetzbar).
+        // Eingeloggte: je User aggregieren. Fairness-Regel (insb. Tagespuzzle):
+        // Ein User gilt nur dann als Löser, wenn sein ERSTER Versuch gelöst war —
+        // ein späterer Solve nach einem fehlgeschlagenen ersten Versuch zählt nicht.
+        // FirstSolved/AnyAttempt sind beides EF-übersetzbare skalare Aggregate.
         var perUser = await q.Where(a => a.UserId != null)
             .GroupBy(a => a.UserId)
-            .Select(g => new { UserId = g.Key!.Value, SolvedCount = g.Count(a => a.Solved) })
+            .Select(g => new
+            {
+                UserId = g.Key!.Value,
+                FirstSolved = g.OrderBy(a => a.AttemptedAt).Select(a => a.Solved).FirstOrDefault()
+            })
             .ToListAsync();
 
         // Anonyme: nur gelöste werden anonym erfasst → distinct Sessions = anonyme Löser.
@@ -192,7 +199,7 @@ public class BookPuzzleService
             .ToDictionaryAsync(p => p.UserId);
 
         var solvers = perUser
-            .Where(u => u.SolvedCount > 0)
+            .Where(u => u.FirstSolved)
             .Select(u =>
             {
                 profiles.TryGetValue(u.UserId, out var prof);
