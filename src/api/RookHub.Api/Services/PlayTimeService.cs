@@ -9,18 +9,18 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Erfasst die externe Spielzeit eines Users von Lichess und chess.com (öffentliche APIs,
-/// kein Login) und schreibt sie tagesweise in <see cref="PlayTimeDaily"/> — Datenquelle für
-/// die Kategorie „Spielen" im Trainingsziele-Tracker. Ein <see cref="PlayTimeSync"/>-Cursor je
-/// User/Plattform sorgt dafür, dass nur neue Partien gezählt werden (kein Doppelzählen).
+/// Zählt die von einem User auf Lichess und chess.com gespielten Rapid-/Classical-Partien
+/// (öffentliche APIs, kein Login) und schreibt die Anzahl tagesweise in <see cref="PlayTimeDaily"/>
+/// — Datenquelle für das wöchentliche Spielen-Ziel im Trainingsziele-Tracker. Ein
+/// <see cref="PlayTimeSync"/>-Cursor je User/Plattform sorgt dafür, dass nur neue Partien gezählt
+/// werden (kein Doppelzählen).
 ///
-/// Genauigkeit: Lichess liefert <c>createdAt</c>/<c>lastMoveAt</c> je Partie → exakte Dauer.
-/// chess.com nur Monatsarchive → Dauer wird aus den PGN-Headern (UTCDate/UTCTime ↔ EndDate/
-/// EndTime) geschätzt (Best-Effort). Korrespondenz-/Daily-Partien werden ausgeschlossen,
-/// Einzelpartien gegen Ausreißer gedeckelt.
+/// Was zählt: Lichess <c>speed</c> = <c>rapid</c> oder <c>classical</c>; chess.com <c>time_class</c>
+/// = <c>rapid</c> (chess.com kennt keine eigene „classical"-Live-Klasse). Bullet/Blitz/Korrespondenz
+/// zählen nicht. Tageszuordnung: Lichess über <c>createdAt</c>, chess.com über den PGN-Header UTCDate
+/// (Fallback: <c>end_time</c>).
 ///
-/// Konfiguration (appsettings/env): <c>PlayTime:PerGameCapSeconds</c> (Default 1800),
-/// <c>PlayTime:FirstSyncLookbackDays</c> (Default 30).
+/// Konfiguration (appsettings/env): <c>PlayTime:FirstSyncLookbackDays</c> (Default 30).
 /// </summary>
 public class PlayTimeService
 {
@@ -30,7 +30,6 @@ public class PlayTimeService
     private readonly HttpClient _http;
     private readonly AppDbContext _db;
     private readonly ILogger<PlayTimeService> _logger;
-    private readonly int _perGameCap;
     private readonly int _firstSyncLookbackDays;
 
     public PlayTimeService(HttpClient http, AppDbContext db, IConfiguration config, ILogger<PlayTimeService> logger)
@@ -38,7 +37,6 @@ public class PlayTimeService
         _http = http;
         _db = db;
         _logger = logger;
-        _perGameCap = config.GetValue<int?>("PlayTime:PerGameCapSeconds") ?? 1800;
         _firstSyncLookbackDays = config.GetValue<int?>("PlayTime:FirstSyncLookbackDays") ?? 30;
     }
 
@@ -60,11 +58,11 @@ public class PlayTimeService
         var cursor = sync?.LastGameTimestamp ?? 0;
         try
         {
-            var (perDay, newCursor) = platform == Lichess
+            var (gamesPerDay, newCursor) = platform == Lichess
                 ? await FetchLichessAsync(username, cursor, ct)
                 : await FetchChessComAsync(username, cursor, ct);
 
-            await UpsertDailyAsync(userId, platform, perDay, ct);
+            await UpsertDailyAsync(userId, platform, gamesPerDay, ct);
 
             sync ??= AddSync(userId, platform);
             if (newCursor > sync.LastGameTimestamp) sync.LastGameTimestamp = newCursor;
@@ -89,20 +87,20 @@ public class PlayTimeService
         return s;
     }
 
-    /// <summary>Addiert die je-Tag-Sekunden auf die bestehenden Zeilen (Cursor verhindert Doppelzählen).</summary>
-    private async Task UpsertDailyAsync(int userId, string platform, Dictionary<DateOnly, int> perDay, CancellationToken ct)
+    /// <summary>Addiert die je-Tag-Partienanzahl auf die bestehenden Zeilen (Cursor verhindert Doppelzählen).</summary>
+    private async Task UpsertDailyAsync(int userId, string platform, Dictionary<DateOnly, int> gamesPerDay, CancellationToken ct)
     {
-        if (perDay.Count == 0) return;
-        var dates = perDay.Keys.ToList();
+        if (gamesPerDay.Count == 0) return;
+        var dates = gamesPerDay.Keys.ToList();
         var existing = await _db.PlayTimeDailies
             .Where(p => p.UserId == userId && p.Platform == platform && dates.Contains(p.Date))
             .ToListAsync(ct);
         var byDate = existing.ToDictionary(p => p.Date);
         var now = DateTime.UtcNow;
-        foreach (var (date, seconds) in perDay)
+        foreach (var (date, games) in gamesPerDay)
         {
-            if (byDate.TryGetValue(date, out var row)) { row.Seconds += seconds; row.UpdatedAt = now; }
-            else _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = userId, Platform = platform, Date = date, Seconds = seconds, UpdatedAt = now });
+            if (byDate.TryGetValue(date, out var row)) { row.Games += games; row.UpdatedAt = now; }
+            else _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = userId, Platform = platform, Date = date, Games = games, UpdatedAt = now });
         }
     }
 
@@ -120,11 +118,12 @@ public class PlayTimeService
         using var resp = await _http.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
         var body = await resp.Content.ReadAsStringAsync(ct);
-        return ParseLichess(body, _perGameCap);
+        return ParseLichess(body);
     }
 
-    /// <summary>Parst Lichess-NDJSON zu Sekunden je UTC-Tag + neuem Cursor (max lastMoveAt). Rein/testbar.</summary>
-    public static (Dictionary<DateOnly, int> perDay, long newCursor) ParseLichess(string ndjson, int perGameCap)
+    /// <summary>Parst Lichess-NDJSON zur Anzahl Rapid-/Classical-Partien je UTC-Tag (über createdAt)
+    /// + neuem Cursor (max lastMoveAt über ALLE Partien). Rein/testbar.</summary>
+    public static (Dictionary<DateOnly, int> perDay, long newCursor) ParseLichess(string ndjson)
     {
         var perDay = new Dictionary<DateOnly, int>();
         long newCursor = 0;
@@ -134,15 +133,15 @@ public class PlayTimeService
             if (line.Length == 0) continue;
             using var doc = JsonDocument.Parse(line);
             var root = doc.RootElement;
-            if (!root.TryGetProperty("createdAt", out var ca) || !root.TryGetProperty("lastMoveAt", out var la)) continue;
+            if (!root.TryGetProperty("createdAt", out var ca)) continue;
             var createdMs = ca.GetInt64();
-            var lastMs = la.GetInt64();
-            // Cursor verfolgt ALLE Partien (auch Korrespondenz), damit sie nicht erneut geladen werden.
+            var lastMs = root.TryGetProperty("lastMoveAt", out var la) ? la.GetInt64() : createdMs;
+            // Cursor verfolgt ALLE Partien (auch Bullet/Blitz/Korrespondenz), damit sie nicht erneut geladen werden.
             if (lastMs > newCursor) newCursor = lastMs;
-            if (root.TryGetProperty("speed", out var sp) && sp.GetString() == "correspondence") continue;
-            var seconds = (int)Math.Clamp((lastMs - createdMs) / 1000, 0, perGameCap);
+            var speed = root.TryGetProperty("speed", out var sp) ? sp.GetString() : null;
+            if (speed != "rapid" && speed != "classical") continue;   // nur Rapid/Classical zählen
             var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeMilliseconds(createdMs).UtcDateTime);
-            if (seconds > 0) perDay[date] = (perDay.TryGetValue(date, out var v) ? v : 0) + seconds;
+            perDay[date] = (perDay.TryGetValue(date, out var v) ? v : 0) + 1;
         }
         return (perDay, newCursor);
     }
@@ -164,15 +163,16 @@ public class PlayTimeService
             if (resp.StatusCode == HttpStatusCode.NotFound) continue; // kein Archiv für den Monat
             resp.EnsureSuccessStatusCode();
             var body = await resp.Content.ReadAsStringAsync(ct);
-            var (md, mc) = ParseChessCom(body, cursor, perGameCap: _perGameCap);
+            var (md, mc) = ParseChessCom(body, cursor);
             foreach (var kv in md) perDay[kv.Key] = (perDay.TryGetValue(kv.Key, out var v) ? v : 0) + kv.Value;
             if (mc > newCursor) newCursor = mc;
         }
         return (perDay, newCursor);
     }
 
-    /// <summary>Parst ein chess.com-Monatsarchiv zu Sekunden je UTC-Tag (Best-Effort aus PGN-Headern) + Cursor (max end_time·1000). Rein/testbar.</summary>
-    public static (Dictionary<DateOnly, int> perDay, long newCursor) ParseChessCom(string json, long cursor, int perGameCap)
+    /// <summary>Parst ein chess.com-Monatsarchiv zur Anzahl Rapid-Partien je UTC-Tag (Datum aus PGN-Header
+    /// UTCDate, Fallback end_time) + Cursor (max end_time·1000 über ALLE Partien). Rein/testbar.</summary>
+    public static (Dictionary<DateOnly, int> perDay, long newCursor) ParseChessCom(string json, long cursor)
     {
         var perDay = new Dictionary<DateOnly, int>();
         long newCursor = cursor;
@@ -182,30 +182,28 @@ public class PlayTimeService
 
         foreach (var g in games.EnumerateArray())
         {
-            if (g.TryGetProperty("time_class", out var tc) && tc.GetString() == "daily") continue; // Korrespondenz
             if (!g.TryGetProperty("end_time", out var et)) continue;
-            var endMs = et.GetInt64() * 1000;
+            var endSec = et.GetInt64();
+            var endMs = endSec * 1000;
             if (endMs <= cursor) continue;               // bereits gezählt
-            if (endMs > newCursor) newCursor = endMs;
+            if (endMs > newCursor) newCursor = endMs;     // Cursor über ALLE Partien
 
+            // chess.com hat keine eigene „classical"-Live-Klasse → nur "rapid" zählt als Rapid/Classical.
+            if (!(g.TryGetProperty("time_class", out var tc) && tc.GetString() == "rapid")) continue;
             var pgn = g.TryGetProperty("pgn", out var p) ? p.GetString() : null;
-            var (date, seconds) = EstimateChessComDuration(pgn, et.GetInt64(), perGameCap);
-            if (seconds > 0) perDay[date] = (perDay.TryGetValue(date, out var v) ? v : 0) + seconds;
+            var date = ChessComGameDate(pgn, endSec);
+            perDay[date] = (perDay.TryGetValue(date, out var v) ? v : 0) + 1;
         }
         return (perDay, newCursor);
     }
 
-    private static (DateOnly date, int seconds) EstimateChessComDuration(string? pgn, long endSec, int perGameCap)
+    /// <summary>UTC-Tag einer chess.com-Partie: PGN-Header UTCDate/UTCTime, Fallback auf end_time.</summary>
+    private static DateOnly ChessComGameDate(string? pgn, long endSec)
     {
         var endDate = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(endSec).UtcDateTime);
-        if (string.IsNullOrEmpty(pgn)) return (endDate, 0);
-
+        if (string.IsNullOrEmpty(pgn)) return endDate;
         var start = ParsePgnDateTime(PgnHeader(pgn, "UTCDate"), PgnHeader(pgn, "UTCTime"));
-        var end = ParsePgnDateTime(PgnHeader(pgn, "EndDate") ?? PgnHeader(pgn, "UTCDate"), PgnHeader(pgn, "EndTime"));
-        var date = start.HasValue ? DateOnly.FromDateTime(start.Value) : endDate;
-        if (start.HasValue && end.HasValue)
-            return (date, (int)Math.Clamp((end.Value - start.Value).TotalSeconds, 0, perGameCap));
-        return (date, 0);
+        return start.HasValue ? DateOnly.FromDateTime(start.Value) : endDate;
     }
 
     private static string? PgnHeader(string pgn, string tag)

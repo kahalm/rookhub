@@ -87,11 +87,12 @@ export interface AdminConfig {
   kibanaUrl: string;
 }
 
-/** Trainingsziel-Vorlage einer Gruppe (Tagesziele je Kategorie in Minuten + Wochenziel). */
+/** Trainingsziel-Vorlage einer Gruppe (Puzzles/Buch = Min/Tag, Spielen = Partien/Woche + Wochenziel Tage). */
 export interface GroupTrainingGoal {
   puzzleMinutes: number;
   bookMinutes: number;
-  playMinutes: number;
+  /** Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche. */
+  playGames: number;
   weeklyDaysTarget: number;
   source: 'none' | 'group' | 'personal';
   groupName: string | null;
@@ -177,7 +178,7 @@ export class AdminService {
     return this.http.get<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`);
   }
 
-  setGroupTrainingGoal(groupId: number, goal: { puzzleMinutes: number; bookMinutes: number; playMinutes: number; weeklyDaysTarget: number }): Observable<GroupTrainingGoal> {
+  setGroupTrainingGoal(groupId: number, goal: { puzzleMinutes: number; bookMinutes: number; playGames: number; weeklyDaysTarget: number }): Observable<GroupTrainingGoal> {
     return this.http.put<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`, goal);
   }
 

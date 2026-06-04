@@ -283,8 +283,8 @@
                             <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.bookMinutes" />
                           </mat-form-field>
                           <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                            <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
-                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.playMinutes" />
+                            <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="200" [(ngModel)]="goalEdit.playGames" />
                           </mat-form-field>
                           <mat-form-field appearance="outline" subscriptSizing="dynamic">
                             <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>

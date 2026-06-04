@@ -5,7 +5,7 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Periodischer Poller, der für alle User mit verknüpftem Lichess-/chess.com-Konto und einem
-/// effektiven Spielen-Ziel (&gt; 0 min) die externe Spielzeit synchronisiert
+/// effektiven Spielen-Ziel (&gt; 0 Partien/Woche) die gespielten Rapid-/Classical-Partien zählt
 /// (siehe <see cref="PlayTimeService"/>). Läuft je User höchstens einmal pro Intervall und
 /// sequentiell (rate-limit-schonend gegenüber den öffentlichen APIs).
 ///
@@ -61,7 +61,7 @@ public class PlayTimeSyncService : BackgroundService
             {
                 if (ct.IsCancellationRequested) break;
                 var goal = await goals.GetEffectiveGoalAsync(userId);
-                if (goal.PlayMinutes <= 0) continue;
+                if (goal.PlayGames <= 0) continue;
                 await playTime.SyncUserAsync(userId, ct);
                 synced++;
             }

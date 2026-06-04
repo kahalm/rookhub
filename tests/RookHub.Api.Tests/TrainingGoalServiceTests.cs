@@ -52,7 +52,7 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     private static TrainingGoalInputDto Input(int puzzle = 0, int book = 0, int play = 0, int weekly = 0)
-        => new() { PuzzleMinutes = puzzle, BookMinutes = book, PlayMinutes = play, WeeklyDaysTarget = weekly };
+        => new() { PuzzleMinutes = puzzle, BookMinutes = book, PlayGames = play, WeeklyDaysTarget = weekly };
 
     // ---- Effektives Ziel --------------------------------------------------
 
@@ -92,7 +92,7 @@ public class TrainingGoalServiceTests : IDisposable
         var goal = await _service.GetEffectiveGoalAsync(u.Id);
         Assert.Equal("personal", goal.Source);
         Assert.Equal(30, goal.PuzzleMinutes);
-        Assert.Equal(20, goal.PlayMinutes);
+        Assert.Equal(20, goal.PlayGames);
     }
 
     [Fact]
@@ -187,20 +187,28 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Tracker_PlayTimeCountsAsPlayCategory()
+    public async Task Today_PlayGamesCountWeekly_AcrossPlatforms_AndDayStatusIgnoresPlay()
     {
         var u = await CreateUserAsync();
-        await _service.SetPersonalGoalAsync(u.Id, Input(play: 15)); // 900 s
+        await _service.SetPersonalGoalAsync(u.Id, Input(play: 5)); // Wochenziel: 5 Partien
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = u.Id, Date = today, Platform = "lichess", Seconds = 600 });
-        _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = u.Id, Date = today, Platform = "chesscom", Seconds = 600 });
+        // Heute 3 (lichess) + 2 (chesscom) = 5 Partien.
+        _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = u.Id, Date = today, Platform = "lichess", Games = 3 });
+        _db.PlayTimeDailies.Add(new PlayTimeDaily { UserId = u.Id, Date = today, Platform = "chesscom", Games = 2 });
         await _db.SaveChangesAsync();
+
+        var todayProgress = await _service.GetTodayAsync(u.Id);
+        Assert.Equal(5, todayProgress.Play.TargetGames);
+        Assert.Equal(5, todayProgress.Play.DoneGames);   // beide Plattformen, ganze Woche summiert
+        Assert.True(todayProgress.Play.Met);
+        // Spielen ist Wochenziel → kein Tagesziel → Tagesstatus bleibt "none".
+        Assert.Equal("none", todayProgress.Status);
 
         var res = await _service.GetTrackerAsync(u.Id, 1);
         var day = Assert.Single(res.Days);
-        Assert.Equal(1200, day.PlaySeconds); // beide Plattformen summiert
-        Assert.Equal("full", day.Status);
+        Assert.Equal(5, day.PlayGames);                  // informativ je Tag
+        Assert.Equal("none", day.Status);                // Tagesstatus nutzt nur Puzzles/Buch
     }
 
     [Fact]
@@ -250,7 +258,7 @@ public class TrainingGoalServiceTests : IDisposable
 
         var got = await _service.GetGroupGoalAsync(g.Id);
         Assert.Equal("group", got.Source);
-        Assert.Equal(20, got.PlayMinutes);
+        Assert.Equal(20, got.PlayGames);
 
         await _service.DeleteGroupGoalAsync(g.Id);
         var after = await _service.GetGroupGoalAsync(g.Id);

@@ -8,7 +8,8 @@ export type GoalStatus = 'none' | 'partial' | 'full';
 export interface TrainingGoal {
   puzzleMinutes: number;
   bookMinutes: number;
-  playMinutes: number;
+  /** Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche. */
+  playGames: number;
   weeklyDaysTarget: number;
   source: GoalSource;
   groupName: string | null;
@@ -17,7 +18,7 @@ export interface TrainingGoal {
 export interface TrainingGoalInput {
   puzzleMinutes: number;
   bookMinutes: number;
-  playMinutes: number;
+  playGames: number;
   weeklyDaysTarget: number;
 }
 
@@ -25,7 +26,8 @@ export interface TrackerDay {
   date: string;
   puzzleSeconds: number;
   bookSeconds: number;
-  playSeconds: number;
+  /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch). */
+  playGames: number;
   status: GoalStatus;
 }
 
@@ -34,9 +36,17 @@ export interface TrackerResponse {
   days: TrackerDay[];
 }
 
+/** Zeitbasierte Tages-Kategorie (Puzzles/Buch). */
 export interface CategoryProgress {
   targetMinutes: number;
   doneSeconds: number;
+  met: boolean;
+}
+
+/** Wöchentliches Spielen-Ziel: Partien dieser Woche vs. Zielanzahl. */
+export interface PlayProgress {
+  targetGames: number;
+  doneGames: number;
   met: boolean;
 }
 
@@ -44,7 +54,7 @@ export interface TodayProgress {
   goal: TrainingGoal;
   puzzles: CategoryProgress;
   book: CategoryProgress;
-  play: CategoryProgress;
+  play: PlayProgress;
   status: GoalStatus;
   weekDaysMet: number;
   weeklyDaysTarget: number;
@@ -79,7 +89,7 @@ export class TrainingGoalService {
     return this.http.get<TrackerResponse>('/api/training-goals/tracker', { params: new HttpParams().set('weeks', weeks) });
   }
 
-  /** Externe Spielzeit (Lichess/chess.com) jetzt synchronisieren (Phase C). */
+  /** Gespielte Rapid-/Classical-Partien (Lichess/chess.com) jetzt synchronisieren. */
   syncPlay(): Observable<{ synced: boolean }> {
     return this.http.post<{ synced: boolean }>('/api/training-goals/sync-play', {});
   }

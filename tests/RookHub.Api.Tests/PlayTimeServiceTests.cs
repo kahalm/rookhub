@@ -30,35 +30,37 @@ public class PlayTimeServiceTests : IDisposable
     // ---- Lichess-Parsing (rein) ------------------------------------------
 
     [Fact]
-    public void ParseLichess_SumsDuration_ExcludesCorrespondence_TracksCursor()
+    public void ParseLichess_CountsRapidAndClassical_IgnoresOthers_TracksCursor()
     {
         var ndjson = string.Join('\n', new[]
         {
-            $"{{\"id\":\"a\",\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
-            $"{{\"id\":\"b\",\"speed\":\"correspondence\",\"createdAt\":{Created},\"lastMoveAt\":{Last + 999999}}}",
+            $"{{\"id\":\"a\",\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"id\":\"b\",\"speed\":\"classical\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"id\":\"c\",\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",            // zählt nicht
+            $"{{\"id\":\"d\",\"speed\":\"correspondence\",\"createdAt\":{Created},\"lastMoveAt\":{Last + 999999}}}", // zählt nicht
             "", // Leerzeile wird ignoriert
         });
 
-        var (perDay, cursor) = PlayTimeService.ParseLichess(ndjson, 1800);
+        var (perDay, cursor) = PlayTimeService.ParseLichess(ndjson);
 
         var day = new DateOnly(2023, 11, 14);
-        Assert.Equal(300, perDay[day]);                 // nur die Blitzpartie
+        Assert.Equal(2, perDay[day]);                   // rapid + classical
         Assert.Single(perDay);
-        Assert.Equal(Last + 999999, cursor);            // Cursor = max(lastMoveAt), auch über Korrespondenz
+        Assert.Equal(Last + 999999, cursor);            // Cursor = max(lastMoveAt) über ALLE Partien
     }
 
     [Fact]
-    public void ParseLichess_ClampsLongGameToCap()
+    public void ParseLichess_CountsClassicalAsOneGame_RegardlessOfDuration()
     {
         var ndjson = $"{{\"speed\":\"classical\",\"createdAt\":{Created},\"lastMoveAt\":{Created + 99_999_000}}}";
-        var (perDay, _) = PlayTimeService.ParseLichess(ndjson, 1800);
-        Assert.Equal(1800, perDay[new DateOnly(2023, 11, 14)]);
+        var (perDay, _) = PlayTimeService.ParseLichess(ndjson);
+        Assert.Equal(1, perDay[new DateOnly(2023, 11, 14)]); // eine Partie, Dauer egal
     }
 
-    // ---- chess.com-Parsing (rein, Best-Effort) ---------------------------
+    // ---- chess.com-Parsing (rein) ----------------------------------------
 
     [Fact]
-    public void ParseChessCom_UsesPgnHeaders_ExcludesDaily_FiltersByCursor()
+    public void ParseChessCom_CountsRapid_IgnoresBlitzAndDaily_FiltersByCursor()
     {
         var pgn = "[UTCDate \"2023.11.14\"]\n[UTCTime \"22:08:20\"]\n[EndDate \"2023.11.14\"]\n[EndTime \"22:13:20\"]\n\n1. e4 e5 *";
         var json = System.Text.Json.JsonSerializer.Serialize(new
@@ -66,23 +68,24 @@ public class PlayTimeServiceTests : IDisposable
             games = new[]
             {
                 new { time_class = "rapid", end_time = 1700000300L, pgn },
-                new { time_class = "daily", end_time = 1700000300L, pgn },
+                new { time_class = "blitz", end_time = 1700000400L, pgn },  // zählt nicht
+                new { time_class = "daily", end_time = 1700000200L, pgn },  // zählt nicht (Korrespondenz)
             }
         });
 
-        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: 0, perGameCap: 1800);
+        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: 0);
 
-        Assert.Equal(300, perDay[new DateOnly(2023, 11, 14)]); // rapid: 22:08:20 → 22:13:20
-        Assert.Single(perDay);                                 // daily ausgeschlossen
-        Assert.Equal(1700000300L * 1000, cursor);
+        Assert.Equal(1, perDay[new DateOnly(2023, 11, 14)]); // nur die Rapid-Partie (Datum aus PGN UTCDate)
+        Assert.Single(perDay);
+        Assert.Equal(1700000400L * 1000, cursor);            // Cursor = max(end_time) über ALLE Partien
     }
 
     [Fact]
     public void ParseChessCom_SkipsGamesAtOrBeforeCursor()
     {
-        var json = @"{ ""games"": [ { ""time_class"": ""blitz"", ""end_time"": 1700000300, ""pgn"": ""x"" } ] }";
+        var json = @"{ ""games"": [ { ""time_class"": ""rapid"", ""end_time"": 1700000300, ""pgn"": ""x"" } ] }";
         var cursorAfter = 1700000300L * 1000;
-        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: cursorAfter, perGameCap: 1800);
+        var (perDay, cursor) = PlayTimeService.ParseChessCom(json, cursor: cursorAfter);
         Assert.Empty(perDay);                 // end_time·1000 <= cursor → übersprungen
         Assert.Equal(cursorAfter, cursor);
     }
@@ -90,7 +93,7 @@ public class PlayTimeServiceTests : IDisposable
     // ---- SyncUserAsync (Integration mit Fake-HTTP) -----------------------
 
     [Fact]
-    public async Task SyncUserAsync_Lichess_PersistsDailyAndCursor()
+    public async Task SyncUserAsync_Lichess_PersistsGameCountAndCursor()
     {
         var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
         _db.AppUsers.Add(user);
@@ -98,7 +101,11 @@ public class PlayTimeServiceTests : IDisposable
         _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = "testuser" });
         await _db.SaveChangesAsync();
 
-        var ndjson = $"{{\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}";
+        var ndjson = string.Join('\n', new[]
+        {
+            $"{{\"speed\":\"rapid\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}",
+            $"{{\"speed\":\"blitz\",\"createdAt\":{Created},\"lastMoveAt\":{Last}}}", // zählt nicht
+        });
         var http = new HttpClient(new FakeHandler(req =>
             new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -109,7 +116,7 @@ public class PlayTimeServiceTests : IDisposable
         await service.SyncUserAsync(user.Id);
 
         var daily = await _db.PlayTimeDailies.SingleAsync(p => p.UserId == user.Id && p.Platform == PlayTimeService.Lichess);
-        Assert.Equal(300, daily.Seconds);
+        Assert.Equal(1, daily.Games);          // nur die Rapid-Partie
         Assert.Equal(new DateOnly(2023, 11, 14), daily.Date);
 
         var sync = await _db.PlayTimeSyncs.SingleAsync(s => s.UserId == user.Id && s.Platform == PlayTimeService.Lichess);

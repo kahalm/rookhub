@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.84.2';
+export const APP_VERSION = '0.85.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.0', date: '2026-06-04', changes: [
+    'Trainingsziel „Spielen" umgestellt: statt Spielzeit in Minuten/Tag zählt jetzt die Anzahl gespielter Rapid-/Classical-Partien pro Woche.',
+    'Gezählt werden auf Lichess Rapid- und Classical-Partien, auf chess.com Rapid-Partien (chess.com hat keine eigene „Classical"-Kategorie). Bullet, Blitz und Korrespondenz/Daily zählen nicht.',
+    'Das Spielen-Ziel ist damit ein Wochenziel und wird separat angezeigt („X / Y Partien diese Woche"); der Tages-Stern im Tracker richtet sich weiterhin nach Puzzles und Buch/Kurs.',
+    'Hinweis: Bestehende „Spielen"-Ziele (in Minuten) wurden zurückgesetzt und müssen als Partien pro Woche neu gesetzt werden; die bisher erfasste Spielzeit wird neu als Partienzahl aufgebaut.',
+  ]},
   { version: '0.84.2', date: '2026-06-04', changes: [
     'Übersetzungen vervollständigt: der Trainingsziele-Bereich (Tagesziele, Ziele-Tracker, Coach-Vorlage in der Gruppenverwaltung) ist jetzt auch in den 22 zusätzlichen Sprachen übersetzt — damit sind alle 25 Sprachen vollständig lokalisiert.',
   ]},

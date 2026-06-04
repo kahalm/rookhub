@@ -92,8 +92,19 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                     <mat-progress-bar mode="determinate" [value]="pct(c.doneSeconds, c.targetMinutes)"></mat-progress-bar>
                   </div>
                 }
+                <!-- Spielen ist ein Wochenziel (Anzahl Rapid-/Classical-Partien dieser Woche). -->
+                @if ((today?.play?.targetGames ?? 0) > 0) {
+                  <div class="cat">
+                    <div class="cat-row">
+                      <mat-icon [class.met]="today?.play?.met">{{ today?.play?.met ? 'check_circle' : 'sports_esports' }}</mat-icon>
+                      <span class="cat-name">{{ 'trainingGoals.cat.play' | translate }} <span class="weekly-tag">{{ 'trainingGoals.thisWeek' | translate }}</span></span>
+                      <span class="cat-val">{{ today?.play?.doneGames ?? 0 }} / {{ today?.play?.targetGames ?? 0 }} {{ 'trainingGoals.games' | translate }}</span>
+                    </div>
+                    <mat-progress-bar mode="determinate" [value]="pctCount(today?.play?.doneGames ?? 0, today?.play?.targetGames ?? 0)"></mat-progress-bar>
+                  </div>
+                }
               </div>
-              @if ((today?.play?.targetMinutes ?? 0) > 0) {
+              @if ((today?.play?.targetGames ?? 0) > 0) {
                 <button mat-stroked-button class="sync-btn" (click)="syncPlayTime()" [disabled]="syncingPlay">
                   <mat-icon>sync</mat-icon> {{ 'trainingGoals.syncPlay' | translate }}
                 </button>
@@ -128,8 +139,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                 <input matInput type="number" min="0" max="600" [(ngModel)]="edit.bookMinutes" />
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
-                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.playMinutes" />
+                <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
+                <input matInput type="number" min="0" max="200" [(ngModel)]="edit.playGames" />
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>
@@ -190,6 +201,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
     .cat-row mat-icon { color: #bdbdbd; }
     .cat-row mat-icon.met { color: #2e7d32; }
     .cat-name { flex: 1; }
+    .weekly-tag { color: #888; font-size: .75rem; font-style: italic; }
     .cat-val { color: #555; font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }
     .source-hint { display: flex; align-items: center; gap: 6px; color: #555; }
@@ -216,7 +228,7 @@ export class TrainingGoalsComponent implements OnInit {
   goal: TrainingGoal | null = null;
   today: TodayProgress | null = null;
   tracker: GoalCell[][] = [];
-  edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, playMinutes: 0, weeklyDaysTarget: 0 };
+  edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
 
   constructor(
     private service: TrainingGoalService,
@@ -226,7 +238,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   get hasGoal(): boolean {
     const g = this.goal;
-    return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.playMinutes > 0);
+    return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.playGames > 0);
   }
 
   ngOnInit(): void { this.reload(); }
@@ -253,7 +265,7 @@ export class TrainingGoalsComponent implements OnInit {
     this.edit = {
       puzzleMinutes: goal.puzzleMinutes,
       bookMinutes: goal.bookMinutes,
-      playMinutes: goal.playMinutes,
+      playGames: goal.playGames,
       weeklyDaysTarget: goal.weeklyDaysTarget,
     };
   }
@@ -263,7 +275,7 @@ export class TrainingGoalsComponent implements OnInit {
     const input: TrainingGoalInput = {
       puzzleMinutes: this.clamp(this.edit.puzzleMinutes, 600),
       bookMinutes: this.clamp(this.edit.bookMinutes, 600),
-      playMinutes: this.clamp(this.edit.playMinutes, 600),
+      playGames: this.clamp(this.edit.playGames, 200),
       weeklyDaysTarget: this.clamp(this.edit.weeklyDaysTarget, 7),
     };
     this.service.saveGoal(input).subscribe({
@@ -288,12 +300,12 @@ export class TrainingGoalsComponent implements OnInit {
     });
   }
 
+  /** Tägliche, zeitbasierte Kategorien (Puzzles/Buch). Spielen ist ein Wochenziel und wird separat dargestellt. */
   categories(): { key: string; icon: string; targetMinutes: number; doneSeconds: number; met: boolean }[] {
     if (!this.today) return [];
     const out = [
       { key: 'puzzles', icon: 'extension', ...this.today.puzzles },
       { key: 'book', icon: 'menu_book', ...this.today.book },
-      { key: 'play', icon: 'sports_esports', ...this.today.play },
     ];
     return out.filter(c => c.targetMinutes > 0);
   }
@@ -308,6 +320,11 @@ export class TrainingGoalsComponent implements OnInit {
   pct(doneSeconds: number, targetMinutes: number): number {
     if (targetMinutes <= 0) return 0;
     return Math.min(100, Math.round((100 * doneSeconds) / (targetMinutes * 60)));
+  }
+  /** Fortschritt in % für ein Zähl-Ziel (Spielen-Partien). */
+  pctCount(done: number, target: number): number {
+    if (target <= 0) return 0;
+    return Math.min(100, Math.round((100 * done) / target));
   }
   private clamp(v: number, max: number): number { return Math.max(0, Math.min(max, Math.round(v || 0))); }
 }
