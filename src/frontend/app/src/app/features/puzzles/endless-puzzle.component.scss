@@ -89,6 +89,22 @@
     .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
     .status-card { min-height: 80px; }
+
+    // Kompakte Pillen-Reihe direkt unter dem Brett: Puzzle-Rating, Level, Herzen.
+    // Soll auch auf kleinen Handy-Screens ohne Scrollen sichtbar sein.
+    .quick-stats {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 8px 12px; border-radius: 8px;
+      background: rgba(0,0,0,0.04);
+    }
+    .qs-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-weight: 500; font-size: 0.95em;
+    }
+    .qs-pill mat-icon { font-size: 18px; width: 18px; height: 18px; color: rgba(0,0,0,0.55); }
+    .qs-hearts { display: inline-flex; gap: 2px; margin-left: auto; }
+    .heart-sm { font-size: 20px; width: 20px; height: 20px; color: rgba(0,0,0,0.25); }
+    .heart-sm.full { color: #f44336; }
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.75rem 0; }
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .result-icon { font-size: 48px; width: 48px; height: 48px; }

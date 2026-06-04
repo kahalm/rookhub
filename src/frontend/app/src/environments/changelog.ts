@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.81.1';
+export const APP_VERSION = '0.82.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.82.0', date: '2026-06-04', changes: [
+    'Endlos: kompakte „Quick-Stats"-Pillen-Reihe direkt unter dem Brett — Puzzle-Rating, aktuelles Level und Herzen sind jetzt auch auf kleinen Handy-Screens ohne Scrollen sichtbar (vorher steckten diese Infos in der Stats-Karte unter Visualisierungs-/Status-Karte).',
+  ]},
   { version: '0.81.1', date: '2026-06-04', changes: [
     'Fix (Mobile, Endlos): Nach dem Lösen sah die „Gelöst"-Karte unter dem Brett ungewohnt schmal aus, weil die Info-Sektion auf Mobile (flex-Spalte) ihre Breite vom Inhalt nahm statt 100 % zu spannen. Beide Sektionen (Brett + Status-Karte) werden jetzt im Mobile-Layout auf volle Breite gesetzt.',
   ]},

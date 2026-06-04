@@ -205,6 +205,21 @@
             </div>
 
             <div class="info-section">
+              @if (puzzle) {
+                <!-- Kompakte Mobile-Pillen: Rating / Level / Herzen direkt unter dem Brett
+                     sichtbar, ohne erst zur Stats-Card scrollen zu muessen. -->
+                <div class="quick-stats">
+                  <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
+                  <span class="qs-pill"><mat-icon>flag</mat-icon>Lv {{ level }}</span>
+                  <div class="qs-hearts">
+                    @for (i of [1,2,3]; track i) {
+                      <mat-icon class="heart-sm" [class.full]="i <= lives">
+                        {{ i <= lives ? 'favorite' : 'favorite_border' }}
+                      </mat-icon>
+                    }
+                  </div>
+                </div>
+              }
               @if (visualizationMode && state !== 'SOLVED' && state !== 'FAILED') {
                 <app-viz-card
                   [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
