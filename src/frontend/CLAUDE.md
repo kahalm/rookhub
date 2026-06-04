@@ -43,7 +43,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Setup**: `provideTranslateService({ fallbackLang: 'en', loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }) })` in `app.config.ts`. `@ngx-translate/core` + `@ngx-translate/http-loader` v17.
 - **`core/locale.service.ts`**: ermittelt Startsprache (localStorage `rookhub_lang` → Browser → `en`), `use(lang)` persistiert. Wird in `AppComponent`-Konstruktor via `init()` gestartet. Sprachumschalter (Globus-Icon) in der Navbar.
 - **Verwendung**: Templates `{{ 'ns.key' | translate }}` bzw. Attribute via Binding (`[attr.title]="'ns.key' | translate"`); dynamische Strings im TS via `TranslateService.instant('ns.key', { param })` mit `{{param}}`-Platzhaltern. Jede Standalone-Component, die übersetzt, importiert `TranslateModule`.
-- **Key-Namespaces**: `common`, `nav`, `app`, `auth`, `dashboard`, `profile`, `friends`, `repertoire`, `tournaments`, `puzzles`, `endless`, `book`, `courses`, `weekly`, `admin`, `pgnViewer`. Generische Begriffe (Speichern/Abbrechen/…) unter `common.*`.
+- **Key-Namespaces**: `common`, `nav`, `app`, `auth`, `dashboard`, `profile`, `friends`, `repertoire`, `tournaments`, `puzzles`, `endless`, `book`, `courses`, `weekly`, `trainingGoals`, `admin`, `pgnViewer`. Generische Begriffe (Speichern/Abbrechen/…) unter `common.*`.
 - **Nicht übersetzt**: Schach-Notation/FEN/PGN, Eigennamen, „RookHub"/„Stockfish", gecrawlte Daten, HTTP-Methoden.
 
 ## Offline / PWA (Service Worker)
@@ -76,6 +76,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |
 | `/analysis` | AnalysisComponent | nein (öffentlich; lokale Stockfish-MultiPV-Analyse) |
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |
+| `/training-goals` | TrainingGoalsComponent | `authGuard` (Tagesziele setzen, Heute-Fortschritt + Ziele-Heatmap; `/api/training-goals/*`) |
 | `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
 | `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
 | `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
