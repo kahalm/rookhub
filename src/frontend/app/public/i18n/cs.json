@@ -34,7 +34,7 @@
     "account": "Účet",
     "analysis": "Analýza",
     "stats": "Statistiky",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Tréninkové cíle"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -880,14 +880,14 @@
         "removeMember": "Odebrání člena se nezdařilo"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Předvolba tréninkového cíle",
+        "hint": "Členové zdědí tuto předvolbu; mohou si ji přepsat pro sebe.",
+        "saved": "Tréninkový cíl uložen.",
+        "cleared": "Předvolba tréninkového cíle odebrána.",
+        "clear": "Odebrat předvolbu",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Tréninkový cíl se nepodařilo načíst.",
+          "save": "Tréninkový cíl se nepodařilo uložit."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Aktivita"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
+    "title": "Tréninkové cíle",
+    "intro": "Nastavte denní cíle podle kategorií a sledujte svůj pokrok.",
+    "today": "Dnes",
+    "setTitle": "Nastavte své cíle",
+    "tracker": "Sledovač cílů",
     "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "weeklyDays": "Dní za týden",
+    "weekProgress": "{{done}} z {{target}} dní tento týden",
+    "fromGroup": "Předvolba z vaší skupiny „{{group}}“. Můžete si ji upravit pro sebe.",
+    "personal": "Váš osobní cíl.",
+    "resetOverride": "Obnovit předvolbu skupiny",
+    "noGoalHint": "Zatím žádné cíle — nastavte si denní cíle níže.",
+    "playHint": "Herní čas je automaticky sledován z vašeho propojeného účtu Lichess/chess.com.",
+    "saved": "Cíle uloženy.",
+    "resetDone": "Obnoveno na předvolbu skupiny.",
+    "error": "Uložení se nezdařilo. Zkuste to znovu.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Nedosaženo",
+      "partial": "Částečně dosaženo",
+      "full": "Všechny cíle splněny"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Úlohy",
+      "book": "Kniha / Kurz",
+      "play": "Hraní"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Aktualizovat herní čas",
+    "syncDone": "Herní čas aktualizován."
   }
 }

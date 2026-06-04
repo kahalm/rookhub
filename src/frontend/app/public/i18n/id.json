@@ -34,7 +34,7 @@
     "account": "Akun",
     "analysis": "Analisis",
     "stats": "Statistik",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Tujuan Latihan"
   },
   "app": {
     "changelogTitle": "Catatan Perubahan",
@@ -880,14 +880,14 @@
         "removeMember": "Gagal menghapus anggota"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Preset tujuan latihan",
+        "hint": "Anggota mewarisi preset ini; mereka dapat menggantinya untuk diri sendiri.",
+        "saved": "Tujuan latihan disimpan.",
+        "cleared": "Preset tujuan latihan dihapus.",
+        "clear": "Hapus preset",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Gagal memuat tujuan latihan.",
+          "save": "Gagal menyimpan tujuan latihan."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Aktivitas"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Tujuan Latihan",
+    "intro": "Tetapkan tujuan harian per kategori dan pantau progres Anda.",
+    "today": "Hari ini",
+    "setTitle": "Tetapkan tujuan Anda",
+    "tracker": "Pelacak tujuan",
+    "min": "mnt",
+    "weeklyDays": "Hari per minggu",
+    "weekProgress": "{{done}} dari {{target}} hari minggu ini",
+    "fromGroup": "Preset dari grup Anda \"{{group}}\". Anda dapat menyesuaikannya untuk diri sendiri.",
+    "personal": "Tujuan pribadi Anda.",
+    "resetOverride": "Reset ke preset grup",
+    "noGoalHint": "Belum ada tujuan yang ditetapkan — tetapkan target harian Anda di bawah.",
+    "playHint": "Waktu bermain dilacak secara otomatis dari akun Lichess/chess.com Anda yang tertaut.",
+    "saved": "Tujuan disimpan.",
+    "resetDone": "Direset ke preset grup.",
+    "error": "Gagal menyimpan. Silakan coba lagi.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Belum tercapai",
+      "partial": "Sebagian tercapai",
+      "full": "Semua tujuan tercapai"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Puzzle",
+      "book": "Buku / Kursus",
+      "play": "Bermain"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Perbarui waktu bermain",
+    "syncDone": "Waktu bermain diperbarui."
   }
 }

@@ -34,7 +34,7 @@
     "account": "계정",
     "analysis": "분석",
     "stats": "통계",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "훈련 목표"
   },
   "app": {
     "changelogTitle": "변경 이력",
@@ -880,14 +880,14 @@
         "removeMember": "멤버 제거 실패"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "훈련 목표 프리셋",
+        "hint": "멤버는 이 프리셋을 상속받으며, 개인적으로 재정의할 수 있습니다.",
+        "saved": "훈련 목표가 저장되었습니다.",
+        "cleared": "훈련 목표 프리셋이 제거되었습니다.",
+        "clear": "프리셋 제거",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "훈련 목표를 불러올 수 없습니다.",
+          "save": "훈련 목표를 저장할 수 없습니다."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "활동"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "훈련 목표",
+    "intro": "카테고리별 일일 목표를 설정하고 진행 상황을 추적하세요.",
+    "today": "오늘",
+    "setTitle": "목표 설정",
+    "tracker": "목표 추적기",
+    "min": "분",
+    "weeklyDays": "주당 일수",
+    "weekProgress": "이번 주 {{target}}일 중 {{done}}일",
+    "fromGroup": "그룹 \"{{group}}\"의 프리셋입니다. 개인적으로 조정할 수 있습니다.",
+    "personal": "개인 목표입니다.",
+    "resetOverride": "그룹 프리셋으로 초기화",
+    "noGoalHint": "아직 목표가 없습니다 — 아래에서 일일 목표를 설정하세요.",
+    "playHint": "연결된 Lichess/chess.com 계정에서 플레이 시간이 자동으로 추적됩니다.",
+    "saved": "목표가 저장되었습니다.",
+    "resetDone": "그룹 프리셋으로 초기화되었습니다.",
+    "error": "저장할 수 없습니다. 다시 시도해 주세요.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "미달성",
+      "partial": "부분 달성",
+      "full": "모든 목표 달성"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "퍼즐",
+      "book": "교재 / 코스",
+      "play": "플레이"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "플레이 시간 업데이트",
+    "syncDone": "플레이 시간이 업데이트되었습니다."
   }
 }

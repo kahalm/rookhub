@@ -34,7 +34,7 @@
     "account": "Konto",
     "analysis": "Analys",
     "stats": "Statistik",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Träningsmål"
   },
   "app": {
     "changelogTitle": "Ändringslogg",
@@ -880,14 +880,14 @@
         "removeMember": "Det gick inte att ta bort medlem"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Träningsmålsmall",
+        "hint": "Medlemmar ärver denna mall; de kan åsidosätta den för sig själva.",
+        "saved": "Träningsmålet sparat.",
+        "cleared": "Träningsmålsmallen borttagen.",
+        "clear": "Ta bort mall",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Det gick inte att läsa in träningsmålet.",
+          "save": "Det gick inte att spara träningsmålet."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Aktivitet"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
+    "title": "Träningsmål",
+    "intro": "Sätt dagliga mål per kategori och följ ditt framsteg.",
+    "today": "Idag",
+    "setTitle": "Sätt dina mål",
+    "tracker": "Måluppföljning",
     "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "weeklyDays": "Dagar per vecka",
+    "weekProgress": "{{done}} av {{target}} dagar denna vecka",
+    "fromGroup": "Mall från din grupp \"{{group}}\". Du kan justera den för dig själv.",
+    "personal": "Ditt personliga mål.",
+    "resetOverride": "Återställ till gruppmall",
+    "noGoalHint": "Inga mål satta ännu — sätt dina dagliga mål nedan.",
+    "playHint": "Speltid spåras automatiskt från ditt länkade Lichess/chess.com-konto.",
+    "saved": "Mål sparade.",
+    "resetDone": "Återställd till gruppmallen.",
+    "error": "Kunde inte spara. Försök igen.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Inte uppnått",
+      "partial": "Delvis uppnått",
+      "full": "Alla mål uppnådda"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Uppgifter",
+      "book": "Bok / Kurs",
+      "play": "Spelande"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Uppdatera speltid",
+    "syncDone": "Speltid uppdaterad."
   }
 }

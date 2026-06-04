@@ -34,7 +34,7 @@
     "account": "Акаунт",
     "analysis": "Аналіз",
     "stats": "Статистика",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Навчальні цілі"
   },
   "app": {
     "changelogTitle": "Список змін",
@@ -880,14 +880,14 @@
         "removeMember": "Не вдалося видалити учасника"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Шаблон навчальної цілі",
+        "hint": "Учасники успадковують цей шаблон; кожен може змінити його для себе.",
+        "saved": "Навчальну ціль збережено.",
+        "cleared": "Шаблон навчальної цілі видалено.",
+        "clear": "Видалити шаблон",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Не вдалося завантажити навчальну ціль.",
+          "save": "Не вдалося зберегти навчальну ціль."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Активність"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Навчальні цілі",
+    "intro": "Встановіть щоденні цілі за категоріями та відстежуйте свій прогрес.",
+    "today": "Сьогодні",
+    "setTitle": "Встановіть свої цілі",
+    "tracker": "Трекер цілей",
+    "min": "хв",
+    "weeklyDays": "Днів на тиждень",
+    "weekProgress": "{{done}} з {{target}} днів цього тижня",
+    "fromGroup": "Шаблон з вашої групи «{{group}}». Ви можете змінити його для себе.",
+    "personal": "Ваша особиста ціль.",
+    "resetOverride": "Скинути до шаблону групи",
+    "noGoalHint": "Цілей ще не встановлено — задайте щоденні показники нижче.",
+    "playHint": "Час гри відстежується автоматично з вашого підключеного акаунту Lichess/chess.com.",
+    "saved": "Цілі збережено.",
+    "resetDone": "Скинуто до шаблону групи.",
+    "error": "Не вдалося зберегти. Будь ласка, спробуйте ще раз.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Не досягнуто",
+      "partial": "Частково досягнуто",
+      "full": "Всі цілі досягнуто"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Задачі",
+      "book": "Книга / Курс",
+      "play": "Гра"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Оновити час гри",
+    "syncDone": "Час гри оновлено."
   }
 }

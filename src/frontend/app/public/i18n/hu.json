@@ -34,7 +34,7 @@
     "account": "Fiók",
     "analysis": "Elemzés",
     "stats": "Statisztikák",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Edzéscélok"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -880,14 +880,14 @@
         "removeMember": "Nem sikerült eltávolítani a tagot"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Edzéscél-sablon",
+        "hint": "A tagok öröklik ezt a sablont; felülírhatják saját maguk számára.",
+        "saved": "Edzéscél mentve.",
+        "cleared": "Edzéscél-sablon eltávolítva.",
+        "clear": "Sablon eltávolítása",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Nem sikerült betölteni az edzéscélt.",
+          "save": "Nem sikerült menteni az edzéscélt."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Aktivitás"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Edzéscélok",
+    "intro": "Állíts be napi célokat kategóriánként, és kövesd nyomon a haladásodat.",
+    "today": "Ma",
+    "setTitle": "Állítsd be a céljaidat",
+    "tracker": "Célkövető",
+    "min": "perc",
+    "weeklyDays": "Napok hetente",
+    "weekProgress": "{{done}} / {{target}} nap ezen a héten",
+    "fromGroup": "Sablon a(z) \"{{group}}\" csoportodtól. Felülírhatod saját magad számára.",
+    "personal": "Személyes célod.",
+    "resetOverride": "Visszaállítás a csoport-sablonra",
+    "noGoalHint": "Még nincsenek célok beállítva – add meg a napi céljaidat lent.",
+    "playHint": "A játékidő automatikusan nyomon követésre kerül a csatlakoztatott Lichess/chess.com-fiókodból.",
+    "saved": "Célok mentve.",
+    "resetDone": "Visszaállítva a csoport-sablonra.",
+    "error": "Nem sikerült menteni. Kérjük, próbáld újra.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Nem teljesítve",
+      "partial": "Részben teljesítve",
+      "full": "Minden cél teljesítve"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Feladványok",
+      "book": "Könyv / Tanfolyam",
+      "play": "Játék"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Játékidő frissítése",
+    "syncDone": "Játékidő frissítve."
   }
 }

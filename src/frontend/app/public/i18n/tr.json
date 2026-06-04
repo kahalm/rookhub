@@ -34,7 +34,7 @@
     "account": "Hesap",
     "analysis": "Analiz",
     "stats": "İstatistikler",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Antrenman Hedefleri"
   },
   "app": {
     "changelogTitle": "Değişiklikler",
@@ -880,14 +880,14 @@
         "removeMember": "Üye kaldırılamadı"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Antrenman hedefi şablonu",
+        "hint": "Üyeler bu şablonu devralır; kendileri için değiştirebilirler.",
+        "saved": "Antrenman hedefi kaydedildi.",
+        "cleared": "Antrenman hedefi şablonu kaldırıldı.",
+        "clear": "Şablonu kaldır",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Antrenman hedefi yüklenemedi.",
+          "save": "Antrenman hedefi kaydedilemedi."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Aktivite"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Antrenman Hedefleri",
+    "intro": "Kategoriye göre günlük hedefler belirleyin ve ilerlemenizi takip edin.",
+    "today": "Bugün",
+    "setTitle": "Hedeflerinizi belirleyin",
+    "tracker": "Hedef takibi",
+    "min": "dk",
+    "weeklyDays": "Haftada gün sayısı",
+    "weekProgress": "Bu hafta {{target}} günden {{done}} günü tamamlandı",
+    "fromGroup": "\"{{group}}\" grubunuzdan şablon. Kendiniz için ayarlayabilirsiniz.",
+    "personal": "Kişisel hedefiniz.",
+    "resetOverride": "Grup şablonuna sıfırla",
+    "noGoalHint": "Henüz hedef belirlenmedi — aşağıda günlük hedeflerinizi ayarlayın.",
+    "playHint": "Oynama süresi, bağlı Lichess/chess.com hesabınızdan otomatik olarak takip edilir.",
+    "saved": "Hedefler kaydedildi.",
+    "resetDone": "Grup şablonuna sıfırlandı.",
+    "error": "Kaydedilemedi. Lütfen tekrar deneyin.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Ulaşılmadı",
+      "partial": "Kısmen ulaşıldı",
+      "full": "Tüm hedeflere ulaşıldı"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Problemler",
+      "book": "Kitap / Kurs",
+      "play": "Oynama"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Oynama süresini güncelle",
+    "syncDone": "Oynama süresi güncellendi."
   }
 }

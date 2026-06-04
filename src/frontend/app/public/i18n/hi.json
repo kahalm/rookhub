@@ -34,7 +34,7 @@
     "account": "खाता",
     "analysis": "विश्लेषण",
     "stats": "आँकड़े",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "प्रशिक्षण लक्ष्य"
   },
   "app": {
     "changelogTitle": "चेंजलॉग",
@@ -880,14 +880,14 @@
         "removeMember": "सदस्य हटाने में विफल"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "प्रशिक्षण लक्ष्य प्रीसेट",
+        "hint": "सदस्यों को यह प्रीसेट मिलता है; वे इसे अपने लिए बदल सकते हैं।",
+        "saved": "प्रशिक्षण लक्ष्य सहेजा गया।",
+        "cleared": "प्रशिक्षण लक्ष्य प्रीसेट हटाया गया।",
+        "clear": "प्रीसेट हटाएं",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "प्रशिक्षण लक्ष्य लोड नहीं हो सका।",
+          "save": "प्रशिक्षण लक्ष्य सहेजा नहीं जा सका।"
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "गतिविधि"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "प्रशिक्षण लक्ष्य",
+    "intro": "प्रत्येक श्रेणी के लिए दैनिक लक्ष्य निर्धारित करें और अपनी प्रगति ट्रैक करें।",
+    "today": "आज",
+    "setTitle": "अपने लक्ष्य निर्धारित करें",
+    "tracker": "लक्ष्य ट्रैकर",
+    "min": "मिनट",
+    "weeklyDays": "प्रति सप्ताह दिन",
+    "weekProgress": "इस सप्ताह {{target}} में से {{done}} दिन",
+    "fromGroup": "आपके समूह \"{{group}}\" का प्रीसेट। आप इसे अपने लिए बदल सकते हैं।",
+    "personal": "आपका व्यक्तिगत लक्ष्य।",
+    "resetOverride": "समूह प्रीसेट पर रीसेट करें",
+    "noGoalHint": "अभी कोई लक्ष्य नहीं — नीचे अपने दैनिक लक्ष्य निर्धारित करें।",
+    "playHint": "खेलने का समय आपके लिंक किए गए Lichess/chess.com खाते से स्वतः ट्रैक होता है।",
+    "saved": "लक्ष्य सहेजे गए।",
+    "resetDone": "समूह प्रीसेट पर रीसेट किया गया।",
+    "error": "सहेजा नहीं जा सका। कृपया पुनः प्रयास करें।",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "नहीं पहुँचा",
+      "partial": "आंशिक रूप से पहुँचा",
+      "full": "सभी लक्ष्य पूर्ण"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "पहेलियाँ",
+      "book": "किताब / पाठ्यक्रम",
+      "play": "खेलना"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "खेलने का समय अपडेट करें",
+    "syncDone": "खेलने का समय अपडेट हुआ।"
   }
 }

@@ -34,7 +34,7 @@
     "account": "Λογαριασμός",
     "analysis": "Ανάλυση",
     "stats": "Στατιστικά",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Στόχοι προπόνησης"
   },
   "app": {
     "changelogTitle": "Αλλαγές",
@@ -880,14 +880,14 @@
         "removeMember": "Αποτυχία αφαίρεσης μέλους"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Πρότυπο στόχου προπόνησης",
+        "hint": "Τα μέλη κληρονομούν αυτό το πρότυπο· μπορούν να το παρακάμψουν για τον εαυτό τους.",
+        "saved": "Ο στόχος προπόνησης αποθηκεύτηκε.",
+        "cleared": "Το πρότυπο στόχου προπόνησης αφαιρέθηκε.",
+        "clear": "Αφαίρεση προτύπου",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Δεν ήταν δυνατή η φόρτωση του στόχου προπόνησης.",
+          "save": "Δεν ήταν δυνατή η αποθήκευση του στόχου προπόνησης."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Δραστηριότητα"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Στόχοι προπόνησης",
+    "intro": "Ορίστε ημερήσιους στόχους ανά κατηγορία και παρακολουθήστε την πρόοδό σας.",
+    "today": "Σήμερα",
+    "setTitle": "Ορίστε τους στόχους σας",
+    "tracker": "Παρακολούθηση στόχων",
+    "min": "λεπτ.",
+    "weeklyDays": "Ημέρες ανά εβδομάδα",
+    "weekProgress": "{{done}} από {{target}} ημέρες αυτή την εβδομάδα",
+    "fromGroup": "Πρότυπο από την ομάδα σας «{{group}}». Μπορείτε να το προσαρμόσετε για τον εαυτό σας.",
+    "personal": "Ο προσωπικός σας στόχος.",
+    "resetOverride": "Επαναφορά στο πρότυπο ομάδας",
+    "noGoalHint": "Δεν έχουν οριστεί στόχοι ακόμα — ορίστε τους ημερήσιους στόχους σας παρακάτω.",
+    "playHint": "Ο χρόνος παιχνιδιού παρακολουθείται αυτόματα από τον συνδεδεμένο λογαριασμό σας Lichess/chess.com.",
+    "saved": "Οι στόχοι αποθηκεύτηκαν.",
+    "resetDone": "Επαναφορά στο πρότυπο ομάδας.",
+    "error": "Δεν ήταν δυνατή η αποθήκευση. Δοκιμάστε ξανά.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Δεν επιτεύχθηκε",
+      "partial": "Επιτεύχθηκε εν μέρει",
+      "full": "Όλοι οι στόχοι επιτεύχθηκαν"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Ασκήσεις",
+      "book": "Βιβλίο / Μάθημα",
+      "play": "Παιχνίδι"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Ενημέρωση χρόνου παιχνιδιού",
+    "syncDone": "Ο χρόνος παιχνιδιού ενημερώθηκε."
   }
 }

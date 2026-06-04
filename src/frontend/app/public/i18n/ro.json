@@ -34,7 +34,7 @@
     "account": "Cont",
     "analysis": "Analiză",
     "stats": "Statistici",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Obiective de antrenament"
   },
   "app": {
     "changelogTitle": "Jurnal de modificări",
@@ -880,14 +880,14 @@
         "removeMember": "Eliminarea membrului a eșuat"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Obiectiv de antrenament prestabilit",
+        "hint": "Membrii moștenesc acest obiectiv prestabilit; îl pot modifica pentru ei înșiși.",
+        "saved": "Obiectivul de antrenament a fost salvat.",
+        "cleared": "Obiectivul de antrenament prestabilit a fost eliminat.",
+        "clear": "Elimină obiectivul prestabilit",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Obiectivul de antrenament nu a putut fi încărcat.",
+          "save": "Obiectivul de antrenament nu a putut fi salvat."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Activitate"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
+    "title": "Obiective de antrenament",
+    "intro": "Setează obiective zilnice pe categorie și urmărește-ți progresul.",
+    "today": "Astăzi",
+    "setTitle": "Setează-ți obiectivele",
+    "tracker": "Monitor obiective",
     "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "weeklyDays": "Zile pe săptămână",
+    "weekProgress": "{{done}} din {{target}} zile în această săptămână",
+    "fromGroup": "Obiectiv prestabilit din grupul tău \"{{group}}\". Îl poți ajusta pentru tine.",
+    "personal": "Obiectivul tău personal.",
+    "resetOverride": "Resetează la obiectivul prestabilit al grupului",
+    "noGoalHint": "Niciun obiectiv setat încă — stabilește-ți țintele zilnice mai jos.",
+    "playHint": "Timpul de joc este urmărit automat din contul tău Lichess/chess.com conectat.",
+    "saved": "Obiective salvate.",
+    "resetDone": "Resetat la obiectivul prestabilit al grupului.",
+    "error": "Nu s-a putut salva. Te rugăm să încerci din nou.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Neatins",
+      "partial": "Parțial atins",
+      "full": "Toate obiectivele atinse"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Probleme",
+      "book": "Carte / Curs",
+      "play": "Joc"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Actualizează timpul de joc",
+    "syncDone": "Timp de joc actualizat."
   }
 }

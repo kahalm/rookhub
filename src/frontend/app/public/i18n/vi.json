@@ -34,7 +34,7 @@
     "account": "Tài khoản",
     "analysis": "Phân tích",
     "stats": "Thống kê",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Mục tiêu luyện tập"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
@@ -880,14 +880,14 @@
         "removeMember": "Không thể xóa thành viên"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Mẫu mục tiêu luyện tập",
+        "hint": "Thành viên kế thừa mẫu này; họ có thể tự điều chỉnh cho bản thân.",
+        "saved": "Đã lưu mục tiêu luyện tập.",
+        "cleared": "Đã xóa mẫu mục tiêu luyện tập.",
+        "clear": "Xóa mẫu",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Không thể tải mục tiêu luyện tập.",
+          "save": "Không thể lưu mục tiêu luyện tập."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Hoạt động"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "Mục tiêu luyện tập",
+    "intro": "Đặt mục tiêu hàng ngày theo từng danh mục và theo dõi tiến trình của bạn.",
+    "today": "Hôm nay",
+    "setTitle": "Đặt mục tiêu của bạn",
+    "tracker": "Theo dõi mục tiêu",
+    "min": "phút",
+    "weeklyDays": "Ngày mỗi tuần",
+    "weekProgress": "{{done}} trong {{target}} ngày tuần này",
+    "fromGroup": "Mẫu từ nhóm \"{{group}}\" của bạn. Bạn có thể tự điều chỉnh cho bản thân.",
+    "personal": "Mục tiêu cá nhân của bạn.",
+    "resetOverride": "Đặt lại về mẫu nhóm",
+    "noGoalHint": "Chưa có mục tiêu nào — hãy đặt mục tiêu hàng ngày bên dưới.",
+    "playHint": "Thời gian chơi được theo dõi tự động từ tài khoản Lichess/chess.com đã liên kết của bạn.",
+    "saved": "Đã lưu mục tiêu.",
+    "resetDone": "Đã đặt lại về mẫu nhóm.",
+    "error": "Không thể lưu. Vui lòng thử lại.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Chưa đạt",
+      "partial": "Đạt một phần",
+      "full": "Đã đạt tất cả mục tiêu"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Bài tập",
+      "book": "Sách / Khóa học",
+      "play": "Chơi cờ"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Cập nhật thời gian chơi",
+    "syncDone": "Đã cập nhật thời gian chơi."
   }
 }

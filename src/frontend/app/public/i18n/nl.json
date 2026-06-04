@@ -34,7 +34,7 @@
     "account": "Account",
     "analysis": "Analyse",
     "stats": "Statistieken",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Trainingsdoelen"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -880,14 +880,14 @@
         "removeMember": "Lid verwijderen mislukt"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Trainingsdoel-voorinstelling",
+        "hint": "Leden erven deze voorinstelling; ze kunnen die zelf aanpassen.",
+        "saved": "Trainingsdoel opgeslagen.",
+        "cleared": "Trainingsdoel-voorinstelling verwijderd.",
+        "clear": "Voorinstelling verwijderen",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "Trainingsdoel laden mislukt.",
+          "save": "Trainingsdoel opslaan mislukt."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Activiteit"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
+    "title": "Trainingsdoelen",
+    "intro": "Stel dagelijkse doelen in per categorie en volg je voortgang.",
+    "today": "Vandaag",
+    "setTitle": "Stel je doelen in",
+    "tracker": "Doeltracker",
     "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "weeklyDays": "Dagen per week",
+    "weekProgress": "{{done}} van {{target}} dagen deze week",
+    "fromGroup": "Voorinstelling van je groep \"{{group}}\". Je kunt die zelf aanpassen.",
+    "personal": "Jouw persoonlijke doel.",
+    "resetOverride": "Terugzetten naar groepsvoorinstelling",
+    "noGoalHint": "Nog geen doelen ingesteld — stel hieronder je dagelijkse doelen in.",
+    "playHint": "Speeltijd wordt automatisch bijgehouden via je gekoppelde Lichess/chess.com-account.",
+    "saved": "Doelen opgeslagen.",
+    "resetDone": "Teruggezet naar de groepsvoorinstelling.",
+    "error": "Opslaan mislukt. Probeer het opnieuw.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "Niet gehaald",
+      "partial": "Gedeeltelijk gehaald",
+      "full": "Alle doelen gehaald"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Puzzels",
+      "book": "Boek / Cursus",
+      "play": "Spelen"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Speeltijd bijwerken",
+    "syncDone": "Speeltijd bijgewerkt."
   }
 }

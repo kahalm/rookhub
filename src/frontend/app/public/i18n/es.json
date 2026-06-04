@@ -34,7 +34,7 @@
     "account": "Cuenta",
     "analysis": "Análisis",
     "stats": "Estadísticas",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "Objetivos de entrenamiento"
   },
   "app": {
     "changelogTitle": "Registro de cambios",
@@ -880,14 +880,14 @@
         "removeMember": "Error al eliminar miembro"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "Plantilla de objetivo de entrenamiento",
+        "hint": "Los miembros heredan esta plantilla; pueden ajustarla para ellos mismos.",
+        "saved": "Objetivo de entrenamiento guardado.",
+        "cleared": "Plantilla de objetivo de entrenamiento eliminada.",
+        "clear": "Eliminar plantilla",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "No se pudo cargar el objetivo de entrenamiento.",
+          "save": "No se pudo guardar el objetivo de entrenamiento."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "Actividad"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
+    "title": "Objetivos de entrenamiento",
+    "intro": "Establece objetivos diarios por categoría y haz un seguimiento de tu progreso.",
+    "today": "Hoy",
+    "setTitle": "Establece tus objetivos",
+    "tracker": "Seguimiento de objetivos",
     "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "weeklyDays": "Días por semana",
+    "weekProgress": "{{done}} de {{target}} días esta semana",
+    "fromGroup": "Plantilla de tu grupo \"{{group}}\". Puedes ajustarla para ti mismo.",
+    "personal": "Tu objetivo personal.",
+    "resetOverride": "Restablecer a la plantilla del grupo",
+    "noGoalHint": "Aún no hay objetivos establecidos — define tus metas diarias a continuación.",
+    "playHint": "El tiempo de juego se registra automáticamente desde tu cuenta de Lichess/chess.com vinculada.",
+    "saved": "Objetivos guardados.",
+    "resetDone": "Restablecido a la plantilla del grupo.",
+    "error": "No se pudo guardar. Por favor, inténtalo de nuevo.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "No alcanzado",
+      "partial": "Parcialmente alcanzado",
+      "full": "Todos los objetivos alcanzados"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "Ejercicios",
+      "book": "Libro / Curso",
+      "play": "Jugar"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "Actualizar tiempo de juego",
+    "syncDone": "Tiempo de juego actualizado."
   }
 }

@@ -34,7 +34,7 @@
     "account": "حساب کاربری",
     "analysis": "تحلیل",
     "stats": "آمار",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "اهداف تمرینی"
   },
   "app": {
     "changelogTitle": "تغییرات",
@@ -880,14 +880,14 @@
         "removeMember": "حذف عضو ناموفق بود"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "پیش‌فرض هدف تمرینی",
+        "hint": "اعضا این پیش‌فرض را به ارث می‌برند؛ می‌توانند آن را برای خود تغییر دهند.",
+        "saved": "هدف تمرینی ذخیره شد.",
+        "cleared": "پیش‌فرض هدف تمرینی حذف شد.",
+        "clear": "حذف پیش‌فرض",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "بارگذاری هدف تمرینی ناموفق بود.",
+          "save": "ذخیره هدف تمرینی ناموفق بود."
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "فعالیت"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "اهداف تمرینی",
+    "intro": "اهداف روزانه را به ازای هر دسته تعیین کنید و پیشرفتتان را دنبال کنید.",
+    "today": "امروز",
+    "setTitle": "اهداف خود را تعیین کنید",
+    "tracker": "ردیاب هدف",
+    "min": "دقیقه",
+    "weeklyDays": "روز در هفته",
+    "weekProgress": "{{done}} از {{target}} روز این هفته",
+    "fromGroup": "پیش‌فرض از گروه شما «{{group}}». می‌توانید آن را برای خود تنظیم کنید.",
+    "personal": "هدف شخصی شما.",
+    "resetOverride": "بازنشانی به پیش‌فرض گروه",
+    "noGoalHint": "هنوز هدفی تعیین نشده — اهداف روزانه خود را در زیر وارد کنید.",
+    "playHint": "زمان بازی به‌طور خودکار از حساب Lichess/chess.com متصل‌شده شما ردیابی می‌شود.",
+    "saved": "اهداف ذخیره شدند.",
+    "resetDone": "به پیش‌فرض گروه بازنشانی شد.",
+    "error": "ذخیره ناموفق بود. لطفاً دوباره تلاش کنید.",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "به هدف نرسیدید",
+      "partial": "تا حدی به هدف رسیدید",
+      "full": "همه اهداف محقق شدند"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "تاکتیک‌ها",
+      "book": "کتاب / دوره",
+      "play": "بازی"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "به‌روزرسانی زمان بازی",
+    "syncDone": "زمان بازی به‌روز شد."
   }
 }

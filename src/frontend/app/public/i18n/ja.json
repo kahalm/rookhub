@@ -34,7 +34,7 @@
     "account": "アカウント",
     "analysis": "解析",
     "stats": "統計",
-    "trainingGoals": "Training Goals"
+    "trainingGoals": "トレーニング目標"
   },
   "app": {
     "changelogTitle": "変更履歴",
@@ -880,14 +880,14 @@
         "removeMember": "メンバーの削除に失敗しました"
       },
       "goal": {
-        "title": "Training goal preset",
-        "hint": "Members inherit this preset; they can override it for themselves.",
-        "saved": "Training goal saved.",
-        "cleared": "Training goal preset removed.",
-        "clear": "Remove preset",
+        "title": "トレーニング目標のプリセット",
+        "hint": "メンバーはこのプリセットを引き継ぎます。個人で上書き設定することもできます。",
+        "saved": "トレーニング目標を保存しました。",
+        "cleared": "トレーニング目標のプリセットを削除しました。",
+        "clear": "プリセットを削除",
         "errors": {
-          "load": "Could not load the training goal.",
-          "save": "Could not save the training goal."
+          "load": "トレーニング目標を読み込めませんでした。",
+          "save": "トレーニング目標を保存できませんでした。"
         }
       }
     },
@@ -958,33 +958,33 @@
     "activity": "アクティビティ"
   },
   "trainingGoals": {
-    "title": "Training Goals",
-    "intro": "Set daily goals per category and track your progress.",
-    "today": "Today",
-    "setTitle": "Set your goals",
-    "tracker": "Goal tracker",
-    "min": "min",
-    "weeklyDays": "Days per week",
-    "weekProgress": "{{done}} of {{target}} days this week",
-    "fromGroup": "Preset from your group \"{{group}}\". You can adjust it for yourself.",
-    "personal": "Your personal goal.",
-    "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
-    "playHint": "Playing time is tracked automatically from your linked Lichess/chess.com account.",
-    "saved": "Goals saved.",
-    "resetDone": "Reset to the group preset.",
-    "error": "Could not save. Please try again.",
+    "title": "トレーニング目標",
+    "intro": "カテゴリーごとに日々の目標を設定し、進捗を追跡しましょう。",
+    "today": "今日",
+    "setTitle": "目標を設定する",
+    "tracker": "目標トラッカー",
+    "min": "分",
+    "weeklyDays": "週あたりの日数",
+    "weekProgress": "今週 {{target}} 日中 {{done}} 日達成",
+    "fromGroup": "グループ「{{group}}」のプリセットです。個人で上書き設定できます。",
+    "personal": "あなたの個人目標です。",
+    "resetOverride": "グループのプリセットに戻す",
+    "noGoalHint": "目標がまだ設定されていません — 下で日々の目標を設定してください。",
+    "playHint": "対局時間は連携済みの Lichess/Chess.com アカウントから自動で記録されます。",
+    "saved": "目標を保存しました。",
+    "resetDone": "グループのプリセットにリセットしました。",
+    "error": "保存できませんでした。もう一度お試しください。",
     "status": {
-      "none": "Not reached",
-      "partial": "Partly reached",
-      "full": "All goals reached"
+      "none": "未達成",
+      "partial": "一部達成",
+      "full": "すべての目標達成"
     },
     "cat": {
-      "puzzles": "Puzzles",
-      "book": "Book / Course",
-      "play": "Playing"
+      "puzzles": "パズル",
+      "book": "ブック / コース",
+      "play": "対局"
     },
-    "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncPlay": "対局時間を更新",
+    "syncDone": "対局時間を更新しました。"
   }
 }
