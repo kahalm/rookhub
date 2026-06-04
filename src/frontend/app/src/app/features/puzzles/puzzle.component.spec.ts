@@ -86,3 +86,60 @@ describe('PuzzleComponent give-up', () => {
     c.ngOnDestroy();
   }));
 });
+
+describe('PuzzleComponent offline pool exhaustion', () => {
+  let originalDescriptor: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'onLine');
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+  });
+
+  afterEach(() => {
+    if (originalDescriptor) Object.defineProperty(navigator, 'onLine', originalDescriptor);
+    else Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true });
+  });
+
+  it('signals exhausted (NOT no-cache) when pool empties after having shown a puzzle', () => {
+    const c = makeComponent();
+    // Erstaufruf-Cache leer; aber lastShownPuzzle gesetzt → Pool wurde durchgespielt.
+    (c as any).offlinePuzzlePool = [];
+    (c as any).lastShownPuzzle = { ...PUZZLE };
+
+    c.loadNext();
+
+    expect(c.state).toBe('ERROR');
+    expect(c.offlinePoolExhausted).toBeTrue();
+    expect(c.offlineNoCache).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('signals no-cache when pool is empty AND nothing was ever shown', () => {
+    const c = makeComponent();
+    (c as any).offlinePuzzlePool = [];
+    // lastShownPuzzle bleibt null → klassischer „nie online geöffnet"-Fall.
+
+    c.loadNext();
+
+    expect(c.state).toBe('ERROR');
+    expect(c.offlineNoCache).toBeTrue();
+    expect(c.offlinePoolExhausted).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('replayLastPuzzle replays the last shown puzzle and clears the exhausted flag', () => {
+    const c = makeComponent();
+    const last = { ...PUZZLE };
+    (c as any).lastShownPuzzle = last;
+    c.offlinePoolExhausted = true;
+    // setupPuzzle ruft setupSolver auf — den hier neutralisieren, der echte Solver hängt an Stockfish.
+    spyOn(c as any, 'setupPuzzle');
+
+    c.replayLastPuzzle();
+
+    expect(c.puzzle).toBe(last);
+    expect(c.offlinePoolExhausted).toBeFalse();
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(last);
+    c.ngOnDestroy();
+  });
+});

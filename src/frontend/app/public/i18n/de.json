@@ -440,6 +440,8 @@
       "loading": "Puzzle wird geladen…",
       "loadFailed": "Puzzle konnte nicht geladen werden",
       "offlineNoCache": "Du bist offline und es sind keine Puzzles gespeichert. Öffne diese Seite einmal online, um Puzzles für den Offline-Modus zu speichern.",
+      "offlinePoolExhausted": "Keine neuen Offline-Puzzles mehr — du hast alle vorab gespeicherten Puzzles durchgespielt. Sobald du wieder online bist, werden neue geladen.",
+      "replayLast": "Letztes Puzzle nochmal spielen",
       "watchOpponent": "Beobachte den Zug des Gegners…",
       "yourTurn": "Du bist am Zug!",
       "gaveUpPlayOut": "Aufgegeben — spiel die Lösung selbst durch.",

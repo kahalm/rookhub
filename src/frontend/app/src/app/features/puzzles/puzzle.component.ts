@@ -104,7 +104,14 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   // ===== Offline-Puzzle-Pool (Standard-Modus) =====
   private offlinePuzzlePool: PuzzleDto[] = [];
+  /** „Offline, nichts gespeichert" — Pool war noch nie befüllt (z.B. Seite erstmals offline geöffnet). */
   offlineNoCache = false;
+  /** „Offline, alle gespielt" — Pool ist leer geworden, aber wir hatten zuvor mindestens 1 Puzzle gezeigt.
+   *  In dem Fall bietet das UI explizit an, das letzte Puzzle nochmal zu spielen — sonst sitzt der Nutzer
+   *  vor einer „Verbinden Sie sich erneut"-Wand, obwohl er noch mit dem zuletzt gesehenen Puzzle üben könnte. */
+  offlinePoolExhausted = false;
+  /** Zuletzt geladenes Puzzle (egal ob gelöst, fehlgeschlagen, oder noch im Spiel). Wird für „Letztes nochmal" verwendet. */
+  private lastShownPuzzle: PuzzleDto | null = null;
 
   private loadOfflinePool(): PuzzleDto[] {
     try { return JSON.parse(localStorage.getItem(PUZZLE_POOL_KEY) || '[]') || []; } catch { return []; }
@@ -238,6 +245,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   loadNext(): void {
     this.state = 'LOADING';
     this.offlineNoCache = false;
+    this.offlinePoolExhausted = false;
     this.attemptRecorded = false;
     this.gaveUp = false;
     this.stopTimer();
@@ -263,7 +271,16 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       const r = this.ratingRange();
       const pooled = takeFromPool(this.offlinePuzzlePool, r.min, r.max)
         ?? takeNearestFromPool(this.offlinePuzzlePool, (r.min + r.max) / 2);
-      if (!pooled) { this.offlineNoCache = true; this.state = 'ERROR'; this.puzzle = null; return; }
+      if (!pooled) {
+        // Pool ist leer. Falls wir vorher schon mindestens ein Puzzle hatten, ist der Vorrat
+        // verbraucht (Pool exhausted) — dann „Letztes nochmal spielen" anbieten statt einfach
+        // „nichts gespeichert" zu zeigen. Sonst (Erstaufruf offline ohne Cache): no-cache.
+        if (this.lastShownPuzzle) this.offlinePoolExhausted = true;
+        else this.offlineNoCache = true;
+        this.state = 'ERROR';
+        this.puzzle = null;
+        return;
+      }
       this.saveOfflinePool();
       source$ = of(pooled);
     } else {
@@ -274,6 +291,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     source$.subscribe({
         next: puzzle => {
           this.puzzle = puzzle;
+          this.lastShownPuzzle = puzzle;
           this.setupPuzzle(puzzle);
           this.prefetchNext();
           this.prefetchOfflinePool();
@@ -283,6 +301,23 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           this.puzzle = null;
         }
       });
+  }
+
+  /** Spielt das zuletzt geladene Puzzle nochmal (Fallback wenn der Offline-Pool aufgebraucht ist). */
+  replayLastPuzzle(): void {
+    if (!this.lastShownPuzzle) return;
+    this.offlineNoCache = false;
+    this.offlinePoolExhausted = false;
+    this.attemptRecorded = false;
+    this.gaveUp = false;
+    this.elapsedSeconds = 0;
+    this.alternativeSolve = false;
+    this.lastEloChange = null;
+    this.showEval = false;
+    this.initialEval = '';
+    this.currentEval = '';
+    this.puzzle = this.lastShownPuzzle;
+    this.setupPuzzle(this.lastShownPuzzle);
   }
 
   private prefetchNext(): void {

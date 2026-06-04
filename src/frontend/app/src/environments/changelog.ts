@@ -19,6 +19,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     '22 neue Sprachen — die App ist jetzt in 25 Sprachen verfügbar (u. a. Spanisch, Chinesisch, Hindi, Arabisch, Portugiesisch, Französisch, Russisch, Japanisch, Koreanisch …), inklusive Rechts-nach-links-Darstellung für Arabisch und Persisch.',
     'Technische Grundlagen für die spätere Android-App im Google Play Store (Digital Asset Links, TWA-Build-Gerüst) und zentrale Konfiguration der Impressum-Betreiberdaten.',
   ]},
+  { version: '0.82.4', date: '2026-06-04', changes: [
+    'Android-TWA: Digital Asset Links unter `/.well-known/assetlinks.json` mit dem App-Signatur-Fingerprint ausgeliefert — verknüpft die installierte App mit der Domain, sodass die TWA ohne Browser-Adressleiste (full-screen) läuft.',
+  ]},
+  { version: '0.82.3', date: '2026-06-04', changes: [
+    'Standard-Puzzle Offline: Wenn der vorab gespeicherte Puzzle-Pool aufgebraucht ist (alle gespielt), sieht man jetzt einen klaren Hinweis „Keine neuen Offline-Puzzles mehr" mit einem Button „Letztes Puzzle nochmal spielen" — statt dem unklaren „nichts gespeichert"-Bildschirm bzw. dem stillen Wiederholen desselben Puzzles. Sobald man wieder online ist, lädt die Seite automatisch neue Puzzles nach.',
+  ]},
   { version: '0.82.2', date: '2026-06-04', changes: [
     'Fix (Mobile, Visualisierungs-Modus): Wenn man im Viz-Modus (≥ Stufe 1) auf ein Feld tippte, war die Auswahl auf dem Handy kaum erkennbar — nur ein dünner Kreis-Stroke, der unter dem Finger oft verschwand. Jetzt wird das angetippte Feld zusätzlich vollflächig hervorgehoben (chessground-„selected", gelblich) und der grüne Kreis bleibt als zweiter Akzent. Chessgrounds eigene Interaktion ist im Viz-Modus abgeschaltet, damit der Tap nicht gleichzeitig die Auswahl wieder löscht.',
   ]},

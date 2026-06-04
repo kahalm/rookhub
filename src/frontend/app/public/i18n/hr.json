@@ -440,6 +440,8 @@
       "loading": "Učitavanje zagonetke…",
       "loadFailed": "Učitavanje zagonetke nije uspjelo",
       "offlineNoCache": "Izvan mreže ste i nema spremljenih zagonetki. Otvorite ovu stranicu jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
+      "offlinePoolExhausted": "Nema više izvanmrežnih zagonetki — odigrali ste sve spremljene. Nove će se učitati čim ponovno budete na mreži.",
+      "replayLast": "Ponovno odigraj zadnju zagonetku",
       "watchOpponent": "Pratite protivnikov potez…",
       "yourTurn": "Vi ste na potezu!",
       "gaveUpPlayOut": "Predali ste se — sami odigrajte rješenje.",
