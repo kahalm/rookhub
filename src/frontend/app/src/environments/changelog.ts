@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.85.4';
+export const APP_VERSION = '0.85.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.5', date: '2026-06-04', changes: [
+    'Fix (Lokalisierung): Beim Aufräumen des „Logs"-Tabs in 0.85.1 ist in den drei i18n-Dateien (en/de/hr) ein überflüssiges Komma stehen geblieben — die JSON-Dateien waren dadurch syntaktisch ungültig, ngx-translate konnte sie nicht parsen und zeigte nur noch die Schlüssel wie „dashboard.friends.manage" statt der Texte. JSON in allen 3 Sprachen repariert; die übrigen 22 Sprachen waren unverändert in Ordnung.',
+  ]},
   { version: '0.85.4', date: '2026-06-04', changes: [
     'Fix (Viz-Modus, Mobile): in 0.85.3 wurde die gelbliche „selected"-Markierung beim Tap entfernt und nur noch ein dicker grüner Kreis gezeichnet — auf einigen Handys war dieser Kreis aber nicht mehr sichtbar, sodass beim Tap GAR keine Markierung mehr zu sehen war. Jetzt wieder: gelbliches Feld-Highlight UND grüner Kreis zusammen; der Kreis ist dabei nochmals dicker (Stroke 22 statt 18), damit er auf Mobile prominent steht und das Highlight als verlässliche Rückfallebene da bleibt.',
   ]},

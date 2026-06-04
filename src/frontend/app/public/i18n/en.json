@@ -889,7 +889,7 @@
           "save": "Could not save the training goal."
         }
       }
-    },
+    }
   },
   "analysis": {
     "title": "Analysis",
