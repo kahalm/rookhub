@@ -84,6 +84,7 @@
       "title": "Bài tập",
       "subtitle": "Elo {{elo}} | {{solved}} đã giải ({{accuracy}}%)",
       "solve": "Giải bài tập",
+      "daily": "Bài tập hàng ngày",
       "endless": "Vô tận"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "Tài khoản Discord này đã được liên kết với người dùng RookHub khác.",
       "linkFailed": "Không thể liên kết tài khoản Discord",
       "stashed": "Đăng nhập hoặc đăng ký để hoàn tất liên kết tài khoản Discord của bạn."
+    },
+    "tokens": {
+      "title": "Token mở rộng",
+      "subtitle": "Token truy cập cá nhân cho các máy khách (ví dụ: tiện ích chess.com).",
+      "empty": "Chưa có token nào. Tạo một token nếu bạn muốn kết nối tiện ích chess.com.",
+      "create": "Tạo Token",
+      "revoke": "Thu hồi token",
+      "revokeConfirm": "Thu hồi token \"{{name}}\"? Máy khách sẽ không còn kết nối được nữa.",
+      "revokeFailed": "Thu hồi thất bại",
+      "loadFailed": "Không thể tải token",
+      "createFailed": "Không thể tạo token",
+      "never": "—",
+      "col": {
+        "name": "Tên",
+        "prefix": "Tiền tố",
+        "created": "Ngày tạo",
+        "lastUsed": "Lần dùng cuối",
+        "expires": "Hết hạn"
+      },
+      "dialog": {
+        "title": "Token mở rộng mới",
+        "name": "Tên",
+        "nameHint": "ví dụ: \"Tiện ích Chess.com (laptop)\"",
+        "expires": "Hết hạn",
+        "never": "không bao giờ",
+        "days": "ngày",
+        "create": "Tạo"
+      },
+      "show": {
+        "title": "Token đã được tạo",
+        "warning": "Token này chỉ được hiển thị MỘT LẦN duy nhất. Hãy sao chép vào tiện ích của bạn — không thể lấy lại sau này.",
+        "copy": "Sao chép",
+        "copied": "Đã sao chép vào clipboard"
+      }
     },
     "offline": {
       "title": "Ngoại tuyến",
@@ -268,7 +303,14 @@
       "name": "Tên",
       "description": "Mô tả",
       "public": "Công khai",
+      "kind": "Danh mục",
       "create": "Tạo"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Khai cuộc",
+      "middlegame": "Trung cuộc",
+      "endgame": "Tàn cuộc"
     },
     "lines": {
       "allLines": "Tất cả đường nước",
@@ -399,6 +441,8 @@
       "loading": "Đang tải bài tập…",
       "loadFailed": "Không thể tải bài tập",
       "offlineNoCache": "Bạn đang ngoại tuyến và chưa có bài tập nào được lưu. Mở trang này khi có kết nối để lưu bài tập cho lần chơi ngoại tuyến.",
+      "offlinePoolExhausted": "Không còn bài tập ngoại tuyến — bạn đã giải hết tất cả bài đã lưu. Bài mới sẽ tải khi bạn kết nối lại.",
+      "replayLast": "Chơi lại bài tập trước",
       "watchOpponent": "Xem nước đi của đối thủ…",
       "yourTurn": "Đến lượt bạn!",
       "gaveUpPlayOut": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải.",
@@ -699,6 +743,8 @@
       "analyze": "Phân tích",
       "nextInBook": "Tiếp theo trong sách",
       "randomInBook": "Ngẫu nhiên từ sách",
+      "prevDaily": "Ngày trước",
+      "nextDaily": "Ngày tiếp theo",
       "sharePuzzle": "Chia sẻ bài tập",
       "backToPuzzle": "Quay lại bài tập"
     },

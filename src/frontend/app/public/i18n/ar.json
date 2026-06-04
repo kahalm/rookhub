@@ -84,6 +84,7 @@
       "title": "الألغاز",
       "subtitle": "Elo {{elo}} | {{solved}} محلول ({{accuracy}}%)",
       "solve": "حل الألغاز",
+      "daily": "لغز اليوم",
       "endless": "لا نهاية"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "فشل البحث",
     "chessResultsApplied": "تم تطبيق بيانات ChessResults",
     "fideApplied": "تم تطبيق بيانات FIDE",
+    "tokens": {
+      "title": "رموز التمديد",
+      "subtitle": "رموز وصول شخصية للعملاء الآليين (مثل إضافة chess.com).",
+      "empty": "لا رموز بعد. أنشئ رمزاً إذا أردت توصيل إضافة chess.com.",
+      "create": "إنشاء رمز",
+      "revoke": "إلغاء الرمز",
+      "revokeConfirm": "إلغاء الرمز \"{{name}}\"؟ لن يتمكن العميل من الاتصال بعد الآن.",
+      "revokeFailed": "فشل الإلغاء",
+      "loadFailed": "فشل تحميل الرموز",
+      "createFailed": "فشل إنشاء الرمز",
+      "never": "—",
+      "col": {
+        "name": "الاسم",
+        "prefix": "البادئة",
+        "created": "تاريخ الإنشاء",
+        "lastUsed": "آخر استخدام",
+        "expires": "تاريخ الانتهاء"
+      },
+      "dialog": {
+        "title": "رمز تمديد جديد",
+        "name": "الاسم",
+        "nameHint": "مثال: \"إضافة Chess.com (حاسوب محمول)\"",
+        "expires": "تاريخ الانتهاء",
+        "never": "أبداً",
+        "days": "أيام",
+        "create": "إنشاء"
+      },
+      "show": {
+        "title": "تم إنشاء الرمز",
+        "warning": "يُعرض هذا الرمز مرة واحدة فقط الآن. انسخه في إضافتك — لا يمكن استرجاعه لاحقاً.",
+        "copy": "نسخ",
+        "copied": "تم النسخ إلى الحافظة"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "افتح رابطاً شخصياً من بوت RookHub على Discord (أمر /link أو رسالة لغز خاصة) لربط حساب Discord الخاص بك.",
@@ -268,7 +303,14 @@
       "name": "الاسم",
       "description": "الوصف",
       "public": "عام",
+      "kind": "الفئة",
       "create": "إنشاء"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "افتتاحية",
+      "middlegame": "وسط اللعبة",
+      "endgame": "نهاية اللعبة"
     },
     "lines": {
       "allLines": "جميع الخطوط",
@@ -399,6 +441,8 @@
       "loading": "جارٍ تحميل اللغز…",
       "loadFailed": "فشل تحميل اللغز",
       "offlineNoCache": "أنت غير متصل ولا توجد ألغاز مخزّنة. افتح هذه الصفحة مرة وأنت متصل لحفظ الألغاز للعب غير المتصل.",
+      "offlinePoolExhausted": "لا مزيد من الألغاز غير المتصلة — لقد لعبت جميع الألغاز المخزّنة. ستُحمَّل ألغاز جديدة فور عودتك للاتصال.",
+      "replayLast": "إعادة آخر لغز",
       "watchOpponent": "راقب حركة الخصم…",
       "yourTurn": "دورك!",
       "gaveUpPlayOut": "استسلمت — العب الحل بنفسك.",
@@ -699,6 +743,8 @@
       "analyze": "تحليل",
       "nextInBook": "التالي في الكتاب",
       "randomInBook": "عشوائي من الكتاب",
+      "prevDaily": "اليوم السابق",
+      "nextDaily": "اليوم التالي",
       "sharePuzzle": "مشاركة اللغز",
       "backToPuzzle": "العودة إلى اللغز"
     },

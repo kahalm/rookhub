@@ -84,6 +84,7 @@
       "title": "Puzzle",
       "subtitle": "Elo {{elo}} | {{solved}} risolti ({{accuracy}}%)",
       "solve": "Risolvi puzzle",
+      "daily": "Puzzle del giorno",
       "endless": "Infinito"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "Questo account Discord è già collegato a un altro utente RookHub.",
       "linkFailed": "Impossibile collegare l'account Discord",
       "stashed": "Accedi o registrati per completare il collegamento del tuo account Discord."
+    },
+    "tokens": {
+      "title": "Token di estensione",
+      "subtitle": "Token di accesso personali per client automatici (es. estensione chess.com).",
+      "empty": "Nessun token ancora. Creane uno se vuoi collegare l'estensione chess.com.",
+      "create": "Crea token",
+      "revoke": "Revoca token",
+      "revokeConfirm": "Revocare il token \"{{name}}\"? Il client non potrà più connettersi.",
+      "revokeFailed": "Revoca non riuscita",
+      "loadFailed": "Impossibile caricare i token",
+      "createFailed": "Impossibile creare il token",
+      "never": "—",
+      "col": {
+        "name": "Nome",
+        "prefix": "Prefisso",
+        "created": "Creato",
+        "lastUsed": "Ultimo utilizzo",
+        "expires": "Scade"
+      },
+      "dialog": {
+        "title": "Nuovo token di estensione",
+        "name": "Nome",
+        "nameHint": "es. \"Estensione Chess.com (laptop)\"",
+        "expires": "Scade",
+        "never": "mai",
+        "days": "giorni",
+        "create": "Crea"
+      },
+      "show": {
+        "title": "Token creato",
+        "warning": "Questo token viene mostrato SOLO ora, una volta sola. Copialo nella tua estensione — non potrà essere recuperato in seguito.",
+        "copy": "Copia",
+        "copied": "Copiato negli appunti"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -268,7 +303,14 @@
       "name": "Nome",
       "description": "Descrizione",
       "public": "Pubblico",
+      "kind": "Categoria",
       "create": "Crea"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Apertura",
+      "middlegame": "Mediogioco",
+      "endgame": "Finale"
     },
     "lines": {
       "allLines": "Tutte le linee",
@@ -399,6 +441,8 @@
       "loading": "Caricamento puzzle…",
       "loadFailed": "Impossibile caricare il puzzle",
       "offlineNoCache": "Sei offline e non ci sono puzzle in cache. Apri questa pagina almeno una volta online per salvare i puzzle per l'uso offline.",
+      "offlinePoolExhausted": "Nessun altro puzzle offline — hai giocato tutti quelli salvati in cache. I nuovi puzzle si caricheranno non appena tornerai online.",
+      "replayLast": "Rigioca l'ultimo puzzle",
       "watchOpponent": "Osserva la mossa dell'avversario…",
       "yourTurn": "Tocca a te!",
       "gaveUpPlayOut": "Hai rinunciato — gioca tu stesso la soluzione.",
@@ -699,6 +743,8 @@
       "analyze": "Analizza",
       "nextInBook": "Successivo nel libro",
       "randomInBook": "Casuale dal libro",
+      "prevDaily": "Giorno precedente",
+      "nextDaily": "Giorno successivo",
       "sharePuzzle": "Condividi puzzle",
       "backToPuzzle": "Torna al puzzle"
     },

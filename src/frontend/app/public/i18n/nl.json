@@ -84,6 +84,7 @@
       "title": "Puzzels",
       "subtitle": "Elo {{elo}} | {{solved}} opgelost ({{accuracy}}%)",
       "solve": "Puzzels oplossen",
+      "daily": "Dagelijkse puzzel",
       "endless": "Eindeloos"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "Zoeken mislukt",
     "chessResultsApplied": "ChessResults-gegevens toegepast",
     "fideApplied": "FIDE-gegevens toegepast",
+    "tokens": {
+      "title": "Extensie-tokens",
+      "subtitle": "Persoonlijke toegangstokens voor machineclients (bijv. chess.com-extensie).",
+      "empty": "Nog geen tokens. Maak er een aan als je de chess.com-extensie wilt koppelen.",
+      "create": "Token aanmaken",
+      "revoke": "Token intrekken",
+      "revokeConfirm": "Token \"{{name}}\" intrekken? De client kan dan niet meer verbinden.",
+      "revokeFailed": "Intrekken mislukt",
+      "loadFailed": "Tokens laden mislukt",
+      "createFailed": "Token aanmaken mislukt",
+      "never": "—",
+      "col": {
+        "name": "Naam",
+        "prefix": "Voorvoegsel",
+        "created": "Aangemaakt",
+        "lastUsed": "Laatst gebruikt",
+        "expires": "Verloopt"
+      },
+      "dialog": {
+        "title": "Nieuw extensie-token",
+        "name": "Naam",
+        "nameHint": "bijv. \"Chess.com-extensie (laptop)\"",
+        "expires": "Verloopt",
+        "never": "nooit",
+        "days": "dagen",
+        "create": "Aanmaken"
+      },
+      "show": {
+        "title": "Token aangemaakt",
+        "warning": "Dit token wordt ALLEEN nu, eenmalig getoond. Kopieer het naar je extensie — het kan later niet meer worden opgehaald.",
+        "copy": "Kopiëren",
+        "copied": "Gekopieerd naar klembord"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "Open een persoonlijke link van de RookHub Discord-bot (het /link-commando of een puzzel-DM) om je Discord-account te koppelen.",
@@ -268,7 +303,14 @@
       "name": "Naam",
       "description": "Beschrijving",
       "public": "Openbaar",
+      "kind": "Categorie",
       "create": "Aanmaken"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Opening",
+      "middlegame": "Middenspel",
+      "endgame": "Eindspel"
     },
     "lines": {
       "allLines": "Alle lijnen",
@@ -399,6 +441,8 @@
       "loading": "Puzzel laden…",
       "loadFailed": "Puzzel laden mislukt",
       "offlineNoCache": "Je bent offline en er zijn geen puzzels in de cache. Open deze pagina eenmaal online om puzzels op te slaan voor offline spelen.",
+      "offlinePoolExhausted": "Geen offline puzzels meer — je hebt alle gecachte puzzels gespeeld. Nieuwe puzzels worden geladen zodra je weer online bent.",
+      "replayLast": "Laatste puzzel opnieuw spelen",
       "watchOpponent": "Kijk de zet van de tegenstander…",
       "yourTurn": "Jij bent aan de beurt!",
       "gaveUpPlayOut": "Opgegeven — speel de oplossing zelf door.",
@@ -699,6 +743,8 @@
       "analyze": "Analyseren",
       "nextInBook": "Volgende in boek",
       "randomInBook": "Willekeurig uit boek",
+      "prevDaily": "Vorige dag",
+      "nextDaily": "Volgende dag",
       "sharePuzzle": "Puzzel delen",
       "backToPuzzle": "Terug naar puzzel"
     },

@@ -84,6 +84,7 @@
       "title": "パズル",
       "subtitle": "Elo {{elo}} | {{solved}} 問正解 ({{accuracy}}%)",
       "solve": "パズルを解く",
+      "daily": "今日のパズル",
       "endless": "エンドレス"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "検索に失敗しました",
     "chessResultsApplied": "ChessResults のデータを適用しました",
     "fideApplied": "FIDE のデータを適用しました",
+    "tokens": {
+      "title": "拡張トークン",
+      "subtitle": "マシンクライアント（例: chess.com 拡張機能）用の個人アクセストークン。",
+      "empty": "トークンがまだありません。chess.com 拡張機能を接続する場合は作成してください。",
+      "create": "トークンを作成",
+      "revoke": "トークンを失効",
+      "revokeConfirm": "トークン「{{name}}」を失効しますか？クライアントは接続できなくなります。",
+      "revokeFailed": "失効に失敗しました",
+      "loadFailed": "トークンの読み込みに失敗しました",
+      "createFailed": "トークンの作成に失敗しました",
+      "never": "—",
+      "col": {
+        "name": "名前",
+        "prefix": "プレフィックス",
+        "created": "作成日",
+        "lastUsed": "最終使用日",
+        "expires": "有効期限"
+      },
+      "dialog": {
+        "title": "新規拡張トークン",
+        "name": "名前",
+        "nameHint": "例: 「Chess.com 拡張機能（ノートPC）」",
+        "expires": "有効期限",
+        "never": "なし",
+        "days": "日",
+        "create": "作成"
+      },
+      "show": {
+        "title": "トークンを作成しました",
+        "warning": "このトークンは今回のみ表示されます。拡張機能にコピーしてください — 後から取得することはできません。",
+        "copy": "コピー",
+        "copied": "クリップボードにコピーしました"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "RookHub Discord ボットの個人リンク（/link コマンドまたはパズルの DM）を開いて Discord アカウントを連携してください。",
@@ -268,7 +303,14 @@
       "name": "名前",
       "description": "説明",
       "public": "公開",
+      "kind": "カテゴリー",
       "create": "作成"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "オープニング",
+      "middlegame": "ミドルゲーム",
+      "endgame": "エンドゲーム"
     },
     "lines": {
       "allLines": "全ライン",
@@ -399,6 +441,8 @@
       "loading": "パズルを読み込み中…",
       "loadFailed": "パズルの読み込みに失敗しました",
       "offlineNoCache": "オフラインで、パズルのキャッシュがありません。オンライン中にこのページを一度開いて、オフライン用のパズルを保存してください。",
+      "offlinePoolExhausted": "オフラインパズルがなくなりました — キャッシュされているパズルをすべてプレイし終えました。オンラインに戻り次第、新しいパズルが読み込まれます。",
+      "replayLast": "最後のパズルをもう一度",
       "watchOpponent": "相手の手を確認してください…",
       "yourTurn": "あなたの番です！",
       "gaveUpPlayOut": "あきらめました — 自分で解答を指してみてください。",
@@ -699,6 +743,8 @@
       "analyze": "解析",
       "nextInBook": "ブックの次へ",
       "randomInBook": "ブックからランダム",
+      "prevDaily": "前の日",
+      "nextDaily": "次の日",
       "sharePuzzle": "パズルを共有",
       "backToPuzzle": "パズルに戻る"
     },

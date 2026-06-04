@@ -84,6 +84,7 @@
       "title": "Puzzle",
       "subtitle": "Elo {{elo}} | {{solved}} diselesaikan ({{accuracy}}%)",
       "solve": "Selesaikan Puzzle",
+      "daily": "Puzzle harian",
       "endless": "Tanpa Batas"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "Pencarian gagal",
     "chessResultsApplied": "Data ChessResults diterapkan",
     "fideApplied": "Data FIDE diterapkan",
+    "tokens": {
+      "title": "Token Ekstensi",
+      "subtitle": "Token akses pribadi untuk klien mesin (mis. ekstensi chess.com).",
+      "empty": "Belum ada token. Buat satu jika ingin menghubungkan ekstensi chess.com.",
+      "create": "Buat Token",
+      "revoke": "Cabut token",
+      "revokeConfirm": "Cabut token \"{{name}}\"? Klien tidak akan bisa terhubung lagi.",
+      "revokeFailed": "Pencabutan gagal",
+      "loadFailed": "Gagal memuat token",
+      "createFailed": "Gagal membuat token",
+      "never": "—",
+      "col": {
+        "name": "Nama",
+        "prefix": "Awalan",
+        "created": "Dibuat",
+        "lastUsed": "Terakhir digunakan",
+        "expires": "Kedaluwarsa"
+      },
+      "dialog": {
+        "title": "Token Ekstensi Baru",
+        "name": "Nama",
+        "nameHint": "mis. \"Ekstensi Chess.com (laptop)\"",
+        "expires": "Kedaluwarsa",
+        "never": "tidak pernah",
+        "days": "hari",
+        "create": "Buat"
+      },
+      "show": {
+        "title": "Token dibuat",
+        "warning": "Token ini hanya ditampilkan SEKARANG, sekali saja. Salin ke ekstensi Anda — tidak dapat diambil kembali nanti.",
+        "copy": "Salin",
+        "copied": "Disalin ke clipboard"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "Buka tautan pribadi dari bot Discord RookHub (perintah /link atau DM puzzle) untuk menghubungkan akun Discord Anda.",
@@ -268,7 +303,14 @@
       "name": "Nama",
       "description": "Deskripsi",
       "public": "Publik",
+      "kind": "Kategori",
       "create": "Buat"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Pembukaan",
+      "middlegame": "Permainan Tengah",
+      "endgame": "Permainan Akhir"
     },
     "lines": {
       "allLines": "Semua Baris",
@@ -399,6 +441,8 @@
       "loading": "Memuat puzzle…",
       "loadFailed": "Gagal memuat puzzle",
       "offlineNoCache": "Anda offline dan tidak ada puzzle yang tersimpan. Buka halaman ini sekali saat online untuk menyimpan puzzle untuk bermain offline.",
+      "offlinePoolExhausted": "Tidak ada lagi puzzle offline — Anda telah memainkan semua yang tersimpan. Puzzle baru akan dimuat begitu Anda kembali online.",
+      "replayLast": "Ulangi puzzle terakhir",
       "watchOpponent": "Perhatikan langkah lawan…",
       "yourTurn": "Giliran Anda!",
       "gaveUpPlayOut": "Menyerah — mainkan solusinya sendiri.",
@@ -699,6 +743,8 @@
       "analyze": "Analisis",
       "nextInBook": "Berikutnya dalam buku",
       "randomInBook": "Acak dari buku",
+      "prevDaily": "Hari sebelumnya",
+      "nextDaily": "Hari berikutnya",
       "sharePuzzle": "Bagikan puzzle",
       "backToPuzzle": "Kembali ke puzzle"
     },

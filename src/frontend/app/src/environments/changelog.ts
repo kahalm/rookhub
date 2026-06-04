@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.84.0';
+export const APP_VERSION = '0.84.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.84.1', date: '2026-06-04', changes: [
+    'Lokalisierung vervollständigt: die zuletzt hinzugekommenen Oberflächen-Texte (Extension-Tokens, Repertoire-Kategorie, Tagespuzzle-Navigation, „Offline-Pool aufgebraucht") sind jetzt in allen 25 Sprachen übersetzt — vorher fielen sie in den 22 zusätzlichen Sprachen auf Englisch zurück.',
+  ]},
   { version: '0.84.0', date: '2026-06-04', changes: [
     'Neuer Trainingsziele-Modus (Trainingsunterstützung für Schüler):',
     'Eigene Tagesziele je Kategorie festlegen — Puzzles, Buch-/Kursstudie und Spielen (in Minuten) — plus Wochenziel (an wie vielen Tagen pro Woche alle Ziele erreicht werden sollen).',

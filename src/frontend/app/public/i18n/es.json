@@ -84,6 +84,7 @@
       "title": "Ejercicios",
       "subtitle": "Elo {{elo}} | {{solved}} resueltos ({{accuracy}}%)",
       "solve": "Resolver ejercicios",
+      "daily": "Ejercicio del día",
       "endless": "Sin fin"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "Error en la búsqueda",
     "chessResultsApplied": "Datos de ChessResults aplicados",
     "fideApplied": "Datos de FIDE aplicados",
+    "tokens": {
+      "title": "Tokens de extensión",
+      "subtitle": "Tokens de acceso personal para clientes automatizados (p. ej. extensión de chess.com).",
+      "empty": "Aún no hay tokens. Crea uno si quieres conectar la extensión de chess.com.",
+      "create": "Crear token",
+      "revoke": "Revocar token",
+      "revokeConfirm": "¿Revocar el token \"{{name}}\"? El cliente ya no podrá conectarse.",
+      "revokeFailed": "Error al revocar",
+      "loadFailed": "Error al cargar los tokens",
+      "createFailed": "Error al crear el token",
+      "never": "—",
+      "col": {
+        "name": "Nombre",
+        "prefix": "Prefijo",
+        "created": "Creado",
+        "lastUsed": "Último uso",
+        "expires": "Caduca"
+      },
+      "dialog": {
+        "title": "Nuevo token de extensión",
+        "name": "Nombre",
+        "nameHint": "p. ej. \"Extensión de Chess.com (portátil)\"",
+        "expires": "Caduca",
+        "never": "nunca",
+        "days": "días",
+        "create": "Crear"
+      },
+      "show": {
+        "title": "Token creado",
+        "warning": "Este token se muestra SOLO ahora, una vez. Cópialo en tu extensión — no podrá recuperarse después.",
+        "copy": "Copiar",
+        "copied": "Copiado al portapapeles"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "Abre un enlace personal del bot de RookHub en Discord (su comando /link o un mensaje privado de ejercicio) para conectar tu cuenta de Discord.",
@@ -268,7 +303,14 @@
       "name": "Nombre",
       "description": "Descripción",
       "public": "Público",
+      "kind": "Categoría",
       "create": "Crear"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Apertura",
+      "middlegame": "Medio juego",
+      "endgame": "Final"
     },
     "lines": {
       "allLines": "Todas las líneas",
@@ -399,6 +441,8 @@
       "loading": "Cargando ejercicio…",
       "loadFailed": "Error al cargar el ejercicio",
       "offlineNoCache": "Estás sin conexión y no hay ejercicios en caché. Abre esta página una vez con conexión para guardar ejercicios para jugar sin internet.",
+      "offlinePoolExhausted": "No quedan ejercicios sin conexión — has jugado todos los almacenados. Los nuevos ejercicios se cargarán en cuanto vuelvas a conectarte.",
+      "replayLast": "Repetir último ejercicio",
       "watchOpponent": "Observa la jugada del rival…",
       "yourTurn": "¡Tu turno!",
       "gaveUpPlayOut": "Te rendiste — juega tú mismo la solución.",
@@ -699,6 +743,8 @@
       "analyze": "Analizar",
       "nextInBook": "Siguiente en el libro",
       "randomInBook": "Aleatorio del libro",
+      "prevDaily": "Día anterior",
+      "nextDaily": "Día siguiente",
       "sharePuzzle": "Compartir ejercicio",
       "backToPuzzle": "Volver al ejercicio"
     },

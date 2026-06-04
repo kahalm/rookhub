@@ -84,6 +84,7 @@
       "title": "Puzzles",
       "subtitle": "Elo {{elo}} | {{solved}} résolus ({{accuracy}}%)",
       "solve": "Résoudre des puzzles",
+      "daily": "Puzzle du jour",
       "endless": "Infini"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "Ce compte Discord est déjà lié à un autre utilisateur RookHub.",
       "linkFailed": "Impossible de lier le compte Discord",
       "stashed": "Connectez-vous ou inscrivez-vous pour terminer la liaison de votre compte Discord."
+    },
+    "tokens": {
+      "title": "Jetons d'extension",
+      "subtitle": "Jetons d'accès personnels pour les clients machine (ex. extension chess.com).",
+      "empty": "Aucun jeton pour l'instant. Créez-en un si vous souhaitez connecter l'extension chess.com.",
+      "create": "Créer un jeton",
+      "revoke": "Révoquer le jeton",
+      "revokeConfirm": "Révoquer le jeton « {{name}} » ? Le client ne pourra plus se connecter.",
+      "revokeFailed": "Révocation échouée",
+      "loadFailed": "Impossible de charger les jetons",
+      "createFailed": "Impossible de créer le jeton",
+      "never": "—",
+      "col": {
+        "name": "Nom",
+        "prefix": "Préfixe",
+        "created": "Créé le",
+        "lastUsed": "Dernière utilisation",
+        "expires": "Expire le"
+      },
+      "dialog": {
+        "title": "Nouveau jeton d'extension",
+        "name": "Nom",
+        "nameHint": "ex. « Extension Chess.com (ordinateur portable) »",
+        "expires": "Expire",
+        "never": "jamais",
+        "days": "jours",
+        "create": "Créer"
+      },
+      "show": {
+        "title": "Jeton créé",
+        "warning": "Ce jeton est affiché UNE SEULE fois. Copiez-le dans votre extension — il ne pourra pas être récupéré ultérieurement.",
+        "copy": "Copier",
+        "copied": "Copié dans le presse-papiers"
+      }
     },
     "offline": {
       "title": "Hors ligne",
@@ -268,7 +303,14 @@
       "name": "Nom",
       "description": "Description",
       "public": "Public",
+      "kind": "Catégorie",
       "create": "Créer"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Ouverture",
+      "middlegame": "Milieu de partie",
+      "endgame": "Finale"
     },
     "lines": {
       "allLines": "Toutes les lignes",
@@ -399,6 +441,8 @@
       "loading": "Chargement du puzzle…",
       "loadFailed": "Impossible de charger le puzzle",
       "offlineNoCache": "Vous êtes hors ligne et aucun puzzle n'est en cache. Ouvrez cette page une fois en ligne pour sauvegarder des puzzles pour le jeu hors ligne.",
+      "offlinePoolExhausted": "Plus de puzzles hors ligne — vous avez joué tous ceux en cache. De nouveaux puzzles se chargeront dès que vous serez de nouveau en ligne.",
+      "replayLast": "Rejouer le dernier puzzle",
       "watchOpponent": "Observez le coup de l'adversaire…",
       "yourTurn": "À vous de jouer !",
       "gaveUpPlayOut": "Abandonné — jouez la solution vous-même.",
@@ -699,6 +743,8 @@
       "analyze": "Analyser",
       "nextInBook": "Suivant dans le livre",
       "randomInBook": "Aléatoire dans le livre",
+      "prevDaily": "Jour précédent",
+      "nextDaily": "Jour suivant",
       "sharePuzzle": "Partager le puzzle",
       "backToPuzzle": "Retour au puzzle"
     },

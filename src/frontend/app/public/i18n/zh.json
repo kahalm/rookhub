@@ -84,6 +84,7 @@
       "title": "战术题",
       "subtitle": "Elo {{elo}} | 已解 {{solved}} 题（{{accuracy}}%）",
       "solve": "做题",
+      "daily": "每日一题",
       "endless": "无尽模式"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "该 Discord 账户已关联到另一个 RookHub 用户。",
       "linkFailed": "无法关联 Discord 账户",
       "stashed": "请登录或注册以完成 Discord 账户的关联。"
+    },
+    "tokens": {
+      "title": "扩展令牌",
+      "subtitle": "机器客户端的个人访问令牌（例如 chess.com 扩展）。",
+      "empty": "暂无令牌。如需连接 chess.com 扩展，请创建一个。",
+      "create": "创建令牌",
+      "revoke": "吊销令牌",
+      "revokeConfirm": "吊销令牌「{{name}}」？客户端将无法再连接。",
+      "revokeFailed": "吊销失败",
+      "loadFailed": "加载令牌失败",
+      "createFailed": "创建令牌失败",
+      "never": "—",
+      "col": {
+        "name": "名称",
+        "prefix": "前缀",
+        "created": "创建时间",
+        "lastUsed": "最后使用",
+        "expires": "到期时间"
+      },
+      "dialog": {
+        "title": "新建扩展令牌",
+        "name": "名称",
+        "nameHint": "例如：「Chess.com 扩展（笔记本）」",
+        "expires": "到期时间",
+        "never": "永不",
+        "days": "天",
+        "create": "创建"
+      },
+      "show": {
+        "title": "令牌已创建",
+        "warning": "此令牌仅显示一次。请将其复制到你的扩展中——之后无法再次查看。",
+        "copy": "复制",
+        "copied": "已复制到剪贴板"
+      }
     },
     "offline": {
       "title": "离线",
@@ -268,7 +303,14 @@
       "name": "名称",
       "description": "描述",
       "public": "公开",
+      "kind": "分类",
       "create": "创建"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "开局",
+      "middlegame": "中局",
+      "endgame": "残局"
     },
     "lines": {
       "allLines": "所有变化线",
@@ -399,6 +441,8 @@
       "loading": "加载战术题中…",
       "loadFailed": "加载战术题失败",
       "offlineNoCache": "你处于离线状态且没有缓存的战术题。请在联网时打开此页面以保存战术题供离线使用。",
+      "offlinePoolExhausted": "离线战术题已用完——你已完成所有缓存题目。联网后将自动加载新题目。",
+      "replayLast": "重新做上一题",
       "watchOpponent": "观察对手的走法…",
       "yourTurn": "轮到你了！",
       "gaveUpPlayOut": "已放弃——请自行演示解法。",
@@ -699,6 +743,8 @@
       "analyze": "分析",
       "nextInBook": "书中下一题",
       "randomInBook": "书中随机题",
+      "prevDaily": "前一天",
+      "nextDaily": "后一天",
       "sharePuzzle": "分享题目",
       "backToPuzzle": "返回题目"
     },

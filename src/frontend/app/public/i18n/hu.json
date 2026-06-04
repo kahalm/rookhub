@@ -84,6 +84,7 @@
       "title": "Feladványok",
       "subtitle": "Elo {{elo}} | {{solved}} megoldva ({{accuracy}}%)",
       "solve": "Feladványok megoldása",
+      "daily": "Napi feladvány",
       "endless": "Végtelen"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "Ez a Discord-fiók már egy másik RookHub-felhasználóhoz van kapcsolva.",
       "linkFailed": "Nem sikerült összekapcsolni a Discord-fiókot",
       "stashed": "Jelentkezz be vagy regisztrálj a Discord-fiókod összekapcsolásának befejezéséhez."
+    },
+    "tokens": {
+      "title": "Kiterjesztés-tokenek",
+      "subtitle": "Személyes hozzáférési tokenek gépi klienseknek (pl. chess.com kiterjesztés).",
+      "empty": "Még nincs token. Hozz létre egyet, ha csatlakoztatni szeretnéd a chess.com kiterjesztést.",
+      "create": "Token létrehozása",
+      "revoke": "Token visszavonása",
+      "revokeConfirm": "Visszavonja a(z) \"{{name}}\" tokent? A kliens többé nem tud csatlakozni.",
+      "revokeFailed": "Sikertelen visszavonás",
+      "loadFailed": "Nem sikerült betölteni a tokeneket",
+      "createFailed": "Nem sikerült létrehozni a tokent",
+      "never": "—",
+      "col": {
+        "name": "Név",
+        "prefix": "Előtag",
+        "created": "Létrehozva",
+        "lastUsed": "Utoljára használva",
+        "expires": "Lejárat"
+      },
+      "dialog": {
+        "title": "Új kiterjesztés-token",
+        "name": "Név",
+        "nameHint": "pl. \"Chess.com kiterjesztés (laptop)\"",
+        "expires": "Lejárat",
+        "never": "soha",
+        "days": "nap",
+        "create": "Létrehozás"
+      },
+      "show": {
+        "title": "Token létrehozva",
+        "warning": "Ez a token CSAK most, egyszer látható. Másold be a kiterjesztésedbe – később nem lehet visszakeresni.",
+        "copy": "Másolás",
+        "copied": "Vágólapra másolva"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -268,7 +303,14 @@
       "name": "Név",
       "description": "Leírás",
       "public": "Nyilvános",
+      "kind": "Kategória",
       "create": "Létrehozás"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Megnyitó",
+      "middlegame": "Középjáték",
+      "endgame": "Végjáték"
     },
     "lines": {
       "allLines": "Összes vonal",
@@ -399,6 +441,8 @@
       "loading": "Feladvány betöltése…",
       "loadFailed": "Nem sikerült betölteni a feladványt",
       "offlineNoCache": "Offline vagy, és nincsenek gyorsítótárazott feladványok. Nyisd meg ezt az oldalt egyszer online, hogy elmentsd a feladványokat offline játékhoz.",
+      "offlinePoolExhausted": "Nincs több offline feladvány – az összes gyorsítótárazottat végigjátszottad. Új feladványok töltődnek be, amint visszakerülsz online.",
+      "replayLast": "Utolsó feladvány újrajátszása",
       "watchOpponent": "Figyeld az ellenfél lépését…",
       "yourTurn": "Te jössz!",
       "gaveUpPlayOut": "Feladtad – játszd végig magad a megoldást.",
@@ -699,6 +743,8 @@
       "analyze": "Elemzés",
       "nextInBook": "Következő a könyvben",
       "randomInBook": "Véletlenszerű a könyvből",
+      "prevDaily": "Előző nap",
+      "nextDaily": "Következő nap",
       "sharePuzzle": "Feladvány megosztása",
       "backToPuzzle": "Vissza a feladványhoz"
     },

@@ -84,6 +84,7 @@
       "title": "Problemler",
       "subtitle": "Elo {{elo}} | {{solved}} çözüldü (%{{accuracy}})",
       "solve": "Problem Çöz",
+      "daily": "Günlük problem",
       "endless": "Sonsuz"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "Arama başarısız",
     "chessResultsApplied": "ChessResults verileri uygulandı",
     "fideApplied": "FIDE verileri uygulandı",
+    "tokens": {
+      "title": "Uzantı Tokenları",
+      "subtitle": "Makine istemcileri için kişisel erişim tokenları (örn. chess.com uzantısı).",
+      "empty": "Henüz token yok. Chess.com uzantısını bağlamak istiyorsanız bir tane oluşturun.",
+      "create": "Token Oluştur",
+      "revoke": "Tokeni iptal et",
+      "revokeConfirm": "\"{{name}}\" tokeni iptal edilsin mi? İstemci artık bağlanamayacak.",
+      "revokeFailed": "İptal başarısız",
+      "loadFailed": "Tokenlar yüklenemedi",
+      "createFailed": "Token oluşturulamadı",
+      "never": "—",
+      "col": {
+        "name": "Ad",
+        "prefix": "Önek",
+        "created": "Oluşturulma",
+        "lastUsed": "Son kullanım",
+        "expires": "Son kullanma"
+      },
+      "dialog": {
+        "title": "Yeni Uzantı Tokeni",
+        "name": "Ad",
+        "nameHint": "örn. \"Chess.com uzantısı (dizüstü)\"",
+        "expires": "Son kullanma",
+        "never": "hiçbir zaman",
+        "days": "gün",
+        "create": "Oluştur"
+      },
+      "show": {
+        "title": "Token oluşturuldu",
+        "warning": "Bu token YALNIZCA şimdi, bir kez gösterilmektedir. Uzantınıza kopyalayın — daha sonra alınamaz.",
+        "copy": "Kopyala",
+        "copied": "Panoya kopyalandı"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "Discord hesabınızı bağlamak için RookHub Discord botundan kişisel bir bağlantı açın (/link komutu veya bir problem DM'i).",
@@ -268,7 +303,14 @@
       "name": "Ad",
       "description": "Açıklama",
       "public": "Herkese açık",
+      "kind": "Kategori",
       "create": "Oluştur"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Açılış",
+      "middlegame": "Orta oyun",
+      "endgame": "Son oyun"
     },
     "lines": {
       "allLines": "Tüm Satırlar",
@@ -399,6 +441,8 @@
       "loading": "Problem yükleniyor…",
       "loadFailed": "Problem yüklenemedi",
       "offlineNoCache": "Çevrimdışısınız ve önbelleğe alınmış problem yok. Çevrimdışı oynama için çevrimiçiyken bu sayfayı bir kez açın.",
+      "offlinePoolExhausted": "Çevrimdışı problem kalmadı — önbellekteki tüm problemleri oynadınız. Tekrar çevrimiçi olduğunuzda yeni problemler yüklenecektir.",
+      "replayLast": "Son problemi tekrar oyna",
       "watchOpponent": "Rakibin hamlesini izleyin…",
       "yourTurn": "Sıra sizde!",
       "gaveUpPlayOut": "Vazgeçildi — çözümü kendiniz oynayın.",
@@ -699,6 +743,8 @@
       "analyze": "Analiz Et",
       "nextInBook": "Kitapta sonraki",
       "randomInBook": "Kitaptan rastgele",
+      "prevDaily": "Önceki gün",
+      "nextDaily": "Sonraki gün",
       "sharePuzzle": "Problemi paylaş",
       "backToPuzzle": "Probleme dön"
     },

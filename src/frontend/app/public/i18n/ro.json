@@ -84,7 +84,8 @@
       "title": "Probleme",
       "subtitle": "Elo {{elo}} | {{solved}} rezolvate ({{accuracy}}%)",
       "solve": "Rezolvă probleme",
-      "endless": "Infinit"
+      "endless": "Infinit",
+      "daily": "Problema zilei"
     },
     "subscriptions": {
       "title": "Abonamente la turnee",
@@ -161,6 +162,40 @@
       "wrongPassword": "Parola este incorectă.",
       "failed": "Ștergerea contului a eșuat.",
       "moreInfo": "Mai multe despre ștergerea contului"
+    },
+    "tokens": {
+      "title": "Token-uri de extensie",
+      "subtitle": "Token-uri de acces personal pentru clienți automat (ex. extensia chess.com).",
+      "empty": "Niciun token încă. Creează unul dacă vrei să conectezi extensia chess.com.",
+      "create": "Creează token",
+      "revoke": "Revocă token",
+      "revokeConfirm": "Revoci token-ul „{{name}}”? Clientul nu va mai putea să se conecteze.",
+      "revokeFailed": "Revocarea a eșuat",
+      "loadFailed": "Încărcarea token-urilor a eșuat",
+      "createFailed": "Crearea token-ului a eșuat",
+      "never": "—",
+      "col": {
+        "name": "Nume",
+        "prefix": "Prefix",
+        "created": "Creat",
+        "lastUsed": "Ultima utilizare",
+        "expires": "Expiră"
+      },
+      "dialog": {
+        "title": "Token de extensie nou",
+        "name": "Nume",
+        "nameHint": "ex. „Extenșie Chess.com (laptop)”",
+        "expires": "Expiră",
+        "never": "niciodată",
+        "days": "zile",
+        "create": "Creează"
+      },
+      "show": {
+        "title": "Token creat",
+        "warning": "Acest token este afișat DOAR acum, o singură dată. Copiază-l în extensia ta — nu poate fi recuperat ulterior.",
+        "copy": "Copiază",
+        "copied": "Copiat în clipboard"
+      }
     }
   },
   "legal": {
@@ -268,7 +303,8 @@
       "name": "Nume",
       "description": "Descriere",
       "public": "Public",
-      "create": "Creează"
+      "create": "Creează",
+      "kind": "Categorie"
     },
     "lines": {
       "allLines": "Toate liniile",
@@ -289,6 +325,12 @@
       "uploadPartial": "{{ok}} încărcate, {{failed}} eșuate",
       "downloadFailed": "Descărcarea a eșuat",
       "deleteConfirm": "Ștergi acest fișier?"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Deschidere",
+      "middlegame": "Mijlocul jocului",
+      "endgame": "Final"
     }
   },
   "tournaments": {
@@ -402,7 +444,9 @@
       "watchOpponent": "Urmărește mutarea adversarului…",
       "yourTurn": "Rândul tău!",
       "gaveUpPlayOut": "Ai renunțat — joacă singur soluția.",
-      "thinking": "Stockfish gândește…"
+      "thinking": "Stockfish gândește…",
+      "offlinePoolExhausted": "Nu mai sunt probleme offline — ai jucat toate cele salvate în cache. Problemele noi se vor încărca imediat ce ești din nou online.",
+      "replayLast": "Rejoacă ultima problemă"
     },
     "result": {
       "solutionPlayedOut": "Soluție jucată.",
@@ -700,7 +744,9 @@
       "nextInBook": "Următoarea din carte",
       "randomInBook": "Aleatorie din carte",
       "sharePuzzle": "Distribuie problema",
-      "backToPuzzle": "Înapoi la problemă"
+      "backToPuzzle": "Înapoi la problemă",
+      "prevDaily": "Ziua anterioară",
+      "nextDaily": "Ziua următoare"
     },
     "settings": {
       "title": "Setări",

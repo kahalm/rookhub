@@ -84,6 +84,7 @@
       "title": "Puzzles",
       "subtitle": "Elo {{elo}} | {{solved}} resolvidos ({{accuracy}}%)",
       "solve": "Resolver Puzzles",
+      "daily": "Puzzle do dia",
       "endless": "Sem fim"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "Falha na pesquisa",
     "chessResultsApplied": "Dados ChessResults aplicados",
     "fideApplied": "Dados FIDE aplicados",
+    "tokens": {
+      "title": "Tokens de extensão",
+      "subtitle": "Tokens de acesso pessoal para clientes de máquina (p. ex. extensão chess.com).",
+      "empty": "Nenhum token ainda. Crie um se quiser ligar a extensão chess.com.",
+      "create": "Criar token",
+      "revoke": "Revogar token",
+      "revokeConfirm": "Revogar o token \"{{name}}\"? O cliente deixará de conseguir ligar-se.",
+      "revokeFailed": "Falha ao revogar",
+      "loadFailed": "Falha ao carregar tokens",
+      "createFailed": "Falha ao criar token",
+      "never": "—",
+      "col": {
+        "name": "Nome",
+        "prefix": "Prefixo",
+        "created": "Criado",
+        "lastUsed": "Último uso",
+        "expires": "Expira"
+      },
+      "dialog": {
+        "title": "Novo token de extensão",
+        "name": "Nome",
+        "nameHint": "p. ex. \"Extensão Chess.com (portátil)\"",
+        "expires": "Expira",
+        "never": "nunca",
+        "days": "dias",
+        "create": "Criar"
+      },
+      "show": {
+        "title": "Token criado",
+        "warning": "Este token é mostrado APENAS agora, uma vez. Copie-o para a sua extensão — não poderá ser recuperado mais tarde.",
+        "copy": "Copiar",
+        "copied": "Copiado para a área de transferência"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "Abra um link pessoal do bot Discord do RookHub (comando /link ou uma DM de puzzle) para ligar a sua conta Discord.",
@@ -268,7 +303,14 @@
       "name": "Nome",
       "description": "Descrição",
       "public": "Público",
+      "kind": "Categoria",
       "create": "Criar"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Abertura",
+      "middlegame": "Meio-jogo",
+      "endgame": "Final"
     },
     "lines": {
       "allLines": "Todas as linhas",
@@ -399,6 +441,8 @@
       "loading": "A carregar puzzle…",
       "loadFailed": "Falha ao carregar puzzle",
       "offlineNoCache": "Está offline e não há puzzles em cache. Abra esta página uma vez com internet para guardar puzzles para jogar offline.",
+      "offlinePoolExhausted": "Sem mais puzzles offline — já jogou todos os que estavam em cache. Novos puzzles serão carregados assim que estiver online novamente.",
+      "replayLast": "Repetir o último puzzle",
       "watchOpponent": "Observe o lance do adversário…",
       "yourTurn": "A sua vez!",
       "gaveUpPlayOut": "Desistiu — jogue a solução você mesmo.",
@@ -699,6 +743,8 @@
       "analyze": "Analisar",
       "nextInBook": "Próximo no livro",
       "randomInBook": "Aleatório do livro",
+      "prevDaily": "Dia anterior",
+      "nextDaily": "Dia seguinte",
       "sharePuzzle": "Partilhar puzzle",
       "backToPuzzle": "Voltar ao puzzle"
     },

@@ -84,6 +84,7 @@
       "title": "Zadania",
       "subtitle": "Elo {{elo}} | {{solved}} rozwiązanych ({{accuracy}}%)",
       "solve": "Rozwiązuj zadania",
+      "daily": "Zadanie dnia",
       "endless": "Tryb nieskończony"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "To konto Discord jest już połączone z innym użytkownikiem RookHub.",
       "linkFailed": "Nie udało się połączyć konta Discord",
       "stashed": "Zaloguj się lub zarejestruj, aby dokończyć łączenie konta Discord."
+    },
+    "tokens": {
+      "title": "Tokeny rozszerzeń",
+      "subtitle": "Osobiste tokeny dostępu dla klientów maszynowych (np. rozszerzenie chess.com).",
+      "empty": "Brak tokenów. Utwórz jeden, jeśli chcesz połączyć rozszerzenie chess.com.",
+      "create": "Utwórz token",
+      "revoke": "Unieważnij token",
+      "revokeConfirm": "Unieważnić token \"{{name}}\"? Klient nie będzie już mógł się połączyć.",
+      "revokeFailed": "Unieważnienie nie powiodło się",
+      "loadFailed": "Nie udało się załadować tokenów",
+      "createFailed": "Nie udało się utworzyć tokenu",
+      "never": "—",
+      "col": {
+        "name": "Nazwa",
+        "prefix": "Prefiks",
+        "created": "Utworzono",
+        "lastUsed": "Ostatnie użycie",
+        "expires": "Wygasa"
+      },
+      "dialog": {
+        "title": "Nowy token rozszerzenia",
+        "name": "Nazwa",
+        "nameHint": "np. \"Rozszerzenie Chess.com (laptop)\"",
+        "expires": "Wygasa",
+        "never": "nigdy",
+        "days": "dni",
+        "create": "Utwórz"
+      },
+      "show": {
+        "title": "Token utworzony",
+        "warning": "Ten token jest wyświetlany TYLKO teraz, jednorazowo. Skopiuj go do rozszerzenia — nie można go później odzyskać.",
+        "copy": "Kopiuj",
+        "copied": "Skopiowano do schowka"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -268,7 +303,14 @@
       "name": "Nazwa",
       "description": "Opis",
       "public": "Publiczny",
+      "kind": "Kategoria",
       "create": "Utwórz"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Otwarcie",
+      "middlegame": "Gra środkowa",
+      "endgame": "Końcówka"
     },
     "lines": {
       "allLines": "Wszystkie linie",
@@ -399,6 +441,8 @@
       "loading": "Ładowanie zadania…",
       "loadFailed": "Nie udało się załadować zadania",
       "offlineNoCache": "Jesteś offline i nie ma zapisanych zadań. Otwórz tę stronę online, aby zapisać zadania do gry offline.",
+      "offlinePoolExhausted": "Brak kolejnych zadań offline — przerobiłeś wszystkie zapisane. Nowe zadania załadują się, gdy wrócisz do sieci.",
+      "replayLast": "Zagraj ostatnie zadanie ponownie",
       "watchOpponent": "Obserwuj ruch przeciwnika…",
       "yourTurn": "Twój ruch!",
       "gaveUpPlayOut": "Poddano — zagraj rozwiązanie samodzielnie.",
@@ -699,6 +743,8 @@
       "analyze": "Analizuj",
       "nextInBook": "Następne w książce",
       "randomInBook": "Losowe z książki",
+      "prevDaily": "Poprzedni dzień",
+      "nextDaily": "Następny dzień",
       "sharePuzzle": "Udostępnij zadanie",
       "backToPuzzle": "Wróć do zadania"
     },

@@ -84,6 +84,7 @@
       "title": "Úlohy",
       "subtitle": "Elo {{elo}} | {{solved}} vyřešeno ({{accuracy}}%)",
       "solve": "Řešit úlohy",
+      "daily": "Denní úloha",
       "endless": "Nekonečný mód"
     },
     "subscriptions": {
@@ -137,6 +138,40 @@
       "linkConflict": "Tento Discord účet je již propojen s jiným uživatelem RookHub.",
       "linkFailed": "Propojení Discord účtu se nezdařilo",
       "stashed": "Přihlaste se nebo se registrujte pro dokončení propojení Discord účtu."
+    },
+    "tokens": {
+      "title": "Tokeny rozšíření",
+      "subtitle": "Osobní přístupové tokeny pro strojové klienty (např. rozšíření chess.com).",
+      "empty": "Zatím žádné tokeny. Vytvořte jeden, chcete-li připojit rozšíření chess.com.",
+      "create": "Vytvořit token",
+      "revoke": "Odvolat token",
+      "revokeConfirm": "Odvolat token \"{{name}}\"? Klient se již nebude moci připojit.",
+      "revokeFailed": "Odvolání se nezdařilo",
+      "loadFailed": "Načtení tokenů se nezdařilo",
+      "createFailed": "Vytvoření tokenu se nezdařilo",
+      "never": "—",
+      "col": {
+        "name": "Název",
+        "prefix": "Předpona",
+        "created": "Vytvořeno",
+        "lastUsed": "Naposledy použito",
+        "expires": "Vyprší"
+      },
+      "dialog": {
+        "title": "Nový token rozšíření",
+        "name": "Název",
+        "nameHint": "např. \"Rozšíření Chess.com (notebook)\"",
+        "expires": "Vyprší",
+        "never": "nikdy",
+        "days": "dní",
+        "create": "Vytvořit"
+      },
+      "show": {
+        "title": "Token vytvořen",
+        "warning": "Tento token je zobrazen POUZE nyní, jednou. Zkopírujte ho do svého rozšíření – nelze ho později získat zpět.",
+        "copy": "Kopírovat",
+        "copied": "Zkopírováno do schránky"
+      }
     },
     "offline": {
       "title": "Offline",
@@ -268,7 +303,14 @@
       "name": "Název",
       "description": "Popis",
       "public": "Veřejný",
+      "kind": "Kategorie",
       "create": "Vytvořit"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "Zahájení",
+      "middlegame": "Střední hra",
+      "endgame": "Koncovka"
     },
     "lines": {
       "allLines": "Všechny linie",
@@ -399,6 +441,8 @@
       "loading": "Načítám úlohu…",
       "loadFailed": "Načtení úlohy se nezdařilo",
       "offlineNoCache": "Jste offline a žádné úlohy nejsou uloženy v mezipaměti. Otevřete tuto stránku jednou online, abyste si uložili úlohy pro hraní offline.",
+      "offlinePoolExhausted": "Žádné další offline úlohy – prošli jste všemi uloženými. Nové úlohy se načtou, jakmile budete zpět online.",
+      "replayLast": "Přehrát poslední úlohu",
       "watchOpponent": "Sledujte tah soupeře…",
       "yourTurn": "Jste na tahu!",
       "gaveUpPlayOut": "Vzdali jste se – zahrajte řešení sami.",
@@ -699,6 +743,8 @@
       "analyze": "Analyzovat",
       "nextInBook": "Další v knize",
       "randomInBook": "Náhodně z knihy",
+      "prevDaily": "Předchozí den",
+      "nextDaily": "Další den",
       "sharePuzzle": "Sdílet úlohu",
       "backToPuzzle": "Zpět na úlohu"
     },

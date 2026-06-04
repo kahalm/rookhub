@@ -84,6 +84,7 @@
       "title": "퍼즐",
       "subtitle": "Elo {{elo}} | {{solved}} 풀음 ({{accuracy}}%)",
       "solve": "퍼즐 풀기",
+      "daily": "오늘의 퍼즐",
       "endless": "무한 모드"
     },
     "subscriptions": {
@@ -128,6 +129,40 @@
     "searchFailed": "검색 실패",
     "chessResultsApplied": "ChessResults 데이터 적용됨",
     "fideApplied": "FIDE 데이터 적용됨",
+    "tokens": {
+      "title": "확장 토큰",
+      "subtitle": "머신 클라이언트(예: chess.com 확장)를 위한 개인 액세스 토큰입니다.",
+      "empty": "토큰이 없습니다. chess.com 확장을 연결하려면 생성하세요.",
+      "create": "토큰 생성",
+      "revoke": "토큰 취소",
+      "revokeConfirm": "토큰 \"{{name}}\"을 취소할까요? 클라이언트가 더 이상 연결할 수 없게 됩니다.",
+      "revokeFailed": "취소 실패",
+      "loadFailed": "토큰 로드 실패",
+      "createFailed": "토큰 생성 실패",
+      "never": "—",
+      "col": {
+        "name": "이름",
+        "prefix": "접두사",
+        "created": "생성일",
+        "lastUsed": "마지막 사용",
+        "expires": "만료일"
+      },
+      "dialog": {
+        "title": "새 확장 토큰",
+        "name": "이름",
+        "nameHint": "예: \"Chess.com 확장 (노트북)\"",
+        "expires": "만료",
+        "never": "없음",
+        "days": "일",
+        "create": "생성"
+      },
+      "show": {
+        "title": "토큰이 생성되었습니다",
+        "warning": "이 토큰은 지금 이 한 번만 표시됩니다. 확장 프로그램에 복사하세요 — 나중에 다시 볼 수 없습니다.",
+        "copy": "복사",
+        "copied": "클립보드에 복사됨"
+      }
+    },
     "discord": {
       "title": "Discord",
       "hint": "RookHub Discord 봇의 개인 링크(/link 명령 또는 퍼즐 DM)를 열어 Discord 계정을 연결하세요.",
@@ -268,7 +303,14 @@
       "name": "이름",
       "description": "설명",
       "public": "공개",
+      "kind": "카테고리",
       "create": "만들기"
+    },
+    "kind": {
+      "none": "—",
+      "opening": "오프닝",
+      "middlegame": "중반전",
+      "endgame": "엔드게임"
     },
     "lines": {
       "allLines": "모든 라인",
@@ -399,6 +441,8 @@
       "loading": "퍼즐 로딩 중…",
       "loadFailed": "퍼즐 로드 실패",
       "offlineNoCache": "오프라인 상태이며 캐시된 퍼즐이 없습니다. 온라인 상태에서 이 페이지를 한 번 열어 오프라인 플레이용 퍼즐을 저장하세요.",
+      "offlinePoolExhausted": "더 이상 오프라인 퍼즐이 없습니다 — 캐시된 퍼즐을 모두 풀었습니다. 온라인 상태로 돌아오면 새 퍼즐이 로드됩니다.",
+      "replayLast": "마지막 퍼즐 다시 풀기",
       "watchOpponent": "상대방의 수를 보세요…",
       "yourTurn": "당신의 차례!",
       "gaveUpPlayOut": "포기했습니다 — 직접 해답을 두세요.",
@@ -699,6 +743,8 @@
       "analyze": "분석",
       "nextInBook": "교재에서 다음",
       "randomInBook": "교재에서 랜덤",
+      "prevDaily": "이전 날",
+      "nextDaily": "다음 날",
       "sharePuzzle": "퍼즐 공유",
       "backToPuzzle": "퍼즐로 돌아가기"
     },
