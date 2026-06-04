@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.85.5';
+export const APP_VERSION = '0.85.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.6', date: '2026-06-04', changes: [
+    'Fix (Viz-Modus, Mobile): mehrere Versuche, die Auswahl per chessground-Brush bzw. „selected"-Highlight sichtbar zu kriegen, sind auf manchen Handys schlicht nicht angekommen — keinerlei Markierung beim Tap. Jetzt zeichnen wir den grünen Auswahl-Ring als eigenes DOM-Overlay direkt über dem Brett (absolute positioniert auf das jeweilige Feld, dicker grüner Border) — unabhängig von chessgrounds SVG-Drawable, damit auf wirklich jedem Gerät sichtbar wird, welches Feld angetippt wurde. chessgrounds Brush/Highlight bleiben zusätzlich als Bonus aktiv.',
+  ]},
   { version: '0.85.5', date: '2026-06-04', changes: [
     'Fix (Lokalisierung): Beim Aufräumen des „Logs"-Tabs in 0.85.1 ist in den drei i18n-Dateien (en/de/hr) ein überflüssiges Komma stehen geblieben — die JSON-Dateien waren dadurch syntaktisch ungültig, ngx-translate konnte sie nicht parsen und zeigte nur noch die Schlüssel wie „dashboard.friends.manage" statt der Texte. JSON in allen 3 Sprachen repariert; die übrigen 22 Sprachen waren unverändert in Ordnung.',
   ]},

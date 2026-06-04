@@ -17,6 +17,12 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   template: `
     <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
       <div #boardEl class="cg-wrap"></div>
+      @if (vizSelectedSquare) {
+        <!-- DOM-Overlay als verlässliche Viz-Auswahlmarkierung (unabhängig von chessground-SVG). -->
+        <div class="viz-select-overlay"
+             [style.left.%]="vizSelectOverlayLeft"
+             [style.top.%]="vizSelectOverlayTop"></div>
+      }
       @if (showPromotionOverlay) {
         <div class="promotion-backdrop" (click)="cancelPromotion()"></div>
         <div class="promotion-choices" [style.left.%]="promotionFilePercent"
@@ -69,6 +75,18 @@ type PromotionPiece = 'q' | 'r' | 'b' | 'n';
       background-repeat: no-repeat;
       background-position: center;
     }
+    .viz-select-overlay {
+      position: absolute;
+      width: 12.5%; height: 12.5%;
+      box-sizing: border-box;
+      border: 0.6vmin solid #15781b;
+      /* Untere Grenze, falls vmin sehr klein wird (Mobile Hochkant) — mindestens 4px. */
+      border-width: max(0.6vmin, 4px);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 50;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+    }
   `]
 })
 export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -100,6 +118,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private initAttempts = 0;
   private pendingPremove?: { orig: Key; dest: Key };
   private vizFrom?: Key;
+  /** Aktuell im Viz-Modus angetapptes Feld — rendert den grünen Overlay-Ring oben drüber. */
+  vizSelectedSquare: Key | null = null;
 
   // Promotion overlay state
   showPromotionOverlay = false;
@@ -170,23 +190,38 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   /**
-   * Markiert die Viz-Auswahl visuell. Kombiniert beides:
-   *  - chessground `selectSquare` malt das Feld vollflächig gelblich ein
-   *    (verlässliches Fallback-Highlight auf Mobile, falls die SVG-Shape nicht greift)
-   *  - `setShapes` zeichnet zusätzlich den grünen Rechtsklick-Style-Kreis,
-   *    mit verdicktem Stroke (lineWidth 22 statt Default 10), damit er auch auf
-   *    kleinen Handy-Brettern prominent über dem Feld steht.
+   * Markiert die Viz-Auswahl visuell. Der primäre Marker ist ein DOM-Overlay-`<div>`
+   * (über `vizSelectedSquare` ans Template gebunden) — komplett unabhängig von
+   * chessgrounds SVG-Drawable-Layer, damit auf jedem Gerät verlässlich ein dicker
+   * grüner Ring um das angetappte Feld erscheint. Zusätzlich noch chessgrounds
+   * `selectSquare`/`setShapes` als Bonus, falls die Theme/Brushes greifen.
    */
   private markVizSelection(key: Key): void {
+    this.vizSelectedSquare = key;
     if (!this.ground) return;
     this.ground.setShapes([{ orig: key, brush: 'green', modifiers: { lineWidth: 22 } }]);
     try { this.ground.selectSquare(key, true); } catch { /* alte chessground-Version */ }
   }
 
   private clearVizSelection(): void {
+    this.vizSelectedSquare = null;
     if (!this.ground) return;
     this.ground.setShapes([]);
     try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
+  }
+
+  /** Linker Offset (in %) des Overlay-Rings — abhängig von Orientation und Feldkoordinate. */
+  get vizSelectOverlayLeft(): number {
+    if (!this.vizSelectedSquare) return 0;
+    const fileIdx = this.vizSelectedSquare.charCodeAt(0) - 97;  // 'a' → 0 ... 'h' → 7
+    return (this.orientation === 'white' ? fileIdx : 7 - fileIdx) * 12.5;
+  }
+
+  /** Top-Offset (in %) des Overlay-Rings — abhängig von Orientation und Feldkoordinate. */
+  get vizSelectOverlayTop(): number {
+    if (!this.vizSelectedSquare) return 0;
+    const rankIdx = parseInt(this.vizSelectedSquare[1], 10) - 1;  // '1' → 0 ... '8' → 7
+    return (this.orientation === 'white' ? 7 - rankIdx : rankIdx) * 12.5;
   }
 
   /** Erkennt einen Bauern-Promotion-Zug im Viz-Modus (anhand actualFen, nicht des frozen Bretts). */
