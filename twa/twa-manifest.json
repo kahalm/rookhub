@@ -12,6 +12,7 @@
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#fafafa",
+  "splashScreenFadeOutDuration": 300,
   "enableNotifications": false,
   "startUrl": "/",
   "iconUrl": "https://rookhub.oberschmid.homes/icons/icon-512.png",
