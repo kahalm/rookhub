@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.85.3';
+export const APP_VERSION = '0.85.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.85.4', date: '2026-06-04', changes: [
+    'Fix (Viz-Modus, Mobile): in 0.85.3 wurde die gelbliche „selected"-Markierung beim Tap entfernt und nur noch ein dicker grüner Kreis gezeichnet — auf einigen Handys war dieser Kreis aber nicht mehr sichtbar, sodass beim Tap GAR keine Markierung mehr zu sehen war. Jetzt wieder: gelbliches Feld-Highlight UND grüner Kreis zusammen; der Kreis ist dabei nochmals dicker (Stroke 22 statt 18), damit er auf Mobile prominent steht und das Highlight als verlässliche Rückfallebene da bleibt.',
+  ]},
   { version: '0.85.3', date: '2026-06-04', changes: [
     'Visualisierungs-Modus (Mobile): Ein Tap auf ein Feld zeichnet jetzt denselben prominenten grünen Kreis wie ein Rechtsklick auf Desktop — vorher war die Auswahl auf kleinen Brettern nur durch das dezente gelbliche „selected"-Highlight von chessground markiert, das unter dem Finger kaum zu sehen war. Der Kreis-Stroke ist gegenüber der Default-Brush verdickt (lineWidth 18 statt 10), damit er auch auf kleinen Handy-Brettern groß und gut sichtbar ist.',
   ]},

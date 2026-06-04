@@ -170,22 +170,23 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   };
 
   /**
-   * Markiert die Viz-Auswahl visuell als grünen Kreis um das Feld — visuell identisch
-   * zum Rechtsklick-Marker auf Desktop. Wir verdicken den Stroke gegenüber der
-   * chessground-Default-Brush (lineWidth 10 → 18), damit der Kreis auf kleinen
-   * Mobile-Brettern genauso prominent rüberkommt wie auf dem Desktop.
-   * Bewusst KEIN zusätzlicher `selectSquare`-Hintergrund: das gelbliche „selected"-
-   * Highlight war auf Mobile dezent und überlagerte zudem den Kreis, weshalb es
-   * der einzige sichtbare Marker zu werden drohte (User-Feedback).
+   * Markiert die Viz-Auswahl visuell. Kombiniert beides:
+   *  - chessground `selectSquare` malt das Feld vollflächig gelblich ein
+   *    (verlässliches Fallback-Highlight auf Mobile, falls die SVG-Shape nicht greift)
+   *  - `setShapes` zeichnet zusätzlich den grünen Rechtsklick-Style-Kreis,
+   *    mit verdicktem Stroke (lineWidth 22 statt Default 10), damit er auch auf
+   *    kleinen Handy-Brettern prominent über dem Feld steht.
    */
   private markVizSelection(key: Key): void {
     if (!this.ground) return;
-    this.ground.setShapes([{ orig: key, brush: 'green', modifiers: { lineWidth: 18 } }]);
+    this.ground.setShapes([{ orig: key, brush: 'green', modifiers: { lineWidth: 22 } }]);
+    try { this.ground.selectSquare(key, true); } catch { /* alte chessground-Version */ }
   }
 
   private clearVizSelection(): void {
     if (!this.ground) return;
     this.ground.setShapes([]);
+    try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
   }
 
   /** Erkennt einen Bauern-Promotion-Zug im Viz-Modus (anhand actualFen, nicht des frozen Bretts). */
