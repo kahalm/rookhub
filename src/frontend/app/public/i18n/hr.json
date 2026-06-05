@@ -63,7 +63,8 @@
       "submit": "Prijava",
       "submitting": "Prijava u tijeku...",
       "registerLink": "Nemate račun? Registrirajte se",
-      "failed": "Prijava nije uspjela"
+      "failed": "Prijava nije uspjela",
+      "required": "Prijavi se ili registriraj se za nastavak."
     },
     "register": {
       "title": "Registracija",

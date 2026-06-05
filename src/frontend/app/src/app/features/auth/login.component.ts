@@ -22,6 +22,9 @@ import { SnackbarService } from '../../core/snackbar.service';
           <mat-card-title>{{ 'auth.login.title' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          @if (authRequired) {
+            <p class="auth-required">{{ 'auth.login.required' | translate }}</p>
+          }
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.usernameLabel' | translate }}</mat-label>
@@ -54,6 +57,7 @@ import { SnackbarService } from '../../core/snackbar.service';
     .legal-links a { color: #90caf9; }
     .legal-links span { color: #777; margin: 0 6px; }
     mat-card { width: 400px; max-width: 90vw; }
+    .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }
   `]
@@ -65,10 +69,12 @@ export class LoginComponent {
   loading = false;
 
   returnUrl: string;
+  authRequired = false;
 
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = this.sanitizeReturnUrl(raw);
+    this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';
   }
 
   private sanitizeReturnUrl(url: string): string {

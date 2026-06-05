@@ -63,7 +63,8 @@
       "submit": "Inloggen",
       "submitting": "Bezig met inloggen...",
       "registerLink": "Nog geen account? Registreren",
-      "failed": "Inloggen mislukt"
+      "failed": "Inloggen mislukt",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registreren",

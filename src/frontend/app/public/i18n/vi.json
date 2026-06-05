@@ -63,7 +63,8 @@
       "submit": "Đăng nhập",
       "submitting": "Đang đăng nhập...",
       "registerLink": "Chưa có tài khoản? Đăng ký",
-      "failed": "Đăng nhập thất bại"
+      "failed": "Đăng nhập thất bại",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Đăng ký",

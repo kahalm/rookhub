@@ -63,7 +63,8 @@
       "submit": "Masuk",
       "submitting": "Sedang masuk...",
       "registerLink": "Belum punya akun? Daftar",
-      "failed": "Gagal masuk"
+      "failed": "Gagal masuk",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Daftar",

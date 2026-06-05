@@ -63,7 +63,8 @@
       "submit": "Bejelentkezés",
       "submitting": "Bejelentkezés folyamatban...",
       "registerLink": "Még nincs fiókod? Regisztrálj",
-      "failed": "Sikertelen bejelentkezés"
+      "failed": "Sikertelen bejelentkezés",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Regisztráció",

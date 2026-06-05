@@ -63,7 +63,8 @@
       "submit": "Se connecter",
       "submitting": "Connexion en cours...",
       "registerLink": "Pas encore de compte ? S'inscrire",
-      "failed": "Échec de la connexion"
+      "failed": "Échec de la connexion",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Inscription",

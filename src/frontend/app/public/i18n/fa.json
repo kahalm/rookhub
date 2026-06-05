@@ -63,7 +63,8 @@
       "submit": "ورود",
       "submitting": "در حال ورود...",
       "registerLink": "حساب کاربری ندارید؟ ثبت‌نام کنید",
-      "failed": "ورود ناموفق بود"
+      "failed": "ورود ناموفق بود",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "ثبت‌نام",

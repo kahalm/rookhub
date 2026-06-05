@@ -63,7 +63,8 @@
       "submit": "Login",
       "submitting": "Logging in...",
       "registerLink": "Don't have an account? Register",
-      "failed": "Login failed"
+      "failed": "Login failed",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Register",

@@ -63,7 +63,8 @@
       "submit": "Anmelden",
       "submitting": "Anmeldung läuft...",
       "registerLink": "Noch kein Konto? Registrieren",
-      "failed": "Anmeldung fehlgeschlagen"
+      "failed": "Anmeldung fehlgeschlagen",
+      "required": "Bitte logge dich ein oder registriere dich, um fortzufahren."
     },
     "register": {
       "title": "Registrieren",

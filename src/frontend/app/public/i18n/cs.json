@@ -63,7 +63,8 @@
       "submit": "Přihlásit",
       "submitting": "Přihlašuji...",
       "registerLink": "Nemáte účet? Registrujte se",
-      "failed": "Přihlášení se nezdařilo"
+      "failed": "Přihlášení se nezdařilo",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registrace",

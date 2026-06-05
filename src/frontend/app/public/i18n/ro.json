@@ -63,7 +63,8 @@
       "submit": "Conectare",
       "submitting": "Se conectează...",
       "registerLink": "Nu ai cont? Înregistrează-te",
-      "failed": "Conectare eșuată"
+      "failed": "Conectare eșuată",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Înregistrare",

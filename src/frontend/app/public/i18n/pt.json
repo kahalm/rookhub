@@ -63,7 +63,8 @@
       "submit": "Iniciar sessão",
       "submitting": "A iniciar sessão...",
       "registerLink": "Não tem conta? Registar",
-      "failed": "Falha ao iniciar sessão"
+      "failed": "Falha ao iniciar sessão",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registar",

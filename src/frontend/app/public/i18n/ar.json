@@ -63,7 +63,8 @@
       "submit": "تسجيل الدخول",
       "submitting": "جارٍ تسجيل الدخول...",
       "registerLink": "ليس لديك حساب؟ سجّل الآن",
-      "failed": "فشل تسجيل الدخول"
+      "failed": "فشل تسجيل الدخول",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "إنشاء حساب",

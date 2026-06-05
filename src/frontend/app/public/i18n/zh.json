@@ -63,7 +63,8 @@
       "submit": "登录",
       "submitting": "登录中…",
       "registerLink": "没有账户？注册",
-      "failed": "登录失败"
+      "failed": "登录失败",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "注册",

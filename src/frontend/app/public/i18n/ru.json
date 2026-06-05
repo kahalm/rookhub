@@ -63,7 +63,8 @@
       "submit": "Войти",
       "submitting": "Вход…",
       "registerLink": "Нет аккаунта? Зарегистрироваться",
-      "failed": "Ошибка входа"
+      "failed": "Ошибка входа",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Регистрация",

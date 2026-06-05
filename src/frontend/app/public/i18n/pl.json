@@ -63,7 +63,8 @@
       "submit": "Zaloguj",
       "submitting": "Logowanie...",
       "registerLink": "Nie masz konta? Zarejestruj się",
-      "failed": "Logowanie nie powiodło się"
+      "failed": "Logowanie nie powiodło się",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Rejestracja",

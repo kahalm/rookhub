@@ -63,7 +63,8 @@
       "submit": "Увійти",
       "submitting": "Вхід…",
       "registerLink": "Немає акаунту? Зареєструватися",
-      "failed": "Помилка входу"
+      "failed": "Помилка входу",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Реєстрація",

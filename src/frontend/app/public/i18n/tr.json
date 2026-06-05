@@ -63,7 +63,8 @@
       "submit": "Giriş Yap",
       "submitting": "Giriş yapılıyor...",
       "registerLink": "Hesabınız yok mu? Kayıt olun",
-      "failed": "Giriş başarısız"
+      "failed": "Giriş başarısız",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Kayıt Ol",

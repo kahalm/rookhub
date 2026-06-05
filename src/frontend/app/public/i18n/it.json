@@ -63,7 +63,8 @@
       "submit": "Accedi",
       "submitting": "Accesso in corso...",
       "registerLink": "Non hai un account? Registrati",
-      "failed": "Accesso non riuscito"
+      "failed": "Accesso non riuscito",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registrati",

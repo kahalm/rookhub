@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.90.0';
+export const APP_VERSION = '0.90.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.90.1', date: '2026-06-05', changes: [
+    'Wer einen Link auf eine Login-pflichtige Seite öffnet (z. B. einen Wochenpost) und nicht eingeloggt ist, sieht auf der Login-Seite jetzt einen Hinweis „Bitte logge dich ein oder registriere dich, um fortzufahren" — und landet nach dem Login direkt auf der gewünschten Seite.',
+  ]},
   { version: '0.90.0', date: '2026-06-05', changes: [
     'Wochenpost zieht auf RookHub: der Wochenpost ist jetzt hier eingeloggt durchspielbar (vorher nur Admin), und dein Fortschritt wird gemerkt. Jedes gespielte Puzzle zählt — egal ob gelöst oder nicht; sind alle gespielt, gilt der Wochenpost als erledigt. Die Seite zeigt „X/Y gespielt · Z gelöst". (Der Schach-Bot kündigt neue Wochenposts künftig nur noch mit Link hier an, statt sie selbst zu verwalten.)',
   ]},

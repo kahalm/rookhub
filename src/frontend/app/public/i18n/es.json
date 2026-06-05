@@ -63,7 +63,8 @@
       "submit": "Iniciar sesión",
       "submitting": "Iniciando sesión...",
       "registerLink": "¿No tienes cuenta? Regístrate",
-      "failed": "Error al iniciar sesión"
+      "failed": "Error al iniciar sesión",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registrarse",

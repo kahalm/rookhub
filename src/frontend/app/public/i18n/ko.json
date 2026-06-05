@@ -63,7 +63,8 @@
       "submit": "로그인",
       "submitting": "로그인 중...",
       "registerLink": "계정이 없으신가요? 회원가입",
-      "failed": "로그인 실패"
+      "failed": "로그인 실패",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "회원가입",

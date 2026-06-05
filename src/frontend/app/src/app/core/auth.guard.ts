@@ -9,5 +9,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   if (authService.isLoggedIn) {
     return true;
   }
-  return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  // Nicht eingeloggt → zur Login-Seite mit Rücksprungziel + Flag, damit dort der Hinweis
+  // „bitte einloggen/registrieren" erscheint (z. B. beim Klick auf einen Wochenpost-Link).
+  return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url, authRequired: '1' } });
 };

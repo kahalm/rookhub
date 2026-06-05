@@ -63,7 +63,8 @@
       "submit": "लॉगिन करें",
       "submitting": "लॉगिन हो रहा है...",
       "registerLink": "खाता नहीं है? पंजीकरण करें",
-      "failed": "लॉगिन विफल"
+      "failed": "लॉगिन विफल",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "पंजीकरण",

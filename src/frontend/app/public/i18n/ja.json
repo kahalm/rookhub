@@ -63,7 +63,8 @@
       "submit": "ログイン",
       "submitting": "ログイン中...",
       "registerLink": "アカウントをお持ちでない方は登録",
-      "failed": "ログインに失敗しました"
+      "failed": "ログインに失敗しました",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "登録",

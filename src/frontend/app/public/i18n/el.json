@@ -63,7 +63,8 @@
       "submit": "Σύνδεση",
       "submitting": "Σύνδεση…",
       "registerLink": "Δεν έχετε λογαριασμό; Εγγραφείτε",
-      "failed": "Αποτυχία σύνδεσης"
+      "failed": "Αποτυχία σύνδεσης",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Εγγραφή",

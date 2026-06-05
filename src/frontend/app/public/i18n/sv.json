@@ -63,7 +63,8 @@
       "submit": "Logga in",
       "submitting": "Loggar in...",
       "registerLink": "Har du inget konto? Registrera dig",
-      "failed": "Inloggningen misslyckades"
+      "failed": "Inloggningen misslyckades",
+      "required": "Please log in or register to continue."
     },
     "register": {
       "title": "Registrera",
