@@ -573,6 +573,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.gaveUp = true;
     this.state = 'FAILED';
+    this.recordWeeklyAttempt(false);   // Aufgeben zählt im Wochenpost als ✗ (gespielt, nicht gelöst)
     this.recordBookAttempt(false);
     // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
     this.playSolutionFromStart();
@@ -706,6 +707,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Daily-Fairness: ein Reset nach mindestens einem gespielten Zug verbraucht den Tag.
     // Der erste Versuch zählt, spätere Solves auf demselben Tagespuzzle ändern das nicht mehr.
     if (this.isDaily && this.moveLog.length > 0) this.recordBookAttempt(false);
+    // Wochenpost: Reset nach mind. einem Zug zählt als ✗ (gespielt, nicht gelöst).
+    if (this.inWeekly && this.moveLog.length > 0) this.recordWeeklyAttempt(false);
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.setupPuzzle(this.puzzle);
