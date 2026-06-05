@@ -40,6 +40,13 @@ public class WeeklyPostService
             .AnyAsync(a => a.WeeklyPostId == weeklyPostId && a.UserId == userId && a.PuzzleIndex == dto.PuzzleIndex);
         if (!already)
         {
+            // Strukturiertes Log fuer Kibana (Marker „WeeklyPostAttempt") — nur beim ERSTEN Versuch je
+            // (Post, User, Index), damit die Event-Anzahl je User = Zahl der gespielten Wochenpost-Puzzle.
+            // UserName/UserId reichert die Request-Middleware via LogContext an. Muster wie CoursePuzzleAttempt.
+            _logger.LogInformation(
+                "WeeklyPostAttempt: User {UserId} {Result} weekly-post {WeeklyPostId} puzzle {PuzzleIndex} in {TimeSeconds}s",
+                userId, dto.Solved ? "solved" : "failed", weeklyPostId, dto.PuzzleIndex, timeSeconds);
+
             _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt
             {
                 WeeklyPostId = weeklyPostId,
