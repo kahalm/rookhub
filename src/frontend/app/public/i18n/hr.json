@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Termin",
       "title": "Naslov",
-      "actions": "Radnje"
+      "actions": "Radnje",
+      "progress": "Tvoj napredak"
+    },
+    "progress": {
+      "solvedLabel": "Riješeno",
+      "failedLabel": "Neriješeno",
+      "doneLabel": "Odigrano"
     },
     "upload": {
       "title": "Učitaj novu tjednu objavu",

@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "날짜",
       "title": "제목",
-      "actions": "작업"
+      "actions": "작업",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "새 주간 게시물 업로드",

@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "दिनांक",
       "title": "शीर्षक",
-      "actions": "क्रियाएँ"
+      "actions": "क्रियाएँ",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "नई साप्ताहिक पोस्ट अपलोड करें",

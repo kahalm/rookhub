@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Data",
       "title": "Tytuł",
-      "actions": "Akcje"
+      "actions": "Akcje",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "Prześlij nowy tygodniowy post",

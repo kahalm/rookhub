@@ -91,6 +91,18 @@ describe('WeeklyService', () => {
     req.flush({ weeklyPostId: 7, total: 5, playedCount: 3, solvedCount: 1, completed: false });
     expect(played).toBe(3);
   });
+
+  it('loads progress over all weekly posts (overview)', () => {
+    let count = 0;
+    svc.getAllProgress().subscribe(list => (count = list.length));
+    const req = http.expectOne('/api/weekly-posts/progress');
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      { weeklyPostId: 7, total: 5, playedCount: 5, solvedCount: 4, completed: true },
+      { weeklyPostId: 8, total: 3, playedCount: 1, solvedCount: 0, completed: false },
+    ]);
+    expect(count).toBe(2);
+  });
 });
 
 describe('weekly slot helpers', () => {

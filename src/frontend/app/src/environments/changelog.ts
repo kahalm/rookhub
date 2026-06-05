@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.90.1';
+export const APP_VERSION = '0.91.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.91.0', date: '2026-06-05', changes: [
+    'Wochenpost-Übersicht zeigt jetzt deinen Fortschritt: hinter jedem Eintrag steht gelöst/nicht-gelöst (✓/✗) und wie viel % du davon schon gespielt hast.',
+  ]},
   { version: '0.90.1', date: '2026-06-05', changes: [
     'Wer einen Link auf eine Login-pflichtige Seite öffnet (z. B. einen Wochenpost) und nicht eingeloggt ist, sieht auf der Login-Seite jetzt einen Hinweis „Bitte logge dich ein oder registriere dich, um fortzufahren" — und landet nach dem Login direkt auf der gewünschten Seite.',
   ]},

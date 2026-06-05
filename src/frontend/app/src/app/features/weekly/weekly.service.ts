@@ -85,6 +85,11 @@ export class WeeklyService {
     return this.http.get<WeeklyProgress>(`/api/weekly-posts/${id}/progress`);
   }
 
+  /** Fortschritt des eingeloggten Users über alle Wochenposts (nur Posts mit Versuchen) — für die Übersicht. */
+  getAllProgress(): Observable<WeeklyProgress[]> {
+    return this.http.get<WeeklyProgress[]>('/api/weekly-posts/progress');
+  }
+
   /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */
   recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number): Observable<WeeklyProgress> {
     return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds });

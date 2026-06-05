@@ -112,6 +112,15 @@ public class WeeklyPostController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Fortschritt des eingeloggten Users über alle Wochenposts (für die Übersicht) — nur Posts mit
+    /// Versuchen. Literal-Route „progress" hat Vorrang vor „{id}".
+    /// </summary>
+    [Authorize]
+    [HttpGet("progress")]
+    public async Task<ActionResult<List<WeeklyPostProgressDto>>> GetAllProgress()
+        => Ok(await _progress.GetAllProgressAsync(GetUserId()));
+
     /// <summary>Fortschritt des eingeloggten Users für diesen Wochenpost.</summary>
     [Authorize]
     [HttpGet("{id}/progress")]

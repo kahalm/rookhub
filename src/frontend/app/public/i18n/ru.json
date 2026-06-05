@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Дата",
       "title": "Заголовок",
-      "actions": "Действия"
+      "actions": "Действия",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "Загрузить новый еженедельный пост",

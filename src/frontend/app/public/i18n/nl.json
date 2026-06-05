@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Datum",
       "title": "Titel",
-      "actions": "Acties"
+      "actions": "Acties",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "Nieuw wekelijks bericht uploaden",

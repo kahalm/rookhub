@@ -60,6 +60,37 @@ public class WeeklyPostService
         return await BuildProgressAsync(weeklyPostId, userId, total);
     }
 
+    /// <summary>
+    /// Fortschritt des Users über ALLE Wochenposts, an denen er Versuche hat (für die Übersicht).
+    /// Posts ohne Versuche werden weggelassen (Frontend zeigt dort nichts). Parst nur die PGNs der
+    /// gespielten Posts (nicht aller) → günstig.
+    /// </summary>
+    public async Task<List<WeeklyPostProgressDto>> GetAllProgressAsync(int userId)
+    {
+        var attempts = await _db.WeeklyPostAttempts
+            .Where(a => a.UserId == userId)
+            .Select(a => new { a.WeeklyPostId, a.Solved })
+            .ToListAsync();
+
+        var result = new List<WeeklyPostProgressDto>();
+        foreach (var grp in attempts.GroupBy(a => a.WeeklyPostId))
+        {
+            var post = await _db.WeeklyPosts.FindAsync(grp.Key);
+            if (post == null) continue;   // Post inzwischen gelöscht → ignorieren
+            var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+            var played = grp.Count();
+            result.Add(new WeeklyPostProgressDto
+            {
+                WeeklyPostId = grp.Key,
+                Total = total,
+                PlayedCount = played,
+                SolvedCount = grp.Count(a => a.Solved),
+                Completed = total > 0 && played >= total,
+            });
+        }
+        return result;
+    }
+
     /// <summary>Aktueller Fortschritt des Users für einen Wochenpost.</summary>
     public async Task<WeeklyPostProgressDto> GetProgressAsync(int weeklyPostId, int userId)
     {

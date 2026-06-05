@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "التاريخ",
       "title": "العنوان",
-      "actions": "الإجراءات"
+      "actions": "الإجراءات",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "رفع منشور أسبوعي جديد",

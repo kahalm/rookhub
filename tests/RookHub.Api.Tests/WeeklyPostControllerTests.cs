@@ -256,4 +256,26 @@ public class WeeklyPostControllerTests : IDisposable
         var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
         Assert.Equal(0, p.PlayedCount);   // anderer User: kein Fortschritt
     }
+
+    [Fact]
+    public async Task GetAllProgress_ReturnsOnlyPostsWithAttempts_PerUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false });
+
+        // User 1: genau ein Post mit Versuchen, played 2/2, solved 1, completed.
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var p = Assert.Single(list);
+        Assert.Equal(id, p.WeeklyPostId);
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);
+        Assert.True(p.Completed);
+
+        // User 2: keine Versuche → leere Liste.
+        SetUser(2);
+        var empty = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        Assert.Empty(empty);
+    }
 }

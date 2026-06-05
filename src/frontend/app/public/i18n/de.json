@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Termin",
       "title": "Titel",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "progress": "Dein Fortschritt"
+    },
+    "progress": {
+      "solvedLabel": "Gelöst",
+      "failedLabel": "Nicht gelöst",
+      "doneLabel": "Gespielt"
     },
     "upload": {
       "title": "Neuen Wochenpost hochladen",

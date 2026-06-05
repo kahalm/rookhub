@@ -11,7 +11,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
-import { WeeklyService, WeeklyPost, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyPost, WeeklyProgress, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -90,6 +90,21 @@ interface WeeklyPostRow extends WeeklyPost {
               }
             </td>
           </ng-container>
+          <ng-container matColumnDef="progress">
+            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.progress' | translate }}</th>
+            <td mat-cell *matCellDef="let r">
+              @if (prog[r.id]; as p) {
+                <span class="wp-prog">
+                  <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
+                  <span class="wp-slash">/</span>
+                  <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
+                  <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
+                </span>
+              } @else {
+                <span class="wp-none">—</span>
+              }
+            </td>
+          </ng-container>
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.actions' | translate }}</th>
             <td mat-cell *matCellDef="let r">
@@ -123,12 +138,20 @@ interface WeeklyPostRow extends WeeklyPost {
     .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
     .inline-time { margin-left: 6px; }
     .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
+    .wp-prog { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .wp-solved { color: #2e7d32; font-weight: 600; }
+    .wp-failed { color: #c62828; font-weight: 600; }
+    .wp-slash { color: #999; margin: 0 4px; }
+    .wp-pct { color: #555; margin-left: 6px; }
+    .wp-none { color: #bbb; }
   `]
 })
 export class WeeklyListComponent implements OnInit {
   rows: WeeklyPostRow[] = [];
   loading = false;
-  columns = ['scheduled', 'title', 'actions'];
+  columns = ['scheduled', 'title', 'progress', 'actions'];
+  /** Per-User-Fortschritt je WeeklyPost-Id (nur Posts mit Versuchen). */
+  prog: Record<number, WeeklyProgress> = {};
 
   uploadFile: File | null = null;
   uploadFileName = '';
@@ -155,12 +178,31 @@ export class WeeklyListComponent implements OnInit {
         this.rows = posts.map(p => ({ ...p, editDate: weeklyDatePart(p.scheduledAt), editTime: weeklyTimePart(p.scheduledAt) }));
         this.suggestNextSlot();
         this.loading = false;
+        this.loadProgress();
       },
       error: () => {
         this.snackbar.info(this.translate.instant('weekly.loadFailed'), { action: 'common.ok', duration: 3000 });
         this.loading = false;
       }
     });
+  }
+
+  /** Lädt den eigenen Fortschritt je Post (für die Spalte „gelöst/failed · %"). */
+  private loadProgress(): void {
+    if (!this.auth.isLoggedIn) return;
+    this.weekly.getAllProgress().subscribe({
+      next: list => {
+        const map: Record<number, WeeklyProgress> = {};
+        for (const p of list) map[p.weeklyPostId] = p;
+        this.prog = map;
+      },
+      error: () => { /* Fortschritt ist optional — Übersicht funktioniert auch ohne */ }
+    });
+  }
+
+  /** Prozent gespielt (von allen Puzzles des Posts). */
+  pct(p: WeeklyProgress): number {
+    return p.total > 0 ? Math.round(100 * p.playedCount / p.total) : 0;
   }
 
   /** Prefill für den Upload: letzter Termin + 7 Tage, gleiche Uhrzeit; sonst heute + 19:00. */

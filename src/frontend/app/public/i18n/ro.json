@@ -564,7 +564,13 @@
     "columns": {
       "scheduled": "Dată",
       "title": "Titlu",
-      "actions": "Acțiuni"
+      "actions": "Acțiuni",
+      "progress": "Your progress"
+    },
+    "progress": {
+      "solvedLabel": "Solved",
+      "failedLabel": "Failed",
+      "doneLabel": "Played"
     },
     "upload": {
       "title": "Încarcă postare săptămânală nouă",
