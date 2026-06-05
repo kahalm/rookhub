@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.94.1';
+export const APP_VERSION = '0.95.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.0', date: '2026-06-05', changes: [
+    'Wochenpost-Bestenliste: in der Übersicht lässt sich je Eintrag eine Bestenliste aufklappen — sortiert nach Genauigkeit (gelöst von allen Puzzles des Posts), bei Gleichstand zählt die schnellere Gesamtzeit. Pro Person: Platz, gelöst/gesamt + %, Zeit.',
+  ]},
   { version: '0.94.1', date: '2026-06-05', changes: [
     'Intern: Wochenpost-Versuche werden jetzt strukturiert nach Kibana geloggt (Observability).',
   ]},

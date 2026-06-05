@@ -579,6 +579,14 @@
       "titlePlaceholder": "ファイル名から",
       "create": "作成",
       "hint": "デフォルト: 最後の日付 + 7日、同じ時刻（未設定の場合は 19:00）。"
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

@@ -579,6 +579,14 @@
       "titlePlaceholder": "з назви файлу",
       "create": "Створити",
       "hint": "За замовчуванням: остання дата + 7 днів, той самий час (інакше 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

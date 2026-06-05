@@ -579,6 +579,14 @@
       "titlePlaceholder": "do nome do ficheiro",
       "create": "Criar",
       "hint": "Predefinição: última data + 7 dias, mesma hora (caso contrário, 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

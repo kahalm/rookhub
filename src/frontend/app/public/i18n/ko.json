@@ -579,6 +579,14 @@
       "titlePlaceholder": "파일 이름에서",
       "create": "만들기",
       "hint": "기본값: 마지막 날짜 + 7일, 같은 시간 (없으면 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

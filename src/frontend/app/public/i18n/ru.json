@@ -579,6 +579,14 @@
       "titlePlaceholder": "из имени файла",
       "create": "Создать",
       "hint": "По умолчанию: последняя дата + 7 дней, то же время (иначе 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

@@ -579,6 +579,14 @@
       "titlePlaceholder": "aus Dateiname",
       "create": "Anlegen",
       "hint": "Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Bestenliste",
+      "player": "Spieler",
+      "accuracy": "Genauigkeit",
+      "time": "Zeit",
+      "completed": "Alle Puzzles gespielt",
+      "empty": "Noch niemand dabei."
     }
   },
   "endless": {

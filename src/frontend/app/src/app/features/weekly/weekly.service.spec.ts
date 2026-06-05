@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { WeeklyService, WeeklyProgress, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 
 describe('WeeklyService', () => {
   let svc: WeeklyService;
@@ -104,6 +104,15 @@ describe('WeeklyService', () => {
     expect(list.length).toBe(2);
     expect(list[0].totalSeconds).toBe(123);
   });
+
+  it('loads aggregated results for the leaderboard', () => {
+    let total = 0;
+    svc.getResults(7).subscribe(r => (total = r.total));
+    const req = http.expectOne('/api/weekly-posts/7/results');
+    expect(req.request.method).toBe('GET');
+    req.flush({ weeklyPostId: 7, total: 5, completedCount: 1, players: [] });
+    expect(total).toBe(5);
+  });
 });
 
 describe('weekly slot helpers', () => {
@@ -126,5 +135,28 @@ describe('weekly slot helpers', () => {
     const now = new Date();
     const p = (n: number) => n.toString().padStart(2, '0');
     expect(r.date).toBe(`${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`);
+  });
+});
+
+describe('sortLeaderboard', () => {
+  const mk = (name: string, solved: number, secs: number): WeeklyPlayerResult => ({
+    name, solvedCount: solved, totalSeconds: secs, playedCount: 5, completed: true,
+  });
+
+  it('sortiert nach Genauigkeit (gelöst/gesamt) absteigend', () => {
+    const out = sortLeaderboard([mk('A', 3, 10), mk('B', 5, 999), mk('C', 4, 10)], 5);
+    expect(out.map(p => p.name)).toEqual(['B', 'C', 'A']);   // 5 > 4 > 3, Zeit egal
+  });
+
+  it('bei gleicher Genauigkeit zählt die schnellere Zeit zuerst', () => {
+    const out = sortLeaderboard([mk('langsam', 4, 300), mk('schnell', 4, 90)], 5);
+    expect(out.map(p => p.name)).toEqual(['schnell', 'langsam']);
+  });
+
+  it('Name als letzter Tiebreaker; verändert die Eingabeliste nicht', () => {
+    const input = [mk('Zoe', 4, 90), mk('Amy', 4, 90)];
+    const out = sortLeaderboard(input, 5);
+    expect(out.map(p => p.name)).toEqual(['Amy', 'Zoe']);
+    expect(input.map(p => p.name)).toEqual(['Zoe', 'Amy']);   // Original unverändert (reine Funktion)
   });
 });

@@ -579,6 +579,14 @@
       "titlePlaceholder": "iz naziva datoteke",
       "create": "Stvori",
       "hint": "Zadano: zadnji termin + 7 dana, isto vrijeme (inače 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Ljestvica",
+      "player": "Igrač",
+      "accuracy": "Točnost",
+      "time": "Vrijeme",
+      "completed": "Odigrao sve zagonetke",
+      "empty": "Još nitko nije igrao."
     }
   },
   "endless": {

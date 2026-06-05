@@ -579,6 +579,14 @@
       "titlePlaceholder": "uit bestandsnaam",
       "create": "Aanmaken",
       "hint": "Standaard: laatste datum + 7 dagen, zelfde tijd (anders 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

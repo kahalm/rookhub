@@ -218,6 +218,29 @@ public class WeeklyPostControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAttempt_EmitsWeeklyPostAttemptLog_OncePerNewPuzzle()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(7);
+        var logger = new TestLogger<WeeklyPostService>();
+        var controller = new WeeklyPostController(_db, new WeeklyPostService(_db, logger))
+        {
+            ControllerContext = _controller.ControllerContext
+        };
+
+        await controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 20 });
+        // Idempotenter Wiederholungsversuch desselben Index → KEIN zweites Log (sonst Doppelzählung in Kibana).
+        await controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 9 });
+
+        var log = Assert.Single(logger.Messages, m => m.Contains("WeeklyPostAttempt"));
+        Assert.Contains("User 7", log);
+        Assert.Contains($"weekly-post {id}", log);
+        Assert.Contains("puzzle 0", log);
+        Assert.Contains("solved", log);
+        Assert.Contains("in 20s", log);
+    }
+
+    [Fact]
     public async Task RecordAttempt_IsIdempotentPerIndex_FirstResultWins()
     {
         var id = await CreateTwoPuzzlePostAsync();

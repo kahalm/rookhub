@@ -579,6 +579,14 @@
       "titlePlaceholder": "dosya adından",
       "create": "Oluştur",
       "hint": "Varsayılan: son tarih + 7 gün, aynı saat (aksi hâlde 19:00)."
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

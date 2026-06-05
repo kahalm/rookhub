@@ -11,7 +11,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
-import { WeeklyService, WeeklyPost, WeeklyProgress, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -68,7 +68,7 @@ interface WeeklyPostRow extends WeeklyPost {
       } @else if (rows.length === 0) {
         <p class="empty-hint">{{ 'weekly.empty' | translate }}</p>
       } @else {
-        <table mat-table [dataSource]="rows" class="full-width">
+        <table mat-table [dataSource]="rows" multiTemplateDataRows class="full-width">
           <ng-container matColumnDef="scheduled">
             <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.scheduled' | translate }}</th>
             <td mat-cell *matCellDef="let r">
@@ -114,6 +114,10 @@ interface WeeklyPostRow extends WeeklyPost {
               <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
                 <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
               </button>
+              <button mat-icon-button (click)="toggleBoard(r)"
+                      [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
+                <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
+              </button>
               @if (auth.isAdmin) {
                 <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
                   <mat-icon>delete</mat-icon>
@@ -122,8 +126,45 @@ interface WeeklyPostRow extends WeeklyPost {
             </td>
           </ng-container>
 
+          <!-- Aufklappbare Bestenliste (Detail-Zeile) -->
+          <ng-container matColumnDef="board">
+            <td mat-cell *matCellDef="let r" [attr.colspan]="columns.length">
+              @if (expandedId === r.id) {
+                <div class="lb">
+                  @if (boardLoading[r.id]) {
+                    <app-loading-spinner />
+                  } @else if ((board[r.id]?.length ?? 0) > 0) {
+                    <table class="lb-table">
+                      <thead>
+                        <tr>
+                          <th class="lb-rank">#</th>
+                          <th>{{ 'weekly.leaderboard.player' | translate }}</th>
+                          <th class="lb-acc">{{ 'weekly.leaderboard.accuracy' | translate }}</th>
+                          <th class="lb-time">{{ 'weekly.leaderboard.time' | translate }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (p of board[r.id]; track $index; let i = $index) {
+                          <tr>
+                            <td class="lb-rank">{{ i + 1 }}</td>
+                            <td>{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
+                            <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
+                            <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  } @else {
+                    <span class="lb-empty">{{ 'weekly.leaderboard.empty' | translate }}</span>
+                  }
+                </div>
+              }
+            </td>
+          </ng-container>
+
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['board']" class="detail-row" [class.collapsed]="expandedId !== row.id"></tr>
         </table>
       }
     </div>
@@ -148,6 +189,18 @@ interface WeeklyPostRow extends WeeklyPost {
     .wp-pct { color: #555; margin-left: 6px; }
     .wp-time { color: #555; margin-left: 6px; }
     .wp-none { color: #bbb; }
+    .detail-row.collapsed { display: none; }
+    .detail-row td { padding: 0; border-bottom: none; }
+    .lb { padding: 8px 12px 16px; }
+    .lb-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #eee; }
+    .lb-table th { color: #888; font-weight: 600; font-size: 0.8rem; }
+    .lb-rank { width: 2.5em; color: #999; }
+    .lb-acc, .lb-time { white-space: nowrap; }
+    .lb-acc { text-align: right; }
+    .lb-time { text-align: right; color: #555; }
+    .lb-done { font-size: 16px; height: 16px; width: 16px; vertical-align: text-bottom; color: #f9a825; margin-left: 4px; }
+    .lb-empty { color: #888; font-style: italic; padding: 8px 12px; display: inline-block; }
   `]
 })
 export class WeeklyListComponent implements OnInit {
@@ -156,6 +209,14 @@ export class WeeklyListComponent implements OnInit {
   columns = ['scheduled', 'title', 'progress', 'actions'];
   /** Per-User-Fortschritt je WeeklyPost-Id (nur Posts mit Versuchen). */
   prog: Record<number, WeeklyProgress> = {};
+
+  /** Aufgeklappte Bestenliste (eine zur Zeit). */
+  expandedId: number | null = null;
+  boardLoading: Record<number, boolean> = {};
+  /** Sortierte Bestenliste je Post (gecacht). */
+  board: Record<number, WeeklyPlayerResult[]> = {};
+  /** Puzzle-Gesamtzahl je Post (für die Genauigkeit). */
+  boardTotal: Record<number, number> = {};
 
   uploadFile: File | null = null;
   uploadFileName = '';
@@ -215,6 +276,27 @@ export class WeeklyListComponent implements OnInit {
     const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
     const p2 = (n: number) => n.toString().padStart(2, '0');
     return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
+  }
+
+  /** Genauigkeit eines Spielers in % (gelöst / gesamt). */
+  accuracyPct(p: WeeklyPlayerResult, total: number): number {
+    return total > 0 ? Math.round(100 * p.solvedCount / total) : 0;
+  }
+
+  /** Bestenliste eines Posts auf-/zuklappen; lädt + sortiert beim ersten Öffnen (danach gecacht). */
+  toggleBoard(row: WeeklyPost): void {
+    if (this.expandedId === row.id) { this.expandedId = null; return; }
+    this.expandedId = row.id;
+    if (this.board[row.id]) return;   // schon geladen
+    this.boardLoading[row.id] = true;
+    this.weekly.getResults(row.id).subscribe({
+      next: res => {
+        this.boardTotal[row.id] = res.total;
+        this.board[row.id] = sortLeaderboard(res.players, res.total);
+        this.boardLoading[row.id] = false;
+      },
+      error: () => { this.board[row.id] = []; this.boardLoading[row.id] = false; },
+    });
   }
 
   /** Prefill für den Upload: letzter Termin + 7 Tage, gleiche Uhrzeit; sonst heute + 19:00. */

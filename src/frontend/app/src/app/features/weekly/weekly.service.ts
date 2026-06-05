@@ -37,6 +37,39 @@ export interface WeeklyProgress {
   playedIndices?: number[];
 }
 
+/** Stand eines Spielers bei einem Wochenpost (für die Bestenliste). */
+export interface WeeklyPlayerResult {
+  name: string;
+  discordId?: string | null;
+  discordUsername?: string | null;
+  playedCount: number;
+  solvedCount: number;
+  totalSeconds: number;
+  completed: boolean;
+}
+
+/** Aggregierte Ergebnisse eines Wochenposts (für die Bestenliste). */
+export interface WeeklyResults {
+  weeklyPostId: number;
+  total: number;
+  completedCount: number;
+  players: WeeklyPlayerResult[];
+}
+
+/**
+ * Bestenlisten-Reihenfolge: Genauigkeit (gelöst/gesamt) absteigend; bei Gleichstand
+ * schnellere Gesamtzeit zuerst; danach Name. Reine Funktion (testbar). Gibt eine neue Liste zurück.
+ */
+export function sortLeaderboard(players: WeeklyPlayerResult[], total: number): WeeklyPlayerResult[] {
+  const acc = (p: WeeklyPlayerResult) => (total > 0 ? p.solvedCount / total : 0);
+  return [...players].sort((a, b) => {
+    const d = acc(b) - acc(a);                         // Genauigkeit desc
+    if (d !== 0) return d;
+    if (a.totalSeconds !== b.totalSeconds) return a.totalSeconds - b.totalSeconds;   // schneller zuerst
+    return a.name.localeCompare(b.name);
+  });
+}
+
 // --- Termin-Helfer (reine Funktionen, testbar ohne Komponente) ---
 
 /** Datums-Teil "YYYY-MM-DD" aus einem ISO-String "YYYY-MM-DDTHH:mm:ss". */
@@ -92,6 +125,11 @@ export class WeeklyService {
   /** Fortschritt des eingeloggten Users über alle Wochenposts (nur Posts mit Versuchen) — für die Übersicht. */
   getAllProgress(): Observable<WeeklyProgress[]> {
     return this.http.get<WeeklyProgress[]>('/api/weekly-posts/progress');
+  }
+
+  /** Aggregierte Ergebnisse aller Spieler (für die Bestenliste). */
+  getResults(id: number): Observable<WeeklyResults> {
+    return this.http.get<WeeklyResults>(`/api/weekly-posts/${id}/results`);
   }
 
   /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */

@@ -579,6 +579,14 @@
       "titlePlaceholder": "来自文件名",
       "create": "创建",
       "hint": "默认：上次日期 + 7 天，相同时间（否则为 19:00）。"
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {

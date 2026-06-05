@@ -579,6 +579,14 @@
       "titlePlaceholder": "फ़ाइल नाम से",
       "create": "बनाएं",
       "hint": "डिफ़ॉल्ट: अंतिम दिनांक + 7 दिन, समान समय (अन्यथा 19:00)।"
+    },
+    "leaderboard": {
+      "toggle": "Leaderboard",
+      "player": "Player",
+      "accuracy": "Accuracy",
+      "time": "Time",
+      "completed": "Played all puzzles",
+      "empty": "No one has played yet."
     }
   },
   "endless": {
