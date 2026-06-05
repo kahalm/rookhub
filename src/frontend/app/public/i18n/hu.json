@@ -785,7 +785,8 @@
       "backToWeekly": "Heti bejegyzések áttekintéséhez",
       "label": "Heti bejegyzés",
       "noPuzzles": "Ez a heti bejegyzés nem tartalmaz lejátszható feladványt.",
-      "allSolved": "Minden feladvány megoldva!"
+      "allSolved": "Minden feladvány megoldva!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

@@ -785,7 +785,8 @@
       "backToWeekly": "Al riepilogo del post settimanale",
       "label": "Post settimanale",
       "noPuzzles": "Questo post settimanale non contiene puzzle giocabili.",
-      "allSolved": "Tutti i puzzle risolti!"
+      "allSolved": "Tutti i puzzle risolti!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

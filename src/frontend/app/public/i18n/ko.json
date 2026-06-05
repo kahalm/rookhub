@@ -785,7 +785,8 @@
       "backToWeekly": "주간 게시물 목록으로",
       "label": "주간 게시물",
       "noPuzzles": "이 주간 게시물에는 플레이 가능한 퍼즐이 없습니다.",
-      "allSolved": "모든 퍼즐 완료!"
+      "allSolved": "모든 퍼즐 완료!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

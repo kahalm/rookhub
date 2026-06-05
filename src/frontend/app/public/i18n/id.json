@@ -785,7 +785,8 @@
       "backToWeekly": "Ke ikhtisar posting mingguan",
       "label": "Posting Mingguan",
       "noPuzzles": "Posting mingguan ini tidak berisi puzzle yang bisa dimainkan.",
-      "allSolved": "Semua puzzle diselesaikan!"
+      "allSolved": "Semua puzzle diselesaikan!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

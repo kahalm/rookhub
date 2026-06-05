@@ -785,7 +785,8 @@
       "backToWeekly": "週刊投稿一覧へ",
       "label": "週刊投稿",
       "noPuzzles": "この週刊投稿には再生可能なパズルが含まれていません。",
-      "allSolved": "すべてのパズルを解きました！"
+      "allSolved": "すべてのパズルを解きました！",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

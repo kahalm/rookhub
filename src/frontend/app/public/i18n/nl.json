@@ -785,7 +785,8 @@
       "backToWeekly": "Naar overzicht wekelijkse berichten",
       "label": "Wekelijks bericht",
       "noPuzzles": "Dit wekelijkse bericht bevat geen speelbare puzzels.",
-      "allSolved": "Alle puzzels opgelost!"
+      "allSolved": "Alle puzzels opgelost!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

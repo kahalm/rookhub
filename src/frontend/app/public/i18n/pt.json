@@ -785,7 +785,8 @@
       "backToWeekly": "Para a visão geral das publicações semanais",
       "label": "Publicação semanal",
       "noPuzzles": "Esta publicação semanal não contém puzzles jogáveis.",
-      "allSolved": "Todos os puzzles resolvidos!"
+      "allSolved": "Todos os puzzles resolvidos!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

@@ -785,7 +785,8 @@
       "backToWeekly": "返回每周内容概览",
       "label": "每周精选",
       "noPuzzles": "此每周内容中没有可播放的题目。",
-      "allSolved": "所有题目已完成！"
+      "allSolved": "所有题目已完成！",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

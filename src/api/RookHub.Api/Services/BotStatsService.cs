@@ -15,12 +15,14 @@ public class BotStatsService
     private readonly AppDbContext _db;
     private readonly TrainingGoalService _goals;
     private readonly PuzzleService _puzzles;
+    private readonly WeeklyPostService _weekly;
 
-    public BotStatsService(AppDbContext db, TrainingGoalService goals, PuzzleService puzzles)
+    public BotStatsService(AppDbContext db, TrainingGoalService goals, PuzzleService puzzles, WeeklyPostService weekly)
     {
         _db = db;
         _goals = goals;
         _puzzles = puzzles;
+        _weekly = weekly;
     }
 
     /// <summary>
@@ -43,6 +45,32 @@ public class BotStatsService
             // vizLevel = null → Elo des meistgespielten Levels (wie Dashboard), nicht stur Level 0.
             Today = await _goals.GetTodayAsync(user.Id),
             Puzzles = await _puzzles.GetStatsAsync(user.Id, null),
+            WeeklyPost = await GetWeeklyPostAsync(user.Id),
+        };
+    }
+
+    /// <summary>Jüngster fälliger Wochenpost + Fortschritt des Users (null, wenn keiner existiert/fällig ist).</summary>
+    private async Task<BotWeeklyPostDto?> GetWeeklyPostAsync(int userId)
+    {
+        var now = DateTime.UtcNow;
+        var post = await _db.WeeklyPosts
+            .Where(w => w.ScheduledAt <= now)
+            .OrderByDescending(w => w.ScheduledAt)
+            .Select(w => new { w.Id, w.Title, w.ScheduledAt })
+            .FirstOrDefaultAsync();
+        if (post == null)
+            return null;
+
+        var progress = await _weekly.GetProgressAsync(post.Id, userId);
+        return new BotWeeklyPostDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            ScheduledAt = post.ScheduledAt,
+            Total = progress.Total,
+            PlayedCount = progress.PlayedCount,
+            SolvedCount = progress.SolvedCount,
+            Completed = progress.Completed,
         };
     }
 }

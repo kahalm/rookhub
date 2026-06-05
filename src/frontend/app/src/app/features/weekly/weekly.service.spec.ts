@@ -74,6 +74,23 @@ describe('WeeklyService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('loads the user progress', () => {
+    svc.getProgress(7).subscribe(p => expect(p.playedCount).toBe(2));
+    const req = http.expectOne('/api/weekly-posts/7/progress');
+    expect(req.request.method).toBe('GET');
+    req.flush({ weeklyPostId: 7, total: 5, playedCount: 2, solvedCount: 1, completed: false });
+  });
+
+  it('records a played attempt (solved or not) and returns updated progress', () => {
+    let played = 0;
+    svc.recordAttempt(7, 2, false, 15).subscribe(p => (played = p.playedCount));
+    const req = http.expectOne('/api/weekly-posts/7/attempt');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15 });
+    req.flush({ weeklyPostId: 7, total: 5, playedCount: 3, solvedCount: 1, completed: false });
+    expect(played).toBe(3);
+  });
 });
 
 describe('weekly slot helpers', () => {

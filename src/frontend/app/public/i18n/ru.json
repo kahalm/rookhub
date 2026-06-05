@@ -785,7 +785,8 @@
       "backToWeekly": "К обзору еженедельных постов",
       "label": "Еженедельный пост",
       "noPuzzles": "Этот еженедельный пост не содержит разыгрываемых задач.",
-      "allSolved": "Все задачи решены!"
+      "allSolved": "Все задачи решены!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

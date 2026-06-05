@@ -785,7 +785,8 @@
       "backToWeekly": "Zur Wochenpost-Übersicht",
       "label": "Wochenpost",
       "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
-      "allSolved": "Alle Puzzles gelöst!"
+      "allSolved": "Alle Puzzles gelöst!",
+      "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst"
     }
   },
   "admin": {

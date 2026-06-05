@@ -20,7 +20,12 @@ namespace RookHub.Api.Controllers;
 public class WeeklyPostController : BaseApiController
 {
     private readonly AppDbContext _db;
-    public WeeklyPostController(AppDbContext db) => _db = db;
+    private readonly WeeklyPostService _progress;
+    public WeeklyPostController(AppDbContext db, WeeklyPostService progress)
+    {
+        _db = db;
+        _progress = progress;
+    }
 
     [AllowAnonymous]
     [HttpGet]
@@ -90,6 +95,36 @@ public class WeeklyPostController : BaseApiController
         }).ToList();
 
         return Ok(new WeeklyPlayDto { Id = w.Id, Title = w.Title, Puzzles = puzzles });
+    }
+
+    /// <summary>Zeichnet ein gespieltes Puzzle des Wochenposts auf (gelöst oder nicht) und gibt den Fortschritt zurück.</summary>
+    [Authorize]
+    [HttpPost("{id}/attempt")]
+    public async Task<ActionResult<WeeklyPostProgressDto>> RecordAttempt(int id, [FromBody] RecordWeeklyAttemptDto dto)
+    {
+        try
+        {
+            return Ok(await _progress.RecordAttemptAsync(id, GetUserId(), dto));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Fortschritt des eingeloggten Users für diesen Wochenpost.</summary>
+    [Authorize]
+    [HttpGet("{id}/progress")]
+    public async Task<ActionResult<WeeklyPostProgressDto>> GetProgress(int id)
+    {
+        try
+        {
+            return Ok(await _progress.GetProgressAsync(id, GetUserId()));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     [HttpPost("/api/admin/weekly-posts")]

@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
+    public DbSet<WeeklyPostAttempt> WeeklyPostAttempts => Set<WeeklyPostAttempt>();
     public DbSet<DailyPuzzle> DailyPuzzles => Set<DailyPuzzle>();
     public DbSet<UserApiToken> UserApiTokens => Set<UserApiToken>();
     public DbSet<GroupTrainingGoal> GroupTrainingGoals => Set<GroupTrainingGoal>();
@@ -193,6 +194,8 @@ public class AppDbContext : DbContext
             e.HasIndex(bp => bp.LineId).IsUnique();
             e.HasIndex(bp => bp.BookFileName);
             e.HasIndex(bp => bp.BookId);
+            // Pool-Filterung (Daily/Random/Blind) schließt ausgemusterte Puzzles aus.
+            e.HasIndex(bp => bp.Retired);
 
             e.HasOne(bp => bp.Book)
              .WithMany(b => b.Puzzles)
@@ -305,6 +308,23 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<WeeklyPost>(e =>
         {
             e.HasIndex(w => w.ScheduledAt);
+        });
+
+        modelBuilder.Entity<WeeklyPostAttempt>(e =>
+        {
+            // WeeklyPost und AppUser sind voneinander unabhaengig → kein Multi-Cascade-Pfad,
+            // beide FKs koennen cascaden (Post oder User geloescht → Versuche weg).
+            e.HasOne(a => a.WeeklyPost)
+             .WithMany()
+             .HasForeignKey(a => a.WeeklyPostId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            // Ein Puzzle je (Post, User) genau einmal → idempotentes Aufzeichnen (erster Versuch zaehlt).
+            e.HasIndex(a => new { a.WeeklyPostId, a.UserId, a.PuzzleIndex }).IsUnique();
+            e.HasIndex(a => new { a.WeeklyPostId, a.UserId });
         });
 
         modelBuilder.Entity<DailyPuzzle>(e =>

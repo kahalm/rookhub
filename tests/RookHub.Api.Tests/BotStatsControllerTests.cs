@@ -25,7 +25,8 @@ public class BotStatsControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         var puzzles = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
-        _service = new BotStatsService(_db, new TrainingGoalService(_db), puzzles);
+        var weekly = new WeeklyPostService(_db, NullLogger<WeeklyPostService>.Instance);
+        _service = new BotStatsService(_db, new TrainingGoalService(_db), puzzles, weekly);
     }
 
     public void Dispose() => _db.Dispose();
@@ -75,6 +76,43 @@ public class BotStatsControllerTests : IDisposable
         Assert.Equal("Anzeige", dto.DisplayName);
         Assert.NotNull(dto.Today);
         Assert.NotNull(dto.Puzzles);
+        Assert.Null(dto.WeeklyPost);   // kein Wochenpost vorhanden
+    }
+
+    // Trainings-PGN mit [%tqu] → 1 Puzzle.
+    private const string TrainingPgn = "[Event \"WP\"]\n[Round \"1.1\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *";
+
+    [Fact]
+    public async Task GetPlayerProgress_IncludesWeeklyPostBlockWithUserProgress()
+    {
+        var user = await CreateLinkedUserAsync("12345");
+        var post = new WeeklyPost
+        {
+            Title = "Woche 1", FileName = "w.pgn", PgnContent = TrainingPgn, FileSize = 10,
+            ScheduledAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),   // fällig (Vergangenheit)
+        };
+        _db.WeeklyPosts.Add(post);
+        await _db.SaveChangesAsync();
+        // User hat das (einzige) Puzzle gespielt → erledigt.
+        _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt
+        {
+            WeeklyPostId = post.Id, UserId = user.Id, PuzzleIndex = 0, Solved = true, AttemptedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var controller = BuildController(Secret, ValidHeader("12345"));
+        var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
+        var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
+
+        Assert.NotNull(dto.WeeklyPost);
+        Assert.Equal(post.Id, dto.WeeklyPost!.Id);
+        Assert.Equal("Woche 1", dto.WeeklyPost.Title);
+        Assert.Equal(1, dto.WeeklyPost.Total);
+        Assert.Equal(1, dto.WeeklyPost.PlayedCount);
+        Assert.Equal(1, dto.WeeklyPost.SolvedCount);
+        Assert.True(dto.WeeklyPost.Completed);
     }
 
     [Fact]

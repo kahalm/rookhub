@@ -785,7 +785,8 @@
       "backToWeekly": "إلى نظرة عامة على المنشورات الأسبوعية",
       "label": "المنشور الأسبوعي",
       "noPuzzles": "لا يحتوي هذا المنشور الأسبوعي على ألغاز قابلة للعب.",
-      "allSolved": "تم حل جميع الألغاز!"
+      "allSolved": "تم حل جميع الألغاز!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

@@ -785,7 +785,8 @@
       "backToWeekly": "До огляду тижневих постів",
       "label": "Тижневий пост",
       "noPuzzles": "Цей тижневий пост не містить задач для гри.",
-      "allSolved": "Всі задачі розв'язано!"
+      "allSolved": "Всі задачі розв'язано!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

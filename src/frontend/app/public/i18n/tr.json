@@ -785,7 +785,8 @@
       "backToWeekly": "Haftalık gönderi genel bakışına git",
       "label": "Haftalık Gönderi",
       "noPuzzles": "Bu haftalık gönderi oynanabilir problem içermiyor.",
-      "allSolved": "Tüm problemler çözüldü!"
+      "allSolved": "Tüm problemler çözüldü!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

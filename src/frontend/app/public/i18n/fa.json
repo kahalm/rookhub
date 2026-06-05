@@ -785,7 +785,8 @@
       "backToWeekly": "به نمای کلی پست‌های هفتگی",
       "label": "پست هفتگی",
       "noPuzzles": "این پست هفتگی شامل تاکتیک قابل بازی نیست.",
-      "allSolved": "همه تاکتیک‌ها حل شدند!"
+      "allSolved": "همه تاکتیک‌ها حل شدند!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

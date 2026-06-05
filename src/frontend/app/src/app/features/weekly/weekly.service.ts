@@ -24,6 +24,15 @@ export interface WeeklyPlay {
   puzzles: BookPuzzleDto[];
 }
 
+/** Per-User-Fortschritt eines Wochenposts. */
+export interface WeeklyProgress {
+  weeklyPostId: number;
+  total: number;
+  playedCount: number;
+  solvedCount: number;
+  completed: boolean;
+}
+
 // --- Termin-Helfer (reine Funktionen, testbar ohne Komponente) ---
 
 /** Datums-Teil "YYYY-MM-DD" aus einem ISO-String "YYYY-MM-DDTHH:mm:ss". */
@@ -69,6 +78,16 @@ export class WeeklyService {
   /** Puzzles des Wochenposts zum sequenziellen Durchspielen. */
   getPlay(id: number): Observable<WeeklyPlay> {
     return this.http.get<WeeklyPlay>(`/api/weekly-posts/${id}/puzzles`);
+  }
+
+  /** Fortschritt des eingeloggten Users für diesen Wochenpost. */
+  getProgress(id: number): Observable<WeeklyProgress> {
+    return this.http.get<WeeklyProgress>(`/api/weekly-posts/${id}/progress`);
+  }
+
+  /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */
+  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number): Observable<WeeklyProgress> {
+    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds });
   }
 
   /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */

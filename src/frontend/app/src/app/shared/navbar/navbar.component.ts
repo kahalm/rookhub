@@ -33,9 +33,7 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
           <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
           <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
           <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          @if (auth.isAdmin) {
-            <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
-          }
+          <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
           @if (showCourses) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
@@ -56,9 +54,7 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
           <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
           <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
           <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          @if (auth.isAdmin) {
-            <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
-          }
+          <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
           @if (showCourses) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }

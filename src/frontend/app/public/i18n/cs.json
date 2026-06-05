@@ -785,7 +785,8 @@
       "backToWeekly": "Na přehled týdenních příspěvků",
       "label": "Týdenní příspěvek",
       "noPuzzles": "Tento týdenní příspěvek neobsahuje žádné hratelné úlohy.",
-      "allSolved": "Všechny úlohy vyřešeny!"
+      "allSolved": "Všechny úlohy vyřešeny!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

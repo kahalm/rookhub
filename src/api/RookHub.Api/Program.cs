@@ -114,6 +114,7 @@ try
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<TrainingGoalService>();
+    builder.Services.AddScoped<WeeklyPostService>();
     builder.Services.AddScoped<BotStatsService>();
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();

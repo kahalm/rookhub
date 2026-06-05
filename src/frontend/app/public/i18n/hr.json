@@ -785,7 +785,8 @@
       "backToWeekly": "Na pregled tjednih objava",
       "label": "Tjedna objava",
       "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
-      "allSolved": "Sve zagonetke riješene!"
+      "allSolved": "Sve zagonetke riješene!",
+      "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno"
     }
   },
   "admin": {

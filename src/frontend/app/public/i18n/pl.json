@@ -785,7 +785,8 @@
       "backToWeekly": "Do przeglądu tygodniowych postów",
       "label": "Tygodniowy post",
       "noPuzzles": "Ten tygodniowy post nie zawiera zadań do rozwiązania.",
-      "allSolved": "Wszystkie zadania rozwiązane!"
+      "allSolved": "Wszystkie zadania rozwiązane!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

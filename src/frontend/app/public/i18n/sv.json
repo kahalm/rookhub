@@ -785,7 +785,8 @@
       "backToWeekly": "Till veckoinläggsöversikt",
       "label": "Veckoinlägg",
       "noPuzzles": "Det här veckoinlägget innehåller inga spelbara uppgifter.",
-      "allSolved": "Alla uppgifter lösta!"
+      "allSolved": "Alla uppgifter lösta!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

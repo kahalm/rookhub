@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.89.0';
+export const APP_VERSION = '0.90.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.90.0', date: '2026-06-05', changes: [
+    'Wochenpost zieht auf RookHub: der Wochenpost ist jetzt hier eingeloggt durchspielbar (vorher nur Admin), und dein Fortschritt wird gemerkt. Jedes gespielte Puzzle zählt — egal ob gelöst oder nicht; sind alle gespielt, gilt der Wochenpost als erledigt. Die Seite zeigt „X/Y gespielt · Z gelöst". (Der Schach-Bot kündigt neue Wochenposts künftig nur noch mit Link hier an, statt sie selbst zu verwalten.)',
+  ]},
   { version: '0.89.0', date: '2026-06-05', changes: [
     'Admin: Tagespuzzle neu generieren. Im Admin-Bereich gibt es einen neuen Tab „Tagespuzzle" — Datum wählen, aktuelles Puzzle ansehen und per Knopf neu auswürfeln. Der Link/das Datum bleibt gleich, nur das Puzzle dahinter wechselt. Das bisher gezogene Puzzle wird ausgemustert und nie wieder als Tages-, Zufalls- oder Blindpuzzle gezogen.',
   ]},

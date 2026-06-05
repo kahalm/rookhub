@@ -62,14 +62,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   courseTotal = 0;
   courseCompleted = false;
 
-  // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen
-  // (kein Leben, beliebige Retrys, keine Fortschritts-Speicherung; client-seitige Liste).
+  // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen.
+  // Per-User-Fortschritt wird serverseitig gemerkt: jedes gespielte Puzzle (gelöst oder nicht)
+  // zählt; erledigt = alle gespielt.
   inWeekly = false;
   weeklyId: number | null = null;
   weeklyTitle = '';
   weeklyPuzzles: BookPuzzleDto[] = [];
   weeklyIndex = 0;
   weeklyCompleted = false;
+  weeklyPlayed = 0;                       // gespielte Puzzles (serverseitiger Stand)
+  weeklySolved = 0;                       // davon gelöst
+  private weeklyAttemptRecorded = false;  // pro Puzzle nur einmal aufzeichnen
 
   // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
   dailyDate: string | null = null;
@@ -248,6 +252,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.updateBoard();
     this.enterSolutionReview();
     this.recordCourseSolved();
+    this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
     // Einheitlicher Auto-Advance wie Standard/Endless: nach kurzem Countdown zum nächsten
     // (kontextabhängig Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
@@ -287,6 +292,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
+    this.recordWeeklyAttempt(false);
     this.recordBookAttempt(false);
   }
 
@@ -418,6 +424,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.weeklyTitle = play.title;
         this.weeklyPuzzles = play.puzzles ?? [];
         this.weeklyIndex = 0;
+        // Bisherigen Fortschritt des Users laden (Anzeige „X/Y gespielt · Z gelöst").
+        if (this.auth.isLoggedIn && this.weeklyId != null) {
+          this.weeklyService.getProgress(this.weeklyId).subscribe({
+            next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; },
+            error: () => { /* Fortschritt optional — Spielen geht trotzdem */ },
+          });
+        }
         if (this.weeklyPuzzles.length === 0) {
           this.weeklyCompleted = false;
           this.puzzle = null;
@@ -438,9 +451,33 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
     this.weeklyCompleted = false;
     this.gaveUp = false;
+    this.weeklyAttemptRecorded = false;   // neues Puzzle → wieder aufzeichenbar
     this.weeklyIndex = index;
     this.puzzle = this.weeklyPuzzles[index];
     this.setupPuzzle(this.puzzle);
+  }
+
+  /**
+   * Zeichnet das aktuelle Wochenpost-Puzzle als gespielt auf (gelöst oder nicht), pro Puzzle einmal.
+   * Offline-fähig via Queue; nur eingeloggt (die Route ist authGuard — defensiv geprüft).
+   */
+  private recordWeeklyAttempt(solved: boolean): void {
+    if (!this.inWeekly || this.weeklyId == null || !this.puzzle || this.weeklyAttemptRecorded) return;
+    if (!this.auth.isLoggedIn) return;
+    this.weeklyAttemptRecorded = true;
+    const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
+    const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
+    const body = { puzzleIndex, solved, timeSeconds: this.elapsedSeconds };
+    if (!navigator.onLine) {
+      this.offlineQueue.enqueue('POST', url, body);
+      this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
+      if (solved) this.weeklySolved += 1;
+      return;
+    }
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.elapsedSeconds).subscribe({
+      next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; },
+      error: () => this.offlineQueue.enqueue('POST', url, body),
+    });
   }
 
   weeklyNext(): void {

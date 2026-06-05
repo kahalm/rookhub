@@ -785,7 +785,8 @@
       "backToWeekly": "To weekly post overview",
       "label": "Weekly Post",
       "noPuzzles": "This weekly post contains no playable puzzles.",
-      "allSolved": "All puzzles solved!"
+      "allSolved": "All puzzles solved!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

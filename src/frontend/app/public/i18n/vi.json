@@ -785,7 +785,8 @@
       "backToWeekly": "Đến tổng quan bài đăng hàng tuần",
       "label": "Bài đăng hàng tuần",
       "noPuzzles": "Bài đăng hàng tuần này không có bài tập nào có thể chơi.",
-      "allSolved": "Đã giải tất cả bài tập!"
+      "allSolved": "Đã giải tất cả bài tập!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

@@ -785,7 +785,8 @@
       "backToWeekly": "La prezentarea generală a postărilor săptămânale",
       "label": "Postare săptămânală",
       "noPuzzles": "Această postare săptămânală nu conține probleme de jucat.",
-      "allSolved": "Toate problemele rezolvate!"
+      "allSolved": "Toate problemele rezolvate!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

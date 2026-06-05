@@ -785,7 +785,8 @@
       "backToWeekly": "साप्ताहिक पोस्ट अवलोकन पर",
       "label": "साप्ताहिक पोस्ट",
       "noPuzzles": "इस साप्ताहिक पोस्ट में कोई खेलने योग्य पहेली नहीं है।",
-      "allSolved": "सभी पहेलियाँ हल!"
+      "allSolved": "सभी पहेलियाँ हल!",
+      "progress": "{{played}}/{{total}} played · {{solved}} solved"
     }
   },
   "admin": {

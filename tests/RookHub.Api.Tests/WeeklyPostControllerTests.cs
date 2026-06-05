@@ -1,11 +1,14 @@
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -20,10 +23,22 @@ public class WeeklyPostControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new WeeklyPostController(_db);
+        _controller = new WeeklyPostController(_db, new WeeklyPostService(_db, NullLogger<WeeklyPostService>.Instance));
     }
 
     public void Dispose() => _db.Dispose();
+
+    private void SetUser(int userId)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
+            }
+        };
+    }
 
     private const string ValidPgn = "[Event \"Test\"]\n[White \"A\"]\n[Black \"B\"]\n\n1. e4 e5 2. Nf3 *";
 
@@ -40,6 +55,9 @@ public class WeeklyPostControllerTests : IDisposable
 
     private static T Unwrap<T>(IActionResult result) where T : class =>
         Assert.IsType<T>(Assert.IsType<OkObjectResult>(result).Value!);
+
+    private static T Unwrap<T>(ActionResult<T> result) where T : class =>
+        Assert.IsType<T>(Assert.IsType<OkObjectResult>(result.Result).Value!);
 
     [Fact]
     public async Task GetAll_ReturnsPostsSortedByScheduledDesc()
@@ -152,5 +170,90 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.IsType<NoContentResult>(await _controller.Delete(created.Id));
         Assert.Equal(0, await _db.WeeklyPosts.CountAsync());
         Assert.IsType<NotFoundObjectResult>(await _controller.Delete(created.Id));
+    }
+
+    // --- Per-User-Fortschritt -------------------------------------------------
+
+    // Zwei Trainings-Puzzles (je [%tqu]) → Sequenz mit 2 Puzzles.
+    private const string TwoPuzzlePgn =
+        "[Event \"WP\"]\n[Round \"1.1\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *\n\n" +
+        "[Event \"WP\"]\n[Round \"1.2\"]\n" +
+        "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n" +
+        "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 *";
+
+    private async Task<int> CreateTwoPuzzlePostAsync()
+    {
+        var created = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(TwoPuzzlePgn, "woche.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), "Woche", default));
+        // Sicherstellen, dass wirklich 2 Puzzles geparst werden (sonst sagt der Test nichts aus).
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
+        Assert.Equal(2, play.Puzzles.Count);
+        return created.Id;
+    }
+
+    [Fact]
+    public async Task RecordAttempt_TracksPlayedSolvedAndCompletion()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        var p1 = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 30 }));
+        Assert.Equal(2, p1.Total);
+        Assert.Equal(1, p1.PlayedCount);
+        Assert.Equal(1, p1.SolvedCount);
+        Assert.False(p1.Completed);
+
+        // Zweites Puzzle NICHT gelöst → trotzdem „gespielt" → erledigt (alle gespielt).
+        var p2 = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 12 }));
+        Assert.Equal(2, p2.PlayedCount);
+        Assert.Equal(1, p2.SolvedCount);
+        Assert.True(p2.Completed);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_IsIdempotentPerIndex_FirstResultWins()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        // erneuter Versuch desselben Index (diesmal nicht gelöst) ändert nichts.
+        var p = Unwrap<WeeklyPostProgressDto>(
+            await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 5 }));
+        Assert.Equal(1, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);   // erster (gelöster) Versuch bleibt
+    }
+
+    [Fact]
+    public async Task RecordAttempt_IndexOutOfRange_Returns404()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        var res = await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 9, Solved = true });
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task GetProgress_UnknownPost_Returns404()
+    {
+        SetUser(1);
+        var res = await _controller.GetProgress(999);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task Progress_IsPerUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
+
+        SetUser(2);
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(0, p.PlayedCount);   // anderer User: kein Fortschritt
     }
 }
