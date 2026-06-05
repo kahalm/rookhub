@@ -38,9 +38,12 @@ public class AuthService
         if (await _db.AppUsers.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
             throw new InvalidOperationException("Username or email already in use.");
 
-        var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+        // Email ist optional: leer/null -> kein Email hinterlegt, keine Dublettenpruefung.
+        var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email)
+            ? null
+            : dto.Email.Trim().ToLowerInvariant();
 
-        if (await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
+        if (normalizedEmail != null && await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
             throw new InvalidOperationException("Username or email already in use.");
 
         var user = new AppUser

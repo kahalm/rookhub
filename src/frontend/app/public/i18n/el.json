@@ -74,7 +74,8 @@
       "submit": "Εγγραφή",
       "submitting": "Εγγραφή…",
       "loginLink": "Έχετε ήδη λογαριασμό; Συνδεθείτε",
-      "failed": "Αποτυχία εγγραφής"
+      "failed": "Αποτυχία εγγραφής",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

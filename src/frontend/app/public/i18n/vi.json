@@ -74,7 +74,8 @@
       "submit": "Đăng ký",
       "submitting": "Đang đăng ký...",
       "loginLink": "Đã có tài khoản? Đăng nhập",
-      "failed": "Đăng ký thất bại"
+      "failed": "Đăng ký thất bại",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

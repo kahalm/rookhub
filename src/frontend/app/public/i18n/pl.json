@@ -74,7 +74,8 @@
       "submit": "Zarejestruj",
       "submitting": "Rejestracja...",
       "loginLink": "Masz już konto? Zaloguj się",
-      "failed": "Rejestracja nie powiodła się"
+      "failed": "Rejestracja nie powiodła się",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

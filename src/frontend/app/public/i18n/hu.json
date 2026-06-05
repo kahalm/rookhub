@@ -74,7 +74,8 @@
       "submit": "Regisztráció",
       "submitting": "Regisztráció folyamatban...",
       "loginLink": "Már van fiókod? Jelentkezz be",
-      "failed": "Sikertelen regisztráció"
+      "failed": "Sikertelen regisztráció",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

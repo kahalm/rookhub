@@ -59,7 +59,7 @@ export class AuthService {
     }
   }
 
-  register(username: string, email: string, password: string): Observable<AuthResponse> {
+  register(username: string, email: string | null, password: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, { username, email, password })
       .pipe(tap(res => this.storeUser(res)));
   }

@@ -74,7 +74,8 @@
       "submit": "إنشاء حساب",
       "submitting": "جارٍ التسجيل...",
       "loginLink": "لديك حساب بالفعل؟ سجّل دخولك",
-      "failed": "فشل التسجيل"
+      "failed": "فشل التسجيل",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

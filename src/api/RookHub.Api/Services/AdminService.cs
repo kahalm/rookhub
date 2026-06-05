@@ -27,7 +27,7 @@ public class AdminService
         if (!string.IsNullOrEmpty(search))
         {
             if (search.Length > 100) search = search[..100];
-            query = query.Where(u => u.Username.Contains(search) || u.Email.Contains(search));
+            query = query.Where(u => u.Username.Contains(search) || (u.Email != null && u.Email.Contains(search)));
         }
 
         var totalCount = await query.CountAsync();

@@ -74,7 +74,8 @@
       "submit": "Kayıt Ol",
       "submitting": "Kayıt yapılıyor...",
       "loginLink": "Zaten hesabınız var mı? Giriş yapın",
-      "failed": "Kayıt başarısız"
+      "failed": "Kayıt başarısız",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

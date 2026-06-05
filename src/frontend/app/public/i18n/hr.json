@@ -74,7 +74,8 @@
       "submit": "Registracija",
       "submitting": "Registracija u tijeku...",
       "loginLink": "Već imate račun? Prijavite se",
-      "failed": "Registracija nije uspjela"
+      "failed": "Registracija nije uspjela",
+      "emailHint": "Neobavezno"
     }
   },
   "dashboard": {

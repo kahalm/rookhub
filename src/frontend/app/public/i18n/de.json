@@ -74,7 +74,8 @@
       "submit": "Registrieren",
       "submitting": "Registrierung läuft...",
       "loginLink": "Bereits ein Konto? Anmelden",
-      "failed": "Registrierung fehlgeschlagen"
+      "failed": "Registrierung fehlgeschlagen",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

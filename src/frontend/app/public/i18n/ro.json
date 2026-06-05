@@ -74,7 +74,8 @@
       "submit": "Înregistrare",
       "submitting": "Se înregistrează...",
       "loginLink": "Ai deja un cont? Conectează-te",
-      "failed": "Înregistrare eșuată"
+      "failed": "Înregistrare eșuată",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

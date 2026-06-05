@@ -70,6 +70,41 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Register_WithoutEmail_Succeeds()
+    {
+        var dto = new RegisterDto { Username = "noemail", Email = null, Password = "password123" };
+
+        var result = await _authService.RegisterAsync(dto);
+
+        Assert.Equal("noemail", result.Username);
+        Assert.NotEmpty(result.Token);
+        Assert.Null(_db.AppUsers.Single().Email); // leer -> null gespeichert
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Register_BlankEmail_StoresNull(string? email)
+    {
+        var dto = new RegisterDto { Username = "blank", Email = email, Password = "password123" };
+
+        await _authService.RegisterAsync(dto);
+
+        Assert.Null(_db.AppUsers.Single().Email);
+    }
+
+    [Fact]
+    public async Task Register_MultipleUsersWithoutEmail_AllSucceed()
+    {
+        // Ohne Email darf es keine Dublettenpruefung geben (mehrere NULLs erlaubt).
+        await _authService.RegisterAsync(new RegisterDto { Username = "a", Email = null, Password = "password123" });
+        await _authService.RegisterAsync(new RegisterDto { Username = "b", Email = "", Password = "password123" });
+
+        Assert.Equal(2, _db.AppUsers.Count());
+    }
+
+    [Fact]
     public async Task Login_ValidCredentials_ReturnsToken()
     {
         await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });

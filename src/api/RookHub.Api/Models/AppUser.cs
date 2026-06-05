@@ -9,8 +9,9 @@ public class AppUser
     [Required, MaxLength(50)]
     public string Username { get; set; } = string.Empty;
 
-    [Required, MaxLength(255)]
-    public string Email { get; set; } = string.Empty;
+    // Optional (nullable). Unique-Index erlaubt mehrere NULLs (MySQL/MariaDB).
+    [MaxLength(255)]
+    public string? Email { get; set; }
 
     [Required]
     public string PasswordHash { get; set; } = string.Empty;

@@ -74,7 +74,8 @@
       "submit": "Daftar",
       "submitting": "Sedang mendaftar...",
       "loginLink": "Sudah punya akun? Masuk",
-      "failed": "Pendaftaran gagal"
+      "failed": "Pendaftaran gagal",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

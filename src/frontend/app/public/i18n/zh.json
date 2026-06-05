@@ -74,7 +74,8 @@
       "submit": "注册",
       "submitting": "注册中…",
       "loginLink": "已有账户？登录",
-      "failed": "注册失败"
+      "failed": "注册失败",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

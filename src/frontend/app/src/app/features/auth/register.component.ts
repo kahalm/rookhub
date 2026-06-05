@@ -28,7 +28,8 @@ import { SnackbarService } from '../../core/snackbar.service';
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.emailLabel' | translate }}</mat-label>
-              <input matInput type="email" [(ngModel)]="email" name="email" required>
+              <input matInput type="email" [(ngModel)]="email" name="email" email>
+              <mat-hint>{{ 'auth.register.emailHint' | translate }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
@@ -73,7 +74,9 @@ export class RegisterComponent {
 
   onSubmit(): void {
     this.loading = true;
-    this.auth.register(this.username, this.email, this.password).subscribe({
+    // Email ist optional: leeres Feld als null senden (Backend [EmailAddress] lehnt "" ab, null nicht).
+    const email = this.email.trim() || null;
+    this.auth.register(this.username, email, this.password).subscribe({
       next: () => {
         // navigateByUrl (nicht navigate([...])): returnUrl ist ein kompletter Pfad und kann mehrere
         // Segmente haben (z.B. /tournaments/123) — navigate([...]) würde den Slash url-encoden → 404.

@@ -74,7 +74,8 @@
       "submit": "Registreren",
       "submitting": "Bezig met registreren...",
       "loginLink": "Al een account? Inloggen",
-      "failed": "Registratie mislukt"
+      "failed": "Registratie mislukt",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

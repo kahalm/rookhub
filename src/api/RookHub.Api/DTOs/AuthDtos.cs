@@ -7,8 +7,11 @@ public class RegisterDto
     [Required, MinLength(3), MaxLength(50)]
     public string Username { get; set; } = string.Empty;
 
-    [Required, EmailAddress, MaxLength(255)]
-    public string Email { get; set; } = string.Empty;
+    // Optional: leer/weggelassen = keine Email hinterlegt. Wenn angegeben, muss es
+    // ein gueltiges Email-Format sein (EmailAddress laesst null durch, "" nicht ->
+    // das Frontend sendet bei leerem Feld null).
+    [EmailAddress, MaxLength(255)]
+    public string? Email { get; set; }
 
     // Bewusst minimal: nur Mindestlänge (>= 4), keine Komplexitätsregeln.
     [Required, MinLength(4), MaxLength(1024)]

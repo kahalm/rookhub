@@ -74,7 +74,8 @@
       "submit": "Registar",
       "submitting": "A registar...",
       "loginLink": "Já tem conta? Iniciar sessão",
-      "failed": "Falha no registo"
+      "failed": "Falha no registo",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

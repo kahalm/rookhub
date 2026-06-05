@@ -74,7 +74,8 @@
       "submit": "Registrera",
       "submitting": "Registrerar...",
       "loginLink": "Har du redan ett konto? Logga in",
-      "failed": "Registreringen misslyckades"
+      "failed": "Registreringen misslyckades",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {

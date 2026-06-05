@@ -74,7 +74,8 @@
       "submit": "Зарегистрироваться",
       "submitting": "Регистрация…",
       "loginLink": "Уже есть аккаунт? Войти",
-      "failed": "Ошибка регистрации"
+      "failed": "Ошибка регистрации",
+      "emailHint": "Optional"
     }
   },
   "dashboard": {
