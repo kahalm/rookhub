@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.88.0';
+export const APP_VERSION = '0.89.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.89.0', date: '2026-06-05', changes: [
+    'Admin: Tagespuzzle neu generieren. Im Admin-Bereich gibt es einen neuen Tab „Tagespuzzle" — Datum wählen, aktuelles Puzzle ansehen und per Knopf neu auswürfeln. Der Link/das Datum bleibt gleich, nur das Puzzle dahinter wechselt. Das bisher gezogene Puzzle wird ausgemustert und nie wieder als Tages-, Zufalls- oder Blindpuzzle gezogen.',
+  ]},
   { version: '0.88.0', date: '2026-06-05', changes: [
     'Der Schach-Bot kann jetzt deinen Trainings-Fortschritt für eine tägliche, persönliche Motivations-DM lesen: neuer bot-interner Endpoint `GET /api/bot/player-progress/{discordId}` liefert für ein mit Discord verknüpftes Konto den heutigen Trainingsziele-Stand + die Puzzle-Statistik. Abgesichert über ein geteiltes HMAC-Secret (`SchachBot:StatsSecret`), keine Nutzerdaten ohne gültige Signatur. Nichts an der Web-Oberfläche ändert sich — die Funktion nutzt ausschließlich der Discord-Bot.',
   ]},

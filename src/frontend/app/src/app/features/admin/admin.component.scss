@@ -33,3 +33,11 @@
 
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 8px; }
     .goal-actions { display: flex; gap: 8px; }
+
+    .daily-intro { color: #666; max-width: 640px; }
+    .daily-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .daily-date-field { min-width: 180px; }
+    .daily-card { max-width: 640px; }
+    .daily-row { display: flex; gap: 12px; padding: 4px 0; }
+    .daily-key { min-width: 120px; color: #666; font-weight: 500; }
+    .daily-lineid { font-family: monospace; font-size: 0.85rem; word-break: break-all; }

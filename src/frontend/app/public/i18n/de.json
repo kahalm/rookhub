@@ -794,7 +794,8 @@
     "tabs": {
       "users": "Users",
       "books": "Bücher",
-      "groups": "Gruppen"
+      "groups": "Gruppen",
+      "daily": "Tagespuzzle"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -890,6 +891,23 @@
           "load": "Trainingsziel konnte nicht geladen werden.",
           "save": "Trainingsziel konnte nicht gespeichert werden."
         }
+      }
+    },
+    "daily": {
+      "intro": "Tagespuzzle für ein Datum neu generieren. Der Link bleibt gleich — nur das dahinterliegende Puzzle wechselt. Das bisher zugeordnete Puzzle wird ausgemustert und nie wieder als Tages-, Zufalls- oder Blindpuzzle gezogen.",
+      "dateLabel": "Datum",
+      "reload": "Neu laden",
+      "puzzleId": "Puzzle-ID",
+      "book": "Buch",
+      "puzzleTitle": "Titel",
+      "none": "Für dieses Datum ist noch kein Tagespuzzle zugeordnet.",
+      "generate": "Tagespuzzle generieren",
+      "regenerate": "Neu generieren",
+      "regenerateConfirm": "Dieses Tagespuzzle neu generieren? Das aktuelle Puzzle wird ausgemustert und nie wieder als Tages- oder Zufallspuzzle gezogen.",
+      "regenerated": "Tagespuzzle neu generiert.",
+      "errors": {
+        "load": "Tagespuzzle konnte nicht geladen werden.",
+        "regenerate": "Tagespuzzle konnte nicht neu generiert werden."
       }
     }
   },

@@ -49,4 +49,13 @@ public class BookPuzzle
 
     [MaxLength(200)]
     public string? Tags { get; set; }
+
+    /// <summary>
+    /// „Ausgemustert": Wird nicht mehr in den Zufalls-Pools (Daily/Random/Blind) gezogen.
+    /// Gesetzt z. B. wenn ein Admin das Tagespuzzle für ein Datum neu generiert — das bis dahin
+    /// gezogene Puzzle soll danach nie wieder als Tages-/Zufallspuzzle erscheinen. Direkter Aufruf
+    /// per Id, Buch-Navigation (next/random im Buch) und persistierte Vergangenheits-Zuordnungen
+    /// bleiben unberührt.
+    /// </summary>
+    public bool Retired { get; set; }
 }

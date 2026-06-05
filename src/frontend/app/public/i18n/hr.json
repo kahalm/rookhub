@@ -794,7 +794,8 @@
     "tabs": {
       "users": "Korisnici",
       "books": "Knjige",
-      "groups": "Grupe"
+      "groups": "Grupe",
+      "daily": "Dnevna zagonetka"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
@@ -890,6 +891,23 @@
           "load": "Trening cilj nije moguće učitati.",
           "save": "Trening cilj nije moguće spremiti."
         }
+      }
+    },
+    "daily": {
+      "intro": "Ponovno generiraj dnevnu zagonetku za odabrani datum. Poveznica ostaje ista — mijenja se samo zagonetka iza nje. Dosad dodijeljena zagonetka se umirovljuje i više se nikada neće izvući kao dnevna, nasumična ili slijepa zagonetka.",
+      "dateLabel": "Datum",
+      "reload": "Ponovno učitaj",
+      "puzzleId": "ID zagonetke",
+      "book": "Knjiga",
+      "puzzleTitle": "Naslov",
+      "none": "Za ovaj datum još nije dodijeljena dnevna zagonetka.",
+      "generate": "Generiraj dnevnu zagonetku",
+      "regenerate": "Ponovno generiraj",
+      "regenerateConfirm": "Ponovno generirati ovu dnevnu zagonetku? Trenutačna zagonetka se umirovljuje i više se nikada neće izvući kao dnevna ili nasumična zagonetka.",
+      "regenerated": "Dnevna zagonetka ponovno generirana.",
+      "errors": {
+        "load": "Učitavanje dnevne zagonetke nije uspjelo.",
+        "regenerate": "Ponovno generiranje dnevne zagonetke nije uspjelo."
       }
     }
   },

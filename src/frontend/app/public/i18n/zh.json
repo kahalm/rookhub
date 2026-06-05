@@ -795,7 +795,8 @@
       "users": "用户",
       "books": "书本",
       "groups": "群组",
-      "logs": "请求日志"
+      "logs": "请求日志",
+      "daily": "Daily Puzzle"
     },
     "users": {
       "searchLabel": "搜索用户",
@@ -913,6 +914,23 @@
       },
       "errors": {
         "load": "加载日志失败"
+      }
+    },
+    "daily": {
+      "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",
+      "dateLabel": "Date",
+      "reload": "Reload",
+      "puzzleId": "Puzzle ID",
+      "book": "Book",
+      "puzzleTitle": "Title",
+      "none": "No daily puzzle assigned for this date yet.",
+      "generate": "Generate daily puzzle",
+      "regenerate": "Regenerate",
+      "regenerateConfirm": "Regenerate this daily puzzle? The current puzzle will be retired and never drawn again for daily or random puzzles.",
+      "regenerated": "Daily puzzle regenerated.",
+      "errors": {
+        "load": "Failed to load the daily puzzle.",
+        "regenerate": "Failed to regenerate the daily puzzle."
       }
     }
   },

@@ -231,4 +231,140 @@ public class DailyPuzzleTests : IDisposable
         Assert.Equal(only.Id, dto.Id);
         Assert.Equal(1, await _db.DailyPuzzles.CountAsync());
     }
+
+    // --- Regenerate / Retired -------------------------------------------------
+
+    [Fact]
+    public async Task RegenerateDailyAsync_RetiresOldAndAssignsNew_SameDate()
+    {
+        var book = await CreateDailyBookAsync();
+        var p1 = await AddPuzzleAsync(book, "d.pgn:1");
+        var p2 = await AddPuzzleAsync(book, "d.pgn:2");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var first = await _service.GetOrAssignDailyAsync(today);
+
+        var regenerated = await _service.RegenerateDailyAsync(today);
+
+        // Anderes Puzzle, aber weiterhin genau eine Zuordnung fuer dasselbe Datum.
+        Assert.NotEqual(first.Id, regenerated.Id);
+        Assert.Equal(1, await _db.DailyPuzzles.CountAsync());
+        var row = await _db.DailyPuzzles.SingleAsync();
+        Assert.Equal(today, row.Date);
+        Assert.Equal(regenerated.Id, row.BookPuzzleId);
+
+        // Das alte Puzzle ist jetzt ausgemustert.
+        var oldRetired = await _db.BookPuzzles.FirstAsync(bp => bp.Id == first.Id);
+        Assert.True(oldRetired.Retired);
+    }
+
+    [Fact]
+    public async Task RegenerateDailyAsync_RetiredPuzzleNeverDrawnAgain()
+    {
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "d.pgn:1");
+        await AddPuzzleAsync(book, "d.pgn:2");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var first = await _service.GetOrAssignDailyAsync(today);
+        var regenerated = await _service.RegenerateDailyAsync(today);
+
+        // Das ausgemusterte (erste) Puzzle darf in keinem Pool mehr auftauchen.
+        for (var i = 0; i < 20; i++)
+        {
+            var rnd = await _service.GetOrAssignDailyAsync(today.AddDays(-(i + 1)));
+            Assert.NotEqual(first.Id, rnd.Id);
+        }
+    }
+
+    [Fact]
+    public async Task RegenerateDailyAsync_ExcludesRetiredFromRandomPool()
+    {
+        var book = new Book { FileName = "rand.pgn", DisplayName = "Rand", ForDaily = true, ForRandom = true };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        await AddPuzzleAsync(book, "r.pgn:1");
+        await AddPuzzleAsync(book, "r.pgn:2");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var first = await _service.GetOrAssignDailyAsync(today);
+        await _service.RegenerateDailyAsync(today);
+
+        // Random-Pool darf das ausgemusterte Puzzle nicht mehr liefern.
+        for (var i = 0; i < 20; i++)
+        {
+            var rnd = await _service.GetRandomAsync("random", exclude: null, bookId: null);
+            Assert.NotEqual(first.Id, rnd.Id);
+        }
+    }
+
+    [Fact]
+    public async Task RegenerateDailyAsync_NoExistingAssignment_CreatesOne()
+    {
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "d.pgn:1");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dto = await _service.RegenerateDailyAsync(today);
+
+        Assert.NotEqual(0, dto.Id);
+        Assert.Equal(1, await _db.DailyPuzzles.CountAsync());
+    }
+
+    [Fact]
+    public async Task RegenerateDailyAsync_PoolExhausted_Throws()
+    {
+        // Nur ein Puzzle im Daily-Pool → nach dem Ausmustern bleibt nichts uebrig.
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "d.pgn:1");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        await _service.GetOrAssignDailyAsync(today);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.RegenerateDailyAsync(today));
+    }
+
+    [Fact]
+    public async Task RegenerateDailyAsync_FutureDate_Throws()
+    {
+        var future = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.RegenerateDailyAsync(future));
+    }
+
+    [Fact]
+    public async Task RegenerateDaily_Endpoint_ReturnsNewPuzzle()
+    {
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "d.pgn:1");
+        await AddPuzzleAsync(book, "d.pgn:2");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var first = await _service.GetOrAssignDailyAsync(today);
+
+        var result = await _controller.RegenerateDaily(today.ToString("yyyyMMdd")) as OkObjectResult;
+        Assert.NotNull(result);
+        var dto = Assert.IsType<BookPuzzleDto>(result.Value);
+        Assert.NotEqual(first.Id, dto.Id);
+    }
+
+    [Fact]
+    public async Task RegenerateDaily_Endpoint_InvalidDate_Returns400()
+    {
+        var result = await _controller.RegenerateDaily("nope");
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task RegenerateDaily_Endpoint_PoolExhausted_Returns404()
+    {
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "d.pgn:1");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        await _service.GetOrAssignDailyAsync(today);
+
+        var result = await _controller.RegenerateDaily("today");
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
 }

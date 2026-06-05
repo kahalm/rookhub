@@ -238,11 +238,12 @@ public class BookPuzzleService
             // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch.
             query = query.Where(bp => bp.BookId == bookId.Value);
         else
+            // Ausgemusterte Puzzles (Retired) werden in keinem Zufalls-Pool mehr gezogen.
             query = pool switch
             {
-                "daily" => query.Where(bp => bp.Book!.ForDaily),
-                "blind" => query.Where(bp => bp.Book!.ForBlind),
-                _ => query.Where(bp => bp.Book!.ForRandom),
+                "daily" => query.Where(bp => bp.Book!.ForDaily && !bp.Retired),
+                "blind" => query.Where(bp => bp.Book!.ForBlind && !bp.Retired),
+                _ => query.Where(bp => bp.Book!.ForRandom && !bp.Retired),
             };
 
         if (!string.IsNullOrWhiteSpace(exclude))
@@ -298,9 +299,9 @@ public class BookPuzzleService
         if (existing?.BookPuzzle != null)
             return MapToDto(existing.BookPuzzle);
 
-        // 2) Zufaelliges Puzzle aus dem forDaily-Pool.
+        // 2) Zufaelliges Puzzle aus dem forDaily-Pool (ausgemusterte ausgenommen).
         var pool = _db.BookPuzzles.Include(bp => bp.Book)
-            .Where(bp => bp.Book != null && bp.Book.ForDaily);
+            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired);
         var count = await pool.CountAsync();
         if (count == 0)
             throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
@@ -335,6 +336,68 @@ public class BookPuzzleService
         }
 
         _logger.LogInformation("DailyPuzzle assigned: Date={Date} BookPuzzleId={Id}", date, picked.Id);
+        return MapToDto(picked);
+    }
+
+    /// <summary>
+    /// Generiert das Tagespuzzle eines UTC-Datums neu (Admin). Der Link/das Datum bleiben gleich,
+    /// nur das dahinterliegende Puzzle wechselt: das bisher zugeordnete Puzzle wird <c>Retired</c>
+    /// gesetzt (nie wieder im Daily-/Random-/Blind-Pool) und ein neues aus dem forDaily-Pool
+    /// (ausgemusterte ausgenommen) gezogen und der bestehenden Zuordnung untergeschoben.
+    ///
+    /// Gibt es für das Datum noch keine Zuordnung, wird einfach eine neue angelegt (nichts auszumustern).
+    /// Zukuenftige Daten → <see cref="InvalidOperationException"/> (400).
+    /// </summary>
+    public async Task<BookPuzzleDto> RegenerateDailyAsync(DateOnly date)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (date > today)
+            throw new InvalidOperationException("Date is in the future.");
+
+        var existing = await _db.DailyPuzzles.FirstOrDefaultAsync(d => d.Date == date);
+
+        // Bisheriges Puzzle ausmustern, damit es nicht erneut (auch nicht in Random/Blind) gezogen wird.
+        int? retiredId = existing?.BookPuzzleId;
+        if (retiredId.HasValue)
+        {
+            var old = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == retiredId.Value);
+            if (old != null)
+                old.Retired = true;
+        }
+
+        // Neues Puzzle aus dem forDaily-Pool ziehen (ausgemusterte – inkl. des gerade ausgemusterten – ausgenommen).
+        var pool = _db.BookPuzzles.Include(bp => bp.Book)
+            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired
+                         && (retiredId == null || bp.Id != retiredId.Value));
+        var count = await pool.CountAsync();
+        if (count == 0)
+            throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+
+        var index = Random.Shared.Next(count);
+        var picked = await pool.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+
+        var now = DateTime.UtcNow;
+        if (existing != null)
+        {
+            existing.BookPuzzleId = picked.Id;
+            existing.CreatedAt = now;
+        }
+        else
+        {
+            _db.DailyPuzzles.Add(new Models.DailyPuzzle
+            {
+                Date = date,
+                BookPuzzleId = picked.Id,
+                CreatedAt = now
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "DailyPuzzle regenerated: Date={Date} RetiredPuzzleId={Retired} NewPuzzleId={New}",
+            date, retiredId, picked.Id);
         return MapToDto(picked);
     }
 

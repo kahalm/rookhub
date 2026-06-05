@@ -119,4 +119,29 @@ public class BookPuzzleController : BaseApiController
         }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
+
+    /// <summary>
+    /// Admin: Tagespuzzle eines UTC-Datums neu generieren. Datum/Link bleiben gleich, nur das
+    /// dahinterliegende Puzzle wechselt; das bisherige wird ausgemustert (nie wieder Daily/Random/Blind).
+    /// <paramref name="date"/> als <c>yyyyMMdd</c> oder das Literal <c>today</c>.
+    /// </summary>
+    [HttpPost("/api/admin/book-puzzles/daily/{date}/regenerate")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RegenerateDaily(string date)
+    {
+        DateOnly parsed;
+        if (string.Equals(date, "today", StringComparison.OrdinalIgnoreCase))
+        {
+            parsed = DateOnly.FromDateTime(DateTime.UtcNow);
+        }
+        else if (!DateOnly.TryParseExact(date, "yyyyMMdd", null,
+                     System.Globalization.DateTimeStyles.None, out parsed))
+        {
+            return BadRequest(new { message = "date must be yyyyMMdd or 'today'." });
+        }
+
+        try { return Ok(await _service.RegenerateDailyAsync(parsed)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
 }

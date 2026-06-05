@@ -75,6 +75,16 @@ export interface AdminConfig {
   kibanaUrl: string;
 }
 
+/** Tagespuzzle-Zuordnung (Auszug aus dem BookPuzzleDto), wie sie das Admin-UI anzeigt. */
+export interface DailyPuzzleInfo {
+  id: number;
+  lineId: string;
+  bookFileName: string;
+  title: string | null;
+  difficulty: string | null;
+  bookRating: number | null;
+}
+
 /** Trainingsziel-Vorlage einer Gruppe (Puzzles/Buch = Min/Tag, Spielen = Partien/Woche + Wochenziel Tage). */
 export interface GroupTrainingGoal {
   puzzleMinutes: number;
@@ -130,6 +140,17 @@ export class AdminService {
     const form = new FormData();
     for (const f of Array.from(files)) form.append('files', f, f.name);
     return this.http.post<BookImportResult>('/api/admin/books/import', form);
+  }
+
+  // --- Tagespuzzle ------------------------------------------------------
+  /** Aktuell zugeordnetes Tagespuzzle eines UTC-Datums (yyyyMMdd oder 'today'). */
+  getDailyPuzzle(date: string): Observable<DailyPuzzleInfo> {
+    return this.http.get<DailyPuzzleInfo>(`/api/book-puzzles/daily/${date}`);
+  }
+
+  /** Generiert das Tagespuzzle eines Datums neu; mustert das bisherige aus. */
+  regenerateDailyPuzzle(date: string): Observable<DailyPuzzleInfo> {
+    return this.http.post<DailyPuzzleInfo>(`/api/admin/book-puzzles/daily/${date}/regenerate`, {});
   }
 
   // --- Gruppen ----------------------------------------------------------

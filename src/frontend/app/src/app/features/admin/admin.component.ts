@@ -15,7 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
+import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -62,6 +62,15 @@ export class AdminComponent implements OnInit {
   /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
   kibanaUrl = '';
 
+  // --- Tagespuzzle ------------------------------------------------------
+  /** Heute (UTC) als yyyy-MM-dd — obere Grenze fürs Datumsfeld (keine Zukunft). */
+  readonly today = new Date().toISOString().slice(0, 10);
+  /** Gewähltes Datum als yyyy-MM-dd (HTML date input); Default heute (UTC). */
+  dailyDate = new Date().toISOString().slice(0, 10);
+  dailyPuzzle: DailyPuzzleInfo | null = null;
+  dailyLoading = false;
+  dailyRegenerating = false;
+
   constructor(private adminService: AdminService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
@@ -69,6 +78,7 @@ export class AdminComponent implements OnInit {
     this.loadBooks();
     this.loadGroups();
     this.loadAllUsers();
+    this.loadDailyPuzzle();
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
@@ -195,6 +205,48 @@ export class AdminComponent implements OnInit {
       },
       error: err => {
         this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.delete'));
+      }
+    });
+  }
+
+  // --- Tagespuzzle ------------------------------------------------------
+  /** yyyy-MM-dd → yyyyMMdd für die API-Route. */
+  private compactDate(d: string): string {
+    return (d || '').replace(/-/g, '');
+  }
+
+  loadDailyPuzzle(): void {
+    const date = this.compactDate(this.dailyDate);
+    if (date.length !== 8) return;
+    this.dailyLoading = true;
+    this.dailyPuzzle = null;
+    this.adminService.getDailyPuzzle(date).subscribe({
+      next: p => { this.dailyPuzzle = p; this.dailyLoading = false; },
+      error: err => {
+        this.dailyLoading = false;
+        // 404 = noch kein Tagespuzzle für dieses Datum (z. B. leerer Pool) — kein Fehler-Toast nötig.
+        if (err.status !== 404) {
+          this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.load'));
+        }
+      }
+    });
+  }
+
+  regenerateDailyPuzzle(): void {
+    const date = this.compactDate(this.dailyDate);
+    if (date.length !== 8) return;
+    if (!confirm(this.translate.instant('admin.daily.regenerateConfirm'))) return;
+
+    this.dailyRegenerating = true;
+    this.adminService.regenerateDailyPuzzle(date).subscribe({
+      next: p => {
+        this.dailyPuzzle = p;
+        this.dailyRegenerating = false;
+        this.snackbar.info(this.translate.instant('admin.daily.regenerated'));
+      },
+      error: err => {
+        this.dailyRegenerating = false;
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.regenerate'));
       }
     });
   }
