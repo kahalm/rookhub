@@ -56,4 +56,33 @@ public class WeeklyPostProgressDto
     public int SolvedCount { get; set; }
     /// <summary>True, wenn alle Puzzles gespielt wurden.</summary>
     public bool Completed { get; set; }
+    /// <summary>Gesamtzeit des Users über alle gespielten Puzzles dieses Wochenposts in Sekunden.</summary>
+    public int TotalSeconds { get; set; }
+    /// <summary>Indizes der bereits gespielten Puzzles (für „zum ersten neuen Puzzle springen"); leer in der Übersicht.</summary>
+    public List<int> PlayedIndices { get; set; } = new();
+}
+
+/// <summary>Aggregierte Wochenpost-Ergebnisse (für die Discord-Anzeige): wer wie weit ist.</summary>
+public class WeeklyPostResultsDto
+{
+    public int WeeklyPostId { get; set; }
+    /// <summary>Anzahl Puzzles im Wochenpost.</summary>
+    public int Total { get; set; }
+    /// <summary>Anzahl User, die alle Puzzles gespielt haben (= erledigt).</summary>
+    public int CompletedCount { get; set; }
+    public List<WeeklyPlayerResultDto> Players { get; set; } = new();
+}
+
+/// <summary>Stand eines Users bei einem Wochenpost (für die Discord-Anzeige).</summary>
+public class WeeklyPlayerResultDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? DiscordId { get; set; }
+    public string? DiscordUsername { get; set; }
+    public int PlayedCount { get; set; }
+    public int SolvedCount { get; set; }
+    /// <summary>Gesamtzeit über alle gespielten Puzzles in Sekunden.</summary>
+    public int TotalSeconds { get; set; }
+    /// <summary>True, wenn alle Puzzles gespielt wurden.</summary>
+    public bool Completed { get; set; }
 }

@@ -570,7 +570,8 @@
     "progress": {
       "solvedLabel": "Gelöst",
       "failedLabel": "Nicht gelöst",
-      "doneLabel": "Gespielt"
+      "doneLabel": "Gespielt",
+      "timeLabel": "Gesamtzeit"
     },
     "upload": {
       "title": "Neuen Wochenpost hochladen",

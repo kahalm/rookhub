@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.91.1';
+export const APP_VERSION = '0.94.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.94.0', date: '2026-06-05', changes: [
+    'Wochenpost zeigt jetzt auch in RookHub die Gesamtzeit an: in der Übersicht hinter deinem Fortschritt (⏱) und beim Durchspielen über dem Brett — die Summe deiner Zeit über alle gespielten Puzzles des Posts.',
+  ]},
+  { version: '0.93.0', date: '2026-06-05', changes: [
+    'Der Schach-Bot zeigt jetzt im Wochenpost-Thread auf Discord live den Fortschritt: wer den Post erledigt hat, gelöst/gesamt pro Person und die Gesamtzeit — aktualisiert sich automatisch, sobald jemand spielt (neuer Endpoint + Webhook an den Bot).',
+  ]},
+  { version: '0.92.0', date: '2026-06-05', changes: [
+    'Wochenpost durchspielen: Wenn du schon Fortschritt hast, startet das Durchspielen jetzt direkt beim ersten Puzzle, das du noch nicht gespielt hast — und wenn du alle durch hast, wieder von vorne.',
+  ]},
   { version: '0.91.1', date: '2026-06-05', changes: [
     'Wochenpost: Wenn du bei einem Puzzle „Aufgeben" drückst oder es nach einem Zug zurücksetzt, zählt es jetzt als ✗ (gespielt, nicht gelöst) — vorher wurde nur ein gelöstes oder per Fehlzug verlorenes Puzzle gewertet.',
   ]},

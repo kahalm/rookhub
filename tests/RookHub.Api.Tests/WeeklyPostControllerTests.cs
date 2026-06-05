@@ -205,6 +205,7 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.Equal(1, p1.PlayedCount);
         Assert.Equal(1, p1.SolvedCount);
         Assert.False(p1.Completed);
+        Assert.Equal(new[] { 0 }, p1.PlayedIndices);   // für „zum ersten neuen Puzzle springen"
 
         // Zweites Puzzle NICHT gelöst → trotzdem „gespielt" → erledigt (alle gespielt).
         var p2 = Unwrap<WeeklyPostProgressDto>(
@@ -212,6 +213,8 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.Equal(2, p2.PlayedCount);
         Assert.Equal(1, p2.SolvedCount);
         Assert.True(p2.Completed);
+        Assert.Equal(new[] { 0, 1 }, p2.PlayedIndices);
+        Assert.Equal(42, p2.TotalSeconds);   // 30 + 12 (eigene Gesamtzeit)
     }
 
     [Fact]
@@ -262,8 +265,8 @@ public class WeeklyPostControllerTests : IDisposable
     {
         var id = await CreateTwoPuzzlePostAsync();
         SetUser(1);
-        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
-        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 20 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 7 });
 
         // User 1: genau ein Post mit Versuchen, played 2/2, solved 1, completed.
         var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
@@ -272,10 +275,46 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.Equal(2, p.PlayedCount);
         Assert.Equal(1, p.SolvedCount);
         Assert.True(p.Completed);
+        Assert.Equal(27, p.TotalSeconds);   // 20 + 7 (Gesamtzeit in der Übersicht)
 
         // User 2: keine Versuche → leere Liste.
         SetUser(2);
         var empty = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
         Assert.Empty(empty);
+    }
+
+    [Fact]
+    public async Task GetResults_AggregatesPerUser_WithDiscordTimeAndCompleted()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var u = new AppUser
+        {
+            Username = "alice", Email = "a@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DiscordId = "d1", DiscordUsername = "alice#1", DisplayName = "Alice" },
+        };
+        _db.AppUsers.Add(u);
+        await _db.SaveChangesAsync();
+
+        SetUser(u.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 30 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = false, TimeSeconds = 12 });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        Assert.Equal(2, res.Total);
+        Assert.Equal(1, res.CompletedCount);
+        var p = Assert.Single(res.Players);
+        Assert.Equal("Alice", p.Name);          // DisplayName bevorzugt
+        Assert.Equal("d1", p.DiscordId);
+        Assert.Equal(2, p.PlayedCount);
+        Assert.Equal(1, p.SolvedCount);
+        Assert.Equal(42, p.TotalSeconds);       // 30 + 12 (Gesamtzeit)
+        Assert.True(p.Completed);
+    }
+
+    [Fact]
+    public async Task GetResults_UnknownPost_Returns404()
+    {
+        var res = await _controller.GetResults(999);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
     }
 }

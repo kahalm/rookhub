@@ -121,6 +121,21 @@ public class WeeklyPostController : BaseApiController
     public async Task<ActionResult<List<WeeklyPostProgressDto>>> GetAllProgress()
         => Ok(await _progress.GetAllProgressAsync(GetUserId()));
 
+    /// <summary>Aggregierte Ergebnisse eines Wochenposts (wer wie weit + Gesamtzeit) — für die Discord-Anzeige.</summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/results")]
+    public async Task<ActionResult<WeeklyPostResultsDto>> GetResults(int id)
+    {
+        try
+        {
+            return Ok(await _progress.GetResultsAsync(id));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Fortschritt des eingeloggten Users für diesen Wochenpost.</summary>
     [Authorize]
     [HttpGet("{id}/progress")]

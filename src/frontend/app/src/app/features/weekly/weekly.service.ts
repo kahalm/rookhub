@@ -31,6 +31,10 @@ export interface WeeklyProgress {
   playedCount: number;
   solvedCount: number;
   completed: boolean;
+  /** Gesamtzeit über alle gespielten Puzzles dieses Wochenposts in Sekunden. */
+  totalSeconds: number;
+  /** Indizes der bereits gespielten Puzzles (für „zum ersten neuen Puzzle springen"); leer in der Übersicht. */
+  playedIndices?: number[];
 }
 
 // --- Termin-Helfer (reine Funktionen, testbar ohne Komponente) ---

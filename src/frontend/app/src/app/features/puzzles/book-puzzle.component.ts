@@ -31,7 +31,7 @@ import { CourseService, CourseMode } from '../courses/course.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
-import { WeeklyService } from '../weekly/weekly.service';
+import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE';
@@ -73,6 +73,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   weeklyCompleted = false;
   weeklyPlayed = 0;                       // gespielte Puzzles (serverseitiger Stand)
   weeklySolved = 0;                       // davon gelöst
+  weeklySeconds = 0;                      // Gesamtzeit über alle gespielten Puzzles (serverseitiger Stand)
   private weeklyAttemptRecorded = false;  // pro Puzzle nur einmal aufzeichnen
 
   // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
@@ -415,6 +416,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.weeklyTotal === 0) return 0;
     return this.weeklyCompleted ? 100 : Math.round(100 * this.weeklyIndex / this.weeklyTotal);
   }
+  /** Gesamtzeit über alle gespielten Puzzles als m:ss bzw. h:mm:ss. */
+  get weeklyTimeDisplay(): string {
+    const s = Math.max(0, Math.floor(this.weeklySeconds));
+    const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
+    const p2 = (n: number) => n.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
+  }
 
   private loadWeekly(): void {
     if (this.weeklyId == null) return;
@@ -424,23 +432,40 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.weeklyTitle = play.title;
         this.weeklyPuzzles = play.puzzles ?? [];
         this.weeklyIndex = 0;
-        // Bisherigen Fortschritt des Users laden (Anzeige „X/Y gespielt · Z gelöst").
-        if (this.auth.isLoggedIn && this.weeklyId != null) {
-          this.weeklyService.getProgress(this.weeklyId).subscribe({
-            next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; },
-            error: () => { /* Fortschritt optional — Spielen geht trotzdem */ },
-          });
-        }
         if (this.weeklyPuzzles.length === 0) {
           this.weeklyCompleted = false;
           this.puzzle = null;
           this.state = 'COURSE_DONE';   // Done-Panel; weekly-Card zeigt „keine Puzzles"
           return;
         }
-        this.loadWeeklyAt(0);
+        // Fortschritt laden → Anzeige + Einstieg beim ersten NEUEN Puzzle (bei 100% von vorne).
+        if (this.auth.isLoggedIn && this.weeklyId != null) {
+          this.weeklyService.getProgress(this.weeklyId).subscribe({
+            next: p => {
+              this.weeklyPlayed = p.playedCount;
+              this.weeklySolved = p.solvedCount;
+              this.weeklySeconds = p.totalSeconds;
+              this.loadWeeklyAt(this.weeklyStartIndex(p));
+            },
+            error: () => this.loadWeeklyAt(0),
+          });
+        } else {
+          this.loadWeeklyAt(0);
+        }
       },
       error: () => { this.state = 'COURSE_DONE'; this.puzzle = null; }
     });
+  }
+
+  /**
+   * Einstiegs-Index: erstes noch NICHT gespieltes Puzzle (Sprung über bereits Gemachtes).
+   * Bei 100% gespielt → 0 (von vorne). Ohne Fortschritt → 0.
+   */
+  private weeklyStartIndex(p: WeeklyProgress): number {
+    if (p.completed) return 0;
+    const played = new Set(p.playedIndices ?? []);
+    const idx = this.weeklyPuzzles.findIndex(pz => !played.has(pz.id));
+    return idx >= 0 ? idx : 0;
   }
 
   private loadWeeklyAt(index: number): void {
@@ -472,10 +497,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
       if (solved) this.weeklySolved += 1;
+      this.weeklySeconds += this.elapsedSeconds;
       return;
     }
     this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.elapsedSeconds).subscribe({
-      next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; },
+      next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
   }

@@ -100,6 +100,64 @@ public class SchachBotWebhookService
         }
     }
 
+    /// <summary>
+    /// Schickt den aggregierten Wochenpost-Stand an den Bot (live-Update des Ankündigungs-Threads).
+    /// Ziel-URL wird aus <c>SchachBot:WebhookUrl</c> abgeleitet (letztes Pfadsegment → <c>weekly-progress</c>),
+    /// gleiches Secret. Schluckt alle Fehler (best-effort).
+    /// </summary>
+    public async Task NotifyWeeklyAsync(int weeklyPostId, WeeklyPostResultsDto results, CancellationToken ct = default)
+    {
+        var baseUrl = _config["SchachBot:WebhookUrl"];
+        var secret = _config["SchachBot:WebhookSecret"];
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(secret))
+            return;
+        // ".../webhook/puzzle-attempt" → ".../webhook/weekly-progress"
+        var slash = baseUrl.LastIndexOf('/');
+        var url = slash > 0 ? baseUrl[..slash] + "/weekly-progress" : baseUrl;
+
+        var payload = new
+        {
+            weeklyPostId,
+            results = new
+            {
+                total = results.Total,
+                completedCount = results.CompletedCount,
+                players = results.Players.Select(p => new
+                {
+                    name = p.Name,
+                    discordId = p.DiscordId,
+                    discordUsername = p.DiscordUsername,
+                    playedCount = p.PlayedCount,
+                    solvedCount = p.SolvedCount,
+                    totalSeconds = p.TotalSeconds,
+                    completed = p.Completed,
+                }),
+            },
+        };
+
+        string body;
+        try { body = JsonSerializer.Serialize(payload); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SchachBot-Weekly-Webhook: Payload nicht serialisierbar (weeklyPostId={Id})", weeklyPostId);
+            return;
+        }
+
+        var signature = ComputeHmacHex(secret, body);
+        try
+        {
+            using var content = new StringContent(body, Encoding.UTF8);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+            req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!resp.IsSuccessStatusCode)
+                _logger.LogWarning("SchachBot-Weekly-Webhook: HTTP {Status} (weeklyPostId={Id})", (int)resp.StatusCode, weeklyPostId);
+        }
+        catch (TaskCanceledException) { _logger.LogDebug("SchachBot-Weekly-Webhook abgebrochen (weeklyPostId={Id})", weeklyPostId); }
+        catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-Weekly-Webhook fehlgeschlagen (weeklyPostId={Id})", weeklyPostId); }
+    }
+
     /// <summary>HMAC-SHA256 ueber <paramref name="body"/> mit <paramref name="secret"/>, als lowercase-hex.</summary>
     public static string ComputeHmacHex(string secret, string body)
     {

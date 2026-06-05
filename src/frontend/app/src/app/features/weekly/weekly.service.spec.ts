@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { WeeklyService, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyProgress, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 
 describe('WeeklyService', () => {
   let svc: WeeklyService;
@@ -92,16 +92,17 @@ describe('WeeklyService', () => {
     expect(played).toBe(3);
   });
 
-  it('loads progress over all weekly posts (overview)', () => {
-    let count = 0;
-    svc.getAllProgress().subscribe(list => (count = list.length));
+  it('loads progress over all weekly posts (overview), incl. total time', () => {
+    let list: WeeklyProgress[] = [];
+    svc.getAllProgress().subscribe(l => (list = l));
     const req = http.expectOne('/api/weekly-posts/progress');
     expect(req.request.method).toBe('GET');
     req.flush([
-      { weeklyPostId: 7, total: 5, playedCount: 5, solvedCount: 4, completed: true },
-      { weeklyPostId: 8, total: 3, playedCount: 1, solvedCount: 0, completed: false },
+      { weeklyPostId: 7, total: 5, playedCount: 5, solvedCount: 4, completed: true, totalSeconds: 123 },
+      { weeklyPostId: 8, total: 3, playedCount: 1, solvedCount: 0, completed: false, totalSeconds: 12 },
     ]);
-    expect(count).toBe(2);
+    expect(list.length).toBe(2);
+    expect(list[0].totalSeconds).toBe(123);
   });
 });
 

@@ -570,7 +570,8 @@
     "progress": {
       "solvedLabel": "Solved",
       "failedLabel": "Failed",
-      "doneLabel": "Played"
+      "doneLabel": "Played",
+      "timeLabel": "Total time"
     },
     "upload": {
       "title": "新しい週刊投稿をアップロード",

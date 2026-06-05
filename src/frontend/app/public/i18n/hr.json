@@ -570,7 +570,8 @@
     "progress": {
       "solvedLabel": "Riješeno",
       "failedLabel": "Neriješeno",
-      "doneLabel": "Odigrano"
+      "doneLabel": "Odigrano",
+      "timeLabel": "Ukupno vrijeme"
     },
     "upload": {
       "title": "Učitaj novu tjednu objavu",

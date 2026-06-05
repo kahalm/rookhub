@@ -99,6 +99,9 @@ interface WeeklyPostRow extends WeeklyPost {
                   <span class="wp-slash">/</span>
                   <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
                   <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
+                  @if (p.totalSeconds > 0) {
+                    <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
+                  }
                 </span>
               } @else {
                 <span class="wp-none">—</span>
@@ -143,6 +146,7 @@ interface WeeklyPostRow extends WeeklyPost {
     .wp-failed { color: #c62828; font-weight: 600; }
     .wp-slash { color: #999; margin: 0 4px; }
     .wp-pct { color: #555; margin-left: 6px; }
+    .wp-time { color: #555; margin-left: 6px; }
     .wp-none { color: #bbb; }
   `]
 })
@@ -203,6 +207,14 @@ export class WeeklyListComponent implements OnInit {
   /** Prozent gespielt (von allen Puzzles des Posts). */
   pct(p: WeeklyProgress): number {
     return p.total > 0 ? Math.round(100 * p.playedCount / p.total) : 0;
+  }
+
+  /** Gesamtzeit als m:ss bzw. h:mm:ss. */
+  fmtTime(seconds: number): string {
+    const s = Math.max(0, Math.floor(seconds));
+    const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
+    const p2 = (n: number) => n.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
   }
 
   /** Prefill für den Upload: letzter Termin + 7 Tage, gleiche Uhrzeit; sonst heute + 19:00. */

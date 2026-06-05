@@ -65,7 +65,7 @@
                   <span class="course-progress">{{ weeklyDisplayIndex }}/{{ weeklyTotal }}</span>
                 </div>
                 <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
-                <p class="weekly-stats">{{ 'book.weekly.progress' | translate:{ played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved } }}</p>
+                <p class="weekly-stats">{{ 'book.weekly.progress' | translate:{ played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved } }}@if (weeklySeconds > 0) { <span class="weekly-time"> · ⏱ {{ weeklyTimeDisplay }}</span> }</p>
                 @if (weeklyTitle) { <p class="weekly-title">{{ weeklyTitle }}</p> }
                 @if (weeklyTotal === 0) {
                   <p class="course-done"><mat-icon>info</mat-icon> {{ 'book.weekly.noPuzzles' | translate }}</p>
