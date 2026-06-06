@@ -226,7 +226,7 @@
               @if (visualizationMode && state !== 'SOLVED' && state !== 'FAILED') {
                 <app-viz-card
                   [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-                  [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+                  [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
                   [vizLevelDescription]="vizLevelDescription"
                   titleKey="endless.game.visualization" countdownKey="endless.game.vizCountdown" noMoveKey="endless.game.vizNoMove"
                   showKey="endless.game.vizShow" showingKey="endless.game.vizShowing"

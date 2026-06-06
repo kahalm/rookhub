@@ -21,7 +21,11 @@ import { TranslateModule } from '@ngx-translate/core';
         @if (vizCountdownSeconds > 0) {
           <div class="viz-countdown">{{ countdownKey | translate: { seconds: vizCountdownSeconds } }}</div>
         }
-        <div class="viz-moves">{{ vizMoveText || (noMoveKey | translate) }}</div>
+        @if (vizMoveHtml) {
+          <div class="viz-moves" [innerHTML]="vizMoveHtml"></div>
+        } @else {
+          <div class="viz-moves">{{ noMoveKey | translate }}</div>
+        }
         @if (vizPiecesHidden) {
           <button class="viz-show-btn" (click)="vizShowClicked.emit()">
             {{ (vizShowPressed ? showingKey : showKey) | translate }}
@@ -51,6 +55,7 @@ export class VizCardComponent {
   @Input() visualizationMode = 0;
   @Input() vizCountdownSeconds = 0;
   @Input() vizMoveText = '';
+  @Input() vizMoveHtml = '';
   @Input() vizPiecesHidden = false;
   @Input() vizShowPressed = false;
   @Input() vizLevelDescription = '';

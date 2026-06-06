@@ -23,7 +23,7 @@
           @if (visualizationMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING' || state === 'SOLVED' || state === 'FAILED')) {
             <app-viz-card
               [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-              [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+              [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
               [vizLevelDescription]="vizLevelDescription"
               titleKey="puzzles.viz.title" countdownKey="puzzles.viz.countdown" noMoveKey="puzzles.viz.noMoveYet"
               showKey="puzzles.viz.show" showingKey="puzzles.viz.showing"

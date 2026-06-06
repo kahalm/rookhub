@@ -69,3 +69,26 @@ export function formatSanList(moves: string[], startWhite: boolean, startNum: nu
   }
   return parts.join(' ');
 }
+
+/**
+ * Wie {@link formatSanList}, aber Gegnerzüge (immer Index 1, 3, 5… in der viz-Sequenz —
+ * der erste Zug ist stets der User) werden in `<strong>` eingebettet.
+ * Ausgabe ist sicheres HTML (nur SAN-Notation + Zugnummern + strong-Tags).
+ */
+export function formatSanListHtml(moves: string[], startWhite: boolean, startNum: number): string {
+  if (!moves.length) return '';
+  const parts: string[] = [];
+  let num = startNum;
+  let white = startWhite;
+  let first = true;
+  for (let i = 0; i < moves.length; i++) {
+    const san = moves[i];
+    const isOpponent = i % 2 === 1;
+    const sanHtml = isOpponent ? `<strong>${san}</strong>` : san;
+    if (white) { parts.push(`${num}.`, sanHtml); }
+    else { if (first) parts.push(`${num}...`); parts.push(sanHtml); num++; }
+    white = !white;
+    first = false;
+  }
+  return parts.join(' ');
+}

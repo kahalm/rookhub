@@ -96,7 +96,7 @@
           @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
             <app-viz-card
               [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-              [vizMoveText]="vizMoveText" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
+              [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
               [vizLevelDescription]="vizLevelDescription"
               titleKey="book.viz.titleLevel" countdownKey="book.viz.countdown" noMoveKey="book.viz.noMoveYet"
               showKey="book.viz.show" showingKey="book.viz.showing"

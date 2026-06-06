@@ -1,7 +1,7 @@
 import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
-import { applyUci, tryFreeMove, calcDests, formatSanList } from './puzzle-move.util';
+import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearVisualizationHide } from './board-theme.util';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
@@ -120,6 +120,11 @@ export abstract class BasePuzzleSolver {
   /** SAN-Zugliste (Visualisierungs-Modus) mit korrekten Zugnummern ab der Trainingsstellung. */
   get vizMoveText(): string {
     return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
+  }
+
+  /** Wie `vizMoveText`, aber Gegnerzüge in `<strong>` (für [innerHTML]-Bindung in VizCard). */
+  get vizMoveHtml(): string {
+    return formatSanListHtml(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }
 
   // ===== Setup =====
