@@ -265,99 +265,52 @@
                       </div>
                     }
                     @case ('AWAITING_USER_MOVE') {
-                      <div class="status-center">
-                        <p class="status-text">{{ 'endless.game.yourTurn' | translate }}</p>
-                        @if (showEval) {
-                          <div class="eval-compare">
-                            @if (evalLoading) {
-                              <mat-spinner diameter="16"></mat-spinner>
-                            } @else {
-                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                              <span class="eval-arrow">→</span>
-                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                            }
-                          </div>
-                        }
-                        <div class="play-actions">
-                          <button mat-button (click)="toggleEval()">
-                            <mat-icon>analytics</mat-icon>
-                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
-                          </button>
-                          <button mat-button color="warn" (click)="giveUp()">
-                            <mat-icon>flag</mat-icon>
-                            {{ 'endless.game.giveUp' | translate }}
-                          </button>
-                        </div>
-                      </div>
+                      <app-puzzle-your-turn
+                        state="AWAITING_USER_MOVE"
+                        mode="endless"
+                        [showEval]="showEval"
+                        [evalLoading]="evalLoading"
+                        [initialEval]="initialEval"
+                        [currentEval]="currentEval"
+                        [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                        [showMouseslipInThinking]="true"
+                        (evalToggled)="toggleEval()"
+                        (resetClicked)="resetPuzzle()"
+                        (mouseslipClicked)="mouseslip()"
+                        (giveUpClicked)="giveUp()"
+                      />
                     }
                     @case ('THINKING') {
-                      <div class="status-center">
-                        <mat-spinner diameter="24"></mat-spinner>
-                        <p class="status-text">{{ 'endless.game.opponentThinking' | translate }}</p>
-                        @if (showEval) {
-                          <div class="eval-compare">
-                            <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                            <span class="eval-arrow">→</span>
-                            <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                          </div>
-                        }
-                        <div class="play-actions">
-                          <button mat-button (click)="toggleEval()">
-                            <mat-icon>analytics</mat-icon>
-                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
-                          </button>
-                          <button mat-button (click)="resetPuzzle()">
-                            <mat-icon>replay</mat-icon>
-                            {{ 'endless.game.reset' | translate }}
-                          </button>
-                          @if (!mouseslipUsed && !onSolutionPath) {
-                            <button mat-button (click)="mouseslip()">
-                              <mat-icon>mouse</mat-icon>
-                              {{ 'endless.game.mouseslip' | translate }}
-                            </button>
-                          }
-                          <button mat-button color="warn" (click)="giveUp()">
-                            <mat-icon>flag</mat-icon>
-                            {{ 'endless.game.giveUp' | translate }}
-                          </button>
-                        </div>
-                      </div>
+                      <app-puzzle-your-turn
+                        state="THINKING"
+                        mode="endless"
+                        [showEval]="showEval"
+                        [evalLoading]="evalLoading"
+                        [initialEval]="initialEval"
+                        [currentEval]="currentEval"
+                        [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                        [showMouseslipInThinking]="true"
+                        (evalToggled)="toggleEval()"
+                        (resetClicked)="resetPuzzle()"
+                        (mouseslipClicked)="mouseslip()"
+                        (giveUpClicked)="giveUp()"
+                      />
                     }
                     @case ('PLAYING') {
-                      <div class="status-center">
-                        <p class="status-text">{{ 'endless.game.yourMove' | translate }}</p>
-                        @if (showEval) {
-                          <div class="eval-compare">
-                            @if (evalLoading) {
-                              <mat-spinner diameter="16"></mat-spinner>
-                            } @else {
-                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalStart' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                              <span class="eval-arrow">→</span>
-                              <span class="eval-item"><span class="eval-label">{{ 'endless.game.evalNow' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                            }
-                          </div>
-                        }
-                        <div class="play-actions">
-                          <button mat-button (click)="toggleEval()">
-                            <mat-icon>analytics</mat-icon>
-                            {{ (showEval ? 'endless.game.hideEval' : 'endless.game.showEval') | translate }}
-                          </button>
-                          <button mat-button (click)="resetPuzzle()">
-                            <mat-icon>replay</mat-icon>
-                            {{ 'endless.game.reset' | translate }}
-                          </button>
-                          @if (!mouseslipUsed && !onSolutionPath) {
-                            <button mat-button (click)="mouseslip()">
-                              <mat-icon>mouse</mat-icon>
-                              {{ 'endless.game.mouseslip' | translate }}
-                            </button>
-                          }
-                          <button mat-button color="warn" (click)="giveUp()">
-                            <mat-icon>flag</mat-icon>
-                            {{ 'endless.game.giveUp' | translate }}
-                          </button>
-                        </div>
-                      </div>
+                      <app-puzzle-your-turn
+                        state="PLAYING"
+                        mode="endless"
+                        [showEval]="showEval"
+                        [evalLoading]="evalLoading"
+                        [initialEval]="initialEval"
+                        [currentEval]="currentEval"
+                        [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                        [showMouseslipInThinking]="true"
+                        (evalToggled)="toggleEval()"
+                        (resetClicked)="resetPuzzle()"
+                        (mouseslipClicked)="mouseslip()"
+                        (giveUpClicked)="giveUp()"
+                      />
                     }
                     @case ('SOLVED') {
                       <div class="status-center solved">
@@ -439,19 +392,14 @@
               }
 
               @if (puzzle) {
-                <mat-card class="info-card">
-                  <mat-card-content>
-                    <div class="puzzle-info">
-                      <span class="rating-badge">{{ 'endless.game.puzzleRating' | translate:{ rating: puzzle.rating } }}</span>
-                      <span class="level-badge">{{ 'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating } }}</span>
-                      <app-puzzle-tags [tags]="puzzle.themes" />
-
-                      <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
-                        <mat-icon>share</mat-icon> {{ 'endless.game.sharePuzzle' | translate }}
-                      </button>
-                    </div>
-                  </mat-card-content>
-                </mat-card>
+                <app-puzzle-rating-card
+                  ratingKey="endless.game.puzzleRating"
+                  [ratingParams]="{ rating: puzzle.rating }"
+                  [levelText]="'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating }"
+                  [tags]="puzzle.themes ?? ''"
+                  shareKey="endless.game.sharePuzzle"
+                  (shareClicked)="sharePuzzle()"
+                />
               }
 
               <mat-card class="stats-card">

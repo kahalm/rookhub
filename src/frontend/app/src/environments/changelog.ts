@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.4';
+export const APP_VERSION = '0.96.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.5', date: '2026-06-06', changes: [
+    'Refactor: „Your turn!"-Panel als eigenständige PuzzleYourTurnComponent (Standard/Endless/Book-Modi nutzen dieselbe Komponente, i18n per Mode-Input).',
+    'Refactor: Puzzle-Rating-Card als eigenständige PuzzleRatingCardComponent (Standard + Endless; zeigt Rating, Level-Range, Tags und Share-Button).',
+    'Standard-Puzzle: Share-Button jetzt in der Rating-Card direkt über der Status-Card (war vorher getrennt darunter).',
+  ]},
   { version: '0.96.4', date: '2026-06-06', changes: [
     'Puzzle-Modi: Tags/Themes sind in allen drei Modi (Standard/Endless/Book) standardmäßig ausgeblendet, neuer „Tags anzeigen"-Link klappt sie auf.',
     'Refactor: neue wiederverwendbare PuzzleTagsComponent (statt 3× kopiertes Tag-Toggle-Markup); CSS-Doubletten in den Puzzle-SCSS-Dateien entfernt.',

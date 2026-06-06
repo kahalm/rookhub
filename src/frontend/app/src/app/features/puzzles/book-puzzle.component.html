@@ -238,86 +238,51 @@
                     </div>
                   }
                   @case ('AWAITING_USER_MOVE') {
-                    <div class="status-center">
-                      <p class="status-text">{{ (gaveUp ? 'book.status.gaveUp' : 'book.status.yourTurn') | translate }}</p>
-                      <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                      @if (showEval) {
-                        <div class="eval-compare">
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                          <span class="eval-arrow">→</span>
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                        </div>
-                      }
-                      <div class="play-actions">
-                        <button mat-button (click)="toggleEval()">
-                          <mat-icon>analytics</mat-icon>
-                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                        </button>
-                        <button mat-button class="give-up-btn" (click)="giveUp()">
-                          <mat-icon>flag</mat-icon>
-                          {{ 'book.actions.giveUp' | translate }}
-                        </button>
-                      </div>
-                    </div>
+                    <app-puzzle-your-turn
+                      state="AWAITING_USER_MOVE"
+                      mode="book"
+                      [showEval]="showEval"
+                      [evalLoading]="evalLoading"
+                      [initialEval]="initialEval"
+                      [currentEval]="currentEval"
+                      [gaveUp]="gaveUp"
+                      [timerSeconds]="elapsedSeconds"
+                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                      (evalToggled)="toggleEval()"
+                      (resetClicked)="resetPuzzle()"
+                      (mouseslipClicked)="mouseslip()"
+                      (giveUpClicked)="giveUp()"
+                    />
                   }
                   @case ('THINKING') {
-                    <div class="status-center">
-                      <mat-spinner diameter="24"></mat-spinner>
-                      <p class="status-text">{{ 'book.status.stockfishThinking' | translate }}</p>
-                      @if (showEval) {
-                        <div class="eval-compare">
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                          <span class="eval-arrow">→</span>
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                        </div>
-                      }
-                      <div class="play-actions">
-                        <button mat-button (click)="toggleEval()">
-                          <mat-icon>analytics</mat-icon>
-                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                        </button>
-                        <button mat-button (click)="resetPuzzle()">
-                          <mat-icon>replay</mat-icon>
-                          {{ 'book.actions.reset' | translate }}
-                        </button>
-                        <button mat-button class="give-up-btn" (click)="giveUp()">
-                          <mat-icon>flag</mat-icon>
-                          {{ 'book.actions.giveUp' | translate }}
-                        </button>
-                      </div>
-                    </div>
+                    <app-puzzle-your-turn
+                      state="THINKING"
+                      mode="book"
+                      [showEval]="showEval"
+                      [evalLoading]="evalLoading"
+                      [initialEval]="initialEval"
+                      [currentEval]="currentEval"
+                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                      (evalToggled)="toggleEval()"
+                      (resetClicked)="resetPuzzle()"
+                      (mouseslipClicked)="mouseslip()"
+                      (giveUpClicked)="giveUp()"
+                    />
                   }
                   @case ('PLAYING') {
-                    <div class="status-center">
-                      <p class="status-text">{{ 'book.status.yourMoveVsStockfish' | translate }}</p>
-                      @if (showEval) {
-                        <div class="eval-compare">
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                          <span class="eval-arrow">→</span>
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                        </div>
-                      }
-                      <div class="play-actions">
-                        <button mat-button (click)="toggleEval()">
-                          <mat-icon>analytics</mat-icon>
-                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                        </button>
-                        <button mat-button (click)="resetPuzzle()">
-                          <mat-icon>replay</mat-icon>
-                          {{ 'book.actions.reset' | translate }}
-                        </button>
-                        @if (!mouseslipUsed && !onSolutionPath) {
-                          <button mat-button (click)="mouseslip()">
-                            <mat-icon>mouse</mat-icon>
-                            {{ 'book.actions.mouseslip' | translate }}
-                          </button>
-                        }
-                        <button mat-button class="give-up-btn" (click)="giveUp()">
-                          <mat-icon>flag</mat-icon>
-                          {{ 'book.actions.giveUp' | translate }}
-                        </button>
-                      </div>
-                    </div>
+                    <app-puzzle-your-turn
+                      state="PLAYING"
+                      mode="book"
+                      [showEval]="showEval"
+                      [evalLoading]="evalLoading"
+                      [initialEval]="initialEval"
+                      [currentEval]="currentEval"
+                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                      (evalToggled)="toggleEval()"
+                      (resetClicked)="resetPuzzle()"
+                      (mouseslipClicked)="mouseslip()"
+                      (giveUpClicked)="giveUp()"
+                    />
                   }
                   @case ('SOLVED') {
                     <div class="status-center solved">

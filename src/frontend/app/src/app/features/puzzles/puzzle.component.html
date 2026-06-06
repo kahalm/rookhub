@@ -38,14 +38,13 @@
 
         <div class="info-section">
           @if (puzzle) {
-            <mat-card class="context-card">
-              <mat-card-content>
-                <div class="puzzle-info">
-                  <span class="rating-badge">{{ 'puzzles.info.rating' | translate }}: {{ puzzle.rating }}</span>
-                  <app-puzzle-tags [tags]="puzzle.themes" />
-                </div>
-              </mat-card-content>
-            </mat-card>
+            <app-puzzle-rating-card
+              ratingKey="puzzles.info.rating"
+              [appendRating]="puzzle.rating"
+              [tags]="puzzle.themes ?? ''"
+              shareKey="puzzles.actions.share"
+              (shareClicked)="sharePuzzle()"
+            />
           }
           <mat-card class="status-card">
             <mat-card-content>
@@ -85,91 +84,53 @@
                   </div>
                 }
                 @case ('AWAITING_USER_MOVE') {
-                  <div class="status-center">
-                    <p class="status-text">{{ (gaveUp ? 'puzzles.status.gaveUpPlayOut' : 'puzzles.status.yourTurn') | translate }}</p>
-                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                        <span class="eval-arrow">→</span>
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button color="warn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'puzzles.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
+                  <app-puzzle-your-turn
+                    state="AWAITING_USER_MOVE"
+                    mode="standard"
+                    [showEval]="showEval"
+                    [evalLoading]="evalLoading"
+                    [initialEval]="initialEval"
+                    [currentEval]="currentEval"
+                    [gaveUp]="gaveUp"
+                    [timerSeconds]="elapsedSeconds"
+                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                    (evalToggled)="toggleEval()"
+                    (resetClicked)="resetPuzzle()"
+                    (mouseslipClicked)="mouseslip()"
+                    (giveUpClicked)="giveUp()"
+                  />
                 }
                 @case ('THINKING') {
-                  <div class="status-center">
-                    <mat-spinner diameter="24"></mat-spinner>
-                    <p class="status-text">{{ 'puzzles.status.thinking' | translate }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                        <span class="eval-arrow">→</span>
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button (click)="resetPuzzle()">
-                        <mat-icon>replay</mat-icon>
-                        {{ 'puzzles.actions.reset' | translate }}
-                      </button>
-                      <button mat-button color="warn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'puzzles.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
+                  <app-puzzle-your-turn
+                    state="THINKING"
+                    mode="standard"
+                    [showEval]="showEval"
+                    [evalLoading]="evalLoading"
+                    [initialEval]="initialEval"
+                    [currentEval]="currentEval"
+                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                    (evalToggled)="toggleEval()"
+                    (resetClicked)="resetPuzzle()"
+                    (mouseslipClicked)="mouseslip()"
+                    (giveUpClicked)="giveUp()"
+                  />
                 }
                 @case ('PLAYING') {
-                  <div class="status-center">
-                    <p class="status-text">{{ (gaveUp ? 'puzzles.status.gaveUpPlayOut' : 'puzzles.status.yourTurn') | translate }}</p>
-                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        @if (evalLoading) {
-                          <mat-spinner diameter="16"></mat-spinner>
-                        } @else {
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                          <span class="eval-arrow">→</span>
-                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                        }
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button (click)="resetPuzzle()">
-                        <mat-icon>replay</mat-icon>
-                        {{ 'puzzles.actions.reset' | translate }}
-                      </button>
-                      @if (!mouseslipUsed && !onSolutionPath) {
-                        <button mat-button (click)="mouseslip()">
-                          <mat-icon>mouse</mat-icon>
-                          {{ 'puzzles.actions.mouseslip' | translate }}
-                        </button>
-                      }
-                      <button mat-button color="warn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'puzzles.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
+                  <app-puzzle-your-turn
+                    state="PLAYING"
+                    mode="standard"
+                    [showEval]="showEval"
+                    [evalLoading]="evalLoading"
+                    [initialEval]="initialEval"
+                    [currentEval]="currentEval"
+                    [gaveUp]="gaveUp"
+                    [timerSeconds]="elapsedSeconds"
+                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+                    (evalToggled)="toggleEval()"
+                    (resetClicked)="resetPuzzle()"
+                    (mouseslipClicked)="mouseslip()"
+                    (giveUpClicked)="giveUp()"
+                  />
                 }
                 @case ('SOLVED') {
                   <div class="status-center solved">
@@ -224,14 +185,6 @@
               }
             </mat-card-content>
           </mat-card>
-
-          @if (puzzle) {
-            <div class="bottom-actions">
-              <button mat-stroked-button class="share-full" (click)="sharePuzzle()">
-                <mat-icon>share</mat-icon> {{ 'puzzles.actions.share' | translate }}
-              </button>
-            </div>
-          }
 
           @if (stats) {
             <mat-card class="stats-card">

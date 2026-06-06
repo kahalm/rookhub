@@ -17,6 +17,8 @@ import { ReviewNavComponent } from './review-nav.component';
 import { VizCardComponent } from './viz-card.component';
 import { ThemePickerComponent } from './theme-picker.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
+import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
+import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -56,7 +58,7 @@ interface EndlessPuzzleAttempt {
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, ThemePickerComponent, PuzzleTagsComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, ThemePickerComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
