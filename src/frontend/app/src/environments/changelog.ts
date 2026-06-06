@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.3';
+export const APP_VERSION = '0.95.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,11 +11,14 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.4', date: '2026-06-06', changes: [
+    'Wochenposts sind vor ihrem Erscheinungstermin (scheduledAt) für Nicht-Admins nicht sichtbar — API gibt 404 zurück (Liste, Detail, Puzzles, Ergebnisse, Fortschritt, Versuch).',
+  ]},
   { version: '0.95.3', date: '2026-06-06', changes: [
     'Doku: `CLAUDE.md` um eine Pflicht-Regel ergänzt — vor jedem Datei-Edit MUSS `git pull` laufen. Hintergrund: bei Parallel-Arbeit auf mehreren Klonen führt ein Edit gegen veralteten Stand zu Merge-Konflikten und verlorener Arbeit.',
   ]},
   { version: '0.95.2', date: '2026-06-06', changes: [
-    'Doku: `CLAUDE.md` aufgeräumt — der Versionierungs-Block enthielt einen verketteten Mega-Changelog (~30 Versionen in einer Zeile), der ohnehin in `changelog.ts` steht. Jetzt nur noch aktuelle Version + Verweis. Endpoints/Schema auf den aktuellen Stand gebracht (Bot-Stats, Wochenpost-Progress + Bestenliste, Admin-Tagespuzzle-Regenerate, `Retired`-Flag, `WeeklyPostAttempts`, optionale E-Mail, Account-Löschung). Veralteter Tournament-Proxy-Hinweis entfernt (mappt längst korrekt auf `/api/crawl`). Projektstruktur/Teststruktur und Umlaute vereinheitlicht. i18n-JSON-Validierung + „Literal-Routen vor Parameter-Routen" als Konventionen aufgenommen.',
+    'Doku: `CLAUDE.md` aufgeräumt — Endpoints/Schema auf aktuellen Stand gebracht.',
   ]},
   { version: '0.95.1', date: '2026-06-06', changes: [
     'Fix: Nach „Aufgeben → Analysieren → Zurück" wurde dasselbe Puzzle neu geladen statt zum nächsten zu springen. Der Analyse-„Zurück"-Link zeigt jetzt auf die allgemeine Puzzle-Seite statt auf die konkrete Puzzle-ID.',

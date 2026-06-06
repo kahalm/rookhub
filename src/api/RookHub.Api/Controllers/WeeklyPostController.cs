@@ -27,11 +27,16 @@ public class WeeklyPostController : BaseApiController
         _progress = progress;
     }
 
+    private bool IsAdmin() => User?.IsInRole("Admin") ?? false;
+    private static bool IsPublished(WeeklyPost w) => w.ScheduledAt <= DateTime.UtcNow;
+
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var admin = IsAdmin();
         var posts = await _db.WeeklyPosts
+            .Where(w => admin || w.ScheduledAt <= DateTime.UtcNow)
             .OrderByDescending(w => w.ScheduledAt)
             .Select(w => new WeeklyPostDto
             {
@@ -52,7 +57,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<IActionResult> GetById(int id)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null)
+        if (w == null || (!IsAdmin() && !IsPublished(w)))
             return NotFound(new { message = "Weekly post not found." });
         return Ok(new WeeklyPostDetailDto
         {
@@ -76,7 +81,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<IActionResult> GetPuzzles(int id)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null)
+        if (w == null || (!IsAdmin() && !IsPublished(w)))
             return NotFound(new { message = "Weekly post not found." });
 
         var parsed = PgnImportService.ParsePgn(w.FileName, w.PgnContent).Puzzles;
@@ -102,6 +107,9 @@ public class WeeklyPostController : BaseApiController
     [HttpPost("{id}/attempt")]
     public async Task<ActionResult<WeeklyPostProgressDto>> RecordAttempt(int id, [FromBody] RecordWeeklyAttemptDto dto)
     {
+        var w = await _db.WeeklyPosts.FindAsync(id);
+        if (w == null || (!IsAdmin() && !IsPublished(w)))
+            return NotFound(new { message = "Weekly post not found." });
         try
         {
             return Ok(await _progress.RecordAttemptAsync(id, GetUserId(), dto));
@@ -126,6 +134,9 @@ public class WeeklyPostController : BaseApiController
     [HttpGet("{id}/results")]
     public async Task<ActionResult<WeeklyPostResultsDto>> GetResults(int id)
     {
+        var w = await _db.WeeklyPosts.FindAsync(id);
+        if (w == null || (!IsAdmin() && !IsPublished(w)))
+            return NotFound(new { message = "Weekly post not found." });
         try
         {
             return Ok(await _progress.GetResultsAsync(id));
@@ -141,6 +152,9 @@ public class WeeklyPostController : BaseApiController
     [HttpGet("{id}/progress")]
     public async Task<ActionResult<WeeklyPostProgressDto>> GetProgress(int id)
     {
+        var w = await _db.WeeklyPosts.FindAsync(id);
+        if (w == null || (!IsAdmin() && !IsPublished(w)))
+            return NotFound(new { message = "Weekly post not found." });
         try
         {
             return Ok(await _progress.GetProgressAsync(id, GetUserId()));

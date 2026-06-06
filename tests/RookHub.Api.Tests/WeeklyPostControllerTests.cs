@@ -28,15 +28,24 @@ public class WeeklyPostControllerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private void SetUser(int userId)
+    private void SetUser(int userId, bool admin = false)
     {
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (admin) claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
             }
+        };
+    }
+
+    private void SetAnonymous()
+    {
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() }
         };
     }
 
@@ -62,24 +71,24 @@ public class WeeklyPostControllerTests : IDisposable
     [Fact]
     public async Task GetAll_ReturnsPostsSortedByScheduledDesc()
     {
-        await _controller.Create(MakePgnFile(ValidPgn, "alt.pgn"), new DateTime(2026, 6, 1, 19, 0, 0), null, default);
-        await _controller.Create(MakePgnFile(ValidPgn, "neu.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), null, default);
+        await _controller.Create(MakePgnFile(ValidPgn, "alt.pgn"), new DateTime(2025, 6, 1, 19, 0, 0), null, default);
+        await _controller.Create(MakePgnFile(ValidPgn, "neu.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), null, default);
 
         var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
 
         Assert.Equal(2, list.Count);
-        Assert.Equal(new DateTime(2026, 6, 8, 19, 0, 0), list[0].ScheduledAt);   // neueste zuerst
-        Assert.Equal(new DateTime(2026, 6, 1, 19, 0, 0), list[1].ScheduledAt);
+        Assert.Equal(new DateTime(2025, 6, 8, 19, 0, 0), list[0].ScheduledAt);   // neueste zuerst
+        Assert.Equal(new DateTime(2025, 6, 1, 19, 0, 0), list[1].ScheduledAt);
     }
 
     [Fact]
     public async Task Create_ValidPgn_StoresWithDefaultTitleFromFileName()
     {
         var res = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(ValidPgn, "Taktik_Woche_1.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), null, default));
+            await _controller.Create(MakePgnFile(ValidPgn, "Taktik_Woche_1.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
 
         Assert.Equal("Taktik Woche 1", res.Title);            // .pgn entfernt, _ -> Leerzeichen
-        Assert.Equal(new DateTime(2026, 6, 8, 19, 0, 0), res.ScheduledAt);
+        Assert.Equal(new DateTime(2025, 6, 8, 19, 0, 0), res.ScheduledAt);
         Assert.True(res.FileSize > 0);
 
         var detail = Unwrap<WeeklyPostDetailDto>(await _controller.GetById(res.Id));
@@ -90,14 +99,14 @@ public class WeeklyPostControllerTests : IDisposable
     public async Task Create_ExplicitTitle_IsUsed()
     {
         var res = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2026, 6, 8, 19, 0, 0), "Mein Titel", default));
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Mein Titel", default));
         Assert.Equal("Mein Titel", res.Title);
     }
 
     [Fact]
     public async Task Create_InvalidPgn_ReturnsBadRequest()
     {
-        var res = await _controller.Create(MakePgnFile("kein gueltiges pgn hier"), new DateTime(2026, 6, 8, 19, 0, 0), null, default);
+        var res = await _controller.Create(MakePgnFile("kein gueltiges pgn hier"), new DateTime(2025, 6, 8, 19, 0, 0), null, default);
         Assert.IsType<BadRequestObjectResult>(res);
         Assert.Equal(0, await _db.WeeklyPosts.CountAsync());
     }
@@ -105,7 +114,7 @@ public class WeeklyPostControllerTests : IDisposable
     [Fact]
     public async Task Create_NoFile_ReturnsBadRequest()
     {
-        var res = await _controller.Create(null!, new DateTime(2026, 6, 8, 19, 0, 0), null, default);
+        var res = await _controller.Create(null!, new DateTime(2025, 6, 8, 19, 0, 0), null, default);
         Assert.IsType<BadRequestObjectResult>(res);
     }
 
@@ -124,7 +133,7 @@ public class WeeklyPostControllerTests : IDisposable
     public async Task GetPuzzles_ParsesPgnIntoSequence()
     {
         var created = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(TrainingPgn, "woche.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), "Woche 1", default));
+            await _controller.Create(MakePgnFile(TrainingPgn, "woche.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), "Woche 1", default));
 
         var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
 
@@ -144,9 +153,9 @@ public class WeeklyPostControllerTests : IDisposable
     public async Task Update_ChangesTitleAndSchedule()
     {
         var created = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2026, 6, 8, 19, 0, 0), null, default));
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
 
-        var newDate = new DateTime(2026, 6, 15, 19, 0, 0);
+        var newDate = new DateTime(2025, 6, 15, 19, 0, 0);
         var updated = Unwrap<WeeklyPostDto>(
             await _controller.Update(created.Id, new UpdateWeeklyPostDto { Title = "Neu", ScheduledAt = newDate }));
 
@@ -165,7 +174,7 @@ public class WeeklyPostControllerTests : IDisposable
     public async Task Delete_RemovesPost()
     {
         var created = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2026, 6, 8, 19, 0, 0), null, default));
+            await _controller.Create(MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), null, default));
 
         Assert.IsType<NoContentResult>(await _controller.Delete(created.Id));
         Assert.Equal(0, await _db.WeeklyPosts.CountAsync());
@@ -186,7 +195,7 @@ public class WeeklyPostControllerTests : IDisposable
     private async Task<int> CreateTwoPuzzlePostAsync()
     {
         var created = Unwrap<WeeklyPostDto>(
-            await _controller.Create(MakePgnFile(TwoPuzzlePgn, "woche.pgn"), new DateTime(2026, 6, 8, 19, 0, 0), "Woche", default));
+            await _controller.Create(MakePgnFile(TwoPuzzlePgn, "woche.pgn"), new DateTime(2025, 6, 8, 19, 0, 0), "Woche", default));
         // Sicherstellen, dass wirklich 2 Puzzles geparst werden (sonst sagt der Test nichts aus).
         var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(created.Id));
         Assert.Equal(2, play.Puzzles.Count);
@@ -338,6 +347,76 @@ public class WeeklyPostControllerTests : IDisposable
     public async Task GetResults_UnknownPost_Returns404()
     {
         var res = await _controller.GetResults(999);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    // --- Terminierte Sichtbarkeit (scheduledAt in der Zukunft) -------------------
+
+    private async Task<int> CreateFuturePostAsync()
+    {
+        var future = DateTime.UtcNow.AddDays(7);
+        var res = Unwrap<WeeklyPostDto>(
+            await _controller.Create(MakePgnFile(ValidPgn, "future.pgn"), future, "Future Post", default));
+        return res.Id;
+    }
+
+    [Fact]
+    public async Task GetAll_FuturePost_HiddenForAnonymous()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.DoesNotContain(list, p => p.Id == id);
+    }
+
+    [Fact]
+    public async Task GetAll_FuturePost_VisibleForAdmin()
+    {
+        SetUser(1, admin: true);
+        var id = await CreateFuturePostAsync();
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.Contains(list, p => p.Id == id);
+    }
+
+    [Fact]
+    public async Task GetById_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetById(id));
+    }
+
+    [Fact]
+    public async Task GetById_FuturePost_OkForAdmin()
+    {
+        SetUser(1, admin: true);
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<OkObjectResult>(await _controller.GetById(id));
+    }
+
+    [Fact]
+    public async Task GetPuzzles_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        Assert.IsType<NotFoundObjectResult>(await _controller.GetPuzzles(id));
+    }
+
+    [Fact]
+    public async Task GetResults_FuturePost_Returns404ForNonAdmin()
+    {
+        SetAnonymous();
+        var id = await CreateFuturePostAsync();
+        var res = await _controller.GetResults(id);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_FuturePost_Returns404ForNonAdmin()
+    {
+        SetUser(1);
+        var id = await CreateFuturePostAsync();
+        var res = await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
         Assert.IsType<NotFoundObjectResult>(res.Result);
     }
 }
