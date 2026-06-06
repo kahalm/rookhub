@@ -15,11 +15,10 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
 import { VizCardComponent } from './viz-card.component';
-import { ThemePickerComponent } from './theme-picker.component';
-import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
+import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
@@ -58,7 +57,7 @@ interface EndlessPuzzleAttempt {
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, ThemePickerComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
@@ -307,6 +306,29 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.vizArrowEnabled = val;
     if (!val) this.clearVizOpponentArrow();
     this.prefs.setVizArrow(val);
+  }
+
+  openSettingsDialog(): void {
+    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
+      data: {
+        mode: 'endless',
+        boardTheme: this.prefs.boardTheme,
+        pieceSet: this.prefs.pieceSet,
+        themeMode: this.themeMode,
+        visualizationMode: this.visualizationMode,
+        vizArrowEnabled: this.vizArrowEnabled,
+      } as PuzzleSettingsDialogData,
+      width: '360px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
+      if (!result) return;
+      this.setBoardTheme(result.boardTheme);
+      this.setPieceSet(result.pieceSet);
+      this.setThemeMode(result.themeMode);
+      this.setVisualizationLevel(result.visualizationMode);
+      this.setVizArrowEnabled(result.vizArrowEnabled);
+    });
   }
 
   // ===== Hooks für BasePuzzleSolver =====

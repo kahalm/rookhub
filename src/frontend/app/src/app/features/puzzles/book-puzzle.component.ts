@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -6,9 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -16,11 +13,10 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
-import { VizCardComponent } from './viz-card.component';
-import { ThemePickerComponent } from './theme-picker.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
+import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -43,8 +39,8 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, ThemePickerComponent, PuzzleTagsComponent, PuzzleYourTurnComponent, TranslateModule
+    MatProgressSpinnerModule, MatProgressBarModule,
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleTagsComponent, PuzzleYourTurnComponent, TranslateModule
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -88,7 +84,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   pieceSet = 'cburnett';
   themeMode: ThemeMode = 'fixed';
-  @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = PIECE_SETS;
 
   elapsedSeconds = 0;
@@ -807,10 +802,31 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.pieceSet = applied.pieceSet;
   }
 
-  override toggleSettings(): void {
-    super.toggleSettings();
-    if (this.showSettings) {
-      setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    }
+  openSettingsDialog(): void {
+    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
+      data: {
+        mode: 'book',
+        boardTheme: this.prefs.boardTheme,
+        pieceSet: this.prefs.pieceSet,
+        themeMode: this.themeMode,
+        visualizationMode: this.visualizationMode,
+        vizArrowEnabled: this.vizArrowEnabled,
+        stockfishDepth: this.stockfishDepth,
+      } as PuzzleSettingsDialogData,
+      width: '360px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
+      if (!result) return;
+      this.setBoardTheme(result.boardTheme);
+      this.setPieceSet(result.pieceSet);
+      this.setThemeMode(result.themeMode);
+      this.setVisualizationLevel(result.visualizationMode);
+      this.setVizArrowEnabled(result.vizArrowEnabled);
+      if (result.stockfishDepth !== undefined) {
+        this.stockfishDepth = result.stockfishDepth;
+        this.prefs.setBookStockfishDepth(this.stockfishDepth);
+      }
+    });
   }
 }

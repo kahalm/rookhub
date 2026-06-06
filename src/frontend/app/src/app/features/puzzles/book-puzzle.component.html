@@ -215,7 +215,7 @@
           @if (puzzle || state === 'LOADING') {
             <mat-card class="status-card">
               <mat-card-content>
-                <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'book.settings.title' | translate">
+                <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [attr.title]="'book.settings.title' | translate">
                   <mat-icon>settings</mat-icon>
                 </button>
                 @if (reviewMode && !solutionReview) {
@@ -333,41 +333,6 @@
             </div>
           }
 
-          <!-- Einstellungen -->
-          @if (showSettings) {
-            <mat-card class="config-card" #settingsPanel>
-              <mat-card-content>
-                <div class="viz-radios">
-                  <span class="viz-radios-title">{{ 'book.settings.visualizationLevel' | translate: { level: visualizationMode } }}</span>
-                  <div class="viz-radio-group">
-                    @for (opt of vizLevelOptions; track opt.value) {
-                      <label class="viz-radio-item" [class.selected]="visualizationMode === opt.value">
-                        <input type="radio" name="vizLevel" [value]="opt.value" [checked]="visualizationMode === opt.value"
-                               (change)="setVisualizationLevel(opt.value)">
-                        {{ opt.label }}
-                      </label>
-                    }
-                  </div>
-                  <div class="viz-level-desc">{{ vizLevelDescription }}</div>
-                  @if (visualizationMode > 0) {
-                    <label class="viz-arrow-toggle">
-                      <input type="checkbox" [checked]="vizArrowEnabled" (change)="setVizArrowEnabled($any($event.target).checked)">
-                      Gegnerzug-Pfeil
-                    </label>
-                  }
-                </div>
-                <mat-form-field appearance="outline" class="depth-field">
-                  <mat-label>{{ 'book.settings.stockfishDepth' | translate }}</mat-label>
-                  <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
-                  <mat-hint>{{ 'book.settings.depthHint' | translate }}</mat-hint>
-                </mat-form-field>
-                <div class="theme-section">
-                  <app-theme-picker namespace="book.settings" [themeMode]="themeMode" [boardTheme]="boardTheme" [pieceSet]="pieceSet"
-                    (themeModeChanged)="setThemeMode($event)" (boardThemeChanged)="setBoardTheme($event)" (pieceSetChanged)="setPieceSet($event)" />
-                </div>
-              </mat-card-content>
-            </mat-card>
-          }
         </div>
       </div>
     </div>

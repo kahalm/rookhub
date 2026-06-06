@@ -500,7 +500,17 @@
       "best": "Beste"
     },
     "settings": {
-      "tooltip": "Einstellungen"
+      "tooltip": "Einstellungen",
+      "title": "Einstellungen",
+      "pieces": "Figuren",
+      "board": "Brett-Design",
+      "mode": "Modus",
+      "modeFixed": "Fest",
+      "modeRandom": "Zufällig",
+      "modeCrazy": "Verrückt",
+      "visualization": "Visualisierung",
+      "vizArrow": "Gegnerzug-Pfeil",
+      "stockfishDepth": "Stockfish-Tiefe"
     },
     "filters": {
       "title": "Filter",

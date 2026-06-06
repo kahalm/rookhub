@@ -500,7 +500,17 @@
       "best": "Best"
     },
     "settings": {
-      "tooltip": "Settings"
+      "tooltip": "Settings",
+      "title": "Settings",
+      "pieces": "Pieces",
+      "board": "Board Theme",
+      "mode": "Mode",
+      "modeFixed": "Fixed",
+      "modeRandom": "Random",
+      "modeCrazy": "Crazy",
+      "visualization": "Visualization",
+      "vizArrow": "Opponent Move Arrow",
+      "stockfishDepth": "Stockfish Depth"
     },
     "filters": {
       "title": "Filters",

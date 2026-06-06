@@ -1,26 +1,19 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatInputModule } from '@angular/material/input';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
-import { VizCardComponent } from './viz-card.component';
-import { ThemePickerComponent } from './theme-picker.component';
-import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
+import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -44,8 +37,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatFormFieldModule, MatInputModule, MatProgressSpinnerModule,
-    MatChipsModule, MatSlideToggleModule, MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, ThemePickerComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
+    MatProgressSpinnerModule, MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],
@@ -175,7 +167,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   pieceSet = 'cburnett';
   themeMode: ThemeMode = 'fixed';
-  @ViewChild('settingsPanel', { read: ElementRef }) settingsPanel?: ElementRef<HTMLElement>;
   readonly pieceSets = PIECE_SETS;
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
@@ -567,10 +558,43 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.pieceSet = applied.pieceSet;
   }
 
-  override toggleSettings(): void {
-    super.toggleSettings();
-    if (this.showSettings) {
-      setTimeout(() => this.settingsPanel?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    }
+  openSettingsDialog(): void {
+    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
+      data: {
+        mode: 'standard',
+        boardTheme: this.prefs.boardTheme,
+        pieceSet: this.prefs.pieceSet,
+        themeMode: this.themeMode,
+        visualizationMode: this.visualizationMode,
+        vizArrowEnabled: this.vizArrowEnabled,
+        stockfishDepth: this.stockfishDepth,
+        difficulty: this.difficulty,
+        excludeSolved: this.excludeSolved,
+        isLoggedIn: this.isLoggedIn,
+        puzzleElo: this.stats?.puzzleElo,
+      } as PuzzleSettingsDialogData,
+      width: '360px',
+      maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
+      if (!result) return;
+      this.setBoardTheme(result.boardTheme);
+      this.setPieceSet(result.pieceSet);
+      this.setThemeMode(result.themeMode);
+      this.setVisualizationLevel(result.visualizationMode);
+      this.setVizArrowEnabled(result.vizArrowEnabled);
+      if (result.stockfishDepth !== undefined) {
+        this.stockfishDepth = result.stockfishDepth;
+        this.prefs.setStockfishDepth(this.stockfishDepth);
+      }
+      if (result.difficulty !== undefined && result.difficulty !== this.difficulty) {
+        this.difficulty = result.difficulty as typeof this.difficulty;
+        this.prefs.setPuzzleDifficulty(this.difficulty);
+        this.onDifficultyChange();
+      }
+      if (result.excludeSolved !== undefined) {
+        this.excludeSolved = result.excludeSolved;
+      }
+    });
   }
 }

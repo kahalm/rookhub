@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.6';
+export const APP_VERSION = '0.96.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.7', date: '2026-06-06', changes: [
+    'Puzzle-Einstellungen: Gear-Button öffnet jetzt einen Modal-Dialog (PuzzleSettingsDialogComponent) mit Figuren/Brett-Vorschau, Dropdown-Auswahl für Figuren-Set, Brett-Design, Modus, Visualisierung, Gegnerzug-Pfeil und modus-spezifischen Optionen (Schwierigkeit + Gelöste überspringen für Standard; Stockfish-Tiefe für Standard/Book). In allen drei Modi (Standard, Endless, Book) verfügbar.',
+    'Refactor: Inline-Settings-Panels (filter-card, theme-card, config-card) aus allen drei Puzzle-Template entfernt; ThemePickerComponent aus den Einzel-Importen der drei Komponenten entfernt.',
+  ]},
   { version: '0.96.6', date: '2026-06-06', changes: [
     'Endless: Settings-Gear-Button in die Status-Card verschoben (war vorher als freies Icon zwischen Status-Card und Rating-Card sichtbar).',
   ]},

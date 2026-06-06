@@ -500,7 +500,17 @@
       "best": "Najbolje"
     },
     "settings": {
-      "tooltip": "Postavke"
+      "tooltip": "Postavke",
+      "title": "Postavke",
+      "pieces": "Figure",
+      "board": "Tema ploče",
+      "mode": "Način",
+      "modeFixed": "Fiksno",
+      "modeRandom": "Nasumično",
+      "modeCrazy": "Ludo",
+      "visualization": "Vizualizacija",
+      "vizArrow": "Strelica protivnika",
+      "stockfishDepth": "Stockfish dubina"
     },
     "filters": {
       "title": "Filtri",

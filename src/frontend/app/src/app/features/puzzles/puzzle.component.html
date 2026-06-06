@@ -48,7 +48,7 @@
           }
           <mat-card class="status-card">
             <mat-card-content>
-              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [title]="'puzzles.settings.tooltip' | translate">
+              <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [title]="'puzzles.settings.tooltip' | translate">
                 <mat-icon>settings</mat-icon>
               </button>
               @switch (state) {
@@ -218,67 +218,6 @@
             </mat-card>
           }
 
-          @if (showSettings) {
-          <mat-card class="filter-card" #settingsPanel>
-            <mat-card-header>
-              <mat-card-title>{{ 'puzzles.filters.title' | translate }}</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="viz-radios">
-                <span class="viz-radios-title">{{ 'puzzles.filters.visualization' | translate: { level: visualizationMode } }}</span>
-                <div class="viz-radio-group">
-                  @for (opt of vizLevelOptions; track opt.value) {
-                    <label class="viz-radio-item" [class.selected]="visualizationMode === opt.value">
-                      <input type="radio" name="vizLevel" [value]="opt.value" [checked]="visualizationMode === opt.value"
-                             (change)="setVisualizationLevel(opt.value)">
-                      {{ opt.label }}
-                    </label>
-                  }
-                </div>
-                <div class="viz-level-desc">{{ vizLevelDescription }}</div>
-                @if (visualizationMode > 0) {
-                  <label class="viz-arrow-toggle">
-                    <input type="checkbox" [checked]="vizArrowEnabled" (change)="setVizArrowEnabled($any($event.target).checked)">
-                    Gegnerzug-Pfeil
-                  </label>
-                }
-              </div>
-              <div class="filter-row">
-                <mat-form-field appearance="outline" class="filter-field">
-                  <mat-label>{{ 'puzzles.filters.difficulty' | translate }}</mat-label>
-                  <mat-select [(ngModel)]="difficulty" (ngModelChange)="onDifficultyChange()">
-                    <mat-option value="sehr_leicht">{{ 'puzzles.difficulty.veryEasy' | translate }} (Elo −600)</mat-option>
-                    <mat-option value="leicht">{{ 'puzzles.difficulty.easy' | translate }} (Elo −300)</mat-option>
-                    <mat-option value="normal">{{ 'puzzles.difficulty.normal' | translate }} (Elo ±100)</mat-option>
-                    <mat-option value="schwer">{{ 'puzzles.difficulty.hard' | translate }} (Elo +300)</mat-option>
-                    <mat-option value="sehr_schwer">{{ 'puzzles.difficulty.veryHard' | translate }} (Elo +600)</mat-option>
-                  </mat-select>
-                  <mat-hint>{{ 'puzzles.filters.difficultyHint' | translate: { elo: stats?.puzzleElo ?? 1500 } }}</mat-hint>
-                </mat-form-field>
-              </div>
-              <div class="filter-row">
-                <mat-form-field appearance="outline" class="filter-field">
-                  <mat-label>{{ 'puzzles.filters.stockfishDepth' | translate }}</mat-label>
-                  <input matInput type="number" [(ngModel)]="stockfishDepth" (ngModelChange)="saveConfig()" min="1" max="24" step="1">
-                  <mat-hint>{{ 'puzzles.filters.depthHint' | translate }}</mat-hint>
-                </mat-form-field>
-              </div>
-              <div class="filter-actions">
-                @if (isLoggedIn) {
-                  <mat-slide-toggle [(ngModel)]="excludeSolved">{{ 'puzzles.filters.skipSolved' | translate }}</mat-slide-toggle>
-                }
-                <button mat-raised-button color="primary" (click)="loadNext()">{{ 'puzzles.actions.loadPuzzle' | translate }}</button>
-              </div>
-            </mat-card-content>
-          </mat-card>
-
-          <mat-card class="theme-card">
-            <mat-card-content>
-              <app-theme-picker namespace="puzzles.theme" [themeMode]="themeMode" [boardTheme]="boardTheme" [pieceSet]="pieceSet"
-                (themeModeChanged)="setThemeMode($event)" (boardThemeChanged)="setBoardTheme($event)" (pieceSetChanged)="setPieceSet($event)" />
-            </mat-card-content>
-          </mat-card>
-          }
 
           @if (lastSolvedPuzzleId) {
             <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
