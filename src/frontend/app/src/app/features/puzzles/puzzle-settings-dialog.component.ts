@@ -86,13 +86,28 @@ export interface PuzzleSettingsDialogResult {
         </div>
 
         <div class="psd-row">
-          <span class="psd-label">{{ 'puzzles.settings.visualization' | translate }}</span>
+          <span class="psd-label">
+            {{ 'puzzles.settings.visualization' | translate }}
+            <button type="button" class="psd-info-btn" (click)="showVizInfo = !showVizInfo" [class.active]="showVizInfo">
+              <mat-icon>info_outline</mat-icon>
+            </button>
+          </span>
           <mat-select [(ngModel)]="visualizationModeEdit" class="psd-select">
             @for (opt of vizLevelOptions; track opt.value) {
               <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
             }
           </mat-select>
         </div>
+        @if (showVizInfo) {
+          <div class="psd-viz-info">
+            @for (opt of vizLevelOptions; track opt.value) {
+              <div class="psd-viz-info-row" [class.current]="visualizationModeEdit === opt.value">
+                <span class="psd-viz-name">{{ opt.label }}</span>
+                <span class="psd-viz-desc">{{ opt.description }}</span>
+              </div>
+            }
+          </div>
+        }
 
         @if (visualizationModeEdit > 0) {
           <div class="psd-row psd-toggle-row">
@@ -176,6 +191,26 @@ export interface PuzzleSettingsDialogResult {
       font-size: 14px; text-align: center; background: transparent;
       color: inherit;
     }
+    .psd-info-btn {
+      background: none; border: none; padding: 0; cursor: pointer;
+      vertical-align: middle; color: inherit; opacity: 0.5;
+      line-height: 1; display: inline-flex; align-items: center;
+      margin-left: 4px;
+    }
+    .psd-info-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .psd-info-btn:hover, .psd-info-btn.active { opacity: 1; color: var(--mat-sys-primary, #1976d2); }
+    .psd-viz-info {
+      margin: 0 0 8px; padding: 10px 12px;
+      background: rgba(128,128,128,0.06); border-radius: 6px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .psd-viz-info-row {
+      display: flex; gap: 8px; font-size: 13px;
+      align-items: baseline;
+    }
+    .psd-viz-info-row.current .psd-viz-name { font-weight: 600; color: var(--mat-sys-primary, #1976d2); }
+    .psd-viz-name { font-weight: 500; min-width: 72px; flex-shrink: 0; }
+    .psd-viz-desc { opacity: 0.75; line-height: 1.4; }
   `]
 })
 export class PuzzleSettingsDialogComponent {
@@ -190,6 +225,7 @@ export class PuzzleSettingsDialogComponent {
   stockfishDepthEdit: number;
   difficultyEdit: string;
   excludeSolvedEdit: boolean;
+  showVizInfo = false;
 
   readonly previewSquares = [
     { piece: 'wK', light: true  }, { piece: 'wQ', light: false },
@@ -224,13 +260,13 @@ export class PuzzleSettingsDialogComponent {
     return BOARD_THEMES.find(t => t.key === this.boardThemeEdit)?.dark ?? '#b58863';
   }
 
-  get vizLevelOptions(): { value: number; label: string }[] {
+  get vizLevelOptions(): { value: number; label: string; description: string }[] {
     return [
-      { value: 0, label: 'Normal' },
-      { value: 1, label: 'Blindfold' },
-      { value: 2, label: 'Checker' },
-      { value: 3, label: 'Dark' },
-      { value: 4, label: 'Invisible' },
+      { value: 0, label: 'Normal',    description: 'Drag & Drop — Brett sichtbar, keine Einschränkungen.' },
+      { value: 1, label: 'Blindfold', description: 'Brett eingefroren, Züge nur als Text sichtbar.' },
+      { value: 2, label: 'Checker',   description: 'Figuren werden nach 3 s durch farbige Spielsteine ersetzt.' },
+      { value: 3, label: 'Dark',      description: 'Figuren werden nach 3 s durch schwarze Steine ersetzt.' },
+      { value: 4, label: 'Invisible', description: 'Figuren verschwinden nach 3 s vollständig.' },
     ];
   }
 
