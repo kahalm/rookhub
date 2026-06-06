@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.10';
+export const APP_VERSION = '0.95.11';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.11', date: '2026-06-06', changes: [
+    'Endless: Kurven-Thresholds angepasst — T1 nach Puzzle 10 (war 5), T2 nach Puzzle 25 (war 20).',
+  ]},
   { version: '0.95.10', date: '2026-06-06', changes: [
     'Statistiken: "Show Eval"-Klicks (EvalShown) und Viz-Show-Button-Klicks (VizShowCount) werden pro Puzzle-Versuch mitgespeichert.',
   ]},

@@ -6,8 +6,8 @@ export const FASTTRACK_SESSION_COUNT = 10;
 export const ENDLESS_RATING_WINDOW = 40;
 
 /** Kette (Gauntlet): Indizes der beiden Schwellen + Blockgröße. */
-export const CHAIN_T1_INDEX = 5;          // T1 (Ø erster Fehler) nach ~5 Puzzles erreicht
-export const CHAIN_T2_INDEX = 20;         // T2 (Ø Max der letzten 5 Runs) nach ~20 Puzzles erreicht
+export const CHAIN_T1_INDEX = 10;         // T1 (Ø erster Fehler) nach ~10 Puzzles erreicht
+export const CHAIN_T2_INDEX = 25;         // T2 (Ø Max der letzten 5 Runs) nach ~25 Puzzles erreicht
 export const CHAIN_FLAT_STEP = 15;        // ab T2: leichtes Plus je Puzzle (oberhalb des eigenen Maximums)
 export const ENDLESS_CHAIN_BLOCK = 30;    // Puzzles je generiertem Block
 
@@ -51,7 +51,7 @@ function logEase(x: number): number {
 
 /**
  * Rating des n-ten Ketten-Puzzles (0-basiert) entlang der ~logarithmischen Kurve:
- * startElo → T1 (bei ~{@link CHAIN_T1_INDEX}) → T2 (bei ~{@link CHAIN_T2_INDEX}), danach leicht über T2.
+ * startElo → T1 (bei {@link CHAIN_T1_INDEX}) → T2 (bei {@link CHAIN_T2_INDEX}), danach leicht über T2.
  */
 export function chainRatingAt(n: number, startElo: number, t1: number, t2: number): number {
   if (n <= 0) return startElo;
