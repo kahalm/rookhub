@@ -1,6 +1,6 @@
 # RookHub
 
-Zentrales Webportal fuer schachrelevante Funktionen: PGN-Repertoire-Verwaltung, Turnierdaten, Benutzerprofile mit FIDE/ChessResults-Verlinkung, Freundeslisten. Gehoert zusammen mit dem **ChessResults Crawler** (`C:/git/chessresults_crawler`) – bei Aenderungen immer beide Projekte beruecksichtigen.
+Zentrales Webportal für schachrelevante Funktionen: PGN-Repertoire-Verwaltung, Turnierdaten, Benutzerprofile mit FIDE/ChessResults-Verlinkung, Freundeslisten, Puzzle-/Endless-/Kurs-Training, Wochenpost. Gehört zusammen mit dem **ChessResults Crawler** (`C:/git/chessresults_crawler`) und dem **Schach-Bot** (separates Repo) – bei Änderungen immer alle betroffenen Projekte berücksichtigen.
 
 ## ⚠️ Parallel-Arbeit: Agenten-Koordination (ZUERST LESEN)
 
@@ -39,11 +39,13 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 
 - **chessresults_crawler**: Backend-Crawler der Turnierdaten von chess-results.com extrahiert. Reine REST-API, kein Frontend. Eigene MariaDB-Datenbank `chessresults`.
 - **RookHub** (dieses Projekt): Webportal mit Angular-Frontend + .NET API. Leitet Turnier-Anfragen als Proxy an den Crawler weiter. Eigene MariaDB-Datenbank `rookhub`.
+- **Schach-Bot** (separates Repo): Discord-Bot, der Tagespuzzle-/Wochenpost-Embeds postet und Motivations-DMs schickt. Konsumiert RookHub-Webhooks + `GET /api/bot/player-progress/{discordId}` (HMAC-signiert).
 
-### Kritische Abhaengigkeiten zwischen den Projekten
+### Kritische Abhängigkeiten zwischen den Projekten
 - `Services/CrawlerProxyService.cs` – HTTP-Client zum Crawler, muss Crawler-Routen kennen
-- `Controllers/TournamentProxyController.cs` – Mappt RookHub-Routen 1:1 auf Crawler-Routen
-- Crawler-Endpoint-Aenderungen muessen in diesen beiden Dateien nachgezogen werden
+- `Controllers/TournamentProxyController.cs` – Mappt RookHub-Routen auf Crawler-Routen (RookHub-`/api/tournaments/crawl*` → Crawler-`/api/crawl*`)
+- `Services/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress)
+- Crawler-Endpoint-Änderungen müssen in den beiden ersten Dateien nachgezogen werden
 - Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping)
 
 ## Tech Stack
@@ -64,22 +66,23 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Log-Visualisierung | Kibana | 8.17.0 |
 | Tests | xUnit + InMemory DB | - |
 
-**Hinweis**: RookHub nutzt Swashbuckle 6.9.0 (nicht 10.x) wegen Kompatibilitaet mit .NET 9's OpenAPI-Namespace.
+**Hinweis**: RookHub nutzt Swashbuckle 6.9.0 (nicht 10.x) wegen Kompatibilität mit .NET 9's OpenAPI-Namespace.
 
 ## REST API
 
-### Auth (offen, kein JWT noetig)
+### Auth (offen, kein JWT nötig)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| POST | `/api/auth/register` | Registrierung (username, email, password) |
-| POST | `/api/auth/login` | Login, gibt JWT zurueck |
+| POST | `/api/auth/register` | Registrierung `{ username, email?, password }` — E-Mail optional (`null` erlaubt, Unique-Index toleriert NULL-Duplikate) |
+| POST | `/api/auth/login` | Login, gibt JWT zurück (`rememberMe` → 30 Tage statt 1 Tag) |
 
 ### Profil (auth)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/profile` | Eigenes Profil |
 | PUT | `/api/profile` | Profil bearbeiten |
-| GET | `/api/profile/{username}` | Oeffentliches Profil (auch ohne Auth) |
+| DELETE | `/api/profile/account` | Konto löschen (DSGVO: anonymisiert Identität+PII, behält Statistik) |
+| GET | `/api/profile/{username}` | Öffentliches Profil (reduziertes `PublicProfileDto` ohne Klarnamen/ChessResultsId/Discord) |
 | GET | `/api/profile/player-search?lastName=&firstName=` | Spielersuche (ChessResults + FIDE) |
 | POST | `/api/profile/discord/link` | Discord verknüpfen via bot-signiertem Token `{ token }` (400 ungültig/abgelaufen, 409 Discord-ID schon vergeben) |
 | DELETE | `/api/profile/discord` | Discord-Verknüpfung trennen |
@@ -102,16 +105,16 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/repertoires` | Alle eigenen Repertoires |
-| POST | `/api/repertoires` | Neues Repertoire erstellen |
+| POST | `/api/repertoires` | Neues Repertoire (`kind`: none/opening/middlegame/endgame) |
 | GET | `/api/repertoires/{id}` | Repertoire mit Dateien |
-| PUT | `/api/repertoires/{id}` | Metadaten aendern |
-| DELETE | `/api/repertoires/{id}` | Loeschen |
+| PUT | `/api/repertoires/{id}` | Metadaten ändern |
+| DELETE | `/api/repertoires/{id}` | Löschen |
 | POST | `/api/repertoires/{id}/files` | PGN hochladen (multipart, max 10 MB) |
 | GET | `/api/repertoires/{id}/files/{fileId}` | PGN herunterladen |
-| DELETE | `/api/repertoires/{id}/files/{fileId}` | Datei loeschen |
+| DELETE | `/api/repertoires/{id}/files/{fileId}` | Datei löschen |
 | GET | `/api/repertoires/{id}/pgn` | Alle PGNs kombiniert |
 
-### Extension API (auth, CORS fuer chess.com)
+### Extension API (auth, CORS für chess.com)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/extension/repertoires?kind=opening` | Leichtgewichtige Liste (id, name, fileCount, kind, totalSizeBytes); `kind` filtert auf `none|opening|middlegame|endgame` |
@@ -119,7 +122,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 
 Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
 
-CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslich `https://www.chess.com`, nur `GET`, ohne `AllowCredentials` (Auth strikt ueber Bearer-Header). Die Default-CORS-Policy (Frontend) erlaubt `http://localhost:4200` + `http://localhost:8085`.
+CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt ausschließlich `https://www.chess.com`, nur `GET`, ohne `AllowCredentials` (Auth strikt über Bearer-Header). Die Default-CORS-Policy (Frontend) erlaubt `http://localhost:4200` + `http://localhost:8085`.
 
 ### Turnier-Proxy (auth, leitet an Crawler weiter)
 | Methode | Endpoint | Crawler-Route |
@@ -131,17 +134,15 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | GET | `/api/tournaments/{id}/pairings?round=` | `/api/tournaments/{id}/pairings` |
 | GET | `/api/tournaments/{id}/players/{snr}/results` | `/api/tournaments/{id}/players/{snr}/results` |
 | GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` |
-| POST | `/api/tournaments/crawl` | `/api/tournaments/crawl` |
+| POST | `/api/tournaments/crawl` | `/api/crawl` |
 | POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` |
 
-**Achtung**: Der Crawler nutzt `/api/crawl` (nicht `/api/tournaments/crawl`). Der Proxy-Endpoint muss ggf. angepasst werden.
-
-### Turnier-Abos (auth)
+### Turnier-Abos + Favoriten + Monitor (auth)
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| GET | `/api/subscriptions` | Meine abonnierten Turniere |
-| POST | `/api/subscriptions` | Turnier abonnieren |
-| DELETE | `/api/subscriptions/{id}` | Abo entfernen |
+| GET/POST/DELETE | `/api/subscriptions[/{id}]` | Abonnierte Turniere verwalten |
+| GET/POST/DELETE | `/api/tournament-favorites[/{id}]` | Favoriten verwalten |
+| GET/POST | `/api/tournament-monitor[/{id}]` | Per-Turnier-User-Einstellungen + Runden-Monitor (Round-Watch, Auto-Subscribe) |
 
 ### Book-Puzzles (offen + Admin)
 | Methode | Endpoint | Auth | Zweck |
@@ -150,12 +151,13 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | GET | `/api/book-puzzles/{id}/next` | AllowAnonymous | Nächstes Puzzle im selben Buch (Loop am Ende) |
 | GET | `/api/book-puzzles/{id}/random` | AllowAnonymous | Zufälliges Puzzle aus demselben Buch |
 | POST | `/api/book-puzzles/{id}/attempt` | Auth | Lösungsversuch erfassen `{ solved, timeSeconds }` (Tagespuzzle) |
-| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User, inkl. Discord) + Versuchs-/Lösungszähler |
-| GET | `/api/book-puzzles/daily/{date}` | AllowAnonymous | Tagespuzzle fuer ein UTC-Datum (`yyyyMMdd` oder `today`); legt on-demand eine persistierte Zuordnung in `DailyPuzzles` an (deterministisch ab da) |
-| GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup fuer schach-bot |
+| POST | `/api/book-puzzles/{id}/attempt/anonymous` | Anon | Anonymer Versuch (Session-ID, je Session/Puzzle dedupliziert) |
+| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User, inkl. Discord) + Versuchs-/Lösungszähler + `anonymousSolvedCount`. Löser-Status: nur wer im **ersten** Versuch löste, gilt als Löser |
+| GET | `/api/book-puzzles/daily/{date}` | AllowAnonymous | Tagespuzzle für UTC-Datum (`yyyyMMdd` oder `today`); legt on-demand eine persistierte Zuordnung in `DailyPuzzles` an (deterministisch ab da) |
+| GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup für schach-bot |
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts |
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
-| POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums (`yyyyMMdd`/`today`) neu generieren: Link/Datum bleibt, das bisherige Puzzle wird `Retired` gesetzt (nie wieder Daily/Random/Blind), ein neues aus dem forDaily-Pool zugeordnet |
+| POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums neu generieren: Datum/Link bleibt, bisheriges Puzzle wird `Retired=true` gesetzt (nie wieder in Daily/Random/Blind), neues aus dem forDaily-Pool zugeordnet |
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
@@ -163,14 +165,14 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | GET | `/api/admin/groups` | Admin | Alle Gruppen inkl. MemberCount |
 | POST | `/api/admin/groups` | Admin | Gruppe anlegen (name, description) |
 | PUT | `/api/admin/groups/{id}` | Admin | Gruppe umbenennen / Beschreibung |
-| DELETE | `/api/admin/groups/{id}` | Admin | Gruppe + Mitgliedschaften loeschen |
+| DELETE | `/api/admin/groups/{id}` | Admin | Gruppe + Mitgliedschaften löschen |
 | GET | `/api/admin/groups/{id}/members` | Admin | Mitglieder einer Gruppe |
-| POST | `/api/admin/groups/{id}/members/{userId}` | Admin | User zur Gruppe hinzufuegen (idempotent) |
+| POST | `/api/admin/groups/{id}/members/{userId}` | Admin | User zur Gruppe hinzufügen (idempotent) |
 | DELETE | `/api/admin/groups/{id}/members/{userId}` | Admin | User aus Gruppe entfernen |
 | GET | `/api/admin/groups/{id}/training-goal` | Admin | Trainingsziel-Vorlage der Gruppe (Source "none" wenn keine) |
 | PUT | `/api/admin/groups/{id}/training-goal` | Admin | Vorlage setzen/aktualisieren (PuzzleMinutes/BookMinutes 0–600, PlayGames 0–200 Partien/Woche, WeeklyDaysTarget 0–7) |
 | DELETE | `/api/admin/groups/{id}/training-goal` | Admin | Vorlage entfernen |
-| GET | `/api/my-groups` | Auth | Gruppen-Namen des eingeloggten Users (gruppenabhaengige Anzeige) |
+| GET | `/api/my-groups` | Auth | Gruppen-Namen des eingeloggten Users (gruppenabhängige Anzeige) |
 
 ### Endless Puzzle Sync (auth + anon)
 | Methode | Endpoint | Auth | Zweck |
@@ -185,15 +187,18 @@ CORS (`ExtensionPolicy`, nur fuer `ExtensionController`): erlaubt ausschliesslic
 | POST | `/api/endless/sessions/anonymous` | Anon+RL | Anonyme Session aufzeichnen |
 | POST | `/api/endless/sessions/bulk` | Auth | Bulk-Import (localStorage-Migration) |
 | POST | `/api/endless/sessions/bulk/anonymous` | Anon+RL | Bulk-Import anonym |
-| POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User uebertragen |
+| POST | `/api/endless/claim-session` | Auth | Anonyme Daten auf User übertragen |
 
 ### Kurse (auth, gruppen-/admin-gated)
 „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Fortschritt pro Buch (gelöste Puzzles / gesamt), geteilt über beide Modi; der Modus bestimmt nur die Reihenfolge. Alles user-bezogen in der DB. **Sichtbarkeit**: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen via `BookGroupAccess` freigegeben sind. Zugriff wird je Buch in jedem Endpoint erzwungen (kein Zugriff → 404).
+
+Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `after` = überspringen) oder `random` (zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/courses` | Auth | Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle) |
 | GET | `/api/courses/access` | Auth | `{ hasAccess }` — Basis für die Menü-Sichtbarkeit (Admin: true wenn Bücher existieren) |
-| GET | `/api/courses/{bookId}/next?mode=sequential\|random&after=&exclude=` | Auth | Nächstes ungelöstes Puzzle (sequential: Buchreihenfolge, `after` = überspringen; random: zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst |
+| GET | `/api/courses/{bookId}/next?mode=&after=&exclude=` | Auth | Nächstes ungelöstes Puzzle (siehe `mode` oben) |
 | POST | `/api/courses/{bookId}/results` | Auth | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
 | GET | `/api/courses/{bookId}/puzzles` | Auth | Alle Puzzles eines (zugänglichen) Buchs am Stück — für Offline-Speichern |
 | POST | `/api/courses/{bookId}/reset` | Auth | Fortschritt des Kurses zurücksetzen |
@@ -204,24 +209,39 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 | GET | `/api/admin/books/{id}/groups` | Admin | Gruppen-Ids mit Kurs-Zugriff auf das Buch |
 | PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
 
-### Wochenpost (öffentlich lesbar, Admin verwaltet)
-Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Datum + Uhrzeit). Termin-Vorschlag (letzter + 7 Tage, gleiche Uhrzeit, Standard 19:00) macht das Frontend aus der Liste. PGN-Validierung via `RepertoireService.LooksLikePgn`.
+### Wochenpost (öffentlich lesbar, durchspielbar mit Login, Admin verwaltet)
+Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Datum + Uhrzeit). PGN-Validierung via `RepertoireService.LooksLikePgn`. Puzzles werden on-the-fly aus dem PGN geparst (`PgnImportService.ParsePgn`) — Progress ist index-basiert.
+
+**Per-User-Fortschritt**: idempotenter erster Versuch je `(WeeklyPostId, UserId, PuzzleIndex)`. „Erledigt" = **alle Puzzles gespielt** (gelöst egal). Aufgeben und Reset nach mindestens einem Zug zählen als ✗. Nach jedem **neuen** Versuch fire-and-forget Webhook (`SchachBotWebhookService.NotifyWeeklyAsync`, HMAC-signiert) an den Bot → Discord-Embed mit Live-Bestenliste.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/weekly-posts` | AllowAnonymous | Liste (ohne PGN), nach Termin absteigend |
+| GET | `/api/weekly-posts/progress` | Authorize | Batch-Fortschritt für die Übersicht (`List<WeeklyPostProgressDto>`, nur Posts mit Versuchen) — literal-Route MUSS vor `{id}` stehen |
 | GET | `/api/weekly-posts/{id}` | AllowAnonymous | Detail inkl. PGN |
-| GET | `/api/weekly-posts/{id}/puzzles` | AllowAnonymous | Puzzle-Sequenz zum Durchspielen (PGN on-the-fly via `PgnImportService.ParsePgn` geparst) |
+| GET | `/api/weekly-posts/{id}/puzzles` | AllowAnonymous | Puzzle-Sequenz zum Durchspielen |
+| POST | `/api/weekly-posts/{id}/attempt` | Authorize | Versuch erfassen `{ puzzleIndex, solved, timeSeconds }` (idempotent je Index) |
+| GET | `/api/weekly-posts/{id}/progress` | Authorize | Eigener Fortschritt `{ total, playedCount, solvedCount, totalSeconds, playedIndices[], completed }` |
+| GET | `/api/weekly-posts/{id}/results` | AllowAnonymous | Bestenliste (alle Spieler mit ≥1 Versuch): `playedCount`, `solvedCount`, `totalSeconds`, `completed`; Sortierung erledigt→gelöst→Name |
 | POST | `/api/admin/weekly-posts` | Admin | Upload (multipart: file + scheduledAt + optional title) |
 | PUT | `/api/admin/weekly-posts/{id}` | Admin | Termin/Titel ändern |
 | DELETE | `/api/admin/weekly-posts/{id}` | Admin | Löschen |
 
+### Bot-Stats (Bot-intern, HMAC-signiert)
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/bot/player-progress/{discordId}` | AllowAnonymous + HMAC | Heutiger Trainingsziel-Fortschritt + Puzzle-Stats + jüngster Wochenpost-Status für eine verknüpfte Discord-ID. Signaturheader `X-Bot-Signature: sha256=…` mit `SchachBot:StatsSecret` (== Bot-`ROOKHUB_STATS_SECRET`); 401 bei falscher Signatur, 404 bei nicht verknüpfter Discord-ID |
+
 ### Client-Diagnostik (offen)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| POST | `/api/client-log` | AllowAnonymous + RL | Client-seitiges Diagnose-Event `{ kind, detail?, url? }` (v. a. Browser-Engine-Crash/Hänger) — wird strukturiert mit Marker „ClientLog" geloggt (→ ES/Kibana), nichts in der DB. Frontend: `ClientLogService` (gedrosselt), Engine-Services melden via `reportEngineEvent`-Hook (in `AppComponent` verdrahtet). |
+| POST | `/api/client-log` | AllowAnonymous + RL | Client-seitiges Diagnose-Event `{ kind, detail?, url? }` (v. a. Browser-Engine-Crash/Hänger) — wird strukturiert mit Marker „ClientLog" geloggt (→ ES/Kibana), nichts in der DB. `heartbeat*`-Kinds auf Information, sonst Warning. Frontend: `ClientLogService` (gedrosselt), Engine-Services melden via `reportEngineEvent`-Hook |
 
 ### Trainingsziele (auth)
 Tagesziele Puzzles/Buch-Kurs (in Minuten) + wöchentliches Spielen-Ziel (Anzahl Rapid-/Classical-Partien pro ISO-Woche) + Wochenziel (volle Tage); effektives Ziel = persönlicher Override > zuletzt aktualisierte Gruppen-Vorlage > keins. Tracker aggregiert je UTC-Tag die verbrachte Zeit (Pro-Einzelpuzzle-Clamp 1800 s) für Puzzles/Buch + die Partienzahl für Spielen und markiert Tage none/partial/full (**Tagesstatus nur aus Puzzles + Buch** — Spielen ist ein Wochenziel). Logik in `TrainingGoalService`; Admin-Vorlage je Gruppe siehe Gruppen-Tabelle.
+
+Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (createdAt/lastMoveAt) + chess.com Best-Effort (PGN-Header UTCDate/UTCTime↔EndDate/EndTime) öffentlich ohne Login; `PlayTimeSyncService` (BackgroundService, `PlayTime:IntervalHours`=6) + manueller `/sync-play`-Button. Gezählt: Lichess `speed` rapid+classical, chess.com `time_class` rapid (keine eigene classical-Live-Klasse); Bullet/Blitz/Korrespondenz zählen nicht.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/training-goals` | Auth | Effektives Ziel (`source` personal/group/none, ggf. `groupName`) |
@@ -235,15 +255,20 @@ Tagesziele Puzzles/Buch-Kurs (in Minuten) + wöchentliches Spielen-Ziel (Anzahl 
 
 | Tabelle | Zweck | Wichtige Felder / Constraints |
 |---------|-------|-------------------------------|
-| AppUsers | Auth | Username (unique), Email (unique), PasswordHash, CreatedAt |
-| UserProfiles | Schach-Identitaet | UserId (1:1 zu AppUser), FideId, ChessResultsId, ChessComUsername, LichessUsername, DisplayName, DiscordId (unique, nullable) + DiscordUsername |
+| AppUsers | Auth | Username (unique), Email (unique, **nullable**), PasswordHash, CreatedAt |
+| UserProfiles | Schach-Identität | UserId (1:1 zu AppUser), FideId, ChessResultsId, ChessComUsername, LichessUsername, DisplayName, DiscordId (unique, nullable) + DiscordUsername |
 | Friendships | Freundesliste | RequesterId, AddresseeId (unique pair), Status (Pending/Accepted/Declined) |
-| Repertoires | PGN-Sammlungen | UserId, Name, Description, IsPublic, CreatedAt, UpdatedAt |
+| Repertoires | PGN-Sammlungen | UserId, Name, Description, Kind (Enum None/Opening/Middlegame/Endgame), IsPublic, CreatedAt, UpdatedAt |
 | RepertoireFiles | Einzelne PGNs | RepertoireId, FileName, PgnContent (LONGTEXT), FileSize |
 | TournamentSubscriptions | Turnier-Abo | UserId + CrawlerTournamentId (unique pair), TournamentName |
-| BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags, Retired (indexed; ausgemustert → nicht mehr in Daily/Random/Blind-Pools) |
-| BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche (eingeloggt) | BookPuzzleId (Restrict) + UserId (Cascade), Solved, TimeSeconds, AttemptedAt; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) |
-| DailyPuzzles | Persistierte Tagespuzzle-Zuordnung je UTC-Datum | Date (PK, DATE), BookPuzzleId (Restrict), CreatedAt; einmal pro Tag vom `DailyPuzzleScheduler` (00:00 UTC) gesetzt oder on-demand bei `/daily/{date}` |
+| TournamentFavorites | Markierte Turniere | UserId + CrawlerTournamentId |
+| TournamentUserSettings | Per-Turnier-User-Einstellungen | UserId + TournamentId, Highlights/Notes/Pinning |
+| TournamentMonitors | Runden-Monitor | TournamentId, RoundsCount, LastSeenRound, AutoSubscribed; `RoundMonitorService` checkt periodisch |
+| Puzzles + PuzzleAttempts | Standard-Puzzle-Pool + Versuche | klassische Lichess-Puzzles + Pro-User-Versuche (UserId Cascade) |
+| BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, Difficulty, BookRating, Tags, **Retired (indexed; ausgemustert → nicht mehr in Daily/Random/Blind-Pools)** |
+| BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche | BookPuzzleId (Restrict) + UserId (Cascade, nullable für Anon) + AnonymousSessionId, Solved, TimeSeconds, AttemptedAt; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) |
+| Books | Buch-Metadaten | FileName (unique), Title, Author |
+| DailyPuzzles | Persistierte Tagespuzzle-Zuordnung je UTC-Datum | Date (PK, DATE), BookPuzzleId (Restrict), CreatedAt; vom `DailyPuzzleScheduler` (00:00 UTC) gesetzt oder on-demand bei `/daily/{date}`; Admin-Regenerate ändert nur `BookPuzzleId` (Datum bleibt) |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
 | UserGroups | User<->Gruppe (n:m) | Composite PK (UserId, GroupId), Cascade von AppUser + Group |
 | EndlessProgresses | Endless Config+Highscore | UserId (unique, nullable), AnonymousSessionId, StartElo, Themes, FasttrackThreshold1/2, StockfishDepth, Highscore, ActiveGameState (LONGTEXT) |
@@ -252,13 +277,14 @@ Tagesziele Puzzles/Buch-Kurs (in Minuten) + wöchentliches Spielen-Ziel (Anzahl 
 | CoursePuzzleResults | Gelöste Buch-Puzzles im Kurs | UserId + BookPuzzleId (unique pair), BookId (denormalisiert, indexed mit UserId), SolvedAt, TimeSeconds (für Buchstudie-Zeit im Trainingsziele-Tracker) |
 | BookGroupAccesses | Welche Gruppe darf welches Buch als Kurs sehen | Composite PK (BookId, GroupId), Cascade von Book + Group, Index GroupId |
 | WeeklyPosts | Wochenpost (terminiertes PGN) | Title, FileName, PgnContent (LONGTEXT), FileSize, ScheduledAt (indexed), CreatedAt, UpdatedAt |
+| WeeklyPostAttempts | Per-User-Fortschritt Wochenpost | WeeklyPostId + UserId + PuzzleIndex (unique triple), Solved, TimeSeconds, AttemptedAt; beide FKs Cascade |
 | GroupTrainingGoals | Coach-Vorlage Trainingsziel je Gruppe | GroupId (unique, Cascade von Group), PuzzleMinutes, BookMinutes, PlayGames (Partien/Woche), WeeklyDaysTarget, CreatedAt, UpdatedAt |
 | UserTrainingGoals | Persönlicher Trainingsziel-Override | UserId (unique, Cascade), PuzzleMinutes, BookMinutes, PlayGames (Partien/Woche), WeeklyDaysTarget, CreatedAt, UpdatedAt |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |
 | PlayTimeSyncs | Sync-Cursor externe Spielzeit | UserId + Platform (unique, Cascade), LastGameTimestamp (ms), LastSyncedAt, LastError |
 | UserApiTokens | Personal-Access-Tokens für Maschinen-Clients (chess.com-Extension) | UserId (Cascade), Name, TokenHash (SHA-256, UNIQUE), Prefix (12 char), Scope ("extension"), CreatedAt, LastUsedAt, ExpiresAt (nullable); Index (UserId, Name) |
 
-Cascade Deletes: AppUser -> Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs; Repertoire -> Files; Group -> UserGroups, BookGroupAccesses, GroupTrainingGoals; Book -> BookPuzzles, CourseProgresses, CoursePuzzleResults, BookGroupAccesses (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden). Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
+Cascade Deletes: AppUser → Profile, Repertoires, Subscriptions, EndlessProgresses, EndlessSessions, UserGroups, CourseProgresses, CoursePuzzleResults, UserTrainingGoals, PlayTimeDailies, PlayTimeSyncs, WeeklyPostAttempts; Repertoire → Files; Group → UserGroups, BookGroupAccesses, GroupTrainingGoals; Book → BookPuzzles, CourseProgresses, CoursePuzzleResults, BookGroupAccesses (CoursePuzzleResult.BookPuzzle = Restrict, um doppelte Cascade-Pfade zu vermeiden); WeeklyPost → WeeklyPostAttempts. Admin-DeleteBook und GroupController.Delete räumen die abhängigen Kurs-/Freigabe-/Ziel-Vorlagen-Daten zusätzlich explizit ab (InMemory-Tests cascaden nicht).
 Friendships nutzen Restrict (kein Cascade) wegen zwei FKs zur selben Tabelle.
 
 ## Projektstruktur
@@ -269,24 +295,35 @@ compose.vpn.yml             Prod-Stack mit Gluetun VPN (WireGuard)
 init-db.sh                  Erstellt beide DBs + User beim ersten MariaDB-Start
 .env.dev.example            Umgebungsvariablen-Template (Development)
 .env.vpn.example            Umgebungsvariablen-Template (VPN/Production)
+twa/                        Android-TWA-Build-Gerüst (Bubblewrap, GH-Action — prod + dev-Variante)
 src/
   api/RookHub.Api/
-    Controllers/            AuthController, ProfileController, FriendController,
-                            RepertoireController, ExtensionController,
-                            TournamentProxyController, SubscriptionController
-    Services/               AuthService (JWT+BCrypt), ProfileService, FriendService,
-                            RepertoireService (CRUD+Upload+CombinedPGN), CrawlerProxyService (HttpClient)
-    Models/                 AppUser, UserProfile, Friendship, Repertoire, RepertoireFile, TournamentSubscription
-    DTOs/                   AuthDtos, ProfileDtos, FriendDtos, RepertoireDtos, TournamentDtos
+    Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,
+                            TournamentFavorite, TournamentMonitor, Subscription, BookPuzzle,
+                            Course, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
+                            Puzzle, Admin, Me, BotStats, BaseApiController
+    Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
+                            BookPuzzle, Course, Puzzle, EndlessProgress, TrainingGoal,
+                            PlayTime, PlayTimeSync, WeeklyPost, BotStats,
+                            ApiToken+ApiTokenAuthenticationHandler, DiscordLink, PgnImport,
+                            SchachBotWebhook, BackgroundTaskQueue, Admin, BookAdmin,
+                            AdminSeeder, AutoSubscription, RoundMonitor,
+                            DailyPuzzleScheduler, Heartbeat
+    Models/                 EF-Entities (1:1 zum Schema oben)
+    DTOs/                   Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
-    Program.cs              Startup: DB, JWT, CORS, Swagger, Auto-Migration, Health-Endpoint
+    Program.cs              Startup: DB, JWT+ApiToken Policy-Scheme, CORS, Swagger,
+                            Auto-Migration, Health-Endpoint, BackgroundServices,
+                            ForwardedHeaders (private Peers only)
     Dockerfile              Multi-stage .NET Build
   frontend/
-    app/                    Angular 19 CLI Projekt (siehe src/frontend/CLAUDE.md)
-    nginx.conf              Proxy /api/ -> api:8080, SPA-Fallback
+    app/                    Angular 19 CLI-Projekt (siehe src/frontend/CLAUDE.md)
+    nginx.conf              Proxy /api/ → api:8080, SPA-Fallback
     Dockerfile              Multi-stage Node Build + nginx
 tests/
-  RookHub.Api.Tests/        xUnit (18 Tests: Auth, Profile, Friends, Repertoire)
+  RookHub.Api.Tests/        xUnit, eine Testklasse je Controller/Service
+                            (Helpers: CapturingLogger, TestLogger, NoOpTaskQueue,
+                             DiscordTokenTestHelper)
 ```
 
 ## Lokales Development
@@ -328,29 +365,18 @@ dotnet run
 
 ```bash
 cd tests/RookHub.Api.Tests
-dotnet test     # 358 Tests (Auth, Profile, Friends, Repertoire, Subscriptions, Favorites, Monitor, Puzzles, Endless, Books, Groups)
+dotnet test
 ```
 
 ### Test-Pattern
 - **InMemory DB** pro Testklasse via `UseInMemoryDatabase(Guid.NewGuid().ToString())`
-- **IDisposable** fuer DB-Cleanup
+- **IDisposable** für DB-Cleanup
 - **xUnit `[Fact]`** Attribute
 - **Namenskonvention**: `MethodName_Scenario_ExpectedResult`
-- **Service-Tests** (FriendService, RepertoireService, AuthService, ProfileService) testen direkt gegen InMemory-DB
-- **Controller mit Inline-DB-Logik** (Subscription, Favorites, Monitor) werden direkt als Controller-Instanz getestet
-- **BaseApiController.GetUserId()** wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
-- **Helper-Methode** `CreateUserAsync()` fuer Test-Daten in jeder Testklasse
-
-### Teststruktur
-```
-tests/RookHub.Api.Tests/
-  UnitTest1.cs                     AuthServiceTests, ProfileServiceTests, FriendServiceTests, RepertoireServiceTests
-  SubscriptionServiceTests.cs      SubscriptionController-Tests
-  TournamentFavoriteTests.cs       TournamentFavoriteController-Tests
-  TournamentMonitorTests.cs        TournamentMonitor DB-Logik
-  FriendServiceExtendedTests.cs    Erweiterte FriendService-Tests
-  RepertoireServiceExtendedTests.cs Erweiterte RepertoireService-Tests
-```
+- **Service-Tests** testen direkt gegen InMemory-DB
+- **Controller-Tests** instanziieren den Controller direkt; `BaseApiController.GetUserId()` wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
+- **Helper-Methode** `CreateUserAsync()` pro Testklasse für Test-Daten
+- **InMemory cascaded nicht** — Admin-Delete-Pfade räumen abhängige Daten explizit ab; Tests entsprechend prüfen
 
 ## EF Core Migrations
 
@@ -363,42 +389,44 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 
 ## Arbeitsweise
 
-- **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein grosser Sammel-Commit. So bleibt die History nachvollziehbar und Rollbacks sind einfach.
-- **Tags NUR auf Zuruf** – NIEMALS automatisch Git-Tags erstellen. Der User muss vorher testen und explizit nach einem Tag fragen. Tags werden ausschliesslich manuell/auf Anweisung gesetzt.
-- **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build noetig.
+- **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein großer Sammel-Commit.
+- **Tags NUR auf Zuruf** – NIEMALS automatisch Git-Tags erstellen. Der User muss vorher testen und explizit nach einem Tag fragen.
+- **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build nötig.
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.95.0` (Wochenpost-Bestenliste in der Übersicht: je Eintrag aufklappbares Detail-Panel (`WeeklyListComponent`, `multiTemplateDataRows` + Detail-Zeile, `toggleBoard`) lädt `GET /api/weekly-posts/{id}/results` (bestehend) und zeigt die Spieler sortiert via reiner `sortLeaderboard(players, total)` (in `weekly.service.ts`): Genauigkeit = `solvedCount/total` absteigend, bei Gleichstand kleinere `totalSeconds` zuerst, dann Name. Pro Zeile Platz, `gelöst/gesamt · %` (`accuracyPct`), `⏱ Zeit` (`fmtTime`), 🏆 bei „alle gespielt". Neue Service-Methode `getResults` + Interfaces `WeeklyResults`/`WeeklyPlayerResult`; i18n `weekly.leaderboard.*` in allen 25 Sprachen. Specs für `getResults` + `sortLeaderboard`. davor: 0.94.1 Intern: `WeeklyPostService.RecordAttemptAsync` loggt beim ersten Versuch je (Post, User, Index) strukturiert `WeeklyPostAttempt` nach Kibana, Muster wie CoursePuzzleAttempt. davor: 0.94.0 Wochenpost-Gesamtzeit auch in RookHub: `WeeklyPostProgressDto.TotalSeconds` (neu) = Summe der `TimeSeconds` über alle gespielten Puzzles des Users, gefüllt in `BuildProgressAsync` + `GetAllProgressAsync`. Frontend: `WeeklyProgress.totalSeconds`; Übersicht (`WeeklyListComponent`) zeigt `⏱ m:ss/h:mm:ss` (`fmtTime`, i18n `weekly.progress.timeLabel` in allen 25 Sprachen), Durchspiel-Ansicht (`BookPuzzleComponent`, `weeklyTimeDisplay`) hängt die Zeit an die „X/Y gespielt"-Zeile (aus `getProgress`/`recordAttempt`, Offline +`elapsedSeconds`). 21 WeeklyPost-Backend-Tests + weekly.service-Specs grün. davor: 0.93.0 Discord-Live-Fortschritt im Wochenpost-Thread: neuer `GET /api/weekly-posts/{id}/results` (`[AllowAnonymous]`) → `WeeklyPostService.GetResultsAsync` aggregiert je User `PlayedCount`/`SolvedCount`/`TotalSeconds` (Summe der `TimeSeconds`) + `Completed`, joint `AppUsers`/`UserProfiles` für Name+Discord, sortiert erledigt→gelöst→Name, liefert `WeeklyPostResultsDto {total, completedCount, players[]}`. Nach jedem **neuen** `RecordAttemptAsync` feuert `NotifySchachBotAsync` fire-and-forget über die `IBackgroundTaskQueue` → frischer `WeeklyPostService` → `SchachBotWebhookService.NotifyWeeklyAsync` POSTet HMAC-signiert (gleiches `SchachBot:WebhookSecret`, `X-Webhook-Signature`) an `…/webhook/weekly-progress` des Bots. Der Bot merkt sich beim Ankündigen Thread+Message (`weekly_posts.json threads{}`) und schreibt/aktualisiert das Embed-Feld „🏆 Fortschritt": je Person `{✅ }{@mention|Name} — gelöst/total · Gesamtzeit (m:ss/h:mm:ss)`, „+N weitere" ab 15, Header „N erledigt". 20 WeeklyPost-Backend-Tests grün. davor: 0.92.0 Wochenpost-Durchspielen springt zum Einstieg: bei vorhandenem Fortschritt startet `loadWeekly()` beim ersten noch nicht gespielten Puzzle (`weeklyStartIndex()` = erster Index nicht in `PlayedIndices`), bei 100% gespielt von vorne (Index 0). `WeeklyPostProgressDto.PlayedIndices` (neu, in `BuildProgressAsync` gefüllt; in der Batch-Übersicht leer) liefert die gespielten Indizes; Frontend `WeeklyProgress.playedIndices`. 17 WeeklyPost-Tests grün. davor: 0.91.1 Wochenpost-Fix: „Aufgeben" (`giveUp()`, setzt `state='FAILED'` ohne `handleFailed()`) und „Zurücksetzen" nach mind. einem Zug (`resetPuzzle()`, `inWeekly && moveLog.length>0`) zählen jetzt als ✗ — riefen vorher nur `recordBookAttempt(false)` (Daily), nicht `recordWeeklyAttempt(false)`. Guard `weeklyAttemptRecorded` + Backend-Idempotenz = erster Versuch zählt. davor: 0.91.0 Wochenpost-Übersicht mit Per-User-Fortschritt: neue Spalte in `WeeklyListComponent` zeigt je Eintrag ✓gelöst / ✗nicht-gelöst + % gespielt. Neuer Batch-Endpoint `GET /api/weekly-posts/progress` (`[Authorize]`, Literal-Route vor `{id}`) → `WeeklyPostService.GetAllProgressAsync(userId)` liefert `List<WeeklyPostProgressDto>` nur für Posts mit Versuchen (parst nur deren PGNs). Frontend: `WeeklyService.getAllProgress()`, `prog`-Map + `pct()`-Helfer, i18n `weekly.columns.progress` + `weekly.progress.{solvedLabel,failedLabel,doneLabel}` in allen 25 Sprachen. 17 WeeklyPost-Tests (+1) + 12 weekly.service-Specs (+1) grün. **Hinweis: in 2. Repo-Klon `rookhubstack-2` gebaut.** davor: 0.90.1 Login-Hinweis bei geschützten Links: `authGuard` hängt beim Redirect jetzt `authRequired=1` (zusätzlich zum bestehenden `returnUrl`) an `/login`; `LoginComponent` zeigt dann den Hinweis `auth.login.required` („Bitte logge dich ein oder registriere dich…", alle 25 Sprachen) und navigiert nach Login auf `returnUrl`. Greift für alle `authGuard`-Routen, u. a. den Wochenpost-Link. Neuer `auth.guard.spec` (2 Tests). davor: 0.90.0 Wochenpost-Progress + Migration vom Bot: WeeklyPost ist jetzt **eingeloggt** durchspielbar (`/weekly` + `/weekly/:id` von `adminGuard` → `authGuard`, Navbar-Link für alle eingeloggten), und der **Per-User-Fortschritt** wird gemerkt. Neues Modell `WeeklyPostAttempt` (Unique `(WeeklyPostId, UserId, PuzzleIndex)`, beide FKs Cascade), Migration `AddWeeklyPostProgress`; `WeeklyPostService` (idempotentes `RecordAttemptAsync` + `GetProgressAsync`, Muster wie `CourseService`); Endpoints `POST /api/weekly-posts/{id}/attempt` + `GET /api/weekly-posts/{id}/progress` (`[Authorize]`). „Erledigt" = **alle Puzzles gespielt** (gelöst egal); `WeeklyPostProgressDto {total, playedCount, solvedCount, completed}`. Frontend `BookPuzzleComponent` zeichnet im Weekly-Modus jeden Ausgang auf (gelöst UND fehlgeschlagen, Offline-Queue) und zeigt „X/Y gespielt · Z gelöst" (`book.weekly.progress` in allen 25 Sprachen). Der Bot-Stats-Endpoint `GET /api/bot/player-progress` liefert zusätzlich einen `weeklyPost`-Block (jüngster fälliger Post + User-Progress) für den Motivations-DM. Puzzles werden weiter on-the-fly aus dem PGN geparst → Progress index-basiert. 580 BE- (+15) + FE-Specs grün. davor: 0.89.0 Admin: Tagespuzzle neu generieren. Neuer Endpoint `POST /api/admin/book-puzzles/daily/{date}/regenerate` (`BookPuzzleService.RegenerateDailyAsync`): das für ein UTC-Datum zugeordnete Tagespuzzle wird neu ausgewürfelt — Datum/Link der `DailyPuzzles`-Zeile bleibt gleich, nur `BookPuzzleId` wechselt. Das bisherige Puzzle wird `Retired=true` gesetzt und danach in keinem Zufalls-Pool mehr gezogen (Daily/Random/Blind filtern `&& !bp.Retired`; direkte Id-Aufrufe, Buch-Navigation und historische Daily-Zuordnungen bleiben unberührt). Neues Feld `BookPuzzle.Retired` (bool, indexed), Migration `AddBookPuzzleRetired`. Frontend: neuer Admin-Tab „Tagespuzzle" (`admin.component`) mit Datumswahl (max heute), Vorschau (Id/Buch/Titel/LineId) und „Neu generieren"-Button; `AdminService.getDailyPuzzle`/`regenerateDailyPuzzle`, DTO `DailyPuzzleInfo`. i18n `admin.tabs.daily` + `admin.daily.*` in allen 25 Sprachen (en/de/hr ausformuliert, 22 EN-Fallback). 574 BE- (+9 DailyPuzzleTests) + 245 FE-Tests (+2) grün. davor: 0.88.0 Schach-Bot Stats-Endpoint: neuer bot-interner `GET /api/bot/player-progress/{discordId}` (`BotStatsController` + `BotStatsService`, DTO `BotPlayerProgressDto`) liefert für eine mit RookHub verknüpfte Discord-ID den heutigen Trainingsziele-Fortschritt (`TrainingGoalService.GetTodayAsync`) + Puzzle-Stats (`PuzzleService.GetStatsAsync`) — Grundlage für den täglichen, stats-basierten Motivations-DM des Bots (ersetzt dort den Wochenpost-Reminder). `[AllowAnonymous]` + eigene HMAC-Signaturprüfung über die Discord-ID (`X-Bot-Signature: sha256=…`) mit geteiltem `SchachBot:StatsSecret` (== Bot-`ROOKHUB_STATS_SECRET`); leer → 404. HMAC-Hex aus `SchachBotWebhookService.ComputeHmacHex` wiederverwendet, DiscordId→User-Lookup über `UserProfiles.DiscordId`. 401 bei falscher/fehlender Signatur, 404 bei nicht verknüpfter Discord-ID. Compose/`.env`-Beispiele um `SCHACH_BOT_STATS_SECRET` ergänzt. 565 BE-Tests grün (+5 `BotStatsControllerTests`). davor: 0.87.0 Registrierung: E-Mail ist jetzt **optional**. `RegisterDto.Email`/`AppUser.Email` → `string?` (kein `[Required]` mehr, `[EmailAddress]` bleibt — lässt `null` durch, `""` nicht). `AuthService.RegisterAsync` normalisiert leer→`null` und überspringt die Dublettenprüfung bei `null` (Unique-Index erlaubt mehrere NULLs in MySQL/MariaDB). Migration `MakeEmailOptional` (AlterColumn nullable; Down backfillt NULLs→`""`). Frontend `register.component`: Feld nicht mehr `required` (nur `email`-Validator), `mat-hint` „Optional" (`auth.register.emailHint` in allen 25 Sprachen, hr „Neobavezno"), sendet leeres Feld als `null`. `AuthService.register(email: string|null)`. `AdminService`-Suche null-sicher (`u.Email != null && …`), `AdminUserDto.Email`→`string?`. 560 BE- + 243 FE-Tests grün. davor: 0.86.1 Android-TWA Dev-Variante: neues `twa/twa-manifest.dev.json` (host `rookhub-dev.oberschmid.homes`, packageId `homes.oberschmid.rookhub.dev`, name „RookHub Dev"), parallel zur Prod-App installierbar; CI-Workflow `android-twa.yml` fragt `workflow_dispatch.inputs.variant` (prod/dev, Default prod), kopiert für `dev` den Dev-Manifest auf `twa-manifest.json` und benennt das Artefakt `rookhub-android-{variant}`. `assetlinks.json` listet beide Package-Ids mit identischem SHA-256-Fingerprint (gleicher Keystore). Lokal: `cp twa-manifest.dev.json twa-manifest.json && bubblewrap update && bubblewrap build`. davor: 0.86.0 Android-App-Hinweis: Im Konto-Menü der Navbar (`shared/navbar`) führt der Eintrag „App installieren (Android)" über den neuen `AppInstallDialogComponent` (`shared/app-install-dialog`) zu einer kurzen Installationsanleitung + Download-Button. Link `APK_DOWNLOAD_URL` zeigt auf das **neueste** GitHub-Release-Asset `releases/latest/download/app-release-signed.apk` (kein hartkodierter Tag → bleibt nach jedem Release aktuell, solange der APK-Asset-Name gleich bleibt). Neue i18n-Keys `nav.installApp` + `install.*` (title/intro/step1-3/download/iosNote) in allen 25 Sprachen (en/de/hr ausformuliert, 22 EN-Fallback). APK-Build-Workflow `.github/workflows/android-twa.yml` (Bubblewrap, manuell) — siehe Memory rookhub-android-twa-build. davor: 0.85.6 Fix Viz-Modus Mobile: Tap-Marker als DOM-Overlay statt chessground-Brush/`selectSquare` — auf manchen Mobilgeräten kam weder der gelbliche Highlight noch der grüne SVG-Kreis durch. Jetzt rendert `PuzzleBoardComponent` ein eigenes `<div class="viz-select-overlay">` (absolute positioniert auf das angetappte Feld, 12.5×12.5 % des Bretts, dicker grüner Border-Ring) unabhängig von chessgrounds Drawable-Layer; `vizSelectedSquare` + `vizSelectOverlayLeft/Top`-Getter rechnen die Position aus Feld + Orientation aus. chessgrounds `setShapes` + `selectSquare` bleiben als Bonus dabei. davor: 0.85.5 Fix Lokalisierung: Beim Entfernen des `admin.logs.*`-Blocks in 0.85.1 blieb in en/de/hr je ein Trailing-Comma vor dem Schluss von `admin` stehen → JSON ungültig → ngx-translate konnte die Sprachdatei nicht parsen → UI zeigte nur noch die Schlüssel („dashboard.friends.manage" usw.). JSON in allen drei Dateien gefixt (Zeile 892: `},` → `}`); übrige 22 i18n-Dateien waren intakt. Lehre: nach jeder i18n-Edit mit `JSON.parse` über alle 25 Dateien validieren. davor: 0.85.4 Fix Viz-Modus Mobile: 0.85.3 entfernte `selectSquare` und ließ nur den dicken grünen Kreis als Tap-Marker — auf einigen Mobilgeräten erschien aber gar kein Marker mehr. Jetzt wieder beides: gelbliches `selectSquare`-Shading als verlässliches Fallback + setShapes mit grünem Kreis (lineWidth 22 statt 18 statt Default 10). `markVizSelection/clearVizSelection` setzen wieder beide Mechanismen. davor: 0.85.3 Viz-Modus Mobile: Tap-Auswahl zeichnet jetzt nur noch den grünen Rechtsklick-Style-Kreis (lineWidth 18 statt Default 10), kein chessground-`selectSquare`-Highlight mehr — das gelbliche „selected"-Shading war auf Mobile dezent und überlagerte zudem den Kreis. `puzzle-board.component.markVizSelection` setzt jetzt `{ orig, brush: 'green', modifiers: { lineWidth: 18 } }` und cleared via `setShapes([])`. davor: 0.85.2 Tagespuzzle-Fairness: ein User gilt nur dann als Löser eines Tagespuzzles, wenn sein ERSTER Versuch gelöst war. `BookPuzzleService.GetResultsAsync` aggregiert jetzt `FirstSolved = g.OrderBy(AttemptedAt).Select(Solved).FirstOrDefault()` statt `g.Count(Solved) > 0` — Discord/Solver-Liste und `/results` zeigen damit nicht mehr denselben Tag gleichzeitig als gelöst und nicht-gelöst. Frontend feuert im Daily-Modus zusätzlich `solved=false` bei `resetPuzzle()` (nach erstem Zug) und beim Override von `mouseslip()`; Giveup/Failed waren bereits abgedeckt. davor: 0.85.1 Fix Admin: verwaisten „Logs"-Tab samt `/api/request-logs`-Call entfernt — der Endpoint/die Tabelle waren längst weg (Logs liegen in ES/Kibana), Tab warf in Prod „failed to load logs". State, Service-Methode, `RequestLog`-Interface, SCSS- und i18n-Keys (en/de/hr) mitgelöscht; Kibana-Link im Header bleibt einzige Anlaufstelle und zeigt jetzt als Deep-Link direkt aufs RookHub-Logging-Dashboard (`app/dashboards#/view/rookhub-logging-dashboard`, Zusammensetzung serverseitig in `AdminController.GetConfig`, `KIBANA_URL`-Env bleibt der Root). davor: 0.85.0 Trainingsziele: Kategorie „Spielen" von Spielzeit (Minuten/Tag) auf **Anzahl Rapid-/Classical-Partien pro ISO-Woche** umgestellt. Gezählt: Lichess `speed` rapid+classical, chess.com `time_class` rapid (keine eigene classical-Live-Klasse); Bullet/Blitz/Korrespondenz zählen nicht. Spielen ist damit ein **Wochenziel** (separat angezeigt „X/Y Partien diese Woche"); der Tages-Status im Tracker nutzt nur noch Puzzles+Buch. Schema: `PlayTimeDaily.Seconds`→`Games` (Partienzahl), `GroupTrainingGoals/UserTrainingGoals.PlayMinutes`→`PlayGames`; DTOs `TrainingGoal*.PlayMinutes`→`PlayGames`, `TrackerDay.PlaySeconds`→`PlayGames`, neues `PlayProgressDto` (TargetGames/DoneGames). `PlayTimeService.ParseLichess/ParseChessCom` zählen jetzt Partien (kein PerGameCap mehr); `TrainingGoalService` summiert Spielen über die laufende Woche, `DayStatus` ohne Play. Migration `ChangePlayGoalToWeeklyGameCount` (Renames + Reset: PlayTimeDailies geleert, Sync-Cursor=0, PlayGames=0 → alte Minuten-Ziele neu als Partien/Woche setzen). i18n: neue Keys `trainingGoals.games/gamesPerWeek/thisWeek` + angepasster `playHint` in allen 25 Sprachen (en/de/hr ausformuliert), Key-Parität 787. 554 BE- + 239 FE-Tests grün. davor: 0.84.2 i18n: Trainingsziele-Bereich (`trainingGoals.*` + `admin.groups.goal.*`) in alle 22 Zusatzsprachen übersetzt → alle 25 Sprachen vollständig (keine englischen Resttexte außer Marken/Abkürzungen wie „min"/„Puzzles"-Lehnwort). davor: i18n: die 36 zuletzt ergänzten Keys (profile.tokens.*, repertoire.kind.*+dialog.kind, dashboard.puzzles.daily, book.actions.prev/nextDaily, puzzles.status.offlinePoolExhausted/replayLast) in alle 22 Zusatzsprachen übersetzt → volle Key-Parität (784) für alle 25 i18n-Dateien. HINWEIS: `trainingGoals.*` ist in den 22 Zusatzsprachen noch englisch (present-but-untranslated, aus dem parallel gemergten Trainingsziele-Feature). davor: Trainingsziele-Modus (Trainingsunterstützung für Schüler): User setzen Tagesziele je Kategorie (Puzzles = PuzzleAttempt + EndlessSession + Buch-/Tagespuzzle, Buch/Kurs = neues Feld `CoursePuzzleResult.TimeSeconds`, Spielen = externe Spielzeit) + Wochenziel (volle Tage je ISO-Woche). Coach legt je Gruppe eine Vorlage fest, Schüler überschreiben sie persönlich; effektives Ziel = persönlich > zuletzt aktualisierte Gruppen-Vorlage > keins. Zweiter Aktivitäts-Tracker als Heatmap (Stern = alle Ziele, Teil-Icon = teilweise) neben der Puzzle-Heatmap. `TrainingGoalService` (Tracker-/Today-Aggregation, Pro-Einzelpuzzle-Clamp 1800 s, Tagesstatus none/partial/full), `TrainingGoalController` (`/api/training-goals`: GET/PUT/DELETE, `/today`, `/tracker`, `/sync-play`) + Admin `GET/PUT/DELETE /api/admin/groups/{id}/training-goal`. Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (createdAt/lastMoveAt) + chess.com Best-Effort (PGN-Header UTCDate/UTCTime↔EndDate/EndTime) öffentlich ohne Login, `PlayTimeSyncService` (BackgroundService, `PlayTime:IntervalHours`=6) + manueller `/sync-play`-Button. Neue Tabellen GroupTrainingGoals/UserTrainingGoals/PlayTimeDailies/PlayTimeSyncs, Migration `AddTrainingGoals`. i18n in allen 25 Sprachen (en/de/hr ausformuliert, übrige 22 vorerst englischer Fallback bei Key-Parität). 554 BE- + 239 FE-Tests grün. davor: 0.83.0 Google-Play-Vorbereitung & 25 Sprachen: App-Icons 192/512 + maskable + Manifest (installierbare PWA); Konto-Löschung DSGVO (`DELETE /api/profile/account`, anonymisiert Identität+PII, behält Statistik) + öffentliche `/account-deletion`; Datenschutz/Impressum-Seiten (`/privacy`, `/impressum`); Digital Asset Links + TWA-Build-Gerüst (`twa/`, GH-Action) für Google Play; 22 neue Sprachen → 25 (LocaleService + native Labels + RTL ar/fa, alle i18n key-parität); Impressum-Betreiberdaten zentral in `src/environments/operator.ts`. davor: Standard-Puzzle Offline-Pool-Exhausted: separater UI-Pfad mit „Letztes Puzzle nochmal spielen"-Button, sobald der vorab gespeicherte Pool aufgebraucht ist (vs. „nie online geöffnet" = no-cache); neue State-Flag `offlinePoolExhausted` + `lastShownPuzzle`-Tracking, neue i18n-Keys `puzzles.status.offlinePoolExhausted/replayLast` (de/en/hr). 3 neue Specs. davor: 0.82.2 Fix Mobile, Viz-Modus: angetipptes Feld wird vollflächig markiert (chessground-„selected" gelblich + grüner Kreis), chessgrounds eigene Interaktion im Viz-Modus deaktiviert, damit der Tap die Auswahl nicht sofort wieder leert; davor: 0.82.1 Endlos-Config-Screen: Continue/Archive/New-Game-Block oben; davor: 0.82.0 Quick-Stats-Pillen unter dem Brett (Rating/Level/Herzen) — ohne Scrollen sichtbar auf Mobile; davor: 0.81.1 Fix (Mobile, Endlos): Gelöst-Karte spannt jetzt volle Breite — auf Mobile war die Info-Sektion vorher nur min-content breit, weil flex-direction: column ohne explizite width nicht auf 100% streckt; davor: 0.81.0 Tagespuzzle-Datums-Navigation + Dashboard-Link; 0.80.1 Auth-Scheme-Kollision-Fix (Startup-Crash); 0.80.0 Datums-basierte Tagespuzzle-Route; 0.79.1 Extension-Endpoint Scope-Guard + CORS-Härtung; davor: 0.79.0 Extension-Tokens: persönliche API-Tokens (rkh_…-Format, GitHub-PAT-Style) im Profil zum Erstellen/Widerrufen; Tabelle UserApiTokens (SHA-256-Hash, Scope=extension, optionaler Ablauf); Endpoints GET/POST/DELETE /api/profile/tokens; Policy-Scheme im JWT-Pfad routet rkh_… auf den ApiTokenAuthenticationHandler. Vorbereitung für die chess.com-Tampermonkey-Extension. davor: 0.78.0 Repertoire-Kategorie: neues Feld `Repertoire.Kind` (Enum None/Opening/Middlegame/Endgame), Create-Dialog mit Kategorie-Dropdown, farbiger Chip in der Liste; Extension-Endpoint `/api/extension/repertoires?kind=opening` filtert + liefert `totalSizeBytes`; Migration `AddRepertoireKind`; davor: 0.77.0 Gauntlet; davor: Tagespuzzle wird persistiert: neuer Endpoint `GET /api/book-puzzles/daily/{yyyyMMdd|today}` + neue Tabelle `DailyPuzzles` (PK=Date, FK→BookPuzzle); BackgroundService `DailyPuzzleScheduler` legt um 00:00 UTC (+1s) die heutige Zuordnung an, Initial-Catch-up beim API-Start. On-Demand-Fallback wenn Scheduler offline war. `GetRandomAsync(pool="daily")` routet jetzt durch die persistierte Zuordnung — Vergangenheit bleibt stabil, gleiche ID egal wer wann fragt. Migration `AddDailyPuzzleTable`. davor: Tagespuzzle-Solver-Updates per Webhook: API feuert nach jedem Buch-/Tagespuzzle-Versuch HMAC-signierten POST an Schach-Bot — sofortige Discord-Embed-Aktualisierung statt 5-Min-Polling; neuer `SchachBotWebhookService`, fire-and-forget via BackgroundTaskQueue; Konfig `SchachBot__WebhookUrl/WebhookSecret`; Compose-Files reichen `SCHACH_BOT_WEBHOOK_URL/SECRET` durch; davor: Admin: Kibana-Dashboard-Link im Admin-Header (en/de/hr); neuer Endpoint GET /api/admin/config mit kibanaUrl aus Server-Env Kibana__Url; Compose-Files reichen KIBANA_URL durch; davor: Fix (Endlos): playAgain() löscht den beendeten Run jetzt auch in-memory (activeGameState=null + Storage), nicht nur im Storage — sonst zeigte der Config-Screen nach Game-Over + „Nochmal spielen" wieder den Resume-Banner („Resume → Aufgeben → Nochmal → wieder fortsetzbar"-Schleife); davor: Fix: Dashboard/Statistik-Übersicht zeigen das Puzzle-Elo des meistgespielten Levels (GetStatsAsync ohne vizLevel → GetPrimaryLevelAsync = Level mit den meisten Versuchen) statt stur Level 0 (Default 1500); betrifft Nutzer, die überwiegend mit Visualisierung spielen; davor: „Eingeloggt bleiben"-Option beim Login (LoginDto.RememberMe → JWT 30 Tage statt 1 Tag; Checkbox im Login-Formular); Passwort-Anforderung auf nur noch MinLength(4) reduziert (PasswordComplexity-Attribut + Frontend-Pattern entfernt); davor: Modus-Harmonisierung der 3 Puzzle-Modi (Standard/Buch/Endless): Aufgeben spielt überall die Lösung von vorne durch; einheitlicher kurzer, überspringbarer Auto-Advance-Countdown nach dem Lösen (auch Buch); Endless Analyse→Zurück setzt den Run fort statt Übersicht; Endless Retry nach Fehler (kostet kein Leben) + Einstellungen (Thema/Viz) auch während des Spiels; Eval-Button auch im Buch; Mausrutscher-Guard + Panel-Offen-Zustand modusübergreifend gleich; Endless-State-Namen CORRECT/WRONG→SOLVED/FAILED. Strukturell: Review-/Lösungs-/Countdown-/Settings-/Eval-Logik in BasePuzzleSolver gebündelt. EndlessGameEngine bewusst nicht separat extrahiert — Spiel-Logik liegt großteils schon in endless-prefetch.util, der Rest ist eng mit dem Komponenten-State verwoben. 224 FE-Tests grün; davor: Fix (Betrieb): Frontend-Docker-Healthcheck nutzt 127.0.0.1 statt localhost (busybox-wget wählte für „localhost" IPv6 ::1, wo nginx nicht lauscht → Container fälschlich „unhealthy"); betrifft compose.dev.yml + compose.vpn.yml, reiner Healthcheck-Fix ohne App-Änderung; davor: Code-Review-Remediation, weitgehend internes Refactoring ohne bewusste Funktionsänderung: Templates/Styles der 6 großen Komponenten ausgelagert; geteilte Subkomponenten ReviewNav/VizCard/ThemePicker + tournament-table.util; SnackbarService (zentralisiert ~106 MatSnackBar-Aufrufe); fat Controller in Services zerlegt — BookPuzzleService, CourseService, AdminService+BookAdminService; SessionId-Pattern als ValidationConstants, RATING_WINDOW-Dedup, Repertoire-DI; Bugfixes: DeleteBook räumt BookPuzzleAttempts ab, Endless-Anon-Session Unique-Index; ThemePicker-Chips modusübergreifend einheitlich. EndlessGameEngine in die Modus-Harmonisierung verschoben (folgt). 223 FE-/482 BE-Tests grün; davor: Puzzle-Buttons konsistent zum Endlosmodus: „Aufgeben" ab Zug 0 (auch Buch-Puzzle), „Zurücksetzen"/„Mausrutscher" erst nach dem ersten Zug; Einstellungen/Filter (Zahnrad) bleiben beim Puzzle-Wechsel offen (Offen-Zustand gemerkt); davor: Anonyme Buch-/Tagespuzzle-Solves zählen mit: neuer `POST /api/book-puzzles/{id}/attempt/anonymous` (Session-ID, je Session/Puzzle dedupliziert) + `anonymousSolvedCount` in `/results`; `BookPuzzleAttempt.UserId` nullable + `AnonymousSessionId` (Migration `BookPuzzleAttemptAnonymous`); Frontend zeichnet Buch-Solves auch ohne Login auf; Discord zeigt „+N anonym"; davor: Fix: ClientLogController loggt „heartbeat*"-Kinds auf Information statt Warning (sonst warn_spike-Fehlalarm durch den 60s-Bot-Heartbeat via /api/client-log); echte Engine-Events bleiben Warning; davor: Heartbeat/Health: API sendet alle 60s strukturiertes „Heartbeat"-Log nach ES (HeartbeatService, BackgroundService, `Heartbeat:IntervalSeconds`, DB-Selbst-Check → healthy/degraded) → Log-Watcher erkennt toten Dienst an fehlenden Heartbeats; Docker-Healthchecks für api (`/health`, curl im Dockerfile), frontend (wget) und crawler (`/api/health`) in compose.dev.yml + compose.vpn.yml; Crawler + Bot senden analoge Heartbeats (eigene Repos); davor: Kibana-Dashboard: Produkt-Kennzahlen Puzzle/Endless/Kurse/Betrieb + Unique Visits via VisitorId (X-Visitor-Id-Header); Recent-Logs-Spalten timestamp/level/RequestPath/message/username; Log-Event EndlessSessionCompleted; kibana-init als Build-Image (Auto-Deploy); davor: Code-Review-Fixes: Public-Profile (`GET /api/profile/{username}`) gibt reduziertes `PublicProfileDto` zurück (KEINE Klarnamen/ChessResultsId/Discord) — PII-Leak behoben; CourseController.RecordResult zeichnet Solve in eigenem SaveChanges auf (kein stiller Solve-Verlust bei parallelem CourseProgress-Insert) + GetNext-Save abgesichert; ProfileService.LinkDiscord fängt DbUpdateException → 409 (TOCTOU); ClientLog strippt CRLF (Log-Forging); BookPuzzleController `[Authorize]` als Default; ForwardedHeaders (X-Forwarded-For nur von privaten Peers) → Rate-Limiter/IP-Log per echter Client-IP; AdminController.ClearPuzzles Transaktions-Rollback; AutoSubscription `snr` defensiv; EndlessProgressService anonyme Reads deterministisch + Log-Timestamps geclampt; Frontend: AnalysisEngine-Watchdog deckt auch isready→readyok-Lücke (kein „Berechne…"-Deadlock), Endless-recordAttempt offline-queue-fähig, Offline-Fallback nimmt rating-nächstes Puzzle (`takeNearestFromPool`), OfflineQueue Backoff-Retry + UUID-Ids, StockfishService sauberer Crash-Abbruch + gequeuete Suche re-init, SwUpdate `unrecoverable`→Reload, Register-Redirect `navigateByUrl` (Multi-Segment), Navbar `takeUntilDestroyed`+`switchMap`; davor: Stockfish offline: `/assets/stockfish/**` wieder im Service Worker (eigene assetGroup `engine`, installMode prefetch) → Analyse/Eval funktionieren offline; sicher, weil das Glue bei `instantiateStreaming`-Fehler auf `instantiate(arrayBuffer)` zurückfällt + Handshake/Recovery/Watchdog/Telemetrie absichern (der „Berechne…"-Hänger lag am UCI-Sequencing, nicht am SW-Caching); davor: Engine-Diagnostik: Browser-Stockfish-Crashes/Hänger werden erkannt + an die API gemeldet — neuer Endpoint `POST /api/client-log` (AllowAnonymous, rate-limited) loggt strukturiert nach ES/Kibana; erfasst Worker-Crash, init_failed, search_timeout, Analyse-„stall"-Watchdog (kein Info nach `go` → auto-Neustart) + giveup; Frontend ClientLogService (pro Art gedrosselt), Hooks in AppComponent verdrahtet; davor: Fix: Analyse-Hänger „Berechne…" behoben — Stockfish-WASM wird NICHT mehr über den Service-Worker gecacht/serviert (aus ngsw-config entfernt → lädt direkt aus dem Netz; ein aus dem SW-Cache serviertes WASM ließ `instantiateStreaming` scheitern → kein `readyok`); zusätzlich sauberes UCI-Sequencing in AnalysisEngineService.analyze (stop→isready→readyok→position+go); Engine/Analyse braucht damit Verbindung, Offline-Solving unberührt; davor: Stockfish-WASM-Crash-Recovery — Worker-Absturz startet automatisch neu (StockfishService + AnalysisEngineService) statt die Engine bis zum Reload lahmzulegen; Analyse nimmt die Stellung nahtlos wieder auf (Loop-Schutz), Hash auf 16 begrenzt gegen OOM, init-Retry nach Fehlschlag; createWorker als Test-Seam; davor: Offline-Pools (Standard-Puzzle + Endless) werden schon beim App-Start vorab geladen statt erst beim ersten Öffnen des Modus → beide Modi direkt offline startbar (core/offline-prefetch.service.ts, in AppComponent angestoßen); Fenster-Logik geteilt via puzzle-window.util / endless-prefetch.util; davor: Strukturiertes Pro-Puzzle-Logging mit Start-/Lösungszeit über alle Modi (Standard, Tagespuzzle/Buch, Kurs, Endless) für ES/Kibana — Endless meldet die Session-Puzzles mit Zeiten beim Session-Ende (nur Log, nicht persistiert), Kurs-Lösungen senden jetzt die benötigte Zeit; davor: Endless: „Letztes Puzzle analysieren" nach dem Lösen (bleibt sichtbar trotz Auto-Advance) + „Analysieren" für das aktuelle Puzzle beim Aufgeben — öffnet jeweils den Analysemodus, Zurück führt in den Endless-Modus; davor: Service Worker (PWA) → App-Shell + Lazy-Module + i18n offline gecacht, Puzzle/Endless offline startbar; Offline gelöste Puzzles werden lokal vorgemerkt (Offline-Queue) und bei Reconnect automatisch hochgeladen (Standard/Tagespuzzle/Kurs/Endless), Anzahl wartender Lösungen im Profil; Endless prefetcht Run schon beim Config-Öffnen + klarer Offline-ohne-Cache-Hinweis; Bücher offline speichern (Kurs-Liste) + Offline-Buch-Navigation; Offline-Einstellungen im Profil + Cache-Größe/Leeren; Standard-Puzzle offline; Endless mehrere Runs vorab; Tagespuzzle-Solves erfasst + Results-Endpoint für Discord-Anzeige; Fix: Endless „Unfinished run | 0 lives"-Zombie weg; Fix: EF „FirstOrDefault ohne OrderBy" an der Quelle behoben; Buch-Puzzle Standalone: „Nächstes im Buch" + „Zufällig aus Buch"; Statistik „Alle": überlagerte farbkodierte Elo-Kurven + Legende; Buch-Import meldet Importiert / Duplikate / Ungültig getrennt; davor: Log-Rauschen reduziert; Kibana-Dashboard Logins/Tag + Unique Logins; strukturierter UserLogin-Log in der API; Endless offline-Vorabladen eines Runs; Pfeile/Kreise auf allen Puzzle-Brettern + Analyse-Fix; Analyse-Tiefe einstellbar + Zurück-zum-Puzzle; „Letztes Puzzle ansehen" öffnet Analysemodus; Repertoires + Wochenpost vorerst nur Admin; Statistik „Alle" zeigt Kurve je Modus; „Analysieren"-Button bei Puzzles; Puzzle-Aufgeben spielt Lösung durch; Discord-Konto-Verknüpfung; User-Statistikseite; Analysemodus; Frontend mehrsprachig en/de/hr)
-- Definiert in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide daraus — so zeigt der Footer in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien.
-- Angezeigt im Footer der Desktop-Version (Klick oeffnet Changelog-Overlay)
-- **Jeder Fix/jedes Feature MUSS die Version erhoehen**: Patch fuer Fixes (0.0.x), Minor fuer Features (0.x.0)
-- **Changelog pflegen**: Jeden Eintrag im `changelog`-Array in `environment.ts` vermerken (Version, Datum, Liste der Aenderungen)
-- Version in `environment.ts` UND in diesem Abschnitt aktualisieren
-- Changelog ist im Frontend einsehbar durch Klick auf die Versionsnummer im Footer
-- **Gilt auch fuer Aenderungen im Crawler-Repo** (`C:/git/chessresults_crawler`): Features/Fixes dort muessen ebenfalls hier Version + Changelog erhoehen und committet werden
+- **Aktuelle Version**: `0.95.2` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
+- Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
+- **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)
+- **Changelog pflegen**: Jeden Eintrag im `CHANGELOG`-Array in `changelog.ts` vermerken (Version, Datum, Liste der Änderungen)
+- **Gilt auch für Änderungen im Crawler-Repo** (`C:/git/chessresults_crawler`): Features/Fixes dort müssen ebenfalls hier Version + Changelog erhöhen und committet werden
+- **Parallel-Arbeit**: Wegen der zwei Stack-Kopien (siehe Lock-Block oben) können Versionssprünge nicht-monoton wirken — beim Commit immer den **aktuellen** `APP_VERSION`-Wert aus `changelog.ts` als Basis nehmen, nicht den Commit-Subject-Wert
 
 ### Checkliste vor JEDEM Commit (beide Projekte)
-1. [ ] Tests vorhanden fuer die Aenderung?
-2. [ ] `APP_VERSION` + `CHANGELOG`-Eintrag in `src/frontend/app/src/environments/changelog.ts` aktualisiert? (gilt automatisch fuer dev + prod-Build)
+1. [ ] Tests vorhanden für die Änderung?
+2. [ ] `APP_VERSION` + `CHANGELOG`-Eintrag in `src/frontend/app/src/environments/changelog.ts` aktualisiert? (gilt automatisch für dev + prod-Build)
 3. [ ] `Aktuelle Version` in diesem Abschnitt angepasst?
-4. [ ] Versionsaenderung committet?
-5. [ ] **Nach jedem Commit dem User die aktuelle Version mitteilen** (z.B. "Version: 0.6.6")
+4. [ ] Versionsänderung committet?
+5. [ ] **Nach jedem Commit dem User die aktuelle Version mitteilen** (z.B. "Version: 0.95.2")
 
-**NIEMALS committen ohne diese Checkliste abzuarbeiten.** Auch reine Test- oder Doku-Aenderungen erhoehen die Patch-Version.
+**NIEMALS committen ohne diese Checkliste abzuarbeiten.** Auch reine Test- oder Doku-Änderungen erhöhen die Patch-Version.
 
 ## Screenshots
 
 - Screenshots liegen in `C:/git/screenshot/` (z.B. `Screenshot.jpg`)
-- Diesen Pfad nutzen um visuelle Pruefungen durchzufuehren
+- Diesen Pfad nutzen um visuelle Prüfungen durchzuführen
 
 ## Wichtige Konventionen
 
-- **Keine Default-Werte in Compose-Example-Dateien** – `compose.yml.example` und `compose.vpn.example` verwenden `${VAR}` ohne `:-default`. Alle Werte muessen explizit in der `.env`-Datei gesetzt werden.
-- Crawler-Proxy-Endpoints muessen mit tatsaechlichen Crawler-Routen uebereinstimmen
+- **Keine Default-Werte in Compose-Example-Dateien** – `compose.yml.example` und `compose.vpn.example` verwenden `${VAR}` ohne `:-default`. Alle Werte müssen explizit in der `.env`-Datei gesetzt werden.
+- **i18n-Validierung**: Nach jeder Änderung an `src/frontend/app/src/assets/i18n/*.json` alle 25 Sprachdateien mit `JSON.parse` validieren — Trailing-Comma-Fehler bricht ngx-translate komplett, UI zeigt dann nur noch Schlüssel statt Texte
+- **Literal-Routen vor Parameter-Routen**: z.B. `GET /api/weekly-posts/progress` MUSS vor `GET /api/weekly-posts/{id}` deklariert sein, sonst matcht der Router „progress" als ID
+- Crawler-Proxy-Endpoints müssen mit tatsächlichen Crawler-Routen übereinstimmen
 - Angular nutzt lazy-loaded standalone components (kein NgModule)
 - JWT-Claims: `ClaimTypes.NameIdentifier` = UserId, `ClaimTypes.Name` = Username
 - PGN-Upload-Limit: 10 MB pro Datei (in `RepertoireService`)
 - Alle Controller holen UserId via `User.FindFirstValue(ClaimTypes.NameIdentifier)`
-- Friendship-Status ist eine State Machine: Pending -> Accepted/Declined
-- Nur der Addressee kann Accept/Decline ausfuehren
+- Friendship-Status ist eine State Machine: Pending → Accepted/Declined; nur der Addressee kann Accept/Decline ausführen
+- Stockfish-WASM **NICHT** über Service-Worker cachen außer in eigener assetGroup `engine` (installMode prefetch) — der Glue muss bei `instantiateStreaming`-Fehler auf `instantiate(arrayBuffer)` zurückfallen, sonst hängt die Analyse
+- HMAC-Webhooks zum Bot: gleiches Secret-Pattern (`SchachBot:WebhookSecret` für Tagespuzzle/Wochenpost, `SchachBot:StatsSecret` für Bot-Stats-Pull) — `ComputeHmacHex` aus `SchachBotWebhookService` wiederverwenden
