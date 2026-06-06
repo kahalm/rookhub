@@ -444,18 +444,8 @@
                     <div class="puzzle-info">
                       <span class="rating-badge">{{ 'endless.game.puzzleRating' | translate:{ rating: puzzle.rating } }}</span>
                       <span class="level-badge">{{ 'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating } }}</span>
-                      @if (puzzle.themes) {
-                        <span class="themes-toggle" (click)="showThemes = !showThemes">
-                          {{ (showThemes ? 'endless.game.hideTags' : 'endless.game.showTags') | translate }}
-                        </span>
-                        @if (showThemes) {
-                          <div class="themes">
-                            @for (theme of puzzle.themes.split(' '); track theme) {
-                              <span class="theme-chip">{{ theme }}</span>
-                            }
-                          </div>
-                        }
-                      }
+                      <app-puzzle-tags [tags]="puzzle.themes" />
+
                       <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
                         <mat-icon>share</mat-icon> {{ 'endless.game.sharePuzzle' | translate }}
                       </button>

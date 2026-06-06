@@ -69,11 +69,7 @@
                     @if (puzzle.bookRating) {
                       <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ puzzle.bookRating }}/10</span>
                     }
-                    @if (puzzle.tags) {
-                      @for (tag of puzzle.tags.split(' '); track tag) {
-                        <span class="tag-chip">{{ tag }}</span>
-                      }
-                    }
+                    <app-puzzle-tags [tags]="puzzle.tags" />
                   </div>
                 }
 

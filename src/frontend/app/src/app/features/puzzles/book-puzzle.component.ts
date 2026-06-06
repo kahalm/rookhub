@@ -18,6 +18,7 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
 import { VizCardComponent } from './viz-card.component';
 import { ThemePickerComponent } from './theme-picker.component';
+import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -42,7 +43,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatChipsModule, MatInputModule, MatFormFieldModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, ThemePickerComponent, TranslateModule
+    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, ThemePickerComponent, PuzzleTagsComponent, TranslateModule
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],

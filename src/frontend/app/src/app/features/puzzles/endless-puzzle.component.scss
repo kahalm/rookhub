@@ -178,15 +178,6 @@
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
     .level-badge { font-size: 0.9em; color: rgba(0,0,0,0.6); }
-    .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-    .theme-chip {
-      background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
-      font-size: 0.85em; white-space: nowrap;
-    }
-    .themes-toggle {
-      font-size: 0.8em; color: #1976d2; cursor: pointer;
-    }
-    .themes-toggle:hover { text-decoration: underline; }
 
     .gameover-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .gameover-card { max-width: 500px; width: 100%; text-align: center; }

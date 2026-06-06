@@ -60,11 +60,6 @@
     .diff-fortgeschritten { background: #fff3e0; color: #e65100; }
     .diff-meister { background: #ffcdd2; color: #c62828; }
     .rating-badge { font-weight: bold; font-size: 0.9em; }
-    .tags { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-    .tag-chip {
-      background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
-      font-size: 0.85em; white-space: nowrap;
-    }
 
     /* Untere Aktionen */
     .bottom-actions {

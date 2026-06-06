@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.3';
+export const APP_VERSION = '0.96.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.4', date: '2026-06-06', changes: [
+    'Puzzle-Modi: Tags/Themes sind in allen drei Modi (Standard/Endless/Book) standardmäßig ausgeblendet, neuer „Tags anzeigen"-Link klappt sie auf.',
+    'Refactor: neue wiederverwendbare PuzzleTagsComponent (statt 3× kopiertes Tag-Toggle-Markup); CSS-Doubletten in den Puzzle-SCSS-Dateien entfernt.',
+  ]},
   { version: '0.96.3', date: '2026-06-06', changes: [
     'Book-Puzzle: Leere graue Settings-Card unter "Share puzzle" ausgeblendet, solange das Einstellungs-Panel nicht offen ist (config-card jetzt komplett im @if).',
   ]},

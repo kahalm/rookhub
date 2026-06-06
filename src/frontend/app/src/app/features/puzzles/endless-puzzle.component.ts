@@ -16,6 +16,7 @@ import { PuzzleBoardComponent } from './puzzle-board.component';
 import { ReviewNavComponent } from './review-nav.component';
 import { VizCardComponent } from './viz-card.component';
 import { ThemePickerComponent } from './theme-picker.component';
+import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -55,7 +56,7 @@ interface EndlessPuzzleAttempt {
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, ThemePickerComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, VizCardComponent, ThemePickerComponent, PuzzleTagsComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
@@ -103,7 +104,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   sessionHistory: EndlessSession[] = [];
   currentSessionMistakes: number[] = [];
   currentSessionPuzzles: EndlessPuzzleAttempt[] = [];
-  showThemes = false;
 
   // Fasttrack
   fasttrackPhase1Step = 0;
@@ -551,7 +551,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.state = 'LOADING';
     this.alternativeSolve = false;
     this.showEval = false;
-    this.showThemes = false;
     this.initialEval = '';
     this.currentEval = '';
 

@@ -23,11 +23,6 @@
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
-    .themes { display: flex; flex-wrap: wrap; gap: 0.25rem; }
-    .theme-chip {
-      background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
-      font-size: 0.85em; white-space: nowrap;
-    }
     .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }

@@ -42,13 +42,7 @@
               <mat-card-content>
                 <div class="puzzle-info">
                   <span class="rating-badge">{{ 'puzzles.info.rating' | translate }}: {{ puzzle.rating }}</span>
-                  @if (puzzle.themes) {
-                    <div class="themes">
-                      @for (theme of puzzle.themes.split(' '); track theme) {
-                        <span class="theme-chip">{{ theme }}</span>
-                      }
-                    </div>
-                  }
+                  <app-puzzle-tags [tags]="puzzle.themes" />
                 </div>
               </mat-card-content>
             </mat-card>
