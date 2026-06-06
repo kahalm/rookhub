@@ -213,118 +213,42 @@
 
           <!-- Status-Card: Interaktionszentrum -->
           @if (puzzle || state === 'LOADING') {
-            <mat-card class="status-card">
-              <mat-card-content>
-                <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [attr.title]="'book.settings.title' | translate">
-                  <mat-icon>settings</mat-icon>
-                </button>
-                @if (reviewMode && !solutionReview) {
-                  <div class="status-center">
-                    <p class="status-text">{{ 'book.status.fullGame' | translate }}</p>
-                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                    <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> {{ 'book.actions.backToPuzzle' | translate }}</button>
-                  </div>
-                } @else {
-                @switch (state) {
-                  @case ('LOADING') {
-                    <div class="status-center">
-                      <mat-spinner diameter="40"></mat-spinner>
-                      <p>{{ 'book.status.loading' | translate }}</p>
-                    </div>
-                  }
-                  @case ('SETUP') {
-                    <div class="status-center">
-                      <p class="status-text">{{ 'book.status.watchOpponent' | translate }}</p>
-                    </div>
-                  }
-                  @case ('AWAITING_USER_MOVE') {
-                    <app-puzzle-your-turn
-                      state="AWAITING_USER_MOVE"
-                      mode="book"
-                      [showEval]="showEval"
-                      [evalLoading]="evalLoading"
-                      [initialEval]="initialEval"
-                      [currentEval]="currentEval"
-                      [gaveUp]="gaveUp"
-                      [timerSeconds]="elapsedSeconds"
-                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                      (evalToggled)="toggleEval()"
-                      (resetClicked)="resetPuzzle()"
-                      (mouseslipClicked)="mouseslip()"
-                      (giveUpClicked)="giveUp()"
-                    />
-                  }
-                  @case ('THINKING') {
-                    <app-puzzle-your-turn
-                      state="THINKING"
-                      mode="book"
-                      [showEval]="showEval"
-                      [evalLoading]="evalLoading"
-                      [initialEval]="initialEval"
-                      [currentEval]="currentEval"
-                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                      (evalToggled)="toggleEval()"
-                      (resetClicked)="resetPuzzle()"
-                      (mouseslipClicked)="mouseslip()"
-                      (giveUpClicked)="giveUp()"
-                    />
-                  }
-                  @case ('PLAYING') {
-                    <app-puzzle-your-turn
-                      state="PLAYING"
-                      mode="book"
-                      [showEval]="showEval"
-                      [evalLoading]="evalLoading"
-                      [initialEval]="initialEval"
-                      [currentEval]="currentEval"
-                      [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                      (evalToggled)="toggleEval()"
-                      (resetClicked)="resetPuzzle()"
-                      (mouseslipClicked)="mouseslip()"
-                      (giveUpClicked)="giveUp()"
-                    />
-                  }
-                  @case ('SOLVED') {
-                    <div class="status-center solved">
-                      <mat-icon class="result-icon">check_circle</mat-icon>
-                      @if (alternativeSolve) {
-                        <p class="status-text">{{ 'book.status.checkmate' | translate }}</p>
-                        <p class="alt-hint">{{ 'book.status.altSolution' | translate }}</p>
-                      } @else {
-                        <p class="status-text">{{ 'book.status.correct' | translate }}</p>
-                      }
-                      <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                      <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                      @if (solvedCountdown > 0) {
-                        <p class="alt-hint"><mat-icon class="countdown-icon">timer</mat-icon> {{ solvedCountdown }}</p>
-                      }
-                    </div>
-                  }
-                  @case ('FAILED') {
-                    <div class="status-center failed">
-                      <mat-icon class="result-icon">{{ gaveUp ? 'flag' : 'cancel' }}</mat-icon>
-                      <p class="status-text">{{ (gaveUp ? 'book.status.gaveUpSolution' : 'book.status.incorrect') | translate }}</p>
-                      <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                      <div class="fail-actions">
-                        <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
-                      </div>
-                    </div>
-                  }
-                }
-                }
-              </mat-card-content>
-            </mat-card>
+            <app-puzzle-status-card
+              mode="book"
+              [state]="state"
+              [showEval]="showEval"
+              [evalLoading]="evalLoading"
+              [initialEval]="initialEval"
+              [currentEval]="currentEval"
+              [gaveUp]="gaveUp"
+              [elapsedSeconds]="elapsedSeconds"
+              [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+              [alternativeSolve]="alternativeSolve"
+              [solvedCountdown]="solvedCountdown"
+              [reviewIndex]="reviewIndex"
+              [reviewTotal]="reviewTotal"
+              [fullGameReview]="reviewMode && !solutionReview"
+              (settingsClicked)="openSettingsDialog()"
+              (evalToggled)="toggleEval()"
+              (resetClicked)="resetPuzzle()"
+              (mouseslipClicked)="mouseslip()"
+              (giveUpClicked)="giveUp()"
+              (retryClicked)="retry()"
+              (nextClicked)="solvedAutoNextPublic()"
+              (failedNextClicked)="failedNext()"
+              (analyzeClicked)="analyze()"
+              (reviewPrev)="reviewPrev()"
+              (reviewNext)="reviewNext()"
+              (exitReviewClicked)="exitReview()"
+            />
           }
 
-          <!-- Untere Aktionen: Share (immer) + Analyse/Ganze Partie (nach Lösen) -->
+          <!-- Untere Aktionen: Share (immer) + Ganze Partie (nach Lösen) -->
           @if (puzzle) {
             <div class="bottom-actions">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">
                   <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
-                </button>
-                <button mat-stroked-button (click)="analyze()">
-                  <mat-icon>biotech</mat-icon> {{ 'book.actions.analyze' | translate }}
                 </button>
               }
               <button mat-stroked-button class="share-full" (click)="sharePuzzle()">

@@ -13,12 +13,11 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { ReviewNavComponent } from './review-nav.component';
 import { VizCardComponent } from './viz-card.component';
-import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
+import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
@@ -57,7 +56,8 @@ interface EndlessPuzzleAttempt {
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
+    MatDialogModule, TranslateModule, PuzzleBoardComponent,
+    PuzzleRatingCardComponent, PuzzleStatusCardComponent
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],

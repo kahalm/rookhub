@@ -46,145 +46,58 @@
               (shareClicked)="sharePuzzle()"
             />
           }
-          <mat-card class="status-card">
-            <mat-card-content>
-              <button mat-icon-button class="settings-gear" (click)="openSettingsDialog()" [title]="'puzzles.settings.tooltip' | translate">
-                <mat-icon>settings</mat-icon>
-              </button>
-              @switch (state) {
-                @case ('LOADING') {
-                  <div class="status-center">
-                    <mat-spinner diameter="40"></mat-spinner>
-                    <p>{{ 'puzzles.status.loading' | translate }}</p>
-                  </div>
-                }
-                @case ('ERROR') {
-                  <div class="status-center failed">
-                    <mat-icon class="result-icon">{{ (offlineNoCache || offlinePoolExhausted) ? 'cloud_off' : 'error_outline' }}</mat-icon>
-                    <p class="status-text">
-                      {{ (offlinePoolExhausted
-                            ? 'puzzles.status.offlinePoolExhausted'
-                            : offlineNoCache
-                              ? 'puzzles.status.offlineNoCache'
-                              : 'puzzles.status.loadFailed') | translate }}
-                    </p>
-                    @if (offlinePoolExhausted) {
-                      <button mat-raised-button color="primary" (click)="replayLastPuzzle()">
-                        <mat-icon>replay</mat-icon> {{ 'puzzles.status.replayLast' | translate }}
-                      </button>
-                    }
-                    <button mat-raised-button [color]="offlinePoolExhausted ? '' : 'primary'" (click)="loadNext()">
-                      <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+          @if (state === 'ERROR') {
+            <mat-card class="status-card">
+              <mat-card-content>
+                <div class="status-center failed">
+                  <mat-icon class="result-icon">{{ (offlineNoCache || offlinePoolExhausted) ? 'cloud_off' : 'error_outline' }}</mat-icon>
+                  <p class="status-text">
+                    {{ (offlinePoolExhausted
+                          ? 'puzzles.status.offlinePoolExhausted'
+                          : offlineNoCache
+                            ? 'puzzles.status.offlineNoCache'
+                            : 'puzzles.status.loadFailed') | translate }}
+                  </p>
+                  @if (offlinePoolExhausted) {
+                    <button mat-raised-button color="primary" (click)="replayLastPuzzle()">
+                      <mat-icon>replay</mat-icon> {{ 'puzzles.status.replayLast' | translate }}
                     </button>
-                  </div>
-                }
-                @case ('SETUP') {
-                  <div class="status-center">
-                    <p class="status-text">{{ 'puzzles.status.watchOpponent' | translate }}</p>
-                  </div>
-                }
-                @case ('AWAITING_USER_MOVE') {
-                  <app-puzzle-your-turn
-                    state="AWAITING_USER_MOVE"
-                    mode="standard"
-                    [showEval]="showEval"
-                    [evalLoading]="evalLoading"
-                    [initialEval]="initialEval"
-                    [currentEval]="currentEval"
-                    [gaveUp]="gaveUp"
-                    [timerSeconds]="elapsedSeconds"
-                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                    (evalToggled)="toggleEval()"
-                    (resetClicked)="resetPuzzle()"
-                    (mouseslipClicked)="mouseslip()"
-                    (giveUpClicked)="giveUp()"
-                  />
-                }
-                @case ('THINKING') {
-                  <app-puzzle-your-turn
-                    state="THINKING"
-                    mode="standard"
-                    [showEval]="showEval"
-                    [evalLoading]="evalLoading"
-                    [initialEval]="initialEval"
-                    [currentEval]="currentEval"
-                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                    (evalToggled)="toggleEval()"
-                    (resetClicked)="resetPuzzle()"
-                    (mouseslipClicked)="mouseslip()"
-                    (giveUpClicked)="giveUp()"
-                  />
-                }
-                @case ('PLAYING') {
-                  <app-puzzle-your-turn
-                    state="PLAYING"
-                    mode="standard"
-                    [showEval]="showEval"
-                    [evalLoading]="evalLoading"
-                    [initialEval]="initialEval"
-                    [currentEval]="currentEval"
-                    [gaveUp]="gaveUp"
-                    [timerSeconds]="elapsedSeconds"
-                    [showMouseslip]="!mouseslipUsed && !onSolutionPath"
-                    (evalToggled)="toggleEval()"
-                    (resetClicked)="resetPuzzle()"
-                    (mouseslipClicked)="mouseslip()"
-                    (giveUpClicked)="giveUp()"
-                  />
-                }
-                @case ('SOLVED') {
-                  <div class="status-center solved">
-                    @if (gaveUp) {
-                      <mat-icon class="result-icon" style="color:#f44336">flag</mat-icon>
-                      <p class="status-text">{{ 'puzzles.result.solutionPlayedOut' | translate }}</p>
-                      <p class="alt-hint">{{ 'puzzles.result.tryYourselfNextTime' | translate }}</p>
-                    } @else if (alternativeSolve) {
-                      <mat-icon class="result-icon">check_circle</mat-icon>
-                      <p class="status-text">{{ 'puzzles.result.checkmate' | translate }}</p>
-                      <p class="alt-hint">{{ 'puzzles.result.alternativeSolution' | translate }}</p>
-                    } @else {
-                      <mat-icon class="result-icon">check_circle</mat-icon>
-                      <p class="status-text">{{ 'puzzles.result.correct' | translate }}</p>
-                    }
-                    @if (lastEloChange != null) {
-                      @if (gaveUp || lastEloChange < 0) {
-                        <span class="elo-change elo-down">{{ lastEloChange }}</span>
-                      } @else {
-                        <span class="elo-change elo-up">+{{ lastEloChange }}</span>
-                      }
-                    }
-                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                    <div class="solved-actions">
-                      <button mat-raised-button color="primary" (click)="loadNext()">
-                        {{ 'puzzles.actions.nextPuzzle' | translate }} @if (solvedCountdown > 0) { ({{ solvedCountdown }}) }
-                      </button>
-                      <button mat-button (click)="analyze()">
-                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                }
-                @case ('FAILED') {
-                  <div class="status-center failed">
-                    <mat-icon class="result-icon">cancel</mat-icon>
-                    <p class="status-text">{{ 'puzzles.result.incorrect' | translate }}</p>
-                    @if (lastEloChange != null) {
-                      <span class="elo-change elo-down">{{ lastEloChange }}</span>
-                    }
-                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                    <div class="fail-actions">
-                      <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
-                      <button mat-button (click)="analyze()">
-                        <mat-icon>biotech</mat-icon> {{ 'puzzles.actions.analyze' | translate }}
-                      </button>
-                      <button mat-raised-button color="primary" (click)="loadNext()">{{ 'puzzles.actions.nextPuzzle' | translate }}</button>
-                    </div>
-                  </div>
-                }
-              }
-            </mat-card-content>
-          </mat-card>
+                  }
+                  <button mat-raised-button [color]="offlinePoolExhausted ? '' : 'primary'" (click)="loadNext()">
+                    <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+                  </button>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          } @else {
+            <app-puzzle-status-card
+              mode="standard"
+              [state]="state"
+              [showEval]="showEval"
+              [evalLoading]="evalLoading"
+              [initialEval]="initialEval"
+              [currentEval]="currentEval"
+              [gaveUp]="gaveUp"
+              [elapsedSeconds]="elapsedSeconds"
+              [showMouseslip]="!mouseslipUsed && !onSolutionPath"
+              [alternativeSolve]="alternativeSolve"
+              [lastEloChange]="lastEloChange"
+              [solvedCountdown]="solvedCountdown"
+              [reviewIndex]="reviewIndex"
+              [reviewTotal]="reviewTotal"
+              (settingsClicked)="openSettingsDialog()"
+              (evalToggled)="toggleEval()"
+              (resetClicked)="resetPuzzle()"
+              (mouseslipClicked)="mouseslip()"
+              (giveUpClicked)="giveUp()"
+              (retryClicked)="retry()"
+              (nextClicked)="loadNext()"
+              (failedNextClicked)="loadNext()"
+              (analyzeClicked)="analyze()"
+              (reviewPrev)="reviewPrev()"
+              (reviewNext)="reviewNext()"
+            />
+          }
 
           @if (stats) {
             <mat-card class="stats-card">

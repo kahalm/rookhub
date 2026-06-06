@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.8';
+export const APP_VERSION = '0.96.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.9', date: '2026-06-06', changes: [
+    'Refactor: Einheitliche PuzzleStatusCardComponent für alle drei Puzzle-Modi (Standard/Endless/Book). Kapselt Zahnrad-Button + gesamten State-Switch (LOADING/SETUP/YourTurn/SOLVED/FAILED) — gleiche Optik und gleiche Features in allen Modi.',
+    'Standard: Aufgeben (Give Up) führt jetzt wie in Endless/Book zum FAILED-Zustand (statt SOLVED). Retry, Analysieren und Nächstes-Puzzle-Button sind in FAILED sichtbar.',
+    'Book: Analysieren-Button aus den unteren Aktionen in die Status-Card verschoben (SOLVED + FAILED). Nächstes-Puzzle-Button auch in FAILED (failedNext()-Methode).',
+  ]},
   { version: '0.96.8', date: '2026-06-06', changes: [
     'Einstellungs-Dialog: (i)-Button neben „Visualisierung" klappt Beschreibungsliste aller 5 Modi auf; aktiv gewählter Modus ist hervorgehoben.',
   ]},

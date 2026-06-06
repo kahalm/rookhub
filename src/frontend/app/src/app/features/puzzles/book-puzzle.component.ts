@@ -12,11 +12,10 @@ import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { ReviewNavComponent } from './review-nav.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
-import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
+import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -39,8 +38,9 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatProgressBarModule,
-    MatTooltipModule, MatDialogModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleTagsComponent, PuzzleYourTurnComponent, TranslateModule
+    MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
+    PuzzleBoardComponent, PuzzleTagsComponent,
+    TranslateModule, PuzzleStatusCardComponent
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -259,6 +259,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
+  solvedAutoNextPublic(): void { this.solvedAutoNext(); }
   private solvedAutoNext(): void {
     if (this.isDaily) return;            // Tagespuzzle: kein Auto-Advance, Navigation via Datum
     if (this.inCourse) this.courseNext();
@@ -619,6 +620,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     this.gaveUp = false;
     this.setupPuzzle(this.puzzle);
+  }
+
+  failedNext(): void {
+    this.stopCountdown();
+    if (this.isDaily) return;
+    if (this.inCourse) this.courseNext();
+    else if (this.inWeekly) this.weeklyNext();
+    else this.nextInBook();
   }
 
   showSolution(): void {

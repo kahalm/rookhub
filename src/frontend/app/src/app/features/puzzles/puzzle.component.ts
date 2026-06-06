@@ -9,9 +9,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { ReviewNavComponent } from './review-nav.component';
-import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
+import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
@@ -37,7 +36,8 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, PuzzleYourTurnComponent, PuzzleRatingCardComponent
+    MatProgressSpinnerModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
+    PuzzleRatingCardComponent, PuzzleStatusCardComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],
@@ -348,9 +348,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     // Fehlversuch aufzeichnen (Elo-Loss + Statistik), falls noch nicht geschehen.
     if (!this.attemptRecorded) this.recordAttempt(false);
     this.gaveUp = true;
-    // Endzustand wie beim Lösen (zeigt Review-Navigation + „Lösung durchgespielt"),
-    // dann auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
-    this.state = 'SOLVED';
+    this.state = 'FAILED';
     this.playSolutionFromStart();
   }
 
