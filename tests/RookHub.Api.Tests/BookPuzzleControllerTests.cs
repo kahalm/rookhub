@@ -246,6 +246,21 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetResults_IncludesTimeSecondsOfFirstAttempt()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "time.pgn:1", bookFileName: "time.pgn");
+        var anna = await CreateUserAsync("anna_time", discordId: "999");
+        SetUser(anna.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 42 });
+        // zweiter Versuch — TimeSeconds des ERSTEN muss gelten
+        await Task.Delay(10);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 99 });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(42, res.Solvers.Single(s => s.Name == "anna_time").TimeSeconds);
+    }
+
+    [Fact]
     public async Task GetById_ReturnsPuzzle()
     {
         var puzzle = await CreateBookPuzzleAsync();

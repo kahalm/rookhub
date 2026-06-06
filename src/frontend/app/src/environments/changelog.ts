@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.14';
+export const APP_VERSION = '0.96.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.0', date: '2026-06-06', changes: [
+    'Tagespuzzle: Lösungszeit je Solver im Discord-Embed (z. B. „@Anna (1:23)").',
+  ]},
   { version: '0.95.14', date: '2026-06-06', changes: [
     'Weekly: Post-Titel im Header-Chip statt generischem "Wochenpost"-Label (spart eine Zeile).',
     'Viz-Card: Überarbeitet — Level-Badge statt Volltext-Titel, kein Monospace mehr, blauer Akzentbalken für Züge.',

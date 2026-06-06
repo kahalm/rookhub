@@ -17,6 +17,7 @@ public class BookSolverDto
     public string Name { get; set; } = string.Empty;
     public string? DiscordId { get; set; }
     public string? DiscordUsername { get; set; }
+    public int TimeSeconds { get; set; }
 }
 
 public class BookPuzzleResultsDto
