@@ -191,8 +191,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   analyze(): void {
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);
+    // Zurück zur Puzzle-Liste (ohne ID) – mit ID würde dasselbe Puzzle neu geladen statt das nächste.
     this.router.navigate(['/analysis'], {
-      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation, from: '/puzzles/' + this.puzzle.id },
+      queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation, from: '/puzzles' },
     });
   }
 
