@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.5';
+export const APP_VERSION = '0.96.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.6', date: '2026-06-06', changes: [
+    'Endless: Settings-Gear-Button in die Status-Card verschoben (war vorher als freies Icon zwischen Status-Card und Rating-Card sichtbar).',
+  ]},
   { version: '0.96.5', date: '2026-06-06', changes: [
     'Refactor: „Your turn!"-Panel als eigenständige PuzzleYourTurnComponent (Standard/Endless/Book-Modi nutzen dieselbe Komponente, i18n per Mode-Input).',
     'Refactor: Puzzle-Rating-Card als eigenständige PuzzleRatingCardComponent (Standard + Endless; zeigt Rating, Level-Range, Tags und Share-Button).',
