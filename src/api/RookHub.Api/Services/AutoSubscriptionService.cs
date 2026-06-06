@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -10,6 +11,20 @@ public class AutoSubscriptionService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AutoSubscriptionService> _logger;
+
+    /// <summary>
+    /// Initiale Pause vor dem ersten Lauf. Beim Deploy startet die API regelmaessig ein paar
+    /// Sekunden vor dem Crawler (gluetun:8080); ohne diese Pause liefe der erste Check sofort
+    /// ins "Connection refused". Da der Service ohnehin nur alle 24 h laeuft, kostet die Pause nichts.
+    /// (internal settable nur fuer Tests.)
+    /// </summary>
+    internal TimeSpan InitialDelay { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>Anzahl Versuche fuer Crawler-GETs (transiente Verbindungsfehler).</summary>
+    internal int MaxCrawlerAttempts { get; set; } = 3;
+
+    /// <summary>Wartezeit zwischen den Crawler-Versuchen.</summary>
+    internal TimeSpan CrawlerRetryBackoff { get; set; } = TimeSpan.FromSeconds(5);
 
     public AutoSubscriptionService(IServiceScopeFactory scopeFactory, ILogger<AutoSubscriptionService> logger)
     {
@@ -20,6 +35,16 @@ public class AutoSubscriptionService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("AutoSubscriptionService started");
+
+        // Crawler beim Deploy erst hochfahren lassen, bevor der erste Check ihn anspricht.
+        try
+        {
+            await Task.Delay(InitialDelay, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -79,7 +104,7 @@ public class AutoSubscriptionService : BackgroundService
         JsonElement tournamentsJson;
         try
         {
-            tournamentsJson = await proxy.GetAsync(queryString);
+            tournamentsJson = await GetWithRetryAsync(proxy, queryString, ct);
         }
         catch (Exception ex)
         {
@@ -188,7 +213,7 @@ public class AutoSubscriptionService : BackgroundService
         JsonElement playersJson;
         try
         {
-            playersJson = await proxy.GetAsync($"/api/tournaments/{Uri.EscapeDataString(crawlerTournamentId)}/players");
+            playersJson = await GetWithRetryAsync(proxy, $"/api/tournaments/{Uri.EscapeDataString(crawlerTournamentId)}/players", ct);
         }
         catch (Exception ex)
         {
@@ -301,6 +326,30 @@ public class AutoSubscriptionService : BackgroundService
                 _logger.LogWarning(ex, "Constraint violation saving favorites for user {UserId}, tournament {TournamentId}", userId, crawlerTournamentId);
                 foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == Microsoft.EntityFrameworkCore.EntityState.Added))
                     entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Crawler-GET mit kurzem Retry/Backoff. Wiederholt nur bei transienten Verbindungsfehlern
+    /// (<see cref="HttpRequestException"/>, z. B. "Connection refused" waehrend der Crawler beim
+    /// Deploy noch hochfaehrt). HTTP-Fehlerantworten (<see cref="CrawlerRequestException"/>) und
+    /// alle uebrigen Fehler werden NICHT wiederholt, sondern direkt weitergereicht.
+    /// </summary>
+    private async Task<JsonElement> GetWithRetryAsync(CrawlerProxyService proxy, string path, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await proxy.GetAsync(path, ct);
+            }
+            catch (HttpRequestException ex) when (attempt < MaxCrawlerAttempts)
+            {
+                _logger.LogDebug(ex,
+                    "Crawler GET {Path} attempt {Attempt}/{Max} failed (transient), retrying in {Backoff}s",
+                    path, attempt, MaxCrawlerAttempts, CrawlerRetryBackoff.TotalSeconds);
+                await Task.Delay(CrawlerRetryBackoff, ct);
             }
         }
     }

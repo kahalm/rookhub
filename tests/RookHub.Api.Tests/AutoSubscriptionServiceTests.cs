@@ -360,6 +360,75 @@ public class AutoSubscriptionServiceTests : IDisposable
         Assert.Empty(subs);
     }
 
+    // --- Retry-Verhalten (transiente Crawler-Verbindungsfehler) ---
+
+    [Fact]
+    public async Task CheckUserAsync_TransientConnectionError_RetriesThenSucceeds()
+    {
+        var userId = await CreateUserAsync(lastName: "Oberschmid", firstName: "Patrik", chessResultsId: "144749");
+
+        var tournaments = JsonSerializer.Serialize(new[]
+        {
+            new { tournamentId = "1202326", tournamentName = "Salzkammergut Open", endDate = "25.12.2099" }
+        });
+        // Erste 2 Versuche des Tournament-Fetch werfen "Connection refused", der 3. liefert die Turniere.
+        var handler = new FlakyHttpMessageHandler(failuresBeforeSuccess: 2, successBody: tournaments,
+            failPathContains: "/api/players/tournaments");
+        var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        {
+            CrawlerRetryBackoff = TimeSpan.Zero // Test nicht künstlich verlangsamen
+        };
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        Assert.Equal(3, handler.FailPathAttempts); // 2 Fehlversuche + 1 Erfolg auf dem Tournament-Pfad
+        var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.Single(subs);
+        Assert.Equal("1202326", subs[0].CrawlerTournamentId);
+    }
+
+    [Fact]
+    public async Task CheckUserAsync_TransientErrorPersists_GivesUpAfterMaxAttempts()
+    {
+        var userId = await CreateUserAsync(lastName: "Oberschmid", firstName: "Patrik", chessResultsId: "144749");
+
+        // Tournament-Fetch schlägt immer fehl → Retry erschöpft sich, keine Subscription, kein Throw.
+        var handler = new FlakyHttpMessageHandler(failuresBeforeSuccess: int.MaxValue, successBody: "[]",
+            failPathContains: "/api/players/tournaments");
+        var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        {
+            CrawlerRetryBackoff = TimeSpan.Zero,
+            MaxCrawlerAttempts = 3
+        };
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        Assert.Equal(3, handler.FailPathAttempts); // genau MaxCrawlerAttempts, dann Aufgabe
+        var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        Assert.Empty(subs);
+    }
+
+    [Fact]
+    public async Task CheckUserAsync_HttpErrorStatus_NotRetried()
+    {
+        var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
+
+        // 500 ist eine HTTP-Antwort (CrawlerRequestException), kein transienter Verbindungsfehler → kein Retry.
+        var handler = new FlakyHttpMessageHandler(failuresBeforeSuccess: 0, successBody: "",
+            successStatus: HttpStatusCode.InternalServerError, failPathContains: "/api/players/tournaments");
+        var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        {
+            CrawlerRetryBackoff = TimeSpan.Zero
+        };
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        Assert.Equal(1, handler.FailPathAttempts); // nur ein Versuch, kein Retry bei 5xx-Antwort
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly string _response;
@@ -377,6 +446,57 @@ public class AutoSubscriptionServiceTests : IDisposable
             return Task.FromResult(new HttpResponseMessage(_statusCode)
             {
                 Content = new StringContent(_response, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    /// <summary>
+    /// Simuliert transiente Crawler-Verbindungsfehler auf einem bestimmten Pfad. Auf dem Ziel-Pfad
+    /// (<c>failPathContains</c>, null = jeder Pfad) werfen die ersten <c>failuresBeforeSuccess</c>
+    /// Aufrufe eine <see cref="HttpRequestException"/> ("Connection refused"), danach kommt
+    /// <c>successBody</c>/<c>successStatus</c>. Alle anderen Pfade antworten mit "[]" (200), damit
+    /// Folgeaufrufe (Crawl-Start, Players-Fetch) den Test nicht stoeren. <see cref="FailPathAttempts"/>
+    /// zaehlt nur die Versuche auf dem Ziel-Pfad, <see cref="Attempts"/> alle.
+    /// </summary>
+    private class FlakyHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly int _failuresBeforeSuccess;
+        private readonly string _successBody;
+        private readonly HttpStatusCode _successStatus;
+        private readonly string? _failPathContains;
+
+        public int Attempts { get; private set; }
+        public int FailPathAttempts { get; private set; }
+
+        public FlakyHttpMessageHandler(int failuresBeforeSuccess, string successBody,
+            HttpStatusCode successStatus = HttpStatusCode.OK, string? failPathContains = null)
+        {
+            _failuresBeforeSuccess = failuresBeforeSuccess;
+            _successBody = successBody;
+            _successStatus = successStatus;
+            _failPathContains = failPathContains;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Attempts++;
+            var path = request.RequestUri?.PathAndQuery ?? string.Empty;
+            var isTarget = _failPathContains == null || path.Contains(_failPathContains);
+
+            if (!isTarget)
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[]", Encoding.UTF8, "application/json")
+                });
+
+            FailPathAttempts++;
+            if (FailPathAttempts <= _failuresBeforeSuccess)
+                throw new HttpRequestException("Connection refused (gluetun:8080)");
+
+            return Task.FromResult(new HttpResponseMessage(_successStatus)
+            {
+                Content = new StringContent(_successBody, Encoding.UTF8, "application/json")
             });
         }
     }
