@@ -393,10 +393,11 @@ Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automa
 - **Commit early, commit often** – nach jedem abgeschlossenen Feature, Fix oder logischen Schritt committen. Kleine, atomare Commits sind besser als ein großer Sammel-Commit.
 - **Tags NUR auf Zuruf** – NIEMALS automatisch Git-Tags erstellen. Der User muss vorher testen und explizit nach einem Tag fragen.
 - **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build nötig.
+- **NIEMALS automatisch deployen** — weder auf Dev noch auf Prod. Der User startet Deploys immer selbst explizit.
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.95.3` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- **Aktuelle Version**: `0.95.5` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)
