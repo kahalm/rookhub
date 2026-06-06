@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.2';
+export const APP_VERSION = '0.96.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.3', date: '2026-06-06', changes: [
+    'Book-Puzzle: Leere graue Settings-Card unter "Share puzzle" ausgeblendet, solange das Einstellungs-Panel nicht offen ist (config-card jetzt komplett im @if).',
+  ]},
   { version: '0.96.2', date: '2026-06-06', changes: [
     'Build: anyComponentStyle-Budget auf 8 kB Warning / 12 kB Error angehoben (endless-puzzle.scss lag 6 Bytes über dem alten 10-kB-Limit → CI-Build schlug fehl).',
   ]},
