@@ -54,6 +54,10 @@
       &:not(.selected):hover { background: rgba(0,0,0,0.06); }
     }
     .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-arrow-toggle {
+      display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
+      font-size: 0.85em; cursor: pointer; user-select: none;
+    }
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }

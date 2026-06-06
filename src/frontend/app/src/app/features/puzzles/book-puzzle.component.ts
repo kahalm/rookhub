@@ -767,12 +767,19 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.themeMode = this.prefs.themeMode;
     this.stockfishDepth = this.prefs.bookStockfishDepth;
     this.visualizationMode = this.prefs.visualization;
+    this.vizArrowEnabled = this.prefs.vizArrow;
   }
 
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
+  }
+
+  setVizArrowEnabled(val: boolean): void {
+    this.vizArrowEnabled = val;
+    if (!val) this.clearVizOpponentArrow();
+    this.prefs.setVizArrow(val);
   }
 
   saveConfig(): void {

@@ -156,6 +156,12 @@
                     }
                   </div>
                   <div class="viz-level-desc">{{ vizLevelDescription }}</div>
+                  @if (visualizationMode > 0) {
+                    <label class="viz-arrow-toggle">
+                      <input type="checkbox" [checked]="vizArrowEnabled" (change)="setVizArrowEnabled($any($event.target).checked)">
+                      Gegnerzug-Pfeil
+                    </label>
+                  }
                 </div>
                 <div class="theme-section">
                   <app-theme-picker namespace="endless.config" [themeMode]="themeMode" [boardTheme]="boardTheme" [pieceSet]="pieceSet"

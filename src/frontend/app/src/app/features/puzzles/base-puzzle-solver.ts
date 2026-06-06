@@ -69,6 +69,8 @@ export abstract class BasePuzzleSolver {
   private vizShowTimer?: ReturnType<typeof setTimeout>;
   /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
   vizOpponentLastMove?: [Key, Key];
+  /** Pfeil-Anzeige ein/aus (Nutzer-Einstellung, aus Prefs geladen). */
+  vizArrowEnabled = true;
   private vizOpponentArrowTimer?: ReturnType<typeof setTimeout>;
 
   // ---- intern ----
@@ -396,14 +398,15 @@ export abstract class BasePuzzleSolver {
     clearVisualizationHide();
   }
 
-  /** Zeigt den letzten Gegnerzug als Pfeil und blendet ihn nach 3s automatisch aus. */
+  /** Zeigt den letzten Gegnerzug als Pfeil und blendet ihn nach 1s automatisch aus. */
   private showVizOpponentArrow(): void {
+    if (!this.vizArrowEnabled) return;
     if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
     this.vizOpponentLastMove = this.lastMove;
     this.vizOpponentArrowTimer = setTimeout(() => {
       this.vizOpponentLastMove = undefined;
       this.vizOpponentArrowTimer = undefined;
-    }, 3000);
+    }, 1000);
   }
 
   protected clearVizOpponentArrow(): void {

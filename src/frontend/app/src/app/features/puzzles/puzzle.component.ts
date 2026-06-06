@@ -519,6 +519,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.themeMode = this.prefs.themeMode;
     this.stockfishDepth = this.prefs.stockfishDepth;
     this.visualizationMode = this.prefs.visualization;
+    this.vizArrowEnabled = this.prefs.vizArrow;
     const d = this.prefs.puzzleDifficulty;
     if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
   }
@@ -530,6 +531,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.puzzleService.getStats(level).subscribe(s => this.stats = s);
     }
     if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
+  }
+
+  setVizArrowEnabled(val: boolean): void {
+    this.vizArrowEnabled = val;
+    if (!val) this.clearVizOpponentArrow();
+    this.prefs.setVizArrow(val);
   }
 
   saveConfig(): void {

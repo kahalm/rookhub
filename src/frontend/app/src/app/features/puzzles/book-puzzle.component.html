@@ -321,6 +321,12 @@
                   }
                 </div>
                 <div class="viz-level-desc">{{ vizLevelDescription }}</div>
+                @if (visualizationMode > 0) {
+                  <label class="viz-arrow-toggle">
+                    <input type="checkbox" [checked]="vizArrowEnabled" (change)="setVizArrowEnabled($any($event.target).checked)">
+                    Gegnerzug-Pfeil
+                  </label>
+                }
               </div>
               <mat-form-field appearance="outline" class="depth-field">
                 <mat-label>{{ 'book.settings.stockfishDepth' | translate }}</mat-label>

@@ -11,6 +11,7 @@ const PUZZLE_CONFIG_KEY = 'rookhub_puzzle_config';
 const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
 const THEME_MODE_KEY = 'rookhub_theme_mode';
 const VISUALIZATION_KEY = 'rookhub_visualization';
+const VIZ_ARROW_KEY = 'rookhub_viz_arrow';
 
 interface ProfilePreferences {
   boardTheme: string | null;
@@ -30,6 +31,8 @@ export class PreferencesService {
   themeMode: ThemeMode = 'fixed';
   /** Visualisierungs-Level 0-4 (nur lokal, geräteabhängig — kein Server-Sync). */
   visualization = 1;
+  /** Gegnerzug-Pfeil im Viz-Modus anzeigen (nur lokal). */
+  vizArrow = true;
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -66,11 +69,20 @@ export class PreferencesService {
         this.visualization = isNaN(n) ? 1 : Math.max(0, Math.min(4, n));
       }
     } catch {}
+    try {
+      const arrow = localStorage.getItem(VIZ_ARROW_KEY);
+      if (arrow !== null) this.vizArrow = arrow !== 'false';
+    } catch {}
   }
 
   setVisualization(level: number): void {
     this.visualization = Math.max(0, Math.min(4, level));
     try { localStorage.setItem(VISUALIZATION_KEY, String(this.visualization)); } catch {}
+  }
+
+  setVizArrow(val: boolean): void {
+    this.vizArrow = val;
+    try { localStorage.setItem(VIZ_ARROW_KEY, String(val)); } catch {}
   }
 
   /** Fetch preferences from server profile and overwrite localStorage. Called after login. */

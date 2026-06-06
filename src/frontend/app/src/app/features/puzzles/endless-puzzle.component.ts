@@ -177,6 +177,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.pieceSet = this.prefs.pieceSet;
     this.themeMode = this.prefs.themeMode;
     this.visualizationMode = this.prefs.visualization;
+    this.vizArrowEnabled = this.prefs.vizArrow;
     // 1. Load from localStorage immediately (no latency)
     this.config = this.storage.loadConfig(this.config);
     this.highscore = this.storage.loadHighscore();
@@ -298,6 +299,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
     if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);  // laufendes Puzzle neu starten
+  }
+
+  setVizArrowEnabled(val: boolean): void {
+    this.vizArrowEnabled = val;
+    if (!val) this.clearVizOpponentArrow();
+    this.prefs.setVizArrow(val);
   }
 
   // ===== Hooks für BasePuzzleSolver =====
