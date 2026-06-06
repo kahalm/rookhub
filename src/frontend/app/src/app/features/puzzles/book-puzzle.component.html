@@ -309,11 +309,17 @@
           <mat-card class="config-card" #settingsPanel>
             <mat-card-content>
               @if (showSettings) {
-              <div class="viz-slider">
-                <label>{{ 'book.settings.visualizationLevel' | translate: { level: visualizationMode } }}</label>
-                <input type="range" min="0" max="4" step="1"
-                       [value]="visualizationMode"
-                       (input)="setVisualizationLevel(+$any($event.target).value)">
+              <div class="viz-radios">
+                <span class="viz-radios-title">{{ 'book.settings.visualizationLevel' | translate: { level: visualizationMode } }}</span>
+                <div class="viz-radio-group">
+                  @for (opt of vizLevelOptions; track opt.value) {
+                    <label class="viz-radio-item" [class.selected]="visualizationMode === opt.value">
+                      <input type="radio" name="vizLevel" [value]="opt.value" [checked]="visualizationMode === opt.value"
+                             (change)="setVisualizationLevel(opt.value)">
+                      {{ opt.label }}
+                    </label>
+                  }
+                </div>
                 <div class="viz-level-desc">{{ vizLevelDescription }}</div>
               </div>
               <mat-form-field appearance="outline" class="depth-field">

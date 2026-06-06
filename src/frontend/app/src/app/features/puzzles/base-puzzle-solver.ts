@@ -411,6 +411,13 @@ export abstract class BasePuzzleSolver {
     this.vizOpponentLastMove = undefined;
   }
 
+  get vizLevelOptions(): { value: number; label: string }[] {
+    return [0, 1, 2, 3, 4].map(v => {
+      const labels = ['Normal', 'Blindfold', 'Checker', 'Dark', 'Invisible'];
+      return { value: v, label: labels[v] };
+    });
+  }
+
   get vizLevelDescription(): string {
     switch (this.visualizationMode) {
       case 0: return 'Normal — Drag & Drop';

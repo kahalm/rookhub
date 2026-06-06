@@ -47,9 +47,18 @@
       font-size: 0.85em; font-variant-numeric: tabular-nums;
     }
     .theme-section { margin-bottom: 1rem; }
-    .viz-slider { margin-bottom: 0.75rem; }
-    .viz-slider label { font-size: 0.9em; font-weight: 500; }
-    .viz-slider input[type=range] { width: 100%; margin: 0.25rem 0; }
+    .viz-radios { margin-bottom: 0.75rem; }
+    .viz-radios-title { font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 0.35rem; }
+    .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
+    .viz-radio-item {
+      display: flex; align-items: center; padding: 0.2rem 0.65rem;
+      border: 1px solid rgba(0,0,0,0.22); border-radius: 16px;
+      cursor: pointer; font-size: 0.85em; user-select: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      input[type=radio] { display: none; }
+      &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
+      &:not(.selected):hover { background: rgba(0,0,0,0.06); }
+    }
     .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
