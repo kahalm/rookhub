@@ -74,8 +74,7 @@
     .course-card .course-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
     .course-card .course-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
     .course-card .course-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .course-card .weekly-title { font-weight: 600; margin: 0.4rem 0 0; }
-
+    .give-up-btn { opacity: 0.6; font-size: 0.85em !important; }
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
       .board-section { width: 100%; }

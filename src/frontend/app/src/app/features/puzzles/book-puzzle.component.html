@@ -62,12 +62,11 @@
                   <button mat-icon-button (click)="backToWeekly()" [matTooltip]="'book.weekly.backToWeekly' | translate">
                     <mat-icon>arrow_back</mat-icon>
                   </button>
-                  <span class="course-mode-chip">{{ 'book.weekly.label' | translate }}</span>
+                  <span class="course-mode-chip">{{ weeklyTitle || ('book.weekly.label' | translate) }}</span>
                   <span class="course-progress">{{ weeklyDisplayIndex }}/{{ weeklyTotal }}</span>
                 </div>
                 <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
                 <p class="weekly-stats">{{ 'book.weekly.progress' | translate:{ played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved } }}@if (weeklySeconds > 0) { <span class="weekly-time"> · ⏱ {{ weeklyTimeDisplay }}</span> }</p>
-                @if (weeklyTitle) { <p class="weekly-title">{{ weeklyTitle }}</p> }
                 @if (weeklyTotal === 0) {
                   <p class="course-done"><mat-icon>info</mat-icon> {{ 'book.weekly.noPuzzles' | translate }}</p>
                   <div class="course-actions"><button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button></div>
@@ -142,7 +141,7 @@
                         <mat-icon>analytics</mat-icon>
                         {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
                       </button>
-                      <button mat-button color="warn" (click)="giveUp()">
+                      <button mat-button class="give-up-btn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
                         {{ 'book.actions.giveUp' | translate }}
                       </button>
@@ -169,7 +168,7 @@
                         <mat-icon>replay</mat-icon>
                         {{ 'book.actions.reset' | translate }}
                       </button>
-                      <button mat-button color="warn" (click)="giveUp()">
+                      <button mat-button class="give-up-btn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
                         {{ 'book.actions.giveUp' | translate }}
                       </button>
@@ -201,7 +200,7 @@
                           {{ 'book.actions.mouseslip' | translate }}
                         </button>
                       }
-                      <button mat-button color="warn" (click)="giveUp()">
+                      <button mat-button class="give-up-btn" (click)="giveUp()">
                         <mat-icon>flag</mat-icon>
                         {{ 'book.actions.giveUp' | translate }}
                       </button>

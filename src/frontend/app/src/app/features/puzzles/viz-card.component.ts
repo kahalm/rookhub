@@ -17,37 +17,53 @@ import { TranslateModule } from '@ngx-translate/core';
   template: `
     <mat-card class="viz-card">
       <mat-card-content>
-        <div class="viz-title"><mat-icon>visibility_off</mat-icon> {{ titleKey | translate: { level: visualizationMode } }}</div>
+        <div class="viz-header">
+          <mat-icon class="viz-icon">visibility_off</mat-icon>
+          <span class="viz-level-badge">Level {{ visualizationMode }}</span>
+          <span class="viz-desc">{{ vizLevelDescription }}</span>
+        </div>
         @if (vizCountdownSeconds > 0) {
           <div class="viz-countdown">{{ countdownKey | translate: { seconds: vizCountdownSeconds } }}</div>
         }
         @if (vizMoveHtml) {
           <div class="viz-moves" [innerHTML]="vizMoveHtml"></div>
         } @else {
-          <div class="viz-moves">{{ noMoveKey | translate }}</div>
+          <div class="viz-moves viz-moves--empty">{{ noMoveKey | translate }}</div>
         }
         @if (vizPiecesHidden) {
           <button class="viz-show-btn" (click)="vizShowClicked.emit()">
+            <mat-icon>{{ vizShowPressed ? 'visibility' : 'visibility_off' }}</mat-icon>
             {{ (vizShowPressed ? showingKey : showKey) | translate }}
           </button>
         }
-        <div class="viz-hint">{{ vizLevelDescription }}</div>
       </mat-card-content>
     </mat-card>
   `,
   styles: [`
-    .viz-card .viz-title { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.4rem; }
-    .viz-card .viz-moves {
-      font-family: 'Courier New', monospace; font-size: 1.05em; line-height: 1.5;
-      background: rgba(0,0,0,0.04); border-radius: 6px; padding: 0.5rem 0.6rem; word-break: break-word;
+    .viz-card .viz-header {
+      display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; flex-wrap: wrap;
     }
-    .viz-card .viz-hint { font-size: 0.8em; color: rgba(0,0,0,0.55); margin-top: 0.4rem; }
+    .viz-card .viz-icon { font-size: 18px; width: 18px; height: 18px; color: rgba(0,0,0,0.45); flex-shrink: 0; }
+    .viz-card .viz-level-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: 10px;
+      background: #e3f2fd; color: #1565c0; white-space: nowrap; flex-shrink: 0;
+    }
+    .viz-card .viz-desc { font-size: 0.78rem; color: rgba(0,0,0,0.5); }
+    .viz-card .viz-moves {
+      font-size: 1.05em; line-height: 1.6;
+      border-left: 3px solid #90caf9; border-radius: 0 6px 6px 0;
+      padding: 0.4rem 0.7rem; word-break: break-word;
+      background: rgba(25,118,210,0.04);
+    }
+    .viz-card .viz-moves--empty { color: rgba(0,0,0,0.4); font-style: italic; }
     .viz-countdown { font-size: 0.9em; color: #e65100; font-weight: 500; margin-bottom: 0.25rem; }
     .viz-show-btn {
-      margin-top: 0.4rem; padding: 0.35rem 1.2rem; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500;
+      display: flex; align-items: center; gap: 0.3rem;
+      margin-top: 0.5rem; padding: 0.3rem 1rem; border: 1px solid rgba(0,0,0,0.18);
+      border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500; font-size: 0.9em;
       user-select: none; touch-action: manipulation;
     }
+    .viz-show-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .viz-show-btn:active { background: #e3f2fd; }
   `],
 })
