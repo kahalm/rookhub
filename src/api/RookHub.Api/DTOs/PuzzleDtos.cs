@@ -44,6 +44,11 @@ public class RecordPuzzleAttemptDto
 
     [Range(0, 4)]
     public int VisualizationLevel { get; set; } = 0;
+
+    public bool EvalShown { get; set; } = false;
+
+    [Range(0, 100)]
+    public int VizShowCount { get; set; } = 0;
 }
 
 public class PuzzleStatsDto
@@ -78,6 +83,11 @@ public class AnonymousAttemptDto
 
     [Range(0, 4)]
     public int VisualizationLevel { get; set; } = 0;
+
+    public bool EvalShown { get; set; } = false;
+
+    [Range(0, 100)]
+    public int VizShowCount { get; set; } = 0;
 }
 
 public class ClaimSessionDto

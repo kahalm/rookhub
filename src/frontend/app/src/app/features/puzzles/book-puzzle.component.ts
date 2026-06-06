@@ -231,8 +231,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
-      this.refreshEval();
+    if (this.showEval) {
+      this.markEvalShown();
+      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
     }
   }
 

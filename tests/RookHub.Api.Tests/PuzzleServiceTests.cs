@@ -848,4 +848,60 @@ public class PuzzleServiceTests : IDisposable
 
         Assert.Equal(3, b.Activity.Sum(a => a.Count));   // alle heute
     }
+
+    [Fact]
+    public async Task RecordAttempt_EvalShown_StoredCorrectly()
+    {
+        var userId = await CreateUserAsync("evalshown_user");
+        var puzzle = await CreatePuzzleAsync(lichessId: "evalshown1");
+
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = false,
+            TimeSpentSeconds = 30,
+            EvalShown = true,
+            VizShowCount = 0
+        });
+
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.True(attempt.EvalShown);
+        Assert.Equal(0, attempt.VizShowCount);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_VizShowCount_StoredCorrectly()
+    {
+        var userId = await CreateUserAsync("vizshow_user");
+        var puzzle = await CreatePuzzleAsync(lichessId: "vizshow1");
+
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = false,
+            TimeSpentSeconds = 20,
+            VisualizationLevel = 3,
+            EvalShown = false,
+            VizShowCount = 4
+        });
+
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.False(attempt.EvalShown);
+        Assert.Equal(4, attempt.VizShowCount);
+    }
+
+    [Fact]
+    public async Task RecordAttempt_DefaultsForHints_AreZeroAndFalse()
+    {
+        var userId = await CreateUserAsync("hints_default_user");
+        var puzzle = await CreatePuzzleAsync(lichessId: "hints_default1");
+
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true,
+            TimeSpentSeconds = 15
+        });
+
+        var attempt = await _db.PuzzleAttempts.SingleAsync();
+        Assert.False(attempt.EvalShown);
+        Assert.Equal(0, attempt.VizShowCount);
+    }
 }

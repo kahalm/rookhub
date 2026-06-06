@@ -22,4 +22,7 @@ public class PuzzleAttempt
     public int? EloChange { get; set; }
 
     public int VisualizationLevel { get; set; } = 0;
+
+    public bool EvalShown { get; set; } = false;
+    public int VizShowCount { get; set; } = 0;
 }

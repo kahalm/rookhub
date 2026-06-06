@@ -458,6 +458,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const body: Record<string, unknown> = {
       solved, timeSpentSeconds: this.elapsedSeconds, moveLog: log ?? null,
       visualizationLevel: this.visualizationMode,
+      evalShown: this.evalShown, vizShowCount: this.vizShowCount,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
@@ -467,7 +468,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       return;
     }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe({
+      this.puzzleService.recordAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: res => {
           if (res.eloChange != null) this.lastEloChange = res.eloChange;
           this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
@@ -475,7 +476,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
     } else {
-      this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode).subscribe({
+      this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
@@ -484,8 +485,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
-      this.refreshEval();
+    if (this.showEval) {
+      this.markEvalShown();
+      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
     }
   }
 

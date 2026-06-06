@@ -157,7 +157,9 @@ public class PuzzleService
             MoveLog = dto.MoveLog,
             EloAfter = newRating,
             EloChange = change,
-            VisualizationLevel = vizLevel
+            VisualizationLevel = vizLevel,
+            EvalShown = dto.EvalShown,
+            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100)
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -166,8 +168,8 @@ public class PuzzleService
         var solvedAt = attempt.AttemptedAt;
         var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
-            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0})",
-            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change);
+            "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0}) EvalShown={EvalShown} VizShowCount={VizShowCount}",
+            userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change, dto.EvalShown, dto.VizShowCount);
 
         return new PuzzleAttemptDto
         {
@@ -212,7 +214,9 @@ public class PuzzleService
             Solved = dto.Solved,
             TimeSpentSeconds = dto.TimeSpentSeconds,
             MoveLog = dto.MoveLog,
-            VisualizationLevel = vizLevel
+            VisualizationLevel = vizLevel,
+            EvalShown = dto.EvalShown,
+            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100)
         };
 
         _db.PuzzleAttempts.Add(attempt);

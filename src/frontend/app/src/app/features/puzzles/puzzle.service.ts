@@ -103,9 +103,9 @@ export class PuzzleService {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }
 
-  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0): Observable<PuzzleAttemptDto> {
+  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, {
-      solved, timeSpentSeconds, moveLog, visualizationLevel,
+      solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }
@@ -147,9 +147,9 @@ export class PuzzleService {
     return this.getOrCreateSessionId();
   }
 
-  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0): Observable<PuzzleAttemptDto> {
+  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
-      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel,
+      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }

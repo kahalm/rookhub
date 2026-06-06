@@ -63,6 +63,10 @@ export abstract class BasePuzzleSolver {
   vizPiecesHidden = false;
   /** Show-Button aktiv (zeigt Figuren/Steine für 3s). */
   vizShowPressed = false;
+  /** Wie oft der Show-Button in diesem Versuch gedrückt wurde. */
+  vizShowCount = 0;
+  /** Eval wurde in diesem Versuch mindestens einmal eingeblendet. */
+  evalShown = false;
   /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
   vizCountdownSeconds = 0;
   protected vizCountdownInterval?: ReturnType<typeof setInterval>;
@@ -151,6 +155,8 @@ export abstract class BasePuzzleSolver {
     this.mouseslipUsed = false;
     this.alternativeSolve = false;
     this.moveLog = [];
+    this.evalShown = false;
+    this.vizShowCount = 0;
     this.frozenFen = fen;
     this.vizMoves = [];
     this.clearVizOpponentArrow();
@@ -384,10 +390,15 @@ export abstract class BasePuzzleSolver {
   onVizShow(): void {
     if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
     this.vizShowPressed = true;
+    this.vizShowCount++;
     this.vizShowTimer = setTimeout(() => {
       this.vizShowPressed = false;
       this.vizShowTimer = undefined;
     }, 3000);
+  }
+
+  protected markEvalShown(): void {
+    this.evalShown = true;
   }
 
   protected endVisualizationHide(): void {

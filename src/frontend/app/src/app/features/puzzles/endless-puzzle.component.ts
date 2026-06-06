@@ -750,8 +750,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   toggleEval(): void {
     this.showEval = !this.showEval;
-    if (this.showEval && (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE')) {
-      this.refreshEval();
+    if (this.showEval) {
+      this.markEvalShown();
+      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
     }
   }
 
@@ -901,14 +902,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const url = loggedIn ? `/api/puzzles/${id}/attempt` : `/api/puzzles/${id}/attempt/anonymous`;
     const body: Record<string, unknown> = {
       solved, timeSpentSeconds: timeSpent, moveLog: log ?? null, visualizationLevel: this.visualizationMode,
+      evalShown: this.evalShown, vizShowCount: this.vizShowCount,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!loggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
     // Offline gelöste Endless-Puzzles nicht verlieren → vormerken (Sync bei Reconnect).
     if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
     const obs = loggedIn
-      ? this.puzzleService.recordAttempt(id, solved, timeSpent, log, this.visualizationMode)
-      : this.puzzleService.recordAnonymousAttempt(id, solved, timeSpent, log, this.visualizationMode);
+      ? this.puzzleService.recordAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount)
+      : this.puzzleService.recordAnonymousAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount);
     obs.subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
   }
 
