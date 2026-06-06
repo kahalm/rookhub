@@ -217,12 +217,27 @@
                 [vizOpponentArrow]="vizOpponentLastMove"
                 (moveMade)="onMoveMade($event)"
               />
+              @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+                <div class="board-hint">
+                  @if (vizCountdownSeconds > 0) {
+                    <span class="board-hint-countdown">{{ vizCountdownSeconds }}s…</span>
+                  }
+                  @if (vizMoveHtml) {
+                    <span [innerHTML]="vizMoveHtml"></span>
+                  } @else {
+                    {{ 'endless.game.vizNoMove' | translate }}
+                  }
+                  @if (vizPiecesHidden) {
+                    <button class="board-hint-show" (click)="onVizShow()">
+                      {{ (vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate }}
+                    </button>
+                  }
+                </div>
+              }
             </div>
 
             <div class="info-section">
               @if (puzzle) {
-                <!-- Kompakte Mobile-Pillen: Rating / Level / Herzen direkt unter dem Brett
-                     sichtbar, ohne erst zur Stats-Card scrollen zu muessen. -->
                 <div class="quick-stats">
                   <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
                   <span class="qs-pill"><mat-icon>flag</mat-icon>Lv {{ level }}</span>
@@ -234,15 +249,6 @@
                     }
                   </div>
                 </div>
-              }
-              @if (visualizationMode && state !== 'SOLVED' && state !== 'FAILED') {
-                <app-viz-card
-                  [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-                  [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
-                  [vizLevelDescription]="vizLevelDescription"
-                  titleKey="endless.game.visualization" countdownKey="endless.game.vizCountdown" noMoveKey="endless.game.vizNoMove"
-                  showKey="endless.game.vizShow" showingKey="endless.game.vizShowing"
-                  (vizShowClicked)="onVizShow()" />
               }
               <mat-card class="status-card">
                 <mat-card-content>

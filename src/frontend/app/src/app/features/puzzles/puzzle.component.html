@@ -17,17 +17,41 @@
             [vizOpponentArrow]="vizOpponentLastMove"
             (moveMade)="onMoveMade($event)"
           />
+          @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <div class="board-hint">
+              @if (vizCountdownSeconds > 0) {
+                <span class="board-hint-countdown">{{ vizCountdownSeconds }}s…</span>
+              }
+              @if (vizMoveHtml) {
+                <span [innerHTML]="vizMoveHtml"></span>
+              } @else {
+                {{ 'puzzles.viz.noMoveYet' | translate }}
+              }
+              @if (vizPiecesHidden) {
+                <button class="board-hint-show" (click)="onVizShow()">
+                  {{ (vizShowPressed ? 'puzzles.viz.showing' : 'puzzles.viz.show') | translate }}
+                </button>
+              }
+            </div>
+          }
         </div>
 
         <div class="info-section">
-          @if (visualizationMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING' || state === 'SOLVED' || state === 'FAILED')) {
-            <app-viz-card
-              [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-              [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
-              [vizLevelDescription]="vizLevelDescription"
-              titleKey="puzzles.viz.title" countdownKey="puzzles.viz.countdown" noMoveKey="puzzles.viz.noMoveYet"
-              showKey="puzzles.viz.show" showingKey="puzzles.viz.showing"
-              (vizShowClicked)="onVizShow()" />
+          @if (puzzle) {
+            <mat-card class="context-card">
+              <mat-card-content>
+                <div class="puzzle-info">
+                  <span class="rating-badge">{{ 'puzzles.info.rating' | translate }}: {{ puzzle.rating }}</span>
+                  @if (puzzle.themes) {
+                    <div class="themes">
+                      @for (theme of puzzle.themes.split(' '); track theme) {
+                        <span class="theme-chip">{{ theme }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
           }
           <mat-card class="status-card">
             <mat-card-content>
@@ -208,23 +232,11 @@
           </mat-card>
 
           @if (puzzle) {
-            <mat-card class="info-card">
-              <mat-card-content>
-                <div class="puzzle-info">
-                  <span class="rating-badge">{{ 'puzzles.info.rating' | translate }}: {{ puzzle.rating }}</span>
-                  @if (puzzle.themes) {
-                    <div class="themes">
-                      @for (theme of puzzle.themes.split(' '); track theme) {
-                        <span class="theme-chip">{{ theme }}</span>
-                      }
-                    </div>
-                  }
-                  <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
-                    <mat-icon>share</mat-icon> {{ 'puzzles.actions.share' | translate }}
-                  </button>
-                </div>
-              </mat-card-content>
-            </mat-card>
+            <div class="bottom-actions">
+              <button mat-stroked-button class="share-full" (click)="sharePuzzle()">
+                <mat-icon>share</mat-icon> {{ 'puzzles.actions.share' | translate }}
+              </button>
+            </div>
           }
 
           @if (stats) {

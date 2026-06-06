@@ -106,6 +106,19 @@
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
     .status-card { min-height: 80px; }
 
+    .board-hint {
+      margin-top: 0.5rem; padding: 0.35rem 0.5rem;
+      font-size: 0.88em; color: rgba(0,0,0,0.5);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    }
+    .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-show {
+      padding: 0.2rem 0.8rem; border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9em;
+      user-select: none; touch-action: manipulation;
+    }
+    .board-hint-show:active { background: #e3f2fd; }
+
     // Kompakte Pillen-Reihe direkt unter dem Brett: Puzzle-Rating, Level, Herzen.
     // Soll auch auf kleinen Handy-Screens ohne Scrollen sichtbar sein.
     .quick-stats {

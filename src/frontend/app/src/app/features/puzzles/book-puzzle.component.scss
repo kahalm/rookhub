@@ -2,7 +2,7 @@
     .puzzle-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
     .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
-    .status-card { min-height: 120px; }
+    .status-card { min-height: 120px; position: relative; }
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
@@ -10,7 +10,6 @@
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
-    .solved-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
     .eval-item { display: flex; align-items: center; gap: 0.25rem; }
@@ -19,15 +18,41 @@
     .eval-arrow { color: rgba(0,0,0,0.4); }
     .countdown-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; color: rgba(0,0,0,0.5); }
     .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
-    .puzzle-meta { display: flex; flex-direction: column; gap: 0.5rem; }
-    .share-puzzle-btn { margin-top: 0.5rem; }
-    .book-nav { display: flex; gap: 8px; margin-top: 0.5rem; flex-wrap: wrap; }
-    .book-nav button { flex: 1; min-width: 130px; }
-    .meta-title { font-weight: bold; font-size: 1.1em; margin: 0; }
-    .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; }
-    .meta-comment { font-style: italic; color: rgba(0,0,0,0.6); margin: 0; font-size: 0.9em; }
-    .meta-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-    .book-name { font-size: 0.85em; color: rgba(0,0,0,0.5); }
+    .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
+    .settings-gear.active { color: #1976d2; }
+    .give-up-btn { opacity: 0.6; font-size: 0.85em !important; }
+
+    /* Hinweistext unter dem Brett */
+    .board-hint {
+      margin-top: 0.5rem; padding: 0.35rem 0.5rem;
+      font-size: 0.88em; color: rgba(0,0,0,0.5);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    }
+    .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-show {
+      padding: 0.2rem 0.8rem; border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9em;
+      user-select: none; touch-action: manipulation;
+    }
+    .board-hint-show:active { background: #e3f2fd; }
+
+    /* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
+    .context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
+    .context-card .ctx-back { flex-shrink: 0; margin: -4px -4px 0 -8px; }
+    .context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+    .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    .context-card .ctx-progress { margin-top: 0.6rem; }
+    .context-card .ctx-stats { font-size: 0.85em; color: rgba(0,0,0,0.55); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
+    .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
+    .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+    .skip-quiet { opacity: 0.7; font-size: 0.85em !important; }
+
+    /* Puzzle-Metadaten */
+    .meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
+    .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; font-size: 0.95em; }
+    .meta-comment { font-style: italic; color: rgba(0,0,0,0.55); margin: 0; font-size: 0.88em; }
+    .book-name { font-size: 0.82em; color: rgba(0,0,0,0.45); }
     .difficulty-badge {
       font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;
     }
@@ -40,7 +65,15 @@
       background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
       font-size: 0.85em; white-space: nowrap;
     }
-    .full-game-btn { margin-top: 0.5rem; align-self: flex-start; }
+
+    /* Untere Aktionen */
+    .bottom-actions {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .bottom-actions button { width: 100%; }
+    .share-full { width: 100%; }
+
+    /* Einstellungen */
     .viz-radios { margin-bottom: 0.75rem; }
     .viz-radios-title { font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 0.35rem; }
     .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
@@ -61,20 +94,7 @@
     .depth-field { width: 100%; }
     .config-card mat-card-content { padding-bottom: 0; }
     .theme-section { margin-top: 0.75rem; }
-    .status-card { position: relative; }
-    .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
-    .settings-gear.active { color: #1976d2; }
 
-    .course-card .course-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
-    .course-card .course-mode-chip {
-      font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;
-      background: #e3f2fd; color: #1565c0;
-    }
-    .course-card .course-progress { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 0.9rem; color: #444; }
-    .course-card .course-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
-    .course-card .course-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
-    .course-card .course-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .give-up-btn { opacity: 0.6; font-size: 0.85em !important; }
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
       .board-section { width: 100%; }

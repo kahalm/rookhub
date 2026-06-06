@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.0';
+export const APP_VERSION = '0.96.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.1', date: '2026-06-06', changes: [
+    'UI: Einheitliches Layout über alle Puzzle-Modi (Book/Weekly/Kurs/Standard/Endless) — Kontext-Card oben, Status-Card mittig, Share-Button unten, Viz-Text direkt unter dem Brett.',
+    'Book-Puzzle: Separate Weekly-/Kurs-Card mit Puzzle-Info-Card zur einzigen Kontext-Card oben zusammengeführt.',
+    'Viz-Text wird nicht mehr als Card in der rechten Spalte, sondern als plain Text direkt unter dem Schachbrett angezeigt.',
+  ]},
   { version: '0.96.0', date: '2026-06-06', changes: [
     'Tagespuzzle: Lösungszeit je Solver im Discord-Embed (z. B. „@Anna (1:23)").',
   ]},

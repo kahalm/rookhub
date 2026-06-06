@@ -1,5 +1,7 @@
     <div class="puzzle-page">
       <div class="puzzle-layout">
+
+        <!-- Brett-Spalte -->
         <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
           <app-puzzle-board
             [fen]="boardFen"
@@ -17,279 +19,103 @@
             [vizOpponentArrow]="vizOpponentLastMove"
             (moveMade)="onMoveMade($event)"
           />
+          @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
+            <div class="board-hint">
+              @if (vizCountdownSeconds > 0) {
+                <span class="board-hint-countdown">{{ 'book.viz.countdown' | translate:{ seconds: vizCountdownSeconds } }}</span>
+              }
+              @if (vizMoveHtml) {
+                <span [innerHTML]="vizMoveHtml"></span>
+              } @else {
+                {{ 'book.viz.noMoveYet' | translate }}
+              }
+              @if (vizPiecesHidden) {
+                <button class="board-hint-show" (click)="onVizShow()">
+                  {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
+                </button>
+              }
+            </div>
+          }
         </div>
 
+        <!-- Info-Spalte -->
         <div class="info-section">
-          @if (inCourse) {
-            <mat-card class="course-card">
-              <mat-card-content>
-                <div class="course-head">
-                  <button mat-icon-button (click)="backToCourses()" [matTooltip]="'book.course.backToCourses' | translate">
-                    <mat-icon>arrow_back</mat-icon>
-                  </button>
-                  <span class="course-mode-chip">{{ (courseModeKind === 'random' ? 'book.course.random' : 'book.course.sequential') | translate }}</span>
-                  <span class="course-progress">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</span>
-                </div>
-                <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
-                @if (courseCompleted) {
-                  <p class="course-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
-                  <div class="course-actions">
-                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
-                  </div>
-                } @else if (state === 'SOLVED') {
-                  <div class="course-actions">
-                    <button mat-raised-button color="primary" (click)="courseNext()">
-                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
-                    </button>
-                  </div>
-                } @else if (state === 'FAILED') {
-                  <div class="course-actions">
-                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> {{ 'book.actions.again' | translate }}</button>
-                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
-                  </div>
-                } @else {
-                  <div class="course-actions">
-                    <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
-                  </div>
-                }
-              </mat-card-content>
-            </mat-card>
-          }
-          @if (inWeekly) {
-            <mat-card class="course-card">
-              <mat-card-content>
-                <div class="course-head">
-                  <button mat-icon-button (click)="backToWeekly()" [matTooltip]="'book.weekly.backToWeekly' | translate">
-                    <mat-icon>arrow_back</mat-icon>
-                  </button>
-                  <span class="course-mode-chip">{{ weeklyTitle || ('book.weekly.label' | translate) }}</span>
-                  <span class="course-progress">{{ weeklyDisplayIndex }}/{{ weeklyTotal }}</span>
-                </div>
-                <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
-                <p class="weekly-stats">{{ 'book.weekly.progress' | translate:{ played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved } }}@if (weeklySeconds > 0) { <span class="weekly-time"> · ⏱ {{ weeklyTimeDisplay }}</span> }</p>
-                @if (weeklyTotal === 0) {
-                  <p class="course-done"><mat-icon>info</mat-icon> {{ 'book.weekly.noPuzzles' | translate }}</p>
-                  <div class="course-actions"><button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button></div>
-                } @else if (weeklyCompleted) {
-                  <p class="course-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
-                  <div class="course-actions"><button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button></div>
-                } @else if (state === 'SOLVED') {
-                  <div class="course-actions">
-                    <button mat-raised-button color="primary" (click)="weeklyNext()">
-                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
-                    </button>
-                  </div>
-                } @else if (state === 'FAILED') {
-                  <div class="course-actions">
-                    <button mat-button (click)="retry()"><mat-icon>replay</mat-icon> {{ 'book.actions.again' | translate }}</button>
-                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
-                  </div>
-                } @else {
-                  <div class="course-actions">
-                    <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
-                  </div>
-                }
-              </mat-card-content>
-            </mat-card>
-          }
-          @if (visualizationMode && !reviewMode && state !== 'LOADING' && state !== 'SETUP') {
-            <app-viz-card
-              [visualizationMode]="visualizationMode" [vizCountdownSeconds]="vizCountdownSeconds"
-              [vizMoveText]="vizMoveText" [vizMoveHtml]="vizMoveHtml" [vizPiecesHidden]="vizPiecesHidden" [vizShowPressed]="vizShowPressed"
-              [vizLevelDescription]="vizLevelDescription"
-              titleKey="book.viz.titleLevel" countdownKey="book.viz.countdown" noMoveKey="book.viz.noMoveYet"
-              showKey="book.viz.show" showingKey="book.viz.showing"
-              (vizShowClicked)="onVizShow()" />
-          }
-          <mat-card class="status-card">
-            <mat-card-content>
-              <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'book.settings.title' | translate">
-                <mat-icon>settings</mat-icon>
-              </button>
-              @if (reviewMode && !solutionReview) {
-                <div class="status-center">
-                  <p class="status-text">{{ 'book.status.fullGame' | translate }}</p>
-                  <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                  <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> {{ 'book.actions.backToPuzzle' | translate }}</button>
-                </div>
-              } @else {
-              @switch (state) {
-                @case ('LOADING') {
-                  <div class="status-center">
-                    <mat-spinner diameter="40"></mat-spinner>
-                    <p>{{ 'book.status.loading' | translate }}</p>
-                  </div>
-                }
-                @case ('SETUP') {
-                  <div class="status-center">
-                    <p class="status-text">{{ 'book.status.watchOpponent' | translate }}</p>
-                  </div>
-                }
-                @case ('AWAITING_USER_MOVE') {
-                  <div class="status-center">
-                    <p class="status-text">{{ (gaveUp ? 'book.status.gaveUp' : 'book.status.yourTurn') | translate }}</p>
-                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                        <span class="eval-arrow">→</span>
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button class="give-up-btn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'book.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                }
-                @case ('THINKING') {
-                  <div class="status-center">
-                    <mat-spinner diameter="24"></mat-spinner>
-                    <p class="status-text">{{ 'book.status.stockfishThinking' | translate }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                        <span class="eval-arrow">→</span>
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button (click)="resetPuzzle()">
-                        <mat-icon>replay</mat-icon>
-                        {{ 'book.actions.reset' | translate }}
-                      </button>
-                      <button mat-button class="give-up-btn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'book.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                }
-                @case ('PLAYING') {
-                  <div class="status-center">
-                    <p class="status-text">{{ 'book.status.yourMoveVsStockfish' | translate }}</p>
-                    @if (showEval) {
-                      <div class="eval-compare">
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
-                        <span class="eval-arrow">→</span>
-                        <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
-                      </div>
-                    }
-                    <div class="play-actions">
-                      <button mat-button (click)="toggleEval()">
-                        <mat-icon>analytics</mat-icon>
-                        {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
-                      </button>
-                      <button mat-button (click)="resetPuzzle()">
-                        <mat-icon>replay</mat-icon>
-                        {{ 'book.actions.reset' | translate }}
-                      </button>
-                      @if (!mouseslipUsed && !onSolutionPath) {
-                        <button mat-button (click)="mouseslip()">
-                          <mat-icon>mouse</mat-icon>
-                          {{ 'book.actions.mouseslip' | translate }}
-                        </button>
-                      }
-                      <button mat-button class="give-up-btn" (click)="giveUp()">
-                        <mat-icon>flag</mat-icon>
-                        {{ 'book.actions.giveUp' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                }
-                @case ('SOLVED') {
-                  <div class="status-center solved">
-                    <mat-icon class="result-icon">check_circle</mat-icon>
-                    @if (alternativeSolve) {
-                      <p class="status-text">{{ 'book.status.checkmate' | translate }}</p>
-                      <p class="alt-hint">{{ 'book.status.altSolution' | translate }}</p>
-                    } @else {
-                      <p class="status-text">{{ 'book.status.correct' | translate }}</p>
-                    }
-                    <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
-                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                    @if (solvedCountdown > 0) {
-                      <p class="alt-hint"><mat-icon class="countdown-icon">timer</mat-icon> {{ solvedCountdown }}</p>
-                    }
-                  </div>
-                }
-                @case ('FAILED') {
-                  <div class="status-center failed">
-                    <mat-icon class="result-icon">{{ gaveUp ? 'flag' : 'cancel' }}</mat-icon>
-                    <p class="status-text">{{ (gaveUp ? 'book.status.gaveUpSolution' : 'book.status.incorrect') | translate }}</p>
-                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
-                    <div class="fail-actions">
-                      <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
-                    </div>
-                  </div>
-                }
-              }
-              }
-            </mat-card-content>
-          </mat-card>
 
+          <!-- Kontext-Card: Puzzle-Info + Kurs/Weekly-Fortschritt + Navigation (immer oben) -->
           @if (puzzle) {
-            <mat-card class="info-card">
+            <mat-card class="context-card">
               <mat-card-content>
-                <div class="puzzle-meta">
-                  @if (puzzle.title) {
-                    <p class="meta-title">{{ puzzle.title }}</p>
+                <div class="ctx-head">
+                  @if (inWeekly || inCourse) {
+                    <button mat-icon-button class="ctx-back"
+                            (click)="inWeekly ? backToWeekly() : backToCourses()"
+                            [matTooltip]="(inWeekly ? 'book.weekly.backToWeekly' : 'book.course.backToCourses') | translate">
+                      <mat-icon>arrow_back</mat-icon>
+                    </button>
                   }
-                  @if (puzzle.chapter) {
-                    <p class="meta-chapter">{{ puzzle.chapter }}</p>
-                  }
-                  @if (puzzle.comment) {
-                    <p class="meta-comment">{{ puzzle.comment }}</p>
-                  }
-                  <div class="meta-row">
+                  <div class="ctx-text">
+                    @if (puzzle.title) { <p class="meta-title">{{ puzzle.title }}</p> }
+                    @if (puzzle.chapter) { <p class="meta-chapter">{{ puzzle.chapter }}</p> }
+                    @if (puzzle.comment) { <p class="meta-comment">({{ puzzle.comment }})</p> }
                     <span class="book-name">{{ displayBookName }}</span>
+                  </div>
+                </div>
+
+                @if (puzzle.difficulty || puzzle.bookRating || puzzle.tags) {
+                  <div class="ctx-badges">
                     @if (puzzle.difficulty) {
                       <span class="difficulty-badge" [class]="'diff-' + puzzle.difficulty.toLowerCase()">{{ puzzle.difficulty }}</span>
                     }
                     @if (puzzle.bookRating) {
                       <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ puzzle.bookRating }}/10</span>
                     }
-                  </div>
-                  @if (puzzle.tags) {
-                    <div class="tags">
+                    @if (puzzle.tags) {
                       @for (tag of puzzle.tags.split(' '); track tag) {
                         <span class="tag-chip">{{ tag }}</span>
                       }
-                    </div>
-                  }
-                  @if ((state === 'SOLVED' || state === 'FAILED') && !(reviewMode && !solutionReview)) {
-                    <button mat-stroked-button class="full-game-btn" (click)="enterReview()">
-                      <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
-                    </button>
-                    <button mat-stroked-button class="analyze-btn" (click)="analyze()">
-                      <mat-icon>biotech</mat-icon> {{ 'book.actions.analyze' | translate }}
-                    </button>
-                  }
-                  <button mat-stroked-button class="share-puzzle-btn" (click)="sharePuzzle()">
-                    <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
-                  </button>
-                  @if (standalone && !isDaily) {
-                    <div class="book-nav">
-                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
-                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                    }
+                  </div>
+                }
+
+                @if (inWeekly && weeklyTotal > 0) {
+                  <div class="ctx-progress">
+                    <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
+                    <p class="ctx-stats">
+                      {{ 'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved} }}
+                      @if (weeklySeconds > 0) {<span> · ⏱ {{ weeklyTimeDisplay }}</span>}
+                    </p>
+                  </div>
+                }
+                @if (inCourse && courseTotal > 0) {
+                  <div class="ctx-progress">
+                    <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
+                    <p class="ctx-stats">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</p>
+                  </div>
+                }
+
+                @if (weeklyCompleted) {
+                  <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
+                  <div class="ctx-nav">
+                    <button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                  </div>
+                } @else if (courseCompleted) {
+                  <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+                  <div class="ctx-nav">
+                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                  </div>
+                } @else if (state === 'SOLVED') {
+                  <div class="ctx-nav">
+                    @if (inWeekly) {
+                      <button mat-raised-button color="primary" (click)="weeklyNext()">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
-                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
-                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                    }
+                    @if (inCourse) {
+                      <button mat-raised-button color="primary" (click)="courseNext()">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
-                    </div>
-                  }
-                  @if (isDaily) {
-                    <div class="book-nav">
+                    }
+                    @if (isDaily) {
                       <button mat-stroked-button (click)="prevDaily()">
                         <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
                       </button>
@@ -298,13 +124,255 @@
                           {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
                         </button>
                       }
-                    </div>
-                  }
-                </div>
+                    }
+                    @if (standalone && !isDaily) {
+                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                      </button>
+                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                      </button>
+                    }
+                  </div>
+                } @else if (state === 'FAILED') {
+                  <div class="ctx-nav">
+                    @if (inWeekly) {
+                      <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
+                    }
+                    @if (inCourse) {
+                      <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
+                    }
+                    @if (isDaily) {
+                      <button mat-stroked-button (click)="prevDaily()">
+                        <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
+                      </button>
+                      @if (canGoForwardDaily) {
+                        <button mat-stroked-button (click)="nextDaily()">
+                          {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
+                        </button>
+                      }
+                    }
+                    @if (standalone && !isDaily) {
+                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                      </button>
+                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                      </button>
+                    }
+                  </div>
+                } @else if (inWeekly || inCourse) {
+                  <div class="ctx-nav">
+                    <button mat-button class="skip-quiet" (click)="inWeekly ? weeklyNext() : courseNext()">
+                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}
+                    </button>
+                  </div>
+                } @else if (isDaily) {
+                  <div class="ctx-nav">
+                    <button mat-stroked-button (click)="prevDaily()">
+                      <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
+                    </button>
+                    @if (canGoForwardDaily) {
+                      <button mat-stroked-button (click)="nextDaily()">
+                        {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
+                      </button>
+                    }
+                  </div>
+                } @else if (standalone) {
+                  <div class="ctx-nav">
+                    <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                    </button>
+                    <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                      <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                    </button>
+                  </div>
+                }
               </mat-card-content>
             </mat-card>
           }
 
+          <!-- Kein Puzzle: Weekly ohne Puzzles oder Kurs bereits abgeschlossen -->
+          @if (!puzzle && (inWeekly || inCourse) && state !== 'LOADING') {
+            <mat-card class="context-card">
+              <mat-card-content>
+                @if (inWeekly) {
+                  <p class="ctx-done">
+                    <mat-icon>{{ weeklyTotal === 0 ? 'info' : 'emoji_events' }}</mat-icon>
+                    {{ (weeklyTotal === 0 ? 'book.weekly.noPuzzles' : 'book.weekly.allSolved') | translate }}
+                  </p>
+                  <div class="ctx-nav">
+                    <button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                  </div>
+                }
+                @if (inCourse && courseCompleted) {
+                  <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+                  <div class="ctx-nav">
+                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- Status-Card: Interaktionszentrum -->
+          @if (puzzle || state === 'LOADING') {
+            <mat-card class="status-card">
+              <mat-card-content>
+                <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'book.settings.title' | translate">
+                  <mat-icon>settings</mat-icon>
+                </button>
+                @if (reviewMode && !solutionReview) {
+                  <div class="status-center">
+                    <p class="status-text">{{ 'book.status.fullGame' | translate }}</p>
+                    <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
+                    <button mat-button (click)="exitReview()"><mat-icon>close</mat-icon> {{ 'book.actions.backToPuzzle' | translate }}</button>
+                  </div>
+                } @else {
+                @switch (state) {
+                  @case ('LOADING') {
+                    <div class="status-center">
+                      <mat-spinner diameter="40"></mat-spinner>
+                      <p>{{ 'book.status.loading' | translate }}</p>
+                    </div>
+                  }
+                  @case ('SETUP') {
+                    <div class="status-center">
+                      <p class="status-text">{{ 'book.status.watchOpponent' | translate }}</p>
+                    </div>
+                  }
+                  @case ('AWAITING_USER_MOVE') {
+                    <div class="status-center">
+                      <p class="status-text">{{ (gaveUp ? 'book.status.gaveUp' : 'book.status.yourTurn') | translate }}</p>
+                      <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                      @if (showEval) {
+                        <div class="eval-compare">
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                          <span class="eval-arrow">→</span>
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                        </div>
+                      }
+                      <div class="play-actions">
+                        <button mat-button (click)="toggleEval()">
+                          <mat-icon>analytics</mat-icon>
+                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                        </button>
+                        <button mat-button class="give-up-btn" (click)="giveUp()">
+                          <mat-icon>flag</mat-icon>
+                          {{ 'book.actions.giveUp' | translate }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @case ('THINKING') {
+                    <div class="status-center">
+                      <mat-spinner diameter="24"></mat-spinner>
+                      <p class="status-text">{{ 'book.status.stockfishThinking' | translate }}</p>
+                      @if (showEval) {
+                        <div class="eval-compare">
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                          <span class="eval-arrow">→</span>
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                        </div>
+                      }
+                      <div class="play-actions">
+                        <button mat-button (click)="toggleEval()">
+                          <mat-icon>analytics</mat-icon>
+                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                        </button>
+                        <button mat-button (click)="resetPuzzle()">
+                          <mat-icon>replay</mat-icon>
+                          {{ 'book.actions.reset' | translate }}
+                        </button>
+                        <button mat-button class="give-up-btn" (click)="giveUp()">
+                          <mat-icon>flag</mat-icon>
+                          {{ 'book.actions.giveUp' | translate }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @case ('PLAYING') {
+                    <div class="status-center">
+                      <p class="status-text">{{ 'book.status.yourMoveVsStockfish' | translate }}</p>
+                      @if (showEval) {
+                        <div class="eval-compare">
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.start' | translate }}</span> <span class="eval-value">{{ initialEval || '...' }}</span></span>
+                          <span class="eval-arrow">→</span>
+                          <span class="eval-item"><span class="eval-label">{{ 'puzzles.eval.now' | translate }}</span> <span class="eval-value">{{ currentEval || '...' }}</span></span>
+                        </div>
+                      }
+                      <div class="play-actions">
+                        <button mat-button (click)="toggleEval()">
+                          <mat-icon>analytics</mat-icon>
+                          {{ (showEval ? 'puzzles.eval.hide' : 'puzzles.eval.show') | translate }}
+                        </button>
+                        <button mat-button (click)="resetPuzzle()">
+                          <mat-icon>replay</mat-icon>
+                          {{ 'book.actions.reset' | translate }}
+                        </button>
+                        @if (!mouseslipUsed && !onSolutionPath) {
+                          <button mat-button (click)="mouseslip()">
+                            <mat-icon>mouse</mat-icon>
+                            {{ 'book.actions.mouseslip' | translate }}
+                          </button>
+                        }
+                        <button mat-button class="give-up-btn" (click)="giveUp()">
+                          <mat-icon>flag</mat-icon>
+                          {{ 'book.actions.giveUp' | translate }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  @case ('SOLVED') {
+                    <div class="status-center solved">
+                      <mat-icon class="result-icon">check_circle</mat-icon>
+                      @if (alternativeSolve) {
+                        <p class="status-text">{{ 'book.status.checkmate' | translate }}</p>
+                        <p class="alt-hint">{{ 'book.status.altSolution' | translate }}</p>
+                      } @else {
+                        <p class="status-text">{{ 'book.status.correct' | translate }}</p>
+                      }
+                      <p class="timer">{{ formatTime(elapsedSeconds) }}</p>
+                      <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
+                      @if (solvedCountdown > 0) {
+                        <p class="alt-hint"><mat-icon class="countdown-icon">timer</mat-icon> {{ solvedCountdown }}</p>
+                      }
+                    </div>
+                  }
+                  @case ('FAILED') {
+                    <div class="status-center failed">
+                      <mat-icon class="result-icon">{{ gaveUp ? 'flag' : 'cancel' }}</mat-icon>
+                      <p class="status-text">{{ (gaveUp ? 'book.status.gaveUpSolution' : 'book.status.incorrect') | translate }}</p>
+                      <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal" (prev)="reviewPrev()" (next)="reviewNext()" />
+                      <div class="fail-actions">
+                        <button mat-button (click)="retry()">{{ 'common.retry' | translate }}</button>
+                      </div>
+                    </div>
+                  }
+                }
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- Untere Aktionen: Share (immer) + Analyse/Ganze Partie (nach Lösen) -->
+          @if (puzzle) {
+            <div class="bottom-actions">
+              @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
+                <button mat-stroked-button (click)="enterReview()">
+                  <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
+                </button>
+                <button mat-stroked-button (click)="analyze()">
+                  <mat-icon>biotech</mat-icon> {{ 'book.actions.analyze' | translate }}
+                </button>
+              }
+              <button mat-stroked-button class="share-full" (click)="sharePuzzle()">
+                <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
+              </button>
+            </div>
+          }
+
+          <!-- Einstellungen -->
           <mat-card class="config-card" #settingsPanel>
             <mat-card-content>
               @if (showSettings) {
