@@ -252,6 +252,9 @@
               }
               <mat-card class="status-card">
                 <mat-card-content>
+                  <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'endless.config.settings' | translate">
+                    <mat-icon>settings</mat-icon>
+                  </button>
                   @switch (state) {
                     @case ('LOADING') {
                       <div class="status-center">
@@ -362,11 +365,6 @@
                 </mat-card-content>
               </mat-card>
 
-              <div class="settings-bar">
-                <button mat-icon-button class="settings-gear" [class.active]="showSettings" (click)="toggleSettings()" [attr.title]="'endless.config.settings' | translate">
-                  <mat-icon>settings</mat-icon>
-                </button>
-              </div>
               @if (showSettings) {
                 <mat-card class="config-card">
                   <mat-card-content>
