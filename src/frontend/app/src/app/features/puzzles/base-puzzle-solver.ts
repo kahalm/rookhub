@@ -69,6 +69,7 @@ export abstract class BasePuzzleSolver {
   private vizShowTimer?: ReturnType<typeof setTimeout>;
   /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
   vizOpponentLastMove?: [Key, Key];
+  private vizOpponentArrowTimer?: ReturnType<typeof setTimeout>;
 
   // ---- intern ----
   protected chess = new Chess();
@@ -145,7 +146,7 @@ export abstract class BasePuzzleSolver {
     this.moveLog = [];
     this.frozenFen = fen;
     this.vizMoves = [];
-    this.vizOpponentLastMove = undefined;
+    this.clearVizOpponentArrow();
     this.endVisualizationHide();
     this.onSetupStart();
 
@@ -174,7 +175,6 @@ export abstract class BasePuzzleSolver {
       this.playMove(this.solutionMoves[this.startPly]);
       this.moveIndex = this.startPly + 1;
       this.beginSolving();
-      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
       this.state = 'AWAITING_USER_MOVE';
       this.onSolvingBegins();
       this.moveStartTime = Date.now();
@@ -232,7 +232,7 @@ export abstract class BasePuzzleSolver {
       if (this.aborted) return;
       this.playMove(this.solutionMoves[this.moveIndex]);
       this.moveIndex++;
-      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
+      if (this.visualizationMode) this.showVizOpponentArrow();
       this.updateBoard();
       if (this.moveIndex >= this.solutionMoves.length) { this.solvedInternal(false); return; }
       // Solver-Antwort im Lösungspfad → User soll seinen nächsten Lösungszug machen.
@@ -255,7 +255,7 @@ export abstract class BasePuzzleSolver {
       this.currentEval = result.eval;
       this.playMove(result.move);
       this.lastOpponentReplied = true;
-      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
+      if (this.visualizationMode) this.showVizOpponentArrow();
       this.updateBoard();
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.autoAdvanceTimer = setTimeout(() => {
@@ -391,6 +391,21 @@ export abstract class BasePuzzleSolver {
     clearVisualizationHide();
   }
 
+  /** Zeigt den letzten Gegnerzug als Pfeil und blendet ihn nach 3s automatisch aus. */
+  private showVizOpponentArrow(): void {
+    if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
+    this.vizOpponentLastMove = this.lastMove;
+    this.vizOpponentArrowTimer = setTimeout(() => {
+      this.vizOpponentLastMove = undefined;
+      this.vizOpponentArrowTimer = undefined;
+    }, 3000);
+  }
+
+  protected clearVizOpponentArrow(): void {
+    if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
+    this.vizOpponentLastMove = undefined;
+  }
+
   get vizLevelDescription(): string {
     switch (this.visualizationMode) {
       case 0: return 'Normal — Drag & Drop';
@@ -469,6 +484,7 @@ export abstract class BasePuzzleSolver {
     this.clearSolutionPlay();
     this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.clearVizOpponentArrow();
     // endVisualizationHide raeumt auch den vizShowTimer auf — sonst feuert dessen
     // setTimeout-Callback nach Teardown/Puzzlewechsel.
     this.endVisualizationHide();

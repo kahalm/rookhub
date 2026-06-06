@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.5';
+export const APP_VERSION = '0.95.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.6', date: '2026-06-06', changes: [
+    'Visualisierungsmodus: Gegnerzug-Pfeil nur für Folgezüge (nicht den ersten Setup-Zug); Pfeil blendet sich nach 3 Sekunden automatisch aus.',
+  ]},
   { version: '0.95.5', date: '2026-06-06', changes: [
     'Visualisierungsmodus 1–4: Letzter Gegnerzug wird als roter Pfeil auf dem eingefrorenen Brett angezeigt (via chessground setAutoShapes, unabhängig vom Auswahl-Ring).',
   ]},
