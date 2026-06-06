@@ -37,3 +37,12 @@ public class AuthResponseDto
     public int UserId { get; set; }
     public bool IsAdmin { get; set; }
 }
+
+public class ChangePasswordDto
+{
+    [Required]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, MinLength(4), MaxLength(1024)]
+    public string NewPassword { get; set; } = string.Empty;
+}

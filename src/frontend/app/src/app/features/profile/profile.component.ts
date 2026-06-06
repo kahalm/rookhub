@@ -208,6 +208,38 @@ interface PlayerSearchItem {
             </div>
 
             <mat-divider class="discord-divider"></mat-divider>
+            <div class="changepwd-section">
+              <h4>{{ 'profile.changePwd.title' | translate }}</h4>
+              @if (!showChangePwd) {
+                <button mat-stroked-button type="button" (click)="showChangePwd = true">
+                  <mat-icon>lock</mat-icon> {{ 'profile.changePwd.button' | translate }}
+                </button>
+              } @else {
+                <div class="changepwd-form">
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'profile.changePwd.current' | translate }}</mat-label>
+                    <input matInput type="password" [(ngModel)]="changePwdCurrent" name="cpwdCurrent" autocomplete="current-password">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'profile.changePwd.new' | translate }}</mat-label>
+                    <input matInput type="password" [(ngModel)]="changePwdNew" name="cpwdNew" autocomplete="new-password">
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ 'profile.changePwd.confirm' | translate }}</mat-label>
+                    <input matInput type="password" [(ngModel)]="changePwdConfirm" name="cpwdConfirm" autocomplete="new-password">
+                  </mat-form-field>
+                  <div class="changepwd-actions">
+                    <button mat-button type="button" (click)="cancelChangePwd()">{{ 'common.cancel' | translate }}</button>
+                    <button mat-raised-button color="primary" type="button" (click)="changePassword()"
+                      [disabled]="!changePwdCurrent || !changePwdNew || !changePwdConfirm || changingPwd">
+                      {{ changingPwd ? ('profile.changePwd.saving' | translate) : ('profile.changePwd.save' | translate) }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <mat-divider class="discord-divider"></mat-divider>
             <div class="danger-section">
               <h4>{{ 'profile.delete.title' | translate }}</h4>
               <p class="danger-hint">{{ 'profile.delete.hint' | translate }}</p>
@@ -278,6 +310,9 @@ interface PlayerSearchItem {
     .discord-name { font-weight: 500; }
     .discord-linked button { margin-left: auto; }
     .discord-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0; }
+    .changepwd-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
+    .changepwd-form { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
+    .changepwd-actions { display: flex; gap: 8px; justify-content: flex-end; }
     .danger-section h4 { margin: 0 0 0.25rem; color: #ef9a9a; }
     .danger-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
     .danger-warn { color: #ef9a9a; font-size: 0.9rem; }
@@ -306,6 +341,12 @@ export class ProfileComponent implements OnInit {
   offlineSize = '0 B';
   offlineBooks = 0;
   offlinePending = 0;
+
+  showChangePwd = false;
+  changePwdCurrent = '';
+  changePwdNew = '';
+  changePwdConfirm = '';
+  changingPwd = false;
 
   showDelete = false;
   deletePassword = '';
@@ -434,6 +475,37 @@ export class ProfileComponent implements OnInit {
       error: () => {
         this.unlinking = false;
         this.snackbar.info(this.translate.instant('profile.discord.linkFailed'));
+      }
+    });
+  }
+
+  cancelChangePwd(): void {
+    this.showChangePwd = false;
+    this.changePwdCurrent = '';
+    this.changePwdNew = '';
+    this.changePwdConfirm = '';
+  }
+
+  changePassword(): void {
+    if (!this.changePwdCurrent || !this.changePwdNew || !this.changePwdConfirm || this.changingPwd) return;
+    if (this.changePwdNew !== this.changePwdConfirm) {
+      this.snackbar.info(this.translate.instant('profile.changePwd.mismatch'));
+      return;
+    }
+    this.changingPwd = true;
+    this.http.put('/api/auth/change-password', {
+      currentPassword: this.changePwdCurrent,
+      newPassword: this.changePwdNew,
+    }).subscribe({
+      next: () => {
+        this.changingPwd = false;
+        this.cancelChangePwd();
+        this.snackbar.success(this.translate.instant('profile.changePwd.done'));
+      },
+      error: (err) => {
+        this.changingPwd = false;
+        this.snackbar.info(this.translate.instant(
+          err?.status === 401 ? 'profile.changePwd.wrongPassword' : 'profile.changePwd.failed'));
       }
     });
   }

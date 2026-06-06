@@ -199,6 +199,19 @@
       "wrongPassword": "Lozinka nije točna.",
       "failed": "Račun nije moguće izbrisati.",
       "moreInfo": "Više o brisanju računa"
+    },
+    "changePwd": {
+      "title": "Promjena lozinke",
+      "button": "Promijeni lozinku",
+      "current": "Trenutna lozinka",
+      "new": "Nova lozinka",
+      "confirm": "Potvrdi novu lozinku",
+      "save": "Promijeni lozinku",
+      "saving": "Spremanje...",
+      "done": "Lozinka uspješno promijenjena.",
+      "wrongPassword": "Trenutna lozinka je netočna.",
+      "mismatch": "Lozinke se ne podudaraju.",
+      "failed": "Nije moguće promijeniti lozinku."
     }
   },
   "legal": {

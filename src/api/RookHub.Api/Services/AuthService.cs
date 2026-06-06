@@ -109,6 +109,18 @@ public class AuthService
         };
     }
 
+    public async Task ChangePasswordAsync(int userId, ChangePasswordDto dto)
+    {
+        var user = await _db.AppUsers.FindAsync(userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            throw new UnauthorizedAccessException("Current password is incorrect.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword, BcryptWorkFactor);
+        await _db.SaveChangesAsync();
+    }
+
     private string GenerateJwt(AppUser user, bool rememberMe = false)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(

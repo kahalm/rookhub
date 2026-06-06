@@ -199,6 +199,19 @@
       "wrongPassword": "Passwort ist falsch.",
       "failed": "Konto konnte nicht gelöscht werden.",
       "moreInfo": "Mehr Informationen zur Konto-Löschung"
+    },
+    "changePwd": {
+      "title": "Passwort ändern",
+      "button": "Passwort ändern",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "confirm": "Neues Passwort bestätigen",
+      "save": "Passwort ändern",
+      "saving": "Wird gespeichert...",
+      "done": "Passwort erfolgreich geändert.",
+      "wrongPassword": "Aktuelles Passwort ist falsch.",
+      "mismatch": "Passwörter stimmen nicht überein.",
+      "failed": "Passwort konnte nicht geändert werden."
     }
   },
   "legal": {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.12';
+export const APP_VERSION = '0.95.13';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.13', date: '2026-06-06', changes: [
+    'Profil: Passwort-Ändern-Funktion (aktuelles + neues Passwort mit Bestätigung).',
+  ]},
   { version: '0.95.12', date: '2026-06-06', changes: [
     'Endless: Bugfix — nach Aufgeben + Analysieren landete man beim Fortsetzen wieder auf demselben aufgegebenen Puzzle und verlor ein zweites Leben dafür.',
   ]},

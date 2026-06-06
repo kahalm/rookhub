@@ -199,6 +199,19 @@
       "wrongPassword": "Password is incorrect.",
       "failed": "Could not delete account.",
       "moreInfo": "More about account deletion"
+    },
+    "changePwd": {
+      "title": "Change password",
+      "button": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "save": "Change password",
+      "saving": "Saving...",
+      "done": "Password changed successfully.",
+      "wrongPassword": "Current password is incorrect.",
+      "mismatch": "Passwords do not match.",
+      "failed": "Could not change password."
     }
   },
   "legal": {

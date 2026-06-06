@@ -193,6 +193,48 @@ public class AuthServiceTests : IDisposable
         Assert.DoesNotContain(_logger.Events, e => e.Message.Contains("UserLogin"));
     }
 
+    [Fact]
+    public async Task ChangePassword_ValidCurrentPassword_UpdatesHash()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        var hashBefore = _db.AppUsers.Single().PasswordHash;
+
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var hashAfter = _db.AppUsers.Single().PasswordHash;
+        Assert.NotEqual(hashBefore, hashAfter);
+        Assert.True(BCrypt.Net.BCrypt.Verify("newpass99", hashAfter));
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrentPassword_Throws()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "wrongpass", NewPassword = "newpass99" }));
+    }
+
+    [Fact]
+    public async Task ChangePassword_AfterChange_OldPasswordRejected()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "oldpass" }));
+    }
+
+    [Fact]
+    public async Task ChangePassword_AfterChange_NewPasswordAccepted()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var result = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "newpass99" });
+        Assert.NotEmpty(result.Token);
+    }
+
     // Minimaler ILogger, der Events samt strukturierter Properties mitschreibt.
     private sealed class CapturingLogger<T> : ILogger<T>
     {
