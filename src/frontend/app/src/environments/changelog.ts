@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.95.2';
+export const APP_VERSION = '0.95.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.95.3', date: '2026-06-06', changes: [
+    'Doku: `CLAUDE.md` um eine Pflicht-Regel ergänzt — vor jedem Datei-Edit MUSS `git pull` laufen. Hintergrund: bei Parallel-Arbeit auf mehreren Klonen führt ein Edit gegen veralteten Stand zu Merge-Konflikten und verlorener Arbeit.',
+  ]},
   { version: '0.95.2', date: '2026-06-06', changes: [
     'Doku: `CLAUDE.md` aufgeräumt — der Versionierungs-Block enthielt einen verketteten Mega-Changelog (~30 Versionen in einer Zeile), der ohnehin in `changelog.ts` steht. Jetzt nur noch aktuelle Version + Verweis. Endpoints/Schema auf den aktuellen Stand gebracht (Bot-Stats, Wochenpost-Progress + Bestenliste, Admin-Tagespuzzle-Regenerate, `Retired`-Flag, `WeeklyPostAttempts`, optionale E-Mail, Account-Löschung). Veralteter Tournament-Proxy-Hinweis entfernt (mappt längst korrekt auf `/api/crawl`). Projektstruktur/Teststruktur und Umlaute vereinheitlicht. i18n-JSON-Validierung + „Literal-Routen vor Parameter-Routen" als Konventionen aufgenommen.',
   ]},
