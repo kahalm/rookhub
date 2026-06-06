@@ -654,6 +654,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   analyzeCurrentPuzzle(): void {
     if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
     if (!this.puzzle) return;
+    // Wurde das Puzzle bereits gescheitert (Aufgeben oder Falschzug) aber chainIndex noch nicht
+    // vorgerückt, würde resume=1 dasselbe Puzzle nochmals laden → zweiter Leben-Verlust.
+    // Deshalb jetzt vorwärts schieben und persistieren, bevor wir wegnavigieren.
+    if ((this.state === 'FAILED' || this.reviewingWrongPuzzle) && this.lives > 0) {
+      this.chainIndex++;
+      this.level = this.chainIndex;
+      this.syncActiveGameToServer();
+    }
     this.router.navigate(['/analysis'], {
       queryParams: {
         fen: this.puzzle.fen,
