@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.10';
+export const APP_VERSION = '0.96.11';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.11', date: '2026-06-06', changes: [
+    'Endless: Per-Puzzle-Timer (elapsedSeconds) wird jetzt an die Status-Card übergeben und nach dem Lösen angezeigt (wie Standard/Book).',
+    'Standard: „Letztes Puzzle reviewen"-Button direkt nach der Status-Card (wie Endless), nicht mehr unter der Stats-Card.',
+    'Standard + Endless: Viz-Countdown-Text nutzt i18n-Key statt hardcoded \"s…\" (wie Book).',
+  ]},
   { version: '0.96.10', date: '2026-06-06', changes: [
     'Standard-Puzzle: Panel-Reihenfolge angepasst — Your Turn oben, dann Rating-Card, dann Stats (wie Endless).',
   ]},

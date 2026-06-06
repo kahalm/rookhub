@@ -148,6 +148,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   reviewingWrongPuzzle = false;
   gaveUp = false;
   private puzzleStartTime = 0;
+  elapsedSeconds = 0;
 
   // Zuletzt gelöstes Puzzle — für „Letztes Puzzle analysieren" (bleibt auch nach dem
   // Auto-Advance auf das nächste Puzzle erhalten, da der SOLVED-Status nur kurz sichtbar ist).
@@ -343,6 +344,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
     this.puzzleStartTime = Date.now();
+    this.elapsedSeconds = 0;
   }
 
   protected override handleSolved(alternative: boolean): void { this.puzzleSolved(alternative); }
@@ -488,6 +490,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionStart = Date.now() - this.sessionSeconds * 1000;
     this.sessionInterval = setInterval(() => {
       this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
+      this.elapsedSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
     }, 1000);
 
     // Kette wiederherstellen: lokal nur, wenn der Token zu DIESEM Run passt (Refresh auf demselben
@@ -902,6 +905,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionSeconds = 0;
     this.sessionInterval = setInterval(() => {
       this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
+      this.elapsedSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
     }, 1000);
   }
 

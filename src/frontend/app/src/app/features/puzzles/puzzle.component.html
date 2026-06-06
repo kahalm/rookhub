@@ -20,7 +20,7 @@
           @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
             <div class="board-hint">
               @if (vizCountdownSeconds > 0) {
-                <span class="board-hint-countdown">{{ vizCountdownSeconds }}s…</span>
+                <span class="board-hint-countdown">{{ 'puzzles.viz.countdown' | translate:{ seconds: vizCountdownSeconds } }}</span>
               }
               @if (vizMoveHtml) {
                 <span [innerHTML]="vizMoveHtml"></span>
@@ -90,6 +90,13 @@
             />
           }
 
+          @if (lastSolvedPuzzleId) {
+            <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
+              <mat-icon>history</mat-icon>
+              {{ 'puzzles.actions.reviewLast' | translate }}
+            </button>
+          }
+
           @if (puzzle) {
             <app-puzzle-rating-card
               ratingKey="puzzles.info.rating"
@@ -132,13 +139,6 @@
             </mat-card>
           }
 
-
-          @if (lastSolvedPuzzleId) {
-            <button mat-stroked-button class="review-btn" (click)="reviewLastPuzzle()">
-              <mat-icon>history</mat-icon>
-              {{ 'puzzles.actions.reviewLast' | translate }}
-            </button>
-          }
 
           <button mat-stroked-button color="accent" class="endless-btn" (click)="goEndless()">
             <mat-icon>all_inclusive</mat-icon>

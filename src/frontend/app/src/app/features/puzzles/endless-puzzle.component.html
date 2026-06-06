@@ -195,7 +195,7 @@
               @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
                 <div class="board-hint">
                   @if (vizCountdownSeconds > 0) {
-                    <span class="board-hint-countdown">{{ vizCountdownSeconds }}s…</span>
+                    <span class="board-hint-countdown">{{ 'endless.game.vizCountdown' | translate:{ seconds: vizCountdownSeconds } }}</span>
                   }
                   @if (vizMoveHtml) {
                     <span [innerHTML]="vizMoveHtml"></span>
@@ -233,6 +233,7 @@
                 [initialEval]="initialEval"
                 [currentEval]="currentEval"
                 [gaveUp]="gaveUp"
+                [elapsedSeconds]="elapsedSeconds"
                 [showMouseslip]="!mouseslipUsed && !onSolutionPath"
                 [showMouseslipInThinking]="true"
                 [alternativeSolve]="alternativeSolve"
