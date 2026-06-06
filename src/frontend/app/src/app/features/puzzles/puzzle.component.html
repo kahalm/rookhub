@@ -37,15 +37,6 @@
         </div>
 
         <div class="info-section">
-          @if (puzzle) {
-            <app-puzzle-rating-card
-              ratingKey="puzzles.info.rating"
-              [appendRating]="puzzle.rating"
-              [tags]="puzzle.themes ?? ''"
-              shareKey="puzzles.actions.share"
-              (shareClicked)="sharePuzzle()"
-            />
-          }
           @if (state === 'ERROR') {
             <mat-card class="status-card">
               <mat-card-content>
@@ -96,6 +87,16 @@
               (analyzeClicked)="analyze()"
               (reviewPrev)="reviewPrev()"
               (reviewNext)="reviewNext()"
+            />
+          }
+
+          @if (puzzle) {
+            <app-puzzle-rating-card
+              ratingKey="puzzles.info.rating"
+              [appendRating]="puzzle.rating"
+              [tags]="puzzle.themes ?? ''"
+              shareKey="puzzles.actions.share"
+              (shareClicked)="sharePuzzle()"
             />
           }
 
