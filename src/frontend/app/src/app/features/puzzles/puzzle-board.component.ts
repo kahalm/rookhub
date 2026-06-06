@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
+import { DrawShape } from 'chessground/draw';
 import { Chess, Square } from 'chess.js';
 
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
@@ -106,6 +107,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   /** Tatsaechliche chess.js-FEN (im Viz-Modus weicht `fen` als frozen-Brett davon ab).
    *  Wird im Viz-Modus für Promotion-Erkennung und Legalitäts-Check beim 2. Klick genutzt. */
   @Input() actualFen?: string;
+  /** Letzter Gegnerzug als Pfeil (nur im Viz-Modus 1-4 gesetzt; via setAutoShapes gerendert). */
+  @Input() vizOpponentArrow?: [Key, Key];
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -208,6 +211,16 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!this.ground) return;
     this.ground.setShapes([]);
     try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
+  }
+
+  private applyVizOpponentArrow(): void {
+    if (!this.ground) return;
+    if (this.visualization > 0 && this.vizOpponentArrow) {
+      const shape: DrawShape = { orig: this.vizOpponentArrow[0], dest: this.vizOpponentArrow[1], brush: 'red' };
+      this.ground.setAutoShapes([shape]);
+    } else {
+      this.ground.setAutoShapes([]);
+    }
   }
 
   /** Linker Offset (in %) des Overlay-Rings — abhängig von Orientation und Feldkoordinate. */
@@ -399,6 +412,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         enabled: this.premovable && !vizActive
       }
     });
+
+    if ('vizOpponentArrow' in changes || 'visualization' in changes) {
+      this.applyVizOpponentArrow();
+    }
 
     // Execute pending premove when transitioning from THINKING to PLAYING
     if (wasPremovable && isNowInteractive && hasPremove) {

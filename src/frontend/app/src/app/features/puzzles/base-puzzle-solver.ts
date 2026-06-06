@@ -67,6 +67,8 @@ export abstract class BasePuzzleSolver {
   vizCountdownSeconds = 0;
   protected vizCountdownInterval?: ReturnType<typeof setInterval>;
   private vizShowTimer?: ReturnType<typeof setTimeout>;
+  /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
+  vizOpponentLastMove?: [Key, Key];
 
   // ---- intern ----
   protected chess = new Chess();
@@ -143,6 +145,7 @@ export abstract class BasePuzzleSolver {
     this.moveLog = [];
     this.frozenFen = fen;
     this.vizMoves = [];
+    this.vizOpponentLastMove = undefined;
     this.endVisualizationHide();
     this.onSetupStart();
 
@@ -171,6 +174,7 @@ export abstract class BasePuzzleSolver {
       this.playMove(this.solutionMoves[this.startPly]);
       this.moveIndex = this.startPly + 1;
       this.beginSolving();
+      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
       this.state = 'AWAITING_USER_MOVE';
       this.onSolvingBegins();
       this.moveStartTime = Date.now();
@@ -228,6 +232,7 @@ export abstract class BasePuzzleSolver {
       if (this.aborted) return;
       this.playMove(this.solutionMoves[this.moveIndex]);
       this.moveIndex++;
+      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
       this.updateBoard();
       if (this.moveIndex >= this.solutionMoves.length) { this.solvedInternal(false); return; }
       // Solver-Antwort im Lösungspfad → User soll seinen nächsten Lösungszug machen.
@@ -250,6 +255,7 @@ export abstract class BasePuzzleSolver {
       this.currentEval = result.eval;
       this.playMove(result.move);
       this.lastOpponentReplied = true;
+      if (this.visualizationMode) this.vizOpponentLastMove = this.lastMove;
       this.updateBoard();
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.autoAdvanceTimer = setTimeout(() => {
