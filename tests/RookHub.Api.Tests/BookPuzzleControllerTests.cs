@@ -660,4 +660,57 @@ public class BookPuzzleControllerTests : IDisposable
         Assert.Equal(8, dto.BookRating);
         Assert.Equal("Endspiel Strategie", dto.Tags);
     }
+
+    [Fact]
+    public async Task ClaimSession_TransfersAnonymousAttemptsToUser()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "claim.pgn:1", bookFileName: "claim.pgn");
+        var user = await CreateUserAsync("claimer");
+
+        // Anonymer Attempt mit einer Session-ID
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaa" });
+
+        // Vorher: 0 eingeloggte Löser, 1 anonym
+        var before = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(0, before.SolvedCount);
+        Assert.Equal(1, before.AnonymousSolvedCount);
+
+        // Claim
+        SetUser(user.Id);
+        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "aaaa" });
+        var ok = Assert.IsType<OkObjectResult>(claimResult);
+        var transferred = (int)ok.Value!.GetType().GetProperty("transferred")!.GetValue(ok.Value)!;
+        Assert.Equal(1, transferred);
+
+        // Nachher: 1 eingeloggt, 0 anonym
+        var after = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(1, after.SolvedCount);
+        Assert.Equal(0, after.AnonymousSolvedCount);
+        Assert.Contains(after.Solvers, s => s.Name == "claimer");
+    }
+
+    [Fact]
+    public async Task ClaimSession_SkipsIfUserAlreadyHasAttempt()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "claim2.pgn:1", bookFileName: "claim2.pgn");
+        var user = await CreateUserAsync("claimer2");
+
+        // User hat bereits selbst gelöst
+        SetUser(user.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 5 });
+
+        // Anonymer Attempt derselben Person (andere Session)
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "bbbb" });
+
+        // Claim → soll 0 übertragen, da Puzzle schon beim User
+        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "bbbb" });
+        var ok = Assert.IsType<OkObjectResult>(claimResult);
+        var transferred = (int)ok.Value!.GetType().GetProperty("transferred")!.GetValue(ok.Value)!;
+        Assert.Equal(0, transferred);
+
+        // Anonym-Zähler bleibt noch (wurde nicht gelöscht, nur übersprungen)
+        var after = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(1, after.SolvedCount);    // nur claimer2
+        Assert.Equal(1, after.AnonymousSolvedCount);  // bbbb bleibt
+    }
 }

@@ -133,6 +133,44 @@ public class BookPuzzleService
     }
 
     /// <summary>
+    /// Überträgt anonyme BookPuzzleAttempts einer Session auf den eingeloggten User.
+    /// Bereits vorhandene Attempts des Users für dasselbe Puzzle werden übersprungen (Unique-Constraint).
+    /// Gibt die Anzahl übertragener Attempts zurück.
+    /// </summary>
+    public async Task<int> ClaimSessionAsync(int userId, string sessionId)
+    {
+        if (!SessionIdPattern.IsMatch(sessionId ?? ""))
+            return 0;
+
+        var anonAttempts = await _db.BookPuzzleAttempts
+            .Where(a => a.AnonymousSessionId == sessionId)
+            .ToListAsync();
+
+        if (anonAttempts.Count == 0) return 0;
+
+        var existingPuzzleIds = await _db.BookPuzzleAttempts
+            .Where(a => a.UserId == userId)
+            .Select(a => a.BookPuzzleId)
+            .ToHashSetAsync();
+
+        int transferred = 0;
+        foreach (var attempt in anonAttempts)
+        {
+            if (existingPuzzleIds.Contains(attempt.BookPuzzleId)) continue;
+            attempt.UserId = userId;
+            attempt.AnonymousSessionId = null;
+            transferred++;
+        }
+
+        if (transferred > 0)
+        {
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("BookPuzzle.ClaimSession: {Count} Attempts von Session {Session} → User {UserId} übertragen.", transferred, sessionId, userId);
+        }
+        return transferred;
+    }
+
+    /// <summary>
     /// Stoesst den schach-bot-Webhook fuer das Puzzle an (fire-and-forget via BG-Queue).
     /// Holt im Worker frische Solver-Daten + ruft <see cref="SchachBotWebhookService.NotifyAttemptAsync"/> auf.
     /// </summary>

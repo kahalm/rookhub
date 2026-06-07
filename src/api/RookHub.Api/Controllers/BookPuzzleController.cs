@@ -60,6 +60,14 @@ public class BookPuzzleController : BaseApiController
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
         => Ok(await _service.GetResultsAsync(id, since));
 
+    [Authorize]
+    [HttpPost("claim-session")]
+    public async Task<IActionResult> ClaimSession([FromBody] ClaimBookSessionDto dto)
+    {
+        var transferred = await _service.ClaimSessionAsync(GetUserId(), dto.SessionId);
+        return Ok(new { transferred });
+    }
+
     [AllowAnonymous]
     [HttpGet("random")]
     public async Task<IActionResult> GetRandom([FromQuery] string pool = "random", [FromQuery] string? exclude = null, [FromQuery] int? bookId = null)

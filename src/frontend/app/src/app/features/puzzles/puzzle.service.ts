@@ -167,6 +167,12 @@ export class PuzzleService {
     });
   }
 
+  claimBookPuzzleSession(): Observable<{ transferred: number }> {
+    return this.http.post<{ transferred: number }>('/api/book-puzzles/claim-session', {
+      sessionId: this.getOrCreateSessionId()
+    });
+  }
+
   getBookPuzzleById(id: number): Observable<BookPuzzleDto> {
     return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
   }

@@ -114,6 +114,7 @@ export class AuthService {
     import('../features/puzzles/puzzle.service').then(m => {
       const puzzleService = this.injector.get(m.PuzzleService);
       puzzleService.claimSession().subscribe();
+      puzzleService.claimBookPuzzleSession().subscribe();
     });
     // Also claim endless puzzle progress
     import('../features/puzzles/endless-storage.service').then(m => {
