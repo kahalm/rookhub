@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.15', date: '2026-06-07', changes: [
+    'Tagespuzzle/Claim-Session: War das Puzzle bereits eingeloggt gelöst, wird der anonyme Eintrag beim Login jetzt korrekt gelöscht statt als Duplikat stehen zu bleiben.',
+  ]},
   { version: '0.96.14', date: '2026-06-07', changes: [
     'Tagespuzzle: Anonyme Lösungen werden beim nächsten Login automatisch dem Account zugeordnet.',
   ]},

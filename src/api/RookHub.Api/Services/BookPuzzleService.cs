@@ -154,18 +154,25 @@ public class BookPuzzleService
             .ToHashSetAsync();
 
         int transferred = 0;
+        int deleted = 0;
         foreach (var attempt in anonAttempts)
         {
-            if (existingPuzzleIds.Contains(attempt.BookPuzzleId)) continue;
+            if (existingPuzzleIds.Contains(attempt.BookPuzzleId))
+            {
+                // User hat das Puzzle bereits eingeloggt gelöst → anonymen Eintrag löschen
+                _db.BookPuzzleAttempts.Remove(attempt);
+                deleted++;
+                continue;
+            }
             attempt.UserId = userId;
             attempt.AnonymousSessionId = null;
             transferred++;
         }
 
-        if (transferred > 0)
+        if (transferred > 0 || deleted > 0)
         {
             await _db.SaveChangesAsync();
-            _logger.LogInformation("BookPuzzle.ClaimSession: {Count} Attempts von Session {Session} → User {UserId} übertragen.", transferred, sessionId, userId);
+            _logger.LogInformation("BookPuzzle.ClaimSession: {Transferred} Attempts übertragen, {Deleted} Duplikate gelöscht (Session {Session} → User {UserId}).", transferred, deleted, sessionId, userId);
         }
         return transferred;
     }

@@ -708,9 +708,9 @@ public class BookPuzzleControllerTests : IDisposable
         var transferred = (int)ok.Value!.GetType().GetProperty("transferred")!.GetValue(ok.Value)!;
         Assert.Equal(0, transferred);
 
-        // Anonym-Zähler bleibt noch (wurde nicht gelöscht, nur übersprungen)
+        // Anonym-Eintrag wird gelöscht (gleicher User, doppelter Eintrag sinnlos)
         var after = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
-        Assert.Equal(1, after.SolvedCount);    // nur claimer2
-        Assert.Equal(1, after.AnonymousSolvedCount);  // bbbb bleibt
+        Assert.Equal(1, after.SolvedCount);         // nur claimer2
+        Assert.Equal(0, after.AnonymousSolvedCount); // bbbb wurde gelöscht
     }
 }
