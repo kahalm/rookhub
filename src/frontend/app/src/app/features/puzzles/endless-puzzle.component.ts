@@ -81,7 +81,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   highscore = 0;
 
   // Board theme
-  boardTheme = 'wood';
+  boardTheme = 'brown';
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';

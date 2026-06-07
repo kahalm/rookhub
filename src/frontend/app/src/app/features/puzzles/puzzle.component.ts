@@ -50,7 +50,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   stats: PuzzleStatsDto | null = null;
   private ratingRangeBounds: PuzzleRatingRange | null = null;
 
-  boardTheme = 'wood';
+  boardTheme = 'brown';
 
   difficulty: 'sehr_leicht' | 'leicht' | 'normal' | 'schwer' | 'sehr_schwer' = 'normal';
   excludeSolved = false;
