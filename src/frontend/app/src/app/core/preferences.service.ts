@@ -23,7 +23,7 @@ interface ProfilePreferences {
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
-  boardTheme = 'brown';
+  boardTheme = 'wood';
   pieceSet = 'cburnett';
   stockfishDepth = 16;
   puzzleDifficulty = 'normal';
@@ -40,7 +40,7 @@ export class PreferencesService {
 
   /** Read all preferences from localStorage (synchronous, instant). */
   private loadFromLocalStorage(): void {
-    try { this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'brown'; } catch {}
+    try { this.boardTheme = localStorage.getItem(BOARD_THEME_KEY) || 'wood'; } catch {}
     try { this.pieceSet = localStorage.getItem(PIECE_SET_KEY) || 'cburnett'; } catch {}
     try {
       const tm = localStorage.getItem(THEME_MODE_KEY);

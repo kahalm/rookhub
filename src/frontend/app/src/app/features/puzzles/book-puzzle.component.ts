@@ -79,7 +79,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private dailySub?: Subscription;
 
   stockfishDepth = 16;
-  boardTheme = 'brown';
+  boardTheme = 'wood';
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';

@@ -99,7 +99,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() viewOnly = false;
   @Input() check = false;
   @Input() premovable = false;
-  @Input() boardTheme = 'brown';
+  @Input() boardTheme = 'wood';
   @Input() pieceSet = 'cburnett';
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
