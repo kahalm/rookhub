@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -16,29 +17,32 @@ public class AdminController : BaseApiController
     private readonly PuzzleService _puzzleService;
     private readonly PgnImportService _pgnImportService;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
 
-    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config)
+    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config, IWebHostEnvironment env)
     {
         _admin = admin;
         _bookAdmin = bookAdmin;
         _puzzleService = puzzleService;
         _pgnImportService = pgnImportService;
         _config = config;
+        _env = env;
     }
 
     /// <summary>Konfigurationswerte fürs Admin-UI (z. B. Kibana-Link aus dem Server-Env).</summary>
     /// <remarks>
-    /// Der zurückgegebene <c>kibanaUrl</c> ist ein Deep-Link direkt auf das RookHub-Logging-Dashboard
-    /// (Saved-Object-ID <c>rookhub-logging-dashboard</c> aus <c>init-kibana.sh</c>), nicht auf die Kibana-Wurzel.
+    /// Der zurückgegebene <c>kibanaUrl</c> ist ein Deep-Link direkt auf das jeweilige Logging-Dashboard
+    /// (Prod: <c>rookhub-prod-dashboard</c>, Dev: <c>rookhub-dev-dashboard</c> aus <c>init-kibana.sh</c>).
     /// Env-Var bleibt der Kibana-Root.
     /// </remarks>
     [HttpGet("config")]
     public IActionResult GetConfig()
     {
         var root = (_config["Kibana:Url"] ?? string.Empty).TrimEnd('/');
+        var dashboardId = _env.IsProduction() ? "rookhub-prod-dashboard" : "rookhub-dev-dashboard";
         var kibanaUrl = string.IsNullOrEmpty(root)
             ? string.Empty
-            : $"{root}/app/dashboards#/view/rookhub-logging-dashboard";
+            : $"{root}/app/dashboards#/view/{dashboardId}";
         return Ok(new { kibanaUrl });
     }
 
