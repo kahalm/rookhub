@@ -215,6 +215,12 @@
       "wrongPassword": "Trenutna lozinka je netočna.",
       "mismatch": "Lozinke se ne podudaraju.",
       "failed": "Nije moguće promijeniti lozinku."
+    },
+    "theme": {
+      "title": "Izgled",
+      "system": "Sustav",
+      "light": "Svijetlo",
+      "dark": "Tamno"
     }
   },
   "legal": {

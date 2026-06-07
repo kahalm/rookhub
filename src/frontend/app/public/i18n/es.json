@@ -202,6 +202,12 @@
       "wrongPassword": "La contraseña es incorrecta.",
       "failed": "No se pudo eliminar la cuenta.",
       "moreInfo": "Más información sobre la eliminación de cuentas"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

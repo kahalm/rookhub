@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
@@ -19,6 +20,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
 import { RouterModule } from '@angular/router';
 import { ApiTokensComponent } from './api-tokens.component';
+import { ThemeService, AppTheme } from '../../core/theme.service';
 
 interface Profile {
   userId: number;
@@ -57,7 +59,7 @@ interface PlayerSearchItem {
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatProgressSpinnerModule, MatListModule,
+    MatButtonModule, MatButtonToggleModule, MatProgressSpinnerModule, MatListModule,
     MatIconModule, MatDividerModule, TranslateModule, RouterModule, LoadingSpinnerComponent,
     ApiTokensComponent],
   template: `
@@ -208,6 +210,25 @@ interface PlayerSearchItem {
             </div>
 
             <mat-divider class="discord-divider"></mat-divider>
+            <div class="theme-section">
+              <h4>{{ 'profile.theme.title' | translate }}</h4>
+              <mat-button-toggle-group [value]="theme.preference" (change)="theme.setPreference($event.value)" class="theme-toggle">
+                <mat-button-toggle value="system">
+                  <mat-icon>brightness_auto</mat-icon>
+                  {{ 'profile.theme.system' | translate }}
+                </mat-button-toggle>
+                <mat-button-toggle value="light">
+                  <mat-icon>light_mode</mat-icon>
+                  {{ 'profile.theme.light' | translate }}
+                </mat-button-toggle>
+                <mat-button-toggle value="dark">
+                  <mat-icon>dark_mode</mat-icon>
+                  {{ 'profile.theme.dark' | translate }}
+                </mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
+            <mat-divider class="discord-divider"></mat-divider>
             <div class="changepwd-section">
               <h4>{{ 'profile.changePwd.title' | translate }}</h4>
               @if (!showChangePwd) {
@@ -310,6 +331,9 @@ interface PlayerSearchItem {
     .discord-name { font-weight: 500; }
     .discord-linked button { margin-left: auto; }
     .discord-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0; }
+    .theme-section h4 { margin: 0 0 0.75rem; color: #90caf9; }
+    .theme-toggle { display: flex; flex-wrap: wrap; }
+    .theme-toggle mat-button-toggle { display: flex; align-items: center; gap: 6px; }
     .changepwd-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
     .changepwd-form { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
     .changepwd-actions { display: flex; gap: 8px; justify-content: flex-end; }
@@ -359,7 +383,8 @@ export class ProfileComponent implements OnInit {
     private discordLink: DiscordLinkService,
     private offline: OfflineService,
     private offlineQueue: OfflineQueueService,
-    private auth: AuthService
+    private auth: AuthService,
+    public theme: ThemeService
   ) {}
 
   ngOnInit(): void {

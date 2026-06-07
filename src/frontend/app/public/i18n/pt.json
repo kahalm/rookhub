@@ -202,6 +202,12 @@
       "wrongPassword": "Palavra-passe incorreta.",
       "failed": "Não foi possível eliminar a conta.",
       "moreInfo": "Mais informações sobre a eliminação de conta"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

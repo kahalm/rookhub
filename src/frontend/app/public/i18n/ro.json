@@ -202,6 +202,12 @@
         "copy": "Copiază",
         "copied": "Copiat în clipboard"
       }
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

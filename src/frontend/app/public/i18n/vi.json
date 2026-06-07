@@ -202,6 +202,12 @@
       "wrongPassword": "Mật khẩu không đúng.",
       "failed": "Không thể xóa tài khoản.",
       "moreInfo": "Thêm thông tin về việc xóa tài khoản"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

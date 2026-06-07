@@ -202,6 +202,12 @@
       "wrongPassword": "Heslo je nesprávné.",
       "failed": "Smazání účtu se nezdařilo.",
       "moreInfo": "Více o smazání účtu"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

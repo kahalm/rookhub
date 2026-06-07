@@ -202,6 +202,12 @@
       "wrongPassword": "Ο κωδικός είναι λανθασμένος.",
       "failed": "Δεν ήταν δυνατή η διαγραφή του λογαριασμού.",
       "moreInfo": "Περισσότερα για τη διαγραφή λογαριασμού"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

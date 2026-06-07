@@ -215,6 +215,12 @@
       "wrongPassword": "Current password is incorrect.",
       "mismatch": "Passwords do not match.",
       "failed": "Could not change password."
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

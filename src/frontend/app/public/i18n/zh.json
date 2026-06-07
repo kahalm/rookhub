@@ -202,6 +202,12 @@
       "wrongPassword": "密码不正确。",
       "failed": "无法删除账户。",
       "moreInfo": "了解更多关于账户删除的信息"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

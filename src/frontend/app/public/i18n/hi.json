@@ -202,6 +202,12 @@
       "wrongPassword": "पासवर्ड गलत है।",
       "failed": "खाता हटाने में विफल।",
       "moreInfo": "खाता हटाने के बारे में अधिक जानकारी"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

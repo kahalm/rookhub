@@ -202,6 +202,12 @@
       "wrongPassword": "كلمة المرور غير صحيحة.",
       "failed": "تعذّر حذف الحساب.",
       "moreInfo": "مزيد من المعلومات حول حذف الحساب"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

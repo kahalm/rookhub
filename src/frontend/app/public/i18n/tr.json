@@ -202,6 +202,12 @@
       "wrongPassword": "Şifre hatalı.",
       "failed": "Hesap silinemedi.",
       "moreInfo": "Hesap silme hakkında daha fazla bilgi"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

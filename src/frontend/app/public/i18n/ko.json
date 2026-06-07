@@ -202,6 +202,12 @@
       "wrongPassword": "비밀번호가 올바르지 않습니다.",
       "failed": "계정 삭제 실패.",
       "moreInfo": "계정 삭제에 대해 더 알아보기"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

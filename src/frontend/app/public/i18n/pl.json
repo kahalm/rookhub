@@ -202,6 +202,12 @@
       "wrongPassword": "Hasło jest nieprawidłowe.",
       "failed": "Nie udało się usunąć konta.",
       "moreInfo": "Więcej o usuwaniu konta"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

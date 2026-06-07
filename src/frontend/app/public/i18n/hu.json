@@ -202,6 +202,12 @@
       "wrongPassword": "Helytelen jelszó.",
       "failed": "Nem sikerült törölni a fiókot.",
       "moreInfo": "Bővebb információ a fiók törléséről"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

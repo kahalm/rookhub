@@ -202,6 +202,12 @@
       "wrongPassword": "Kata sandi salah.",
       "failed": "Gagal menghapus akun.",
       "moreInfo": "Lebih lanjut tentang penghapusan akun"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {

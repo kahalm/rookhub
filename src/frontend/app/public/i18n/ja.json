@@ -202,6 +202,12 @@
       "wrongPassword": "パスワードが正しくありません。",
       "failed": "アカウントを削除できませんでした。",
       "moreInfo": "アカウント削除について詳しく"
+    },
+    "theme": {
+      "title": "Appearance",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
     }
   },
   "legal": {
