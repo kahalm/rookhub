@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.17';
+export const APP_VERSION = '0.96.18';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.18', date: '2026-06-07', changes: [
+    'Infra: Kibana-Init erstellt jetzt zwei Dashboards (Prod + Dev) mit identischem Layout. ES-Index-Format konfigurierbar über Elasticsearch:IndexFormat.',
+  ]},
   { version: '0.96.17', date: '2026-06-07', changes: [
     'Extension-API: neuer Endpoint POST /api/extension/analyze-game. Repcheck-Userscript/Extension (≥ v1.6.0) schickt jetzt die Zugliste der aktuellen Partie und der Server liefert ply-weise Annotationen zurück — das Repertoire-PGN verlässt den Server nicht mehr. Server-seitiger Positions-Set-Cache (15 min / 5 min sliding), invalidiert bei PGN-Upload/-Delete.',
   ]},

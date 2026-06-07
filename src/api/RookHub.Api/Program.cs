@@ -45,7 +45,7 @@ try
         {
             configuration.WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(esUrl))
             {
-                IndexFormat = "rookhub-logs-{0:yyyy.MM}",
+                IndexFormat = context.Configuration["Elasticsearch:IndexFormat"] ?? "rookhub-logs-{0:yyyy.MM}",
                 AutoRegisterTemplate = true,
                 AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
                 BatchAction = ElasticOpType.Create,
