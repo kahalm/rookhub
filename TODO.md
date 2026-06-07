@@ -3,6 +3,7 @@
 ## Periodisch
 - [ ] Code Review — letzter: noch keiner
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: noch keiner
+- [ ] Security Review — letzter: noch keiner
 
 ## Features
 - [ ] Dark Mode
