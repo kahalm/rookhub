@@ -306,7 +306,8 @@
       "loadFailed": "Failed to load repertoires",
       "createFailed": "Failed to create repertoire",
       "deleteConfirm": "Delete this repertoire?",
-      "deleteFailed": "Failed to delete repertoire"
+      "deleteFailed": "Failed to delete repertoire",
+      "updateFailed": "Repertoire could not be updated"
     },
     "detail": {
       "noDescription": "No description",
@@ -320,7 +321,9 @@
       "description": "Description",
       "public": "Public",
       "kind": "Category",
-      "create": "Create"
+      "create": "Create",
+      "editTitle": "Edit Repertoire",
+      "save": "Save"
     },
     "kind": {
       "none": "—",

@@ -293,7 +293,8 @@
       "loadFailed": "Repertuarlar yüklenemedi",
       "createFailed": "Repertuar oluşturulamadı",
       "deleteConfirm": "Bu repertuar silinsin mi?",
-      "deleteFailed": "Repertuar silinemedi"
+      "deleteFailed": "Repertuar silinemedi",
+      "updateFailed": "Repertuar güncellenemedi"
     },
     "detail": {
       "noDescription": "Açıklama yok",
@@ -307,7 +308,9 @@
       "description": "Açıklama",
       "public": "Herkese açık",
       "kind": "Kategori",
-      "create": "Oluştur"
+      "create": "Oluştur",
+      "editTitle": "Repertuarı düzenle",
+      "save": "Kaydet"
     },
     "kind": {
       "none": "—",

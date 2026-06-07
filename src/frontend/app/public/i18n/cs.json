@@ -293,7 +293,8 @@
       "loadFailed": "Načtení repertoárů se nezdařilo",
       "createFailed": "Vytvoření repertoáru se nezdařilo",
       "deleteConfirm": "Smazat tento repertoár?",
-      "deleteFailed": "Smazání repertoáru se nezdařilo"
+      "deleteFailed": "Smazání repertoáru se nezdařilo",
+      "updateFailed": "Repertoár nebylo možné aktualizovat"
     },
     "detail": {
       "noDescription": "Bez popisu",
@@ -307,7 +308,9 @@
       "description": "Popis",
       "public": "Veřejný",
       "kind": "Kategorie",
-      "create": "Vytvořit"
+      "create": "Vytvořit",
+      "editTitle": "Upravit repertoár",
+      "save": "Uložit"
     },
     "kind": {
       "none": "—",

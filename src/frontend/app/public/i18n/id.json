@@ -293,7 +293,8 @@
       "loadFailed": "Gagal memuat repertoir",
       "createFailed": "Gagal membuat repertoir",
       "deleteConfirm": "Hapus repertoir ini?",
-      "deleteFailed": "Gagal menghapus repertoir"
+      "deleteFailed": "Gagal menghapus repertoir",
+      "updateFailed": "Repertoar tidak dapat diperbarui"
     },
     "detail": {
       "noDescription": "Tidak ada deskripsi",
@@ -307,7 +308,9 @@
       "description": "Deskripsi",
       "public": "Publik",
       "kind": "Kategori",
-      "create": "Buat"
+      "create": "Buat",
+      "editTitle": "Edit repertoar",
+      "save": "Simpan"
     },
     "kind": {
       "none": "—",

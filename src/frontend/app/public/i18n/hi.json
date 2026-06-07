@@ -293,7 +293,8 @@
       "loadFailed": "रेपर्टोयर लोड करने में विफल",
       "createFailed": "रेपर्टोयर बनाने में विफल",
       "deleteConfirm": "यह रेपर्टोयर हटाएं?",
-      "deleteFailed": "रेपर्टोयर हटाने में विफल"
+      "deleteFailed": "रेपर्टोयर हटाने में विफल",
+      "updateFailed": "रेपर्टोयर अपडेट नहीं हो सका"
     },
     "detail": {
       "noDescription": "कोई विवरण नहीं",
@@ -307,7 +308,9 @@
       "description": "विवरण",
       "public": "सार्वजनिक",
       "kind": "श्रेणी",
-      "create": "बनाएं"
+      "create": "बनाएं",
+      "editTitle": "रेपर्टोयर संपादित करें",
+      "save": "सहेजें"
     },
     "kind": {
       "none": "—",

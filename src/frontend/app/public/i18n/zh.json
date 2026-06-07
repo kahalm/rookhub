@@ -293,7 +293,8 @@
       "loadFailed": "加载开局库失败",
       "createFailed": "创建开局库失败",
       "deleteConfirm": "删除此开局库？",
-      "deleteFailed": "删除开局库失败"
+      "deleteFailed": "删除开局库失败",
+      "updateFailed": "开局库更新失败"
     },
     "detail": {
       "noDescription": "暂无描述",
@@ -307,7 +308,9 @@
       "description": "描述",
       "public": "公开",
       "kind": "分类",
-      "create": "创建"
+      "create": "创建",
+      "editTitle": "编辑开局库",
+      "save": "保存"
     },
     "kind": {
       "none": "—",

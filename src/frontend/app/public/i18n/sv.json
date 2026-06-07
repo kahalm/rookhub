@@ -293,7 +293,8 @@
       "loadFailed": "Det gick inte att läsa in repertoarer",
       "createFailed": "Det gick inte att skapa repertoar",
       "deleteConfirm": "Ta bort den här repertoaren?",
-      "deleteFailed": "Det gick inte att ta bort repertoaren"
+      "deleteFailed": "Det gick inte att ta bort repertoaren",
+      "updateFailed": "Repertoaren kunde inte uppdateras"
     },
     "detail": {
       "noDescription": "Ingen beskrivning",
@@ -307,7 +308,9 @@
       "description": "Beskrivning",
       "public": "Offentlig",
       "kind": "Kategori",
-      "create": "Skapa"
+      "create": "Skapa",
+      "editTitle": "Redigera repertoar",
+      "save": "Spara"
     },
     "kind": {
       "none": "—",

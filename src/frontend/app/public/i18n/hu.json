@@ -293,7 +293,8 @@
       "loadFailed": "Nem sikerült betölteni a repertoárokat",
       "createFailed": "Nem sikerült létrehozni a repertoárt",
       "deleteConfirm": "Törli ezt a repertoárt?",
-      "deleteFailed": "Nem sikerült törölni a repertoárt"
+      "deleteFailed": "Nem sikerült törölni a repertoárt",
+      "updateFailed": "A repertoár nem frissíthető"
     },
     "detail": {
       "noDescription": "Nincs leírás",
@@ -307,7 +308,9 @@
       "description": "Leírás",
       "public": "Nyilvános",
       "kind": "Kategória",
-      "create": "Létrehozás"
+      "create": "Létrehozás",
+      "editTitle": "Repertoár szerkesztése",
+      "save": "Mentés"
     },
     "kind": {
       "none": "—",

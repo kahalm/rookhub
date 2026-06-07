@@ -293,7 +293,8 @@
       "loadFailed": "레퍼토리 로드 실패",
       "createFailed": "레퍼토리 생성 실패",
       "deleteConfirm": "이 레퍼토리를 삭제할까요?",
-      "deleteFailed": "레퍼토리 삭제 실패"
+      "deleteFailed": "레퍼토리 삭제 실패",
+      "updateFailed": "레퍼토리를 업데이트할 수 없습니다"
     },
     "detail": {
       "noDescription": "설명 없음",
@@ -307,7 +308,9 @@
       "description": "설명",
       "public": "공개",
       "kind": "카테고리",
-      "create": "만들기"
+      "create": "만들기",
+      "editTitle": "레퍼토리 편집",
+      "save": "저장"
     },
     "kind": {
       "none": "—",

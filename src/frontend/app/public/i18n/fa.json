@@ -293,7 +293,8 @@
       "loadFailed": "بارگذاری رپرتوارها ناموفق بود",
       "createFailed": "ساخت رپرتوار ناموفق بود",
       "deleteConfirm": "این رپرتوار حذف شود؟",
-      "deleteFailed": "حذف رپرتوار ناموفق بود"
+      "deleteFailed": "حذف رپرتوار ناموفق بود",
+      "updateFailed": "به‌روزرسانی رپرتوار ممکن نشد"
     },
     "detail": {
       "noDescription": "بدون توضیحات",
@@ -307,7 +308,9 @@
       "description": "توضیحات",
       "public": "عمومی",
       "kind": "دسته‌بندی",
-      "create": "ایجاد"
+      "create": "ایجاد",
+      "editTitle": "ویرایش رپرتوار",
+      "save": "ذخیره"
     },
     "kind": {
       "none": "—",

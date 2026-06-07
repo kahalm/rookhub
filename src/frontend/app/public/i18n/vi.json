@@ -293,7 +293,8 @@
       "loadFailed": "Không thể tải kho repertoire",
       "createFailed": "Không thể tạo repertoire",
       "deleteConfirm": "Xóa repertoire này?",
-      "deleteFailed": "Không thể xóa repertoire"
+      "deleteFailed": "Không thể xóa repertoire",
+      "updateFailed": "Không thể cập nhật hệ thống nước đi"
     },
     "detail": {
       "noDescription": "Không có mô tả",
@@ -307,7 +308,9 @@
       "description": "Mô tả",
       "public": "Công khai",
       "kind": "Danh mục",
-      "create": "Tạo"
+      "create": "Tạo",
+      "editTitle": "Chỉnh sửa hệ thống nước đi",
+      "save": "Lưu"
     },
     "kind": {
       "none": "—",

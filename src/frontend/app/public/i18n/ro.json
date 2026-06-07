@@ -293,7 +293,8 @@
       "loadFailed": "Încărcarea repertoriilor a eșuat",
       "createFailed": "Crearea repertoriului a eșuat",
       "deleteConfirm": "Ștergi acest repertoriu?",
-      "deleteFailed": "Ștergerea repertoriului a eșuat"
+      "deleteFailed": "Ștergerea repertoriului a eșuat",
+      "updateFailed": "Repertoriul nu a putut fi actualizat"
     },
     "detail": {
       "noDescription": "Fără descriere",
@@ -307,7 +308,9 @@
       "description": "Descriere",
       "public": "Public",
       "create": "Creează",
-      "kind": "Categorie"
+      "kind": "Categorie",
+      "editTitle": "Editare repertoriu",
+      "save": "Salvați"
     },
     "lines": {
       "allLines": "Toate liniile",

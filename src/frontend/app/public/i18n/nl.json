@@ -293,7 +293,8 @@
       "loadFailed": "Repertoires laden mislukt",
       "createFailed": "Repertoire aanmaken mislukt",
       "deleteConfirm": "Dit repertoire verwijderen?",
-      "deleteFailed": "Repertoire verwijderen mislukt"
+      "deleteFailed": "Repertoire verwijderen mislukt",
+      "updateFailed": "Repertoire kon niet worden bijgewerkt"
     },
     "detail": {
       "noDescription": "Geen beschrijving",
@@ -307,7 +308,9 @@
       "description": "Beschrijving",
       "public": "Openbaar",
       "kind": "Categorie",
-      "create": "Aanmaken"
+      "create": "Aanmaken",
+      "editTitle": "Repertoire bewerken",
+      "save": "Opslaan"
     },
     "kind": {
       "none": "—",

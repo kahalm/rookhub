@@ -293,7 +293,8 @@
       "loadFailed": "فشل تحميل المخزون",
       "createFailed": "فشل إنشاء المخزون",
       "deleteConfirm": "حذف هذا المخزون؟",
-      "deleteFailed": "فشل حذف المخزون"
+      "deleteFailed": "فشل حذف المخزون",
+      "updateFailed": "تعذّر تحديث الريبرتوار"
     },
     "detail": {
       "noDescription": "لا يوجد وصف",
@@ -307,7 +308,9 @@
       "description": "الوصف",
       "public": "عام",
       "kind": "الفئة",
-      "create": "إنشاء"
+      "create": "إنشاء",
+      "editTitle": "تعديل الريبرتوار",
+      "save": "حفظ"
     },
     "kind": {
       "none": "—",

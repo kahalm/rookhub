@@ -293,7 +293,8 @@
       "loadFailed": "Error al cargar repertorios",
       "createFailed": "Error al crear el repertorio",
       "deleteConfirm": "¿Eliminar este repertorio?",
-      "deleteFailed": "Error al eliminar el repertorio"
+      "deleteFailed": "Error al eliminar el repertorio",
+      "updateFailed": "No se pudo actualizar el repertorio"
     },
     "detail": {
       "noDescription": "Sin descripción",
@@ -307,7 +308,9 @@
       "description": "Descripción",
       "public": "Público",
       "kind": "Categoría",
-      "create": "Crear"
+      "create": "Crear",
+      "editTitle": "Editar repertorio",
+      "save": "Guardar"
     },
     "kind": {
       "none": "—",

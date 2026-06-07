@@ -49,6 +49,7 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
               </mat-card-content>
               <mat-card-actions>
                 <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+                <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
                 <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
               </mat-card-actions>
             </mat-card>
@@ -99,6 +100,18 @@ export class RepertoireListComponent implements OnInit {
         this.http.post('/api/repertoires', result).subscribe({
           next: () => this.loadRepertoires(),
           error: () => this.snackbar.info(this.translate.instant('repertoire.list.createFailed'))
+        });
+      }
+    });
+  }
+
+  openEditDialog(rep: Repertoire): void {
+    const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', data: rep });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.http.put(`/api/repertoires/${rep.id}`, result).subscribe({
+          next: () => this.loadRepertoires(),
+          error: () => this.snackbar.info(this.translate.instant('repertoire.list.updateFailed'))
         });
       }
     });

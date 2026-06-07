@@ -293,7 +293,8 @@
       "loadFailed": "レパートリーの読み込みに失敗しました",
       "createFailed": "レパートリーの作成に失敗しました",
       "deleteConfirm": "このレパートリーを削除しますか？",
-      "deleteFailed": "レパートリーの削除に失敗しました"
+      "deleteFailed": "レパートリーの削除に失敗しました",
+      "updateFailed": "レパートリーを更新できませんでした"
     },
     "detail": {
       "noDescription": "説明なし",
@@ -307,7 +308,9 @@
       "description": "説明",
       "public": "公開",
       "kind": "カテゴリー",
-      "create": "作成"
+      "create": "作成",
+      "editTitle": "レパートリーを編集",
+      "save": "保存"
     },
     "kind": {
       "none": "—",

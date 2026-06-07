@@ -293,7 +293,8 @@
       "loadFailed": "Nie udało się załadować repertuarów",
       "createFailed": "Nie udało się utworzyć repertuaru",
       "deleteConfirm": "Usunąć ten repertuar?",
-      "deleteFailed": "Nie udało się usunąć repertuaru"
+      "deleteFailed": "Nie udało się usunąć repertuaru",
+      "updateFailed": "Nie udało się zaktualizować repertuaru"
     },
     "detail": {
       "noDescription": "Brak opisu",
@@ -307,7 +308,9 @@
       "description": "Opis",
       "public": "Publiczny",
       "kind": "Kategoria",
-      "create": "Utwórz"
+      "create": "Utwórz",
+      "editTitle": "Edytuj repertuar",
+      "save": "Zapisz"
     },
     "kind": {
       "none": "—",

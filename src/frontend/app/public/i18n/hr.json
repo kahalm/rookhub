@@ -306,7 +306,8 @@
       "loadFailed": "Učitavanje repertoara nije uspjelo",
       "createFailed": "Stvaranje repertoara nije uspjelo",
       "deleteConfirm": "Izbrisati ovaj repertoar?",
-      "deleteFailed": "Brisanje repertoara nije uspjelo"
+      "deleteFailed": "Brisanje repertoara nije uspjelo",
+      "updateFailed": "Repertoar nije mogao biti ažuriran"
     },
     "detail": {
       "noDescription": "Nema opisa",
@@ -320,7 +321,9 @@
       "description": "Opis",
       "public": "Javno",
       "kind": "Kategorija",
-      "create": "Stvori"
+      "create": "Stvori",
+      "editTitle": "Uredi repertoar",
+      "save": "Spremi"
     },
     "kind": {
       "none": "—",

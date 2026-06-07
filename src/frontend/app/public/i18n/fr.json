@@ -293,7 +293,8 @@
       "loadFailed": "Impossible de charger les répertoires",
       "createFailed": "Impossible de créer le répertoire",
       "deleteConfirm": "Supprimer ce répertoire ?",
-      "deleteFailed": "Impossible de supprimer le répertoire"
+      "deleteFailed": "Impossible de supprimer le répertoire",
+      "updateFailed": "Le répertoire n'a pas pu être mis à jour"
     },
     "detail": {
       "noDescription": "Pas de description",
@@ -307,7 +308,9 @@
       "description": "Description",
       "public": "Public",
       "kind": "Catégorie",
-      "create": "Créer"
+      "create": "Créer",
+      "editTitle": "Modifier le répertoire",
+      "save": "Enregistrer"
     },
     "kind": {
       "none": "—",

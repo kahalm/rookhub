@@ -306,7 +306,8 @@
       "loadFailed": "Repertoires konnten nicht geladen werden",
       "createFailed": "Repertoire konnte nicht erstellt werden",
       "deleteConfirm": "Dieses Repertoire löschen?",
-      "deleteFailed": "Repertoire konnte nicht gelöscht werden"
+      "deleteFailed": "Repertoire konnte nicht gelöscht werden",
+      "updateFailed": "Repertoire konnte nicht aktualisiert werden"
     },
     "detail": {
       "noDescription": "Keine Beschreibung",
@@ -320,7 +321,9 @@
       "description": "Beschreibung",
       "public": "Öffentlich",
       "kind": "Kategorie",
-      "create": "Erstellen"
+      "create": "Erstellen",
+      "editTitle": "Repertoire bearbeiten",
+      "save": "Speichern"
     },
     "kind": {
       "none": "—",
