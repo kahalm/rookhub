@@ -410,7 +410,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           fen: this.lastSolvedFen,
           moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
           orientation: this.lastSolvedOrientation,
-          from: this.lastSolvedPuzzleId ? '/puzzles/' + this.lastSolvedPuzzleId : undefined,
+          from: this.puzzle?.id ? '/puzzles/' + this.puzzle.id : undefined,
         },
       });
       return;

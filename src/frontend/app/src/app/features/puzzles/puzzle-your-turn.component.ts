@@ -75,13 +75,13 @@ const ACTION_KEYS = {
           <mat-icon>analytics</mat-icon>
           {{ (showEval ? ek.hide : ek.show) | translate }}
         </button>
-        @if (state !== 'AWAITING_USER_MOVE') {
+        @if (hasMadeFirstMove || state !== 'AWAITING_USER_MOVE') {
           <button mat-button (click)="resetClicked.emit()">
             <mat-icon>replay</mat-icon>
             {{ ak.reset | translate }}
           </button>
         }
-        @if (showMouseslip && (state === 'PLAYING' || (state === 'THINKING' && showMouseslipInThinking))) {
+        @if (showMouseslip && (hasMadeFirstMove || state === 'PLAYING' || (state === 'THINKING' && showMouseslipInThinking))) {
           <button mat-button (click)="mouseslipClicked.emit()">
             <mat-icon>mouse</mat-icon>
             {{ ak.mouseslip | translate }}
@@ -116,10 +116,12 @@ export class PuzzleYourTurnComponent {
   @Input() gaveUp = false;
   /** null = keinen Timer anzeigen (Endless). */
   @Input() timerSeconds: number | null = null;
-  /** !mouseslipUsed && !onSolutionPath – berechnet im Eltern. */
+  /** !mouseslipUsed && (!onSolutionPath || hasMadeFirstMove) – berechnet im Eltern. */
   @Input() showMouseslip = false;
   /** Endless zeigt Mouseslip auch im THINKING-State. */
   @Input() showMouseslipInThinking = false;
+  /** User hat mindestens einen Zug gemacht – steuert Reset/Mouseslip-Sichtbarkeit auf Korrektpfad. */
+  @Input() hasMadeFirstMove = false;
 
   @Output() evalToggled = new EventEmitter<void>();
   @Output() resetClicked = new EventEmitter<void>();

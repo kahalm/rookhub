@@ -123,6 +123,8 @@ export abstract class BasePuzzleSolver {
     return this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING' || this.state === 'PLAYING';
   }
 
+  get hasMadeFirstMove(): boolean { return this.moveLog.length > 0; }
+
   /** SAN-Zugliste (Visualisierungs-Modus) mit korrekten Zugnummern ab der Trainingsstellung. */
   get vizMoveText(): string {
     return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
@@ -304,7 +306,29 @@ export abstract class BasePuzzleSolver {
   }
 
   mouseslip(): void {
-    if (this.mouseslipUsed || this.onSolutionPath) return;
+    if (this.mouseslipUsed) return;
+    if (this.onSolutionPath) {
+      // Lösungspfad-Mouseslip: letzten Korrekt-Zug (+ ggf. bereits gespielte Solver-Antwort) rückgängig.
+      if (this.moveLog.length === 0) return;
+      if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+      this.aborted = false;
+      this.solverEpoch++;
+      // Im THINKING-State hat der Solver noch nicht geantwortet → nur 1 Zug zurück;
+      // im AWAITING-State hat der Solver bereits gespielt → 2 Züge zurück.
+      const undoCount = this.state === 'AWAITING_USER_MOVE' ? 2 : 1;
+      for (let i = 0; i < undoCount; i++) this.chess.undo();
+      this.moveIndex -= undoCount;
+      if (this.visualizationMode) this.vizMoves.splice(-undoCount);
+      if (this.moveLog.length > 0 && this.moveLog[this.moveLog.length - 1].ok) this.moveLog.pop();
+      this.mouseslipUsed = true;
+      const hist = this.chess.history({ verbose: true });
+      const lm = hist.length > 0 ? hist[hist.length - 1] : undefined;
+      this.lastMove = lm ? [lm.from as Key, lm.to as Key] : undefined;
+      this.state = 'AWAITING_USER_MOVE';
+      this.moveStartTime = Date.now();
+      this.updateBoard();
+      return;
+    }
     this.mouseslipUsed = true;
     this.aborted = true;
     this.solverEpoch++;                         // verspätete Stockfish-Antwort verwerfen

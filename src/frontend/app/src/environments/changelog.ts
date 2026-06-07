@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.22';
+export const APP_VERSION = '0.96.23';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.23', date: '2026-06-07', changes: [
+    'Puzzle: Zugtext unter dem Brett jetzt größer und schwarz für besseren Kontrast.',
+    'Puzzle: Reset- und Mausslip-Schaltfläche erscheinen ab dem ersten Zug, auch wenn man im richtigen Lösungszweig ist.',
+    'Puzzle/Endless/Buch: Mausslip funktioniert jetzt auch auf dem Lösungspfad (nimmt den letzten korrekten Zug zurück).',
+    'Fix: „Letztes Puzzle reviewen" gibt nach dem Review das aktuelle (neue) Puzzle zurück, nicht das reviewte.',
+  ]},
   { version: '0.96.22', date: '2026-06-07', changes: [
     'Fix: Kibana-Dashboard-Link im Admin zeigt jetzt auf das korrekte Dashboard — Prod auf rookhub-prod-dashboard, Dev auf rookhub-dev-dashboard (statt der nicht existierenden ID rookhub-logging-dashboard).',
   ]},
