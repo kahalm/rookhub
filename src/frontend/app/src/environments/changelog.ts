@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.14';
+export const APP_VERSION = '0.96.16';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.16', date: '2026-06-07', changes: [
+    'Admin: Tagespuzzle neu generieren schickt Webhook an den Bot — dieser postet das neue Puzzle in Discord und hinterlässt im alten Thread einen Hinweis.',
+  ]},
   { version: '0.96.15', date: '2026-06-07', changes: [
     'Tagespuzzle/Claim-Session: War das Puzzle bereits eingeloggt gelöst, wird der anonyme Eintrag beim Login jetzt korrekt gelöscht statt als Duplikat stehen zu bleiben.',
   ]},

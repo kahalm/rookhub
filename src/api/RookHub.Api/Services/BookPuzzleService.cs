@@ -445,6 +445,16 @@ public class BookPuzzleService
         _logger.LogInformation(
             "DailyPuzzle regenerated: Date={Date} RetiredPuzzleId={Retired} NewPuzzleId={New}",
             date, retiredId, picked.Id);
+
+        var regeneratedDate = date;
+        var regeneratedId = picked.Id;
+        await _bgQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var hook = sp.GetService<SchachBotWebhookService>();
+            if (hook != null)
+                await hook.NotifyDailyRegeneratedAsync(regeneratedDate, regeneratedId, ct);
+        });
+
         return MapToDto(picked);
     }
 

@@ -158,6 +158,45 @@ public class SchachBotWebhookService
         catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-Weekly-Webhook fehlgeschlagen (weeklyPostId={Id})", weeklyPostId); }
     }
 
+    /// <summary>
+    /// Benachrichtigt den Bot, dass das Tagespuzzle für <paramref name="date"/> neu generiert wurde.
+    /// Der Bot postet das neue Puzzle in den Channel und archiviert den alten Thread.
+    /// Schluckt alle Fehler (best-effort, fire-and-forget).
+    /// </summary>
+    public async Task NotifyDailyRegeneratedAsync(DateOnly date, int newPuzzleId, CancellationToken ct = default)
+    {
+        var baseUrl = _config["SchachBot:WebhookUrl"];
+        var secret = _config["SchachBot:WebhookSecret"];
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(secret))
+            return;
+
+        var slash = baseUrl.LastIndexOf('/');
+        var url = slash > 0 ? baseUrl[..slash] + "/daily-regenerate" : baseUrl;
+
+        var payload = new { date = date.ToString("yyyy-MM-dd"), puzzleId = newPuzzleId };
+        string body;
+        try { body = JsonSerializer.Serialize(payload); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook: Payload nicht serialisierbar (date={Date})", date);
+            return;
+        }
+
+        var signature = ComputeHmacHex(secret, body);
+        try
+        {
+            using var content = new StringContent(body, Encoding.UTF8);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+            req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!resp.IsSuccessStatusCode)
+                _logger.LogWarning("SchachBot-DailyRegenerate-Webhook: HTTP {Status} (date={Date})", (int)resp.StatusCode, date);
+        }
+        catch (TaskCanceledException) { _logger.LogDebug("SchachBot-DailyRegenerate-Webhook abgebrochen (date={Date})", date); }
+        catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook fehlgeschlagen (date={Date})", date); }
+    }
+
     /// <summary>HMAC-SHA256 ueber <paramref name="body"/> mit <paramref name="secret"/>, als lowercase-hex.</summary>
     public static string ComputeHmacHex(string secret, string body)
     {
