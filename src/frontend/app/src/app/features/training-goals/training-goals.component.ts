@@ -185,40 +185,40 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
   `,
   styles: [`
     .tg-container { max-width: 1000px; margin: 16px auto; padding: 0 12px; }
-    .intro { color: #666; margin-top: -8px; }
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-top: -8px; }
     mat-card { margin-bottom: 16px; }
-    .muted { color: #888; font-style: italic; }
+    .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
     .small { font-size: .8rem; }
     .today-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
     .day-star { font-size: 44px; width: 44px; height: 44px; }
     .day-star.st-full { color: #f5b301; }
     .day-star.st-partial { color: #fb8c00; }
-    .day-star.st-none { color: #bdbdbd; }
+    .day-star.st-none { color: color-mix(in srgb, currentColor 25%, transparent); }
     .today-label { font-size: 1.1rem; font-weight: 600; }
-    .week-line { color: #666; font-size: .9rem; }
+    .week-line { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .9rem; }
     .cats { display: flex; flex-direction: column; gap: 12px; }
     .cat-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; margin-bottom: 4px; }
-    .cat-row mat-icon { color: #bdbdbd; }
+    .cat-row mat-icon { color: color-mix(in srgb, currentColor 25%, transparent); }
     .cat-row mat-icon.met { color: #2e7d32; }
     .cat-name { flex: 1; }
-    .weekly-tag { color: #888; font-size: .75rem; font-style: italic; }
-    .cat-val { color: #555; font-variant-numeric: tabular-nums; }
+    .weekly-tag { color: color-mix(in srgb, currentColor 47%, transparent); font-size: .75rem; font-style: italic; }
+    .cat-val { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }
-    .source-hint { display: flex; align-items: center; gap: 6px; color: #555; }
+    .source-hint { display: flex; align-items: center; gap: 6px; color: color-mix(in srgb, currentColor 65%, transparent); }
     .inline { font-size: 18px; width: 18px; height: 18px; }
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 8px 0; }
     .actions { display: flex; gap: 8px; margin-top: 8px; }
     .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
     .hm-col { display: flex; flex-direction: column; gap: 3px; }
-    .hm-cell { width: 12px; height: 12px; border-radius: 2px; background: #ebedf0; }
+    .hm-cell { width: 12px; height: 12px; border-radius: 2px; background: color-mix(in srgb, currentColor 10%, transparent); }
     .hm-cell.gl-1 { background: transparent; }
-    .hm-cell.gl0 { background: #ebedf0; }
+    .hm-cell.gl0 { background: color-mix(in srgb, currentColor 10%, transparent); }
     .hm-cell.gl2 { background: #fdd835; }
     .hm-cell.gl4 { background: #f5b301; }
     .legend { display: flex; gap: 16px; margin-top: 8px; }
-    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: #555; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-    .sw.gl0 { background: #ebedf0; } .sw.gl2 { background: #fdd835; } .sw.gl4 { background: #f5b301; }
+    .sw.gl0 { background: color-mix(in srgb, currentColor 10%, transparent); } .sw.gl2 { background: #fdd835; } .sw.gl4 { background: #f5b301; }
   `]
 })
 export class TrainingGoalsComponent implements OnInit {

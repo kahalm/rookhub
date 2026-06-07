@@ -77,13 +77,13 @@ import { environment } from '../environments/environment';
   `,
   styles: [`
     :host { display: block; }
-    .app-footer { text-align: center; padding: 8px; color: #888; font-size: 0.75rem; }
+    .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
-    .version-link:hover { color: #aaa; text-decoration: underline; }
-    .footer-sep { margin: 0 6px; color: #aaa; }
+    .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
+    .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
     .feedback-link { color: inherit; text-decoration: none; }
-    .feedback-link:hover { color: #aaa; text-decoration: underline; }
+    .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
     .changelog-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -96,11 +96,11 @@ import { environment } from '../environments/environment';
     .changelog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .changelog-header h3 { margin: 0; color: #fff; }
     .changelog-header button {
-      background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer;
+      background: none; border: none; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 1.5rem; cursor: pointer;
     }
-    .changelog-header button:hover { color: #fff; }
+    .changelog-header button:hover { color: inherit; }
     .changelog-entry { margin-bottom: 12px; }
-    .changelog-date { color: #666; font-size: 0.85rem; margin-left: 8px; }
+    .changelog-date { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; margin-left: 8px; }
     .changelog-entry ul { margin: 4px 0 0 20px; padding: 0; }
     .changelog-entry li { font-size: 0.85rem; margin-bottom: 2px; }
     .qs-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }

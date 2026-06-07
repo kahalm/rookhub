@@ -97,8 +97,8 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
     .friends-container { padding: 2rem; max-width: 800px; margin: 0 auto; }
     .search-card { display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .search-field { flex: 1; min-width: 0; margin-bottom: -1.25em; }
-    .empty-text { padding: 1rem; color: #888; }
-    .chess-identities { font-size: 0.75rem; color: #999; }
+    .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .chess-identities { font-size: 0.75rem; color: color-mix(in srgb, currentColor 40%, transparent); }
     @media (max-width: 768px) {
       .friends-container { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }

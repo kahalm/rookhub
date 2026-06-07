@@ -88,7 +88,7 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
     .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
-    .tournament-link:hover { background: rgba(0,0,0,0.04); }
+    .tournament-link:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     @media (max-width: 768px) {
       .dashboard { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }

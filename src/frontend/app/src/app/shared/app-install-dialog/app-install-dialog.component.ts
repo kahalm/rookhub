@@ -38,7 +38,7 @@ export const APK_DOWNLOAD_URL =
   styles: [`
     .steps { margin: 0 0 1rem; padding-left: 1.25rem; }
     .steps li { margin-bottom: 0.5rem; }
-    .ios-note { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
+    .ios-note { font-size: 0.85rem; color: color-mix(in srgb, currentColor 47%, transparent); margin-top: 0.5rem; }
     a[mat-raised-button] mat-icon { margin-right: 4px; vertical-align: middle; }
   `]
 })

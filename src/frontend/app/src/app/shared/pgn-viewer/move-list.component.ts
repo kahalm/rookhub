@@ -43,17 +43,17 @@ import { Move } from 'chess.js';
       align-content: flex-start;
       gap: 2px 4px;
     }
-    .move-number { color: #888; min-width: 28px; }
+    .move-number { color: color-mix(in srgb, currentColor 47%, transparent); min-width: 28px; }
     .move {
       cursor: pointer;
       padding: 1px 4px;
       border-radius: 3px;
     }
-    .move:hover { background: #e0e0e0; }
+    .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .move.active { background: #1976d2; color: white; }
     .comment {
       width: 100%;
-      color: #666;
+      color: color-mix(in srgb, currentColor 60%, transparent);
       font-style: italic;
       font-size: 12px;
       font-family: 'Roboto', sans-serif;

@@ -100,9 +100,9 @@ const ACTION_KEYS = {
     .ytp-timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .ytp-eval { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; flex-wrap: wrap; justify-content: center; }
     .ytp-eval-item { display: flex; gap: 0.25rem; align-items: center; }
-    .ytp-eval-label { color: rgba(0,0,0,0.55); font-size: 0.85em; }
+    .ytp-eval-label { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85em; }
     .ytp-eval-val { font-weight: 600; }
-    .ytp-eval-arrow { color: rgba(0,0,0,0.4); }
+    .ytp-eval-arrow { color: color-mix(in srgb, currentColor 40%, transparent); }
     .ytp-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
   `],
 })

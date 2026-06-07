@@ -78,8 +78,8 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
   `,
   styles: [`
     .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    .intro { color: #666; margin-bottom: 16px; }
-    .empty-hint { color: #666; font-style: italic; padding: 16px 0; }
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
+    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .course-grid {
       display: grid; gap: 16px;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -87,7 +87,7 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
     .course-card { display: flex; flex-direction: column; }
     .progress-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
     .progress-row mat-progress-bar { flex: 1; }
-    .progress-label { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: #444; white-space: nowrap; }
+    .progress-label { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); white-space: nowrap; }
     .done-hint { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 500; margin: 4px 0 0; }
     .done-hint mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .course-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

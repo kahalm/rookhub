@@ -5,12 +5,12 @@
       display: flex; justify-content: center; align-items: flex-start; padding: 2rem; overflow-y: auto;
     }
     .help-content {
-      background: white; border-radius: 12px; max-width: 600px; width: 100%;
+      background: var(--mat-sys-surface-container, white); border-radius: 12px; max-width: 600px; width: 100%;
       max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
     .help-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 1rem 1.5rem 0; position: sticky; top: 0; background: white; z-index: 1;
+      padding: 1rem 1.5rem 0; position: sticky; top: 0; background: var(--mat-sys-surface-container, white); z-index: 1;
     }
     .help-header h2 { margin: 0; }
     .help-body { padding: 0 1.5rem 1.5rem; }
@@ -25,7 +25,7 @@
     .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
     .config-fields mat-form-field:last-child { grid-column: 1 / -1; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
-    .threshold-explain { font-size: 0.8em; color: rgba(0,0,0,0.5); margin: 0 0 0.5rem; }
+    .threshold-explain { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); margin: 0 0 0.5rem; }
     .threshold-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
     .threshold-field-wrap { position: relative; }
     .auto-hint {
@@ -38,12 +38,12 @@
     .curve-points { display: flex; flex-direction: column; gap: 0.25rem; }
     .fasttrack-phase { display: flex; justify-content: space-between; font-size: 0.85em; }
     .phase-label { font-weight: 500; }
-    .phase-detail { color: rgba(0,0,0,0.6); font-variant-numeric: tabular-nums; }
+    .phase-detail { color: color-mix(in srgb, currentColor 60%, transparent); font-variant-numeric: tabular-nums; }
     .level-preview { margin-bottom: 1rem; }
-    .level-preview h4 { margin: 0 0 0.5rem; color: rgba(0,0,0,0.6); font-size: 0.9em; }
+    .level-preview h4 { margin: 0 0 0.5rem; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9em; }
     .preview-levels { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .preview-chip {
-      background: rgba(0,0,0,0.06); border-radius: 12px; padding: 4px 12px;
+      background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 12px; padding: 4px 12px;
       font-size: 0.85em; font-variant-numeric: tabular-nums;
     }
     .theme-section { margin-bottom: 1rem; }
@@ -52,14 +52,14 @@
     .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
     .viz-radio-item {
       display: flex; align-items: center; padding: 0.2rem 0.65rem;
-      border: 1px solid rgba(0,0,0,0.22); border-radius: 16px;
+      border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 16px;
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
       &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
-      &:not(.selected):hover { background: rgba(0,0,0,0.06); }
+      &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
-    .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
     .viz-arrow-toggle {
       display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
       font-size: 0.85em; cursor: pointer; user-select: none;
@@ -70,7 +70,7 @@
       transition: border-color 0.15s;
     }
     .theme-chip.active { border-color: #1976d2; }
-    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .settings-bar { display: flex; justify-content: flex-end; }
     .settings-gear.active { color: #1976d2; }
     .config-lives { justify-content: center; margin: 1rem 0; }
@@ -78,7 +78,7 @@
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #ff9800; font-weight: 500; margin-bottom: 1rem;
     }
-    .session-count { text-align: center; font-size: 0.85em; color: rgba(0,0,0,0.5); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+    .session-count { text-align: center; font-size: 0.85em; color: color-mix(in srgb, currentColor 50%, transparent); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
     .history-link { font-size: 0.85em; min-height: 0; padding: 0 8px; line-height: 28px; }
     .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
     .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
@@ -91,7 +91,7 @@
     }
     .resume-info {
       display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
-      font-size: 0.9em; color: rgba(0,0,0,0.7);
+      font-size: 0.9em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
     .resume-info mat-icon { color: #1976d2; }
     .resume-actions { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -108,31 +108,31 @@
 
     .board-hint {
       margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 0.88em; color: rgba(0,0,0,0.5);
+      font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
     .board-hint-countdown { color: #e65100; font-weight: 500; }
     .board-hint-show {
-      padding: 0.2rem 0.8rem; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9em;
-      user-select: none; touch-action: manipulation;
+      padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
+      user-select: none; touch-action: manipulation; color: inherit;
     }
-    .board-hint-show:active { background: #e3f2fd; }
+    .board-hint-show:active { background: color-mix(in srgb, currentColor 10%, transparent); }
 
     // Kompakte Pillen-Reihe direkt unter dem Brett: Puzzle-Rating, Level, Herzen.
     // Soll auch auf kleinen Handy-Screens ohne Scrollen sichtbar sein.
     .quick-stats {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
       padding: 8px 12px; border-radius: 8px;
-      background: rgba(0,0,0,0.04);
+      background: color-mix(in srgb, currentColor 4%, transparent);
     }
     .qs-pill {
       display: inline-flex; align-items: center; gap: 4px;
       font-weight: 500; font-size: 0.95em;
     }
-    .qs-pill mat-icon { font-size: 18px; width: 18px; height: 18px; color: rgba(0,0,0,0.55); }
+    .qs-pill mat-icon { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, currentColor 55%, transparent); }
     .qs-hearts { display: inline-flex; gap: 2px; margin-left: auto; }
-    .heart-sm { font-size: 20px; width: 20px; height: 20px; color: rgba(0,0,0,0.25); }
+    .heart-sm { font-size: 20px; width: 20px; height: 20px; color: color-mix(in srgb, currentColor 25%, transparent); }
     .heart-sm.full { color: #f44336; }
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.75rem 0; }
     .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
@@ -140,36 +140,36 @@
     .solved .result-icon { color: #4caf50; }
     .failed .result-icon { color: #f44336; }
     .failed .gave-up-icon { color: #ff9800; }
-    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
     .review-last-btn { width: 100%; height: 40px; font-size: 0.9em; }
     .review-last-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
-    .solution-review { color: rgba(0,0,0,0.6); }
+    .solution-review { color: color-mix(in srgb, currentColor 60%, transparent); }
     .eval-compare {
       display: flex; align-items: center; gap: 0.5rem;
-      padding: 6px 14px; border-radius: 8px; background: rgba(0,0,0,0.04);
+      padding: 6px 14px; border-radius: 8px; background: color-mix(in srgb, currentColor 4%, transparent);
       font-variant-numeric: tabular-nums;
     }
     .eval-item { display: flex; flex-direction: column; align-items: center; }
-    .eval-label { font-size: 0.7em; color: rgba(0,0,0,0.5); text-transform: uppercase; }
+    .eval-label { font-size: 0.7em; color: color-mix(in srgb, currentColor 50%, transparent); text-transform: uppercase; }
     .eval-value { font-size: 1.2em; font-weight: bold; }
-    .eval-arrow { color: rgba(0,0,0,0.3); font-size: 1.2em; }
+    .eval-arrow { color: color-mix(in srgb, currentColor 30%, transparent); font-size: 1.2em; }
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
-    .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
+    .stat-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lives-display { display: flex; gap: 0.25rem; justify-content: center; margin-top: 0.75rem; }
     .heart { font-size: 28px; width: 28px; height: 28px; }
     .heart.full { color: #f44336; }
-    .heart.empty { color: rgba(0,0,0,0.2); }
+    .heart.empty { color: color-mix(in srgb, currentColor 20%, transparent); }
     .phase-indicator {
-      text-align: center; font-size: 0.8em; color: rgba(0,0,0,0.5);
+      text-align: center; font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent);
       margin-top: 0.25rem; font-style: italic;
     }
     .depth-control {
       display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-      margin-top: 0.5rem; font-size: 0.85em; color: rgba(0,0,0,0.6);
+      margin-top: 0.5rem; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent);
     }
     .depth-control mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .depth-control input[type="range"] { width: 100px; cursor: pointer; }
@@ -177,15 +177,15 @@
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .rating-badge { font-weight: bold; font-size: 1.1em; }
     .share-puzzle-btn { margin-top: 0.25rem; }
-    .level-badge { font-size: 0.9em; color: rgba(0,0,0,0.6); }
+    .level-badge { font-size: 0.9em; color: color-mix(in srgb, currentColor 60%, transparent); }
 
     .gameover-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .gameover-card { max-width: 500px; width: 100%; text-align: center; }
     .gameover-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin: 1.5rem 0; }
     .gameover-stat { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
-    .gameover-stat mat-icon { color: rgba(0,0,0,0.5); }
+    .gameover-stat mat-icon { color: color-mix(in srgb, currentColor 50%, transparent); }
     .go-value { font-size: 1.5em; font-weight: bold; }
-    .go-label { font-size: 0.85em; color: rgba(0,0,0,0.6); }
+    .go-label { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .mistake-ratings {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
       color: #f44336; font-size: 0.9em; margin-bottom: 1rem;
@@ -200,9 +200,9 @@
     .stockfish-text { font-size: 1.3em; font-weight: bold; color: #1976d2; margin: 0; }
 
     .puzzle-review { margin: 1rem 0; text-align: left; }
-    .review-title { margin: 0 0 0.5rem; font-size: 0.95em; color: rgba(0,0,0,0.6); }
+    .review-title { margin: 0 0 0.5rem; font-size: 0.95em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .review-list {
-      max-height: 240px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.08);
+      max-height: 240px; overflow-y: auto; border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
       border-radius: 8px;
     }
     .review-item {
@@ -210,11 +210,11 @@
       cursor: pointer; transition: background 0.15s;
       font-variant-numeric: tabular-nums;
     }
-    .review-item:hover { background: rgba(0,0,0,0.04); }
-    .review-item:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .review-item:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
+    .review-item:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
     .review-failed { background: rgba(244,67,54,0.06); }
     .review-failed:hover { background: rgba(244,67,54,0.12); }
-    .review-number { font-weight: 500; min-width: 32px; color: rgba(0,0,0,0.6); }
+    .review-number { font-weight: 500; min-width: 32px; color: color-mix(in srgb, currentColor 60%, transparent); }
     .review-rating { flex: 1; font-weight: bold; }
     .review-icon { font-size: 20px; width: 20px; height: 20px; }
     .review-icon.solved { color: #4caf50; }

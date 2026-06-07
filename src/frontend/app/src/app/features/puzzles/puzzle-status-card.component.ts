@@ -211,7 +211,7 @@ const CK = {
     .psc-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
     .psc-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
     .psc-text { font-size: 1.1em; font-weight: 500; margin: 0; }
-    .psc-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .psc-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .psc-timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .psc-result-icon { font-size: 48px; width: 48px; height: 48px; }
     .psc-solved .psc-result-icon { color: #4caf50; }

@@ -13,10 +13,10 @@
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
     .eval-item { display: flex; align-items: center; gap: 0.25rem; }
-    .eval-label { font-size: 0.8em; color: rgba(0,0,0,0.5); }
+    .eval-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); }
     .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
-    .eval-arrow { color: rgba(0,0,0,0.4); }
-    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .eval-arrow { color: color-mix(in srgb, currentColor 40%, transparent); }
+    .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .elo-change { font-size: 1.2em; font-weight: bold; }
     .elo-up { color: #4caf50; }
     .elo-down { color: #f44336; }
@@ -25,7 +25,7 @@
     .share-puzzle-btn { margin-top: 0.25rem; }
     .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
-    .stat-label { font-size: 0.8em; color: rgba(0,0,0,0.6); }
+    .stat-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .filter-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     .filter-field { flex: 1; }
     .viz-radios { margin-bottom: 0.75rem; }
@@ -33,14 +33,14 @@
     .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
     .viz-radio-item {
       display: flex; align-items: center; padding: 0.2rem 0.65rem;
-      border: 1px solid rgba(0,0,0,0.22); border-radius: 16px;
+      border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 16px;
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
       &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
-      &:not(.selected):hover { background: rgba(0,0,0,0.06); }
+      &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
-    .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
     .viz-arrow-toggle {
       display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
       font-size: 0.85em; cursor: pointer; user-select: none;
@@ -60,20 +60,20 @@
       transition: border-color 0.15s;
     }
     .theme-chip.active { border-color: #1976d2; }
-    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
 
     .board-hint {
       margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 1em; color: #000;
+      font-size: 1em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
     .board-hint-countdown { color: #e65100; font-weight: 500; }
     .board-hint-show {
-      padding: 0.2rem 0.8rem; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9em;
-      user-select: none; touch-action: manipulation;
+      padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
+      user-select: none; touch-action: manipulation; color: inherit;
     }
-    .board-hint-show:active { background: #e3f2fd; }
+    .board-hint-show:active { background: color-mix(in srgb, currentColor 10%, transparent); }
     .bottom-actions { display: flex; flex-direction: column; gap: 0.5rem; }
     .bottom-actions button, .share-full { width: 100%; }
 

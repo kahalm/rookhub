@@ -55,7 +55,7 @@ import { SnackbarService } from '../../core/snackbar.service';
     .auth-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 80vh; }
     .legal-links { margin-top: 1rem; text-align: center; font-size: 0.8rem; }
     .legal-links a { color: #90caf9; }
-    .legal-links span { color: #777; margin: 0 6px; }
+    .legal-links span { color: color-mix(in srgb, currentColor 53%, transparent); margin: 0 6px; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }

@@ -13,11 +13,11 @@
     .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
     .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
     .eval-item { display: flex; align-items: center; gap: 0.25rem; }
-    .eval-label { font-size: 0.8em; color: rgba(0,0,0,0.5); }
+    .eval-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); }
     .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
-    .eval-arrow { color: rgba(0,0,0,0.4); }
-    .countdown-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; color: rgba(0,0,0,0.5); }
-    .alt-hint { font-size: 0.85em; color: rgba(0,0,0,0.6); margin: 0; text-align: center; }
+    .eval-arrow { color: color-mix(in srgb, currentColor 40%, transparent); }
+    .countdown-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; color: color-mix(in srgb, currentColor 50%, transparent); }
+    .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
     .settings-gear.active { color: #1976d2; }
     .give-up-btn { opacity: 0.6; font-size: 0.85em !important; }
@@ -25,16 +25,16 @@
     /* Hinweistext unter dem Brett */
     .board-hint {
       margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 0.88em; color: rgba(0,0,0,0.5);
+      font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
     .board-hint-countdown { color: #e65100; font-weight: 500; }
     .board-hint-show {
-      padding: 0.2rem 0.8rem; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.9em;
-      user-select: none; touch-action: manipulation;
+      padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
+      user-select: none; touch-action: manipulation; color: inherit;
     }
-    .board-hint-show:active { background: #e3f2fd; }
+    .board-hint-show:active { background: color-mix(in srgb, currentColor 10%, transparent); }
 
     /* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
     .context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
@@ -42,7 +42,7 @@
     .context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
     .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
-    .context-card .ctx-stats { font-size: 0.85em; color: rgba(0,0,0,0.55); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
+    .context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
     .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
     .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
@@ -50,9 +50,9 @@
 
     /* Puzzle-Metadaten */
     .meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
-    .meta-chapter { color: rgba(0,0,0,0.7); margin: 0; font-size: 0.95em; }
-    .meta-comment { font-style: italic; color: rgba(0,0,0,0.55); margin: 0; font-size: 0.88em; }
-    .book-name { font-size: 0.82em; color: rgba(0,0,0,0.45); }
+    .meta-chapter { color: color-mix(in srgb, currentColor 70%, transparent); margin: 0; font-size: 0.95em; }
+    .meta-comment { font-style: italic; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0; font-size: 0.88em; }
+    .book-name { font-size: 0.82em; color: color-mix(in srgb, currentColor 45%, transparent); }
     .difficulty-badge {
       font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;
     }
@@ -74,14 +74,14 @@
     .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
     .viz-radio-item {
       display: flex; align-items: center; padding: 0.2rem 0.65rem;
-      border: 1px solid rgba(0,0,0,0.22); border-radius: 16px;
+      border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 16px;
       cursor: pointer; font-size: 0.85em; user-select: none;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
       input[type=radio] { display: none; }
       &.selected { background: #1976d2; color: #fff; border-color: #1976d2; }
-      &:not(.selected):hover { background: rgba(0,0,0,0.06); }
+      &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     }
-    .viz-level-desc { font-size: 0.8em; color: rgba(0,0,0,0.55); }
+    .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
     .viz-arrow-toggle {
       display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
       font-size: 0.85em; cursor: pointer; user-select: none;

@@ -89,7 +89,7 @@ export class CreateTokenDialogComponent {
   `,
   styles: [`
     .warning { color: #d32f2f; font-weight: 500; }
-    .token-box { display: flex; align-items: center; gap: 8px; background: #f5f5f5; padding: 8px 12px; border-radius: 4px; }
+    .token-box { display: flex; align-items: center; gap: 8px; background: var(--mat-sys-surface-container, #f5f5f5); padding: 8px 12px; border-radius: 4px; }
     .token-box code { flex: 1; word-break: break-all; font-family: monospace; font-size: 0.9rem; }
     .copied { color: #2e7d32; font-size: 0.85rem; }
   `]
@@ -167,10 +167,10 @@ export class ShowTokenDialogComponent {
   `,
   styles: [`
     .tokens-card { margin-top: 1rem; }
-    .empty-hint { color: #666; font-style: italic; }
+    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
     .tokens-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid #eee; text-align: left; }
-    .tokens-table code { font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+    .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); text-align: left; }
+    .tokens-table code { font-family: monospace; background: color-mix(in srgb, currentColor 6%, transparent); padding: 2px 6px; border-radius: 3px; }
   `]
 })
 export class ApiTokensComponent implements OnInit {

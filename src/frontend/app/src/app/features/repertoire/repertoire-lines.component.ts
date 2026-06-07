@@ -58,7 +58,7 @@ import { RepertoireLine } from './repertoire-viewer.service';
       cursor: pointer;
       transition: background 0.15s;
     }
-    .line-item:hover { background: #f5f5f5; }
+    .line-item:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .line-players {
       display: flex;
       justify-content: space-between;
@@ -67,11 +67,11 @@ import { RepertoireLine } from './repertoire-viewer.service';
       font-size: 14px;
     }
     .line-result { color: #1976d2; font-weight: 600; font-size: 13px; }
-    .line-opening { color: #666; font-size: 12px; margin-top: 2px; }
+    .line-opening { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin-top: 2px; }
     .line-summary {
       font-family: 'Roboto Mono', monospace;
       font-size: 12px;
-      color: #888;
+      color: color-mix(in srgb, currentColor 47%, transparent);
       margin-top: 4px;
       white-space: nowrap;
       overflow: hidden;
@@ -84,12 +84,12 @@ import { RepertoireLine } from './repertoire-viewer.service';
       justify-content: space-between;
       padding: 4px 16px 8px;
       font-size: 14px;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
     .players { font-weight: 500; }
     .result { color: #1976d2; font-weight: 600; }
     .move-list-wrap { flex: 1; overflow: hidden; }
-    .empty { padding: 2rem; text-align: center; color: #888; }
+    .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
 export class RepertoireLinesComponent {

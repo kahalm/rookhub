@@ -56,8 +56,8 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
       border-radius: 4px;
       font-weight: 500;
     }
-    .crumb:hover { background: #e0e0e0; }
-    .crumb-sep { font-size: 18px; width: 18px; height: 18px; color: #999; }
+    .crumb:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+    .crumb-sep { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, currentColor 40%, transparent); }
     .back-btn { align-self: flex-start; margin: 4px; }
     .children-list { flex: 1; overflow-y: auto; }
     .child-item {
@@ -65,18 +65,18 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
       justify-content: space-between;
       align-items: center;
       padding: 12px 16px;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
       cursor: pointer;
       transition: background 0.15s;
     }
-    .child-item:hover { background: #f5f5f5; }
+    .child-item:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .child-san {
       font-family: 'Roboto Mono', monospace;
       font-weight: 600;
       font-size: 15px;
     }
-    .child-count { color: #666; font-size: 13px; }
-    .empty { padding: 2rem; text-align: center; color: #888; }
+    .child-count { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 13px; }
+    .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
 export class RepertoireTreeComponent {

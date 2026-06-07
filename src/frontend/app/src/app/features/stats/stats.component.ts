@@ -294,20 +294,20 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .stat { text-align: center; padding: 8px; }
     .stat .val { font-size: 1.6rem; font-weight: 700; color: #1976d2; }
-    .stat .lbl { font-size: .8rem; color: #666; }
+    .stat .lbl { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .chart-card mat-card-header { display: flex; align-items: center; justify-content: space-between; }
     .level-field { width: 130px; }
     .chart { display: flex; gap: 6px; height: 180px; }
-    .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: #888; }
-    .svg { flex: 1; height: 180px; background: linear-gradient(#fafafa,#f0f0f0); border-radius: 4px; }
-    .x-axis { display: flex; justify-content: space-between; font-size: .7rem; color: #888; margin-top: 2px; }
+    .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .svg { flex: 1; height: 180px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 4px; }
+    .x-axis { display: flex; justify-content: space-between; font-size: .7rem; color: color-mix(in srgb, currentColor 47%, transparent); margin-top: 2px; }
     .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 8px; }
-    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: #555; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .legend-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-    .muted { color: #888; font-style: italic; }
+    .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
     .perlevel { display: flex; flex-wrap: wrap; gap: 12px; }
-    .pl { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; background: #f5f5f5; border-radius: 6px; }
-    .pl-lvl { font-size: .75rem; color: #666; }
+    .pl { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 6px; }
+    .pl-lvl { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .pl-elo { font-size: 1.1rem; font-weight: 600; }
     .full-width { width: 100%; }
     .res-ok { color: #2e7d32; } .res-fail { color: #c62828; }
@@ -316,20 +316,20 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .theme-list { display: flex; flex-direction: column; gap: 6px; }
     .theme-row { display: flex; align-items: center; gap: 10px; font-size: .85rem; }
     .theme-name { width: 130px; flex: 0 0 auto; text-transform: capitalize; }
-    .theme-bar { flex: 1; height: 12px; background: #eee; border-radius: 6px; overflow: hidden; }
+    .theme-bar { flex: 1; height: 12px; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 6px; overflow: hidden; }
     .theme-fill { height: 100%; background: #1976d2; }
-    .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: #555; font-variant-numeric: tabular-nums; }
+    .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .bands { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 8px; }
     .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 28px; }
-    .band-bar { width: 60%; flex: 1; display: flex; align-items: flex-end; background: #f0f0f0; border-radius: 3px; }
+    .band-bar { width: 60%; flex: 1; display: flex; align-items: flex-end; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 3px; }
     .band-fill { width: 100%; background: #43a047; border-radius: 3px; min-height: 2px; }
-    .band-lbl { font-size: .65rem; color: #888; }
+    .band-lbl { font-size: .65rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .band-cnt { font-size: .75rem; font-weight: 600; }
     .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
     .hm-col { display: flex; flex-direction: column; gap: 3px; }
-    .hm-cell { width: 12px; height: 12px; border-radius: 2px; background: #ebedf0; }
+    .hm-cell { width: 12px; height: 12px; border-radius: 2px; background: color-mix(in srgb, currentColor 10%, transparent); }
     .hm-cell.lvl-1 { background: transparent; }
-    .hm-cell.lvl0 { background: #ebedf0; }
+    .hm-cell.lvl0 { background: color-mix(in srgb, currentColor 10%, transparent); }
     .hm-cell.lvl1 { background: #c6e48b; }
     .hm-cell.lvl2 { background: #7bc96f; }
     .hm-cell.lvl3 { background: #239a3b; }

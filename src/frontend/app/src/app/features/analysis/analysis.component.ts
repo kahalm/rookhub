@@ -151,11 +151,11 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .board-wrap { flex: 1; min-width: 260px; }
     .side-col { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
     .engine-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .depth { font-size: .8rem; color: #666; }
+    .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .he-spacer { flex: 1 1 auto; }
     .num-field { width: 104px; }
     .back-btn { width: 100%; margin-bottom: 8px; }
-    .muted { color: #888; font-style: italic; margin: 8px 0 0; }
+    .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .line-row { display: flex; gap: 8px; font-size: .9rem; }
     .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: #1b5e20; }
@@ -164,9 +164,9 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .controls { display: flex; align-items: center; gap: 2px; }
     .controls .spacer { flex: 1; }
     .movelist { margin-top: 8px; line-height: 1.9; }
-    .moveno { color: #999; margin: 0 2px 0 8px; font-size: .85rem; }
+    .moveno { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 2px 0 8px; font-size: .85rem; }
     .move { cursor: pointer; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New', monospace; }
-    .move:hover { background: rgba(0,0,0,.06); }
+    .move:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .move.active { background: #1976d2; color: #fff; }
     .io-card .full { width: 100%; }
     .io-actions { display: flex; gap: 8px; margin-bottom: 8px; }

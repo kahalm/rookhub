@@ -119,7 +119,7 @@ export interface PgnViewerData {
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
       flex-shrink: 0;
     }
     .header-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
@@ -133,7 +133,7 @@ export interface PgnViewerData {
       font-size: 14px;
     }
     .result { color: #1976d2; font-weight: 500; }
-    .event, .date { color: #666; }
+    .event, .date { color: color-mix(in srgb, currentColor 60%, transparent); }
 
     .viewer-body {
       display: flex;
@@ -153,7 +153,7 @@ export interface PgnViewerData {
     .moves-section {
       flex: 1;
       overflow: hidden;
-      border: 1px solid #e0e0e0;
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
       border-radius: 4px;
       min-width: 180px;
     }

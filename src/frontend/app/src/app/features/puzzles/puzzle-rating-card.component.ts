@@ -38,7 +38,7 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
     .prc-card { margin-bottom: 0; }
     .prc-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
     .prc-rating { font-weight: bold; font-size: 1.1em; }
-    .prc-level { font-size: 0.9em; color: rgba(0,0,0,0.6); }
+    .prc-level { font-size: 0.9em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .prc-share { width: 100%; }
   `],
 })

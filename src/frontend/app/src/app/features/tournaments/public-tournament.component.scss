@@ -17,19 +17,19 @@
     .player-cards { padding: 0.5rem 0; }
     .player-card {
       padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
       cursor: pointer;
     }
-    .player-card:hover { background: rgba(0,0,0,0.02); }
+    .player-card:hover { background: color-mix(in srgb, currentColor 2%, transparent); }
     .player-main {
       display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.95rem;
     }
-    .player-snr { color: #888; min-width: 2rem; }
+    .player-snr { color: color-mix(in srgb, currentColor 47%, transparent); min-width: 2rem; }
     .player-title { font-weight: 600; color: #1565c0; }
     .player-name { font-weight: 500; }
     .player-details {
       display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem;
-      padding-left: 2.4rem; font-size: 0.82rem; color: #666;
+      padding-left: 2.4rem; font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent);
     }
     .player-details span:not(:last-child)::after { content: "\\00b7"; margin-left: 0.5rem; }
 
@@ -38,14 +38,14 @@
     .pairing-cards { padding: 0.5rem 0; }
     .pairing-card {
       display: flex; gap: 0.75rem; padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgba(0,0,0,0.08); align-items: center;
+      border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); align-items: center;
     }
-    .pairing-board { color: #888; min-width: 1.5rem; font-size: 0.85rem; }
+    .pairing-board { color: color-mix(in srgb, currentColor 47%, transparent); min-width: 1.5rem; font-size: 0.85rem; }
     .pairing-teams { flex: 1; min-width: 0; }
     .pairing-team {
       font-size: 0.93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .pairing-result { font-size: 0.82rem; color: #666; padding: 0.15rem 0; white-space: nowrap; }
+    .pairing-result { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); padding: 0.15rem 0; white-space: nowrap; }
 
     @media (max-width: 768px) {
       .detail-container { padding: 0.75rem; }

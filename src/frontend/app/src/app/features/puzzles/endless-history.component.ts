@@ -206,30 +206,30 @@ interface EndlessHistoryResponse {
     mat-card-title { display: flex; align-items: center; gap: 0.5rem; }
     .loading { display: flex; justify-content: center; padding: 3rem 0; }
     .empty-state { text-align: center; padding: 3rem 1rem; }
-    .empty-icon { font-size: 48px; width: 48px; height: 48px; color: rgba(0,0,0,0.3); }
-    .empty-state p { color: rgba(0,0,0,0.5); margin: 1rem 0; }
+    .empty-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 30%, transparent); }
+    .empty-state p { color: color-mix(in srgb, currentColor 50%, transparent); margin: 1rem 0; }
     .history-table { width: 100%; }
     .back-link { margin-top: 1rem; }
     th.mat-mdc-header-cell { font-weight: 600; }
     .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-    .selection-count { font-size: 0.875rem; color: rgba(0,0,0,0.6); }
+    .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .archived-row { opacity: 0.5; }
 
     .mobile-only { display: none; }
     .session-card {
-      padding: 0.75rem; border-bottom: 1px solid rgba(0,0,0,0.08);
+      padding: 0.75rem; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
     }
     .session-card-header {
       display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
     }
     .session-date { font-weight: 500; font-size: 0.9rem; }
-    .archived-icon { font-size: 16px; width: 16px; height: 16px; color: rgba(0,0,0,0.4); }
+    .archived-icon { font-size: 16px; width: 16px; height: 16px; color: color-mix(in srgb, currentColor 40%, transparent); }
     .session-card-stats {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.25rem; text-align: center;
     }
     .session-stat-value { font-weight: 600; font-size: 0.95rem; display: block; }
-    .session-stat-label { font-size: 0.7rem; color: rgba(0,0,0,0.5); }
+    .session-stat-label { font-size: 0.7rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .session-mistakes {
       display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem;
       font-size: 0.8rem; color: #f44336;

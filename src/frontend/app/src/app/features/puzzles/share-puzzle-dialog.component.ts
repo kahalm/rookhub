@@ -32,8 +32,8 @@ import { QRCodeComponent } from 'angularx-qrcode';
     .qr-container { display: flex; justify-content: center; margin-bottom: 1rem; }
     .link-row { display: flex; align-items: center; gap: 0.5rem; }
     .link-input {
-      flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;
-      font-size: 0.85rem; background: #f5f5f5; color: #333;
+      flex: 1; padding: 0.5rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 4px;
+      font-size: 0.85rem; background: var(--mat-sys-surface-container, #f5f5f5); color: inherit;
     }
     .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
   `]

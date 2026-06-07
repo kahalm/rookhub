@@ -28,7 +28,7 @@ import { TranslateModule } from '@ngx-translate/core';
     .puzzle-tags-toggle:hover { text-decoration: underline; }
     .puzzle-tags-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .puzzle-tags-chip {
-      background: rgba(0,0,0,0.08); border-radius: 12px; padding: 2px 10px;
+      background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 12px; padding: 2px 10px;
       font-size: 0.85em; white-space: nowrap;
     }
   `],

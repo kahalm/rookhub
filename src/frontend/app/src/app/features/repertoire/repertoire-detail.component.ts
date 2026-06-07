@@ -121,7 +121,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
       gap: 1rem;
     }
     .header-info h2 { margin: 0; }
-    .subtitle { color: #666; font-size: 14px; }
+    .subtitle { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 14px; }
 
     .viewer-layout {
       display: flex;

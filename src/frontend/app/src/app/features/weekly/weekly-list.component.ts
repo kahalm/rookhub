@@ -171,36 +171,36 @@ interface WeeklyPostRow extends WeeklyPost {
   `,
   styles: [`
     .weekly-container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
-    .intro { color: #666; margin-bottom: 16px; }
-    .empty-hint { color: #666; font-style: italic; padding: 16px 0; }
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
+    .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .full-width { width: 100%; }
     .upload-card { margin-bottom: 20px; }
     .upload-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .f-date, .f-time { width: 150px; }
     .f-title { flex: 1; min-width: 180px; }
-    .upload-hint { color: #888; font-size: 0.8rem; margin: 4px 0 0; }
+    .upload-hint { color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.8rem; margin: 4px 0 0; }
     .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
     .inline-time { margin-left: 6px; }
     .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
     .wp-prog { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .wp-solved { color: #2e7d32; font-weight: 600; }
     .wp-failed { color: #c62828; font-weight: 600; }
-    .wp-slash { color: #999; margin: 0 4px; }
-    .wp-pct { color: #555; margin-left: 6px; }
-    .wp-time { color: #555; margin-left: 6px; }
-    .wp-none { color: #bbb; }
+    .wp-slash { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 4px; }
+    .wp-pct { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
+    .wp-time { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
+    .wp-none { color: color-mix(in srgb, currentColor 25%, transparent); }
     .detail-row.collapsed { display: none; }
     .detail-row td { padding: 0; border-bottom: none; }
     .lb { padding: 8px 12px 16px; }
     .lb-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-    .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #eee; }
-    .lb-table th { color: #888; font-weight: 600; font-size: 0.8rem; }
-    .lb-rank { width: 2.5em; color: #999; }
+    .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
+    .lb-table th { color: color-mix(in srgb, currentColor 47%, transparent); font-weight: 600; font-size: 0.8rem; }
+    .lb-rank { width: 2.5em; color: color-mix(in srgb, currentColor 40%, transparent); }
     .lb-acc, .lb-time { white-space: nowrap; }
     .lb-acc { text-align: right; }
-    .lb-time { text-align: right; color: #555; }
+    .lb-time { text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); }
     .lb-done { font-size: 16px; height: 16px; width: 16px; vertical-align: text-bottom; color: #f9a825; margin-left: 4px; }
-    .lb-empty { color: #888; font-style: italic; padding: 8px 12px; display: inline-block; }
+    .lb-empty { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; padding: 8px 12px; display: inline-block; }
   `]
 })
 export class WeeklyListComponent implements OnInit {

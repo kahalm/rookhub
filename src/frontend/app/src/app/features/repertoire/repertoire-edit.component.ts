@@ -54,8 +54,8 @@ import { SnackbarService } from '../../core/snackbar.service';
       transition: border-color 0.2s;
     }
     .upload-area:hover { border-color: #3f51b5; }
-    .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: #888; }
-    .empty-text { padding: 1rem; color: #888; }
+    .upload-area mat-icon { font-size: 48px; width: 48px; height: 48px; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
   `]
 })
 export class RepertoireEditComponent {

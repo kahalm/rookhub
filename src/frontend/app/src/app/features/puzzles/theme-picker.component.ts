@@ -56,7 +56,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
     }
   `,
   styles: [`
-    .theme-label { font-size: 0.85em; color: rgba(0,0,0,0.6); margin-bottom: 0.5rem; }
+    .theme-label { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 0.5rem; }
     .theme-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -64,12 +64,12 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
       transition: border-color 0.15s;
     }
     .theme-chip.active { border-color: #1976d2; }
-    .theme-chip:hover { background: rgba(0,0,0,0.04); }
+    .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }
     .theme-img { width: 32px; height: 16px; border-radius: 3px; background-size: cover; background-position: center; }
     .theme-preview { display: flex; width: 32px; height: 16px; border-radius: 3px; overflow: hidden; }
     .tp-light, .tp-dark { flex: 1; }
-    .theme-name { font-size: 0.75em; color: rgba(0,0,0,0.7); }
+    .theme-name { font-size: 0.75em; color: color-mix(in srgb, currentColor 70%, transparent); }
   `],
 })
 export class ThemePickerComponent {

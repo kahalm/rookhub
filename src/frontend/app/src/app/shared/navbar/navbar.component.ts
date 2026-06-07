@@ -111,7 +111,7 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
     .spacer { flex: 1 1 auto; }
     .mobile-menu-btn { display: none; }
-    .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: #888; text-transform: uppercase; }
+    .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .mobile-menu-btn { display: inline-flex; }
