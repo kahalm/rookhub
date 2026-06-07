@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -23,7 +24,8 @@ public class RepertoireControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new RepertoireService(_db);
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        _service = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
         _controller = new RepertoireController(_service);
     }
 

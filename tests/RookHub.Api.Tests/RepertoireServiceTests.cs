@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -16,7 +17,8 @@ public class RepertoireServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _repertoireService = new RepertoireService(_db);
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        _repertoireService = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
     }
 
     public void Dispose() => _db.Dispose();

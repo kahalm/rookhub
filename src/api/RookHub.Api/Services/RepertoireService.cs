@@ -9,6 +9,7 @@ namespace RookHub.Api.Services;
 public class RepertoireService
 {
     private readonly AppDbContext _db;
+    private readonly RepertoireAnalyzeService _analyzeCache;
     public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
 
     // S-13: PGN-Heuristik. Linear (kein katastrophisches Backtracking); 2s-Timeout als Defense-in-depth.
@@ -18,7 +19,11 @@ public class RepertoireService
     public const int MaxRepertoiresPerUser = 50;
     public const int MaxFilesPerRepertoire = 100;
 
-    public RepertoireService(AppDbContext db) => _db = db;
+    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache)
+    {
+        _db = db;
+        _analyzeCache = analyzeCache;
+    }
 
     /// <summary>
     /// S-13-Heuristik: Sieht der Inhalt nach echtem PGN aus (Tag-Pair ODER echter erster Zug)?
@@ -112,10 +117,12 @@ public class RepertoireService
         if (dto.Name != null) rep.Name = dto.Name;
         if (dto.Description != null) rep.Description = dto.Description;
         if (dto.IsPublic.HasValue) rep.IsPublic = dto.IsPublic.Value;
+        var kindChanged = dto.Kind.HasValue && dto.Kind.Value != rep.Kind;
         if (dto.Kind.HasValue) rep.Kind = dto.Kind.Value;
         rep.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+        if (kindChanged) _analyzeCache.Invalidate(userId);
 
         var fileCount = await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == id);
 
@@ -139,6 +146,7 @@ public class RepertoireService
 
         _db.Repertoires.Remove(rep);
         await _db.SaveChangesAsync();
+        _analyzeCache.Invalidate(userId);
     }
 
     public async Task<RepertoireFileDto> UploadFileAsync(int repertoireId, int userId, string fileName, Stream fileStream)
@@ -182,6 +190,7 @@ public class RepertoireService
         _db.RepertoireFiles.Add(file);
         rep.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        _analyzeCache.Invalidate(userId);
 
         return new RepertoireFileDto
         {
@@ -212,6 +221,7 @@ public class RepertoireService
         _db.RepertoireFiles.Remove(file);
         file.Repertoire.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+        _analyzeCache.Invalidate(userId);
     }
 
     public async Task<string> GetCombinedPgnAsync(int repertoireId, int userId)

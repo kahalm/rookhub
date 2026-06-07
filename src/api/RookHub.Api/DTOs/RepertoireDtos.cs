@@ -66,3 +66,33 @@ public class ExtensionRepertoireDto
     /// <summary>Summe aller File-Groessen — Hinweis fuer den Client (Soft-Limit-Warning).</summary>
     public long TotalSizeBytes { get; set; }
 }
+
+/// <summary>
+/// Request fuer <c>POST /api/extension/analyze-game</c>: SAN-Zugliste der Hauptlinie, optional
+/// gefiltert auf einen <see cref="RepertoireKind"/>. Server baut/cacht das Positions-Set des
+/// Users und vergleicht ply-weise.
+/// </summary>
+public class AnalyzeGameRequestDto
+{
+    [Required]
+    public List<string> Moves { get; set; } = new();
+    public RepertoireKind Kind { get; set; } = RepertoireKind.Opening;
+    /// <summary>Invalidate the cached position-set before analyzing (manual refresh button).</summary>
+    public bool Refresh { get; set; }
+}
+
+public class AnalyzeGameResponseDto
+{
+    /// <summary>Index des ersten dauerhaften Ausreissers (-1 = Partie komplett im Repertoire).</summary>
+    public int Deviation { get; set; } = -1;
+    /// <summary>Ply-Indices von Zugumstellungen (temporaer ausserhalb, Partie kehrt zurueck).</summary>
+    public List<int> Gaps { get; set; } = new();
+    /// <summary>Ply-Indices, deren resultierende Position im Repertoire steht.</summary>
+    public List<int> InRepertoire { get; set; } = new();
+    /// <summary>FEN VOR dem Out-of-Rep-Zug (fuer Chessable-Suche). Null wenn keine Abweichung.</summary>
+    public string? FenBeforeDeviation { get; set; }
+    /// <summary>Wie viele Repertoire-Dateien zur Position-Set-Berechnung beigetragen haben.</summary>
+    public int RepertoireFileCount { get; set; }
+    /// <summary>Ply, bei dem ein Zug nicht parsbar war (illegale SAN). Null = alle Zuege OK.</summary>
+    public int? IllegalMoveAt { get; set; }
+}

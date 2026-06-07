@@ -107,6 +107,7 @@ try
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<FriendService>();
     builder.Services.AddScoped<RepertoireService>();
+    builder.Services.AddScoped<RepertoireAnalyzeService>();
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();

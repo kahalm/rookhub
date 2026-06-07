@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -22,8 +23,10 @@ public class ExtensionControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new RepertoireService(_db);
-        _controller = new ExtensionController(_service);
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var analyzeService = new RepertoireAnalyzeService(_db, cache);
+        _service = new RepertoireService(_db, analyzeService);
+        _controller = new ExtensionController(_service, analyzeService);
     }
 
     public void Dispose() => _db.Dispose();

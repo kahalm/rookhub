@@ -15,8 +15,13 @@ namespace RookHub.Api.Controllers;
 public class ExtensionController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
+    private readonly RepertoireAnalyzeService _analyzeService;
 
-    public ExtensionController(RepertoireService repertoireService) => _repertoireService = repertoireService;
+    public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService)
+    {
+        _repertoireService = repertoireService;
+        _analyzeService = analyzeService;
+    }
 
     /// <summary>
     /// Wenn ein API-Token genutzt wird (User-Identity hat scope-Claim), muss dieser
@@ -63,5 +68,22 @@ public class ExtensionController : BaseApiController
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Server-seitige Partie-Analyse: Client schickt die SAN-Zugliste der aktuellen Partie,
+    /// Server vergleicht ply-weise gegen das (gecachte) Positions-Set des Users und liefert
+    /// Abweichungs-Index, Zugumstellungen und FEN-vor-Abweichung zurueck. Vermeidet, dass das
+    /// ganze Repertoire-PGN zur Extension wandern muss.
+    /// </summary>
+    [HttpPost("analyze-game")]
+    public async Task<ActionResult<AnalyzeGameResponseDto>> AnalyzeGame([FromBody] AnalyzeGameRequestDto dto)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        if (dto.Moves == null) dto.Moves = new();
+        if (dto.Moves.Count > 600)
+            return BadRequest(new { message = "Too many moves (max 600 plies)." });
+        return Ok(await _analyzeService.AnalyzeAsync(GetUserId(), dto));
     }
 }
