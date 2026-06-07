@@ -62,13 +62,13 @@ create_lens_viz() {
                 "layer1": {
                   "columnOrder": ["col-visitor","col-puzzle","col-endless","col-daily","col-kurs","col-weekly","col-days"],
                   "columns": {
-                    "col-visitor": {"label":"Visitor / User","dataType":"string","operationType":"terms","scale":"ordinal","sourceField":"fields.VisitorId.keyword","isBucketed":true,"params":{"size":50,"orderBy":{"type":"column","columnId":"col-days"},"orderDirection":"desc","otherBucket":false,"missingBucket":false}},
-                    "col-puzzle":  {"label":"#puzzle","dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: PuzzleAttempt*","language":"kuery"}},
-                    "col-endless": {"label":"#endless","dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: EndlessSessionCompleted*","language":"kuery"}},
-                    "col-daily":   {"label":"#daily","dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: BookPuzzleAttempt*","language":"kuery"}},
-                    "col-kurs":    {"label":"#kurs","dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: CoursePuzzleAttempt*","language":"kuery"}},
-                    "col-weekly":  {"label":"#weekly","dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: WeeklyPostAttempt*","language":"kuery"}},
-                    "col-days":    {"label":"#tageaktiv","dataType":"number","operationType":"unique_count","scale":"ratio","sourceField":"day_bucket","isBucketed":false,"params":{"emptyAsNull":true}}
+                    "col-visitor": {"label":"Visitor / User","customLabel":true,"dataType":"string","operationType":"terms","scale":"ordinal","sourceField":"fields.VisitorId.keyword","isBucketed":true,"params":{"size":50,"orderBy":{"type":"column","columnId":"col-days"},"orderDirection":"desc","otherBucket":false,"missingBucket":false}},
+                    "col-puzzle":  {"label":"#puzzle","customLabel":true,"dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: PuzzleAttempt*","language":"kuery"}},
+                    "col-endless": {"label":"#endless","customLabel":true,"dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: EndlessSessionCompleted*","language":"kuery"}},
+                    "col-daily":   {"label":"#daily","customLabel":true,"dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: BookPuzzleAttempt*","language":"kuery"}},
+                    "col-kurs":    {"label":"#kurs","customLabel":true,"dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: CoursePuzzleAttempt*","language":"kuery"}},
+                    "col-weekly":  {"label":"#weekly","customLabel":true,"dataType":"number","operationType":"count","scale":"ratio","isBucketed":false,"sourceField":"___records___","filter":{"query":"messageTemplate.keyword: WeeklyPostAttempt*","language":"kuery"}},
+                    "col-days":    {"label":"#tageaktiv","customLabel":true,"dataType":"number","operationType":"unique_count","scale":"ratio","sourceField":"day_bucket","isBucketed":false,"params":{"emptyAsNull":true}}
                   },
                   "incompleteColumns": {}
                 }
