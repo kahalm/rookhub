@@ -13,6 +13,17 @@ html {
     typography: Roboto,
     density: 0,
   ));
+}
+
+html.dark-theme {
+  color-scheme: dark;
+  @include mat.theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+  ));
 }/* You can add global styles to this file, and also import other style files */
 
 html, body { height: 100%; }

@@ -35,7 +35,10 @@
     "analysis": "Ανάλυση",
     "stats": "Στατιστικά",
     "trainingGoals": "Στόχοι προπόνησης",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "Αλλαγές",

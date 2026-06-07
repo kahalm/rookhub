@@ -35,7 +35,10 @@
     "analysis": "Analyse",
     "stats": "Statistik",
     "trainingGoals": "Trainingsziele",
-    "installApp": "App installieren (Android)"
+    "installApp": "App installieren (Android)",
+    "themeSystem": "System-Design",
+    "themeLight": "Helles Design",
+    "themeDark": "Dunkles Design"
   },
   "app": {
     "changelogTitle": "Changelog",

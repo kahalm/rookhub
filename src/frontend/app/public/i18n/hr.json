@@ -35,7 +35,10 @@
     "analysis": "Analiza",
     "stats": "Statistika",
     "trainingGoals": "Trening ciljevi",
-    "installApp": "Instaliraj aplikaciju (Android)"
+    "installApp": "Instaliraj aplikaciju (Android)",
+    "themeSystem": "Sustavna tema",
+    "themeLight": "Svijetla tema",
+    "themeDark": "Tamna tema"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",

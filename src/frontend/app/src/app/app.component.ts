@@ -13,6 +13,7 @@ import { ClientLogService } from './core/client-log.service';
 import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
+import { ThemeService } from './core/theme.service';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -129,7 +130,8 @@ export class AppComponent implements OnInit {
     private offlinePrefetch: OfflinePrefetchService,
     clientLog: ClientLogService,
     stockfish: StockfishService,
-    analysisEngine: AnalysisEngineService
+    analysisEngine: AnalysisEngineService,
+    _theme: ThemeService
   ) {
     locale.init();
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).

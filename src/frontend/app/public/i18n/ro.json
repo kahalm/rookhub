@@ -35,7 +35,10 @@
     "analysis": "Analiză",
     "stats": "Statistici",
     "trainingGoals": "Obiective de antrenament",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "Jurnal de modificări",

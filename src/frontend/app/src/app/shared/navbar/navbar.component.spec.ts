@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
+import { TranslateService } from '@ngx-translate/core';
 import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { LocaleService } from '../../core/locale.service';
+import { ThemeService } from '../../core/theme.service';
 import { APK_DOWNLOAD_URL, AppInstallDialogComponent } from '../app-install-dialog/app-install-dialog.component';
 
 describe('NavbarComponent — App-Install', () => {
@@ -20,6 +22,8 @@ describe('NavbarComponent — App-Install', () => {
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
         { provide: LocaleService, useValue: {} },
         { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
       ],
     });
     return TestBed.runInInjectionContext(() => new NavbarComponent(
@@ -27,6 +31,8 @@ describe('NavbarComponent — App-Install', () => {
       TestBed.inject(CourseService),
       TestBed.inject(LocaleService),
       TestBed.inject(MatDialog),
+      TestBed.inject(ThemeService),
+      TestBed.inject(TranslateService),
     ));
   }
 

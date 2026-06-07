@@ -7,17 +7,19 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { LocaleService } from '../../core/locale.service';
+import { ThemeService, AppTheme } from '../../core/theme.service';
 import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dialog.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, TranslateModule],
+  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, TranslateModule],
   template: `
     <mat-toolbar color="primary">
       <span class="logo" routerLink="/dashboard">RookHub</span>
@@ -62,6 +64,9 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </mat-menu>
+        <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
+          <mat-icon>{{ themeIcon }}</mat-icon>
+        </button>
         <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
@@ -81,6 +86,9 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
         <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
         <button mat-icon-button (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
           <mat-icon>info_outline</mat-icon>
+        </button>
+        <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
+          <mat-icon>{{ themeIcon }}</mat-icon>
         </button>
         <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
@@ -119,7 +127,21 @@ export class NavbarComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
-  constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService, private dialog: MatDialog) {}
+  get themeIcon(): string {
+    const icons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
+    return icons[this.theme.preference];
+  }
+
+  get themeTooltip(): string {
+    const labels: Record<AppTheme, string> = {
+      system: this.translate.instant('nav.themeSystem'),
+      light: this.translate.instant('nav.themeLight'),
+      dark: this.translate.instant('nav.themeDark'),
+    };
+    return labels[this.theme.preference];
+  }
+
+  constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService, private dialog: MatDialog, public theme: ThemeService, private translate: TranslateService) {}
 
   /** Öffnet den Dialog mit Android-Installationsanleitung + APK-Download-Link. */
   openInstall(): void {

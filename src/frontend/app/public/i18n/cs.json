@@ -35,7 +35,10 @@
     "analysis": "Analýza",
     "stats": "Statistiky",
     "trainingGoals": "Tréninkové cíle",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "Changelog",

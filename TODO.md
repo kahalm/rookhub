@@ -47,7 +47,6 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Retry-Interceptor für 502/503/0 mit Exponential-Backoff im Frontend
 
 ## Features
-- [ ] Dark Mode
 - [ ] Passwort vergessen / E-Mail-Reset
 - [ ] Push-Benachrichtigungen (PWA) — z.B. „Dein Tagespuzzle wartet"
 - [ ] E-Mail-Benachrichtigung bei neuen Turnierblättchen

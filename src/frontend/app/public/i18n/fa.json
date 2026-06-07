@@ -35,7 +35,10 @@
     "analysis": "تحلیل",
     "stats": "آمار",
     "trainingGoals": "اهداف تمرینی",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "تغییرات",

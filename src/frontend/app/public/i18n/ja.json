@@ -35,7 +35,10 @@
     "analysis": "解析",
     "stats": "統計",
     "trainingGoals": "トレーニング目標",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "変更履歴",

@@ -35,7 +35,10 @@
     "analysis": "विश्लेषण",
     "stats": "आँकड़े",
     "trainingGoals": "प्रशिक्षण लक्ष्य",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "चेंजलॉग",

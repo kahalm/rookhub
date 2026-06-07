@@ -35,7 +35,10 @@
     "analysis": "Анализ",
     "stats": "Статистика",
     "trainingGoals": "Цели тренировки",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "Список изменений",

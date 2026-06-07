@@ -35,7 +35,10 @@
     "analysis": "Phân tích",
     "stats": "Thống kê",
     "trainingGoals": "Mục tiêu luyện tập",
-    "installApp": "Install app (Android)"
+    "installApp": "Install app (Android)",
+    "themeSystem": "System theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme"
   },
   "app": {
     "changelogTitle": "Nhật ký thay đổi",
