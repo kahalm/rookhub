@@ -4,6 +4,7 @@
 - [ ] Code Review — letzter: noch keiner
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: noch keiner
 - [ ] Security Review — letzter: noch keiner
+- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: noch keiner
 
 ## Features
 - [ ] Dark Mode
