@@ -481,7 +481,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.maxRatingReached = g.maxRatingReached ?? this._currentMinRating;
     this.sessionSeconds = g.sessionSeconds ?? 0;
     this.currentSessionMistakes = g.mistakes ?? [];
-    this.currentSessionPuzzles = [];
+    this.currentSessionPuzzles = (g.puzzleAttempts ?? []).map((p: any) => ({
+      puzzleNumber: p.puzzleNumber,
+      puzzleId: p.puzzleId,
+      lichessId: p.lichessId ?? '',
+      rating: p.rating,
+      solved: p.solved,
+      themes: undefined,
+      startedAt: 0,
+      endedAt: 0,
+    }));
     this.isNewHighscore = false;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
@@ -972,7 +981,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       currentMinRating: this._currentMinRating,
       maxRatingReached: this.maxRatingReached,
       sessionSeconds: this.sessionSeconds,
-      mistakes: this.currentSessionMistakes
+      mistakes: this.currentSessionMistakes,
+      puzzleAttempts: this.currentSessionPuzzles.map(p => ({
+        puzzleNumber: p.puzzleNumber,
+        puzzleId: p.puzzleId,
+        lichessId: p.lichessId,
+        rating: p.rating,
+        solved: p.solved,
+      })),
     };
     this.storage.saveActiveGameLocal(gameState);
     this.storage.saveProgressToServer(this.config, this.highscore, gameState);
@@ -993,7 +1009,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
     // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server für das Logging mitgeben,
     // nicht in die lokale History (würde localStorage aufblähen).
-    this.storage.recordSessionToServer(session, this.currentSessionPuzzles).subscribe(id => {
+    // Nur auf diesem Tab gespielte Puzzles (startedAt > 0) ans Server-Logging übergeben;
+    // wiederhergestellte Puzzles (Tab-Wechsel-Resume) wurden bereits von Tab A geloggt.
+    const newPuzzles = this.currentSessionPuzzles.filter(p => p.startedAt > 0);
+    this.storage.recordSessionToServer(session, newPuzzles).subscribe(id => {
       if (id) this.lastSessionId = id;
     });
   }

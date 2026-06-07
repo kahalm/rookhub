@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.96.18';
+export const APP_VERSION = '0.96.19';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.96.19', date: '2026-06-07', changes: [
+    'Endless: Game-Over-Liste zeigt jetzt auch die Puzzles, die auf einem anderen Tab gespielt wurden (Multi-Tab-Resume).',
+  ]},
   { version: '0.96.18', date: '2026-06-07', changes: [
     'Infra: Kibana-Init erstellt jetzt zwei Dashboards (Prod + Dev) mit identischem Layout. ES-Index-Format konfigurierbar über Elasticsearch:IndexFormat.',
   ]},
