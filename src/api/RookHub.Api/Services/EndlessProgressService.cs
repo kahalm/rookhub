@@ -227,7 +227,9 @@ public class EndlessProgressService
                 MaxRating = dto.MaxRating,
                 DurationSeconds = dto.DurationSeconds,
                 ConfigJson = dto.ConfigJson,
-                MistakeAtRatings = dto.MistakeAtRatings
+                MistakeAtRatings = dto.MistakeAtRatings,
+                Seed = dto.Seed,
+                ChainPuzzleIds = dto.ChainPuzzleIds
             });
             count++;
         }
@@ -249,7 +251,9 @@ public class EndlessProgressService
                 MaxRating = dto.MaxRating,
                 DurationSeconds = dto.DurationSeconds,
                 ConfigJson = dto.ConfigJson,
-                MistakeAtRatings = dto.MistakeAtRatings
+                MistakeAtRatings = dto.MistakeAtRatings,
+                Seed = dto.Seed,
+                ChainPuzzleIds = dto.ChainPuzzleIds
             });
             count++;
         }

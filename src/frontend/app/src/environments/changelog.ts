@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.10';
+export const APP_VERSION = '0.97.11';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.11', date: '2026-06-08', changes: [
+    'StockfishService: toter Ternary bei Mate-Eval entfernt (beide Zweige waren identisch).',
+    'EndlessProgressService: BulkImport überträgt jetzt Seed und ChainPuzzleIds aus dem DTO (wurden bisher stillschweigend verworfen).',
+  ]},
   { version: '0.97.10', date: '2026-06-08', changes: [
     'Analyse: Engine-Crash-Erkennung verbessert — nach 3 fehlgeschlagenen Auto-Recovery-Versuchen wird ein Fehlerbanner mit Seite-neu-laden-Button angezeigt statt lautlos zu hängen.',
     'Analyse: crashStreak wird beim Verlassen der Seite zurückgesetzt, sodass ein erneuter Besuch einen sauberen Neustart garantiert.',

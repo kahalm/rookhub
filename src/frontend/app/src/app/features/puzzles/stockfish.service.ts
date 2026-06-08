@@ -123,7 +123,7 @@ export class StockfishService implements OnDestroy {
             const v = value / 100;
             lastEval = (v >= 0 ? '+' : '') + v.toFixed(1);
           } else {
-            lastEval = value > 0 ? `#${value}` : `#${value}`;
+            lastEval = `#${value}`;
           }
         }
 
