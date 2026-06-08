@@ -589,6 +589,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         this.difficulty = result.difficulty as typeof this.difficulty;
         this.prefs.setPuzzleDifficulty(this.difficulty);
         this.onDifficultyChange();
+        this.loadNext();
       }
       if (result.excludeSolved !== undefined) {
         this.excludeSolved = result.excludeSolved;

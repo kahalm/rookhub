@@ -125,7 +125,12 @@ export interface PuzzleSettingsDialogResult {
 
         @if (data.mode === 'standard') {
           <div class="psd-row">
-            <span class="psd-label">{{ 'puzzles.filters.difficulty' | translate }}</span>
+            <span class="psd-label">
+              {{ 'puzzles.filters.difficulty' | translate }}
+              <button type="button" class="psd-info-btn" (click)="showDifficultyInfo = !showDifficultyInfo" [class.active]="showDifficultyInfo">
+                <mat-icon>info_outline</mat-icon>
+              </button>
+            </span>
             <mat-select [(ngModel)]="difficultyEdit" class="psd-select">
               <mat-option value="sehr_leicht">{{ 'puzzles.difficulty.veryEasy' | translate }}</mat-option>
               <mat-option value="leicht">{{ 'puzzles.difficulty.easy' | translate }}</mat-option>
@@ -134,6 +139,16 @@ export interface PuzzleSettingsDialogResult {
               <mat-option value="sehr_schwer">{{ 'puzzles.difficulty.veryHard' | translate }}</mat-option>
             </mat-select>
           </div>
+          @if (showDifficultyInfo) {
+            <div class="psd-viz-info">
+              @for (opt of difficultyInfoOptions; track opt.value) {
+                <div class="psd-viz-info-row" [class.current]="difficultyEdit === opt.value">
+                  <span class="psd-viz-name">{{ opt.label | translate }}</span>
+                  <span class="psd-viz-desc">{{ opt.description }}</span>
+                </div>
+              }
+            </div>
+          }
         }
 
         @if (data.mode === 'standard' && data.isLoggedIn) {
@@ -226,6 +241,7 @@ export class PuzzleSettingsDialogComponent {
   difficultyEdit: string;
   excludeSolvedEdit: boolean;
   showVizInfo = false;
+  showDifficultyInfo = false;
 
   readonly previewSquares = [
     { piece: 'wK', light: true  }, { piece: 'wQ', light: false },
@@ -267,6 +283,16 @@ export class PuzzleSettingsDialogComponent {
       { value: 2, label: 'Checker',   description: 'Figuren werden nach 3 s durch farbige Spielsteine ersetzt.' },
       { value: 3, label: 'Dark',      description: 'Figuren werden nach 3 s durch schwarze Steine ersetzt.' },
       { value: 4, label: 'Invisible', description: 'Figuren verschwinden nach 3 s vollständig.' },
+    ];
+  }
+
+  get difficultyInfoOptions(): { value: string; label: string; description: string }[] {
+    return [
+      { value: 'sehr_leicht', label: 'puzzles.difficulty.veryEasy', description: 'Puzzles ca. 600 Elo unter deinem Niveau — zum Aufwärmen oder Technik üben.' },
+      { value: 'leicht',      label: 'puzzles.difficulty.easy',    description: 'Puzzles ca. 300 Elo unter deinem Niveau — für flüssiges Lösen.' },
+      { value: 'normal',      label: 'puzzles.difficulty.normal',  description: 'Puzzles auf deinem Niveau — optimales Training.' },
+      { value: 'schwer',      label: 'puzzles.difficulty.hard',    description: 'Puzzles ca. 300 Elo über deinem Niveau — fordert und verbessert.' },
+      { value: 'sehr_schwer', label: 'puzzles.difficulty.veryHard', description: 'Puzzles ca. 600 Elo über deinem Niveau — sehr anspruchsvoll.' },
     ];
   }
 
