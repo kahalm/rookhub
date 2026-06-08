@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.11';
+export const APP_VERSION = '0.97.12';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.12', date: '2026-06-08', changes: [
+    'Security: Swagger-UI nur noch im Development-Build verfügbar (nicht in Production).',
+    'Security: RememberMe-Token-Laufzeit von 20 Jahren auf 1 Jahr reduziert.',
+  ]},
   { version: '0.97.11', date: '2026-06-08', changes: [
     'StockfishService: toter Ternary bei Mate-Eval entfernt (beide Zweige waren identisch).',
     'EndlessProgressService: BulkImport überträgt jetzt Seed und ChainPuzzleIds aus dem DTO (wurden bisher stillschweigend verworfen).',

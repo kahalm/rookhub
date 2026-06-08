@@ -139,8 +139,8 @@ public class AuthService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            // „Eingeloggt bleiben": 20 Jahre (praktisch unbegrenzt), sonst 30 Tage.
-            expires: DateTime.UtcNow.AddYears(rememberMe ? 20 : 0).AddDays(rememberMe ? 0 : 30),
+            // „Eingeloggt bleiben": 1 Jahr, sonst 30 Tage.
+            expires: DateTime.UtcNow.AddDays(rememberMe ? 365 : 30),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 

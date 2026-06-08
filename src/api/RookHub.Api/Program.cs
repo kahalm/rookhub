@@ -305,9 +305,11 @@ try
         });
     });
 
-    // Swagger immer aktiv – die API ist nur im internen Netz erreichbar.
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    if (!app.Environment.IsProduction())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
 
     app.UseResponseCompression();
     app.UseCors();
