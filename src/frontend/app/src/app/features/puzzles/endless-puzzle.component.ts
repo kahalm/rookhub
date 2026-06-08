@@ -241,6 +241,33 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   ngOnInit(): void {
+    // Rückkehr aus dem Analysemodus nach verlorenstem letzten Herz (?gameover=1):
+    // Gameover-Snapshot aus sessionStorage wiederherstellen und Zusammenfassungs-Screen zeigen.
+    if (this.route.snapshot.queryParamMap.get('gameover') === '1') {
+      const raw = sessionStorage.getItem('rookhub_endless_gameover');
+      if (raw) {
+        try {
+          const s = JSON.parse(raw);
+          sessionStorage.removeItem('rookhub_endless_gameover');
+          this.maxRatingReached = s.maxRatingReached ?? 0;
+          this.solved = s.solved ?? 0;
+          this.level = s.level ?? 0;
+          this.lives = s.lives ?? 0;
+          this.sessionSeconds = s.sessionSeconds ?? 0;
+          this.isNewHighscore = s.isNewHighscore ?? false;
+          this.currentSessionMistakes = s.currentSessionMistakes ?? [];
+          this.currentSessionPuzzles = s.currentSessionPuzzles ?? [];
+        } catch {}
+      }
+      // lastSessionId könnte inzwischen asynchron eingetroffen sein (recordSession-Subscribe)
+      const pendingSid = sessionStorage.getItem('rookhub_endless_pending_sid');
+      if (pendingSid) {
+        this.lastSessionId = parseInt(pendingSid, 10) || null;
+        sessionStorage.removeItem('rookhub_endless_pending_sid');
+      }
+      this.state = 'GAME_OVER';
+      return;
+    }
     // Rückkehr aus dem Analysemodus (?resume=1): laufenden Run direkt fortsetzen statt in der
     // Übersicht zu landen. Bei normalem Einstieg (kein resume-Param) bleibt der Resume-Banner,
     // damit man Fortsetzen/Archivieren wählen kann. Der Konstruktor hat 0-Leben-Zombies bereits
@@ -691,6 +718,33 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   analyzeCurrentPuzzle(): void {
     if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
     if (!this.puzzle) return;
+
+    if ((this.state === 'FAILED' || this.reviewingWrongPuzzle) && this.lives <= 0) {
+      // Letztes Herz verloren → Run ist vorbei. Session jetzt aufzeichnen, Snapshot sichern
+      // und nach der Analyse direkt zum Zusammenfassungs-Screen zurückkehren (gameover=1).
+      this.endGame();
+      const snap = {
+        maxRatingReached: this.maxRatingReached,
+        solved: this.solved,
+        level: this.level,
+        lives: this.lives,
+        sessionSeconds: this.sessionSeconds,
+        isNewHighscore: this.isNewHighscore,
+        currentSessionMistakes: [...this.currentSessionMistakes],
+        currentSessionPuzzles: [...this.currentSessionPuzzles],
+      };
+      try { sessionStorage.setItem('rookhub_endless_gameover', JSON.stringify(snap)); } catch {}
+      this.router.navigate(['/analysis'], {
+        queryParams: {
+          fen: this.puzzle.fen,
+          moves: this.puzzle.moves.split(' ').filter(m => m).join(','),
+          orientation: this.orientation,
+          from: '/puzzles/endless?gameover=1',
+        },
+      });
+      return;
+    }
+
     // Wurde das Puzzle bereits gescheitert (Aufgeben oder Falschzug) aber chainIndex noch nicht
     // vorgerückt, würde resume=1 dasselbe Puzzle nochmals laden → zweiter Leben-Verlust.
     // Deshalb jetzt vorwärts schieben und persistieren, bevor wir wegnavigieren.
@@ -1020,7 +1074,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // wiederhergestellte Puzzles (Tab-Wechsel-Resume) wurden bereits von Tab A geloggt.
     const newPuzzles = this.currentSessionPuzzles.filter(p => p.startedAt > 0);
     this.storage.recordSessionToServer(session, newPuzzles).subscribe(id => {
-      if (id) this.lastSessionId = id;
+      if (id) {
+        this.lastSessionId = id;
+        // Für Rückkehr aus der Analyse nach 0-Leben-Situation (gameover=1): ID sichern,
+        // damit der neue Component-Instanz-Konstruktor sie noch auslesen kann.
+        try { sessionStorage.setItem('rookhub_endless_pending_sid', String(id)); } catch {}
+      }
     });
   }
 
