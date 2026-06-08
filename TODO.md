@@ -10,14 +10,14 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: noch keiner
 
 ## Bugs
-- [ ] Engine-Hang bei Puzzle→Analyse-Wechsel (tritt auf beim Wechsel von Puzzle- in Analyse-Modus)
-- [ ] BookPuzzle: Ladefehler → `state='LOADING'` bleibt → endloser Spinner, kein Retry (`book-puzzle.component.ts:284-288`)
-- [ ] FriendController: `return Forbid(ex.Message)` → 500 statt 403 (`FriendController.cs:57,70,83`)
-- [ ] Friendship TOCTOU-Race: Unique-Index nur auf geordnetes Paar → gespiegelte Doppel-Beziehung möglich + fehlender Self-Friend-Ausschluss (`AppDbContext.cs:53`)
-- [ ] CrawlJob bleibt bei Enqueue-Fehler dauerhaft `Queued` → Duplikat-Check blockiert Turnier für immer (`CrawlController.cs:56-73`)
-- [ ] StockfishService-Singleton wird von 3 Komponenten in `ngOnDestroy` `terminate()`t → Worker-Konflikt (`stockfish.service.ts:8`)
-- [ ] `RecordAttemptAsync` ohne Idempotenz/Limit → Stats fälschbar, unbegrenztes Tabellenwachstum (`PuzzleService.cs:81`)
-- [ ] `RoundMonitorService`: ein `SaveChanges` nach ganzer Schleife → bei Exception alle Updates verloren (`RoundMonitorService.cs:137`)
+- [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
+- [x] BookPuzzle: Ladefehler → endloser Spinner → behoben in 0.97.6 (loadError-Flag + Retry-Button)
+- [x] FriendController: return Forbid(ex.Message) → 500 → war bereits behoben in 0.40.9
+- [x] Friendship TOCTOU-Race → war bereits behoben (PairLow/PairHigh computed columns + Self-Friend-Check)
+- [x] CrawlJob bleibt bei Enqueue-Fehler dauerhaft Queued → behoben in Crawler (Job auf Failed setzen)
+- [x] StockfishService in ngOnDestroy terminate() → war bereits behoben (kein terminate()-Aufruf mehr)
+- [x] RecordAttemptAsync ohne Idempotenz/Limit → behoben in 0.97.8 (30s-Idempotenz + Elo-Guard)
+- [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
 
 ## Geparkt
 - [ ] Google Play / TWA fertigstellen (Branches 0.78.1–0.78.5 bereits in master 0.83.0):
