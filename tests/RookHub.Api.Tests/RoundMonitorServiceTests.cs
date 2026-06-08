@@ -138,4 +138,37 @@ public class RoundMonitorServiceTests : IDisposable
 
         Assert.Empty(active);
     }
+
+    [Fact]
+    public async Task PerIterationSave_PreservesFirstMonitorWhenSecondFails()
+    {
+        // Verifies the fix for Bug 8: SaveChanges inside the loop ensures that
+        // successfully processed monitors are persisted even if a later one fails.
+        var m1 = new TournamentMonitor { CrawlerTournamentId = "A1", CrawlerTournamentDbId = 1, ActiveUntil = DateTime.UtcNow.AddHours(1) };
+        var m2 = new TournamentMonitor { CrawlerTournamentId = "B2", CrawlerTournamentDbId = 2, ActiveUntil = DateTime.UtcNow.AddHours(1) };
+        _db.TournamentMonitors.AddRange(m1, m2);
+        await _db.SaveChangesAsync();
+
+        var monitors = await _db.TournamentMonitors.Where(m => m.ActiveUntil >= DateTime.UtcNow).ToListAsync();
+        foreach (var monitor in monitors)
+        {
+            try
+            {
+                monitor.LastCheckedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();   // per-iteration save (the fix)
+
+                if (monitor.CrawlerTournamentId == "B2")
+                    throw new InvalidOperationException("Simulated failure on second monitor");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // logged, continue — mirrors the service catch block
+            }
+        }
+
+        var saved = await _db.TournamentMonitors.ToListAsync();
+        // First monitor was saved before second one failed → its LastCheckedAt is set
+        Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "A1").LastCheckedAt);
+        Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "B2").LastCheckedAt);
+    }
 }

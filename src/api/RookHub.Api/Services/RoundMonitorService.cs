@@ -127,6 +127,7 @@ public class RoundMonitorService : BackgroundService
                 }
 
                 monitor.LastCheckedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -135,7 +136,5 @@ public class RoundMonitorService : BackgroundService
                     monitor.CrawlerTournamentId);
             }
         }
-
-        await db.SaveChangesAsync(ct);
     }
 }

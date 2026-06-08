@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.8';
+export const APP_VERSION = '0.97.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.9', date: '2026-06-08', changes: [
+    'RoundMonitorService: SaveChanges jetzt pro Iteration statt einmalig am Ende — bei Fehler in späteren Einträgen gehen frühere Updates nicht mehr verloren.',
+  ]},
   { version: '0.97.8', date: '2026-06-08', changes: [
     'Puzzle: RecordAttemptAsync mit Idempotenz (30s-Fenster) und Elo-Guard — nur der erste Versuch pro Puzzle zählt für Elo, weitere Versuche werden gespeichert aber verändern die Wertung nicht.',
   ]},
