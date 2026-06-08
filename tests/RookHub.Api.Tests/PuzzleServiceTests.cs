@@ -531,14 +531,14 @@ public class PuzzleServiceTests : IDisposable
     public async Task RecordAttempt_EstablishedKFactor_SmallerSwings()
     {
         var userId = await CreateUserAsync("elo_est");
-        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_e1");
-
-        // Create 30 prior attempts to switch to K=20
+        // Use different puzzles for the 30 prior attempts so the target puzzle is still a "first attempt"
+        var target = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_e_target");
         for (int i = 0; i < 30; i++)
         {
+            var other = await CreatePuzzleAsync(rating: 1500, lichessId: $"elo_e_prior_{i}");
             _db.PuzzleAttempts.Add(new PuzzleAttempt
             {
-                UserId = userId, PuzzleId = puzzle.Id, Solved = true, TimeSpentSeconds = 5,
+                UserId = userId, PuzzleId = other.Id, Solved = true, TimeSpentSeconds = 5,
                 AttemptedAt = DateTime.UtcNow.AddMinutes(-30 + i)
             });
         }
@@ -549,9 +549,9 @@ public class PuzzleServiceTests : IDisposable
         user!.PuzzleElo = 1500;
         await _db.SaveChangesAsync();
 
-        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+        var result = await _service.RecordAttemptAsync(userId, target.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
 
-        // K=20, equal rating → change ~10
+        // K=20 (30 prior attempts), equal rating → change ~10
         Assert.Equal(10, result.EloChange);
     }
 
@@ -903,5 +903,46 @@ public class PuzzleServiceTests : IDisposable
         var attempt = await _db.PuzzleAttempts.SingleAsync();
         Assert.False(attempt.EvalShown);
         Assert.Equal(0, attempt.VizShowCount);
+    }
+
+    // ---- Idempotenz + Elo-Guard ----
+
+    [Fact]
+    public async Task RecordAttempt_DuplicateWithin30s_ReturnsSameAttempt()
+    {
+        var userId = await CreateUserAsync("idem1");
+        var puzzle = await CreatePuzzleAsync(lichessId: "idem_p1");
+
+        var first = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+        var second = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(1, await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.PuzzleId == puzzle.Id));
+    }
+
+    [Fact]
+    public async Task RecordAttempt_SecondAttemptOlderThan30s_DoesNotUpdateElo()
+    {
+        var userId = await CreateUserAsync("eloguard1");
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "eloguard_p1");
+
+        // Füge einen älteren Versuch direkt in die DB ein (außerhalb des Idempotenz-Fensters).
+        _db.PuzzleAttempts.Add(new PuzzleAttempt
+        {
+            UserId = userId, PuzzleId = puzzle.Id, Solved = false,
+            EloAfter = 1480, EloChange = -20, AttemptedAt = DateTime.UtcNow.AddMinutes(-5)
+        });
+        await _db.SaveChangesAsync();
+
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.PuzzleElo = 1480;
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.Equal(0, result.EloChange);
+        Assert.Equal(1480, result.EloAfter);
+        var userAfter = await _db.AppUsers.FindAsync(userId);
+        Assert.Equal(1480, userAfter!.PuzzleElo);
     }
 }

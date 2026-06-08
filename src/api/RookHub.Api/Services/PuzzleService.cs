@@ -16,6 +16,8 @@ public class PuzzleService
     // Obergrenze anonymer Versuche pro Session — verhindert unbegrenztes
     // Anwachsen der PuzzleAttempts-Tabelle durch eine einzelne (anonyme) Session.
     private const int MaxAnonymousAttemptsPerSession = 200;
+    // Obergrenze auth. Versuche pro (User, Puzzle, VizLevel) — kein unbegrenztes Tabellenwachstum.
+    private const int MaxAttemptsPerUserPuzzleVizLevel = 20;
 
     public PuzzleService(AppDbContext db, IMemoryCache cache, ILogger<PuzzleService> logger)
     {
@@ -141,12 +143,35 @@ public class PuzzleService
             ?? throw new KeyNotFoundException("User not found.");
 
         var vizLevel = Math.Clamp(dto.VisualizationLevel, 0, 4);
+
+        // Idempotenz: Doppel-Submit innerhalb von 30 Sekunden → bestehenden Versuch zurückgeben.
+        var idempotencyCutoff = DateTime.UtcNow.AddSeconds(-30);
+        var duplicate = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.PuzzleId == puzzleId
+                     && a.VisualizationLevel == vizLevel && a.AttemptedAt >= idempotencyCutoff)
+            .OrderByDescending(a => a.AttemptedAt)
+            .FirstOrDefaultAsync();
+        if (duplicate != null)
+            return MapAttemptToDto(duplicate, puzzle);
+
         var currentElo = GetEloForLevel(user, vizLevel);
         var attemptCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == vizLevel);
         var kFactor = attemptCount < 30 ? 40 : 20;
-        var (newRating, change) = CalculateElo(currentElo, puzzle.Rating, dto.Solved, kFactor);
 
-        SetEloForLevel(user, vizLevel, newRating);
+        // Elo nur beim ersten Versuch für dieses Puzzle aktualisieren — verhindert Elo-Inflation.
+        var isFirstAttempt = !await _db.PuzzleAttempts.AnyAsync(
+            a => a.UserId == userId && a.PuzzleId == puzzleId && a.VisualizationLevel == vizLevel);
+        int newRating, change;
+        if (isFirstAttempt)
+        {
+            (newRating, change) = CalculateElo(currentElo, puzzle.Rating, dto.Solved, kFactor);
+            SetEloForLevel(user, vizLevel, newRating);
+        }
+        else
+        {
+            newRating = currentElo;
+            change = 0;
+        }
 
         var attempt = new PuzzleAttempt
         {
@@ -165,26 +190,45 @@ public class PuzzleService
         _db.PuzzleAttempts.Add(attempt);
         await _db.SaveChangesAsync();
 
+        // Tabellenwachstum begrenzen: älteste Versuche entfernen wenn Limit überschritten.
+        await TrimUserPuzzleAttemptsAsync(userId, puzzleId, vizLevel);
+
         var solvedAt = attempt.AttemptedAt;
         var startedAt = solvedAt.AddSeconds(-Math.Clamp(dto.TimeSpentSeconds, 0, 86400));
         _logger.LogInformation(
             "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0}) EvalShown={EvalShown} VizShowCount={VizShowCount}",
             userId, dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change, dto.EvalShown, dto.VizShowCount);
 
-        return new PuzzleAttemptDto
-        {
-            Id = attempt.Id,
-            PuzzleId = attempt.PuzzleId,
-            LichessId = puzzle.LichessId,
-            PuzzleRating = puzzle.Rating,
-            Solved = attempt.Solved,
-            TimeSpentSeconds = attempt.TimeSpentSeconds,
-            AttemptedAt = attempt.AttemptedAt,
-            MoveLog = attempt.MoveLog,
-            EloAfter = attempt.EloAfter,
-            EloChange = attempt.EloChange,
-            VisualizationLevel = attempt.VisualizationLevel
-        };
+        return MapAttemptToDto(attempt, puzzle);
+    }
+
+    private static PuzzleAttemptDto MapAttemptToDto(PuzzleAttempt attempt, Puzzle puzzle) => new()
+    {
+        Id = attempt.Id,
+        PuzzleId = attempt.PuzzleId,
+        LichessId = puzzle.LichessId,
+        PuzzleRating = puzzle.Rating,
+        Solved = attempt.Solved,
+        TimeSpentSeconds = attempt.TimeSpentSeconds,
+        AttemptedAt = attempt.AttemptedAt,
+        MoveLog = attempt.MoveLog,
+        EloAfter = attempt.EloAfter,
+        EloChange = attempt.EloChange,
+        VisualizationLevel = attempt.VisualizationLevel
+    };
+
+    private async Task TrimUserPuzzleAttemptsAsync(int userId, int puzzleId, int vizLevel)
+    {
+        var count = await _db.PuzzleAttempts.CountAsync(
+            a => a.UserId == userId && a.PuzzleId == puzzleId && a.VisualizationLevel == vizLevel);
+        if (count <= MaxAttemptsPerUserPuzzleVizLevel) return;
+        var stale = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.PuzzleId == puzzleId && a.VisualizationLevel == vizLevel)
+            .OrderBy(a => a.AttemptedAt)
+            .Take(count - MaxAttemptsPerUserPuzzleVizLevel)
+            .ToListAsync();
+        _db.PuzzleAttempts.RemoveRange(stale);
+        await _db.SaveChangesAsync();
     }
 
     private async Task TrimAnonymousAttemptsAsync(string sessionId)
