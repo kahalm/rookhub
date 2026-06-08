@@ -59,6 +59,15 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
               <mat-icon>arrow_back</mat-icon> {{ 'analysis.backToPuzzle' | translate }}
             </button>
           }
+          @if (engineCrashed) {
+            <mat-card style="background:#b71c1c;color:#fff;">
+              <mat-card-content style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <mat-icon>error_outline</mat-icon>
+                <span style="flex:1">{{ 'analysis.engineCrashed' | translate }}</span>
+                <button mat-stroked-button style="color:#fff;border-color:#fff" (click)="reloadPage()">{{ 'analysis.engineCrashedReload' | translate }}</button>
+              </mat-card-content>
+            </mat-card>
+          }
           <mat-card class="engine-card">
             <mat-card-content>
               <div class="engine-head">
@@ -196,11 +205,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   displayLines: EngineDisplayLine[] = [];
   evalText = '0.00';
   whiteHeight = 50;
+  engineCrashed = false;
 
   fenInput = '';
   pgnInput = '';
 
   private sub?: Subscription;
+  private errorSub?: Subscription;
 
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService, private router: Router) {
     try {
@@ -230,6 +241,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => this.onEngineUpdate(s.fen, s.depth, s.lines));
+    this.errorSub = this.engine.engineFatalError$.subscribe(e => this.engineCrashed = e !== null);
 
     // Optional: eine Zugfolge (UCI, durch Leerzeichen/Komma getrennt) ab startFen vorladen
     // und an die aktuelle (letzte) Stellung springen — genutzt vom „Analysieren"-Button der Puzzles.
@@ -261,6 +273,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.errorSub?.unsubscribe();
     this.engine.destroy();
   }
 
@@ -394,6 +407,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);
   }
+  reloadPage(): void { window.location.reload(); }
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 
   reset(): void { this.startFen = START_FEN; this.resetToStart(); }

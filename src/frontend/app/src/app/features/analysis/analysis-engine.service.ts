@@ -46,6 +46,10 @@ export class AnalysisEngineService implements OnDestroy {
   private state$ = new BehaviorSubject<AnalysisState>(EMPTY);
   readonly analysis$: Observable<AnalysisState> = this.state$.asObservable();
 
+  /** Gesetzt wenn die Engine nach zu vielen Crashes aufgibt; null = OK. */
+  private fatalError$ = new BehaviorSubject<string | null>(null);
+  readonly engineFatalError$: Observable<string | null> = this.fatalError$.asObservable();
+
   /** Aufeinanderfolgende Crashes ohne erfolgreiche Antwort — gegen Endlos-Recovery-Loops. */
   private crashStreak = 0;
 
@@ -95,7 +99,7 @@ export class AnalysisEngineService implements OnDestroy {
           worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
           // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
-          worker.onerror = () => { this.reportEngineEvent?.('crash'); this.handleCrash(); };
+          worker.onerror = (e: ErrorEvent) => { this.reportEngineEvent?.('crash', e?.message || ''); this.handleCrash(); };
           worker.addEventListener('message', (ev) => this.onMessage(ev));
           resolve();
         }
@@ -128,6 +132,7 @@ export class AnalysisEngineService implements OnDestroy {
     } else {
       // Zu viele Crashes hintereinander → aufgeben statt Endlos-Loop.
       this.reportEngineEvent?.('giveup', `streak=${this.crashStreak}`);
+      this.fatalError$.next('crash');
       this.state$.next({ fen, depth: 0, lines: [], running: false });
     }
   }
@@ -225,6 +230,7 @@ export class AnalysisEngineService implements OnDestroy {
 
     this.clearWatchdog();   // Engine antwortet → kein Hänger
     this.crashStreak = 0;   // Engine liefert wieder → Recovery-Zähler zurücksetzen
+    this.fatalError$.next(null);
     this.partial.set(parsed.multipv, parsed);
     const lines = [...this.partial.values()].sort((a, b) => a.multipv - b.multipv);
     const depth = Math.max(...lines.map(l => l.depth), 0);
@@ -275,6 +281,8 @@ export class AnalysisEngineService implements OnDestroy {
     }
     this.awaitingReady = false;
     this.pendingGoFen = null;
+    this.crashStreak = 0;
+    this.fatalError$.next(null);
     this.clearWatchdog();
     this.state$.next(EMPTY);
   }

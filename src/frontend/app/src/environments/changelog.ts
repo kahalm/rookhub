@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.9';
+export const APP_VERSION = '0.97.10';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.10', date: '2026-06-08', changes: [
+    'Analyse: Engine-Crash-Erkennung verbessert — nach 3 fehlgeschlagenen Auto-Recovery-Versuchen wird ein Fehlerbanner mit Seite-neu-laden-Button angezeigt statt lautlos zu hängen.',
+    'Analyse: crashStreak wird beim Verlassen der Seite zurückgesetzt, sodass ein erneuter Besuch einen sauberen Neustart garantiert.',
+    'StockfishService: worker.onerror übergibt jetzt die Fehlermeldung an den Telemetrie-Hook.',
+  ]},
   { version: '0.97.9', date: '2026-06-08', changes: [
     'RoundMonitorService: SaveChanges jetzt pro Iteration statt einmalig am Ende — bei Fehler in späteren Einträgen gehen frühere Updates nicht mehr verloren.',
   ]},

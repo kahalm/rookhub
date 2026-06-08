@@ -981,7 +981,9 @@
     "loadFen": "FEN laden",
     "copyFen": "FEN kopieren",
     "pgn": "PGN",
-    "loadPgn": "PGN laden"
+    "loadPgn": "PGN laden",
+    "engineCrashed": "Die Analyse-Engine ist abgestürzt und konnte nicht wiederhergestellt werden.",
+    "engineCrashedReload": "Seite neu laden"
   },
   "stats": {
     "title": "Statistik",

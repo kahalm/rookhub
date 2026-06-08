@@ -53,7 +53,7 @@ export class StockfishService implements OnDestroy {
           worker.removeEventListener('message', handler);
           clearTimeout(timeout);
           // Ab jetzt: dauerhafter Crash-Handler statt init-reject.
-          worker.onerror = () => { this.reportEngineEvent?.('crash'); this.handleCrash(); };
+          worker.onerror = (e: ErrorEvent) => { this.reportEngineEvent?.('crash', e?.message || ''); this.handleCrash(); };
           resolve();
         }
       };

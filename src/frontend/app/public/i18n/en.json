@@ -981,7 +981,9 @@
     "loadFen": "Load FEN",
     "copyFen": "Copy FEN",
     "pgn": "PGN",
-    "loadPgn": "Load PGN"
+    "loadPgn": "Load PGN",
+    "engineCrashed": "The analysis engine crashed and could not be recovered.",
+    "engineCrashedReload": "Reload page"
   },
   "stats": {
     "title": "Statistics",
