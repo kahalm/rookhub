@@ -5,7 +5,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 ## Periodisch
 - [ ] Code Review — letzter: 2026-06-08 → 2 QUALITY-Fixes (stockfish toter Ternary + BulkImport Seed/ChainPuzzleIds) in 0.97.11; keine Bugs gefunden
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: 2026-06-08 → alle 840 Keys vorhanden, kein leerer String, kein JSON-Fehler; keine echten Lücken gefunden
-- [ ] Security Review — letzter: noch keiner
+- [ ] Security Review — letzter: 2026-06-08 → 2 Fixes (Swagger nur Dev + RememberMe 1 Jahr) in 0.97.12; keine kritischen Lücken gefunden
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-08 → engine_analysis_crash als einziger aktiver Fehler gefunden, in 0.97.10 behoben
 - [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: 2026-06-08 → npm-Patches eingespielt (Angular 19.2.25/cli 19.2.27); NuGet + Angular/TS-Major-Sprünge bewusst ausgelassen
 
