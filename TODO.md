@@ -6,7 +6,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Code Review — letzter: noch keiner
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: noch keiner
 - [ ] Security Review — letzter: noch keiner
-- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: noch keiner
+- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-08 → engine_analysis_crash als einziger aktiver Fehler gefunden, in 0.97.10 behoben
 - [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: noch keiner
 
 ## Bugs
