@@ -261,7 +261,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
-    this.engine.stop();
+    this.engine.destroy();
   }
 
   // ---- Navigation ----
