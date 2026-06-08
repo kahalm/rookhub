@@ -783,7 +783,8 @@
       "gaveUpSolution": "Aufgegeben — hier ist die Lösung",
       "checkmate": "Schachmatt!",
       "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
-      "fullGame": "Ganze Partie"
+      "fullGame": "Ganze Partie",
+      "loadError": "Laden fehlgeschlagen. Bitte Verbindung prüfen."
     },
     "actions": {
       "reset": "Zurücksetzen",

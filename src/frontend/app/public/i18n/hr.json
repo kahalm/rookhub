@@ -783,7 +783,8 @@
       "gaveUpSolution": "Predao si — evo rješenja",
       "checkmate": "Šah-mat!",
       "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
-      "fullGame": "Cijela partija"
+      "fullGame": "Cijela partija",
+      "loadError": "Učitavanje nije uspjelo. Provjerite vezu."
     },
     "actions": {
       "reset": "Poništi",

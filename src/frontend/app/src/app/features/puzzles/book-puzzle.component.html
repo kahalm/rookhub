@@ -212,7 +212,15 @@
           }
 
           <!-- Status-Card: Interaktionszentrum -->
-          @if (puzzle || state === 'LOADING') {
+          @if (loadError && state === 'LOADING') {
+            <mat-card>
+              <mat-card-content style="display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:1.5rem 0">
+                <mat-icon color="warn">error_outline</mat-icon>
+                <p style="margin:0">{{ 'book.status.loadError' | translate }}</p>
+                <button mat-raised-button color="primary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
+              </mat-card-content>
+            </mat-card>
+          } @else if (puzzle || state === 'LOADING') {
             <app-puzzle-status-card
               mode="book"
               [state]="state"

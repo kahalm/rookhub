@@ -106,6 +106,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
   bookNavLoading = false;
+  loadError = false;
+  private retryFn: (() => void) | null = null;
   private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
 
   get displayBookName(): string {
@@ -374,6 +376,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private loadCourseNext(after?: number, exclude?: number): void {
     if (this.courseBookId == null) return;
     const hadPuzzle = this.puzzle != null;
+    this.loadError = false;
+    this.retryFn = () => this.loadCourseNext(after, exclude);
     if (!hadPuzzle) this.state = 'LOADING';
 
     this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude).subscribe({
@@ -391,7 +395,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.puzzle = res.puzzle;
         this.setupPuzzle(res.puzzle);
       },
-      error: () => { this.state = 'LOADING'; }
+      error: () => { this.state = 'LOADING'; this.loadError = true; }
     });
   }
 
@@ -400,6 +404,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const cur = this.puzzle?.id;
     if (this.courseModeKind === 'random') this.loadCourseNext(undefined, cur);
     else this.loadCourseNext(cur, undefined);
+  }
+
+  retryLoad(): void {
+    this.loadError = false;
+    this.retryFn?.();
   }
 
   backToCourses(): void {
@@ -533,6 +542,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private loadDaily(dateParam: string): void {
     const date = dateParam === 'today' ? this.todayUtc() : dateParam;
     this.dailyDate = date;
+    this.loadError = false;
+    this.retryFn = () => this.loadDaily(dateParam);
     this.state = 'LOADING';
     this.stopTimer();
     this.elapsedSeconds = 0;
@@ -546,11 +557,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       error: () => {
         this.state = 'LOADING';
         this.puzzle = null;
+        this.loadError = true;
       }
     });
   }
 
   private loadPuzzle(id: number): void {
+    this.loadError = false;
+    this.retryFn = () => this.loadPuzzle(id);
     this.state = 'LOADING';
     this.stopTimer();
     this.elapsedSeconds = 0;
@@ -571,6 +585,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       error: () => {
         this.state = 'LOADING';
         this.puzzle = null;
+        this.loadError = true;
       }
     });
   }

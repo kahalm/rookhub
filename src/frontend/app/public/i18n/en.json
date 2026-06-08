@@ -783,7 +783,8 @@
       "gaveUpSolution": "Gave up — here's the solution",
       "checkmate": "Checkmate!",
       "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",
-      "fullGame": "Full game"
+      "fullGame": "Full game",
+      "loadError": "Failed to load. Please check your connection."
     },
     "actions": {
       "reset": "Reset",
