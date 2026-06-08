@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.6';
+export const APP_VERSION = '0.97.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.7', date: '2026-06-08', changes: [
+    'Crawler: CrawlJob bleibt bei Queue-voll-Fehler nicht mehr dauerhaft auf "Queued" hängen — Job wird sofort auf "Failed" gesetzt.',
+  ]},
   { version: '0.97.6', date: '2026-06-08', changes: [
     'Buchpuzzle: Ladefehler zeigt jetzt Fehlermeldung mit Retry-Button statt endlosem Spinner.',
   ]},
