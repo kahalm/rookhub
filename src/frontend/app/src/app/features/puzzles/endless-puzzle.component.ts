@@ -147,6 +147,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private offlinePool: PuzzleDto[] = [];
   reviewingWrongPuzzle = false;
   gaveUp = false;
+  private puzzleLifeLost = false;
   private puzzleStartTime = 0;
   elapsedSeconds = 0;
 
@@ -623,6 +624,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   private onPuzzleLoaded(puzzle: PuzzleDto): void {
+    this.puzzleLifeLost = false;
     this.puzzle = puzzle;
     this._currentMinRating = puzzle.rating;   // Anzeige/Fehler-Logging am tatsächlichen Puzzle-Rating
     this.trackMaxRating(puzzle.rating);
@@ -771,18 +773,21 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   private loseLife(): void {
-    this.currentSessionMistakes.push(this._currentMinRating);
-    this.pushSessionPuzzle(false);
-    this.lives--;
-    this.recordAttempt(false);
-    // Bei 0 Lives ist der Run faktisch vorbei — nicht den Zombie-State (0 Lives) auf den
-    // Server schreiben. endGame() raeumt nach Klick auf Continue endgueltig auf; falls der
-    // User vorher die Seite verlaesst, ist dann kein 0-Lives-Run als "unfinished" gemerkt.
-    if (this.lives > 0) {
-      this.syncActiveGameToServer();
-    } else {
-      this.storage.saveActiveGameLocal(null);
-      this.storage.saveProgressImmediate(this.config, this.highscore, null);
+    if (!this.puzzleLifeLost) {
+      this.puzzleLifeLost = true;
+      this.currentSessionMistakes.push(this._currentMinRating);
+      this.pushSessionPuzzle(false);
+      this.lives--;
+      this.recordAttempt(false);
+      // Bei 0 Lives ist der Run faktisch vorbei — nicht den Zombie-State (0 Lives) auf den
+      // Server schreiben. endGame() raeumt nach Klick auf Continue endgueltig auf; falls der
+      // User vorher die Seite verlaesst, ist dann kein 0-Lives-Run als "unfinished" gemerkt.
+      if (this.lives > 0) {
+        this.syncActiveGameToServer();
+      } else {
+        this.storage.saveActiveGameLocal(null);
+        this.storage.saveProgressImmediate(this.config, this.highscore, null);
+      }
     }
     this.state = 'FAILED';
     this.updateBoard();
@@ -823,20 +828,22 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.currentEval = '';
     this.initialEval = '';
     this.showEval = false;
-    // Reset costs a life
-    this.lives--;
-    if (this.lives <= 0) {
-      this.currentSessionMistakes.push(this._currentMinRating);
-      this.pushSessionPuzzle(false);
-      this.recordAttempt(false);
-      // 0 Lives = Run ist vorbei. Active-State (mit jetzt veralteten Werten) auf
-      // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
-      this.storage.saveActiveGameLocal(null);
-      this.storage.saveProgressImmediate(this.config, this.highscore, null);
-      this.state = 'FAILED';
-      this.updateBoard();
-      this.enterSolutionReview();
-      return;
+    if (!this.puzzleLifeLost) {
+      this.puzzleLifeLost = true;
+      this.lives--;
+      if (this.lives <= 0) {
+        this.currentSessionMistakes.push(this._currentMinRating);
+        this.pushSessionPuzzle(false);
+        this.recordAttempt(false);
+        // 0 Lives = Run ist vorbei. Active-State (mit jetzt veralteten Werten) auf
+        // dem Server loeschen, damit kein "Unfinished run | 0 lives"-Zombie zurueckbleibt.
+        this.storage.saveActiveGameLocal(null);
+        this.storage.saveProgressImmediate(this.config, this.highscore, null);
+        this.state = 'FAILED';
+        this.updateBoard();
+        this.enterSolutionReview();
+        return;
+      }
     }
     this.setupPuzzle(this.puzzle);
   }
