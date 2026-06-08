@@ -3,7 +3,7 @@
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Periodisch
-- [ ] Code Review — letzter: noch keiner
+- [ ] Code Review — letzter: 2026-06-08 → 2 QUALITY-Fixes (stockfish toter Ternary + BulkImport Seed/ChainPuzzleIds) in 0.97.11; keine Bugs gefunden
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: 2026-06-08 → alle 840 Keys vorhanden, kein leerer String, kein JSON-Fehler; keine echten Lücken gefunden
 - [ ] Security Review — letzter: noch keiner
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-08 → engine_analysis_crash als einziger aktiver Fehler gefunden, in 0.97.10 behoben
