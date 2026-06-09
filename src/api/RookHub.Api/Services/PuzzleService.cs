@@ -13,6 +13,7 @@ public class PuzzleService
     private readonly AppDbContext _db;
     private readonly IMemoryCache _cache;
     private readonly ILogger<PuzzleService> _logger;
+    private bool _puzzleTagsReady;   // pro Request gecacht: ist die PuzzleTags-Tabelle befüllt?
 
     // Obergrenze anonymer Versuche pro Session — verhindert unbegrenztes
     // Anwachsen der PuzzleAttempts-Tabelle durch eine einzelne (anonyme) Session.
@@ -33,6 +34,17 @@ public class PuzzleService
     public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved,
         string? themesAny = null, IReadOnlyCollection<int>? excludeIds = null)
     {
+        // Schnellpfad: reiner ODER-Themenfilter über die normalisierte Tag-Tabelle (Index (TagId,Rating))
+        // statt LIKE-Full-Scan. Nur wenn PuzzleTags befüllt ist (sonst Fallback auf LIKE unten).
+        if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
+        {
+            var cands = await TagCandidatesAsync(themesAny, minRating, maxRating, excludeSolved, userId, excludeIds);
+            if (cands.Count == 0) return null;
+            var pickId = cands[Random.Shared.Next(cands.Count)].Id;
+            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId);
+            return picked == null ? null : MapToDto(picked);
+        }
+
         var query = _db.Puzzles.AsQueryable();
 
         if (minRating.HasValue)
@@ -146,16 +158,27 @@ public class PuzzleService
     {
         var spanMin = windows.Min(w => w.Min);
         var spanMax = windows.Max(w => w.Max);
-        var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
-        q = ApplyThemeFilters(q, themes, themesAny);
-        if (excludeSolved && userId.HasValue)
-        {
-            var uid = userId.Value;
-            var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
-            q = q.Where(p => !solvedIds.Contains(p.Id));
-        }
 
-        var candidates = await q.Select(p => new { p.Id, p.Rating }).ToListAsync();   // 1 Scan
+        List<(int Id, int Rating)> candidates;
+        if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
+        {
+            // Schneller Index-Pfad über die normalisierte Tag-Tabelle.
+            candidates = await TagCandidatesAsync(themesAny, spanMin, spanMax, excludeSolved, userId, null);
+        }
+        else
+        {
+            // Fallback: LIKE-Scan über die Rating-Spanne (1 Scan).
+            var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
+            q = ApplyThemeFilters(q, themes, themesAny);
+            if (excludeSolved && userId.HasValue)
+            {
+                var uid = userId.Value;
+                var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
+                q = q.Where(p => !solvedIds.Contains(p.Id));
+            }
+            candidates = (await q.Select(p => new { p.Id, p.Rating }).ToListAsync())
+                .Select(r => (r.Id, r.Rating)).ToList();
+        }
         if (candidates.Count == 0) return new List<PuzzleDto>();
 
         var used = new HashSet<int>();
@@ -189,6 +212,111 @@ public class PuzzleService
         if (!string.IsNullOrEmpty(themesAny))
             query = WhereAnyThemeLike(query, themesAny);
         return query;
+    }
+
+    /// <summary>Ist die normalisierte PuzzleTags-Tabelle befüllt? (pro Request gecacht)</summary>
+    private async Task<bool> HasPuzzleTagsAsync()
+    {
+        if (_puzzleTagsReady) return true;
+        _puzzleTagsReady = await _db.PuzzleTags.AnyAsync();
+        return _puzzleTagsReady;
+    }
+
+    /// <summary>
+    /// Kandidaten (PuzzleId + Rating) für einen ODER-Themenfilter über die normalisierte Tag-Tabelle.
+    /// Nutzt den Index (TagId, Rating) → reiner Index-Range-Scan statt LIKE-Full-Scan.
+    /// </summary>
+    private async Task<List<(int Id, int Rating)>> TagCandidatesAsync(string themesAny,
+        int? minRating, int? maxRating, bool excludeSolved, int? userId, IReadOnlyCollection<int>? excludeIds)
+    {
+        var names = themesAny.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct().ToList();
+        if (names.Count == 0) return new List<(int, int)>();
+        var tagIds = await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
+        if (tagIds.Count == 0) return new List<(int, int)>();
+
+        var q = _db.PuzzleTags.Where(pt => tagIds.Contains(pt.TagId));
+        if (minRating.HasValue) q = q.Where(pt => pt.Rating >= minRating.Value);
+        if (maxRating.HasValue) q = q.Where(pt => pt.Rating <= maxRating.Value);
+        if (excludeIds is { Count: > 0 }) q = q.Where(pt => !excludeIds.Contains(pt.PuzzleId));
+        if (excludeSolved && userId.HasValue)
+        {
+            var uid = userId.Value;
+            var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
+            q = q.Where(pt => !solvedIds.Contains(pt.PuzzleId));
+        }
+        // Ein Puzzle kann mehrere der gesuchten Tags tragen → DISTINCT auf (PuzzleId, Rating).
+        var rows = await q.Select(pt => new { pt.PuzzleId, pt.Rating }).Distinct().ToListAsync();
+        return rows.Select(r => (r.PuzzleId, r.Rating)).ToList();
+    }
+
+    /// <summary>
+    /// Legt für eine Menge bereits gespeicherter Puzzles die Tag/PuzzleTag-Zeilen an (idempotent über den
+    /// Tag-Cache). Wird beim Import genutzt. <paramref name="tagCache"/> (Name→Id) lebt über alle Batches.
+    /// </summary>
+    private async Task SyncPuzzleTagsAsync(List<Puzzle> puzzles, Dictionary<string, int> tagCache, CancellationToken ct)
+    {
+        static IEnumerable<string> Split(string? s) =>
+            string.IsNullOrWhiteSpace(s) ? Array.Empty<string>()
+            : s.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var newNames = puzzles.SelectMany(p => Split(p.Themes)).Distinct()
+            .Where(n => !tagCache.ContainsKey(n)).ToList();
+        if (newNames.Count > 0)
+        {
+            var existing = await _db.Tags.Where(t => newNames.Contains(t.Name)).ToListAsync(ct);
+            foreach (var t in existing) tagCache[t.Name] = t.Id;
+            var toCreate = newNames.Where(n => !tagCache.ContainsKey(n)).Select(n => new Tag { Name = n }).ToList();
+            if (toCreate.Count > 0)
+            {
+                _db.Tags.AddRange(toCreate);
+                await _db.SaveChangesAsync(ct);
+                foreach (var t in toCreate) tagCache[t.Name] = t.Id;
+            }
+        }
+
+        var links = new List<PuzzleTag>();
+        foreach (var p in puzzles)
+            foreach (var name in Split(p.Themes).Distinct())
+                if (tagCache.TryGetValue(name, out var tagId))
+                    links.Add(new PuzzleTag { PuzzleId = p.Id, TagId = tagId, Rating = p.Rating });
+        if (links.Count > 0)
+        {
+            _db.PuzzleTags.AddRange(links);
+            await _db.SaveChangesAsync(ct);
+        }
+    }
+
+    /// <summary>
+    /// Befüllt PuzzleTags für alle bereits importierten Puzzles (einmaliger Backfill, batchweise, idempotent).
+    /// Bestehende Verknüpfungen werden übersprungen. Gibt die Zahl verarbeiteter Puzzles zurück.
+    /// </summary>
+    public async Task<int> BackfillPuzzleTagsAsync(int batchSize = 5000, CancellationToken ct = default)
+    {
+        var tagCache = await _db.Tags.ToDictionaryAsync(t => t.Name, t => t.Id, ct);
+        int processed = 0, lastId = 0;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var batch = await _db.Puzzles.Where(p => p.Id > lastId).OrderBy(p => p.Id).Take(batchSize)
+                .Select(p => new { p.Id, p.Rating, p.Themes }).ToListAsync(ct);
+            if (batch.Count == 0) break;
+            lastId = batch[^1].Id;
+
+            var ids = batch.Select(b => b.Id).ToList();
+            var already = (await _db.PuzzleTags.Where(pt => ids.Contains(pt.PuzzleId))
+                .Select(pt => pt.PuzzleId).Distinct().ToListAsync(ct)).ToHashSet();
+            var todo = batch.Where(b => !already.Contains(b.Id))
+                .Select(b => new Puzzle { Id = b.Id, Rating = b.Rating, Themes = b.Themes }).ToList();
+
+            if (todo.Count > 0)
+                await SyncPuzzleTagsAsync(todo, tagCache, ct);
+
+            _db.ChangeTracker.Clear();
+            processed += batch.Count;
+        }
+        _logger.LogInformation("PuzzleTags-Backfill abgeschlossen: {Count} Puzzles verarbeitet.", processed);
+        return processed;
     }
 
     /// <summary>
@@ -658,6 +786,7 @@ public class PuzzleService
     public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
         var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);
+        var tagCache = await _db.Tags.ToDictionaryAsync(t => t.Name, t => t.Id, ct);
         var imported = 0;
         var batch = new List<Puzzle>();
 
@@ -703,6 +832,7 @@ public class PuzzleService
             {
                 _db.Puzzles.AddRange(batch);
                 await _db.SaveChangesAsync(ct);
+                await SyncPuzzleTagsAsync(batch, tagCache, ct);   // Tag/PuzzleTag mitpflegen
                 _db.ChangeTracker.Clear();
                 batch.Clear();
             }
@@ -712,6 +842,7 @@ public class PuzzleService
         {
             _db.Puzzles.AddRange(batch);
             await _db.SaveChangesAsync(ct);
+            await SyncPuzzleTagsAsync(batch, tagCache, ct);
         }
 
         return imported;

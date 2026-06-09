@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -18,8 +19,9 @@ public class AdminController : BaseApiController
     private readonly PgnImportService _pgnImportService;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
+    private readonly IBackgroundTaskQueue _taskQueue;
 
-    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config, IWebHostEnvironment env)
+    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config, IWebHostEnvironment env, IBackgroundTaskQueue taskQueue)
     {
         _admin = admin;
         _bookAdmin = bookAdmin;
@@ -27,6 +29,7 @@ public class AdminController : BaseApiController
         _pgnImportService = pgnImportService;
         _config = config;
         _env = env;
+        _taskQueue = taskQueue;
     }
 
     /// <summary>Konfigurationswerte fürs Admin-UI (z. B. Kibana-Link aus dem Server-Env).</summary>
@@ -111,6 +114,22 @@ public class AdminController : BaseApiController
     {
         await _admin.ClearPuzzlesAsync();
         return NoContent();
+    }
+
+    /// <summary>
+    /// Stößt den einmaligen Backfill der normalisierten PuzzleTags-Tabelle an (Hintergrund-Job).
+    /// Nötig EINMAL nach dem Deploy, damit der schnelle Themen-Filter („schwächste Themen") greift —
+    /// danach pflegt der Import die Tags automatisch mit. Idempotent (überspringt bereits Verknüpftes).
+    /// </summary>
+    [HttpPost("puzzles/backfill-tags")]
+    public async Task<IActionResult> BackfillPuzzleTags()
+    {
+        await _taskQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var svc = sp.GetRequiredService<PuzzleService>();
+            await svc.BackfillPuzzleTagsAsync(ct: ct);
+        });
+        return Accepted(new { message = "PuzzleTags-Backfill gestartet (läuft im Hintergrund; Fortschritt im Log)." });
     }
 
     // ---- Buch-Puzzles: Upload + Verwaltung -------------------------------

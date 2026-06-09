@@ -36,7 +36,8 @@ public class AdminControllerTests : IDisposable
             new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
             _config,
-            new FakeWebHostEnvironment());
+            new FakeWebHostEnvironment(),
+            new NoOpTaskQueue());
         SetUser(99);
     }
 
@@ -94,7 +95,8 @@ public class AdminControllerTests : IDisposable
             new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(db),
             emptyConfig,
-            new FakeWebHostEnvironment());
+            new FakeWebHostEnvironment(),
+            new NoOpTaskQueue());
 
         var result = ctrl.GetConfig() as OkObjectResult;
 

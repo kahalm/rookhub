@@ -96,6 +96,42 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task BackfillPuzzleTags_CreatesTagsAndLinks_Idempotent()
+    {
+        await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "bf1");
+        await CreatePuzzleAsync(rating: 1600, themes: "fork pin", lichessId: "bf2");
+        await CreatePuzzleAsync(rating: 1700, themes: "", lichessId: "bf3");   // ohne Themen → keine Links
+
+        var processed = await _service.BackfillPuzzleTagsAsync(batchSize: 2);
+
+        Assert.Equal(3, processed);
+        Assert.Equal(3, await _db.Tags.CountAsync());                 // fork, endgame, pin
+        Assert.Equal(4, await _db.PuzzleTags.CountAsync());           // 2 + 2 + 0
+        var fork = await _db.Tags.SingleAsync(t => t.Name == "fork");
+        Assert.Equal(2, await _db.PuzzleTags.CountAsync(pt => pt.TagId == fork.Id));
+        // Rating denormalisiert?
+        Assert.All(await _db.PuzzleTags.Where(pt => pt.TagId == fork.Id).ToListAsync(),
+            pt => Assert.Contains(pt.Rating, new[] { 1500, 1600 }));
+
+        // Erneuter Lauf legt nichts doppelt an.
+        await _service.BackfillPuzzleTagsAsync();
+        Assert.Equal(4, await _db.PuzzleTags.CountAsync());
+    }
+
+    [Fact]
+    public async Task GetRandom_ThemesAny_UsesTagIndexPath_WhenPopulated()
+    {
+        await CreatePuzzleAsync(rating: 1500, themes: "endgame mateIn2", lichessId: "ti1");
+        await CreatePuzzleAsync(rating: 1500, themes: "middlegame fork", lichessId: "ti2");
+        await _service.BackfillPuzzleTagsAsync();   // PuzzleTags befüllen → Schnellpfad aktiv
+
+        var result = await _service.GetRandomAsync(null, 1400, 1600, themes: null, excludeSolved: false, themesAny: "fork pin");
+
+        Assert.NotNull(result);
+        Assert.Contains("fork", result!.Themes);   // nur das fork-Puzzle matcht
+    }
+
+    [Fact]
     public async Task GetRandomBatch_SkipsEmptyWindows()
     {
         await CreatePuzzleAsync(rating: 810);
@@ -358,6 +394,9 @@ public class PuzzleServiceTests : IDisposable
         Assert.Equal("abc123", puzzle.LichessId);
         Assert.Equal(1500, puzzle.Rating);
         Assert.Equal("middlegame fork", puzzle.Themes);
+        // Import pflegt die normalisierten Tags mit.
+        Assert.Equal(2, await _db.Tags.CountAsync());                              // middlegame, fork
+        Assert.Equal(2, await _db.PuzzleTags.CountAsync(pt => pt.PuzzleId == puzzle.Id));
     }
 
     [Fact]

@@ -315,7 +315,8 @@ public class CourseControllerTests : IDisposable
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
             new ConfigurationBuilder().Build(),
-            new FakeWebHostEnvironment());
+            new FakeWebHostEnvironment(),
+            new NoOpTaskQueue());
         SetUser(admin, UserId);
         Assert.IsType<NoContentResult>(await admin.DeleteBook(book.Id));
 
@@ -352,7 +353,8 @@ public class CourseControllerTests : IDisposable
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
             new ConfigurationBuilder().Build(),
-            new FakeWebHostEnvironment());
+            new FakeWebHostEnvironment(),
+            new NoOpTaskQueue());
         SetUser(admin, UserId);
         return admin;
     }

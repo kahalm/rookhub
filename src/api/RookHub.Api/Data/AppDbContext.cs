@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<Book> Books => Set<Book>();
@@ -144,6 +146,20 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(p => p.LichessId).IsUnique();
             e.HasIndex(p => p.Rating);
+        });
+
+        modelBuilder.Entity<Tag>(e =>
+        {
+            e.HasIndex(t => t.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<PuzzleTag>(e =>
+        {
+            e.HasKey(pt => new { pt.PuzzleId, pt.TagId });
+            // Killer-Index: „Puzzles mit Thema X im Rating-Fenster" → reiner Index-Range-Scan.
+            e.HasIndex(pt => new { pt.TagId, pt.Rating });
+            e.HasOne(pt => pt.Puzzle).WithMany().HasForeignKey(pt => pt.PuzzleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(pt => pt.Tag).WithMany(t => t.PuzzleTags).HasForeignKey(pt => pt.TagId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PuzzleAttempt>(e =>
