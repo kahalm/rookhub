@@ -61,6 +61,7 @@ public class SchachBotWebhookService
                     name = s.Name,
                     discordId = s.DiscordId,
                     discordUsername = s.DiscordUsername,
+                    timeSeconds = s.TimeSeconds,
                 }),
             },
         };

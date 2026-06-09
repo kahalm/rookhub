@@ -73,8 +73,8 @@ public class SchachBotWebhookServiceTests
             AttemptCount = 5,
             Solvers = new List<BookSolverDto>
             {
-                new() { Name = "Anna", DiscordId = "111", DiscordUsername = "anna#1" },
-                new() { Name = "Ben", DiscordId = null, DiscordUsername = null },
+                new() { Name = "Anna", DiscordId = "111", DiscordUsername = "anna#1", TimeSeconds = 42 },
+                new() { Name = "Ben", DiscordId = null, DiscordUsername = null, TimeSeconds = 7 },
             },
         };
         await svc.NotifyAttemptAsync(42, results);
@@ -101,6 +101,8 @@ public class SchachBotWebhookServiceTests
         Assert.Equal(2, solvers.GetArrayLength());
         Assert.Equal("Anna", solvers[0].GetProperty("name").GetString());
         Assert.Equal("111", solvers[0].GetProperty("discordId").GetString());
+        Assert.Equal(42, solvers[0].GetProperty("timeSeconds").GetInt32());   // Lösungszeit im Payload
+        Assert.Equal(7, solvers[1].GetProperty("timeSeconds").GetInt32());
     }
 
     [Fact]
