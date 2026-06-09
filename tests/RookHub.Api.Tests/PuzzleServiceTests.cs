@@ -119,6 +119,25 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandom_ThemesAny_DuringPartialBackfill_StillFindsMatch_ViaFallback()
+    {
+        var p1 = await CreatePuzzleAsync(rating: 1500, themes: "fork", lichessId: "pb1");
+        var p2 = await CreatePuzzleAsync(rating: 1500, themes: "fork", lichessId: "pb2");
+        // Backfill „mittendrin": nur p1 ist verknüpft, p2 fehlt noch.
+        _db.Tags.Add(new Tag { Name = "fork" });
+        await _db.SaveChangesAsync();
+        var fork = await _db.Tags.SingleAsync(t => t.Name == "fork");
+        _db.PuzzleTags.Add(new PuzzleTag { PuzzleId = p1.Id, TagId = fork.Id, Rating = 1500 });
+        await _db.SaveChangesAsync();
+
+        // Tabelle UNVOLLSTÄNDIG (p2 ohne Tag) → Tag-Pfad darf NICHT greifen → LIKE-Fallback findet trotzdem.
+        var result = await _service.GetRandomAsync(null, 1400, 1600, themes: null, excludeSolved: false, themesAny: "fork");
+
+        Assert.NotNull(result);
+        Assert.Contains("fork", result!.Themes);
+    }
+
+    [Fact]
     public async Task GetRandom_ThemesAny_UsesTagIndexPath_WhenPopulated()
     {
         await CreatePuzzleAsync(rating: 1500, themes: "endgame mateIn2", lichessId: "ti1");
