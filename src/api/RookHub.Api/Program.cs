@@ -203,6 +203,11 @@ try
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        // Es gibt ZWEI vertrauenswürdige Proxy-Hops (NPM + frontend-nginx), der XFF lautet
+        // z.B. "10.24.x.x, 172.26.0.1". Der Default ForwardLimit=1 rollt nur einen Hop zurück
+        // → es bliebe die Docker-Gateway-IP 172.26.0.1 stehen. null = so weit zurückrollen wie
+        // KnownNetworks reicht; gestoppt wird am ersten nicht-privaten Peer = echte Client-IP.
+        options.ForwardLimit = null;
         options.KnownProxies.Clear();
         options.KnownNetworks.Clear();
         options.KnownNetworks.Add(new IPNetwork(System.Net.IPAddress.Parse("10.0.0.0"), 8));
