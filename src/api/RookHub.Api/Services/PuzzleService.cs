@@ -13,7 +13,7 @@ public class PuzzleService
     private readonly AppDbContext _db;
     private readonly IMemoryCache _cache;
     private readonly ILogger<PuzzleService> _logger;
-    private const string PuzzleTagsReadyCacheKey = "puzzletags_ready";
+    private bool _puzzleTagsReady;   // pro Request gecacht: ist die PuzzleTags-Tabelle befüllt?
 
     // Obergrenze anonymer Versuche pro Session — verhindert unbegrenztes
     // Anwachsen der PuzzleAttempts-Tabelle durch eine einzelne (anonyme) Session.
@@ -214,21 +214,12 @@ public class PuzzleService
         return query;
     }
 
-    /// <summary>
-    /// Ist die normalisierte PuzzleTags-Tabelle VOLLSTÄNDIG? (= kein themen-tragendes Puzzle ohne
-    /// Verknüpfung). Nur dann ist der Tag-Index-Pfad korrekt — sonst (z. B. während des Backfills,
-    /// der die Tabelle erst nach und nach füllt) würde er Treffer übersehen → Fallback auf LIKE.
-    /// Ergebnis gecacht (IMemoryCache, prozessweit): true lange, false kurz (Backfill-Recheck).
-    /// </summary>
+    /// <summary>Ist die normalisierte PuzzleTags-Tabelle befüllt? (pro Request gecacht)</summary>
     private async Task<bool> HasPuzzleTagsAsync()
     {
-        if (_cache.TryGetValue(PuzzleTagsReadyCacheKey, out bool cached)) return cached;
-        var ready = await _db.Puzzles.AnyAsync()
-            && !await _db.Puzzles
-                .Where(p => p.Themes != null && p.Themes != "" && !_db.PuzzleTags.Any(pt => pt.PuzzleId == p.Id))
-                .AnyAsync();
-        _cache.Set(PuzzleTagsReadyCacheKey, ready, ready ? TimeSpan.FromHours(12) : TimeSpan.FromSeconds(30));
-        return ready;
+        if (_puzzleTagsReady) return true;
+        _puzzleTagsReady = await _db.PuzzleTags.AnyAsync();
+        return _puzzleTagsReady;
     }
 
     /// <summary>
@@ -324,8 +315,6 @@ public class PuzzleService
             _db.ChangeTracker.Clear();
             processed += batch.Count;
         }
-        // Tabelle ist jetzt vollständig → Tag-Index-Pfad sofort freischalten (kein Recheck-Delay).
-        _cache.Set(PuzzleTagsReadyCacheKey, true, TimeSpan.FromHours(12));
         _logger.LogInformation("PuzzleTags-Backfill abgeschlossen: {Count} Puzzles verarbeitet.", processed);
         return processed;
     }

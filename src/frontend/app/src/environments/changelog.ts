@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.98.8';
+export const APP_VERSION = '0.98.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,8 +11,8 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: '0.98.8', date: '2026-06-09', changes: [
-    'Fix: Während der Tag-Tabellen-Backfill läuft, blieb die Themen-Puzzle-Auswahl auf dem sicheren LIKE-Pfad — der schnelle Tag-Index greift erst, wenn der Backfill VOLLSTÄNDIG ist (vorher konnte mitten im Aufbau „kein Puzzle" auftreten).',
+  { version: '0.98.9', date: '2026-06-09', changes: [
+    'Revert von 0.98.8 (Bereitschafts-Prüfung des Tag-Index): die Vollständigkeits-Abfrage wurde wieder auf die einfache Variante zurückgesetzt.',
   ]},
   { version: '0.98.7', date: '2026-06-09', changes: [
     'Tagespuzzle → Discord: Der Webhook an den Schach-Bot sendet jetzt die Lösungszeit pro Löser (timeSeconds) — der Bot zeigt sie in der „Gelöst von"-Zeile an (war bisher leer, weil die Zeit nicht übertragen wurde).',
