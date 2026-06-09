@@ -850,7 +850,8 @@
       "users": "Users",
       "books": "Books",
       "groups": "Groups",
-      "daily": "Daily Puzzle"
+      "daily": "Daily Puzzle",
+      "puzzles": "Puzzles"
     },
     "users": {
       "searchLabel": "Search users",
@@ -964,6 +965,15 @@
         "load": "Failed to load the daily puzzle.",
         "regenerate": "Failed to regenerate the daily puzzle."
       }
+    },
+    "puzzles": {
+      "title": "Puzzles",
+      "backfillHint": "Builds the normalized tag table (Tags / PuzzleTags) used by the fast theme filter (\"train worst themes\"). Run once after deploying — the import keeps tags up to date afterwards. Runs as a background job.",
+      "backfillBtn": "Build tag table",
+      "backfillRunning": "Starting…",
+      "backfillConfirm": "Build / refresh the puzzle tag table now? This runs as a background job.",
+      "backfillStarted": "Tag backfill started (running in the background).",
+      "backfillError": "Could not start the backfill."
     }
   },
   "analysis": {

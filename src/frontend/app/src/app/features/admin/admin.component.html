@@ -217,6 +217,21 @@
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.puzzles' | translate">
+          <div class="tab-content">
+            <h2>{{ 'admin.puzzles.title' | translate }}</h2>
+            <mat-card>
+              <mat-card-content>
+                <p>{{ 'admin.puzzles.backfillHint' | translate }}</p>
+                <button mat-raised-button color="primary" (click)="backfillPuzzleTags()" [disabled]="puzzleTagsBackfilling">
+                  <mat-icon>sync</mat-icon>
+                  {{ (puzzleTagsBackfilling ? 'admin.puzzles.backfillRunning' : 'admin.puzzles.backfillBtn') | translate }}
+                </button>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </mat-tab>
+
         <mat-tab [label]="'admin.tabs.groups' | translate">
           <div class="tab-content">
             <div class="group-create">

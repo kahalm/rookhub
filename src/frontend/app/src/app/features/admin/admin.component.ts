@@ -71,6 +71,9 @@ export class AdminComponent implements OnInit {
   dailyLoading = false;
   dailyRegenerating = false;
 
+  // --- Puzzles (Standard) -----------------------------------------------
+  puzzleTagsBackfilling = false;
+
   constructor(private adminService: AdminService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
@@ -247,6 +250,23 @@ export class AdminComponent implements OnInit {
       error: err => {
         this.dailyRegenerating = false;
         this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.regenerate'));
+      }
+    });
+  }
+
+  // --- Puzzles (Standard) -----------------------------------------------
+  backfillPuzzleTags(): void {
+    if (this.puzzleTagsBackfilling) return;
+    if (!confirm(this.translate.instant('admin.puzzles.backfillConfirm'))) return;
+    this.puzzleTagsBackfilling = true;
+    this.adminService.backfillPuzzleTags().subscribe({
+      next: () => {
+        this.puzzleTagsBackfilling = false;
+        this.snackbar.info(this.translate.instant('admin.puzzles.backfillStarted'));
+      },
+      error: err => {
+        this.puzzleTagsBackfilling = false;
+        this.snackbar.info(err.error?.message || this.translate.instant('admin.puzzles.backfillError'));
       }
     });
   }

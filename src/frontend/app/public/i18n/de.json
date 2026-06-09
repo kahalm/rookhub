@@ -850,7 +850,8 @@
       "users": "Users",
       "books": "Bücher",
       "groups": "Gruppen",
-      "daily": "Tagespuzzle"
+      "daily": "Tagespuzzle",
+      "puzzles": "Puzzles"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -964,6 +965,15 @@
         "load": "Tagespuzzle konnte nicht geladen werden.",
         "regenerate": "Tagespuzzle konnte nicht neu generiert werden."
       }
+    },
+    "puzzles": {
+      "title": "Puzzles",
+      "backfillHint": "Baut die normalisierte Tag-Tabelle (Tags / PuzzleTags) für den schnellen Themen-Filter („schwächste Themen trainieren\") auf. Einmalig nach dem Deploy ausführen — danach pflegt der Import die Tags automatisch. Läuft als Hintergrund-Job.",
+      "backfillBtn": "Tag-Tabelle aufbauen",
+      "backfillRunning": "Wird gestartet…",
+      "backfillConfirm": "Tag-Tabelle jetzt aufbauen/auffrischen? Läuft als Hintergrund-Job.",
+      "backfillStarted": "Tag-Backfill gestartet (läuft im Hintergrund).",
+      "backfillError": "Backfill konnte nicht gestartet werden."
     }
   },
   "analysis": {

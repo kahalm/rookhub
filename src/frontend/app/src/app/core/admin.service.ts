@@ -142,6 +142,11 @@ export class AdminService {
     return this.http.post<BookImportResult>('/api/admin/books/import', form);
   }
 
+  /** Stößt den einmaligen Backfill der normalisierten Puzzle-Tag-Tabelle an (Hintergrund-Job). */
+  backfillPuzzleTags(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>('/api/admin/puzzles/backfill-tags', {});
+  }
+
   // --- Tagespuzzle ------------------------------------------------------
   /** Aktuell zugeordnetes Tagespuzzle eines UTC-Datums (yyyyMMdd oder 'today'). */
   getDailyPuzzle(date: string): Observable<DailyPuzzleInfo> {

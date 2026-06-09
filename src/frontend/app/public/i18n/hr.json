@@ -850,7 +850,8 @@
       "users": "Korisnici",
       "books": "Knjige",
       "groups": "Grupe",
-      "daily": "Dnevna zagonetka"
+      "daily": "Dnevna zagonetka",
+      "puzzles": "Zagonetke"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
@@ -964,6 +965,15 @@
         "load": "Učitavanje dnevne zagonetke nije uspjelo.",
         "regenerate": "Ponovno generiranje dnevne zagonetke nije uspjelo."
       }
+    },
+    "puzzles": {
+      "title": "Zagonetke",
+      "backfillHint": "Gradi normaliziranu tablicu oznaka (Tags / PuzzleTags) za brzi filtar tema („treniraj najslabije teme\"). Pokreni jednom nakon postavljanja — nakon toga uvoz automatski održava oznake. Radi u pozadini.",
+      "backfillBtn": "Izgradi tablicu oznaka",
+      "backfillRunning": "Pokreće se…",
+      "backfillConfirm": "Izgraditi/osvježiti tablicu oznaka sada? Radi kao pozadinski zadatak.",
+      "backfillStarted": "Backfill oznaka pokrenut (radi u pozadini).",
+      "backfillError": "Backfill se nije mogao pokrenuti."
     }
   },
   "analysis": {
