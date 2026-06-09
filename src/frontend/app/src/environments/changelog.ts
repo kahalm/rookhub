@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.13';
+export const APP_VERSION = '0.97.14';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.14', date: '2026-06-09', changes: [
+    'Logging/Rate-Limiter erfassen jetzt die echte Client-IP statt der Docker-Gateway-IP (X-Forwarded-For über beide Proxy-Hops zurückgerollt).',
+  ]},
   { version: '0.97.13', date: '2026-06-08', changes: [
     'Puzzle-Einstellungen: Schwierigkeitsstufen haben jetzt ein (i)-Info-Panel mit Beschreibung der Elo-Offsets.',
     'Puzzle: Bei Schwierigkeitsänderung wird automatisch zum nächsten Puzzle im neuen Bereich gesprungen.',
