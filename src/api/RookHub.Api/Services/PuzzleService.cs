@@ -39,17 +39,8 @@ public class PuzzleService
             query = query.Where(p => p.Rating >= minRating.Value);
         if (maxRating.HasValue)
             query = query.Where(p => p.Rating <= maxRating.Value);
-        if (!string.IsNullOrEmpty(themes))
-        {
-            var themeList = themes.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var theme in themeList)
-            {
-                var sanitized = SanitizeLikeInput(theme);
-                query = query.Where(p => p.Themes != null && EF.Functions.Like(p.Themes, $"%{sanitized}%"));
-            }
-        }
-        if (!string.IsNullOrEmpty(themesAny))
-            query = WhereAnyThemeLike(query, themesAny);
+        var hasThemeFilter = !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny);
+        query = ApplyThemeFilters(query, themes, themesAny);
         if (excludeSolved && userId.HasValue)
         {
             var uid = userId.Value;
@@ -62,11 +53,24 @@ public class PuzzleService
         if (excludeIds is { Count: > 0 })
             query = query.Where(p => !excludeIds.Contains(p.Id));
 
+        // Theme-Filter (LIKE) kann KEINEN Index nutzen → die ID-Range-Methode (Min/Max + Seek)
+        // würde mehrere Full-Scans pro Aufruf auslösen (im Endless-Batch ×Fensteranzahl = sehr lahm).
+        // Stattdessen die (durch Rating bereits eingegrenzte) Treffer-ID-Liste EINMAL laden und
+        // zufällig wählen: 1 Scan + 1 PK-Lookup.
+        if (hasThemeFilter)
+        {
+            var ids = await query.Select(p => p.Id).ToListAsync();
+            if (ids.Count == 0) return null;
+            var pickId = ids[Random.Shared.Next(ids.Count)];
+            var picked = await _db.Puzzles.FirstOrDefaultAsync(p => p.Id == pickId);
+            return picked == null ? null : MapToDto(picked);
+        }
+
         // Fast random selection via ID-range instead of COUNT(*)+SKIP(N).
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
         // ID-range picks a random point in the PK space and seeks forward - O(1).
+        // Theme-Filter ist oben schon behandelt (early return) → hier nur Rating/Solved/ExcludeIds.
         var anyFilter = minRating.HasValue || maxRating.HasValue
-            || !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny)
             || (excludeSolved && userId.HasValue)
             || excludeIds is { Count: > 0 };
 
@@ -116,15 +120,75 @@ public class PuzzleService
     public async Task<List<PuzzleDto>> GetRandomBatchAsync(int? userId,
         IEnumerable<(int Min, int Max)> windows, string? themes, bool excludeSolved, string? themesAny = null)
     {
+        var winList = windows.ToList();
+        // Theme-Filter (LIKE, kein Index): NICHT pro Fenster scannen (×40 = sehr lahm), sondern
+        // EINMAL alle Treffer der Gesamt-Rating-Spanne laden und in-memory auf die Fenster verteilen.
+        if ((!string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny)) && winList.Count > 0)
+            return await GetThemedBatchAsync(userId, winList, themes, themesAny, excludeSolved);
+
         var used = new HashSet<int>();
         var result = new List<PuzzleDto>();
-        foreach (var (min, max) in windows)
+        foreach (var (min, max) in winList)
         {
             var dto = await GetRandomAsync(userId, min, max, themes, excludeSolved, themesAny, used);
             if (dto != null && used.Add(dto.Id))
                 result.Add(dto);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Effizienter Theme-Batch: EIN Scan über die gesamte Rating-Spanne aller Fenster, dann
+    /// in-memory je Fenster ein zufälliges, eindeutiges Treffer-Puzzle wählen und EINMAL nachladen.
+    /// </summary>
+    private async Task<List<PuzzleDto>> GetThemedBatchAsync(int? userId,
+        List<(int Min, int Max)> windows, string? themes, string? themesAny, bool excludeSolved)
+    {
+        var spanMin = windows.Min(w => w.Min);
+        var spanMax = windows.Max(w => w.Max);
+        var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
+        q = ApplyThemeFilters(q, themes, themesAny);
+        if (excludeSolved && userId.HasValue)
+        {
+            var uid = userId.Value;
+            var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
+            q = q.Where(p => !solvedIds.Contains(p.Id));
+        }
+
+        var candidates = await q.Select(p => new { p.Id, p.Rating }).ToListAsync();   // 1 Scan
+        if (candidates.Count == 0) return new List<PuzzleDto>();
+
+        var used = new HashSet<int>();
+        var chosenIds = new List<int>();
+        foreach (var (min, max) in windows)
+        {
+            var pool = candidates.Where(c => c.Rating >= min && c.Rating <= max && !used.Contains(c.Id)).ToList();
+            if (pool.Count == 0) continue;
+            var pick = pool[Random.Shared.Next(pool.Count)].Id;
+            used.Add(pick);
+            chosenIds.Add(pick);
+        }
+        if (chosenIds.Count == 0) return new List<PuzzleDto>();
+
+        var puzzles = await _db.Puzzles.Where(p => chosenIds.Contains(p.Id)).ToListAsync();   // 1 Nachladen
+        var byId = puzzles.ToDictionary(p => p.Id);
+        return chosenIds.Where(byId.ContainsKey).Select(id => MapToDto(byId[id])).ToList();   // Fensterreihenfolge
+    }
+
+    /// <summary>Wendet UND-Themen (<paramref name="themes"/>) und ODER-Themen (<paramref name="themesAny"/>) auf die Query an.</summary>
+    private static IQueryable<Puzzle> ApplyThemeFilters(IQueryable<Puzzle> query, string? themes, string? themesAny)
+    {
+        if (!string.IsNullOrEmpty(themes))
+        {
+            foreach (var theme in themes.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var sanitized = SanitizeLikeInput(theme);
+                query = query.Where(p => p.Themes != null && EF.Functions.Like(p.Themes, $"%{sanitized}%"));
+            }
+        }
+        if (!string.IsNullOrEmpty(themesAny))
+            query = WhereAnyThemeLike(query, themesAny);
+        return query;
     }
 
     /// <summary>

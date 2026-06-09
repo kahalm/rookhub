@@ -77,6 +77,25 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRandomBatch_ThemesAny_FiltersAndDistributesPerWindow()
+    {
+        // Treffer (fork) + Nicht-Treffer (endgame) je Fenster — der ODER-Filter darf nur Treffer liefern.
+        await CreatePuzzleAsync(rating: 810, themes: "fork", lichessId: "tb-a1");
+        await CreatePuzzleAsync(rating: 810, themes: "endgame", lichessId: "tb-a2");
+        await CreatePuzzleAsync(rating: 900, themes: "pin", lichessId: "tb-b1");
+        await CreatePuzzleAsync(rating: 900, themes: "endgame", lichessId: "tb-b2");
+
+        var windows = new (int, int)[] { (800, 840), (880, 920) };
+        var result = await _service.GetRandomBatchAsync(null, windows, themes: null, excludeSolved: false, themesAny: "fork pin");
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(2, result.Select(p => p.Id).Distinct().Count());
+        Assert.All(result, p => Assert.DoesNotContain("endgame", p.Themes));   // nur fork/pin
+        Assert.InRange(result[0].Rating, 800, 840);
+        Assert.InRange(result[1].Rating, 880, 920);
+    }
+
+    [Fact]
     public async Task GetRandomBatch_SkipsEmptyWindows()
     {
         await CreatePuzzleAsync(rating: 810);

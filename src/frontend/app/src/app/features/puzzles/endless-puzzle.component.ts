@@ -77,6 +77,26 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   /** Für das Config-Template: „schwächste Themen"-Option nur eingeloggt anbieten. */
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
+  /** Manuell eingegebene Themen, gemerkt während „schwächste Themen" aktiv ist (Wiederherstellung beim Abschalten). */
+  private savedManualThemes = '';
+
+  /** Aktive Themen-Filter für die Sichtbar-Anzeige (Config + Run). Leer = kein Filter. */
+  get activeFilterThemes(): string[] {
+    const src = (this.config.worstTags ? this.worstThemes.join(' ') : this.config.themes) || '';
+    return src.trim().split(/\s+/).filter(Boolean);
+  }
+
+  /** Toggle „5 schwächste Themen trainieren": schwächste Themen laden und in die Editbox schreiben (sichtbar). */
+  onWorstTagsToggle(enabled: boolean): void {
+    if (enabled) {
+      this.savedManualThemes = this.config.themes;
+      this.ensureWorstThemes(() => { this.config.themes = this.worstThemes.join(' '); this.saveConfig(); });
+    } else {
+      this.config.themes = this.savedManualThemes;
+      this.worstThemes = [];   // beim nächsten Aktivieren frisch laden
+      this.saveConfig();
+    }
+  }
 
   lives = 3;
   level = 0;

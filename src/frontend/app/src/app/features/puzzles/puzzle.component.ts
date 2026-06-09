@@ -523,6 +523,11 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.worstTagsEnabled = this.prefs.puzzleWorstTags;
   }
 
+  /** Aktive Schwächen-Themen für die Sichtbar-Anzeige während des Lösens (leer, wenn Filter aus). */
+  get activeWorstThemes(): string[] {
+    return this.worstTagsEnabled ? this.worstThemes : [];
+  }
+
   /** Themen-Param für die Puzzle-Auswahl, wenn „schwächste Themen trainieren" aktiv ist (sonst undefined). */
   private get worstThemesParam(): string | undefined {
     return this.worstTagsEnabled && this.worstThemes.length ? this.worstThemes.join(' ') : undefined;
