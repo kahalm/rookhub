@@ -9,6 +9,7 @@ import { AuthService } from './core/auth.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
+import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
 import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
@@ -133,7 +134,9 @@ export class AppComponent implements OnInit {
     clientLog: ClientLogService,
     stockfish: StockfishService,
     analysisEngine: AnalysisEngineService,
-    _theme: ThemeService
+    _theme: ThemeService,
+    // App-weit instanziieren, damit beforeinstallprompt zuverlässig gefangen wird.
+    _pwaInstall: PwaInstallService
   ) {
     locale.init();
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).

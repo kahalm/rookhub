@@ -14,5 +14,14 @@
 </head>
 <body>
   <app-root></app-root>
+  <script>
+    // Faengt das PWA-Install-Event ab, falls es vor dem Angular-Bootstrap feuert.
+    // PwaInstallService liest window.__rookhubInstallPrompt beim Start aus, damit
+    // die Installationsseite (/install) den nativen Installieren-Button anbieten kann.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__rookhubInstallPrompt = e;
+    });
+  </script>
 </body>
 </html>

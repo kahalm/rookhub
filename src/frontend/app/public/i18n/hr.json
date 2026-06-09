@@ -35,7 +35,7 @@
     "analysis": "Analiza",
     "stats": "Statistika",
     "trainingGoals": "Trening ciljevi",
-    "installApp": "Instaliraj aplikaciju (Android)",
+    "installApp": "Instaliraj aplikaciju",
     "themeSystem": "Sustavna tema",
     "themeLight": "Svijetla tema",
     "themeDark": "Tamna tema",
@@ -1056,13 +1056,29 @@
     "syncDone": "Vrijeme igranja ažurirano."
   },
   "install": {
-    "title": "Instaliraj RookHub na Android",
-    "intro": "RookHub je dostupan kao Android aplikacija. Kako instalirati:",
-    "step1": "Dolje dodirni „Preuzmi APK“ – najbolje izravno na svom Android uređaju.",
-    "step2": "Otvori preuzetu datoteku. Ako se zatraži, dopusti „Instalacija iz nepoznatih izvora“ za svoj preglednik.",
-    "step3": "Potvrdi instalaciju – gotovo. RookHub se pojavljuje kao aplikacija na uređaju.",
-    "download": "Preuzmi APK",
-    "iosNote": "Samo za Android. Na iPhoneu/iPadu: otvori stranicu u Safariju i preko „Podijeli → Dodaj na početni zaslon“ dodaj kao aplikaciju."
+    "pageTitle": "Instaliraj RookHub",
+    "pageIntro": "Instaliraj RookHub kao aplikaciju na svoj uređaj. Odaberi opciju koja odgovara tvom sustavu.",
+    "apk": {
+      "title": "Android aplikacija (APK)",
+      "desc": "Preuzmi nativnu Android aplikaciju kao APK datoteku i instaliraj je ručno.",
+      "step1": "Dolje dodirni „Preuzmi APK“ – najbolje izravno na svom Android uređaju.",
+      "step2": "Otvori preuzetu datoteku. Ako se zatraži, dopusti „Instalacija iz nepoznatih izvora“ za svoj preglednik.",
+      "step3": "Potvrdi instalaciju – gotovo. RookHub se pojavljuje kao aplikacija na uređaju.",
+      "download": "Preuzmi APK",
+      "downloadAnyway": "Ipak preuzmi APK",
+      "unavailable": "Izravna instalacija APK-a moguća je samo na Androidu – ne na tvom trenutnom sustavu. Datoteku ipak možeš preuzeti i prenijeti na Android uređaj."
+    },
+    "pwa": {
+      "title": "Instaliraj kao aplikaciju (PWA)",
+      "desc": "Instalira RookHub izravno iz preglednika – na Androidu, Windowsu, macOS-u i Linuxu. Nakon toga radi u vlastitom prozoru i izvanmrežno.",
+      "button": "Instaliraj sada",
+      "installed": "RookHub je već instaliran kao aplikacija na ovom uređaju.",
+      "iosTitle": "iPhone / iPad (Safari)",
+      "ios1": "Otvori ovu stranicu u Safariju.",
+      "ios2": "Dolje dodirni ikonu za dijeljenje.",
+      "ios3": "Odaberi „Dodaj na početni zaslon“ i potvrdi s „Dodaj“.",
+      "unavailable": "Instalacija kao aplikacija nije dostupna u tvom trenutnom pregledniku/sustavu. Otvori RookHub u Chromeu ili Edgeu za instalaciju aplikacije."
+    }
   },
   "help": {
     "title": "Pomoć i upute",

@@ -35,7 +35,7 @@
     "analysis": "Analysis",
     "stats": "Statistics",
     "trainingGoals": "Training Goals",
-    "installApp": "Install app (Android)",
+    "installApp": "Install app",
     "themeSystem": "System theme",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
@@ -1056,13 +1056,29 @@
     "syncDone": "Playing time updated."
   },
   "install": {
-    "title": "Install RookHub on Android",
-    "intro": "RookHub is available as an Android app. To install it:",
-    "step1": "Tap “Download APK” below — ideally directly on your Android device.",
-    "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
-    "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
-    "download": "Download APK",
-    "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
+    "pageTitle": "Install RookHub",
+    "pageIntro": "Install RookHub as an app on your device. Pick the option that matches your system.",
+    "apk": {
+      "title": "Android app (APK)",
+      "desc": "Download the native Android app as an APK file and install it manually.",
+      "step1": "Tap “Download APK” below — ideally directly on your Android device.",
+      "step2": "Open the downloaded file. If prompted, allow “Install from unknown sources” for your browser.",
+      "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
+      "download": "Download APK",
+      "downloadAnyway": "Download APK anyway",
+      "unavailable": "Direct APK installation is only possible on Android — not on your current system. You can still download the file and transfer it to an Android device."
+    },
+    "pwa": {
+      "title": "Install as an app (PWA)",
+      "desc": "Installs RookHub straight from the browser — on Android, Windows, macOS and Linux. Runs in its own window and offline afterwards.",
+      "button": "Install now",
+      "installed": "RookHub is already installed as an app on this device.",
+      "iosTitle": "iPhone / iPad (Safari)",
+      "ios1": "Open this page in Safari.",
+      "ios2": "Tap the Share icon at the bottom.",
+      "ios3": "Choose “Add to Home Screen” and confirm with “Add”.",
+      "unavailable": "Installing as an app isn’t available in your current browser/system. Open RookHub in Chrome or Edge to install the app."
+    }
   },
   "help": {
     "title": "Help & Guide",

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.99.1';
+export const APP_VERSION = '0.100.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.100.0', date: '2026-06-09', changes: [
+    'App-Installation überarbeitet: Der „App installieren"-Eintrag öffnet keinen Dialog mehr, sondern eine eigene Installationsseite (/install) mit zwei Wegen — Android-APK (Download + Anleitung) und Installation als Web-App (PWA). Beide Varianten zeigen je nach System den passenden Weg; ist eine nicht möglich (z. B. APK auf Mac/iOS, PWA-Direktinstallation in nicht unterstützten Browsern), wird das an Ort und Stelle vermerkt. Auf iPhone/iPad gibt es die „Zum Home-Bildschirm"-Anleitung, läuft die App bereits installiert, wird das angezeigt.',
+  ]},
   { version: '0.99.1', date: '2026-06-09', changes: [
     'Endlos-Modus: das manuelle Themenfeld ist jetzt ODER-verknüpft (z. B. „fork pin" liefert Puzzles mit fork ODER pin) — vorher mussten alle Themen gleichzeitig vorkommen, was kaum Treffer ergab.',
   ]},

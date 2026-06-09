@@ -30,6 +30,7 @@ export const routes: Routes = [
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
   { path: 't/:id', loadComponent: () => import('./features/tournaments/public-tournament.component').then(m => m.PublicTournamentComponent) },
   { path: 'help', loadComponent: () => import('./features/help/help.component').then(m => m.HelpComponent) },
+  { path: 'install', loadComponent: () => import('./features/install/install.component').then(m => m.InstallComponent) },
   { path: 'privacy', loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent) },
   { path: 'impressum', loadComponent: () => import('./features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'account-deletion', loadComponent: () => import('./features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
