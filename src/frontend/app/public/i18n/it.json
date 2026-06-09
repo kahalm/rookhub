@@ -507,7 +507,9 @@
       "difficulty": "Difficoltà",
       "difficultyHint": "Puzzle vicini al tuo Elo ({{elo}})",
       "depthHint": "1 (debole) – 24 (forte)",
-      "skipSolved": "Salta i risolti"
+      "skipSolved": "Salta i risolti",
+      "worstTags": "Allena i 5 temi peggiori",
+      "worstTagsHint": "Concentrati sui temi che risolvi peggio"
     },
     "difficulty": {
       "veryEasy": "Molto facile",

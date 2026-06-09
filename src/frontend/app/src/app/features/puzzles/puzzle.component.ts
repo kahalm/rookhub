@@ -54,6 +54,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   difficulty: 'sehr_leicht' | 'leicht' | 'normal' | 'schwer' | 'sehr_schwer' = 'normal';
   excludeSolved = false;
+  /** „5 schwächste Themen trainieren" — filtert Puzzles auf die schwächsten Themen des Users (ODER). */
+  worstTagsEnabled = false;
+  private worstThemes: string[] = [];
   stockfishDepth = 16;
 
   elapsedSeconds = 0;
@@ -121,7 +124,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (n <= 0 || !navigator.onLine || this.offlinePuzzlePool.length >= n) return;   // nur auffüllen
     const r = this.ratingRange();
     const windows = Array.from({ length: n }, () => ({ minRating: r.min, maxRating: r.max }));
-    this.puzzleService.getRandomBatch(windows, undefined, this.excludeSolved).subscribe({
+    this.puzzleService.getRandomBatch(windows, undefined, this.excludeSolved, this.worstThemesParam).subscribe({
       next: pool => { this.offlinePuzzlePool = pool || []; this.saveOfflinePool(); },
       error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
     });
@@ -217,8 +220,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const loadFirst = () => {
       this.puzzleService.getRatingRange().subscribe({
         next: r => this.ratingRangeBounds = r,
-        error: () => this.loadNext(),
-        complete: () => this.loadNext(),
+        // Schwächste Themen vor dem ersten Puzzle laden, damit der Filter schon greift.
+        error: () => this.ensureWorstThemes(() => this.loadNext()),
+        complete: () => this.ensureWorstThemes(() => this.loadNext()),
       });
     };
     stats$.subscribe({
@@ -280,7 +284,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       source$ = of(pooled);
     } else {
       const r = this.ratingRange();
-      source$ = this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved);
+      source$ = this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam);
     }
 
     source$.subscribe({
@@ -317,7 +321,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private prefetchNext(): void {
     const r = this.ratingRange();
-    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved)
+    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam)
       .subscribe({ next: p => this.nextPuzzle = p, error: () => {} });
   }
 
@@ -516,6 +520,21 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.vizArrowEnabled = this.prefs.vizArrow;
     const d = this.prefs.puzzleDifficulty;
     if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
+    this.worstTagsEnabled = this.prefs.puzzleWorstTags;
+  }
+
+  /** Themen-Param für die Puzzle-Auswahl, wenn „schwächste Themen trainieren" aktiv ist (sonst undefined). */
+  private get worstThemesParam(): string | undefined {
+    return this.worstTagsEnabled && this.worstThemes.length ? this.worstThemes.join(' ') : undefined;
+  }
+
+  /** Lädt die schwächsten Themen (nur eingeloggt + aktiviert); ruft danach cb. */
+  private ensureWorstThemes(cb: () => void): void {
+    if (!this.worstTagsEnabled || !this.isLoggedIn || this.worstThemes.length) { cb(); return; }
+    this.puzzleService.getWorstThemes().subscribe({
+      next: themes => { this.worstThemes = themes; cb(); },
+      error: () => cb(),
+    });
   }
 
   setVisualizationLevel(level: number): void {
@@ -568,6 +587,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         stockfishDepth: this.stockfishDepth,
         difficulty: this.difficulty,
         excludeSolved: this.excludeSolved,
+        worstTags: this.worstTagsEnabled,
         isLoggedIn: this.isLoggedIn,
         puzzleElo: this.stats?.puzzleElo,
       } as PuzzleSettingsDialogData,
@@ -593,6 +613,15 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       }
       if (result.excludeSolved !== undefined) {
         this.excludeSolved = result.excludeSolved;
+      }
+      if (result.worstTags !== undefined && result.worstTags !== this.worstTagsEnabled) {
+        this.worstTagsEnabled = result.worstTags;
+        this.prefs.setPuzzleWorstTags(this.worstTagsEnabled);
+        // Vorab geladenes Puzzle + Offline-Pool galten für den alten Filter → neu aufbauen.
+        this.nextPuzzle = null;
+        this.offlinePuzzlePool = [];
+        this.saveOfflinePool();
+        this.ensureWorstThemes(() => { this.prefetchOfflinePool(); this.loadNext(); });
       }
     });
   }

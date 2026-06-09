@@ -18,6 +18,8 @@ public class RandomBatchRequestDto
     public List<RatingWindowDto> Windows { get; set; } = new();
     public string? Themes { get; set; }
     public bool ExcludeSolved { get; set; }
+    /// <summary>ODER-Themenfilter (mind. eins) — für „schwächste Themen trainieren".</summary>
+    public string? ThemesAny { get; set; }
 }
 
 public class RatingWindowDto

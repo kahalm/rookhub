@@ -507,7 +507,9 @@
       "difficulty": "Trudność",
       "difficultyHint": "Zadania w okolicach Twojego Elo ({{elo}})",
       "depthHint": "1 (słabe) – 24 (silne)",
-      "skipSolved": "Pomijaj rozwiązane"
+      "skipSolved": "Pomijaj rozwiązane",
+      "worstTags": "Trenuj 5 najsłabszych tematów",
+      "worstTagsHint": "Skup się na tematach, które rozwiązujesz najsłabiej"
     },
     "difficulty": {
       "veryEasy": "Bardzo łatwe",

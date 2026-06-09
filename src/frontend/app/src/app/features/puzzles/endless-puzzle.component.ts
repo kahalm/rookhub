@@ -72,6 +72,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   config: EndlessConfig = { startElo: 700, themes: '', stockfishDepth: 16 };
+  /** Schwächste Themen des Users (für „5 schwächste Themen trainieren"). */
+  private worstThemes: string[] = [];
+
+  /** Für das Config-Template: „schwächste Themen"-Option nur eingeloggt anbieten. */
+  get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
 
   lives = 3;
   level = 0;
@@ -431,12 +436,28 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * bei startIndex 0). `then` wird nach dem Eintreffen aufgerufen. Bleibt leer/leerer Block:
    * Run-Start → zurück zur Config; Verlängerung → „You win".
    */
+  /** Themen-Filter für die Ketten-Generierung: „schwächste Themen" (ODER) hat Vorrang vor dem manuellen Themenfeld (UND). */
+  private batchThemes(): { themes?: string; themesAny?: string } {
+    if (this.config.worstTags && this.worstThemes.length) return { themesAny: this.worstThemes.join(' ') };
+    return { themes: this.config.themes.trim() || undefined };
+  }
+
+  /** Lädt die schwächsten Themen (nur eingeloggt + Option aktiv), ruft danach cb. */
+  private ensureWorstThemes(cb: () => void): void {
+    if (!this.config.worstTags || !this.authService.isLoggedIn || this.worstThemes.length) { cb(); return; }
+    this.puzzleService.getWorstThemes().subscribe({
+      next: t => { this.worstThemes = t; cb(); },
+      error: () => cb(),
+    });
+  }
+
   private generateChainBlock(startIndex: number, then?: () => void, count = ENDLESS_CHAIN_BLOCK): void {
     const windows = buildChainWindows(
       this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, count, startIndex
     );
-    const themes = this.config.themes.trim() || undefined;
-    this.puzzleService.getRandomBatch(windows, themes).subscribe({
+    this.ensureWorstThemes(() => {
+    const { themes, themesAny } = this.batchThemes();
+    this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
       next: pool => {
         const block = pool || [];
         if (block.length === 0) {
@@ -461,6 +482,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         if (then) then();
       }
     });
+    });
   }
 
   /**
@@ -473,14 +495,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max
     );
     if (!windows.length) return;
-    const themes = this.config.themes.trim() || undefined;
-    this.puzzleService.getRandomBatch(windows, themes).subscribe({
-      next: pool => {
-        this.offlinePool = pool || [];
-        this.storage.saveOfflinePool(this.offlinePool);
-        this.storage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
-      },
-      error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
+    this.ensureWorstThemes(() => {
+      const { themes, themesAny } = this.batchThemes();
+      this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
+        next: pool => {
+          this.offlinePool = pool || [];
+          this.storage.saveOfflinePool(this.offlinePool);
+          this.storage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
+        },
+        error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
+      });
     });
   }
 

@@ -507,7 +507,9 @@
       "difficulty": "Difficulté",
       "difficultyHint": "Puzzles autour de votre Elo ({{elo}})",
       "depthHint": "1 (faible) – 24 (fort)",
-      "skipSolved": "Ignorer les résolus"
+      "skipSolved": "Ignorer les résolus",
+      "worstTags": "Entraîner les 5 thèmes les plus faibles",
+      "worstTagsHint": "Cible les thèmes que tu réussis le moins"
     },
     "difficulty": {
       "veryEasy": "Très facile",

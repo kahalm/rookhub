@@ -507,7 +507,9 @@
       "difficulty": "난이도",
       "difficultyHint": "내 Elo({{elo}}) 기준 퍼즐",
       "depthHint": "1(약) – 24(강)",
-      "skipSolved": "풀은 문제 건너뜀"
+      "skipSolved": "풀은 문제 건너뜀",
+      "worstTags": "가장 취약한 테마 5개 훈련",
+      "worstTagsHint": "정답률이 가장 낮은 테마에 집중"
     },
     "difficulty": {
       "veryEasy": "매우 쉬움",

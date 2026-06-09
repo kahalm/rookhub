@@ -850,6 +850,64 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetWorstThemes_OrdersByLowestSolveRate_AndRespectsMinAttempts()
+    {
+        var userId = await CreateUserAsync();
+        var pGood = await CreatePuzzleAsync(lichessId: "wt-good", themes: "pin");        // 3/3 = 100%
+        var pBad = await CreatePuzzleAsync(lichessId: "wt-bad", themes: "fork");         // 1/4 = 25%
+        var pMid = await CreatePuzzleAsync(lichessId: "wt-mid", themes: "skewer");       // 2/4 = 50%
+        var pRare = await CreatePuzzleAsync(lichessId: "wt-rare", themes: "endgame");    // 0/2 = 0% aber < minAttempts
+        var now = DateTime.UtcNow;
+        void add(Puzzle p, bool solved) => _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = p.Id, Solved = solved, AttemptedAt = now });
+        add(pGood, true); add(pGood, true); add(pGood, true);
+        add(pBad, true); add(pBad, false); add(pBad, false); add(pBad, false);
+        add(pMid, true); add(pMid, true); add(pMid, false); add(pMid, false);
+        add(pRare, false); add(pRare, false);   // nur 2 Versuche → unter minAttempts=3
+        await _db.SaveChangesAsync();
+
+        var worst = await _service.GetWorstThemesAsync(userId, count: 5, minAttempts: 3);
+
+        // endgame (0%, aber zu wenig Daten) fällt raus; Reihenfolge: fork (25%) < skewer (50%) < pin (100%).
+        Assert.Equal(new[] { "fork", "skewer", "pin" }, worst.Select(t => t.Theme).ToArray());
+        Assert.DoesNotContain(worst, t => t.Theme == "endgame");
+    }
+
+    [Fact]
+    public async Task GetWorstThemes_RespectsCountLimit()
+    {
+        var userId = await CreateUserAsync();
+        // 4 Themen mit je 3 Versuchen, abnehmende Quote.
+        var themes = new[] { "a", "b", "c", "d" };
+        var now = DateTime.UtcNow;
+        for (int i = 0; i < themes.Length; i++)
+        {
+            var p = await CreatePuzzleAsync(lichessId: $"wt-c{i}", themes: themes[i]);
+            for (int j = 0; j < 3; j++)
+                _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = p.Id, Solved = j < i, AttemptedAt = now });
+        }
+        await _db.SaveChangesAsync();
+
+        var worst = await _service.GetWorstThemesAsync(userId, count: 2, minAttempts: 3);
+
+        Assert.Equal(2, worst.Count);
+        Assert.Equal("a", worst[0].Theme);   // 0/3 = schwächstes
+    }
+
+    [Fact]
+    public async Task GetRandom_ThemesAny_MatchesAnyOfTheGivenThemes()
+    {
+        var userId = await CreateUserAsync();
+        await CreatePuzzleAsync(lichessId: "ta1", themes: "endgame mateIn2");
+        await CreatePuzzleAsync(lichessId: "ta2", themes: "middlegame fork");
+
+        // ODER-Filter: "fork pin" → Puzzle mit fork ODER pin (hier nur ta2 mit fork).
+        var result = await _service.GetRandomAsync(userId, null, null, themes: null, excludeSolved: false, themesAny: "fork pin");
+
+        Assert.NotNull(result);
+        Assert.Contains("fork", result!.Themes);
+    }
+
+    [Fact]
     public async Task RecordAttempt_EvalShown_StoredCorrectly()
     {
         var userId = await CreateUserAsync("evalshown_user");

@@ -33,10 +33,11 @@ public class PuzzleController : BaseApiController
         [FromQuery] int? minRating,
         [FromQuery] int? maxRating,
         [FromQuery] string? themes,
-        [FromQuery] bool excludeSolved = false)
+        [FromQuery] bool excludeSolved = false,
+        [FromQuery] string? themesAny = null)
     {
         int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
-        var puzzle = await _puzzleService.GetRandomAsync(userId, minRating, maxRating, themes, excludeSolved);
+        var puzzle = await _puzzleService.GetRandomAsync(userId, minRating, maxRating, themes, excludeSolved, themesAny);
         if (puzzle == null)
             return NotFound(new { message = "No puzzles found matching criteria." });
         return Ok(puzzle);
@@ -55,7 +56,7 @@ public class PuzzleController : BaseApiController
         // Schutz gegen überzogene Anfragen.
         var windows = dto.Windows.Take(100).Select(w => (w.MinRating, w.MaxRating));
         int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
-        var puzzles = await _puzzleService.GetRandomBatchAsync(userId, windows, dto.Themes, dto.ExcludeSolved);
+        var puzzles = await _puzzleService.GetRandomBatchAsync(userId, windows, dto.Themes, dto.ExcludeSolved, dto.ThemesAny);
         return Ok(puzzles);
     }
 
@@ -109,6 +110,15 @@ public class PuzzleController : BaseApiController
     public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
     {
         return Ok(await _puzzleService.GetBreakdownAsync(GetUserId()));
+    }
+
+    /// <summary>Die schwächsten Themen des Users (niedrigste Lösungsquote) — für „X schwächste Themen trainieren".</summary>
+    [HttpGet("stats/worst-themes")]
+    public async Task<ActionResult<List<ThemeStatDto>>> GetWorstThemes([FromQuery] int count = 5, [FromQuery] int minAttempts = 3)
+    {
+        count = Math.Clamp(count, 1, 20);
+        minAttempts = Math.Clamp(minAttempts, 1, 1000);
+        return Ok(await _puzzleService.GetWorstThemesAsync(GetUserId(), count, minAttempts));
     }
 
     [AllowAnonymous]

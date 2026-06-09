@@ -507,7 +507,9 @@
       "difficulty": "难度",
       "difficultyHint": "接近你的 Elo（{{elo}}）的题目",
       "depthHint": "1（弱）– 24（强）",
-      "skipSolved": "跳过已解"
+      "skipSolved": "跳过已解",
+      "worstTags": "训练最薄弱的5个主题",
+      "worstTagsHint": "专注于你解得最差的主题"
     },
     "difficulty": {
       "veryEasy": "非常简单",

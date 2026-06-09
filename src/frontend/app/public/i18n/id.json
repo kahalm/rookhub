@@ -507,7 +507,9 @@
       "difficulty": "Kesulitan",
       "difficultyHint": "Puzzle di sekitar Elo Anda ({{elo}})",
       "depthHint": "1 (lemah) – 24 (kuat)",
-      "skipSolved": "Lewati yang sudah diselesaikan"
+      "skipSolved": "Lewati yang sudah diselesaikan",
+      "worstTags": "Latih 5 tema terlemah",
+      "worstTagsHint": "Fokus pada tema yang paling sulit kamu selesaikan"
     },
     "difficulty": {
       "veryEasy": "Sangat mudah",

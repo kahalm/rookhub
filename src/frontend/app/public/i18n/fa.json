@@ -507,7 +507,9 @@
       "difficulty": "سختی",
       "difficultyHint": "تاکتیک‌هایی در محدوده Elo شما ({{elo}})",
       "depthHint": "۱ (ضعیف) – ۲۴ (قوی)",
-      "skipSolved": "نادیده گرفتن حل‌شده‌ها"
+      "skipSolved": "نادیده گرفتن حل‌شده‌ها",
+      "worstTags": "تمرین ۵ موضوع ضعیف‌تر",
+      "worstTagsHint": "تمرکز روی موضوع‌هایی که ضعیف‌تر حل می‌کنی"
     },
     "difficulty": {
       "veryEasy": "خیلی آسان",

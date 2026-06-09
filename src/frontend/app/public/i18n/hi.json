@@ -507,7 +507,9 @@
       "difficulty": "कठिनाई",
       "difficultyHint": "आपके Elo ({{elo}}) के आसपास की पहेलियाँ",
       "depthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
-      "skipSolved": "हल की गई छोड़ें"
+      "skipSolved": "हल की गई छोड़ें",
+      "worstTags": "5 सबसे कमज़ोर थीम का अभ्यास करें",
+      "worstTagsHint": "उन थीम पर ध्यान दें जिन्हें आप सबसे कम हल करते हैं"
     },
     "difficulty": {
       "veryEasy": "बहुत आसान",

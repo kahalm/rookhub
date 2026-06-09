@@ -530,7 +530,9 @@
       "difficulty": "Difficulty",
       "difficultyHint": "Puzzles around your Elo ({{elo}})",
       "depthHint": "1 (weak) – 24 (strong)",
-      "skipSolved": "Skip solved"
+      "skipSolved": "Skip solved",
+      "worstTags": "Train 5 worst themes",
+      "worstTagsHint": "Focus on the themes you solve worst"
     },
     "difficulty": {
       "veryEasy": "Very easy",

@@ -507,7 +507,9 @@
       "difficulty": "Moeilijkheidsgraad",
       "difficultyHint": "Puzzels rond je Elo ({{elo}})",
       "depthHint": "1 (zwak) – 24 (sterk)",
-      "skipSolved": "Opgeloste overslaan"
+      "skipSolved": "Opgeloste overslaan",
+      "worstTags": "Train je 5 zwakste thema's",
+      "worstTagsHint": "Focus op de thema's die je het slechtst oplost"
     },
     "difficulty": {
       "veryEasy": "Zeer gemakkelijk",

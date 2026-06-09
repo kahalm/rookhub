@@ -507,7 +507,9 @@
       "difficulty": "Nehézség",
       "difficultyHint": "Feladványok az Elo-d körül ({{elo}})",
       "depthHint": "1 (gyenge) – 24 (erős)",
-      "skipSolved": "Megoldottak kihagyása"
+      "skipSolved": "Megoldottak kihagyása",
+      "worstTags": "5 leggyengébb téma gyakorlása",
+      "worstTagsHint": "A leggyengébben megoldott témákra fókuszál"
     },
     "difficulty": {
       "veryEasy": "Nagyon könnyű",

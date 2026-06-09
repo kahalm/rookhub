@@ -31,6 +31,8 @@ export class PreferencesService {
   themeMode: ThemeMode = 'fixed';
   /** Visualisierungs-Level 0-4 (nur lokal, geräteabhängig — kein Server-Sync). */
   visualization = 1;
+  /** Standard-Puzzle: „5 schwächste Themen trainieren" (nur lokal, geräteabhängig). */
+  puzzleWorstTags = false;
   /** Gegnerzug-Pfeil im Viz-Modus anzeigen (nur lokal). */
   vizArrow = true;
 
@@ -52,6 +54,7 @@ export class PreferencesService {
         const saved = JSON.parse(raw);
         if (saved.stockfishDepth) this.stockfishDepth = this.clampDepth(saved.stockfishDepth);
         if (saved.difficulty) this.puzzleDifficulty = saved.difficulty;
+        if (typeof saved.worstTags === 'boolean') this.puzzleWorstTags = saved.worstTags;
       }
     } catch {}
     try {
@@ -144,6 +147,11 @@ export class PreferencesService {
     this.saveToServer({ puzzleDifficulty: difficulty });
   }
 
+  setPuzzleWorstTags(enabled: boolean): void {
+    this.puzzleWorstTags = enabled;
+    this.savePuzzleConfigLocal();
+  }
+
   setBookStockfishDepth(depth: number): void {
     this.bookStockfishDepth = this.clampDepth(depth);
     this.saveBookConfigLocal();
@@ -154,7 +162,8 @@ export class PreferencesService {
     try {
       localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({
         stockfishDepth: this.stockfishDepth,
-        difficulty: this.puzzleDifficulty
+        difficulty: this.puzzleDifficulty,
+        worstTags: this.puzzleWorstTags
       }));
     } catch {}
   }

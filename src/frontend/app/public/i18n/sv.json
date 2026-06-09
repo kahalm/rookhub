@@ -507,7 +507,9 @@
       "difficulty": "Svårighetsgrad",
       "difficultyHint": "Uppgifter kring ditt Elo ({{elo}})",
       "depthHint": "1 (svag) – 24 (stark)",
-      "skipSolved": "Hoppa över lösta"
+      "skipSolved": "Hoppa över lösta",
+      "worstTags": "Träna dina 5 svagaste teman",
+      "worstTagsHint": "Fokusera på de teman du löser sämst"
     },
     "difficulty": {
       "veryEasy": "Mycket lätt",

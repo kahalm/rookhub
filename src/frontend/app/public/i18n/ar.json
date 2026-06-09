@@ -507,7 +507,9 @@
       "difficulty": "الصعوبة",
       "difficultyHint": "ألغاز حول Elo الخاص بك ({{elo}})",
       "depthHint": "1 (ضعيف) – 24 (قوي)",
-      "skipSolved": "تخطي المحلولة"
+      "skipSolved": "تخطي المحلولة",
+      "worstTags": "تدرّب على أضعف 5 مواضيع",
+      "worstTagsHint": "ركّز على المواضيع التي تحلّها بأسوأ شكل"
     },
     "difficulty": {
       "veryEasy": "سهل جداً",

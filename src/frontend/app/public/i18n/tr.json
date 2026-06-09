@@ -507,7 +507,9 @@
       "difficulty": "Zorluk",
       "difficultyHint": "Elo'nuz ({{elo}}) civarında problemler",
       "depthHint": "1 (zayıf) – 24 (güçlü)",
-      "skipSolved": "Çözülenleri atla"
+      "skipSolved": "Çözülenleri atla",
+      "worstTags": "En zayıf 5 temayı çalış",
+      "worstTagsHint": "En kötü çözdüğün temalara odaklan"
     },
     "difficulty": {
       "veryEasy": "Çok kolay",

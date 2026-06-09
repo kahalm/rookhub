@@ -530,7 +530,9 @@
       "difficulty": "Težina",
       "difficultyHint": "Zagonetke oko vašeg Ela ({{elo}})",
       "depthHint": "1 (slabo) – 24 (jako)",
-      "skipSolved": "Preskoči riješene"
+      "skipSolved": "Preskoči riješene",
+      "worstTags": "Treniraj 5 najslabijih tema",
+      "worstTagsHint": "Fokus na teme koje najslabije rješavaš"
     },
     "difficulty": {
       "veryEasy": "Vrlo lako",

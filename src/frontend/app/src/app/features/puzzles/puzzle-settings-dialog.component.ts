@@ -19,6 +19,7 @@ export interface PuzzleSettingsDialogData {
   stockfishDepth?: number;
   difficulty?: string;
   excludeSolved?: boolean;
+  worstTags?: boolean;
   isLoggedIn?: boolean;
 }
 
@@ -31,6 +32,7 @@ export interface PuzzleSettingsDialogResult {
   stockfishDepth?: number;
   difficulty?: string;
   excludeSolved?: boolean;
+  worstTags?: boolean;
 }
 
 @Component({
@@ -156,6 +158,13 @@ export interface PuzzleSettingsDialogResult {
             <span class="psd-label">{{ 'puzzles.filters.skipSolved' | translate }}</span>
             <mat-slide-toggle [(ngModel)]="excludeSolvedEdit"></mat-slide-toggle>
           </div>
+          <div class="psd-row psd-toggle-row">
+            <span class="psd-label">
+              {{ 'puzzles.filters.worstTags' | translate }}
+              <span class="psd-sublabel">{{ 'puzzles.filters.worstTagsHint' | translate }}</span>
+            </span>
+            <mat-slide-toggle [(ngModel)]="worstTagsEdit"></mat-slide-toggle>
+          </div>
         }
       </div>
     </mat-dialog-content>
@@ -198,6 +207,7 @@ export interface PuzzleSettingsDialogResult {
     }
     .psd-row:last-child { border-bottom: none; }
     .psd-label { font-size: 14px; flex: 1; }
+    .psd-sublabel { display: block; font-size: 12px; opacity: 0.6; margin-top: 2px; }
     .psd-select { width: 140px; flex-shrink: 0; }
     .psd-toggle-row { gap: 16px; }
     .psd-number-input {
@@ -240,6 +250,7 @@ export class PuzzleSettingsDialogComponent {
   stockfishDepthEdit: number;
   difficultyEdit: string;
   excludeSolvedEdit: boolean;
+  worstTagsEdit: boolean;
   showVizInfo = false;
   showDifficultyInfo = false;
 
@@ -262,6 +273,7 @@ export class PuzzleSettingsDialogComponent {
     this.stockfishDepthEdit = data.stockfishDepth ?? 16;
     this.difficultyEdit = data.difficulty ?? 'normal';
     this.excludeSolvedEdit = data.excludeSolved ?? false;
+    this.worstTagsEdit = data.worstTags ?? false;
   }
 
   get effectivePieceSet(): string {
@@ -306,6 +318,7 @@ export class PuzzleSettingsDialogComponent {
       stockfishDepth: this.stockfishDepthEdit,
       difficulty: this.difficultyEdit,
       excludeSolved: this.excludeSolvedEdit,
+      worstTags: this.worstTagsEdit,
     } as PuzzleSettingsDialogResult);
   }
 }

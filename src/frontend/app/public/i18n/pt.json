@@ -507,7 +507,9 @@
       "difficulty": "Dificuldade",
       "difficultyHint": "Puzzles à volta do seu Elo ({{elo}})",
       "depthHint": "1 (fraco) – 24 (forte)",
-      "skipSolved": "Ignorar resolvidos"
+      "skipSolved": "Ignorar resolvidos",
+      "worstTags": "Treinar os 5 piores temas",
+      "worstTagsHint": "Foca nos temas que resolves pior"
     },
     "difficulty": {
       "veryEasy": "Muito fácil",

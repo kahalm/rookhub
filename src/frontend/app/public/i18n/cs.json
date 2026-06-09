@@ -507,7 +507,9 @@
       "difficulty": "Obtížnost",
       "difficultyHint": "Úlohy kolem vašeho Elo ({{elo}})",
       "depthHint": "1 (slabý) – 24 (silný)",
-      "skipSolved": "Přeskočit vyřešené"
+      "skipSolved": "Přeskočit vyřešené",
+      "worstTags": "Trénovat 5 nejslabších témat",
+      "worstTagsHint": "Zaměř se na témata, která řešíš nejhůř"
     },
     "difficulty": {
       "veryEasy": "Velmi lehká",

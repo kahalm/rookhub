@@ -507,7 +507,9 @@
       "difficulty": "Dificultate",
       "difficultyHint": "Probleme în jurul Elo-ului tău ({{elo}})",
       "depthHint": "1 (slab) – 24 (puternic)",
-      "skipSolved": "Omite rezolvate"
+      "skipSolved": "Omite rezolvate",
+      "worstTags": "Antrenează cele mai slabe 5 teme",
+      "worstTagsHint": "Concentrează-te pe temele rezolvate cel mai slab"
     },
     "difficulty": {
       "veryEasy": "Foarte ușor",

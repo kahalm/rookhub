@@ -507,7 +507,9 @@
       "difficulty": "Độ khó",
       "difficultyHint": "Bài tập xung quanh Elo của bạn ({{elo}})",
       "depthHint": "1 (yếu) – 24 (mạnh)",
-      "skipSolved": "Bỏ qua đã giải"
+      "skipSolved": "Bỏ qua đã giải",
+      "worstTags": "Luyện 5 chủ đề yếu nhất",
+      "worstTagsHint": "Tập trung vào các chủ đề bạn giải kém nhất"
     },
     "difficulty": {
       "veryEasy": "Rất dễ",

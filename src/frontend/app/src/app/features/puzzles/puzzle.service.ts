@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface PuzzleDto {
   id: number;
@@ -85,18 +86,27 @@ export class PuzzleService {
     return this.http.get<PuzzleRatingRange>('/api/puzzles/rating-range');
   }
 
-  getRandom(minRating?: number, maxRating?: number, themes?: string, excludeSolved = false): Observable<PuzzleDto> {
+  /** @param themesAny Leerzeichengetrennt; Puzzle muss mind. EINS enthalten (für „schwächste Themen trainieren"). */
+  getRandom(minRating?: number, maxRating?: number, themes?: string, excludeSolved = false, themesAny?: string): Observable<PuzzleDto> {
     let params = new HttpParams();
     if (minRating != null) params = params.set('minRating', minRating);
     if (maxRating != null) params = params.set('maxRating', maxRating);
     if (themes) params = params.set('themes', themes);
     if (excludeSolved) params = params.set('excludeSolved', 'true');
+    if (themesAny) params = params.set('themesAny', themesAny);
     return this.http.get<PuzzleDto>('/api/puzzles/random', { params });
   }
 
   /** Lädt je Rating-Fenster ein eindeutiges Zufalls-Puzzle (Offline-Vorab-Laden eines Runs). */
-  getRandomBatch(windows: { minRating: number; maxRating: number }[], themes?: string, excludeSolved = false): Observable<PuzzleDto[]> {
-    return this.http.post<PuzzleDto[]>('/api/puzzles/random-batch', { windows, themes: themes ?? null, excludeSolved });
+  getRandomBatch(windows: { minRating: number; maxRating: number }[], themes?: string, excludeSolved = false, themesAny?: string): Observable<PuzzleDto[]> {
+    return this.http.post<PuzzleDto[]>('/api/puzzles/random-batch', { windows, themes: themes ?? null, excludeSolved, themesAny: themesAny ?? null });
+  }
+
+  /** Themen-Namen der schwächsten Themen des Users (niedrigste Lösungsquote), für „schwächste Themen trainieren". */
+  getWorstThemes(count = 5, minAttempts = 3): Observable<string[]> {
+    return this.http.get<ThemeStat[]>('/api/puzzles/stats/worst-themes', {
+      params: new HttpParams().set('count', count).set('minAttempts', minAttempts)
+    }).pipe(map(ts => ts.map(t => t.theme)));
   }
 
   getById(id: number): Observable<PuzzleDto> {

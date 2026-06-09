@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -26,8 +27,11 @@ public class PuzzleService
         _logger = logger;
     }
 
+    /// <param name="themes">Leerzeichengetrennt; Puzzle muss ALLE enthalten (UND-Verknüpfung).</param>
+    /// <param name="themesAny">Leerzeichengetrennt; Puzzle muss MINDESTENS EINS enthalten (ODER-Verknüpfung).
+    /// Für „5 schwächste Themen trainieren" — ein Puzzle trägt selten alle Schwächen-Themen gleichzeitig.</param>
     public async Task<PuzzleDto?> GetRandomAsync(int? userId, int? minRating, int? maxRating, string? themes, bool excludeSolved,
-        IReadOnlyCollection<int>? excludeIds = null)
+        string? themesAny = null, IReadOnlyCollection<int>? excludeIds = null)
     {
         var query = _db.Puzzles.AsQueryable();
 
@@ -44,6 +48,8 @@ public class PuzzleService
                 query = query.Where(p => p.Themes != null && EF.Functions.Like(p.Themes, $"%{sanitized}%"));
             }
         }
+        if (!string.IsNullOrEmpty(themesAny))
+            query = WhereAnyThemeLike(query, themesAny);
         if (excludeSolved && userId.HasValue)
         {
             var uid = userId.Value;
@@ -60,7 +66,8 @@ public class PuzzleService
         // COUNT+SKIP is O(N) and takes 10+ seconds on millions of rows.
         // ID-range picks a random point in the PK space and seeks forward - O(1).
         var anyFilter = minRating.HasValue || maxRating.HasValue
-            || !string.IsNullOrEmpty(themes) || (excludeSolved && userId.HasValue)
+            || !string.IsNullOrEmpty(themes) || !string.IsNullOrEmpty(themesAny)
+            || (excludeSolved && userId.HasValue)
             || excludeIds is { Count: > 0 };
 
         int? minId, maxId;
@@ -107,17 +114,84 @@ public class PuzzleService
     /// die Reihenfolge folgt den übergebenen Fenstern.
     /// </summary>
     public async Task<List<PuzzleDto>> GetRandomBatchAsync(int? userId,
-        IEnumerable<(int Min, int Max)> windows, string? themes, bool excludeSolved)
+        IEnumerable<(int Min, int Max)> windows, string? themes, bool excludeSolved, string? themesAny = null)
     {
         var used = new HashSet<int>();
         var result = new List<PuzzleDto>();
         foreach (var (min, max) in windows)
         {
-            var dto = await GetRandomAsync(userId, min, max, themes, excludeSolved, used);
+            var dto = await GetRandomAsync(userId, min, max, themes, excludeSolved, themesAny, used);
             if (dto != null && used.Add(dto.Id))
                 result.Add(dto);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Filtert auf Puzzles, deren Themes-String mindestens EINES der übergebenen Themen enthält
+    /// (ODER-Verknüpfung). Baut ein EF-übersetzbares OrElse-Prädikat über LIKE-Vergleiche.
+    /// </summary>
+    private static IQueryable<Puzzle> WhereAnyThemeLike(IQueryable<Puzzle> query, string themesAny)
+    {
+        var list = themesAny
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(SanitizeLikeInput)
+            .Where(t => t.Length > 0)
+            .Distinct()
+            .ToList();
+        if (list.Count == 0) return query;
+
+        var p = Expression.Parameter(typeof(Puzzle), "p");
+        var themesProp = Expression.Property(p, nameof(Puzzle.Themes));
+        var efFns = Expression.Constant(EF.Functions, typeof(Microsoft.EntityFrameworkCore.DbFunctions));
+        var likeMethod = typeof(DbFunctionsExtensions).GetMethod(
+            nameof(DbFunctionsExtensions.Like),
+            new[] { typeof(Microsoft.EntityFrameworkCore.DbFunctions), typeof(string), typeof(string) })!;
+
+        Expression? anyLike = null;
+        foreach (var t in list)
+        {
+            var pattern = Expression.Constant($"%{t}%", typeof(string));
+            Expression like = Expression.Call(likeMethod, efFns, themesProp, pattern);
+            anyLike = anyLike == null ? like : Expression.OrElse(anyLike, like);
+        }
+        // p.Themes != null && (LIKE %t1% || LIKE %t2% || ...)
+        var notNull = Expression.NotEqual(themesProp, Expression.Constant(null, typeof(string)));
+        var body = Expression.AndAlso(notNull, anyLike!);
+        return query.Where(Expression.Lambda<Func<Puzzle, bool>>(body, p));
+    }
+
+    /// <summary>
+    /// Die schwächsten Themen des Users: nach Lösungsquote (solved/attempts) aufsteigend,
+    /// nur Themen mit ≥ <paramref name="minAttempts"/> Versuchen, max. <paramref name="count"/>.
+    /// Basis für „5 schwächste Themen trainieren" in Puzzle- und Endless-Modus.
+    /// </summary>
+    public async Task<List<ThemeStatDto>> GetWorstThemesAsync(int userId, int count = 5, int minAttempts = 3)
+    {
+        var themeStrings = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.Puzzle.Themes != null)
+            .Select(a => new { a.Solved, a.Puzzle.Themes })
+            .ToListAsync();
+
+        var agg = new Dictionary<string, (int attempts, int solved)>();
+        foreach (var r in themeStrings)
+        {
+            if (string.IsNullOrWhiteSpace(r.Themes)) continue;
+            foreach (var theme in r.Themes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var (att, sol) = agg.TryGetValue(theme, out var v) ? v : (0, 0);
+                agg[theme] = (att + 1, sol + (r.Solved ? 1 : 0));
+            }
+        }
+
+        return agg
+            .Where(kv => kv.Value.attempts >= minAttempts)
+            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+            .OrderBy(t => (double)t.Solved / t.Attempts)   // niedrigste Lösungsquote zuerst
+            .ThenByDescending(t => t.Attempts)             // bei Gleichstand: mehr Daten zuerst
+            .ThenBy(t => t.Theme)
+            .Take(Math.Max(1, count))
+            .ToList();
     }
 
     public async Task<(int Min, int Max)?> GetRatingRangeAsync()

@@ -11,6 +11,8 @@ export interface EndlessConfig {
   fasttrackThreshold1?: number;
   fasttrackThreshold2?: number;
   stockfishDepth: number;
+  /** „5 schwächste Themen trainieren" — überschreibt das manuelle Themenfeld (nur lokal). */
+  worstTags?: boolean;
 }
 
 export interface EndlessSession {

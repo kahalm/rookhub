@@ -507,7 +507,9 @@
       "difficulty": "難易度",
       "difficultyHint": "あなたの Elo ({{elo}}) 前後のパズル",
       "depthHint": "1（弱）〜 24（強）",
-      "skipSolved": "解済みをスキップ"
+      "skipSolved": "解済みをスキップ",
+      "worstTags": "苦手なテーマ上位5つを練習",
+      "worstTagsHint": "最も正答率が低いテーマを重点的に練習"
     },
     "difficulty": {
       "veryEasy": "とても簡単",

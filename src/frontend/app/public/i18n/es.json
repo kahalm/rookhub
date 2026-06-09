@@ -507,7 +507,9 @@
       "difficulty": "Dificultad",
       "difficultyHint": "Ejercicios cerca de tu Elo ({{elo}})",
       "depthHint": "1 (débil) – 24 (fuerte)",
-      "skipSolved": "Omitir resueltos"
+      "skipSolved": "Omitir resueltos",
+      "worstTags": "Entrenar los 5 peores temas",
+      "worstTagsHint": "Céntrate en los temas que peor resuelves"
     },
     "difficulty": {
       "veryEasy": "Muy fácil",

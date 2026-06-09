@@ -97,8 +97,14 @@
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>{{ 'endless.config.themes' | translate }}</mat-label>
-                    <input matInput [(ngModel)]="config.themes" [placeholder]="'endless.config.themesPlaceholder' | translate">
+                    <input matInput [(ngModel)]="config.themes" [disabled]="!!config.worstTags" [placeholder]="'endless.config.themesPlaceholder' | translate">
                   </mat-form-field>
+                  @if (isLoggedIn) {
+                    <div class="worst-tags-row">
+                      <mat-slide-toggle [(ngModel)]="config.worstTags">{{ 'puzzles.filters.worstTags' | translate }}</mat-slide-toggle>
+                      <span class="worst-tags-hint">{{ 'puzzles.filters.worstTagsHint' | translate }}</span>
+                    </div>
+                  }
                 </div>
 
                 <div class="level-preview">

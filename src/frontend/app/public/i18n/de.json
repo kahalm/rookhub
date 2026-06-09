@@ -530,7 +530,9 @@
       "difficulty": "Schwierigkeit",
       "difficultyHint": "Puzzles rund um deine Elo ({{elo}})",
       "depthHint": "1 (schwach) – 24 (stark)",
-      "skipSolved": "Gelöste überspringen"
+      "skipSolved": "Gelöste überspringen",
+      "worstTags": "5 schwächste Themen trainieren",
+      "worstTagsHint": "Übt gezielt deine schwächsten Themen"
     },
     "difficulty": {
       "veryEasy": "Sehr leicht",
