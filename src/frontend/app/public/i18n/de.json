@@ -38,7 +38,8 @@
     "installApp": "App installieren (Android)",
     "themeSystem": "System-Design",
     "themeLight": "Helles Design",
-    "themeDark": "Dunkles Design"
+    "themeDark": "Dunkles Design",
+    "help": "Hilfe"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -662,7 +663,7 @@
       "stockfishDepth": "Stockfish Depth",
       "stockfishDepthHint": "1 (schwach) – 24 (stark)",
       "themes": "Themes (optional)",
-      "themesPlaceholder": "z.B. fork pin",
+      "themesPlaceholder": "z.B. fork pin (eines genügt)",
       "thresholdExplain": "Ratings, bei denen du typischerweise Leben verlierst. Anpassen, um leichtere Puzzles schneller oder langsamer zu überspringen.",
       "firstThreshold": "1. Schwellenwert",
       "secondThreshold": "2. Schwellenwert",
@@ -1062,5 +1063,153 @@
     "step3": "Bestätige die Installation – fertig. RookHub erscheint als App im Launcher.",
     "download": "APK herunterladen",
     "iosNote": "Nur für Android. Auf iPhone/iPad: die Seite in Safari öffnen und über „Teilen → Zum Home-Bildschirm“ als App hinzufügen."
+  },
+  "help": {
+    "title": "Hilfe & Anleitung",
+    "subtitle": "Alles, was du über RookHub wissen musst – Schritt für Schritt.",
+    "tocTitle": "Inhalt",
+    "backToTop": "Nach oben",
+    "s": {
+      "welcome": {
+        "t": "Willkommen bei RookHub",
+        "p": [
+          "RookHub ist dein zentrales Schach-Portal: Live-Turnierdaten von chess-results.com, tägliches und endloses Puzzle-Training, Buch-Kurse, die Wochenpost, persönliche Trainingsziele, eine lokale Engine-Analyse sowie Profil- und Freundesfunktionen – alles an einem Ort.",
+          "Vieles funktioniert ohne Konto (Puzzles, Analyse, Tagespuzzle). Für persönlichen Fortschritt, Turnier-Abos, Freunde und Trainingsziele meldest du dich an. Diese Seite erklärt alle Bereiche – nutze das Inhaltsverzeichnis, um direkt zu springen."
+        ]
+      },
+      "account": {
+        "t": "Konto & Anmeldung",
+        "p": [
+          "Registrieren kannst du dich mit Benutzername und Passwort; eine E-Mail-Adresse ist optional. Über »Registrieren« in der oberen Leiste legst du ein Konto an und meldest dich danach mit denselben Daten an.",
+          "Setze beim Login das Häkchen »Angemeldet bleiben«, um 30 Tage statt nur einen Tag eingeloggt zu bleiben. Abmelden kannst du jederzeit über das Konto-Menü (Personen-Symbol) oben rechts."
+        ]
+      },
+      "profile": {
+        "t": "Profil & Schach-Identität",
+        "p": [
+          "Im Profil hinterlegst du deinen Anzeigenamen sowie deine Verknüpfungen: FIDE-ID, ChessResults-ID, chess.com- und Lichess-Benutzername. Diese Angaben verbinden RookHub mit deinen externen Schach-Konten.",
+          "Hinterlegst du deine ChessResults-ID, werden anstehende Turniere automatisch für dich abonniert. chess.com- und Lichess-Namen werden für das Spielen-Tracking deiner Trainingsziele genutzt.",
+          "Über die Spielersuche (nach Nach- und Vorname) findest du dich in ChessResults/FIDE und übernimmst die richtige ID direkt. Dein öffentliches Profil zeigt anderen nur eine reduzierte Ansicht – ohne Klarnamen, ChessResults-ID oder Discord."
+        ]
+      },
+      "discord": {
+        "t": "Discord verknüpfen",
+        "p": [
+          "Wenn der Schach-Bot in deinem Discord aktiv ist, kannst du dein RookHub-Konto mit Discord verknüpfen. Der Bot schickt dir einen Link mit Token; bist du eingeloggt, wird die Verknüpfung sofort hergestellt, sonst nach der nächsten Anmeldung.",
+          "Verknüpft erscheinst du in Tagespuzzle- und Wochenpost-Bestenlisten mit deinem Discord-Namen, und der Bot kann dir deinen Trainingsfortschritt anzeigen. Die Verknüpfung lässt sich im Profil jederzeit wieder trennen."
+        ]
+      },
+      "friends": {
+        "t": "Freunde",
+        "p": [
+          "Unter »Freunde« suchst du andere Nutzer und schickst Freundschaftsanfragen. Eingehende Anfragen findest du im Tab »Anfragen« und kannst sie annehmen oder ablehnen.",
+          "Nur der Empfänger einer Anfrage kann sie bestätigen. Bestehende Freundschaften lassen sich jederzeit wieder entfernen."
+        ]
+      },
+      "tournaments": {
+        "t": "Turniere",
+        "p": [
+          "RookHub holt Turnierdaten live von chess-results.com. In der Turnierliste durchsuchst du Turniere und öffnest Details mit Spielern, Teams, Paarungen und Einzelergebnissen – die Runde wählst du per Auswahlfeld.",
+          "Mit »Abonnieren« heftest du ein Turnier an für schnellen Zugriff. Der Runden-Monitor erkennt automatisch neue Runden und crawlt sie nach. Spieler oder Teams kannst du als Favorit markieren, um sie in der Ansicht hervorzuheben.",
+          "Pro Turnier kannst du persönliche Einstellungen wie Hervorhebungen und Notizen speichern."
+        ]
+      },
+      "puzzles": {
+        "t": "Puzzles",
+        "p": [
+          "Der Standard-Puzzle-Modus stellt dir taktische Aufgaben aus einem großen Pool. Du ziehst die Lösung direkt auf dem Brett; richtige und falsche Züge werden sofort zurückgemeldet.",
+          "Puzzles lassen sich nach Themen filtern. Eingeloggt wird dein Fortschritt samt Puzzle-Elo gespeichert – ohne Login kannst du trotzdem üben, der Fortschritt bleibt dann lokal auf dem Gerät."
+        ]
+      },
+      "endless": {
+        "t": "Endlos-Modus",
+        "p": [
+          "Im Endlos-Modus löst du eine fortlaufende Serie immer schwieriger werdender Puzzles, bis du zu viele Fehler machst. Start-Elo, Themen, Fast-Track-Schwellen und Stockfish-Tiefe stellst du selbst ein.",
+          "Dein Highscore und abgeschlossene Sessions werden gespeichert; den Verlauf siehst du unter »Puzzle-Verlauf« im Konto-Menü und kannst alte Sessions archivieren."
+        ]
+      },
+      "daily": {
+        "t": "Tagespuzzle",
+        "p": [
+          "Jeden Tag (nach UTC) gibt es ein festes Tagespuzzle, das für alle gleich ist – so könnt ihr euch direkt vergleichen.",
+          "Nach dem Lösen siehst du die Bestenliste aller Löser. Als »Löser« zählt, wer das Puzzle im ersten Versuch löst. Bist du mit Discord verknüpft, erscheint dein Name auch im Discord-Embed des Bots."
+        ]
+      },
+      "courses": {
+        "t": "Kurse",
+        "p": [
+          "Kurse sind importierte Schachbücher, die du puzzleweise durcharbeitest. Welche Bücher du siehst, hängt von deinen Gruppen-Freigaben ab; Administratoren sehen alle.",
+          "Du wählst zwischen der Buchreihenfolge (sequenziell) und zufälliger Reihenfolge. Dein Fortschritt wird pro Buch gespeichert und über beide Modi geteilt; den Fortschritt eines Kurses kannst du zurücksetzen.",
+          "Der Menüpunkt »Kurse« erscheint nur, wenn dir mindestens ein Buch freigegeben wurde."
+        ]
+      },
+      "weekly": {
+        "t": "Wochenpost",
+        "p": [
+          "Die Wochenpost bildet die wöchentlichen Schach-Bot-Posts ab: eine Partie oder Studie mit Termin, die du puzzleweise durchspielst. Lesen geht ohne Login, Durchspielen mit Anmeldung.",
+          "»Erledigt« bedeutet, dass du alle Puzzles gespielt hast (ob gelöst oder nicht). Aufgeben oder Zurücksetzen nach einem Zug zählt als Fehlversuch. Eine Live-Bestenliste zeigt alle Teilnehmer."
+        ]
+      },
+      "trainingGoals": {
+        "t": "Trainingsziele",
+        "p": [
+          "Setze dir Tagesziele für Puzzle- und Buch-Training (in Minuten) sowie ein Wochenziel für gespielte Partien (Rapid/Classical) und volle Trainingstage. Trainer können Vorlagen je Gruppe vorgeben; dein persönliches Ziel hat Vorrang.",
+          "Der Tracker färbt jeden Tag nach Zielerreichung (keins/teilweise/voll) – der Tagesstatus ergibt sich nur aus Puzzle- und Buch-Zeit, das Spielen ist ein Wochenziel.",
+          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit »Jetzt synchronisieren« stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
+        ]
+      },
+      "stats": {
+        "t": "Statistik",
+        "p": [
+          "Unter »Statistik« (Konto-Menü) siehst du deine Puzzle-Elo-Kurve und weitere Auswertungen deiner gelösten Puzzles über die Zeit."
+        ]
+      },
+      "analysis": {
+        "t": "Analyse",
+        "p": [
+          "Die Analyse läuft komplett lokal in deinem Browser über Stockfish (WebAssembly) – ohne Server, auch offline. Du erhältst mehrere Hauptvarianten (MultiPV) und Bewertungen zu jeder Stellung.",
+          "Die Analyse ist ohne Login nutzbar. Beim ersten Start lädt die Engine einmalig rund 7 MB; danach steht sie auch offline bereit."
+        ]
+      },
+      "repertoires": {
+        "t": "Repertoires",
+        "p": [
+          "Repertoires sind Sammlungen von PGN-Dateien (Eröffnung/Mittelspiel/Endspiel), die du hochlädst und verwaltest. Du kannst Dateien per Drag & Drop hinzufügen, herunterladen und den kombinierten PGN abrufen (max. 10 MB pro Datei).",
+          "Dieser Bereich ist derzeit Administratoren vorbehalten. Über die optionale chess.com-Erweiterung lassen sich Repertoires direkt im Spiel abrufen (siehe »API-Tokens«)."
+        ]
+      },
+      "offline": {
+        "t": "Offline & App-Installation",
+        "p": [
+          "RookHub ist eine Progressive Web App: Du kannst sie als App installieren und vieles offline nutzen. Puzzles, Endlos-Pool, ganze Bücher und die Stockfish-Engine werden vorab zwischengespeichert.",
+          "Offline gelöste Puzzles werden in einer Warteschlange gemerkt und automatisch synchronisiert, sobald du wieder online bist. Eine Android-Installationsanleitung samt APK findest du im Konto-Menü unter »App installieren«."
+        ]
+      },
+      "settings": {
+        "t": "Design & Sprache",
+        "p": [
+          "Über das Sonne/Mond-Symbol wechselst du zwischen hellem, dunklem und System-Design. Das Globus-Symbol schaltet die Sprache um – RookHub spricht 25 Sprachen, und deine Auswahl wird gespeichert."
+        ]
+      },
+      "tokens": {
+        "t": "API-Tokens & chess.com-Erweiterung",
+        "p": [
+          "Im Profil kannst du persönliche API-Tokens anlegen, z. B. für die chess.com-Browser-Erweiterung, die deine Repertoires direkt am Brett anzeigt. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
+          "Tokens haben einen Geltungsbereich (Scope) und ein optionales Ablaufdatum und lassen sich jederzeit widerrufen."
+        ]
+      },
+      "privacy": {
+        "t": "Datenschutz & Konto löschen",
+        "p": [
+          "Impressum und Datenschutzerklärung erreichst du über die entsprechenden Seiten. Dein Konto kannst du selbst löschen: Dabei werden Identität und persönliche Daten anonymisiert, die anonymisierte Statistik bleibt erhalten (DSGVO)."
+        ]
+      },
+      "feedback": {
+        "t": "Feedback & Hilfe",
+        "p": [
+          "Einen Fehler gefunden oder einen Wunsch? Über »Feedback / Bug melden« im Footer gelangst du direkt zum Issue-Tracker auf GitHub. Den Schnellstart-Überblick öffnest du jederzeit über das Info-Symbol in der Leiste."
+        ]
+      }
+    }
   }
 }

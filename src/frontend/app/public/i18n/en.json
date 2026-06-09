@@ -38,7 +38,8 @@
     "installApp": "Install app (Android)",
     "themeSystem": "System theme",
     "themeLight": "Light theme",
-    "themeDark": "Dark theme"
+    "themeDark": "Dark theme",
+    "help": "Help"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -662,7 +663,7 @@
       "stockfishDepth": "Stockfish Depth",
       "stockfishDepthHint": "1 (weak) – 24 (strong)",
       "themes": "Themes (optional)",
-      "themesPlaceholder": "e.g. fork pin",
+      "themesPlaceholder": "e.g. fork pin (any of them)",
       "thresholdExplain": "Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.",
       "firstThreshold": "1st Threshold",
       "secondThreshold": "2nd Threshold",
@@ -1062,5 +1063,153 @@
     "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
     "download": "Download APK",
     "iosNote": "Android only. On iPhone/iPad, open the site in Safari and use “Share → Add to Home Screen” to install it as an app."
+  },
+  "help": {
+    "title": "Help & Guide",
+    "subtitle": "Everything you need to know about RookHub – step by step.",
+    "tocTitle": "Contents",
+    "backToTop": "Back to top",
+    "s": {
+      "welcome": {
+        "t": "Welcome to RookHub",
+        "p": [
+          "RookHub is your central chess portal: live tournament data from chess-results.com, daily and endless puzzle training, book courses, the Weekly Post, personal training goals, a local engine analysis, plus profile and friend features – all in one place.",
+          "Much of it works without an account (puzzles, analysis, daily puzzle). For personal progress, tournament subscriptions, friends and training goals, sign in. This page explains every area – use the table of contents to jump directly."
+        ]
+      },
+      "account": {
+        "t": "Account & sign-in",
+        "p": [
+          "You can register with a username and password; an email address is optional. Use »Register« in the top bar to create an account, then sign in with the same credentials.",
+          "Tick »Stay signed in« at login to remain logged in for 30 days instead of just one. You can sign out any time via the account menu (person icon) at the top right."
+        ]
+      },
+      "profile": {
+        "t": "Profile & chess identity",
+        "p": [
+          "In your profile you set your display name and your links: FIDE ID, ChessResults ID, chess.com and Lichess usernames. These connect RookHub to your external chess accounts.",
+          "If you store your ChessResults ID, upcoming tournaments are subscribed for you automatically. Your chess.com and Lichess names are used for the play tracking of your training goals.",
+          "Use the player search (by last and first name) to find yourself in ChessResults/FIDE and adopt the right ID directly. Your public profile shows others only a reduced view – without your real name, ChessResults ID or Discord."
+        ]
+      },
+      "discord": {
+        "t": "Link Discord",
+        "p": [
+          "If the chess bot is active in your Discord, you can link your RookHub account to Discord. The bot sends you a link with a token; if you are logged in the link is established immediately, otherwise after your next sign-in.",
+          "Once linked, you appear in daily-puzzle and Weekly-Post leaderboards with your Discord name, and the bot can show you your training progress. You can unlink it again any time in your profile."
+        ]
+      },
+      "friends": {
+        "t": "Friends",
+        "p": [
+          "Under »Friends« you search for other users and send friend requests. Incoming requests appear on the »Requests« tab where you can accept or decline them.",
+          "Only the recipient of a request can confirm it. Existing friendships can be removed at any time."
+        ]
+      },
+      "tournaments": {
+        "t": "Tournaments",
+        "p": [
+          "RookHub pulls tournament data live from chess-results.com. In the tournament list you search tournaments and open details with players, teams, pairings and individual results – pick the round from the selector.",
+          "Use »Subscribe« to pin a tournament for quick access. The round monitor automatically detects new rounds and crawls them. You can mark players or teams as favorites to highlight them in the view.",
+          "For each tournament you can save personal settings such as highlights and notes."
+        ]
+      },
+      "puzzles": {
+        "t": "Puzzles",
+        "p": [
+          "The standard puzzle mode gives you tactical problems from a large pool. You play the solution right on the board; correct and wrong moves are reported instantly.",
+          "Puzzles can be filtered by theme. When logged in, your progress including puzzle Elo is saved – without login you can still practice, but progress stays local on the device."
+        ]
+      },
+      "endless": {
+        "t": "Endless mode",
+        "p": [
+          "In endless mode you solve a continuous series of increasingly harder puzzles until you make too many mistakes. You set the starting Elo, themes, fast-track thresholds and Stockfish depth yourself.",
+          "Your high score and finished sessions are saved; see the history under »Puzzle history« in the account menu and archive old sessions."
+        ]
+      },
+      "daily": {
+        "t": "Daily puzzle",
+        "p": [
+          "Every day (by UTC) there is a fixed daily puzzle that is the same for everyone – so you can compare directly.",
+          "After solving you see the leaderboard of all solvers. A »solver« is anyone who solves the puzzle on the first attempt. If you are linked with Discord, your name also appears in the bot's Discord embed."
+        ]
+      },
+      "courses": {
+        "t": "Courses",
+        "p": [
+          "Courses are imported chess books you work through puzzle by puzzle. Which books you see depends on your group access; administrators see all of them.",
+          "You choose between book order (sequential) and random order. Your progress is saved per book and shared across both modes; you can reset a course's progress.",
+          "The »Courses« menu item only appears once at least one book has been granted to you."
+        ]
+      },
+      "weekly": {
+        "t": "Weekly Post",
+        "p": [
+          "The Weekly Post mirrors the weekly chess-bot posts: a game or study with a date that you play through puzzle by puzzle. Reading works without login, playing through requires sign-in.",
+          "»Done« means you have played all puzzles (solved or not). Giving up or resetting after a move counts as a failed attempt. A live leaderboard shows all participants."
+        ]
+      },
+      "trainingGoals": {
+        "t": "Training goals",
+        "p": [
+          "Set daily goals for puzzle and book training (in minutes) plus a weekly goal for games played (rapid/classical) and full training days. Coaches can provide templates per group; your personal goal takes precedence.",
+          "The tracker colors each day by goal completion (none/partial/full) – the daily status comes only from puzzle and book time, while playing is a weekly goal.",
+          "RookHub fetches rapid/classical games automatically from Lichess and chess.com (public, no login there). Use »Sync now« to trigger it immediately. Bullet, blitz and correspondence do not count."
+        ]
+      },
+      "stats": {
+        "t": "Statistics",
+        "p": [
+          "Under »Statistics« (account menu) you see your puzzle Elo curve and further analysis of your solved puzzles over time."
+        ]
+      },
+      "analysis": {
+        "t": "Analysis",
+        "p": [
+          "Analysis runs entirely locally in your browser via Stockfish (WebAssembly) – no server, even offline. You get several main lines (MultiPV) and evaluations for any position.",
+          "Analysis works without login. On first start the engine downloads about 7 MB once; afterwards it is available offline too."
+        ]
+      },
+      "repertoires": {
+        "t": "Repertoires",
+        "p": [
+          "Repertoires are collections of PGN files (opening/middlegame/endgame) you upload and manage. You can add files via drag & drop, download them and fetch the combined PGN (max 10 MB per file).",
+          "This area is currently reserved for administrators. Via the optional chess.com extension, repertoires can be fetched right in the game (see »API tokens«)."
+        ]
+      },
+      "offline": {
+        "t": "Offline & app install",
+        "p": [
+          "RookHub is a Progressive Web App: you can install it as an app and use much of it offline. Puzzles, the endless pool, whole books and the Stockfish engine are pre-cached.",
+          "Puzzles solved offline are queued and synced automatically once you are back online. An Android install guide including the APK is in the account menu under »Install app«."
+        ]
+      },
+      "settings": {
+        "t": "Theme & language",
+        "p": [
+          "Use the sun/moon icon to switch between light, dark and system theme. The globe icon switches the language – RookHub speaks 25 languages and your choice is saved."
+        ]
+      },
+      "tokens": {
+        "t": "API tokens & chess.com extension",
+        "p": [
+          "In your profile you can create personal API tokens, e.g. for the chess.com browser extension that shows your repertoires right on the board. The raw token is shown only once at creation – copy it immediately.",
+          "Tokens have a scope and an optional expiry date and can be revoked at any time."
+        ]
+      },
+      "privacy": {
+        "t": "Privacy & account deletion",
+        "p": [
+          "You reach the imprint and privacy policy via the respective pages. You can delete your account yourself: identity and personal data are anonymized, while the anonymized statistics are kept (GDPR)."
+        ]
+      },
+      "feedback": {
+        "t": "Feedback & help",
+        "p": [
+          "Found a bug or have a wish? Via »Feedback / report bug« in the footer you reach the issue tracker on GitHub directly. You can open the quick-start overview any time via the info icon in the bar."
+        ]
+      }
+    }
   }
 }

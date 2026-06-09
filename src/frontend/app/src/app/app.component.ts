@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs';
@@ -19,12 +19,14 @@ import { environment } from '../environments/environment';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NavbarComponent, TranslateModule],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule],
   template: `
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
       <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      <span class="footer-sep">·</span>
+      <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
       <span class="footer-sep">·</span>
       <a class="feedback-link" href="https://github.com/kahalm/rookhub/issues" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
     </footer>

@@ -78,12 +78,16 @@ import { AppInstallDialogComponent } from '../app-install-dialog/app-install-dia
           <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
           <button mat-menu-item (click)="openInstall()">{{ 'nav.installApp' | translate }}</button>
+          <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button>
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
       } @else {
         <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
         <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
+        <button mat-icon-button routerLink="/help" [matTooltip]="'nav.help' | translate" [attr.aria-label]="'nav.help' | translate">
+          <mat-icon>help_outline</mat-icon>
+        </button>
         <button mat-icon-button (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
           <mat-icon>info_outline</mat-icon>
         </button>

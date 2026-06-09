@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.98.9';
+export const APP_VERSION = '0.99.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.99.0', date: '2026-06-09', changes: [
+    'Neue ausführliche Hilfeseite (/help): erklärt alle Bereiche (Konto, Profil, Discord, Freunde, Turniere, Puzzles, Endlos, Tagespuzzle, Kurse, Wochenpost, Trainingsziele, Statistik, Analyse, Repertoires, Offline/App, Design/Sprache, API-Tokens, Datenschutz, Feedback) mit Inhaltsverzeichnis. Verlinkt in Navbar (Hilfe-Icon + Konto-Menü) und Footer; lokalisiert in de/en/hr (übrige Sprachen fallen auf en zurück).',
+  ]},
   { version: '0.98.9', date: '2026-06-09', changes: [
     'Revert von 0.98.8 (Bereitschafts-Prüfung des Tag-Index): die Vollständigkeits-Abfrage wurde wieder auf die einfache Variante zurückgesetzt.',
   ]},

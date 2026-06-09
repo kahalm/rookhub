@@ -38,7 +38,8 @@
     "installApp": "Instaliraj aplikaciju (Android)",
     "themeSystem": "Sustavna tema",
     "themeLight": "Svijetla tema",
-    "themeDark": "Tamna tema"
+    "themeDark": "Tamna tema",
+    "help": "Pomoć"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -662,7 +663,7 @@
       "stockfishDepth": "Stockfish Depth",
       "stockfishDepthHint": "1 (slabo) – 24 (jako)",
       "themes": "Themes (opcionalno)",
-      "themesPlaceholder": "npr. fork pin",
+      "themesPlaceholder": "npr. fork pin (bilo koja)",
       "thresholdExplain": "Rejtinzi pri kojima obično gubiš živote. Prilagodi da brže ili sporije preskačeš lakše zagonetke.",
       "firstThreshold": "1. prag",
       "secondThreshold": "2. prag",
@@ -1062,5 +1063,153 @@
     "step3": "Potvrdi instalaciju – gotovo. RookHub se pojavljuje kao aplikacija na uređaju.",
     "download": "Preuzmi APK",
     "iosNote": "Samo za Android. Na iPhoneu/iPadu: otvori stranicu u Safariju i preko „Podijeli → Dodaj na početni zaslon“ dodaj kao aplikaciju."
+  },
+  "help": {
+    "title": "Pomoć i upute",
+    "subtitle": "Sve što trebaš znati o RookHubu – korak po korak.",
+    "tocTitle": "Sadržaj",
+    "backToTop": "Na vrh",
+    "s": {
+      "welcome": {
+        "t": "Dobro došli u RookHub",
+        "p": [
+          "RookHub je tvoj središnji šahovski portal: podaci o turnirima uživo s chess-results.com, dnevni i beskonačni trening zagonetki, tečajevi iz knjiga, Tjedna objava, osobni ciljevi treninga, lokalna analiza motorom te funkcije profila i prijatelja – sve na jednom mjestu.",
+          "Mnogo toga radi bez računa (zagonetke, analiza, dnevna zagonetka). Za osobni napredak, pretplate na turnire, prijatelje i ciljeve treninga prijavi se. Ova stranica objašnjava sva područja – koristi sadržaj za izravni skok."
+        ]
+      },
+      "account": {
+        "t": "Račun i prijava",
+        "p": [
+          "Registrirati se možeš korisničkim imenom i lozinkom; e-adresa nije obavezna. Putem »Registracija« u gornjoj traci stvaraš račun i zatim se prijaviš istim podacima.",
+          "Pri prijavi označi »Ostani prijavljen« da ostaneš prijavljen 30 dana umjesto samo jedan. Odjaviti se možeš bilo kada putem izbornika računa (ikona osobe) gore desno."
+        ]
+      },
+      "profile": {
+        "t": "Profil i šahovski identitet",
+        "p": [
+          "U profilu postavljaš prikazno ime i svoje poveznice: FIDE ID, ChessResults ID, korisnička imena za chess.com i Lichess. Time povezuješ RookHub sa svojim vanjskim šahovskim računima.",
+          "Ako upišeš svoj ChessResults ID, nadolazeći turniri pretplaćuju se za tebe automatski. Imena za chess.com i Lichess koriste se za praćenje igranja kod tvojih ciljeva treninga.",
+          "Pretragom igrača (po prezimenu i imenu) pronađeš sebe u ChessResults/FIDE i izravno preuzmeš ispravni ID. Tvoj javni profil drugima prikazuje samo smanjeni prikaz – bez pravog imena, ChessResults ID-a ili Discorda."
+        ]
+      },
+      "discord": {
+        "t": "Povezivanje Discorda",
+        "p": [
+          "Ako je šahovski bot aktivan na tvom Discordu, možeš povezati svoj RookHub račun s Discordom. Bot ti šalje poveznicu s tokenom; ako si prijavljen, veza se uspostavlja odmah, inače nakon sljedeće prijave.",
+          "Povezan, pojavljuješ se na ljestvicama dnevne zagonetke i Tjedne objave sa svojim Discord imenom, a bot ti može prikazati napredak treninga. Vezu možeš u profilu prekinuti bilo kada."
+        ]
+      },
+      "friends": {
+        "t": "Prijatelji",
+        "p": [
+          "Pod »Prijatelji« tražiš druge korisnike i šalješ zahtjeve za prijateljstvo. Dolazne zahtjeve nalaziš na kartici »Zahtjevi« gdje ih možeš prihvatiti ili odbiti.",
+          "Samo primatelj zahtjeva može ga potvrditi. Postojeća prijateljstva mogu se ukloniti bilo kada."
+        ]
+      },
+      "tournaments": {
+        "t": "Turniri",
+        "p": [
+          "RookHub dohvaća podatke o turnirima uživo s chess-results.com. Na popisu turnira pretražuješ turnire i otvaraš detalje s igračima, ekipama, parovima i pojedinačnim rezultatima – kolo biraš odabirnikom.",
+          "Putem »Pretplati se« prikvačiš turnir za brzi pristup. Nadzor kola automatski prepoznaje nova kola i dohvaća ih. Igrače ili ekipe možeš označiti kao favorite kako bi se istaknuli u prikazu.",
+          "Za svaki turnir možeš spremiti osobne postavke poput isticanja i bilješki."
+        ]
+      },
+      "puzzles": {
+        "t": "Zagonetke",
+        "p": [
+          "Standardni način zagonetki daje ti taktičke zadatke iz velikog skupa. Rješenje povlačiš izravno na ploči; ispravni i pogrešni potezi javljaju se odmah.",
+          "Zagonetke se mogu filtrirati po temama. Kad si prijavljen, tvoj napredak uključujući Elo zagonetki sprema se – bez prijave svejedno možeš vježbati, no napredak ostaje lokalno na uređaju."
+        ]
+      },
+      "endless": {
+        "t": "Beskonačni način",
+        "p": [
+          "U beskonačnom načinu rješavaš neprekinuti niz sve težih zagonetki dok ne napraviš previše pogrešaka. Početni Elo, teme, pragove brzog napretka i dubinu Stockfisha postavljaš sam.",
+          "Tvoj najbolji rezultat i završene sesije se spremaju; povijest vidiš pod »Povijest zagonetki« u izborniku računa i možeš arhivirati stare sesije."
+        ]
+      },
+      "daily": {
+        "t": "Dnevna zagonetka",
+        "p": [
+          "Svaki dan (po UTC-u) postoji fiksna dnevna zagonetka koja je ista za sve – pa se možete izravno usporediti.",
+          "Nakon rješavanja vidiš ljestvicu svih rješavača. »Rješavač« je svatko tko zagonetku riješi iz prvog pokušaja. Ako si povezan s Discordom, tvoje ime pojavljuje se i u botovom Discord embedu."
+        ]
+      },
+      "courses": {
+        "t": "Tečajevi",
+        "p": [
+          "Tečajevi su uvezene šahovske knjige koje prolaziš zagonetku po zagonetku. Koje knjige vidiš ovisi o pristupu tvoje grupe; administratori vide sve.",
+          "Biraš između redoslijeda knjige (slijedno) i nasumičnog redoslijeda. Napredak se sprema po knjizi i dijeli između oba načina; napredak tečaja možeš resetirati.",
+          "Stavka izbornika »Tečajevi« pojavljuje se tek kad ti je odobrena barem jedna knjiga."
+        ]
+      },
+      "weekly": {
+        "t": "Tjedna objava",
+        "p": [
+          "Tjedna objava preslikava tjedne objave šahovskog bota: partiju ili studiju s terminom koju prolaziš zagonetku po zagonetku. Čitanje ide bez prijave, prolazak zahtijeva prijavu.",
+          "»Gotovo« znači da si odigrao sve zagonetke (riješene ili ne). Predaja ili resetiranje nakon poteza računa se kao neuspjeli pokušaj. Ljestvica uživo prikazuje sve sudionike."
+        ]
+      },
+      "trainingGoals": {
+        "t": "Ciljevi treninga",
+        "p": [
+          "Postavi dnevne ciljeve za trening zagonetki i knjiga (u minutama) te tjedni cilj za odigrane partije (rapid/classical) i pune dane treninga. Treneri mogu zadati predloške po grupi; tvoj osobni cilj ima prednost.",
+          "Pratilac boji svaki dan prema ostvarenju cilja (nijedan/djelomično/puno) – dnevni status proizlazi samo iz vremena za zagonetke i knjige, dok je igranje tjedni cilj.",
+          "Odigrane rapid/classical partije RookHub dohvaća automatski s Lichessa i chess.com (javno, bez prijave ondje). Putem »Sinkroniziraj sada« to pokrećeš odmah. Bullet, blitz i dopisni se ne broje."
+        ]
+      },
+      "stats": {
+        "t": "Statistika",
+        "p": [
+          "Pod »Statistika« (izbornik računa) vidiš svoju krivulju Ela zagonetki i daljnje analize riješenih zagonetki tijekom vremena."
+        ]
+      },
+      "analysis": {
+        "t": "Analiza",
+        "p": [
+          "Analiza radi potpuno lokalno u tvom pregledniku putem Stockfisha (WebAssembly) – bez poslužitelja, čak i izvanmrežno. Dobivaš nekoliko glavnih varijanti (MultiPV) i procjene za svaku poziciju.",
+          "Analiza radi bez prijave. Pri prvom pokretanju motor jednokratno preuzme oko 7 MB; nakon toga dostupan je i izvanmrežno."
+        ]
+      },
+      "repertoires": {
+        "t": "Repertoari",
+        "p": [
+          "Repertoari su zbirke PGN datoteka (otvaranje/sredina/završnica) koje učitavaš i njima upravljaš. Datoteke možeš dodati povlačenjem, preuzeti ih i dohvatiti kombinirani PGN (najviše 10 MB po datoteci).",
+          "Ovo je područje trenutačno rezervirano za administratore. Putem neobavezne chess.com ekstenzije repertoari se mogu dohvatiti izravno u igri (vidi »API tokeni«)."
+        ]
+      },
+      "offline": {
+        "t": "Izvanmrežno i instalacija aplikacije",
+        "p": [
+          "RookHub je progresivna web-aplikacija: možeš ga instalirati kao aplikaciju i mnogo toga koristiti izvanmrežno. Zagonetke, beskonačni skup, cijele knjige i Stockfish motor unaprijed se spremaju.",
+          "Izvanmrežno riješene zagonetke pamte se u redu i sinkroniziraju automatski čim se vratiš na mrežu. Upute za instalaciju na Androidu s APK-om nalaze se u izborniku računa pod »Instaliraj aplikaciju«."
+        ]
+      },
+      "settings": {
+        "t": "Tema i jezik",
+        "p": [
+          "Putem ikone sunca/mjeseca prebacuješ između svijetle, tamne i sistemske teme. Ikona globusa mijenja jezik – RookHub govori 25 jezika, a tvoj izbor se sprema."
+        ]
+      },
+      "tokens": {
+        "t": "API tokeni i chess.com ekstenzija",
+        "p": [
+          "U profilu možeš stvoriti osobne API tokene, npr. za chess.com ekstenziju preglednika koja prikazuje tvoje repertoare izravno na ploči. Sirovi token prikazuje se samo jednom pri stvaranju – kopiraj ga odmah.",
+          "Tokeni imaju opseg (scope) i neobavezni datum isteka te se mogu opozvati bilo kada."
+        ]
+      },
+      "privacy": {
+        "t": "Privatnost i brisanje računa",
+        "p": [
+          "Impresum i pravila privatnosti dostupni su putem odgovarajućih stranica. Račun možeš sam izbrisati: identitet i osobni podaci se anonimiziraju, dok anonimizirana statistika ostaje (GDPR)."
+        ]
+      },
+      "feedback": {
+        "t": "Povratne informacije i pomoć",
+        "p": [
+          "Pronašao si grešku ili imaš želju? Putem »Povratne informacije / prijavi grešku« u podnožju dolaziš izravno na issue tracker na GitHubu. Pregled brzog početka otvaraš bilo kada putem ikone informacija u traci."
+        ]
+      }
+    }
   }
 }
