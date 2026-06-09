@@ -143,7 +143,9 @@ public class PuzzleService
 
         var p = Expression.Parameter(typeof(Puzzle), "p");
         var themesProp = Expression.Property(p, nameof(Puzzle.Themes));
-        var efFns = Expression.Constant(EF.Functions, typeof(Microsoft.EntityFrameworkCore.DbFunctions));
+        // EF.Functions als STATISCHER Property-Zugriff (nicht als Konstante!) — nur so erkennt
+        // der Pomelo/MySQL-Übersetzer das Like-Muster und erzeugt SQL statt zu scheitern.
+        var efFns = Expression.Property(null, typeof(EF).GetProperty(nameof(EF.Functions))!);
         var likeMethod = typeof(DbFunctionsExtensions).GetMethod(
             nameof(DbFunctionsExtensions.Like),
             new[] { typeof(Microsoft.EntityFrameworkCore.DbFunctions), typeof(string), typeof(string) })!;
