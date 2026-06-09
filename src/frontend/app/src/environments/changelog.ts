@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.98.2';
+export const APP_VERSION = '0.98.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.98.3', date: '2026-06-09', changes: [
+    'Interne Doku: Hinweis zum lokalen dotnet-Pfad + InMemory-Test-Lücke in CLAUDE.md (keine App-Änderung).',
+  ]},
   { version: '0.98.2', date: '2026-06-09', changes: [
     '„Schwächste Themen trainieren": Beim Aktivieren werden die 5 Themen jetzt sichtbar ins Themenfeld geschrieben (Endless), und der aktive Themenfilter wird während des Lösens/Runs als Chips angezeigt (beide Modi).',
     'Performance: Theme-gefilterte Puzzle-Auswahl massiv beschleunigt — statt mehrerer Full-Scans pro Aufruf (im Endless-Batch ×Fensteranzahl) jetzt ein einziger Scan über die Rating-Spanne (erstes Puzzle lädt nicht mehr ~30 s).',

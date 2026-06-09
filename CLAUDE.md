@@ -363,7 +363,15 @@ dotnet run
 
 **Pflicht**: Jedes neue Feature, jeder neue Endpoint und jeder Bugfix MUSS mit mindestens einem Test abgedeckt werden. Kein PR/Commit ohne passenden Test.
 
+> **`dotnet` ist installiert, aber NICHT im PATH** — liegt unter `/home/kahalm/.dotnet/dotnet`.
+> Vor `dotnet`-Befehlen daher: `export PATH="$HOME/.dotnet:$PATH"` (ggf. `DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1`).
+> **Achtung Test-Lücke:** Tests laufen gegen die EF **InMemory-DB** (LINQ-to-Objects) und stellen die
+> **MySQL/Pomelo-SQL-Übersetzung NICHT nach**. Übersetzungsfehler (z. B. `EF.Functions.Like` in
+> handgebauten Expression-Trees, raw SQL, provider-spezifische Funktionen) fallen erst gegen echtes
+> MariaDB auf — solche Änderungen zusätzlich auf Dev verifizieren.
+
 ```bash
+export PATH="$HOME/.dotnet:$PATH"
 cd tests/RookHub.Api.Tests
 dotnet test
 ```
@@ -401,7 +409,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.98.2` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- **Aktuelle Version**: `0.98.3` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)
