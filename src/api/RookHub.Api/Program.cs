@@ -326,10 +326,24 @@ try
     // Nach UseAuthentication, damit HttpContext.User bereits gesetzt ist.
     app.Use(async (ctx, next) =>
     {
-        var scopes = new List<IDisposable>(4);
+        var scopes = new List<IDisposable>(6);
         var ip = ctx.Connection.RemoteIpAddress?.ToString();
         if (!string.IsNullOrEmpty(ip))
             scopes.Add(LogContext.PushProperty("IpAddress", ip));
+        // IpAddress oben ist die VERTRAUENSWUERDIGE, aufgeloeste Client-IP (Basis fuer
+        // Rate-Limiter). Zusaetzlich die ROHE Weiterleitungs-Kette mitschreiben, damit alle
+        // Hops sichtbar sind — inkl. einer evtl. oeffentlichen IP, die nicht als kanonische
+        // Client-IP gewaehlt wurde. UseForwardedHeaders verschiebt das Original-XFF nach
+        // X-Original-For (X-Forwarded-For enthaelt danach nur noch Unverbrauchtes), daher
+        // bevorzugt X-Original-For lesen, sonst Fallback auf X-Forwarded-For.
+        var fwd = ctx.Request.Headers["X-Original-For"].ToString();
+        if (string.IsNullOrEmpty(fwd))
+            fwd = ctx.Request.Headers["X-Forwarded-For"].ToString();
+        if (!string.IsNullOrEmpty(fwd))
+            scopes.Add(LogContext.PushProperty("ForwardedFor", fwd));
+        var realIp = ctx.Request.Headers["X-Real-IP"].ToString();
+        if (!string.IsNullOrEmpty(realIp))
+            scopes.Add(LogContext.PushProperty("XRealIp", realIp));
         if (ctx.User?.Identity?.IsAuthenticated == true)
         {
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
