@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.16';
+export const APP_VERSION = '0.97.17';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.17', date: '2026-06-09', changes: [
+    'Test-Infrastruktur: karma.conf.js findet automatisch die Puppeteer-Headless-Shell — ng test läuft jetzt ohne system-weites Chrome und ohne root.',
+  ]},
   { version: '0.97.16', date: '2026-06-09', changes: [
     'Spielerstatistik: Elo-Verlaufskurve wird geglättet (Bézier statt zackiger Polyline) — gilt für Einzel- und Alle-Level-Ansicht.',
     'Spielerstatistik: Die Verlaufs-Ansicht startet standardmäßig auf der aktuell bei den Puzzles eingestellten Visualisierungsstufe.',

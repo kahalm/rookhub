@@ -136,9 +136,21 @@ npm install
 npx ng serve              # http://localhost:4200 (braucht API auf :5001)
 npx ng build              # Production Build -> dist/app/browser/
 npx ng build --watch      # Watch-Mode
+npx ng test --watch=false # Unit-Tests (Karma/Jasmine), einmalig headless
 ```
 
 Fuer den vollen Stack: `docker compose -f compose.dev.yml --env-file .env.dev up --build` im rookhub Root.
+
+### Unit-Tests / Headless-Browser (`karma.conf.js`)
+
+`ng test` nutzt `app/karma.conf.js`. In Headless-/Container-Umgebungen ohne system-weites
+Chrome (`apt install chromium` braucht root) sucht die Config automatisch die von
+**Puppeteer gecachte `chrome-headless-shell`** unter `~/.cache/puppeteer/chrome-headless-shell/`
+und setzt sie als `CHROME_BIN` — `ng test` läuft damit ohne sudo und ohne manuelles `CHROME_BIN`.
+Default-Browser ist `ChromeHeadlessNoSandbox` (`--no-sandbox --disable-gpu --disable-dev-shm-usage`).
+
+- Ist keine Cache-Shell da: `npx puppeteer browsers install chrome-headless-shell` (lädt nach `~/.cache/puppeteer`, kein root).
+- Lokal mit installiertem Chrome: einfach `CHROME_BIN` setzen oder `--browsers=Chrome` übergeben.
 
 ## Build-Konfiguration
 
