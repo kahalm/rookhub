@@ -30,7 +30,7 @@ describe('PuzzleComponent give-up', () => {
     c.giveUp();
 
     expect(c.gaveUp).toBeTrue();
-    expect(c.state).toBe('SOLVED');
+    expect(c.state).toBe('FAILED');         // Aufgeben = Fehlversuch (recordAttempt(false))
     expect(c.reviewMode).toBeTrue();
     expect(c.reviewIndex).toBe(0);          // startet an der Anfangsstellung
 
@@ -48,8 +48,8 @@ describe('PuzzleComponent give-up', () => {
     c.attemptRecorded = true;
 
     c.giveUp();
-    // resetPuzzle würde wieder in einen Lös-Zustand gehen; Aufgeben bleibt im Review.
-    expect(c.state).toBe('SOLVED');
+    // resetPuzzle würde wieder in einen Lös-Zustand gehen; Aufgeben bleibt im Review (FAILED).
+    expect(c.state).toBe('FAILED');
     expect(c.reviewMode).toBeTrue();
 
     c.ngOnDestroy();
@@ -58,6 +58,7 @@ describe('PuzzleComponent give-up', () => {
   it('reviewLastPuzzle navigates straight to the analysis board with the last solved puzzle', () => {
     const c = makeComponent();
     // Zustand wie nach einem gelösten Puzzle (handleSolved merkt sich id/fen/moves/orientation):
+    c.puzzle = { ...PUZZLE, id: 123 };      // aktuelles Puzzle = das gelöste → from-Param '/puzzles/123'
     c.lastSolvedPuzzleId = 123;
     c.lastSolvedFen = PUZZLE.fen;
     c.lastSolvedMoves = PUZZLE.moves;       // 'e2e4 e7e5 g1f3'

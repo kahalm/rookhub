@@ -8,10 +8,12 @@ import { AnalysisComponent } from './analysis.component';
 function makeComponent(params: Record<string, string | null>): any {
   const engine: any = {
     analysis$: new Subject(),
+    engineFatalError$: new Subject(),   // Crash-Detection-Stream (seit 0.97.10), in ngOnInit subscribed
     setMultiPv: jasmine.createSpy('setMultiPv'),
     setDepth: jasmine.createSpy('setDepth'),
     analyze: jasmine.createSpy('analyze'),
     stop: () => {},
+    destroy: () => {},                  // in ngOnDestroy aufgerufen
   };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const snackBar: any = { open: () => {} };

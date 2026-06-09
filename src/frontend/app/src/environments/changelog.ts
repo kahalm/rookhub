@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.97.17';
+export const APP_VERSION = '0.97.18';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.97.18', date: '2026-06-09', changes: [
+    'Tests: 11 veraltete Unit-Tests an das aktuelle Verhalten angepasst (AnalysisComponent-Engine-Mock um engineFatalError$/destroy ergänzt; Aufgeben-Tests erwarten jetzt korrekt FAILED statt SOLVED; reviewLastPuzzle-from-Param). Gesamte Suite wieder grün (258/258).',
+  ]},
   { version: '0.97.17', date: '2026-06-09', changes: [
     'Test-Infrastruktur: karma.conf.js findet automatisch die Puppeteer-Headless-Shell — ng test läuft jetzt ohne system-weites Chrome und ohne root.',
   ]},
