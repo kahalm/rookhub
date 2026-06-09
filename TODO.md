@@ -52,4 +52,4 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] E-Mail-Benachrichtigung bei neuen Turnierblättchen
 - [ ] Puzzle-Streaks / Achievements
 - [ ] Admin-Dashboard: User-Übersicht + Aktionen
-- [ ] Schach-Bot auf Elasticsearch umbauen (Logging/Events)
+- [x] Schach-Bot auf Elasticsearch umbauen (Logging/Events) → umgesetzt im Bot-Repo v2.60.0/2.60.1 (`core/es_client.py`, ESHandler in `log_setup.py`, Events `reaction`+`stat_inc`); Index `schach-bot-logs-*` ist live in Prod. Weitere Event-Typen (Daily-Post, DMs, Webhooks, Commands, Buttons) bei Bedarf später ergänzen.
