@@ -40,7 +40,7 @@
           @if (activeWorstThemes.length) {
             <div class="theme-filter-bar" [title]="'puzzles.filters.worstTags' | translate">
               <mat-icon>filter_alt</mat-icon>
-              @for (t of activeWorstThemes; track t) { <span class="theme-chip">{{ t }}</span> }
+              @for (t of activeWorstThemes; track t) { <span class="theme-chip" [class.matched]="themeMatched(t)">{{ t }}</span> }
             </div>
           }
           @if (state === 'ERROR') {

@@ -142,7 +142,9 @@
     .theme-chip {
       padding: 2px 8px; border-radius: 10px; text-transform: capitalize;
       background: color-mix(in srgb, currentColor 10%, transparent);
+      transition: background 0.2s, color 0.2s;
     }
+    .theme-chip.matched { background: #2e7d32; color: #fff; font-weight: 600; }
     .heart-sm { font-size: 20px; width: 20px; height: 20px; color: color-mix(in srgb, currentColor 25%, transparent); }
     .heart-sm.full { color: #f44336; }
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.75rem 0; }

@@ -86,6 +86,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     return src.trim().split(/\s+/).filter(Boolean);
   }
 
+  /** True, wenn das gerade GELÖSTE Puzzle dieses Thema trägt — fürs Einfärben des passenden Chips. */
+  themeMatched(theme: string): boolean {
+    return this.state === 'SOLVED' && !!this.puzzle?.themes
+      && this.puzzle.themes.split(/\s+/).includes(theme);
+  }
+
   /** Toggle „5 schwächste Themen trainieren": schwächste Themen laden und in die Editbox schreiben (sichtbar). */
   onWorstTagsToggle(enabled: boolean): void {
     if (enabled) {

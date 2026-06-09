@@ -528,6 +528,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     return this.worstTagsEnabled ? this.worstThemes : [];
   }
 
+  /** True, wenn das gerade GELÖSTE Puzzle dieses Thema trägt — fürs Einfärben des passenden Chips. */
+  themeMatched(theme: string): boolean {
+    return this.state === 'SOLVED' && !!this.puzzle?.themes
+      && this.puzzle.themes.split(/\s+/).includes(theme);
+  }
+
   /** Themen-Param für die Puzzle-Auswahl, wenn „schwächste Themen trainieren" aktiv ist (sonst undefined). */
   private get worstThemesParam(): string | undefined {
     return this.worstTagsEnabled && this.worstThemes.length ? this.worstThemes.join(' ') : undefined;
