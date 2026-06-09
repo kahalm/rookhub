@@ -11,10 +11,32 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { PuzzleService, PuzzleStatsDto, PuzzleAttemptDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay } from '../puzzles/puzzle.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
-export interface Curve { poly: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
+export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
+
+/**
+ * Baut aus Punkten einen geglätteten SVG-Pfad (Catmull-Rom → kubische Béziers, läuft durch
+ * alle Punkte). Glättet die zackige Polyline ohne die Datenpunkte zu verfälschen. '' bei < 2.
+ */
+export function smoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  const f = (n: number) => n.toFixed(1);
+  if (pts.length === 2) return `M${f(pts[0].x)},${f(pts[0].y)} L${f(pts[1].x)},${f(pts[1].y)}`;
+  let d = `M${f(pts[0].x)},${f(pts[0].y)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C${f(c1x)},${f(c1y)} ${f(c2x)},${f(c2y)} ${f(p2.x)},${f(p2.y)}`;
+  }
+  return d;
+}
 
 export function heatLevel(count: number): number {
   if (count <= 0) return 0;
@@ -55,16 +77,17 @@ export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad =
   let minElo = Math.min(...elos), maxElo = Math.max(...elos);
   if (minElo === maxElo) { minElo -= 10; maxElo += 10; }
   const n = points.length;
-  const poly = points.map((p, i) => {
-    const x = pad + (i / (n - 1)) * (w - 2 * pad);
-    const y = h - pad - ((p.elo - minElo) / (maxElo - minElo)) * (h - 2 * pad);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
+  const coords = points.map((p, i) => ({
+    x: pad + (i / (n - 1)) * (w - 2 * pad),
+    y: h - pad - ((p.elo - minElo) / (maxElo - minElo)) * (h - 2 * pad),
+  }));
+  const poly = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const path = smoothPath(coords);
   const fmt = (s: string) => { const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); };
-  return { poly, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
+  return { poly, path, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
 }
 
-export interface OverlayLine { level: number; poly: string; color: string; }
+export interface OverlayLine { level: number; poly: string; path: string; color: string; }
 export interface Overlay { lines: OverlayLine[]; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 
 /** Farben je Visualisierungs-Level für die „Alle"-Overlay-Ansicht (Index = Level). */
@@ -100,11 +123,15 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   };
   const yOf = (elo: number): number => h - pad - ((elo - minElo) / (maxElo - minElo)) * (h - 2 * pad);
 
-  const lines: OverlayLine[] = drawn.map(([level, ps]) => ({
-    level,
-    color: LEVEL_COLORS[level % LEVEL_COLORS.length],
-    poly: ps.map((p, i) => `${xOf(p, i, ps.length).toFixed(1)},${yOf(p.elo).toFixed(1)}`).join(' '),
-  }));
+  const lines: OverlayLine[] = drawn.map(([level, ps]) => {
+    const coords = ps.map((p, i) => ({ x: xOf(p, i, ps.length), y: yOf(p.elo) }));
+    return {
+      level,
+      color: LEVEL_COLORS[level % LEVEL_COLORS.length],
+      poly: coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' '),
+      path: smoothPath(coords),
+    };
+  });
 
   const byTime = [...all].sort((a, b) => Date.parse(a.attemptedAt) - Date.parse(b.attemptedAt));
   const fmt = (s: string) => { const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); };
@@ -152,7 +179,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <div class="y-axis"><span>{{ overlay.maxElo }}</span><span>{{ overlay.minElo }}</span></div>
                   <svg [attr.viewBox]="'0 0 ' + overlay.w + ' ' + overlay.h" preserveAspectRatio="none" class="svg">
                     @for (l of overlay.lines; track l.level) {
-                      <polyline [attr.points]="l.poly" fill="none" [attr.stroke]="l.color" stroke-width="2" vector-effect="non-scaling-stroke" />
+                      <path [attr.d]="l.path" fill="none" [attr.stroke]="l.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                     }
                   </svg>
                 </div>
@@ -169,7 +196,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               <div class="chart">
                 <div class="y-axis"><span>{{ curve.maxElo }}</span><span>{{ curve.minElo }}</span></div>
                 <svg [attr.viewBox]="'0 0 ' + curve.w + ' ' + curve.h" preserveAspectRatio="none" class="svg">
-                  <polyline [attr.points]="curve.poly" fill="none" stroke="#1976d2" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  <path [attr.d]="curve.path" fill="none" stroke="#1976d2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                 </svg>
               </div>
               <div class="x-axis"><span>{{ curve.first }}</span><span>{{ curve.last }}</span></div>
@@ -319,8 +346,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .theme-bar { flex: 1; height: 12px; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 6px; overflow: hidden; }
     .theme-fill { height: 100%; background: #1976d2; }
     .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
-    .bands { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 8px; }
-    .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 28px; }
+    .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; padding-top: 8px; }
+    .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 28px; height: 100%; }
     .band-bar { width: 60%; flex: 1; display: flex; align-items: flex-end; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 3px; }
     .band-fill { width: 100%; background: #43a047; border-radius: 3px; min-height: 2px; }
     .band-lbl { font-size: .65rem; color: color-mix(in srgb, currentColor 47%, transparent); }
@@ -344,6 +371,7 @@ export class StatsComponent implements OnInit {
   recent: PuzzleAttemptDto[] = [];
   cols = ['date', 'rating', 'result', 'elo', 'time', 'open'];
 
+  /** Default = aktuell bei den Puzzles eingestellte Visualisierungsstufe (im Konstruktor gesetzt). */
   level = 0;
   private eloPoints: EloHistoryPoint[] = [];
   curve: Curve | null = null;
@@ -354,7 +382,9 @@ export class StatsComponent implements OnInit {
   heatmap: HeatCell[][] = [];
   private maxBandSolved = 0;
 
-  constructor(private puzzles: PuzzleService) {}
+  constructor(private puzzles: PuzzleService, private prefs: PreferencesService) {
+    this.level = prefs.visualization;
+  }
 
   ngOnInit(): void {
     forkJoin({
@@ -370,7 +400,9 @@ export class StatsComponent implements OnInit {
         this.perLevel = stats.puzzleEloPerLevel
           ? Object.entries(stats.puzzleEloPerLevel).map(([k, v]) => ({ level: +k, elo: v as number })).sort((a, b) => a.level - b.level)
           : [];
-        this.themes = breakdown.themes;
+        // Nach Lösungs-% absteigend sortieren (bei Gleichstand mehr Versuche zuerst).
+        this.themes = [...breakdown.themes].sort((a, b) =>
+          this.acc(b.solved, b.attempts) - this.acc(a.solved, a.attempts) || b.attempts - a.attempts);
         this.ratingBands = breakdown.ratingBands;
         this.maxBandSolved = Math.max(1, ...this.ratingBands.map(b => b.solved));
         this.heatmap = breakdown.activity.length ? buildHeatmap(breakdown.activity, new Date()) : [];

@@ -1,4 +1,4 @@
-import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel } from './stats.component';
+import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel, smoothPath } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
 function pt(elo: number, day: number, vizLevel = 0): EloHistoryPoint {
@@ -29,6 +29,31 @@ describe('buildEloCurve', () => {
     expect(c.poly).toContain(',');
     expect(Number.isFinite(c.minElo)).toBeTrue();
   });
+
+  it('exposes a smoothed bezier path through the points', () => {
+    const c = buildEloCurve([pt(1500, 1), pt(1560, 2), pt(1520, 3)])!;
+    expect(c.path.startsWith('M')).toBeTrue();
+    expect(c.path).toContain('C');                 // kubische Béziers = geglättet
+    expect(c.path).not.toContain('NaN');
+  });
+});
+
+describe('smoothPath', () => {
+  it('returns empty for fewer than 2 points', () => {
+    expect(smoothPath([])).toBe('');
+    expect(smoothPath([{ x: 0, y: 0 }])).toBe('');
+  });
+
+  it('uses a straight line segment for exactly 2 points', () => {
+    const d = smoothPath([{ x: 0, y: 10 }, { x: 20, y: 30 }]);
+    expect(d).toBe('M0.0,10.0 L20.0,30.0');
+  });
+
+  it('builds one cubic bezier per segment for 3+ points', () => {
+    const d = smoothPath([{ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 20, y: 0 }]);
+    expect(d.startsWith('M0.0,0.0')).toBeTrue();
+    expect((d.match(/C/g) ?? []).length).toBe(2);   // 3 Punkte → 2 Segmente
+  });
 });
 
 describe('buildOverlay', () => {
@@ -46,6 +71,8 @@ describe('buildOverlay', () => {
     // ein Punktpaar je Datenpunkt
     expect(o.lines[0].poly.trim().split(/\s+/).length).toBe(2);
     expect(o.lines[1].poly.trim().split(/\s+/).length).toBe(3);
+    // jede Linie hat einen geglätteten Pfad
+    expect(o.lines.every(l => l.path.startsWith('M'))).toBeTrue();
   });
 
   it('drops levels with fewer than 2 points', () => {
