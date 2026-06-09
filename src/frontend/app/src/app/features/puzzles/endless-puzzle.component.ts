@@ -464,8 +464,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    */
   /** Themen-Filter für die Ketten-Generierung: „schwächste Themen" (ODER) hat Vorrang vor dem manuellen Themenfeld (UND). */
   private batchThemes(): { themes?: string; themesAny?: string } {
-    if (this.config.worstTags && this.worstThemes.length) return { themesAny: this.worstThemes.join(' ') };
-    return { themes: this.config.themes.trim() || undefined };
+    // Beide Quellen ODER-verknüpft (themesAny): ein Puzzle muss MINDESTENS EINS der Themen tragen.
+    // (Mehrere Themen UND-verknüpft hätten kaum Treffer — „fork pin" soll fork ODER pin liefern.)
+    const src = this.config.worstTags && this.worstThemes.length
+      ? this.worstThemes.join(' ')
+      : this.config.themes.trim();
+    return { themesAny: src || undefined };
   }
 
   /** Lädt die schwächsten Themen (nur eingeloggt + Option aktiv), ruft danach cb. */
