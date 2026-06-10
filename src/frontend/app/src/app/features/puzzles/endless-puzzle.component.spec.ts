@@ -170,6 +170,22 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     c.ngOnDestroy();
   });
 
+  it('retry erlaubt auch beim letzten verlorenen Leben einen Neuversuch desselben Puzzles', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.lives = 1;
+    c['loseLife']();                 // letztes Leben weg → lives 0, Status FAILED
+    expect(c.lives).toBe(0);
+    expect(c.state).toBe('FAILED');
+
+    c.retry();                       // früher: no-op bei 0 Leben; jetzt: Puzzle erneut aufsetzen
+    expect(c.state).not.toBe('FAILED');   // wieder spielbar (SETUP/AWAITING)
+    expect(c.chainIndex).toBe(0);    // kein Weiterrücken
+    expect(c.puzzle.id).toBe(100);   // dasselbe Puzzle, an dem der Run scheiterte
+    expect(c.lives).toBe(0);         // Retry kostet kein weiteres Leben
+    c.ngOnDestroy();
+  });
+
   it('Kette offline durchgespielt → „You win"', () => {
     const c = makeComponent();
     c['chain'] = [{ ...CHAIN[0] }];

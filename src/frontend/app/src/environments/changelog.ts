@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.101.0';
+export const APP_VERSION = '0.101.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.101.1', date: '2026-06-10', changes: [
+    'Endlos-Modus: „Nochmal versuchen" funktioniert jetzt auch, wenn man beim Verlust des letzten Lebens scheitert — man darf das Puzzle, an dem der Run endete, erneut probieren (vorher tat der Button beim letzten Leben nichts). Löst man es, geht der Run im Sudden-Death weiter; sonst führt „Weiter" wie gehabt ins Game Over.',
+  ]},
   { version: '0.101.0', date: '2026-06-10', changes: [
     'Statistik: Neue Karte „Schwächste Themen" zeigt die 5 Themen mit der niedrigsten Lösungsquote (ab 3 Versuchen, rot hervorgehoben) — ergänzend zur bestehenden Themen-Übersicht.',
     'Statistik: Die Elo-Kurve wird zusätzlich leicht geglättet (gleitender Mittelwert über die Elo-Reihe), wodurch Ausreißer gedämpft werden und der Verlauf ruhiger wirkt; die Achsenwerte zeigen weiterhin das tatsächliche Min/Max.',

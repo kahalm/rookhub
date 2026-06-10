@@ -965,9 +965,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   /** Dasselbe Puzzle erneut versuchen. Kostet KEIN (weiteres) Leben — der Fehlversuch hat
-   *  bereits eines gekostet. Nur sinnvoll, solange noch Leben übrig sind. */
+   *  bereits eines gekostet. Auch beim letzten verlorenen Leben erlaubt: man darf das Puzzle,
+   *  an dem der Run scheiterte, nochmal probieren (Lösen → Sudden-Death weiter, sonst „Weiter"
+   *  führt ins Game Over). */
   retry(): void {
-    if (!this.puzzle || this.lives <= 0) return;
+    if (!this.puzzle) return;
     this.currentEval = '';
     this.initialEval = '';
     this.showEval = false;
