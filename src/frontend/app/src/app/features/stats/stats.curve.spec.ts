@@ -1,4 +1,4 @@
-import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel, smoothPath } from './stats.component';
+import { buildEloCurve, buildOverlay, LEVEL_COLORS, buildHeatmap, heatLevel, smoothPath, smoothSeries } from './stats.component';
 import { EloHistoryPoint } from '../puzzles/puzzle.service';
 
 function pt(elo: number, day: number, vizLevel = 0): EloHistoryPoint {
@@ -35,6 +35,32 @@ describe('buildEloCurve', () => {
     expect(c.path.startsWith('M')).toBeTrue();
     expect(c.path).toContain('C');                 // kubische Béziers = geglättet
     expect(c.path).not.toContain('NaN');
+  });
+
+  it('keeps axis min/max from the raw series even though the line is pre-smoothed', () => {
+    // Spitze bei 2000 wird durch den gleitenden Mittel gedämpft, die Achse zeigt aber das Roh-Maximum.
+    const c = buildEloCurve([pt(1500, 1), pt(1500, 2), pt(2000, 3), pt(1500, 4), pt(1500, 5)])!;
+    expect(c.minElo).toBe(1500);
+    expect(c.maxElo).toBe(2000);
+    expect(c.path).not.toContain('NaN');
+  });
+});
+
+describe('smoothSeries', () => {
+  it('returns a copy unchanged for fewer than 3 values', () => {
+    expect(smoothSeries([1500])).toEqual([1500]);
+    expect(smoothSeries([1500, 1600])).toEqual([1500, 1600]);
+  });
+
+  it('preserves length and dampens a single spike toward its neighbours', () => {
+    const out = smoothSeries([1500, 1500, 2000, 1500, 1500]);
+    expect(out.length).toBe(5);
+    expect(out[2]).toBeLessThan(2000);             // Spitze gedämpft
+    expect(out[2]).toBeGreaterThan(1500);
+  });
+
+  it('leaves a constant series unchanged', () => {
+    expect(smoothSeries([1500, 1500, 1500, 1500])).toEqual([1500, 1500, 1500, 1500]);
   });
 });
 

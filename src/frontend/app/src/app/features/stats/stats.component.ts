@@ -38,6 +38,20 @@ export function smoothPath(pts: { x: number; y: number }[]): string {
   return d;
 }
 
+/**
+ * Gleitender Mittelwert (zentriert, ungerades Fenster `win`) — dämpft Zacken/Ausreißer der
+ * Elo-Reihe, bevor daraus die Kurve gebaut wird. Längen-erhaltend; Reihen < 3 bleiben unverändert.
+ */
+export function smoothSeries(vals: number[], win = 5): number[] {
+  if (win < 3 || vals.length < 3) return vals.slice();
+  const half = Math.floor(win / 2);
+  return vals.map((_, i) => {
+    let sum = 0, n = 0;
+    for (let j = Math.max(0, i - half); j <= Math.min(vals.length - 1, i + half); j++) { sum += vals[j]; n++; }
+    return sum / n;
+  });
+}
+
 export function heatLevel(count: number): number {
   if (count <= 0) return 0;
   if (count <= 2) return 1;
@@ -74,15 +88,14 @@ export function buildHeatmap(activity: ActivityDay[], today: Date, weeks = 27): 
 export function buildEloCurve(points: EloHistoryPoint[], w = 600, h = 180, pad = 6): Curve | null {
   if (points.length < 2) return null;
   const elos = points.map(p => p.elo);
-  let minElo = Math.min(...elos), maxElo = Math.max(...elos);
+  let minElo = Math.min(...elos), maxElo = Math.max(...elos);   // Achsen aus den Rohwerten
   if (minElo === maxElo) { minElo -= 10; maxElo += 10; }
   const n = points.length;
-  const coords = points.map((p, i) => ({
-    x: pad + (i / (n - 1)) * (w - 2 * pad),
-    y: h - pad - ((p.elo - minElo) / (maxElo - minElo)) * (h - 2 * pad),
-  }));
-  const poly = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-  const path = smoothPath(coords);
+  const sm = smoothSeries(elos);                                // Reihe vorglätten (gleitender Mittel)
+  const x = (i: number) => pad + (i / (n - 1)) * (w - 2 * pad);
+  const y = (elo: number) => h - pad - ((elo - minElo) / (maxElo - minElo)) * (h - 2 * pad);
+  const poly = points.map((p, i) => `${x(i).toFixed(1)},${y(p.elo).toFixed(1)}`).join(' ');
+  const path = smoothPath(sm.map((e, i) => ({ x: x(i), y: y(e) })));
   const fmt = (s: string) => { const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toLocaleDateString(); };
   return { poly, path, minElo, maxElo, w, h, first: fmt(points[0].attemptedAt), last: fmt(points[n - 1].attemptedAt) };
 }
@@ -124,12 +137,12 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   const yOf = (elo: number): number => h - pad - ((elo - minElo) / (maxElo - minElo)) * (h - 2 * pad);
 
   const lines: OverlayLine[] = drawn.map(([level, ps]) => {
-    const coords = ps.map((p, i) => ({ x: xOf(p, i, ps.length), y: yOf(p.elo) }));
+    const sm = smoothSeries(ps.map(p => p.elo));               // je Level vorglätten
     return {
       level,
       color: LEVEL_COLORS[level % LEVEL_COLORS.length],
-      poly: coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' '),
-      path: smoothPath(coords),
+      poly: ps.map((p, i) => `${xOf(p, i, ps.length).toFixed(1)},${yOf(p.elo).toFixed(1)}`).join(' '),
+      path: smoothPath(ps.map((p, i) => ({ x: xOf(p, i, ps.length), y: yOf(sm[i]) }))),
     };
   });
 
@@ -228,6 +241,23 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <div class="theme-row">
                     <span class="theme-name">{{ t.theme }}</span>
                     <div class="theme-bar"><div class="theme-fill" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
+                    <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (worstThemes.length && themes.length > 5) {
+          <mat-card>
+            <mat-card-header><mat-card-title>{{ 'stats.worstThemes' | translate }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="theme-list">
+                @for (t of worstThemes; track t.theme) {
+                  <div class="theme-row">
+                    <span class="theme-name">{{ t.theme }}</span>
+                    <div class="theme-bar"><div class="theme-fill warn" [style.width.%]="acc(t.solved, t.attempts)"></div></div>
                     <span class="theme-val">{{ acc(t.solved, t.attempts) }}% · {{ t.solved }}/{{ t.attempts }}</span>
                   </div>
                 }
@@ -345,6 +375,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .theme-name { width: 130px; flex: 0 0 auto; text-transform: capitalize; }
     .theme-bar { flex: 1; height: 12px; background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 6px; overflow: hidden; }
     .theme-fill { height: 100%; background: #1976d2; }
+    .theme-fill.warn { background: #e53935; }
     .theme-val { width: 120px; flex: 0 0 auto; text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .bands { display: flex; align-items: stretch; gap: 6px; height: 140px; padding-top: 8px; }
     .band { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 28px; height: 100%; }
@@ -378,6 +409,7 @@ export class StatsComponent implements OnInit {
   overlay: Overlay | null = null;   // „Alle"-Ansicht: alle Level in einer Grafik, farbkodiert
 
   themes: ThemeStat[] = [];
+  worstThemes: ThemeStat[] = [];   // 5 schwächste (Lösungs-% aufsteigend, min. 3 Versuche)
   ratingBands: RatingBand[] = [];
   heatmap: HeatCell[][] = [];
   private maxBandSolved = 0;
@@ -403,6 +435,11 @@ export class StatsComponent implements OnInit {
         // Nach Lösungs-% absteigend sortieren (bei Gleichstand mehr Versuche zuerst).
         this.themes = [...breakdown.themes].sort((a, b) =>
           this.acc(b.solved, b.attempts) - this.acc(a.solved, a.attempts) || b.attempts - a.attempts);
+        // 5 schwächste: nur Themen mit genug Versuchen, nach Lösungs-% aufsteigend (bei Gleichstand mehr Versuche zuerst).
+        this.worstThemes = [...breakdown.themes]
+          .filter(t => t.attempts >= 3)
+          .sort((a, b) => this.acc(a.solved, a.attempts) - this.acc(b.solved, b.attempts) || b.attempts - a.attempts)
+          .slice(0, 5);
         this.ratingBands = breakdown.ratingBands;
         this.maxBandSolved = Math.max(1, ...this.ratingBands.map(b => b.solved));
         this.heatmap = breakdown.activity.length ? buildHeatmap(breakdown.activity, new Date()) : [];

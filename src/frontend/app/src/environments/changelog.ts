@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.100.2';
+export const APP_VERSION = '0.101.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.101.0', date: '2026-06-10', changes: [
+    'Statistik: Neue Karte „Schwächste Themen" zeigt die 5 Themen mit der niedrigsten Lösungsquote (ab 3 Versuchen, rot hervorgehoben) — ergänzend zur bestehenden Themen-Übersicht.',
+    'Statistik: Die Elo-Kurve wird zusätzlich leicht geglättet (gleitender Mittelwert über die Elo-Reihe), wodurch Ausreißer gedämpft werden und der Verlauf ruhiger wirkt; die Achsenwerte zeigen weiterhin das tatsächliche Min/Max.',
+  ]},
   { version: '0.100.2', date: '2026-06-09', changes: [
     'Interne Doku: TODO „Schach-Bot auf Elasticsearch umbauen" als erledigt markiert (umgesetzt im Bot-Repo v2.60.0/2.60.1) — keine App-Änderung.',
   ]},

@@ -1018,6 +1018,7 @@
     "result": "Result",
     "time": "Time",
     "byTheme": "By theme",
+    "worstThemes": "Weakest themes",
     "byRating": "By rating (solved)",
     "byRatingHint": "Solved puzzles per rating band — hover for accuracy.",
     "activity": "Activity"
