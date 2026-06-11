@@ -13,7 +13,7 @@ using RookHub.Api.Services;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
-using Serilog.Sinks.Elasticsearch;
+using Elastic.Serilog.Sinks;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -43,14 +43,16 @@ try
         var esUrl = context.Configuration["Elasticsearch:Url"];
         if (!string.IsNullOrEmpty(esUrl))
         {
-            configuration.WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(esUrl))
+            // ECS-Schema (Elastic.Serilog.Sinks) in einen Data-Stream. Felder werden zentral per
+            // Ingest-Pipeline normalisiert (siehe log-watcher/schema/logging-schema.md).
+            // Data-Stream-Basisname aus dem bisherigen Monats-IndexFormat ableiten (Teil vor "{"),
+            // damit dev/prod unter ihren bestehenden "*-logs-*"-Patterns bleiben (Kibana, log-watcher).
+            var indexFormat = context.Configuration["Elasticsearch:IndexFormat"] ?? "rookhub-logs-{0:yyyy.MM}";
+            var streamName = indexFormat.Split('{')[0].TrimEnd('-', '.', ' ');
+            configuration.WriteTo.Elasticsearch([new Uri(esUrl)], opts =>
             {
-                IndexFormat = context.Configuration["Elasticsearch:IndexFormat"] ?? "rookhub-logs-{0:yyyy.MM}",
-                AutoRegisterTemplate = true,
-                AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
-                BatchAction = ElasticOpType.Create,
-                NumberOfReplicas = 0,
-                NumberOfShards = 1
+                opts.DataStream = new Elastic.Ingest.Elasticsearch.DataStreams.DataStreamName(streamName);
+                opts.BootstrapMethod = Elastic.Ingest.Elasticsearch.BootstrapMethod.Silent;
             });
         }
     });
