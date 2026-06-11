@@ -67,7 +67,8 @@
       "submitting": "Đang đăng nhập...",
       "registerLink": "Chưa có tài khoản? Đăng ký",
       "failed": "Đăng nhập thất bại",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Quên mật khẩu?"
     },
     "register": {
       "title": "Đăng ký",
@@ -80,6 +81,29 @@
       "loginLink": "Đã có tài khoản? Đăng nhập",
       "failed": "Đăng ký thất bại",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Đặt lại mật khẩu",
+      "intro": "Nhập địa chỉ email của tài khoản của bạn. Chúng tôi sẽ gửi liên kết để đặt mật khẩu mới.",
+      "emailLabel": "Email",
+      "submit": "Gửi liên kết",
+      "submitting": "Đang gửi…",
+      "sent": "Nếu địa chỉ thuộc về một tài khoản, chúng tôi đã gửi email chứa liên kết đặt lại mật khẩu. Vui lòng kiểm tra cả thư mục spam.",
+      "backToLogin": "Quay lại đăng nhập",
+      "failed": "Yêu cầu thất bại. Vui lòng thử lại."
+    },
+    "reset": {
+      "title": "Đặt mật khẩu mới",
+      "passwordLabel": "Mật khẩu mới",
+      "passwordHint": "Ít nhất 4 ký tự",
+      "confirmLabel": "Xác nhận mật khẩu",
+      "submit": "Lưu mật khẩu",
+      "submitting": "Đang lưu…",
+      "success": "Mật khẩu của bạn đã được thay đổi. Bây giờ bạn có thể đăng nhập.",
+      "failed": "Không thể đặt lại mật khẩu.",
+      "mismatch": "Mật khẩu không khớp.",
+      "missingToken": "Liên kết này không hợp lệ hoặc không đầy đủ. Vui lòng yêu cầu liên kết mới.",
+      "requestNew": "Yêu cầu liên kết mới"
     }
   },
   "dashboard": {

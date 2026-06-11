@@ -69,6 +69,19 @@ export class AuthService {
       .pipe(tap(res => this.storeUser(res)));
   }
 
+  /**
+   * „Passwort vergessen", Schritt 1: fordert einen Reset-Link per E-Mail an. Der Server
+   * antwortet aus Datenschutzgründen immer mit Erfolg — egal ob die Adresse existiert.
+   */
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  /** „Passwort vergessen", Schritt 2: setzt das neue Passwort mit dem Token aus der E-Mail. */
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/reset-password`, { token, newPassword });
+  }
+
   logout(): void {
     localStorage.removeItem('rookhub_user');
     this.currentUserSubject.next(null);

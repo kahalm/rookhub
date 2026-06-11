@@ -67,7 +67,8 @@
       "submitting": "Loggar in...",
       "registerLink": "Har du inget konto? Registrera dig",
       "failed": "Inloggningen misslyckades",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Glömt lösenordet?"
     },
     "register": {
       "title": "Registrera",
@@ -80,6 +81,29 @@
       "loginLink": "Har du redan ett konto? Logga in",
       "failed": "Registreringen misslyckades",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Återställ lösenord",
+      "intro": "Ange e-postadressen för ditt konto. Vi skickar en länk för att ange ett nytt lösenord.",
+      "emailLabel": "E-post",
+      "submit": "Skicka länk",
+      "submitting": "Skickar…",
+      "sent": "Om adressen tillhör ett konto har vi skickat ett e-postmeddelande med en länk för att återställa lösenordet. Kontrollera även skräpposten.",
+      "backToLogin": "Tillbaka till inloggning",
+      "failed": "Begäran misslyckades. Försök igen."
+    },
+    "reset": {
+      "title": "Ange nytt lösenord",
+      "passwordLabel": "Nytt lösenord",
+      "passwordHint": "Minst 4 tecken",
+      "confirmLabel": "Bekräfta lösenord",
+      "submit": "Spara lösenord",
+      "submitting": "Sparar…",
+      "success": "Ditt lösenord har ändrats. Du kan nu logga in.",
+      "failed": "Det gick inte att återställa lösenordet.",
+      "mismatch": "Lösenorden stämmer inte överens.",
+      "missingToken": "Den här länken är ogiltig eller ofullständig. Begär en ny länk.",
+      "requestNew": "Begär ny länk"
     }
   },
   "dashboard": {

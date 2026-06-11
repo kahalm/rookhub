@@ -67,7 +67,8 @@
       "submitting": "Bezig met inloggen...",
       "registerLink": "Nog geen account? Registreren",
       "failed": "Inloggen mislukt",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Wachtwoord vergeten?"
     },
     "register": {
       "title": "Registreren",
@@ -80,6 +81,29 @@
       "loginLink": "Al een account? Inloggen",
       "failed": "Registratie mislukt",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Wachtwoord opnieuw instellen",
+      "intro": "Voer het e-mailadres van je account in. We sturen je een link om een nieuw wachtwoord in te stellen.",
+      "emailLabel": "E-mail",
+      "submit": "Link versturen",
+      "submitting": "Versturen…",
+      "sent": "Als het adres bij een account hoort, hebben we een e-mail met een herstelink verstuurd. Controleer ook je spammap.",
+      "backToLogin": "Terug naar inloggen",
+      "failed": "Verzoek mislukt. Probeer het opnieuw."
+    },
+    "reset": {
+      "title": "Nieuw wachtwoord instellen",
+      "passwordLabel": "Nieuw wachtwoord",
+      "passwordHint": "Minstens 4 tekens",
+      "confirmLabel": "Wachtwoord bevestigen",
+      "submit": "Wachtwoord opslaan",
+      "submitting": "Opslaan…",
+      "success": "Je wachtwoord is gewijzigd. Je kunt nu inloggen.",
+      "failed": "Kan wachtwoord niet opnieuw instellen.",
+      "mismatch": "De wachtwoorden komen niet overeen.",
+      "missingToken": "Deze link is ongeldig of onvolledig. Vraag een nieuwe link aan.",
+      "requestNew": "Nieuwe link aanvragen"
     }
   },
   "dashboard": {

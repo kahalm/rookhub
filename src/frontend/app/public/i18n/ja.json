@@ -67,7 +67,8 @@
       "submitting": "ログイン中...",
       "registerLink": "アカウントをお持ちでない方は登録",
       "failed": "ログインに失敗しました",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "パスワードをお忘れですか？"
     },
     "register": {
       "title": "登録",
@@ -80,6 +81,29 @@
       "loginLink": "すでにアカウントをお持ちの方はログイン",
       "failed": "登録に失敗しました",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "パスワードの再設定",
+      "intro": "アカウントのメールアドレスを入力してください。新しいパスワードを設定するためのリンクをお送りします。",
+      "emailLabel": "メール",
+      "submit": "リンクを送信",
+      "submitting": "送信中…",
+      "sent": "そのアドレスがアカウントに登録されている場合、パスワード再設定用のリンクを記載したメールを送信しました。迷惑メールフォルダもご確認ください。",
+      "backToLogin": "ログインに戻る",
+      "failed": "リクエストに失敗しました。もう一度お試しください。"
+    },
+    "reset": {
+      "title": "新しいパスワードを設定",
+      "passwordLabel": "新しいパスワード",
+      "passwordHint": "4文字以上",
+      "confirmLabel": "パスワードの確認",
+      "submit": "パスワードを保存",
+      "submitting": "保存中…",
+      "success": "パスワードが変更されました。ログインできます。",
+      "failed": "パスワードを再設定できませんでした。",
+      "mismatch": "パスワードが一致しません。",
+      "missingToken": "このリンクは無効か不完全です。新しいリンクをリクエストしてください。",
+      "requestNew": "新しいリンクをリクエスト"
     }
   },
   "dashboard": {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.104.1';
+export const APP_VERSION = '0.105.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.105.0', date: '2026-06-11', changes: [
+    'Passwort vergessen: Auf der Anmeldeseite gibt es jetzt „Passwort vergessen?". Nach Eingabe der hinterlegten E-Mail-Adresse wird ein zeitlich begrenzter Reset-Link (1 Stunde gültig, einmalig nutzbar) an diese Adresse geschickt; über den Link lässt sich ein neues Passwort setzen. Aus Datenschutzgründen verrät die Seite nicht, ob eine Adresse registriert ist.',
+    'Voraussetzung für den tatsächlichen Versand ist ein konfigurierter SMTP-Server (Umgebungsvariablen EMAIL_SMTP_* + APP_BASE_URL); ohne Konfiguration wird die Mail nur ins Log geschrieben.',
+  ]},
   { version: '0.104.1', date: '2026-06-11', changes: [
     'Endlos-Start mit „5 schwächste Themen" deutlich beschleunigt: Die Ketten-Generierung holt pro Rating-Fenster gezielt ein Puzzle per Index-Seek (TagId, Rating), statt die gesamte Rating-Spanne aller Fenster zu laden und im Speicher zu sampeln. Bei häufigen Themen sank die Antwortzeit von ~25 s auf ~0,1 s.',
   ]},

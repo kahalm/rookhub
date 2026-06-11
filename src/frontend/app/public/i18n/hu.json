@@ -67,7 +67,8 @@
       "submitting": "Bejelentkezés folyamatban...",
       "registerLink": "Még nincs fiókod? Regisztrálj",
       "failed": "Sikertelen bejelentkezés",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Elfelejtette a jelszót?"
     },
     "register": {
       "title": "Regisztráció",
@@ -80,6 +81,29 @@
       "loginLink": "Már van fiókod? Jelentkezz be",
       "failed": "Sikertelen regisztráció",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Jelszó visszaállítása",
+      "intro": "Adja meg a fiókja e-mail-címét. Küldünk egy hivatkozást új jelszó beállításához.",
+      "emailLabel": "E-mail",
+      "submit": "Hivatkozás küldése",
+      "submitting": "Küldés…",
+      "sent": "Ha a cím egy fiókhoz tartozik, e-mailt küldtünk a jelszó visszaállításához szükséges hivatkozással. Ellenőrizze a levélszemét mappát is.",
+      "backToLogin": "Vissza a bejelentkezéshez",
+      "failed": "A kérés sikertelen. Próbálja újra."
+    },
+    "reset": {
+      "title": "Új jelszó beállítása",
+      "passwordLabel": "Új jelszó",
+      "passwordHint": "Legalább 4 karakter",
+      "confirmLabel": "Jelszó megerősítése",
+      "submit": "Jelszó mentése",
+      "submitting": "Mentés…",
+      "success": "A jelszava megváltozott. Most már bejelentkezhet.",
+      "failed": "A jelszó visszaállítása nem sikerült.",
+      "mismatch": "A jelszavak nem egyeznek.",
+      "missingToken": "Ez a hivatkozás érvénytelen vagy hiányos. Kérjen új hivatkozást.",
+      "requestNew": "Új hivatkozás kérése"
     }
   },
   "dashboard": {

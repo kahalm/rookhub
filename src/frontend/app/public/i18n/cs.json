@@ -67,7 +67,8 @@
       "submitting": "Přihlašuji...",
       "registerLink": "Nemáte účet? Registrujte se",
       "failed": "Přihlášení se nezdařilo",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Zapomněli jste heslo?"
     },
     "register": {
       "title": "Registrace",
@@ -80,6 +81,29 @@
       "loginLink": "Máte již účet? Přihlaste se",
       "failed": "Registrace se nezdařila",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Obnovení hesla",
+      "intro": "Zadejte e-mailovou adresu svého účtu. Pošleme vám odkaz pro nastavení nového hesla.",
+      "emailLabel": "E-mail",
+      "submit": "Odeslat odkaz",
+      "submitting": "Odesílání…",
+      "sent": "Pokud adresa patří k účtu, poslali jsme e-mail s odkazem pro obnovení hesla. Zkontrolujte také složku se spamem.",
+      "backToLogin": "Zpět na přihlášení",
+      "failed": "Požadavek selhal. Zkuste to znovu."
+    },
+    "reset": {
+      "title": "Nastavit nové heslo",
+      "passwordLabel": "Nové heslo",
+      "passwordHint": "Alespoň 4 znaky",
+      "confirmLabel": "Potvrďte heslo",
+      "submit": "Uložit heslo",
+      "submitting": "Ukládání…",
+      "success": "Vaše heslo bylo změněno. Nyní se můžete přihlásit.",
+      "failed": "Heslo se nepodařilo obnovit.",
+      "mismatch": "Hesla se neshodují.",
+      "missingToken": "Tento odkaz je neplatný nebo neúplný. Vyžádejte si nový odkaz.",
+      "requestNew": "Vyžádat nový odkaz"
     }
   },
   "dashboard": {

@@ -68,7 +68,8 @@
       "submitting": "Prijava u tijeku...",
       "registerLink": "Nemate račun? Registrirajte se",
       "failed": "Prijava nije uspjela",
-      "required": "Prijavi se ili registriraj se za nastavak."
+      "required": "Prijavi se ili registriraj se za nastavak.",
+      "forgotLink": "Zaboravljena lozinka?"
     },
     "register": {
       "title": "Registracija",
@@ -81,6 +82,29 @@
       "loginLink": "Već imate račun? Prijavite se",
       "failed": "Registracija nije uspjela",
       "emailHint": "Neobavezno"
+    },
+    "forgot": {
+      "title": "Ponovno postavljanje lozinke",
+      "intro": "Unesite e-mail adresu svog računa. Poslat ćemo vam poveznicu za postavljanje nove lozinke.",
+      "emailLabel": "E-mail",
+      "submit": "Pošalji poveznicu",
+      "submitting": "Slanje…",
+      "sent": "Ako adresa pripada računu, poslali smo e-mail s poveznicom za ponovno postavljanje lozinke. Provjerite i mapu neželjene pošte.",
+      "backToLogin": "Natrag na prijavu",
+      "failed": "Zahtjev nije uspio. Pokušajte ponovno."
+    },
+    "reset": {
+      "title": "Postavi novu lozinku",
+      "passwordLabel": "Nova lozinka",
+      "passwordHint": "Najmanje 4 znaka",
+      "confirmLabel": "Potvrdi lozinku",
+      "submit": "Spremi lozinku",
+      "submitting": "Spremanje…",
+      "success": "Vaša lozinka je promijenjena. Sada se možete prijaviti.",
+      "failed": "Lozinku nije moguće ponovno postaviti.",
+      "mismatch": "Lozinke se ne podudaraju.",
+      "missingToken": "Ova poveznica je nevažeća ili nepotpuna. Zatražite novu poveznicu.",
+      "requestNew": "Zatraži novu poveznicu"
     }
   },
   "dashboard": {

@@ -46,3 +46,20 @@ public class ChangePasswordDto
     [Required, MinLength(4), MaxLength(1024)]
     public string NewPassword { get; set; } = string.Empty;
 }
+
+/// <summary>„Passwort vergessen" — Schritt 1: Reset-Link per E-Mail anfordern.</summary>
+public class ForgotPasswordDto
+{
+    [Required, EmailAddress, MaxLength(255)]
+    public string Email { get; set; } = string.Empty;
+}
+
+/// <summary>„Passwort vergessen" — Schritt 2: neues Passwort mit dem Token aus der E-Mail setzen.</summary>
+public class ResetPasswordDto
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+
+    [Required, MinLength(4), MaxLength(1024)]
+    public string NewPassword { get; set; } = string.Empty;
+}

@@ -33,10 +33,19 @@ public class AuthControllerTests : IDisposable
             .Build();
 
         _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance);
-        _controller = new AuthController(_authService);
+        var resetService = new PasswordResetService(
+            _db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance);
+        _controller = new AuthController(_authService, resetService);
     }
 
     public void Dispose() => _db.Dispose();
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public bool IsEnabled => true;
+        public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
 
     // ---- Register ----
 
@@ -144,6 +153,28 @@ public class AuthControllerTests : IDisposable
         });
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
+    }
+
+    // ---- Forgot / Reset Password ----
+
+    [Fact]
+    public async Task ForgotPassword_ReturnsOk_EvenForUnknownEmail()
+    {
+        var result = await _controller.ForgotPassword(new ForgotPasswordDto { Email = "nobody@test.com" });
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task ResetPassword_ReturnsBadRequest_WithInvalidToken()
+    {
+        var result = await _controller.ResetPassword(new ResetPasswordDto
+        {
+            Token = "does-not-exist",
+            NewPassword = "BrandNew1!"
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]

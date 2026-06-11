@@ -68,7 +68,8 @@
       "submitting": "Anmeldung läuft...",
       "registerLink": "Noch kein Konto? Registrieren",
       "failed": "Anmeldung fehlgeschlagen",
-      "required": "Bitte logge dich ein oder registriere dich, um fortzufahren."
+      "required": "Bitte logge dich ein oder registriere dich, um fortzufahren.",
+      "forgotLink": "Passwort vergessen?"
     },
     "register": {
       "title": "Registrieren",
@@ -81,6 +82,29 @@
       "loginLink": "Bereits ein Konto? Anmelden",
       "failed": "Registrierung fehlgeschlagen",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Passwort zurücksetzen",
+      "intro": "Gib die E-Mail-Adresse deines Kontos ein. Wir senden dir einen Link, um ein neues Passwort zu setzen.",
+      "emailLabel": "E-Mail",
+      "submit": "Link senden",
+      "submitting": "Senden…",
+      "sent": "Falls die Adresse zu einem Konto gehört, haben wir eine E-Mail mit einem Link zum Zurücksetzen verschickt. Bitte auch den Spam-Ordner prüfen.",
+      "backToLogin": "Zurück zur Anmeldung",
+      "failed": "Anfrage fehlgeschlagen. Bitte erneut versuchen."
+    },
+    "reset": {
+      "title": "Neues Passwort setzen",
+      "passwordLabel": "Neues Passwort",
+      "passwordHint": "Mindestens 4 Zeichen",
+      "confirmLabel": "Passwort bestätigen",
+      "submit": "Passwort speichern",
+      "submitting": "Speichern…",
+      "success": "Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.",
+      "failed": "Passwort konnte nicht zurückgesetzt werden.",
+      "mismatch": "Die Passwörter stimmen nicht überein.",
+      "missingToken": "Dieser Link ist ungültig oder unvollständig. Bitte fordere einen neuen Link an.",
+      "requestNew": "Neuen Link anfordern"
     }
   },
   "dashboard": {

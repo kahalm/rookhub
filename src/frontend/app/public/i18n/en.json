@@ -68,7 +68,8 @@
       "submitting": "Logging in...",
       "registerLink": "Don't have an account? Register",
       "failed": "Login failed",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Forgot password?"
     },
     "register": {
       "title": "Register",
@@ -81,6 +82,29 @@
       "loginLink": "Already have an account? Login",
       "failed": "Registration failed",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "intro": "Enter the email address of your account. We'll send you a link to set a new password.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sent": "If the address belongs to an account, we've sent an email with a link to reset your password. Please also check your spam folder.",
+      "backToLogin": "Back to login",
+      "failed": "Request failed. Please try again."
+    },
+    "reset": {
+      "title": "Set new password",
+      "passwordLabel": "New password",
+      "passwordHint": "At least 4 characters",
+      "confirmLabel": "Confirm password",
+      "submit": "Save password",
+      "submitting": "Saving…",
+      "success": "Your password has been changed. You can now log in.",
+      "failed": "Could not reset password.",
+      "mismatch": "The passwords do not match.",
+      "missingToken": "This link is invalid or incomplete. Please request a new reset link.",
+      "requestNew": "Request new link"
     }
   },
   "dashboard": {

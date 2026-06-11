@@ -97,6 +97,16 @@ services:
       SchachBot__WebhookUrl: ${SCHACH_BOT_WEBHOOK_URL:-}
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
+      # Basis-URL des Frontends fuer Links in E-Mails (z.B. Passwort-Reset).
+      App__BaseUrl: ${APP_BASE_URL:-http://localhost:8085}
+      # E-Mail-Versand (Passwort-Reset). SmtpHost leer -> Versand aus (Mail wird nur geloggt).
+      Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
+      Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
+      Email__SmtpUser: ${EMAIL_SMTP_USER:-}
+      Email__SmtpPassword: ${EMAIL_SMTP_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-}
+      Email__FromName: ${EMAIL_FROM_NAME:-RookHub}
+      Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
     volumes:
       - dataprotection-keys:/keys
     networks:

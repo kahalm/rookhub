@@ -67,7 +67,8 @@
       "submitting": "Logowanie...",
       "registerLink": "Nie masz konta? Zarejestruj się",
       "failed": "Logowanie nie powiodło się",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Nie pamiętasz hasła?"
     },
     "register": {
       "title": "Rejestracja",
@@ -80,6 +81,29 @@
       "loginLink": "Masz już konto? Zaloguj się",
       "failed": "Rejestracja nie powiodła się",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Resetowanie hasła",
+      "intro": "Podaj adres e-mail swojego konta. Wyślemy link do ustawienia nowego hasła.",
+      "emailLabel": "E-mail",
+      "submit": "Wyślij link",
+      "submitting": "Wysyłanie…",
+      "sent": "Jeśli adres należy do konta, wysłaliśmy e-mail z linkiem do zresetowania hasła. Sprawdź też folder spam.",
+      "backToLogin": "Powrót do logowania",
+      "failed": "Żądanie nie powiodło się. Spróbuj ponownie."
+    },
+    "reset": {
+      "title": "Ustaw nowe hasło",
+      "passwordLabel": "Nowe hasło",
+      "passwordHint": "Co najmniej 4 znaki",
+      "confirmLabel": "Potwierdź hasło",
+      "submit": "Zapisz hasło",
+      "submitting": "Zapisywanie…",
+      "success": "Twoje hasło zostało zmienione. Możesz się teraz zalogować.",
+      "failed": "Nie udało się zresetować hasła.",
+      "mismatch": "Hasła nie są zgodne.",
+      "missingToken": "Ten link jest nieprawidłowy lub niekompletny. Poproś o nowy link.",
+      "requestNew": "Poproś o nowy link"
     }
   },
   "dashboard": {

@@ -67,7 +67,8 @@
       "submitting": "Giriş yapılıyor...",
       "registerLink": "Hesabınız yok mu? Kayıt olun",
       "failed": "Giriş başarısız",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Şifrenizi mi unuttunuz?"
     },
     "register": {
       "title": "Kayıt Ol",
@@ -80,6 +81,29 @@
       "loginLink": "Zaten hesabınız var mı? Giriş yapın",
       "failed": "Kayıt başarısız",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Şifreyi sıfırla",
+      "intro": "Hesabınızın e-posta adresini girin. Yeni bir şifre belirlemeniz için bir bağlantı göndereceğiz.",
+      "emailLabel": "E-posta",
+      "submit": "Bağlantı gönder",
+      "submitting": "Gönderiliyor…",
+      "sent": "Adres bir hesaba aitse, şifre sıfırlama bağlantısı içeren bir e-posta gönderdik. Lütfen spam klasörünü de kontrol edin.",
+      "backToLogin": "Girişe dön",
+      "failed": "İstek başarısız oldu. Tekrar deneyin."
+    },
+    "reset": {
+      "title": "Yeni şifre belirle",
+      "passwordLabel": "Yeni şifre",
+      "passwordHint": "En az 4 karakter",
+      "confirmLabel": "Şifreyi onayla",
+      "submit": "Şifreyi kaydet",
+      "submitting": "Kaydediliyor…",
+      "success": "Şifreniz değiştirildi. Artık giriş yapabilirsiniz.",
+      "failed": "Şifre sıfırlanamadı.",
+      "mismatch": "Şifreler eşleşmiyor.",
+      "missingToken": "Bu bağlantı geçersiz veya eksik. Lütfen yeni bir bağlantı isteyin.",
+      "requestNew": "Yeni bağlantı iste"
     }
   },
   "dashboard": {

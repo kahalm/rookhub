@@ -105,6 +105,8 @@ try
 
     // Services
     builder.Services.AddScoped<AuthService>();
+    builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+    builder.Services.AddScoped<PasswordResetService>();
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<FriendService>();

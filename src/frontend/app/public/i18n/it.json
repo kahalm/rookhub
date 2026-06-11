@@ -67,7 +67,8 @@
       "submitting": "Accesso in corso...",
       "registerLink": "Non hai un account? Registrati",
       "failed": "Accesso non riuscito",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Password dimenticata?"
     },
     "register": {
       "title": "Registrati",
@@ -80,6 +81,29 @@
       "loginLink": "Hai già un account? Accedi",
       "failed": "Registrazione non riuscita",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Reimposta password",
+      "intro": "Inserisci l'indirizzo email del tuo account. Ti invieremo un link per impostare una nuova password.",
+      "emailLabel": "Email",
+      "submit": "Invia link",
+      "submitting": "Invio…",
+      "sent": "Se l'indirizzo appartiene a un account, abbiamo inviato un'email con un link per reimpostare la password. Controlla anche la cartella spam.",
+      "backToLogin": "Torna al login",
+      "failed": "Richiesta non riuscita. Riprova."
+    },
+    "reset": {
+      "title": "Imposta nuova password",
+      "passwordLabel": "Nuova password",
+      "passwordHint": "Almeno 4 caratteri",
+      "confirmLabel": "Conferma password",
+      "submit": "Salva password",
+      "submitting": "Salvataggio…",
+      "success": "La tua password è stata cambiata. Ora puoi accedere.",
+      "failed": "Impossibile reimpostare la password.",
+      "mismatch": "Le password non corrispondono.",
+      "missingToken": "Questo link non è valido o è incompleto. Richiedi un nuovo link.",
+      "requestNew": "Richiedi nuovo link"
     }
   },
   "dashboard": {

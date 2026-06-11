@@ -67,7 +67,8 @@
       "submitting": "A iniciar sessão...",
       "registerLink": "Não tem conta? Registar",
       "failed": "Falha ao iniciar sessão",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Esqueceu a senha?"
     },
     "register": {
       "title": "Registar",
@@ -80,6 +81,29 @@
       "loginLink": "Já tem conta? Iniciar sessão",
       "failed": "Falha no registo",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Redefinir senha",
+      "intro": "Digite o e-mail da sua conta. Enviaremos um link para definir uma nova senha.",
+      "emailLabel": "E-mail",
+      "submit": "Enviar link",
+      "submitting": "Enviando…",
+      "sent": "Se o endereço pertencer a uma conta, enviamos um e-mail com um link para redefinir a senha. Verifique também a pasta de spam.",
+      "backToLogin": "Voltar ao login",
+      "failed": "Falha na solicitação. Tente novamente."
+    },
+    "reset": {
+      "title": "Definir nova senha",
+      "passwordLabel": "Nova senha",
+      "passwordHint": "Pelo menos 4 caracteres",
+      "confirmLabel": "Confirmar senha",
+      "submit": "Salvar senha",
+      "submitting": "Salvando…",
+      "success": "Sua senha foi alterada. Agora você pode entrar.",
+      "failed": "Não foi possível redefinir a senha.",
+      "mismatch": "As senhas não coincidem.",
+      "missingToken": "Este link é inválido ou incompleto. Solicite um novo link.",
+      "requestNew": "Solicitar novo link"
     }
   },
   "dashboard": {

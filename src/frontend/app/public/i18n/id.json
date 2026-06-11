@@ -67,7 +67,8 @@
       "submitting": "Sedang masuk...",
       "registerLink": "Belum punya akun? Daftar",
       "failed": "Gagal masuk",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Lupa kata sandi?"
     },
     "register": {
       "title": "Daftar",
@@ -80,6 +81,29 @@
       "loginLink": "Sudah punya akun? Masuk",
       "failed": "Pendaftaran gagal",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Atur ulang kata sandi",
+      "intro": "Masukkan alamat email akun Anda. Kami akan mengirimkan tautan untuk menyetel kata sandi baru.",
+      "emailLabel": "Email",
+      "submit": "Kirim tautan",
+      "submitting": "Mengirim…",
+      "sent": "Jika alamat tersebut milik sebuah akun, kami telah mengirim email berisi tautan untuk mengatur ulang kata sandi. Periksa juga folder spam.",
+      "backToLogin": "Kembali ke masuk",
+      "failed": "Permintaan gagal. Coba lagi."
+    },
+    "reset": {
+      "title": "Setel kata sandi baru",
+      "passwordLabel": "Kata sandi baru",
+      "passwordHint": "Minimal 4 karakter",
+      "confirmLabel": "Konfirmasi kata sandi",
+      "submit": "Simpan kata sandi",
+      "submitting": "Menyimpan…",
+      "success": "Kata sandi Anda telah diubah. Sekarang Anda dapat masuk.",
+      "failed": "Tidak dapat mengatur ulang kata sandi.",
+      "mismatch": "Kata sandi tidak cocok.",
+      "missingToken": "Tautan ini tidak valid atau tidak lengkap. Silakan minta tautan baru.",
+      "requestNew": "Minta tautan baru"
     }
   },
   "dashboard": {

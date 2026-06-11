@@ -67,7 +67,8 @@
       "submitting": "Se conectează...",
       "registerLink": "Nu ai cont? Înregistrează-te",
       "failed": "Conectare eșuată",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Ai uitat parola?"
     },
     "register": {
       "title": "Înregistrare",
@@ -80,6 +81,29 @@
       "loginLink": "Ai deja un cont? Conectează-te",
       "failed": "Înregistrare eșuată",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Resetare parolă",
+      "intro": "Introdu adresa de e-mail a contului tău. Îți vom trimite un link pentru a seta o parolă nouă.",
+      "emailLabel": "E-mail",
+      "submit": "Trimite linkul",
+      "submitting": "Se trimite…",
+      "sent": "Dacă adresa aparține unui cont, am trimis un e-mail cu un link pentru resetarea parolei. Verifică și folderul de spam.",
+      "backToLogin": "Înapoi la autentificare",
+      "failed": "Cererea a eșuat. Încearcă din nou."
+    },
+    "reset": {
+      "title": "Setează o parolă nouă",
+      "passwordLabel": "Parolă nouă",
+      "passwordHint": "Cel puțin 4 caractere",
+      "confirmLabel": "Confirmă parola",
+      "submit": "Salvează parola",
+      "submitting": "Se salvează…",
+      "success": "Parola ta a fost schimbată. Acum te poți autentifica.",
+      "failed": "Parola nu a putut fi resetată.",
+      "mismatch": "Parolele nu coincid.",
+      "missingToken": "Acest link este invalid sau incomplet. Solicită un link nou.",
+      "requestNew": "Solicită un link nou"
     }
   },
   "dashboard": {

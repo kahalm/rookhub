@@ -67,7 +67,8 @@
       "submitting": "Iniciando sesión...",
       "registerLink": "¿No tienes cuenta? Regístrate",
       "failed": "Error al iniciar sesión",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "¿Olvidaste tu contraseña?"
     },
     "register": {
       "title": "Registrarse",
@@ -80,6 +81,29 @@
       "loginLink": "¿Ya tienes cuenta? Inicia sesión",
       "failed": "Error en el registro",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Restablecer contraseña",
+      "intro": "Introduce el correo electrónico de tu cuenta. Te enviaremos un enlace para establecer una nueva contraseña.",
+      "emailLabel": "Correo electrónico",
+      "submit": "Enviar enlace",
+      "submitting": "Enviando…",
+      "sent": "Si la dirección pertenece a una cuenta, hemos enviado un correo con un enlace para restablecer la contraseña. Revisa también la carpeta de spam.",
+      "backToLogin": "Volver al inicio de sesión",
+      "failed": "La solicitud falló. Inténtalo de nuevo."
+    },
+    "reset": {
+      "title": "Establecer nueva contraseña",
+      "passwordLabel": "Nueva contraseña",
+      "passwordHint": "Al menos 4 caracteres",
+      "confirmLabel": "Confirmar contraseña",
+      "submit": "Guardar contraseña",
+      "submitting": "Guardando…",
+      "success": "Tu contraseña se ha cambiado. Ya puedes iniciar sesión.",
+      "failed": "No se pudo restablecer la contraseña.",
+      "mismatch": "Las contraseñas no coinciden.",
+      "missingToken": "Este enlace no es válido o está incompleto. Solicita un nuevo enlace.",
+      "requestNew": "Solicitar nuevo enlace"
     }
   },
   "dashboard": {

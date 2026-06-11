@@ -67,7 +67,8 @@
       "submitting": "Connexion en cours...",
       "registerLink": "Pas encore de compte ? S'inscrire",
       "failed": "Échec de la connexion",
-      "required": "Please log in or register to continue."
+      "required": "Please log in or register to continue.",
+      "forgotLink": "Mot de passe oublié ?"
     },
     "register": {
       "title": "Inscription",
@@ -80,6 +81,29 @@
       "loginLink": "Vous avez déjà un compte ? Se connecter",
       "failed": "Échec de l'inscription",
       "emailHint": "Optional"
+    },
+    "forgot": {
+      "title": "Réinitialiser le mot de passe",
+      "intro": "Saisissez l'adresse e-mail de votre compte. Nous vous enverrons un lien pour définir un nouveau mot de passe.",
+      "emailLabel": "E-mail",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi…",
+      "sent": "Si l'adresse correspond à un compte, nous avons envoyé un e-mail contenant un lien de réinitialisation. Vérifiez aussi vos courriers indésirables.",
+      "backToLogin": "Retour à la connexion",
+      "failed": "Échec de la demande. Veuillez réessayer."
+    },
+    "reset": {
+      "title": "Définir un nouveau mot de passe",
+      "passwordLabel": "Nouveau mot de passe",
+      "passwordHint": "Au moins 4 caractères",
+      "confirmLabel": "Confirmer le mot de passe",
+      "submit": "Enregistrer le mot de passe",
+      "submitting": "Enregistrement…",
+      "success": "Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.",
+      "failed": "Impossible de réinitialiser le mot de passe.",
+      "mismatch": "Les mots de passe ne correspondent pas.",
+      "missingToken": "Ce lien est invalide ou incomplet. Veuillez demander un nouveau lien.",
+      "requestNew": "Demander un nouveau lien"
     }
   },
   "dashboard": {

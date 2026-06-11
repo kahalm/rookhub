@@ -42,6 +42,7 @@ import { SnackbarService } from '../../core/snackbar.service';
         </mat-card-content>
         <mat-card-actions>
           <a mat-button routerLink="/register" [queryParams]="{ returnUrl: returnUrl }">{{ 'auth.login.registerLink' | translate }}</a>
+          <a mat-button routerLink="/forgot-password">{{ 'auth.login.forgotLink' | translate }}</a>
         </mat-card-actions>
       </mat-card>
       <div class="legal-links">
