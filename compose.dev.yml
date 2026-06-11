@@ -163,6 +163,9 @@ services:
       start_period: 30s
     networks:
       - rookhub
+      # Damit piratechess-api seine Serilog-Events hier ablegen kann
+      # (gemeinsamer Index-Pool fuer Kibana).
+      - chessable-bridge
 
   # ── Kibana ────────────────────────────────────────────────────────────────
   kibana:
