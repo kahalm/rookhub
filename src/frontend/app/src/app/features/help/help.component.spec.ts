@@ -32,6 +32,23 @@ describe('HelpComponent', () => {
     expect(component.asParagraphs(undefined)).toEqual([]);
   });
 
+  it('linkify() wandelt http(s)-URLs in klickbare Links (target=_blank, rel=noopener)', () => {
+    const html = component.linkify('Siehe https://github.com/kahalm/repcheck und https://addons.mozilla.org/de/firefox/addon/repcheck/ danach.');
+    expect(html).toContain('<a href="https://github.com/kahalm/repcheck" target="_blank" rel="noopener noreferrer">https://github.com/kahalm/repcheck</a>');
+    expect(html).toContain('<a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener noreferrer">');
+  });
+
+  it('linkify() lässt den abschließenden Satzpunkt außerhalb des Links', () => {
+    const html = component.linkify('Import via https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js.');
+    expect(html).toContain('repcheck.user.js" target="_blank"');
+    expect(html).toContain('</a>.');
+  });
+
+  it('linkify() escaped HTML und lässt linkfreien Text unverändert', () => {
+    expect(component.linkify('a < b & c')).toBe('a &lt; b &amp; c');
+    expect(component.linkify('kein Link hier')).toBe('kein Link hier');
+  });
+
   it('scrollt bei vorhandenem Fragment (Deep-Link /help#extension) zum Abschnitt', () => {
     jasmine.clock().install();
     const withFragment = build('extension');

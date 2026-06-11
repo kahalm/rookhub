@@ -49,7 +49,7 @@ interface HelpSection { id: string; icon: string; }
           </mat-card-header>
           <mat-card-content>
             @for (p of asParagraphs('help.s.' + s.id + '.p' | translate); track $index) {
-              <p>{{ p }}</p>
+              <p [innerHTML]="linkify(p)"></p>
             }
             <a class="back-top" (click)="scrollTop()">
               <mat-icon>arrow_upward</mat-icon>{{ 'help.backToTop' | translate }}
@@ -125,6 +125,25 @@ export class HelpComponent implements AfterViewInit {
   asParagraphs(value: unknown): string[] {
     if (Array.isArray(value)) return value as string[];
     return value ? [String(value)] : [];
+  }
+
+  private static readonly URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g;
+
+  /**
+   * Wandelt http(s)-URLs in einem Absatz in klickbare Links. Der Text wird zuerst
+   * HTML-escaped (kein Markup aus i18n durchlassen), dann werden URLs durch Anker
+   * ersetzt; das Ergebnis bindet das Template per [innerHTML] (Angular sanitisiert,
+   * behält aber a[href][target]). Daher kein DomSanitizer/bypass nötig.
+   */
+  linkify(text: string): string {
+    const escaped = (text ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return escaped.replace(
+      HelpComponent.URL_RE,
+      (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
+    );
   }
 
   scrollTo(id: string): void {

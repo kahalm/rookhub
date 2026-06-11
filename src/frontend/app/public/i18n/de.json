@@ -1223,7 +1223,7 @@
           "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
           "Es gibt zwei Varianten mit identischer Funktion: eine Browser-Erweiterung (als signierte Version derzeit nur für Firefox verfügbar) und ein Tampermonkey-Userscript, das in jedem Browser mit Tampermonkey/Greasemonkey läuft.",
           "Einrichtung: Lege im Profil unter »Extension-Tokens« ein Token an (Scope „extension\"), öffne auf chess.com oder lichess.org das Zahnrad-Panel im Repertoire-Banner, trage deine RookHub-URL und das Token ein und klicke »Verbinden«.",
-          "Installation, Auto-Update und Details: github.com/kahalm/repcheck — das Userscript lässt sich direkt über https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js in Tampermonkey importieren."
+          "Installation, Auto-Update und Details: https://github.com/kahalm/repcheck — die signierte Firefox-Erweiterung gibt es unter https://addons.mozilla.org/de/firefox/addon/repcheck/, das Tampermonkey-Userscript lässt sich direkt über https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js importieren."
         ]
       },
       "privacy": {

@@ -1223,7 +1223,7 @@
           "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
           "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (trenutačno kao potpisana verzija dostupna samo za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
           "Postavljanje: u profilu pod »Extension tokeni« stvori token (opseg „extension\"), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoju RookHub URL i token te klikni »Poveži«.",
-          "Instalacija, automatsko ažuriranje i pojedinosti: github.com/kahalm/repcheck — userscript se može uvesti izravno u Tampermonkey s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "Instalacija, automatsko ažuriranje i pojedinosti: https://github.com/kahalm/repcheck — potpisana Firefox ekstenzija dostupna je na https://addons.mozilla.org/hr/firefox/addon/repcheck/, a Tampermonkey userscript može se uvesti izravno s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {

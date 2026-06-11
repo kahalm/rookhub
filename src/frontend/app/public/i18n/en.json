@@ -1223,7 +1223,7 @@
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
           "Two variants with identical functionality exist: a browser extension (currently available as a signed build for Firefox only) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
           "Setup: create a token under »Extension tokens« in your profile (scope „extension\"), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
-          "Installation, auto-update and details: github.com/kahalm/repcheck — the userscript can be imported into Tampermonkey directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "Installation, auto-update and details: https://github.com/kahalm/repcheck — the signed Firefox extension is available at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {
