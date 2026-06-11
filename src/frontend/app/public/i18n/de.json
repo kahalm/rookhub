@@ -562,7 +562,9 @@
     "share": {
       "title": "Puzzle teilen",
       "copied": "Link kopiert!",
-      "copyFailed": "Kopieren fehlgeschlagen"
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "current": "Aktuelles Puzzle",
+      "previous": "Vorheriges Puzzle"
     }
   },
   "courses": {

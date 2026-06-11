@@ -136,6 +136,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   sessionHistory: EndlessSession[] = [];
   currentSessionMistakes: number[] = [];
   currentSessionPuzzles: EndlessPuzzleAttempt[] = [];
+  /** ID des zuvor gespielten Puzzles (für „vorheriges Puzzle teilen"). */
+  private previousPuzzleId: number | null = null;
 
   // Fasttrack
   fasttrackPhase1Step = 0;
@@ -414,7 +416,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   sharePuzzle(): void {
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/${this.puzzle.id}`;
-    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+    const previousUrl = this.previousPuzzleId
+      ? `${window.location.origin}/puzzles/${this.previousPuzzleId}`
+      : undefined;
+    this.dialog.open(SharePuzzleDialogComponent, { data: { url, previousUrl }, width: '400px' });
   }
 
   startGame(): void {
@@ -431,6 +436,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.sessionSeconds = 0;
     this.currentSessionMistakes = [];
     this.currentSessionPuzzles = [];
+    this.previousPuzzleId = null;
     this.activeGameState = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
@@ -706,6 +712,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   private onPuzzleLoaded(puzzle: PuzzleDto): void {
     this.puzzleLifeLost = false;
+    // Bisher angezeigtes Puzzle als „vorheriges" merken (für Teilen-Dialog).
+    if (this.puzzle && this.puzzle.id !== puzzle.id) this.previousPuzzleId = this.puzzle.id;
     this.puzzle = puzzle;
     this._currentMinRating = puzzle.rating;   // Anzeige/Fehler-Logging am tatsächlichen Puzzle-Rating
     this.trackMaxRating(puzzle.rating);

@@ -110,6 +110,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   offlinePoolExhausted = false;
   /** Zuletzt geladenes Puzzle (egal ob gelöst, fehlgeschlagen, oder noch im Spiel). Wird für „Letztes nochmal" verwendet. */
   private lastShownPuzzle: PuzzleDto | null = null;
+  /** ID des zuvor angezeigten Puzzles (für „vorheriges Puzzle teilen"). */
+  private previousPuzzleId: number | null = null;
 
   private loadOfflinePool(): PuzzleDto[] {
     try { return JSON.parse(localStorage.getItem(PUZZLE_POOL_KEY) || '[]') || []; } catch { return []; }
@@ -181,7 +183,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   sharePuzzle(): void {
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/${this.puzzle.id}`;
-    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+    const previousUrl = this.previousPuzzleId
+      ? `${window.location.origin}/puzzles/${this.previousPuzzleId}`
+      : undefined;
+    this.dialog.open(SharePuzzleDialogComponent, { data: { url, previousUrl }, width: '400px' });
   }
 
   /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */
@@ -289,6 +294,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
     source$.subscribe({
         next: puzzle => {
+          // Bisher angezeigtes Puzzle als „vorheriges" merken (für Teilen-Dialog).
+          if (this.puzzle && this.puzzle.id !== puzzle.id) this.previousPuzzleId = this.puzzle.id;
           this.puzzle = puzzle;
           this.lastShownPuzzle = puzzle;
           this.setupPuzzle(puzzle);

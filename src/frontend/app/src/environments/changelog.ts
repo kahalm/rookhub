@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.102.1';
+export const APP_VERSION = '0.103.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.103.0', date: '2026-06-11', changes: [
+    'Puzzle teilen (Zufalls- & Endlos-Modus): Im Teilen-Dialog (QR-Code + Link) lässt sich jetzt per Button zwischen dem aktuellen und dem vorherigen Puzzle umschalten — so kann man auch das gerade gelöste, schon weitergeschaltete Puzzle noch teilen.',
+  ]},
   { version: '0.102.1', date: '2026-06-11', changes: [
     'Hilfeseite: Links im Abschnitt „Browser-Erweiterung & Userscript (RepCheck)" sind jetzt klickbar (öffnen in neuem Tab). Zusätzlich verlinkt: die signierte Firefox-Erweiterung auf addons.mozilla.org neben GitHub-Repo und Tampermonkey-Userscript.',
   ]},
