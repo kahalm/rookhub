@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.104.0';
+export const APP_VERSION = '0.104.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.104.1', date: '2026-06-11', changes: [
+    'Endlos-Start mit „5 schwächste Themen" deutlich beschleunigt: Die Ketten-Generierung holt pro Rating-Fenster gezielt ein Puzzle per Index-Seek (TagId, Rating), statt die gesamte Rating-Spanne aller Fenster zu laden und im Speicher zu sampeln. Bei häufigen Themen sank die Antwortzeit von ~25 s auf ~0,1 s.',
+  ]},
   { version: '0.104.0', date: '2026-06-11', changes: [
     'Endlos-Modus History: Ein Klick auf einen Lauf öffnet jetzt dessen Detail-Ansicht — dieselbe Zusammenfassung wie direkt nach Spielende (Max-Rating, gelöste Puzzles, Level, Dauer, verlorene Leben und die Puzzle-Übersicht zum Nachspielen). Dafür werden die einzelnen Puzzle-Versuche eines Laufs jetzt serverseitig gespeichert; bei Altläufen (vor diesem Update) bleibt die Puzzle-Übersicht leer, die übrigen Werte werden angezeigt.',
   ]},

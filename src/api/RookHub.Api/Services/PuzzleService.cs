@@ -150,24 +150,25 @@ public class PuzzleService
     }
 
     /// <summary>
-    /// Effizienter Theme-Batch: EIN Scan über die gesamte Rating-Spanne aller Fenster, dann
-    /// in-memory je Fenster ein zufälliges, eindeutiges Treffer-Puzzle wählen und EINMAL nachladen.
+    /// Theme-Batch: je Rating-Fenster GENAU EIN zufälliges, im Batch eindeutiges Treffer-Puzzle,
+    /// danach die gewählten Puzzles EINMAL nachladen (Reihenfolge = Fensterreihenfolge).
     /// </summary>
     private async Task<List<PuzzleDto>> GetThemedBatchAsync(int? userId,
         List<(int Min, int Max)> windows, string? themes, string? themesAny, bool excludeSolved)
     {
-        var spanMin = windows.Min(w => w.Min);
-        var spanMax = windows.Max(w => w.Max);
-
-        List<(int Id, int Rating)> candidates;
+        List<int> chosenIds;
         if (!string.IsNullOrEmpty(themesAny) && string.IsNullOrEmpty(themes) && await HasPuzzleTagsAsync())
         {
-            // Schneller Index-Pfad über die normalisierte Tag-Tabelle.
-            candidates = await TagCandidatesAsync(themesAny, spanMin, spanMax, excludeSolved, userId, null);
+            // Schneller Index-Pfad: pro Fenster ein gezielter Random-Seek über (TagId, Rating) mit
+            // LIMIT 1 — NICHT die gesamte Spanne materialisieren (bei häufigen Tags Millionen Zeilen).
+            chosenIds = await PickTaggedPerWindowAsync(themesAny, windows, excludeSolved, userId);
         }
         else
         {
-            // Fallback: LIKE-Scan über die Rating-Spanne (1 Scan).
+            // Fallback (manuelle UND-Themen oder PuzzleTags noch nicht befüllt): LIKE-Scan über die
+            // Gesamtspanne (1 Scan), dann in-memory je Fenster wählen. Kein Index → kein Per-Fenster-Seek.
+            var spanMin = windows.Min(w => w.Min);
+            var spanMax = windows.Max(w => w.Max);
             var q = _db.Puzzles.Where(p => p.Rating >= spanMin && p.Rating <= spanMax);
             q = ApplyThemeFilters(q, themes, themesAny);
             if (excludeSolved && userId.HasValue)
@@ -176,26 +177,88 @@ public class PuzzleService
                 var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
                 q = q.Where(p => !solvedIds.Contains(p.Id));
             }
-            candidates = (await q.Select(p => new { p.Id, p.Rating }).ToListAsync())
+            var candidates = (await q.Select(p => new { p.Id, p.Rating }).ToListAsync())
                 .Select(r => (r.Id, r.Rating)).ToList();
-        }
-        if (candidates.Count == 0) return new List<PuzzleDto>();
-
-        var used = new HashSet<int>();
-        var chosenIds = new List<int>();
-        foreach (var (min, max) in windows)
-        {
-            var pool = candidates.Where(c => c.Rating >= min && c.Rating <= max && !used.Contains(c.Id)).ToList();
-            if (pool.Count == 0) continue;
-            var pick = pool[Random.Shared.Next(pool.Count)].Id;
-            used.Add(pick);
-            chosenIds.Add(pick);
+            var used = new HashSet<int>();
+            chosenIds = new List<int>();
+            foreach (var (min, max) in windows)
+            {
+                var pool = candidates.Where(c => c.Rating >= min && c.Rating <= max && !used.Contains(c.Id)).ToList();
+                if (pool.Count == 0) continue;
+                var pick = pool[Random.Shared.Next(pool.Count)].Id;
+                used.Add(pick);
+                chosenIds.Add(pick);
+            }
         }
         if (chosenIds.Count == 0) return new List<PuzzleDto>();
 
         var puzzles = await _db.Puzzles.Where(p => chosenIds.Contains(p.Id)).ToListAsync();   // 1 Nachladen
         var byId = puzzles.ToDictionary(p => p.Id);
         return chosenIds.Where(byId.ContainsKey).Select(id => MapToDto(byId[id])).ToList();   // Fensterreihenfolge
+    }
+
+    /// <summary>
+    /// Wählt je Rating-Fenster EIN zufälliges, im Batch eindeutiges Tag-Puzzle über den Index
+    /// (TagId, Rating) per Random-Seek + LIMIT 1 — statt die gesamte Kandidatenmenge zu laden.
+    /// Reihenfolge der Rückgabe folgt den Fenstern; Fenster ohne Treffer entfallen.
+    /// </summary>
+    private async Task<List<int>> PickTaggedPerWindowAsync(string themesAny,
+        List<(int Min, int Max)> windows, bool excludeSolved, int? userId)
+    {
+        var names = themesAny.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct().ToList();
+        if (names.Count == 0) return new List<int>();
+        var tagIds = await _db.Tags.Where(t => names.Contains(t.Name)).Select(t => t.Id).ToListAsync();
+        if (tagIds.Count == 0) return new List<int>();
+
+        var used = new HashSet<int>();
+        var chosen = new List<int>();
+        foreach (var (min, max) in windows)
+        {
+            var id = await SeekTaggedIdAsync(tagIds, min, max, excludeSolved, userId, used);
+            if (id.HasValue && used.Add(id.Value))
+                chosen.Add(id.Value);
+        }
+        return chosen;
+    }
+
+    /// <summary>
+    /// Ein zufälliges Tag-Puzzle im Fenster [min,max]: Zufalls-Rating r ziehen, dann die Tags in
+    /// zufälliger Reihenfolge durchgehen und je Tag per Index-Seek (TagId, Rating) das nächste Puzzle
+    /// ab r holen. Pro Tag ist die Abfrage ein reiner Index-Range-Read (rating-sortiert) + LIMIT 1 —
+    /// KEIN Filesort über eine IN-Liste (das machte häufige Tags langsam).
+    /// </summary>
+    private async Task<int?> SeekTaggedIdAsync(List<int> tagIds, int min, int max,
+        bool excludeSolved, int? userId, ISet<int> used)
+    {
+        var r = Random.Shared.Next(min, max + 1);
+        foreach (var tagId in tagIds.OrderBy(_ => Random.Shared.Next()))
+        {
+            var id = await SeekOneTagAsync(tagId, r, min, max, excludeSolved, userId, used);
+            if (id.HasValue) return id;
+        }
+        return null;
+    }
+
+    /// <summary>Nächstes Puzzle EINES Tags im Fenster: vorwärts ab r (sonst rückwärts), Index-Seek + LIMIT 1.</summary>
+    private async Task<int?> SeekOneTagAsync(int tagId, int r, int min, int max,
+        bool excludeSolved, int? userId, ISet<int> used)
+    {
+        var q = _db.PuzzleTags.Where(pt => pt.TagId == tagId);
+        if (excludeSolved && userId.HasValue)
+        {
+            var uid = userId.Value;
+            var solvedIds = _db.PuzzleAttempts.Where(a => a.UserId == uid && a.Solved).Select(a => a.PuzzleId);
+            q = q.Where(pt => !solvedIds.Contains(pt.PuzzleId));
+        }
+        if (used.Count > 0)
+            q = q.Where(pt => !used.Contains(pt.PuzzleId));
+
+        var fwd = await q.Where(pt => pt.Rating >= r && pt.Rating <= max)
+            .OrderBy(pt => pt.Rating).Select(pt => (int?)pt.PuzzleId).FirstOrDefaultAsync();
+        if (fwd.HasValue) return fwd;
+        return await q.Where(pt => pt.Rating >= min && pt.Rating < r)
+            .OrderByDescending(pt => pt.Rating).Select(pt => (int?)pt.PuzzleId).FirstOrDefaultAsync();
     }
 
     /// <summary>Wendet UND-Themen (<paramref name="themes"/>) und ODER-Themen (<paramref name="themesAny"/>) auf die Query an.</summary>
