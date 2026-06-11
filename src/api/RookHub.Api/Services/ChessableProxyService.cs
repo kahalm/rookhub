@@ -1,0 +1,68 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using RookHub.Api.DTOs;
+
+namespace RookHub.Api.Services;
+
+/// <summary>
+/// Fehler aus dem piratechess-Backend. <see cref="Status"/> ist der Original-
+/// Statuscode, <see cref="Message"/> die vom Backend gelieferte Fehlermeldung
+/// (oder eine generische, falls keine geliefert wurde).
+/// </summary>
+public class ChessableProxyException : Exception
+{
+    public HttpStatusCode Status { get; }
+    public ChessableProxyException(HttpStatusCode status, string message) : base(message)
+    {
+        Status = status;
+    }
+}
+
+/// <summary>
+/// Typed HttpClient zur piratechess-API. Reicht den User-Bearer pro Request
+/// durch (stateless aus piratechess-Sicht). Authentifiziert sich mit dem
+/// <c>X-Service-Key</c>-Header (siehe <c>Chessable:ServiceKey</c>).
+/// </summary>
+public class ChessableProxyService
+{
+    private readonly HttpClient _httpClient;
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
+    public ChessableProxyService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<ChessableTestResultDto> TestAsync(string bearer, CancellationToken ct = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/test", new { Bearer = bearer }, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return (await response.Content.ReadFromJsonAsync<ChessableTestResultDto>(JsonOpts, ct))!;
+    }
+
+    public async Task<List<ChessableCourseDto>> GetCoursesAsync(string bearer, CancellationToken ct = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/courses", new { Bearer = bearer }, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return (await response.Content.ReadFromJsonAsync<List<ChessableCourseDto>>(JsonOpts, ct)) ?? new();
+    }
+
+    private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        if (response.IsSuccessStatusCode) return;
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        // piratechess gibt { "message": "..." } zurueck — herausziehen falls vorhanden.
+        var message = body;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.String)
+                message = msg.GetString() ?? body;
+        }
+        catch (JsonException) { /* not JSON — keep raw */ }
+
+        throw new ChessableProxyException(response.StatusCode, message);
+    }
+}

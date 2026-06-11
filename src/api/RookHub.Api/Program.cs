@@ -105,6 +105,7 @@ try
 
     // Services
     builder.Services.AddScoped<AuthService>();
+    builder.Services.AddSingleton<EncryptionService>();
     builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
     builder.Services.AddScoped<PasswordResetService>();
     builder.Services.AddScoped<ProfileService>();
@@ -148,6 +149,22 @@ try
     builder.Services.AddHttpClient<SchachBotWebhookService>(client =>
     {
         client.Timeout = TimeSpan.FromSeconds(5);
+    });
+
+    // Chessable Proxy HttpClient — leitet User-Bearer an piratechess-API durch.
+    // Default-URL passt zum Container-Namen im chessable-bridge-Docker-Netz.
+    var chessableBaseUrl = builder.Configuration["Chessable:ApiUrl"] ?? "http://piratechess-api:8080";
+    if (!Uri.TryCreate(chessableBaseUrl, UriKind.Absolute, out var chessableUri))
+        throw new InvalidOperationException($"Invalid Chessable:ApiUrl: {chessableBaseUrl}");
+    var chessableServiceKey = builder.Configuration["Chessable:ServiceKey"];
+    builder.Services.AddHttpClient<ChessableProxyService>(client =>
+    {
+        client.BaseAddress = chessableUri;
+        // Chessable-Listen koennen lange brauchen (curl-impersonate + ggf. Retry),
+        // aber /direct/test und /direct/courses sind beide eine Handvoll Calls.
+        client.Timeout = TimeSpan.FromSeconds(60);
+        if (!string.IsNullOrEmpty(chessableServiceKey))
+            client.DefaultRequestHeaders.Add("X-Service-Key", chessableServiceKey);
     });
 
     // Crawler Proxy HttpClient

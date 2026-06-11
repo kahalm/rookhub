@@ -132,10 +132,15 @@ services:
       Email__FromAddress: ${EMAIL_FROM_ADDRESS:-}
       Email__FromName: ${EMAIL_FROM_NAME:-RookHub}
       Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
+      # Chessable-Integration (piratechess-API im externen chessable-bridge Netz).
+      Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
+      Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      Encryption__Key: ${ENCRYPTION_KEY:-}
     volumes:
       - dataprotection-keys:/keys
     networks:
       - rookhub
+      - chessable-bridge
 
   # ── Elasticsearch ──────────────────────────────────────────────────────────
   elasticsearch:
@@ -219,6 +224,11 @@ services:
 
 networks:
   rookhub:
+  # Externes Netz, das von piratechess_docker bereitgestellt wird, damit
+  # rookhub-api den piratechess-api Container per DNS-Namen erreicht.
+  chessable-bridge:
+    external: true
+    name: chessable-bridge
 
 volumes:
   mariadb-data:

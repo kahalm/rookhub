@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<UserTrainingGoal> UserTrainingGoals => Set<UserTrainingGoal>();
     public DbSet<PlayTimeDaily> PlayTimeDailies => Set<PlayTimeDaily>();
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
+    public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -385,6 +386,18 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(g => g.GroupId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ChessableCredential>(e =>
+        {
+            // 1:1 zu AppUser; Cascade-Delete entfernt den verschluesselten Bearer
+            // mit dem User.
+            e.HasIndex(c => c.UserId).IsUnique();
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(c => c.EncryptedBearer).HasColumnType("TEXT");
         });
 
         modelBuilder.Entity<UserTrainingGoal>(e =>

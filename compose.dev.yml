@@ -107,10 +107,17 @@ services:
       Email__FromAddress: ${EMAIL_FROM_ADDRESS:-}
       Email__FromName: ${EMAIL_FROM_NAME:-RookHub}
       Email__UseStartTls: ${EMAIL_USE_STARTTLS:-true}
+      # Chessable-Integration: User-Bearer wird per Proxy an piratechess-API
+      # durchgereicht. Service-Key + URL siehe .env.dev. ENCRYPTION_KEY ist
+      # der AES-Schluessel fuer den verschluesselt persistierten User-Bearer.
+      Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
+      Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
+      Encryption__Key: ${ENCRYPTION_KEY:-}
     volumes:
       - dataprotection-keys:/keys
     networks:
       - rookhub
+      - chessable-bridge
 
   # ── Frontend (Angular + nginx) ─────────────────────────────────────────────
   frontend:
@@ -196,6 +203,13 @@ services:
 
 networks:
   rookhub:
+  # Externes Netz, das von piratechess_docker bereitgestellt wird, damit
+  # rookhub-api den piratechess-api Container per DNS-Namen erreicht. Muss
+  # existieren, bevor dieser Stack hochfaehrt (piratechess_docker zuerst
+  # starten, oder manuell `docker network create chessable-bridge`).
+  chessable-bridge:
+    external: true
+    name: chessable-bridge
 
 volumes:
   mariadb-data:
