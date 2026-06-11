@@ -39,7 +39,8 @@
     "themeSystem": "System-Design",
     "themeLight": "Helles Design",
     "themeDark": "Dunkles Design",
-    "help": "Hilfe"
+    "help": "Hilfe",
+    "chessable": "Chessable"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1266,5 +1267,26 @@
         ]
       }
     }
+  },
+  "chessable": {
+    "title": "Chessable verbinden",
+    "intro": "Hinterlege deinen Chessable-Bearer einmal — RookHub fragt darüber deine Kurse über die piratechess-API ab. Der Token wird verschlüsselt gespeichert und nicht im Klartext angezeigt.",
+    "bearerLabel": "Bearer-Token",
+    "bearerHint": "Bearer findest du im Browser: Chessable → Entwicklertools → Netzwerk → Header „authorization: Bearer …\"",
+    "save": "Speichern",
+    "saving": "Speichere…",
+    "saved": "Token gespeichert.",
+    "delete": "Token löschen",
+    "deleted": "Token gelöscht.",
+    "test": "Verbindung testen",
+    "testing": "Teste…",
+    "loadCourses": "Kurse laden",
+    "loadingCourses": "Lade Kurse…",
+    "noToken": "Noch kein Token hinterlegt.",
+    "currentToken": "Aktuell gespeichert: {{masked}}",
+    "testOk": "Verbindung erfolgreich. {{count}} Kurse für UID {{uid}}.",
+    "coursesTitle": "Deine Chessable-Kurse",
+    "noCourses": "Keine Kurse gefunden.",
+    "error": "Fehler: {{message}}"
   }
 }

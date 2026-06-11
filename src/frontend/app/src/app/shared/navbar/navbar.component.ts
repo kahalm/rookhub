@@ -71,6 +71,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
           <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
+          <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button>
           <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button>
           <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button>
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>

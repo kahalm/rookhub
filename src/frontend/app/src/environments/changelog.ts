@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.106.0';
+export const APP_VERSION = '0.107.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.107.0', date: '2026-06-11', changes: [
+    'Chessable-Integration (Frontend, Etappe 2): Neue Seite unter „Chessable" (im Konto-Menü erreichbar). Eingabefeld für den persönlichen Bearer, Speichern/Löschen/Test, „Kurse laden" listet die eigenen Chessable-Kurse auf — alles ohne Chessable-Login im Browser, die Calls laufen serverseitig über die piratechess-API.',
+    'Übersetzungen in alle 25 Sprachen (Deutsch ausführlich, restliche Sprachen mit englischem Fallback-Text).',
+    'Logging-Update piratechess: gleicher ECS-/Elasticsearch-Stack wie RookHub, eigener Index `piratechess-logs-*`; rookhub/piratechess-Stream in Kibana nebeneinander.',
+  ]},
   { version: '0.106.0', date: '2026-06-11', changes: [
     'Chessable-Integration (Backend, Etappe 1): RookHub kann jetzt einen persönlichen Chessable-Bearer pro Nutzer verschlüsselt in der Datenbank ablegen und über die piratechess-API gegen Chessable testen bzw. die eigenen Kurse abrufen. Endpoints: GET/POST/DELETE /api/chessable/credentials, POST /api/chessable/test, GET /api/chessable/courses.',
     'Die eigentlichen Chessable-Calls (curl-impersonate gegen Cloudflare) bleiben im piratechess-Stack; RookHub reicht den Bearer pro Request stateless durch. Verkabelung über das externe Docker-Netz `chessable-bridge` (von piratechess_docker bereitgestellt) und Service-Key-Auth (X-Service-Key) zwischen den beiden APIs.',
