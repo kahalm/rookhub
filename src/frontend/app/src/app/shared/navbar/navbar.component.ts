@@ -25,9 +25,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
       @if (auth.isLoggedIn) {
         <div class="nav-links">
           <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          @if (auth.isAdmin) {
-            <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
-          }
+          <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
           <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
@@ -46,9 +44,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
         </button>
         <mat-menu #navMenu="matMenu">
           <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          @if (auth.isAdmin) {
-            <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
-          }
+          <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
           <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
           <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button>
           <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>

@@ -1,11 +1,17 @@
+import { ActivatedRoute } from '@angular/router';
 import { HelpComponent } from './help.component';
 
 describe('HelpComponent', () => {
+  function build(fragment: string | null = null): HelpComponent {
+    // Nur die im Component genutzte snapshot.fragment-Eigenschaft mocken.
+    const route = { snapshot: { fragment } } as unknown as ActivatedRoute;
+    return new HelpComponent(route);
+  }
+
   let component: HelpComponent;
 
   beforeEach(() => {
-    // Keine DI-Abhängigkeiten — die Komponente ist rein (Struktur + zwei Helfer).
-    component = new HelpComponent();
+    component = build();
   });
 
   it('listet alle Hilfe-Abschnitte mit eindeutigen Ids und je einem Icon', () => {
@@ -14,7 +20,7 @@ describe('HelpComponent', () => {
     expect(new Set(ids).size).toBe(ids.length); // keine Duplikate
     expect(component.sections.every(s => !!s.icon)).toBeTrue();
     // Kernbereiche müssen abgedeckt sein
-    ['welcome', 'tournaments', 'puzzles', 'trainingGoals', 'privacy'].forEach(id =>
+    ['welcome', 'tournaments', 'puzzles', 'trainingGoals', 'privacy', 'extension'].forEach(id =>
       expect(ids).toContain(id),
     );
   });
@@ -24,5 +30,21 @@ describe('HelpComponent', () => {
     expect(component.asParagraphs('einzeln')).toEqual(['einzeln']);
     expect(component.asParagraphs(null)).toEqual([]);
     expect(component.asParagraphs(undefined)).toEqual([]);
+  });
+
+  it('scrollt bei vorhandenem Fragment (Deep-Link /help#extension) zum Abschnitt', () => {
+    jasmine.clock().install();
+    const withFragment = build('extension');
+    const spy = spyOn(withFragment, 'scrollTo');
+    withFragment.ngAfterViewInit();
+    jasmine.clock().tick(1);
+    expect(spy).toHaveBeenCalledWith('extension');
+    jasmine.clock().uninstall();
+  });
+
+  it('scrollt ohne Fragment nicht', () => {
+    const spy = spyOn(component, 'scrollTo');
+    component.ngAfterViewInit();
+    expect(spy).not.toHaveBeenCalled();
   });
 });

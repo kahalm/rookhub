@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 
 /**
@@ -86,7 +86,17 @@ interface HelpSection { id: string; icon: string; }
     .back-top mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
   `]
 })
-export class HelpComponent {
+export class HelpComponent implements AfterViewInit {
+  constructor(private route: ActivatedRoute) {}
+
+  /** Deep-Link wie /help#extension: nach dem Render zum Abschnitt scrollen. */
+  ngAfterViewInit(): void {
+    const fragment = this.route.snapshot.fragment;
+    if (fragment) {
+      setTimeout(() => this.scrollTo(fragment), 0);
+    }
+  }
+
   readonly sections: HelpSection[] = [
     { id: 'welcome', icon: '\u{1F44B}' },
     { id: 'account', icon: '\u{1F511}' },
@@ -106,6 +116,7 @@ export class HelpComponent {
     { id: 'offline', icon: '\u{1F4F2}' },
     { id: 'settings', icon: '\u{1F3A8}' },
     { id: 'tokens', icon: '\u{1F50C}' },
+    { id: 'extension', icon: '\u{1F9E9}' },
     { id: 'privacy', icon: '\u{1F512}' },
     { id: 'feedback', icon: '\u{1F41E}' },
   ];

@@ -47,6 +47,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Retry-Interceptor für 502/503/0 mit Exponential-Backoff im Frontend
 
 ## Features
+- [ ] Trainersystem mit eigenen Gruppen einführen — Konzept noch offen. Idee: Trainer-Rolle, die eigene Gruppen anlegen/verwalten und Mitglieder zuweisen kann (heute nur Admin via `/api/admin/groups`), inkl. Trainingsziel-Vorlagen + ggf. Kurs-Freigaben für die eigenen Gruppen. Aufbauen auf bestehender Gruppen-/`GroupTrainingGoals`-/`BookGroupAccess`-Infrastruktur; offene Fragen: Rollenmodell (neue Rolle vs. Flag), Sichtbarkeits-/Berechtigungsgrenzen Trainer ↔ Mitglieder, Einladungsfluss.
 - [ ] Passwort vergessen / E-Mail-Reset
 - [ ] Push-Benachrichtigungen (PWA) — z.B. „Dein Tagespuzzle wartet"
 - [ ] E-Mail-Benachrichtigung bei neuen Turnierblättchen

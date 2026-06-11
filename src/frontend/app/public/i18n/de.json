@@ -317,7 +317,9 @@
       "createFailed": "Repertoire konnte nicht erstellt werden",
       "deleteConfirm": "Dieses Repertoire löschen?",
       "deleteFailed": "Repertoire konnte nicht gelöscht werden",
-      "updateFailed": "Repertoire konnte nicht aktualisiert werden"
+      "updateFailed": "Repertoire konnte nicht aktualisiert werden",
+      "extHint": "Tipp: Mit der passenden Browser-Erweiterung (derzeit für Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org.",
+      "extHintLink": "Mehr dazu in der Hilfe"
     },
     "detail": {
       "noDescription": "Keine Beschreibung",
@@ -1192,7 +1194,7 @@
         "t": "Repertoires",
         "p": [
           "Repertoires sind Sammlungen von PGN-Dateien (Eröffnung/Mittelspiel/Endspiel), die du hochlädst und verwaltest. Du kannst Dateien per Drag & Drop hinzufügen, herunterladen und den kombinierten PGN abrufen (max. 10 MB pro Datei).",
-          "Dieser Bereich ist derzeit Administratoren vorbehalten. Über die optionale chess.com-Erweiterung lassen sich Repertoires direkt im Spiel abrufen (siehe »API-Tokens«)."
+          "Über die optionale Browser-Erweiterung bzw. das Userscript lassen sich deine Eröffnungsrepertoires direkt beim Spielen auf chess.com und lichess.org abgleichen (siehe »Browser-Erweiterung & Userscript«)."
         ]
       },
       "offline": {
@@ -1213,6 +1215,15 @@
         "p": [
           "Im Profil kannst du persönliche API-Tokens anlegen, z. B. für die chess.com-Browser-Erweiterung, die deine Repertoires direkt am Brett anzeigt. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
           "Tokens haben einen Geltungsbereich (Scope) und ein optionales Ablaufdatum und lassen sich jederzeit widerrufen."
+        ]
+      },
+      "extension": {
+        "t": "Browser-Erweiterung & Userscript (RepCheck)",
+        "p": [
+          "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
+          "Es gibt zwei Varianten mit identischer Funktion: eine Browser-Erweiterung (als signierte Version derzeit nur für Firefox verfügbar) und ein Tampermonkey-Userscript, das in jedem Browser mit Tampermonkey/Greasemonkey läuft.",
+          "Einrichtung: Lege im Profil unter »Extension-Tokens« ein Token an (Scope „extension\"), öffne auf chess.com oder lichess.org das Zahnrad-Panel im Repertoire-Banner, trage deine RookHub-URL und das Token ein und klicke »Verbinden«.",
+          "Installation, Auto-Update und Details: github.com/kahalm/repcheck — das Userscript lässt sich direkt über https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js in Tampermonkey importieren."
         ]
       },
       "privacy": {

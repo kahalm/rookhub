@@ -69,8 +69,8 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/dashboard` | DashboardComponent | ja |
 | `/profile` | ProfileComponent | ja |
 | `/friends` | FriendsComponent | ja |
-| `/repertoires` | RepertoireListComponent | `adminGuard` (vorerst nur Admin) |
-| `/repertoires/:id` | RepertoireDetailComponent | `adminGuard` (vorerst nur Admin) |
+| `/repertoires` | RepertoireListComponent | `authGuard` (alle eingeloggten Nutzer; API ist pro-Nutzer abgesichert) |
+| `/repertoires/:id` | RepertoireDetailComponent | `authGuard` (alle eingeloggten Nutzer) |
 | `/tournaments` | TournamentListComponent | ja |
 | `/tournaments/:id` | TournamentDetailComponent | ja |
 | `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |

@@ -27,6 +27,14 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
         </button>
       </div>
 
+      <div class="ext-hint">
+        <mat-icon>extension</mat-icon>
+        <span>
+          {{ 'repertoire.list.extHint' | translate }}
+          <a routerLink="/help" fragment="extension">{{ 'repertoire.list.extHintLink' | translate }}</a>
+        </span>
+      </div>
+
       @if (loading) {
         <app-loading-spinner />
       } @else {
@@ -63,6 +71,12 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
   styles: [`
     .repertoire-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; }
+    .ext-hint { display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1.25rem;
+                padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;
+                background: color-mix(in srgb, currentColor 7%, transparent);
+                color: color-mix(in srgb, currentColor 80%, transparent); }
+    .ext-hint mat-icon { flex: 0 0 auto; opacity: 0.7; }
+    .ext-hint a { color: inherit; text-decoration: underline; cursor: pointer; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
     .kind-chip-set { display: inline-flex; margin-left: 8px; vertical-align: middle; }
     .kind-chip { font-size: 0.72rem; min-height: 22px; }

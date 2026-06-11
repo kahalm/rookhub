@@ -317,7 +317,9 @@
       "createFailed": "Failed to create repertoire",
       "deleteConfirm": "Delete this repertoire?",
       "deleteFailed": "Failed to delete repertoire",
-      "updateFailed": "Repertoire could not be updated"
+      "updateFailed": "Repertoire could not be updated",
+      "extHint": "Tip: with the matching browser extension (currently for Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org.",
+      "extHintLink": "Learn more in the help"
     },
     "detail": {
       "noDescription": "No description",
@@ -1192,7 +1194,7 @@
         "t": "Repertoires",
         "p": [
           "Repertoires are collections of PGN files (opening/middlegame/endgame) you upload and manage. You can add files via drag & drop, download them and fetch the combined PGN (max 10 MB per file).",
-          "This area is currently reserved for administrators. Via the optional chess.com extension, repertoires can be fetched right in the game (see »API tokens«)."
+          "Via the optional browser extension or userscript, your opening repertoires can be checked right while playing on chess.com and lichess.org (see »Browser extension & userscript«)."
         ]
       },
       "offline": {
@@ -1213,6 +1215,15 @@
         "p": [
           "In your profile you can create personal API tokens, e.g. for the chess.com browser extension that shows your repertoires right on the board. The raw token is shown only once at creation – copy it immediately.",
           "Tokens have a scope and an optional expiry date and can be revoked at any time."
+        ]
+      },
+      "extension": {
+        "t": "Browser extension & userscript (RepCheck)",
+        "p": [
+          "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
+          "Two variants with identical functionality exist: a browser extension (currently available as a signed build for Firefox only) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
+          "Setup: create a token under »Extension tokens« in your profile (scope „extension\"), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
+          "Installation, auto-update and details: github.com/kahalm/repcheck — the userscript can be imported into Tampermonkey directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {

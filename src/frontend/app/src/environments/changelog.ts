@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.101.1';
+export const APP_VERSION = '0.102.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.102.0', date: '2026-06-11', changes: [
+    'Repertoires sind jetzt für alle eingeloggten Nutzer verfügbar (bisher nur Admins) — der Menüpunkt „Repertoires" erscheint für jeden angemeldeten Account; jeder sieht ausschließlich seine eigenen Repertoires. Die API war bereits pro-Nutzer abgesichert.',
+    'Repertoire-Übersicht: Hinweis-Banner auf die passende Browser-Erweiterung/das Userscript (RepCheck), das Abweichungen vom Repertoire direkt auf chess.com und lichess.org anzeigt — mit Link in die Hilfe.',
+    'Hilfeseite: neuer Abschnitt „Browser-Erweiterung & Userscript (RepCheck)" mit Einrichtung (Extension-Token), Varianten (signierte Firefox-Erweiterung bzw. Tampermonkey-Userscript) und Installationslink. Deep-Link /help#extension scrollt direkt zum Abschnitt.',
+  ]},
   { version: '0.101.1', date: '2026-06-10', changes: [
     'Endlos-Modus: „Nochmal versuchen" funktioniert jetzt auch, wenn man beim Verlust des letzten Lebens scheitert — man darf das Puzzle, an dem der Run endete, erneut probieren (vorher tat der Button beim letzten Leben nichts). Löst man es, geht der Run im Sudden-Death weiter; sonst führt „Weiter" wie gehabt ins Game Over.',
   ]},

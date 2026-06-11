@@ -317,7 +317,9 @@
       "createFailed": "Stvaranje repertoara nije uspjelo",
       "deleteConfirm": "Izbrisati ovaj repertoar?",
       "deleteFailed": "Brisanje repertoara nije uspjelo",
-      "updateFailed": "Repertoar nije mogao biti ažuriran"
+      "updateFailed": "Repertoar nije mogao biti ažuriran",
+      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (trenutačno za Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org.",
+      "extHintLink": "Saznaj više u pomoći"
     },
     "detail": {
       "noDescription": "Nema opisa",
@@ -1192,7 +1194,7 @@
         "t": "Repertoari",
         "p": [
           "Repertoari su zbirke PGN datoteka (otvaranje/sredina/završnica) koje učitavaš i njima upravljaš. Datoteke možeš dodati povlačenjem, preuzeti ih i dohvatiti kombinirani PGN (najviše 10 MB po datoteci).",
-          "Ovo je područje trenutačno rezervirano za administratore. Putem neobavezne chess.com ekstenzije repertoari se mogu dohvatiti izravno u igri (vidi »API tokeni«)."
+          "Putem neobavezne ekstenzije preglednika ili userscripta tvoji se repertoari otvaranja mogu provjeriti izravno tijekom igre na chess.com i lichess.org (vidi »Ekstenzija preglednika i userscript«)."
         ]
       },
       "offline": {
@@ -1213,6 +1215,15 @@
         "p": [
           "U profilu možeš stvoriti osobne API tokene, npr. za chess.com ekstenziju preglednika koja prikazuje tvoje repertoare izravno na ploči. Sirovi token prikazuje se samo jednom pri stvaranju – kopiraj ga odmah.",
           "Tokeni imaju opseg (scope) i neobavezni datum isteka te se mogu opozvati bilo kada."
+        ]
+      },
+      "extension": {
+        "t": "Ekstenzija preglednika i userscript (RepCheck)",
+        "p": [
+          "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
+          "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (trenutačno kao potpisana verzija dostupna samo za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
+          "Postavljanje: u profilu pod »Extension tokeni« stvori token (opseg „extension\"), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoju RookHub URL i token te klikni »Poveži«.",
+          "Instalacija, automatsko ažuriranje i pojedinosti: github.com/kahalm/repcheck — userscript se može uvesti izravno u Tampermonkey s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {
