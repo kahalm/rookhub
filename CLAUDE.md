@@ -179,6 +179,7 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt ausschließlic
 |---------|----------|------|-------|
 | GET | `/api/endless/progress` | Auth | Progress + Sessions laden (single call) |
 | GET | `/api/endless/history?page=&pageSize=&archived=` | Auth | Paginierte Session-History (archived: bool-Filter) |
+| GET | `/api/endless/sessions/{id}` | Auth | Lauf-Detail inkl. einzelner Puzzle-Versuche (History-Detailansicht) |
 | PUT | `/api/endless/progress` | Auth | Config + Highscore + Active Game upsert |
 | POST | `/api/endless/archive` | Auth | Sessions archivieren/unarchivieren |
 | GET | `/api/endless/progress/anonymous?sessionId=` | Anon+RL | Anonymer Progress |
@@ -410,7 +411,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.103.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- **Aktuelle Version**: `0.104.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)

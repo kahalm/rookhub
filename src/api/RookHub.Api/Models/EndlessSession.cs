@@ -32,6 +32,11 @@ public class EndlessSession
     [Column(TypeName = "TEXT")]
     public string? ChainPuzzleIds { get; set; }
 
+    /// <summary>JSON-Liste der einzelnen Puzzle-Versuche (puzzleId, lichessId, rating, solved) — für die
+    /// Detail-/Zusammenfassungs-Ansicht eines Laufs in der History. Null bei Altläufen vor Einführung.</summary>
+    [Column(TypeName = "TEXT")]
+    public string? PuzzleAttemptsJson { get; set; }
+
     public bool IsArchived { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

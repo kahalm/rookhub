@@ -179,6 +179,11 @@
           </div>
         }
 
+        @case ('loading') {
+          <div class="history-loading">
+            <mat-spinner diameter="48"></mat-spinner>
+          </div>
+        }
         @case ('play') {
           <div class="play-screen">
             <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
@@ -529,14 +534,23 @@
                   </div>
                 }
                 <div class="gameover-actions">
-                  <button mat-raised-button color="primary" (click)="playAgain()">
-                    <mat-icon>replay</mat-icon>
-                    {{ 'endless.gameOver.playAgain' | translate }}
-                  </button>
-                  <button mat-button (click)="backToPuzzles()">
-                    <mat-icon>arrow_back</mat-icon>
-                    {{ 'endless.gameOver.backToPuzzles' | translate }}
-                  </button>
+                  @if (historyView) {
+                    <button mat-raised-button color="primary" (click)="backToHistory()">
+                      <mat-icon>arrow_back</mat-icon>
+                      {{ 'endless.gameOver.backToHistory' | translate }}
+                    </button>
+                  } @else {
+                    <button mat-raised-button color="primary" (click)="playAgain()">
+                      <mat-icon>replay</mat-icon>
+                      {{ 'endless.gameOver.playAgain' | translate }}
+                    </button>
+                  }
+                  @if (!historyView) {
+                    <button mat-button (click)="backToPuzzles()">
+                      <mat-icon>arrow_back</mat-icon>
+                      {{ 'endless.gameOver.backToPuzzles' | translate }}
+                    </button>
+                  }
                 </div>
               </mat-card-content>
             </mat-card>

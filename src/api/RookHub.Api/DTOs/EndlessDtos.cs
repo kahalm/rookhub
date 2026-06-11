@@ -36,6 +36,12 @@ public class EndlessSessionDto
     public bool IsArchived { get; set; }
 }
 
+/// <summary>Vollständige Detail-Ansicht eines Laufs (History-Klick) inkl. der einzelnen Puzzle-Versuche.</summary>
+public class EndlessSessionDetailDto : EndlessSessionDto
+{
+    public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();
+}
+
 // --- Request DTOs ---
 
 public class SaveEndlessProgressDto

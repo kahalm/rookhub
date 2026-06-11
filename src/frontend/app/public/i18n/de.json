@@ -752,7 +752,8 @@
       "archiveRun": "Diesen Lauf archivieren",
       "archived": "Archiviert",
       "playAgain": "Nochmal spielen",
-      "backToPuzzles": "Zurück zu den Puzzles"
+      "backToPuzzles": "Zurück zu den Puzzles",
+      "backToHistory": "Zurück zur History"
     },
     "history": {
       "title": "Endless Puzzle Verlauf",

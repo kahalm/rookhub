@@ -752,7 +752,8 @@
       "archiveRun": "Archive this Run",
       "archived": "Archived",
       "playAgain": "Play Again",
-      "backToPuzzles": "Back to Puzzles"
+      "backToPuzzles": "Back to Puzzles",
+      "backToHistory": "Back to History"
     },
     "history": {
       "title": "Endless Puzzle History",

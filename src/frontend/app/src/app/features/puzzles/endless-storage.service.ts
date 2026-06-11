@@ -66,6 +66,20 @@ export interface EndlessSessionDto {
   chainPuzzleIds?: string;
 }
 
+/** Ein persistierter Puzzle-Versuch eines Laufs (für die Detail-Ansicht in der History). */
+export interface EndlessSessionPuzzleDto {
+  puzzleId: number;
+  lichessId?: string;
+  rating: number;
+  solved: boolean;
+}
+
+/** Detail eines Laufs inkl. der einzelnen Puzzle-Versuche (GET /api/endless/sessions/:id). */
+export interface EndlessSessionDetailDto extends EndlessSessionDto {
+  isArchived: boolean;
+  puzzles: EndlessSessionPuzzleDto[];
+}
+
 const CONFIG_KEY = 'rookhub_endless_config';
 const HIGHSCORE_KEY = 'rookhub_endless_highscore';
 const HISTORY_KEY = 'rookhub_endless_history';
@@ -313,6 +327,13 @@ export class EndlessStorageService {
       }
       return of(null);
     }
+  }
+
+  /** Detail eines Laufs (mit den einzelnen Puzzle-Versuchen) für die History-Detail-Ansicht laden. */
+  getSessionDetail(sessionId: number): Observable<EndlessSessionDetailDto | null> {
+    return this.http.get<EndlessSessionDetailDto>(`${this.apiUrl}/sessions/${sessionId}`).pipe(
+      catchError(() => of(null))
+    );
   }
 
   archiveSession(sessionId: number): Observable<any> {

@@ -102,6 +102,50 @@ public class EndlessProgressServiceTests : IDisposable
         Assert.Contains(logs, m => m.Contains("endless-puzzle 10") && m.Contains("StartedAt=") && m.Contains("SolvedAt="));
     }
 
+    // --- Session-Detail (History-Klick) ---
+
+    [Fact]
+    public async Task GetSessionDetail_ReturnsPersistedPuzzleAttempts()
+    {
+        var userId = await CreateUserAsync();
+        var recorded = await _service.RecordSessionAsync(userId, SessionWithPuzzles());
+
+        var detail = await _service.GetSessionDetailAsync(userId, recorded.Id);
+
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.Puzzles.Count);
+        Assert.Equal(10, detail.Puzzles[0].PuzzleId);
+        Assert.True(detail.Puzzles[0].Solved);
+        Assert.Equal(11, detail.Puzzles[1].PuzzleId);
+        Assert.False(detail.Puzzles[1].Solved);
+        Assert.Equal(1600, detail.Puzzles[1].Rating);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_OtherUsersSession_ReturnsNull()
+    {
+        var owner = await CreateUserAsync("owner");
+        var stranger = await CreateUserAsync("stranger");
+        var recorded = await _service.RecordSessionAsync(owner, SessionWithPuzzles());
+
+        var detail = await _service.GetSessionDetailAsync(stranger, recorded.Id);
+
+        Assert.Null(detail);
+    }
+
+    [Fact]
+    public async Task GetSessionDetail_NoPuzzlesPersisted_ReturnsEmptyList()
+    {
+        var userId = await CreateUserAsync();
+        var recorded = await _service.RecordSessionAsync(userId, MakeSessionDto());
+
+        var detail = await _service.GetSessionDetailAsync(userId, recorded.Id);
+
+        Assert.NotNull(detail);
+        Assert.Empty(detail!.Puzzles);
+        Assert.Equal("780,920", detail.MistakeAtRatings);
+    }
+
     // --- Progress Tests ---
 
     [Fact]

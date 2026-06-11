@@ -42,6 +42,15 @@ public class EndlessController : BaseApiController
         return Ok(result);
     }
 
+    [HttpGet("sessions/{id:int}")]
+    [Authorize]
+    public async Task<ActionResult<EndlessSessionDetailDto>> GetSessionDetail(int id)
+    {
+        var detail = await _service.GetSessionDetailAsync(GetUserId(), id);
+        if (detail == null) return NotFound();
+        return Ok(detail);
+    }
+
     [HttpPost("archive")]
     [Authorize]
     public async Task<ActionResult<object>> ArchiveSessions([FromBody] ArchiveSessionsDto dto)

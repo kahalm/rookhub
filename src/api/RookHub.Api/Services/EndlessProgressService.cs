@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
@@ -142,7 +143,8 @@ public class EndlessProgressService
             ConfigJson = dto.ConfigJson,
             MistakeAtRatings = dto.MistakeAtRatings,
             Seed = dto.Seed,
-            ChainPuzzleIds = dto.ChainPuzzleIds
+            ChainPuzzleIds = dto.ChainPuzzleIds,
+            PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
         };
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
@@ -170,7 +172,8 @@ public class EndlessProgressService
             ConfigJson = dto.ConfigJson,
             MistakeAtRatings = dto.MistakeAtRatings,
             Seed = dto.Seed,
-            ChainPuzzleIds = dto.ChainPuzzleIds
+            ChainPuzzleIds = dto.ChainPuzzleIds,
+            PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
         };
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
@@ -352,6 +355,30 @@ public class EndlessProgressService
         };
     }
 
+    /// <summary>Einzelnen Lauf (mit den persistierten Puzzle-Versuchen) für die Detail-Ansicht laden.
+    /// Liefert null, wenn der Lauf nicht existiert oder nicht dem Nutzer gehört.</summary>
+    public async Task<EndlessSessionDetailDto?> GetSessionDetailAsync(int userId, int sessionId)
+    {
+        var session = await _db.EndlessSessions
+            .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId);
+        if (session == null) return null;
+
+        return new EndlessSessionDetailDto
+        {
+            Id = session.Id,
+            Timestamp = session.Timestamp,
+            TotalSolved = session.TotalSolved,
+            MaxRating = session.MaxRating,
+            DurationSeconds = session.DurationSeconds,
+            ConfigJson = session.ConfigJson,
+            MistakeAtRatings = session.MistakeAtRatings,
+            Seed = session.Seed,
+            ChainPuzzleIds = session.ChainPuzzleIds,
+            IsArchived = session.IsArchived,
+            Puzzles = DeserializeAttempts(session.PuzzleAttemptsJson)
+        };
+    }
+
     // --- Archive ---
 
     public async Task<int> ArchiveSessionsAsync(int userId, List<int> sessionIds, bool archive)
@@ -368,6 +395,40 @@ public class EndlessProgressService
     }
 
     // --- Helpers ---
+
+    /// <summary>Serialisiert die Puzzle-Versuche kompakt (nur die für die Detail-Ansicht nötigen Felder)
+    /// für die Persistierung in PuzzleAttemptsJson. Null bei leerer Liste.</summary>
+    private static string? SerializeAttempts(List<EndlessSessionPuzzleDto> puzzles)
+    {
+        if (puzzles == null || puzzles.Count == 0) return null;
+        var compact = puzzles
+            .Take(MaxLoggedSessionPuzzles)
+            .Select(p => new StoredAttempt(p.PuzzleId, p.LichessId, p.Rating, p.Solved))
+            .ToList();
+        return JsonSerializer.Serialize(compact);
+    }
+
+    private static List<EndlessSessionPuzzleDto> DeserializeAttempts(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new();
+        try
+        {
+            var stored = JsonSerializer.Deserialize<List<StoredAttempt>>(json) ?? new();
+            return stored.Select(a => new EndlessSessionPuzzleDto
+            {
+                PuzzleId = a.PuzzleId,
+                LichessId = a.LichessId,
+                Rating = a.Rating,
+                Solved = a.Solved
+            }).ToList();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    private record StoredAttempt(int PuzzleId, string? LichessId, int Rating, bool Solved);
 
     private async Task TrimSessionsAsync(int? userId = null, string? anonymousSessionId = null)
     {

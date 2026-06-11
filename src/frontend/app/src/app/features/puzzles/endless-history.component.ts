@@ -134,14 +134,16 @@ interface EndlessHistoryResponse {
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                   <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-                      [class.archived-row]="row.isArchived"></tr>
+                      class="clickable-row"
+                      [class.archived-row]="row.isArchived"
+                      (click)="openSession(row)"></tr>
                 </table>
               </div>
 
               <!-- Mobile cards -->
               <div class="mobile-only">
                 @for (s of sessions; track s.id) {
-                  <div class="session-card" [class.archived-row]="s.isArchived">
+                  <div class="session-card clickable-row" [class.archived-row]="s.isArchived" (click)="openSession(s)">
                     <div class="session-card-header">
                       <mat-checkbox
                         (click)="$event.stopPropagation()"
@@ -215,6 +217,9 @@ interface EndlessHistoryResponse {
     .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .archived-row { opacity: 0.5; }
+    .clickable-row { cursor: pointer; }
+    tr.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+    .session-card.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
 
     .mobile-only { display: none; }
     .session-card {
@@ -285,6 +290,11 @@ export class EndlessHistoryComponent implements OnInit {
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  /** Detail-Ansicht eines Laufs öffnen (gleiches Game-Over-Layout wie direkt nach Spielende). */
+  openSession(s: EndlessSessionDto): void {
+    this.router.navigate(['/puzzles/endless'], { queryParams: { session: s.id } });
   }
 
   onPageChange(event: PageEvent): void {

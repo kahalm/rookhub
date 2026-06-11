@@ -63,7 +63,9 @@ interface EndlessPuzzleAttempt {
   styleUrls: ['./endless-puzzle.component.scss'],
 })
 export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy, OnInit {
-  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' | 'won' {
+  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' | 'won' | 'loading' {
+    // History-Detail wird geladen → Spinner statt leerem Brett (kein gültiges Puzzle vorhanden).
+    if (this.historyView && this.state === 'LOADING') return 'loading';
     if (this.state === 'WON') return 'won';
     if (this.state === 'EXHAUSTED') return 'exhausted';
     if (this.state === 'GAME_OVER') return 'gameover';
@@ -156,6 +158,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // Archive
   lastSessionId: number | null = null;
   lastSessionArchived = false;
+  /** True, wenn die Game-Over-Ansicht einen abgeschlossenen Lauf aus der History zeigt
+   * (Aufruf mit ?session=ID) und nicht einen gerade beendeten Run. */
+  historyView = false;
   archiving = false;
 
   // Puzzle DB range
@@ -274,6 +279,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   ngOnInit(): void {
+    // History-Detail (?session=ID): abgeschlossenen Lauf wie den Game-Over-Screen anzeigen.
+    // Stats + Puzzle-Review werden aus dem persistierten Lauf rekonstruiert.
+    const sessionParam = this.route.snapshot.queryParamMap.get('session');
+    if (sessionParam) {
+      const id = parseInt(sessionParam, 10);
+      if (id > 0) { this.loadHistorySession(id); return; }
+    }
+
     // Rückkehr aus dem Analysemodus nach verlorenstem letzten Herz (?gameover=1):
     // Gameover-Snapshot aus sessionStorage wiederherstellen und Zusammenfassungs-Screen zeigen.
     if (this.route.snapshot.queryParamMap.get('gameover') === '1') {
@@ -664,8 +677,41 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   backToPuzzles(): void { this.router.navigate(['/puzzles']); }
 
+  backToHistory(): void { this.router.navigate(['/puzzles/endless/history']); }
+
   openPuzzle(id: number): void {
     this.router.navigate(['/puzzles', id]);
+  }
+
+  /** Lädt einen abgeschlossenen Lauf aus der History und zeigt ihn im Game-Over-Layout an
+   * (gleiche Detail-Ansicht wie direkt nach Spielende). */
+  private loadHistorySession(id: number): void {
+    this.historyView = true;
+    this.state = 'LOADING';
+    this.storage.getSessionDetail(id).subscribe(detail => {
+      if (!detail) { this.router.navigate(['/puzzles/endless/history']); return; }
+      this.maxRatingReached = detail.maxRating;
+      this.solved = detail.totalSolved;
+      this.sessionSeconds = detail.durationSeconds;
+      this.currentSessionMistakes = (detail.mistakeAtRatings || '')
+        .split(',').map(Number).filter(n => !isNaN(n));
+      this.currentSessionPuzzles = (detail.puzzles ?? []).map((p, i) => ({
+        puzzleNumber: i + 1,
+        puzzleId: p.puzzleId,
+        lichessId: p.lichessId ?? '',
+        rating: p.rating,
+        solved: p.solved,
+        startedAt: 0,
+        endedAt: 0,
+      }));
+      // „Level" = Anzahl gespielter Puzzles (Kettenposition); fällt auf TotalSolved zurück,
+      // falls für einen Altlauf keine Einzel-Puzzles persistiert sind.
+      this.level = this.currentSessionPuzzles.length || detail.totalSolved;
+      this.isNewHighscore = false;
+      this.lastSessionId = detail.id;
+      this.lastSessionArchived = detail.isArchived;
+      this.state = 'GAME_OVER';
+    });
   }
 
   // --- Loading (Gauntlet: vordefinierte Kette) ---
