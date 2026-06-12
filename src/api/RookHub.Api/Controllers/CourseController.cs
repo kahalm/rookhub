@@ -32,6 +32,18 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Lädt das Buch als PGN herunter (ein Spiel je Linie).</summary>
+    [HttpGet("{bookId}/pgn")]
+    public async Task<IActionResult> DownloadPgn(int bookId)
+    {
+        try
+        {
+            var (pgn, fileName) = await _service.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
+            return File(System.Text.Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn", fileName);
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
     [HttpGet]
     public async Task<IActionResult> GetCourses()

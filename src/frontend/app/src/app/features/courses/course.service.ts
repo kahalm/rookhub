@@ -54,6 +54,11 @@ export class CourseService {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
   }
 
+  /** Lädt das Buch als PGN (ein Spiel je Linie). */
+  downloadPgn(bookId: number): Observable<Blob> {
+    return this.http.get(`/api/courses/${bookId}/pgn`, { responseType: 'blob' });
+  }
+
   /** Hat der eingeloggte User Zugriff auf mindestens einen Kurs? (Menü-Sichtbarkeit) */
   checkAccess(): Observable<{ hasAccess: boolean }> {
     return this.http.get<{ hasAccess: boolean }>('/api/courses/access');

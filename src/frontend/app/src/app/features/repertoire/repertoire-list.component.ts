@@ -57,6 +57,7 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
               </mat-card-content>
               <mat-card-actions>
                 <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+                <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
                 <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
                 <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
               </mat-card-actions>
@@ -138,5 +139,19 @@ export class RepertoireListComponent implements OnInit {
         error: () => this.snackbar.info(this.translate.instant('repertoire.list.deleteFailed'))
       });
     }
+  }
+
+  downloadPgn(rep: Repertoire): void {
+    this.http.get(`/api/repertoires/${rep.id}/pgn`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const safe = (rep.name || 'repertoire').replace(/[^A-Za-z0-9]+/g, '_');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${safe}.pgn`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      },
+      error: () => this.snackbar.info(this.translate.instant('common.downloadFailed'))
+    });
   }
 }

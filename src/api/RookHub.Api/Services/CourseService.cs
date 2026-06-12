@@ -58,6 +58,20 @@ public class CourseService
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
 
+    /// <summary>Exportiert ein (zugängliches) Buch als PGN (ein Spiel je Linie). Liefert PGN-Text + Dateiname.</summary>
+    public async Task<(string Pgn, string FileName)> GetBookPgnAsync(int userId, int bookId, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        var book = await _db.Books.FirstAsync(b => b.Id == bookId);
+        var puzzles = await _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId)
+            .OrderBy(bp => bp.Id)
+            .ToListAsync();
+        var pgn = CoursePgnExporter.ToPgn(book.DisplayName, puzzles);
+        var safe = new string((book.DisplayName ?? "course").Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray());
+        return (pgn, $"{(string.IsNullOrWhiteSpace(safe) ? "course" : safe)}.pgn");
+    }
+
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle).</summary>
     public async Task<List<CourseListItemDto>> GetCoursesAsync(int userId, bool isAdmin)
     {

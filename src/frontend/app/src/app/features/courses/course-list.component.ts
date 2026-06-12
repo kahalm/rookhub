@@ -64,6 +64,10 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
                         (click)="toggleOffline(c)">
                   <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
                 </button>
+                <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
+                        [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
+                  <mat-icon>download</mat-icon>
+                </button>
                 <span class="spacer"></span>
                 <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
                         [disabled]="c.solvedCount === 0" (click)="reset(c)">
@@ -98,6 +102,7 @@ export class CourseListComponent implements OnInit {
   courses: CourseListItem[] = [];
   loading = false;
   savingOffline: number | null = null;
+  downloadingPgn: number | null = null;
   private offlineFiles = new Set<string>();
 
   constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
@@ -156,6 +161,25 @@ export class CourseListComponent implements OnInit {
         course.progressPercent = p.progressPercent;
       },
       error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
+    });
+  }
+
+  downloadPgn(course: CourseListItem): void {
+    this.downloadingPgn = course.bookId;
+    this.courseService.downloadPgn(course.bookId).subscribe({
+      next: blob => {
+        this.downloadingPgn = null;
+        const safe = (course.displayName || 'course').replace(/[^A-Za-z0-9]+/g, '_');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${safe}.pgn`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      },
+      error: () => {
+        this.downloadingPgn = null;
+        this.snackbar.info(this.translate.instant('courses.downloadFailed'), { action: 'common.ok', duration: 3000 });
+      }
     });
   }
 }
