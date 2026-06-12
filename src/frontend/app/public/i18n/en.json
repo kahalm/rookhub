@@ -1280,7 +1280,7 @@
     "helpStep3": "In its request headers, copy the value after \"authorization: Bearer \" — that is your token (a JWT, valid about 7 days).",
     "helpNote": "Used only to fetch your own purchased courses for personal backup.",
     "disclaimerTitle": "Use at your own risk",
-    "disclaimerText": "Use at your own risk! Don't know if it is against any TOS, but be warned if you get banned it's not my fault. Use only for personal backups.",
+    "disclaimerText": "Use at your own risk! I don't know whether it is against any TOS. If you get banned on Chessable, that's not my fault. Use only for personal backups.",
     "disclaimerAccept": "I understand — continue",
     "disclaimerDecline": "Cancel",
     "save": "Save",

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.109.0';
+export const APP_VERSION = '0.109.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.109.1', date: '2026-06-12', changes: [
+    'Chessable-Haftungsausschluss klarer formuliert (ausdrücklicher Hinweis: ein Bann auf Chessable ist nicht meine Schuld; nur für persönliche Backups).',
+  ]},
   { version: '0.109.0', date: '2026-06-12', changes: [
     'Chessable: Beim ersten Öffnen erscheint jetzt ein Haftungsausschluss, der bestätigt werden muss (Nutzung auf eigene Gefahr, nur für persönliche Backups) — die Bestätigung wird pro Konto gespeichert.',
     'Beim Bearer-Feld steht statt des Kurz-Hinweises ein Hilfe-Link, der Schritt für Schritt erklärt, wie man seinen Chessable-Bearer-Token findet.',
