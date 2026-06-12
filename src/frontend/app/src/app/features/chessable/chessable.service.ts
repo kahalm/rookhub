@@ -31,7 +31,7 @@ export interface ChessableImport {
   bid: string;
   courseName: string;
   target: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
   phase: string;
   error: string | null;
   resultId: number | null;
@@ -41,6 +41,7 @@ export interface ChessableImport {
   chaptersDone: number;
   chaptersTotal: number;
   linesDone: number;
+  queuedAhead: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -93,5 +94,17 @@ export class ChessableService {
   /** Letzte Importe des Users (z. B. um beim Laden der Seite einen laufenden Import zu erkennen). */
   getImports(): Observable<ChessableImport[]> {
     return this.http.get<ChessableImport[]>(`${this.apiUrl}/imports`);
+  }
+
+  cancelImport(id: number): Observable<ChessableImport> {
+    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/cancel`, {});
+  }
+
+  pauseImport(id: number): Observable<ChessableImport> {
+    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/pause`, {});
+  }
+
+  resumeImport(id: number): Observable<ChessableImport> {
+    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/resume`, {});
   }
 }

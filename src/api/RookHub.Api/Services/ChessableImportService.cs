@@ -91,6 +91,14 @@ public class ChessableImportService
                 // Poll-Schleife (max ~15 min bei 2,5 s Takt) — Fortschritt in die DB schreiben.
                 for (int i = 0; i < 360 && string.IsNullOrEmpty(pgn); i++)
                 {
+                    // Externen Abbruch/Pause erkennen (anderer Request setzt Status) — Checkpoint bleibt erhalten.
+                    await _db.Entry(import).ReloadAsync(ct);
+                    if (import.Status != "running")
+                    {
+                        _logger.LogInformation("Chessable-Import {Id} während Hol-Phase {Status}", import.Id, import.Status);
+                        return;
+                    }
+
                     var prog = await _proxy.GetCourseProgressAsync(import.FetchJobId!, ct);
                     if (prog is null)
                     {

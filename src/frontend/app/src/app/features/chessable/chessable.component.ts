@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
@@ -33,6 +34,7 @@ import {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
     TranslateModule,
   ],
   template: `
@@ -58,6 +60,38 @@ import {
           </mat-card-content>
         </mat-card>
       } @else {
+      @if (activeList().length > 0) {
+        <mat-card class="queue-card">
+          <mat-card-content>
+            <h3 class="queue-title">{{ 'chessable.queueTitle' | translate }}</h3>
+            @for (imp of activeList(); track imp.bid) {
+              <div class="queue-row">
+                @if (imp.status === 'running') {
+                  <mat-progress-spinner mode="indeterminate" diameter="18"></mat-progress-spinner>
+                } @else {
+                  <mat-icon class="paused-icon">pause_circle</mat-icon>
+                }
+                <span class="queue-name">{{ imp.courseName || imp.bid }}</span>
+                <span class="queue-status">{{ queueLabel(imp) }}</span>
+                <span class="queue-actions">
+                  @if (imp.status === 'paused') {
+                    <button mat-icon-button [matTooltip]="'chessable.resume' | translate" (click)="resumeImport(imp)">
+                      <mat-icon>play_arrow</mat-icon>
+                    </button>
+                  } @else {
+                    <button mat-icon-button [matTooltip]="'chessable.pause' | translate" (click)="pauseImport(imp)">
+                      <mat-icon>pause</mat-icon>
+                    </button>
+                  }
+                  <button mat-icon-button [matTooltip]="'chessable.cancel' | translate" (click)="cancelImport(imp)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </span>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
       <mat-card>
         <mat-card-content>
           @if (loadingStatus) {
@@ -90,6 +124,10 @@ import {
                   <li>{{ 'chessable.helpStep2' | translate }}</li>
                   <li>{{ 'chessable.helpStep3' | translate }}</li>
                 </ol>
+                <p class="help-repcheck">
+                  {{ 'chessable.helpRepcheck' | translate }}
+                  <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener">RepCheck</a>.
+                </p>
                 <p class="help-note">{{ 'chessable.helpNote' | translate }}</p>
               </div>
             }
@@ -151,8 +189,10 @@ import {
                     </div>
                     <div class="course-actions">
                       @if (activeImports[c.bid]; as imp) {
-                        <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
-                        <span class="phase">{{ statusLabel(imp) }}</span>
+                        @if (imp.status === 'running') {
+                          <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+                        }
+                        <span class="phase">{{ queueLabel(imp) }}</span>
                       } @else {
                         <ng-container>
                           @if (c.importedRepertoire) {
@@ -194,6 +234,14 @@ import {
     .help-panel ol { margin: 0.4rem 0; padding-left: 1.2rem; }
     .help-panel li { margin: 0.2rem 0; }
     .help-note { color: var(--mat-sys-on-surface-variant, #777); font-style: italic; margin-bottom: 0; }
+    .help-repcheck { margin: 0.4rem 0 0.2rem; }
+    .queue-card { margin-bottom: 1rem; border-left: 4px solid var(--mat-sys-primary, #3f51b5); }
+    .queue-title { margin: 0 0 0.5rem; font-size: 1rem; }
+    .queue-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; flex-wrap: wrap; }
+    .queue-row .queue-name { font-weight: 500; flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+    .queue-row .queue-status { font-size: 0.82rem; color: var(--mat-sys-on-surface-variant, #777); }
+    .queue-row .queue-actions { display: flex; align-items: center; margin-left: auto; }
+    .queue-row .paused-icon { color: var(--mat-sys-on-surface-variant, #999); }
     .status { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; }
     .status mat-icon.ok { color: #2e7d32; }
     .status mat-icon.neutral { color: var(--mat-sys-on-surface-variant, #888); }
@@ -282,10 +330,10 @@ export class ChessableComponent implements OnInit, OnDestroy {
   private loadActiveImports(): void {
     this.chessable.getImports().subscribe({
       next: list => {
-        for (const imp of list.filter(i => i.status === 'running')) {
+        for (const imp of list.filter(i => i.status === 'running' || i.status === 'paused')) {
           this.activeImports[imp.bid] = imp;
         }
-        if (this.hasActive()) this.ensurePolling();
+        if (this.hasRunning()) this.ensurePolling();
       },
       error: () => { /* nicht kritisch */ }
     });
@@ -362,10 +410,15 @@ export class ChessableComponent implements OnInit, OnDestroy {
     this.activeImports[c.bid] = {
       id: 0, bid: c.bid, courseName: c.name, target, status: 'running', phase: 'queued',
       error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
-      chaptersDone: 0, chaptersTotal: 0, linesDone: 0,
+      chaptersDone: 0, chaptersTotal: 0, linesDone: 0, queuedAhead: 0,
     };
     this.chessable.startImport(c.bid, target, c.name).subscribe({
-      next: imp => { this.activeImports[c.bid] = imp; this.ensurePolling(); },
+      next: imp => {
+        this.activeImports[c.bid] = imp;
+        this.ensurePolling();
+        const key = imp.queuedAhead > 0 ? 'chessable.queuePopup' : 'chessable.queueStarted';
+        this.snackbar.info(this.translate.instant(key, { ahead: imp.queuedAhead, name: c.name }));
+      },
       error: e => { delete this.activeImports[c.bid]; this.showError(e); }
     });
   }
@@ -380,8 +433,42 @@ export class ChessableComponent implements OnInit, OnDestroy {
     return s;
   }
 
-  private hasActive(): boolean {
-    return Object.keys(this.activeImports).length > 0;
+  /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben). */
+  activeList(): ChessableImport[] {
+    return Object.values(this.activeImports);
+  }
+
+  /** Status für Warteschlange/Zeile: pausiert / globale Position / Hol-Fortschritt. */
+  queueLabel(imp: ChessableImport): string {
+    if (imp.status === 'paused') return this.translate.instant('chessable.statusPaused');
+    if (imp.phase === 'queued') return this.translate.instant('chessable.queuePos', { pos: imp.queuedAhead + 1 });
+    return this.statusLabel(imp);
+  }
+
+  pauseImport(imp: ChessableImport): void {
+    this.chessable.pauseImport(imp.id).subscribe({ next: u => this.applyUpdate(u), error: e => this.showError(e) });
+  }
+
+  resumeImport(imp: ChessableImport): void {
+    this.chessable.resumeImport(imp.id).subscribe({
+      next: u => { this.applyUpdate(u); this.ensurePolling(); },
+      error: e => this.showError(e),
+    });
+  }
+
+  cancelImport(imp: ChessableImport): void {
+    this.chessable.cancelImport(imp.id).subscribe({
+      next: u => { delete this.activeImports[u.bid]; if (!this.hasRunning()) this.stopPolling(); },
+      error: e => this.showError(e),
+    });
+  }
+
+  private applyUpdate(u: ChessableImport): void {
+    this.activeImports[u.bid] = u;
+  }
+
+  private hasRunning(): boolean {
+    return this.activeList().some(i => i.status === 'running');
   }
 
   private ensurePolling(): void {
@@ -403,14 +490,14 @@ export class ChessableComponent implements OnInit, OnDestroy {
           if (!cur.id) continue; // Platzhalter — wartet noch auf die Start-Antwort
           const upd = byId.get(cur.id);
           if (!upd) continue;
-          if (upd.status === 'running') {
+          if (upd.status === 'running' || upd.status === 'paused') {
             this.activeImports[bid] = upd;
           } else {
-            delete this.activeImports[bid];
+            delete this.activeImports[bid]; // completed/failed/cancelled
             this.notifyDone(upd);
           }
         }
-        if (!this.hasActive()) this.stopPolling();
+        if (!this.hasRunning()) this.stopPolling();
       },
       error: () => { /* nächster Tick versucht es erneut */ }
     });
@@ -428,6 +515,8 @@ export class ChessableComponent implements OnInit, OnDestroy {
       if (imp.target === 'book') this.courseService.notifyAccessChanged();
       const key = imp.target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
       this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
+    } else if (imp.status === 'cancelled') {
+      this.snackbar.info(this.translate.instant('chessable.importCancelled', { name: imp.courseName }));
     } else {
       this.snackbar.info(this.translate.instant('chessable.importFailed', { error: imp.error ?? '' }));
     }

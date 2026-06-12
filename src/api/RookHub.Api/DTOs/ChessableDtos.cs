@@ -53,4 +53,5 @@ public record ChessableImportDto(
     int Invalid,
     int ChaptersDone,
     int ChaptersTotal,
-    int LinesDone);
+    int LinesDone,
+    int QueuedAhead);

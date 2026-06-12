@@ -328,6 +328,33 @@ public class ChessableControllerTests : IDisposable
         Assert.True(await _db.UserProfiles.AnyAsync(p => p.UserId == 42 && p.ChessableDisclaimerAcceptedAt != null));
     }
 
+    [Fact]
+    public async Task CancelImport_Running_SetsCancelled()
+    {
+        await SeedUserAsync(42);
+        var imp = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        Assert.IsType<OkObjectResult>(await _controller.CancelImport(imp.Id));
+        Assert.Equal("cancelled", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task GetImports_ReportsGlobalQueuePosition()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow });
+        var mine = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(mine);
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetImports());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableImportDto>>(ok.Value).ToList();
+        Assert.Equal(1, list.Single(d => d.Id == mine.Id).QueuedAhead); // 1 Kurs (anderer User) davor
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

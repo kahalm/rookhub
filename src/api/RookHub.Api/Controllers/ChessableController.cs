@@ -223,14 +223,8 @@ public class ChessableController : BaseApiController
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync();
 
-        var importId = import.Id;
-        await _taskQueue.EnqueueAsync(async (sp, ct) =>
-        {
-            var svc = sp.GetRequiredService<ChessableImportService>();
-            await svc.RunAsync(importId, ct);
-        });
-
-        return Accepted(ToDto(import));
+        await EnqueueRunAsync(import.Id);
+        return Accepted(ToDto(import, await QueuedAheadAsync(import)));
     }
 
     /// <summary>Status/Fortschritt eines Imports (Polling bis status != "running").</summary>
@@ -240,10 +234,10 @@ public class ChessableController : BaseApiController
         var userId = GetUserId();
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId);
         if (import is null) return NotFound();
-        return Ok(ToDto(import));
+        return Ok(ToDto(import, await QueuedAheadAsync(import)));
     }
 
-    /// <summary>Die letzten Importe des Users (Verlauf).</summary>
+    /// <summary>Die letzten Importe des Users (Verlauf + laufende/wartende mit globaler Position).</summary>
     [HttpGet("imports")]
     public async Task<IActionResult> GetImports()
     {
@@ -253,12 +247,81 @@ public class ChessableController : BaseApiController
             .OrderByDescending(i => i.CreatedAt)
             .Take(20)
             .ToListAsync();
-        return Ok(list.Select(ToDto));
+        var runningIds = await _db.ChessableImports.Where(i => i.Status == "running").Select(i => i.Id).ToListAsync();
+        return Ok(list.Select(i => ToDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
     }
 
-    private static ChessableImportDto ToDto(ChessableImport i) => new(
+    /// <summary>Bricht einen eigenen Import ab (wartend oder laufend).</summary>
+    [HttpPost("imports/{id:int}/cancel")]
+    public async Task<IActionResult> CancelImport(int id)
+    {
+        var import = await OwnImportAsync(id);
+        if (import is null) return NotFound();
+        if (import.Status is "running" or "paused")
+        {
+            import.Status = "cancelled";
+            import.Error = "Vom Nutzer abgebrochen";
+            import.CompletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+        return Ok(ToDto(import, 0));
+    }
+
+    /// <summary>Pausiert einen eigenen, laufenden/wartenden Import.</summary>
+    [HttpPost("imports/{id:int}/pause")]
+    public async Task<IActionResult> PauseImport(int id)
+    {
+        var import = await OwnImportAsync(id);
+        if (import is null) return NotFound();
+        if (import.Status == "running")
+        {
+            import.Status = "paused";
+            await _db.SaveChangesAsync();
+        }
+        return Ok(ToDto(import, 0));
+    }
+
+    /// <summary>Setzt einen pausierten Import fort (wird wieder eingereiht).</summary>
+    [HttpPost("imports/{id:int}/resume")]
+    public async Task<IActionResult> ResumeImport(int id)
+    {
+        var import = await OwnImportAsync(id);
+        if (import is null) return NotFound();
+        if (import.Status == "paused")
+        {
+            import.Status = "running";
+            import.Phase = "queued";
+            import.Attempts = 0;
+            await _db.SaveChangesAsync();
+            await EnqueueRunAsync(import.Id);
+        }
+        return Ok(ToDto(import, await QueuedAheadAsync(import)));
+    }
+
+    private async Task<ChessableImport?> OwnImportAsync(int id)
+    {
+        var userId = GetUserId();
+        return await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId);
+    }
+
+    private async Task EnqueueRunAsync(int importId)
+    {
+        await _taskQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var svc = sp.GetRequiredService<ChessableImportService>();
+            await svc.RunAsync(importId, ct);
+        });
+    }
+
+    /// <summary>Globale Warteschlangen-Position: Anzahl laufender/wartender Importe (aller User) davor.</summary>
+    private async Task<int> QueuedAheadAsync(ChessableImport i)
+        => i.Status == "running"
+            ? await _db.ChessableImports.CountAsync(x => x.Status == "running" && x.Id < i.Id)
+            : 0;
+
+    private static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(
         i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,
-        i.ChaptersDone, i.ChaptersTotal, i.LinesDone);
+        i.ChaptersDone, i.ChaptersTotal, i.LinesDone, queuedAhead);
 
     private async Task<string?> LoadBearerAsync()
     {
