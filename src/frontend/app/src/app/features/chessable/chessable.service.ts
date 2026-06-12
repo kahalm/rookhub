@@ -17,6 +17,11 @@ export interface ChessableCourse {
   name: string;
 }
 
+export interface ChessableCoursesResult {
+  courses: ChessableCourse[];
+  cachedAt: string | null;
+}
+
 export type ChessableImportTarget = 'repertoire' | 'book';
 
 export interface ChessableImport {
@@ -55,8 +60,10 @@ export class ChessableService {
     return this.http.post<ChessableTestResult>(`${this.apiUrl}/test`, {});
   }
 
-  getCourses(): Observable<ChessableCourse[]> {
-    return this.http.get<ChessableCourse[]>(`${this.apiUrl}/courses`);
+  /** Kursliste — aus dem DB-Cache, oder mit refresh=true frisch von piratechess (+ Cache-Update). */
+  getCourses(refresh = false): Observable<ChessableCoursesResult> {
+    return this.http.get<ChessableCoursesResult>(`${this.apiUrl}/courses`,
+      refresh ? { params: { refresh: 'true' } } : {});
   }
 
   /** Startet einen async Kurs-Import (Repertoire oder Buch). Liefert den Import-Satz (status "running"). */
@@ -68,5 +75,10 @@ export class ChessableService {
   /** Pollt den Status eines Imports. */
   getImport(id: number): Observable<ChessableImport> {
     return this.http.get<ChessableImport>(`${this.apiUrl}/imports/${id}`);
+  }
+
+  /** Letzte Importe des Users (z. B. um beim Laden der Seite einen laufenden Import zu erkennen). */
+  getImports(): Observable<ChessableImport[]> {
+    return this.http.get<ChessableImport[]>(`${this.apiUrl}/imports`);
   }
 }

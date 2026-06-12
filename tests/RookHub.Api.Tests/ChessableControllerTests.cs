@@ -202,12 +202,37 @@ public class ChessableControllerTests : IDisposable
             });
         };
 
-        var result = await _controller.Courses(CancellationToken.None);
+        var result = await _controller.Courses(refresh: false, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-        var body = Assert.IsType<List<ChessableCourseDto>>(ok.Value);
-        Assert.Equal(2, body.Count);
-        Assert.Equal("Course A", body[0].Name);
+        var body = Assert.IsType<ChessableCoursesDto>(ok.Value);
+        Assert.Equal(2, body.Courses.Count);
+        Assert.Equal("Course A", body.Courses[0].Name);
+        Assert.NotNull(body.CachedAt); // wurde beim Abruf gecacht
+    }
+
+    [Fact]
+    public async Task Courses_CacheHit_ReturnsCachedWithoutProxy()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42,
+            EncryptedBearer = _encryption.Encrypt("b"),
+            CachedCoursesJson = "[{\"bid\":\"1\",\"name\":\"Cached Course\"}]",
+            CoursesCachedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        _handler.Reply = (_, _) => throw new Exception("Proxy darf bei Cache-Hit nicht aufgerufen werden");
+
+        var result = await _controller.Courses(refresh: false, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ChessableCoursesDto>(ok.Value);
+        Assert.Single(body.Courses);
+        Assert.Equal("Cached Course", body.Courses[0].Name);
     }
 
     private static HttpResponseMessage JsonResponse<T>(HttpStatusCode status, T payload)

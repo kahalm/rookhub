@@ -40,6 +40,16 @@ import {
       <h1>{{ 'chessable.title' | translate }}</h1>
       <p class="intro">{{ 'chessable.intro' | translate }}</p>
 
+      @if (importingBid) {
+        <div class="import-banner">
+          <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+          <span>
+            {{ 'chessable.importingBanner' | translate: { name: importingName } }}
+            — {{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}
+          </span>
+        </div>
+      }
+
       <mat-card>
         <mat-card-content>
           @if (loadingStatus) {
@@ -79,9 +89,9 @@ import {
 
               <button mat-stroked-button
                       [disabled]="!credentials?.hasCredentials || loadingCourses"
-                      (click)="loadCourses()">
-                <mat-icon>list</mat-icon>
-                {{ (loadingCourses ? 'chessable.loadingCourses' : 'chessable.loadCourses') | translate }}
+                      (click)="loadCourses(true)">
+                <mat-icon>refresh</mat-icon>
+                {{ (loadingCourses ? 'chessable.loadingCourses' : 'chessable.refreshCourses') | translate }}
               </button>
 
               <button mat-stroked-button color="warn"
@@ -99,6 +109,9 @@ import {
         <mat-card class="courses-card">
           <mat-card-header>
             <mat-card-title>{{ 'chessable.coursesTitle' | translate }}</mat-card-title>
+            @if (coursesCachedAt) {
+              <mat-card-subtitle>{{ 'chessable.coursesCachedAt' | translate: { date: (coursesCachedAt | date:'short') } }}</mat-card-subtitle>
+            }
           </mat-card-header>
           <mat-card-content>
             @if (courses.length === 0) {
@@ -138,6 +151,10 @@ import {
     .container { max-width: 760px; margin: 0 auto; padding: 1rem; }
     h1 { margin-bottom: 0.25rem; }
     .intro { color: var(--mat-sys-on-surface-variant, #666); margin-bottom: 1.25rem; }
+    .import-banner { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem;
+      padding: 0.6rem 0.9rem; border-radius: 8px;
+      background: var(--mat-sys-surface-container-high, #eef); }
+    .import-banner span { font-size: 0.9rem; }
     .status { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; }
     .status mat-icon.ok { color: #2e7d32; }
     .status mat-icon.neutral { color: var(--mat-sys-on-surface-variant, #888); }
@@ -158,6 +175,7 @@ export class ChessableComponent implements OnInit {
   credentials: ChessableCredential | null = null;
   bearerInput = '';
   courses: ChessableCourse[] | null = null;
+  coursesCachedAt: string | null = null;
 
   loadingStatus = true;
   saving = false;
@@ -165,6 +183,8 @@ export class ChessableComponent implements OnInit {
   loadingCourses = false;
   /** bid des aktuell importierenden Kurses (null = kein Import läuft). */
   importingBid: string | null = null;
+  /** Name des aktuell importierenden Kurses (für den Banner). */
+  importingName: string | null = null;
   /** aktuelle Phase des laufenden Imports (queued|fetching|importing). */
   importPhase: string | null = null;
 
@@ -176,12 +196,33 @@ export class ChessableComponent implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
+    this.checkRunningImport();
+  }
+
+  /** Beim Laden der Seite einen evtl. noch laufenden Import erkennen und Banner/Polling wieder aufnehmen. */
+  private checkRunningImport(): void {
+    this.chessable.getImports().subscribe({
+      next: list => {
+        const running = list.find(i => i.status === 'running');
+        if (running && !this.importingBid) {
+          this.importingBid = running.bid;
+          this.importingName = running.courseName;
+          this.importPhase = running.phase;
+          this.pollImport(running.id, running.target as ChessableImportTarget);
+        }
+      },
+      error: () => { /* nicht kritisch */ }
+    });
   }
 
   private refresh(): void {
     this.loadingStatus = true;
     this.chessable.getCredentials().subscribe({
-      next: c => { this.credentials = c; this.loadingStatus = false; },
+      next: c => {
+        this.credentials = c;
+        this.loadingStatus = false;
+        if (c.hasCredentials) this.loadCourses(false); // gecachte Liste automatisch zeigen
+      },
       error: e => { this.loadingStatus = false; this.showError(e); }
     });
   }
@@ -196,6 +237,7 @@ export class ChessableComponent implements OnInit {
         this.bearerInput = '';
         this.saving = false;
         this.snackbar.success(this.translate.instant('chessable.saved'));
+        this.loadCourses(true); // neuen Account → Kursliste frisch holen + cachen
       },
       error: e => { this.saving = false; this.showError(e); }
     });
@@ -206,6 +248,7 @@ export class ChessableComponent implements OnInit {
       next: () => {
         this.credentials = { hasCredentials: false, maskedBearer: null };
         this.courses = null;
+        this.coursesCachedAt = null;
         this.snackbar.success(this.translate.instant('chessable.deleted'));
       },
       error: e => this.showError(e)
@@ -223,10 +266,14 @@ export class ChessableComponent implements OnInit {
     });
   }
 
-  loadCourses(): void {
+  loadCourses(refresh = false): void {
     this.loadingCourses = true;
-    this.chessable.getCourses().subscribe({
-      next: list => { this.courses = list; this.loadingCourses = false; },
+    this.chessable.getCourses(refresh).subscribe({
+      next: res => {
+        this.courses = res.courses;
+        this.coursesCachedAt = res.cachedAt;
+        this.loadingCourses = false;
+      },
       error: e => { this.loadingCourses = false; this.showError(e); }
     });
   }
@@ -234,10 +281,11 @@ export class ChessableComponent implements OnInit {
   importCourse(c: ChessableCourse, target: ChessableImportTarget): void {
     if (this.importingBid) return;
     this.importingBid = c.bid;
+    this.importingName = c.name;
     this.importPhase = 'queued';
     this.chessable.startImport(c.bid, target, c.name).subscribe({
       next: imp => this.pollImport(imp.id, target),
-      error: e => { this.importingBid = null; this.importPhase = null; this.showError(e); }
+      error: e => { this.resetImporting(); this.showError(e); }
     });
   }
 
@@ -248,8 +296,7 @@ export class ChessableComponent implements OnInit {
     ).subscribe({
       next: imp => {
         if (imp.status === 'running') { this.importPhase = imp.phase; return; }
-        this.importingBid = null;
-        this.importPhase = null;
+        this.resetImporting();
         if (imp.status === 'completed') {
           const key = target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
           this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
@@ -257,8 +304,14 @@ export class ChessableComponent implements OnInit {
           this.snackbar.info(this.translate.instant('chessable.importFailed', { error: imp.error ?? '' }));
         }
       },
-      error: e => { this.importingBid = null; this.importPhase = null; this.showError(e); }
+      error: e => { this.resetImporting(); this.showError(e); }
     });
+  }
+
+  private resetImporting(): void {
+    this.importingBid = null;
+    this.importingName = null;
+    this.importPhase = null;
   }
 
   private showError(err: any): void {

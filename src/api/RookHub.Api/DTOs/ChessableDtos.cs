@@ -9,6 +9,9 @@ public record ChessableCredentialResponse(bool HasCredentials, string? MaskedBea
 /// <summary>Ein Chessable-Kurs (vom piratechess-Backend durchgereicht).</summary>
 public record ChessableCourseDto(string Bid, string Name);
 
+/// <summary>Kursliste + Zeitpunkt des Abrufs (aus dem DB-Cache oder frisch geholt).</summary>
+public record ChessableCoursesDto(List<ChessableCourseDto> Courses, DateTime? CachedAt);
+
 /// <summary>Test-Ergebnis: gibt die uid des Bearers und die Anzahl der Kurse zurueck.</summary>
 public record ChessableTestResultDto(string Uid, int CourseCount);
 

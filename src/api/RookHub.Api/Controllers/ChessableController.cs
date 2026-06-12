@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ public class ChessableController : BaseApiController
     private readonly ChessableProxyService _chessable;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ChessableController> _logger;
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
     public ChessableController(
         AppDbContext db,
@@ -78,6 +80,9 @@ public class ChessableController : BaseApiController
         {
             cred.EncryptedBearer = _encryption.Encrypt(request.Bearer.Trim());
             cred.UpdatedAt = now;
+            // Bearer gewechselt → gecachte Kursliste verwerfen (kann zu anderem Account gehören).
+            cred.CachedCoursesJson = null;
+            cred.CoursesCachedAt = null;
         }
 
         await _db.SaveChangesAsync();
@@ -115,16 +120,31 @@ public class ChessableController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Kursliste des Users. Standardmäßig aus dem DB-Cache (damit man nicht jedes Mal neu laden muss);
+    /// <c>?refresh=true</c> holt frisch von piratechess und aktualisiert den Cache.
+    /// </summary>
     [HttpGet("courses")]
-    public async Task<IActionResult> Courses(CancellationToken ct)
+    public async Task<IActionResult> Courses([FromQuery] bool refresh, CancellationToken ct)
     {
-        var bearer = await LoadBearerAsync();
-        if (bearer is null) return BadRequest(new { message = "No Chessable bearer saved" });
+        var userId = GetUserId();
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
+        if (cred is null) return BadRequest(new { message = "No Chessable bearer saved" });
+
+        if (!refresh && !string.IsNullOrEmpty(cred.CachedCoursesJson))
+        {
+            var cached = JsonSerializer.Deserialize<List<ChessableCourseDto>>(cred.CachedCoursesJson, JsonOpts) ?? new();
+            return Ok(new ChessableCoursesDto(cached, cred.CoursesCachedAt));
+        }
 
         try
         {
+            var bearer = _encryption.Decrypt(cred.EncryptedBearer);
             var courses = await _chessable.GetCoursesAsync(bearer, ct);
-            return Ok(courses);
+            cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
+            cred.CoursesCachedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return Ok(new ChessableCoursesDto(courses, cred.CoursesCachedAt));
         }
         catch (ChessableProxyException ex)
         {

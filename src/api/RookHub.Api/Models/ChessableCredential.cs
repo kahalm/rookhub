@@ -21,4 +21,9 @@ public class ChessableCredential
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Gecachte Kursliste (JSON: [{bid,name}]) — damit der User nicht jedes Mal „Kurse laden" muss.</summary>
+    public string? CachedCoursesJson { get; set; }
+    /// <summary>Zeitpunkt des letzten Kurslisten-Abrufs (für die „Stand"-Anzeige).</summary>
+    public DateTime? CoursesCachedAt { get; set; }
 }

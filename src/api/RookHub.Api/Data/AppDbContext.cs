@@ -400,6 +400,7 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedBearer).HasColumnType("TEXT");
+            e.Property(c => c.CachedCoursesJson).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<ChessableImport>(e =>
