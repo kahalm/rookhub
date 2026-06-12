@@ -1299,6 +1299,7 @@
     "phase_fetching": "fetching course…",
     "phase_importing": "importing…",
     "phase_done": "done",
+    "fetchProgress": "chapter {{ch}}/{{total}} · {{lines}} lines",
     "error": "Error: {{message}}"
   }
 }

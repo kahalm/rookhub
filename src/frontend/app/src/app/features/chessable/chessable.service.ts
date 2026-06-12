@@ -36,6 +36,9 @@ export interface ChessableImport {
   imported: number;
   skipped: number;
   invalid: number;
+  chaptersDone: number;
+  chaptersTotal: number;
+  linesDone: number;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +19,7 @@ namespace RookHub.Api.Tests;
 public class ChessableImportServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly EncryptionService _encryption;
     private readonly RepertoireService _repertoires;
     private readonly ChessableImportService _svc;
 
@@ -30,12 +33,17 @@ public class ChessableImportServiceTests : IDisposable
         {
             ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!"
         }).Build();
-        var encryption = new EncryptionService(config);
+        _encryption = new EncryptionService(config);
         var cache = new MemoryCache(new MemoryCacheOptions());
         _repertoires = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
-        var pgnImport = new PgnImportService(_db);
-        var proxy = new ChessableProxyService(new HttpClient { BaseAddress = new Uri("http://piratechess-api:8080") });
-        _svc = new ChessableImportService(_db, encryption, proxy, _repertoires, pgnImport,
+        // Default-Proxy wird bei FetchedPgn-Tests nie aufgerufen → Handler wirft, falls doch.
+        _svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")));
+    }
+
+    private ChessableImportService BuildSvc(HttpMessageHandler handler)
+    {
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
+        return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
             NullLogger<ChessableImportService>.Instance);
     }
 
@@ -119,5 +127,54 @@ public class ChessableImportServiceTests : IDisposable
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
         Assert.Equal("failed", reloaded!.Status);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_NoCachedPgn_PollsFetchJobThenImports()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start"))
+                return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new
+            {
+                status = "completed", chaptersDone = 2, chaptersTotal = 2, linesDone = 5,
+                chapterCount = 2, lineCount = 5, courseName = "Real Name", pgn = "1. e4 e5 *", error = (string?)null
+            });
+        }));
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(5, reloaded.LinesDone);
+        Assert.Equal("Real Name", reloaded.CourseName); // aus dem Fetch übernommen
+        Assert.NotNull(reloaded.ResultId);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+    }
+
+    private static HttpResponseMessage JsonOk(object payload) =>
+        new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
+
+    private sealed class ScriptedHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _fn;
+        public ScriptedHandler(Func<HttpRequestMessage, HttpResponseMessage> fn) => _fn = fn;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => Task.FromResult(_fn(request));
     }
 }

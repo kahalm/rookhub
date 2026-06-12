@@ -1299,6 +1299,7 @@
     "phase_fetching": "hole Kurs…",
     "phase_importing": "importiere…",
     "phase_done": "fertig",
+    "fetchProgress": "Kapitel {{ch}}/{{total}} · {{lines}} Linien",
     "error": "Fehler: {{message}}"
   }
 }

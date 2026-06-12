@@ -75,19 +75,56 @@ public class ChessableImportService
                     return;
                 }
                 var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+                var mode = import.Target == "book" ? "FirstKeyMove" : "None";
 
                 import.Phase = "fetching";
                 await _db.SaveChangesAsync(ct);
 
-                var mode = import.Target == "book" ? "FirstKeyMove" : "None";
-                var course = await _proxy.FetchCourseAsync(bearer, import.Bid, mode, ct);
+                // Async Job bei piratechess starten (oder bei Resume den gemerkten weiterpollen).
+                if (string.IsNullOrEmpty(import.FetchJobId))
+                {
+                    var start = await _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct);
+                    import.FetchJobId = start.JobId;
+                    await _db.SaveChangesAsync(ct);
+                }
 
-                pgn = course.Pgn ?? "";
-                import.FetchedPgn = pgn;
-                import.LineCount = course.LineCount;
-                if (string.IsNullOrWhiteSpace(import.CourseName))
-                    import.CourseName = !string.IsNullOrWhiteSpace(course.Name) ? course.Name : $"Chessable {import.Bid}";
-                await _db.SaveChangesAsync(ct); // Checkpoint: ab hier kein erneuter Fetch nötig
+                // Poll-Schleife (max ~15 min bei 2,5 s Takt) — Fortschritt in die DB schreiben.
+                for (int i = 0; i < 360 && string.IsNullOrEmpty(pgn); i++)
+                {
+                    var prog = await _proxy.GetCourseProgressAsync(import.FetchJobId!, ct);
+                    if (prog is null)
+                    {
+                        // Job weg (piratechess-Neustart) → neu starten und weiter pollen.
+                        var start = await _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct);
+                        import.FetchJobId = start.JobId;
+                        await _db.SaveChangesAsync(ct);
+                        await Task.Delay(2500, ct);
+                        continue;
+                    }
+
+                    import.ChaptersDone = prog.ChaptersDone;
+                    import.ChaptersTotal = prog.ChaptersTotal;
+                    import.LinesDone = prog.LinesDone;
+
+                    if (prog.Status == "completed")
+                    {
+                        pgn = prog.Pgn ?? "";
+                        import.LineCount = prog.LineCount;
+                        if (string.IsNullOrWhiteSpace(import.CourseName))
+                            import.CourseName = !string.IsNullOrWhiteSpace(prog.CourseName) ? prog.CourseName! : $"Chessable {import.Bid}";
+                        import.FetchedPgn = pgn;
+                        await _db.SaveChangesAsync(ct); // Checkpoint: ab hier kein erneuter Fetch nötig
+                        break;
+                    }
+                    if (prog.Status == "failed")
+                        throw new InvalidOperationException(prog.Error ?? "Kurs-Abruf fehlgeschlagen");
+
+                    await _db.SaveChangesAsync(ct); // Fortschritt fürs Frontend sichtbar machen
+                    await Task.Delay(2500, ct);
+                }
+
+                if (string.IsNullOrEmpty(pgn))
+                    throw new TimeoutException("Zeitüberschreitung beim Kurs-Abruf");
             }
 
             var courseName = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";

@@ -35,6 +35,13 @@ public class ChessableImport
     /// <summary>Anzahl Linien im Kurs (aus dem Fetch; für Repertoire-Ergebnismeldung beim Resume).</summary>
     public int LineCount { get; set; }
 
+    // --- Live-Fortschritt der Hol-Phase (von piratechess gepollt, für die Anzeige) ---
+    public int ChaptersDone { get; set; }
+    public int ChaptersTotal { get; set; }
+    public int LinesDone { get; set; }
+    /// <summary>JobId des laufenden piratechess-Fetch-Jobs (zum Weiterpollen, auch nach Resume).</summary>
+    public string? FetchJobId { get; set; }
+
     /// <summary>Wie oft der Job (auch via Resume) schon angelaufen ist — begrenzt Endlos-Resumes.</summary>
     public int Attempts { get; set; }
 

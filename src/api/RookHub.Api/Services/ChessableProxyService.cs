@@ -61,6 +61,24 @@ public class ChessableProxyService
         return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
     }
 
+    /// <summary>Startet den tiefen Kurs-Abruf asynchron und liefert die JobId für das Polling.</summary>
+    public async Task<ChessableCourseStartDto> StartCourseFetchAsync(string bearer, string bid, string mode, CancellationToken ct = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "/api/chessable/direct/course/start", new { Bearer = bearer, Bid = bid, Mode = mode }, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return (await response.Content.ReadFromJsonAsync<ChessableCourseStartDto>(JsonOpts, ct))!;
+    }
+
+    /// <summary>Pollt den Fortschritt eines Kurs-Abruf-Jobs. <c>null</c> = Job unbekannt/weg (piratechess-Neustart).</summary>
+    public async Task<ChessableCourseProgressDto?> GetCourseProgressAsync(string jobId, CancellationToken ct = default)
+    {
+        var response = await _httpClient.GetAsync($"/api/chessable/direct/course/{jobId}", ct);
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return await response.Content.ReadFromJsonAsync<ChessableCourseProgressDto>(JsonOpts, ct);
+    }
+
     private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;

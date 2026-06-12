@@ -46,6 +46,9 @@ import {
           <span>
             {{ 'chessable.importingBanner' | translate: { name: importingName } }}
             — {{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}
+            @if (importPhase === 'fetching' && importChaptersTotal > 0) {
+              · {{ 'chessable.fetchProgress' | translate: { ch: importChaptersDone, total: importChaptersTotal, lines: importLinesDone } }}
+            }
           </span>
         </div>
       }
@@ -128,14 +131,16 @@ import {
                         <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
                         <span class="phase">{{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}</span>
                       } @else {
-                        <button mat-stroked-button [disabled]="importingBid !== null"
-                                (click)="importCourse(c, 'repertoire')">
-                          <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
-                        </button>
-                        <button mat-stroked-button [disabled]="importingBid !== null"
-                                (click)="importCourse(c, 'book')">
-                          <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
-                        </button>
+                        <ng-container>
+                          <button mat-stroked-button [disabled]="importingBid !== null"
+                                  (click)="importCourse(c, 'repertoire')">
+                            <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
+                          </button>
+                          <button mat-stroked-button [disabled]="importingBid !== null"
+                                  (click)="importCourse(c, 'book')">
+                            <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
+                          </button>
+                        </ng-container>
                       }
                     </div>
                   </mat-list-item>
@@ -187,6 +192,9 @@ export class ChessableComponent implements OnInit {
   importingName: string | null = null;
   /** aktuelle Phase des laufenden Imports (queued|fetching|importing). */
   importPhase: string | null = null;
+  importChaptersDone = 0;
+  importChaptersTotal = 0;
+  importLinesDone = 0;
 
   constructor(
     private chessable: ChessableService,
@@ -208,6 +216,9 @@ export class ChessableComponent implements OnInit {
           this.importingBid = running.bid;
           this.importingName = running.courseName;
           this.importPhase = running.phase;
+          this.importChaptersDone = running.chaptersDone;
+          this.importChaptersTotal = running.chaptersTotal;
+          this.importLinesDone = running.linesDone;
           this.pollImport(running.id, running.target as ChessableImportTarget);
         }
       },
@@ -295,7 +306,13 @@ export class ChessableComponent implements OnInit {
       takeWhile(imp => imp.status === 'running', true),
     ).subscribe({
       next: imp => {
-        if (imp.status === 'running') { this.importPhase = imp.phase; return; }
+        if (imp.status === 'running') {
+          this.importPhase = imp.phase;
+          this.importChaptersDone = imp.chaptersDone;
+          this.importChaptersTotal = imp.chaptersTotal;
+          this.importLinesDone = imp.linesDone;
+          return;
+        }
         this.resetImporting();
         if (imp.status === 'completed') {
           const key = target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
@@ -312,6 +329,9 @@ export class ChessableComponent implements OnInit {
     this.importingBid = null;
     this.importingName = null;
     this.importPhase = null;
+    this.importChaptersDone = 0;
+    this.importChaptersTotal = 0;
+    this.importLinesDone = 0;
   }
 
   private showError(err: any): void {
