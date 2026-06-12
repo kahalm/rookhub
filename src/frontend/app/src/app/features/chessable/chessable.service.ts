@@ -49,6 +49,14 @@ export class ChessableService {
 
   constructor(private http: HttpClient) {}
 
+  getDisclaimer(): Observable<{ accepted: boolean }> {
+    return this.http.get<{ accepted: boolean }>(`${this.apiUrl}/disclaimer`);
+  }
+
+  acceptDisclaimer(): Observable<{ accepted: boolean }> {
+    return this.http.post<{ accepted: boolean }>(`${this.apiUrl}/disclaimer`, {});
+  }
+
   getCredentials(): Observable<ChessableCredential> {
     return this.http.get<ChessableCredential>(`${this.apiUrl}/credentials`);
   }

@@ -50,4 +50,7 @@ public class UserProfile
     public string? PuzzleDifficulty { get; set; }
 
     public int? BookStockfishDepth { get; set; }
+
+    /// <summary>Zeitpunkt der Bestätigung des Chessable-Haftungsausschlusses (null = noch nicht bestätigt).</summary>
+    public DateTime? ChessableDisclaimerAcceptedAt { get; set; }
 }

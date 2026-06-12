@@ -3,6 +3,9 @@ namespace RookHub.Api.DTOs;
 /// <summary>Speichert/aktualisiert den Chessable-Bearer eines Users.</summary>
 public record SaveChessableBearerRequest(string Bearer);
 
+/// <summary>Ob der User den Chessable-Haftungsausschluss bestätigt hat.</summary>
+public record ChessableDisclaimerDto(bool Accepted);
+
 /// <summary>Antwort der credentials-Endpoints. Bearer wird nur maskiert zurueckgegeben.</summary>
 public record ChessableCredentialResponse(bool HasCredentials, string? MaskedBearer);
 

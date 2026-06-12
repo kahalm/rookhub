@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -38,6 +39,24 @@ import {
       <h1>{{ 'chessable.title' | translate }}</h1>
       <p class="intro">{{ 'chessable.intro' | translate }}</p>
 
+      @if (disclaimerAccepted === null) {
+        <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+      } @else if (!disclaimerAccepted) {
+        <mat-card class="disclaimer-card">
+          <mat-card-content>
+            <h2 class="disclaimer-title"><mat-icon>warning</mat-icon> {{ 'chessable.disclaimerTitle' | translate }}</h2>
+            <p class="disclaimer-text">{{ 'chessable.disclaimerText' | translate }}</p>
+            <div class="actions">
+              <button mat-raised-button color="primary" (click)="acceptDisclaimer()">
+                {{ 'chessable.disclaimerAccept' | translate }}
+              </button>
+              <button mat-stroked-button (click)="declineDisclaimer()">
+                {{ 'chessable.disclaimerDecline' | translate }}
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      } @else {
       <mat-card>
         <mat-card-content>
           @if (loadingStatus) {
@@ -57,8 +76,22 @@ import {
               <mat-label>{{ 'chessable.bearerLabel' | translate }}</mat-label>
               <textarea matInput [(ngModel)]="bearerInput" rows="4" autocomplete="off"
                         [placeholder]="'eyJ0eXAiOi...'"></textarea>
-              <mat-hint>{{ 'chessable.bearerHint' | translate }}</mat-hint>
+              <mat-hint>
+                <a href="#" (click)="$event.preventDefault(); showHelp = !showHelp">{{ 'chessable.helpLink' | translate }}</a>
+              </mat-hint>
             </mat-form-field>
+
+            @if (showHelp) {
+              <div class="help-panel">
+                <p>{{ 'chessable.helpIntro' | translate }}</p>
+                <ol>
+                  <li>{{ 'chessable.helpStep1' | translate }}</li>
+                  <li>{{ 'chessable.helpStep2' | translate }}</li>
+                  <li>{{ 'chessable.helpStep3' | translate }}</li>
+                </ol>
+                <p class="help-note">{{ 'chessable.helpNote' | translate }}</p>
+              </div>
+            }
 
             <div class="actions">
               <button mat-raised-button color="primary"
@@ -145,12 +178,21 @@ import {
           </mat-card-content>
         </mat-card>
       }
+      }
     </div>
   `,
   styles: [`
     .container { max-width: 760px; margin: 0 auto; padding: 1rem; }
     h1 { margin-bottom: 0.25rem; }
     .intro { color: var(--mat-sys-on-surface-variant, #666); margin-bottom: 1.25rem; }
+    .disclaimer-card { border-left: 4px solid #c62828; }
+    .disclaimer-title { display: flex; align-items: center; gap: 0.5rem; color: #c62828; margin-top: 0; }
+    .disclaimer-text { font-size: 1.02rem; line-height: 1.5; }
+    .help-panel { margin: 0.25rem 0 0.75rem; padding: 0.6rem 0.9rem; border-radius: 8px;
+      background: var(--mat-sys-surface-container-high, #eef); font-size: 0.9rem; }
+    .help-panel ol { margin: 0.4rem 0; padding-left: 1.2rem; }
+    .help-panel li { margin: 0.2rem 0; }
+    .help-note { color: var(--mat-sys-on-surface-variant, #777); font-style: italic; margin-bottom: 0; }
     .status { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; }
     .status mat-icon.ok { color: #2e7d32; }
     .status mat-icon.neutral { color: var(--mat-sys-on-surface-variant, #888); }
@@ -182,6 +224,10 @@ export class ChessableComponent implements OnInit, OnDestroy {
   courses: ChessableCourse[] | null = null;
   coursesCachedAt: string | null = null;
 
+  /** null = noch nicht geprüft, false = Disclaimer offen, true = bestätigt. */
+  disclaimerAccepted: boolean | null = null;
+  showHelp = false;
+
   loadingStatus = true;
   saving = false;
   testing = false;
@@ -196,11 +242,34 @@ export class ChessableComponent implements OnInit, OnDestroy {
     private chessable: ChessableService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
+    // Erst den (in der DB gespeicherten) Disclaimer-Status prüfen — ohne Bestätigung kein Zugriff.
+    this.chessable.getDisclaimer().subscribe({
+      next: r => {
+        this.disclaimerAccepted = r.accepted;
+        if (r.accepted) this.proceed();
+      },
+      error: () => { this.disclaimerAccepted = false; }
+    });
+  }
+
+  private proceed(): void {
     this.refresh();
     this.loadActiveImports();
+  }
+
+  acceptDisclaimer(): void {
+    this.chessable.acceptDisclaimer().subscribe({
+      next: () => { this.disclaimerAccepted = true; this.proceed(); },
+      error: e => this.showError(e)
+    });
+  }
+
+  declineDisclaimer(): void {
+    this.router.navigate(['/dashboard']);
   }
 
   ngOnDestroy(): void {

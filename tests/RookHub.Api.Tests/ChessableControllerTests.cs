@@ -313,6 +313,21 @@ public class ChessableControllerTests : IDisposable
         Assert.False(b.ImportedRepertoire);
     }
 
+    [Fact]
+    public async Task Disclaimer_DefaultFalse_ThenAcceptPersists()
+    {
+        await SeedUserAsync(42);
+
+        var before = Assert.IsType<ChessableDisclaimerDto>(Assert.IsType<OkObjectResult>(await _controller.GetDisclaimer()).Value);
+        Assert.False(before.Accepted);
+
+        await _controller.AcceptDisclaimer();
+
+        var after = Assert.IsType<ChessableDisclaimerDto>(Assert.IsType<OkObjectResult>(await _controller.GetDisclaimer()).Value);
+        Assert.True(after.Accepted);
+        Assert.True(await _db.UserProfiles.AnyAsync(p => p.UserId == 42 && p.ChessableDisclaimerAcceptedAt != null));
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

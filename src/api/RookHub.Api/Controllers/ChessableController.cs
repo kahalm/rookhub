@@ -42,6 +42,31 @@ public class ChessableController : BaseApiController
         _logger = logger;
     }
 
+    /// <summary>Hat der User den Chessable-Haftungsausschluss bestätigt?</summary>
+    [HttpGet("disclaimer")]
+    public async Task<IActionResult> GetDisclaimer()
+    {
+        var userId = GetUserId();
+        var accepted = await _db.UserProfiles.AnyAsync(p => p.UserId == userId && p.ChessableDisclaimerAcceptedAt != null);
+        return Ok(new ChessableDisclaimerDto(accepted));
+    }
+
+    /// <summary>Bestätigt den Chessable-Haftungsausschluss (einmalig, in der DB gespeichert).</summary>
+    [HttpPost("disclaimer")]
+    public async Task<IActionResult> AcceptDisclaimer()
+    {
+        var userId = GetUserId();
+        var profile = await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (profile is null)
+        {
+            profile = new UserProfile { UserId = userId };
+            _db.UserProfiles.Add(profile);
+        }
+        profile.ChessableDisclaimerAcceptedAt ??= DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return Ok(new ChessableDisclaimerDto(true));
+    }
+
     [HttpGet("credentials")]
     public async Task<IActionResult> GetCredentials()
     {
