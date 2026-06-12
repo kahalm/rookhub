@@ -1291,6 +1291,8 @@
     "noCourses": "Keine Kurse gefunden.",
     "importRepertoire": "Als Repertoire",
     "importBook": "Als Buch",
+    "doneRepertoire": "Repertoire",
+    "doneBook": "Buch",
     "importRepertoireDone": "\"{{name}}\" als Repertoire importiert ({{count}} Linien) — zu finden unter Repertoires.",
     "importBookDone": "\"{{name}}\" als Buch importiert ({{count}} Puzzles) — zu finden unter Kurse.",
     "importFailed": "Import fehlgeschlagen: {{error}}",

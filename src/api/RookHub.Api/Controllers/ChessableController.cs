@@ -134,7 +134,7 @@ public class ChessableController : BaseApiController
         if (!refresh && !string.IsNullOrEmpty(cred.CachedCoursesJson))
         {
             var cached = JsonSerializer.Deserialize<List<ChessableCourseDto>>(cred.CachedCoursesJson, JsonOpts) ?? new();
-            return Ok(new ChessableCoursesDto(cached, cred.CoursesCachedAt));
+            return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(cached, userId, ct), cred.CoursesCachedAt));
         }
 
         try
@@ -144,13 +144,28 @@ public class ChessableController : BaseApiController
             cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
             cred.CoursesCachedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
-            return Ok(new ChessableCoursesDto(courses, cred.CoursesCachedAt));
+            return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(courses, userId, ct), cred.CoursesCachedAt));
         }
         catch (ChessableProxyException ex)
         {
             _logger.LogWarning("Chessable courses failed: {Status} {Message}", ex.Status, ex.Message);
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>Markiert je Kurs, ob er vom User bereits als Repertoire bzw. Buch importiert wurde
+    /// (Quelle: abgeschlossene ChessableImports) — Basis fürs Ausblenden der erledigten Buttons.</summary>
+    private async Task<List<ChessableCourseDto>> EnrichImportStateAsync(List<ChessableCourseDto> courses, int userId, CancellationToken ct)
+    {
+        var done = await _db.ChessableImports
+            .Where(i => i.UserId == userId && i.Status == "completed")
+            .Select(i => new { i.Bid, i.Target })
+            .ToListAsync(ct);
+        var rep = done.Where(d => d.Target == "repertoire").Select(d => d.Bid).ToHashSet();
+        var book = done.Where(d => d.Target == "book").Select(d => d.Bid).ToHashSet();
+        return courses
+            .Select(c => c with { ImportedRepertoire = rep.Contains(c.Bid), ImportedBook = book.Contains(c.Bid) })
+            .ToList();
     }
 
     /// <summary>

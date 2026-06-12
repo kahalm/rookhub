@@ -7,7 +7,13 @@ public record SaveChessableBearerRequest(string Bearer);
 public record ChessableCredentialResponse(bool HasCredentials, string? MaskedBearer);
 
 /// <summary>Ein Chessable-Kurs (vom piratechess-Backend durchgereicht).</summary>
-public record ChessableCourseDto(string Bid, string Name);
+public record ChessableCourseDto(string Bid, string Name)
+{
+    /// <summary>Dieser Kurs wurde vom User bereits als Repertoire importiert.</summary>
+    public bool ImportedRepertoire { get; init; }
+    /// <summary>Dieser Kurs wurde vom User bereits als Buch importiert.</summary>
+    public bool ImportedBook { get; init; }
+}
 
 /// <summary>Kursliste + Zeitpunkt des Abrufs (aus dem DB-Cache oder frisch geholt).</summary>
 public record ChessableCoursesDto(List<ChessableCourseDto> Courses, DateTime? CachedAt);

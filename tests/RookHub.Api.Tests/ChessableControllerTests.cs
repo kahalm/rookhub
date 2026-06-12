@@ -284,6 +284,35 @@ public class ChessableControllerTests : IDisposable
         Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "bid-1" && i.Status == "running"));
     }
 
+    [Fact]
+    public async Task Courses_MarksImportedVariants()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42,
+            EncryptedBearer = _encryption.Encrypt("b"),
+            CachedCoursesJson = "[{\"bid\":\"1\",\"name\":\"A\"},{\"bid\":\"2\",\"name\":\"B\"}]",
+            CoursesCachedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "completed", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.Courses(refresh: false, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ChessableCoursesDto>(ok.Value);
+        var a = body.Courses.Single(c => c.Bid == "1");
+        var b = body.Courses.Single(c => c.Bid == "2");
+        Assert.True(a.ImportedRepertoire);
+        Assert.False(a.ImportedBook);
+        Assert.True(b.ImportedBook);
+        Assert.False(b.ImportedRepertoire);
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

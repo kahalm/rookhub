@@ -15,6 +15,8 @@ export interface ChessableTestResult {
 export interface ChessableCourse {
   bid: string;
   name: string;
+  importedRepertoire?: boolean;
+  importedBook?: boolean;
 }
 
 export interface ChessableCoursesResult {

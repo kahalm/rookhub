@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -6,17 +6,16 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { timer } from 'rxjs';
-import { switchMap, takeWhile } from 'rxjs/operators';
+import { Subscription, timer } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import {
   ChessableService,
   ChessableCredential,
   ChessableCourse,
   ChessableTestResult,
+  ChessableImport,
   ChessableImportTarget,
 } from './chessable.service';
 
@@ -31,7 +30,6 @@ import {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatListModule,
     MatProgressSpinnerModule,
     TranslateModule,
   ],
@@ -39,19 +37,6 @@ import {
     <div class="container">
       <h1>{{ 'chessable.title' | translate }}</h1>
       <p class="intro">{{ 'chessable.intro' | translate }}</p>
-
-      @if (importingBid) {
-        <div class="import-banner">
-          <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-          <span>
-            {{ 'chessable.importingBanner' | translate: { name: importingName } }}
-            — {{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}
-            @if (importPhase === 'fetching' && importChaptersTotal > 0) {
-              · {{ 'chessable.fetchProgress' | translate: { ch: importChaptersDone, total: importChaptersTotal, lines: importLinesDone } }}
-            }
-          </span>
-        </div>
-      }
 
       <mat-card>
         <mat-card-content>
@@ -120,32 +105,42 @@ import {
             @if (courses.length === 0) {
               <p class="empty">{{ 'chessable.noCourses' | translate }}</p>
             } @else {
-              <mat-list>
+              <div class="course-list">
                 @for (c of courses; track c.bid) {
-                  <mat-list-item>
-                    <mat-icon matListItemIcon>menu_book</mat-icon>
-                    <span matListItemTitle>{{ c.name }}</span>
-                    <span matListItemLine class="bid">bid {{ c.bid }}</span>
-                    <div matListItemMeta class="course-actions">
-                      @if (importingBid === c.bid) {
-                        <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-                        <span class="phase">{{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}</span>
+                  <div class="course-row">
+                    <div class="course-info">
+                      <mat-icon>menu_book</mat-icon>
+                      <div class="course-text">
+                        <div class="course-name">{{ c.name }}</div>
+                        <div class="bid">bid {{ c.bid }}</div>
+                      </div>
+                    </div>
+                    <div class="course-actions">
+                      @if (activeImports[c.bid]; as imp) {
+                        <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+                        <span class="phase">{{ statusLabel(imp) }}</span>
                       } @else {
                         <ng-container>
-                          <button mat-stroked-button [disabled]="importingBid !== null"
-                                  (click)="importCourse(c, 'repertoire')">
-                            <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
-                          </button>
-                          <button mat-stroked-button [disabled]="importingBid !== null"
-                                  (click)="importCourse(c, 'book')">
-                            <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
-                          </button>
+                          @if (c.importedRepertoire) {
+                            <span class="done-badge"><mat-icon>check_circle</mat-icon> {{ 'chessable.doneRepertoire' | translate }}</span>
+                          } @else {
+                            <button mat-stroked-button (click)="importCourse(c, 'repertoire')">
+                              <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
+                            </button>
+                          }
+                          @if (c.importedBook) {
+                            <span class="done-badge"><mat-icon>check_circle</mat-icon> {{ 'chessable.doneBook' | translate }}</span>
+                          } @else {
+                            <button mat-stroked-button (click)="importCourse(c, 'book')">
+                              <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
+                            </button>
+                          }
                         </ng-container>
                       }
                     </div>
-                  </mat-list-item>
+                  </div>
                 }
-              </mat-list>
+              </div>
             }
           </mat-card-content>
         </mat-card>
@@ -156,10 +151,6 @@ import {
     .container { max-width: 760px; margin: 0 auto; padding: 1rem; }
     h1 { margin-bottom: 0.25rem; }
     .intro { color: var(--mat-sys-on-surface-variant, #666); margin-bottom: 1.25rem; }
-    .import-banner { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem;
-      padding: 0.6rem 0.9rem; border-radius: 8px;
-      background: var(--mat-sys-surface-container-high, #eef); }
-    .import-banner span { font-size: 0.9rem; }
     .status { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; }
     .status mat-icon.ok { color: #2e7d32; }
     .status mat-icon.neutral { color: var(--mat-sys-on-surface-variant, #888); }
@@ -169,14 +160,23 @@ import {
     .actions button mat-icon { margin-right: 0.25rem; }
     .courses-card { margin-top: 1rem; }
     .empty { color: var(--mat-sys-on-surface-variant, #888); }
-    .bid { font-family: monospace; font-size: 0.8rem; color: var(--mat-sys-on-surface-variant, #888); }
-    .course-actions { display: flex; align-items: center; gap: 0.4rem; }
-    .course-actions .phase { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant, #888); }
-    .course-actions button { font-size: 0.8rem; }
+
+    .course-list { display: flex; flex-direction: column; }
+    .course-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      padding: 0.6rem 0; border-bottom: 1px solid var(--mat-sys-outline-variant, #e3e3e3); flex-wrap: wrap; }
+    .course-row:last-child { border-bottom: none; }
+    .course-info { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1 1 240px; }
+    .course-text { min-width: 0; }
+    .course-name { font-weight: 500; overflow-wrap: anywhere; }
+    .bid { font-family: monospace; font-size: 0.78rem; color: var(--mat-sys-on-surface-variant, #888); }
+    .course-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
     .course-actions button mat-icon { margin-right: 0.2rem; }
+    .course-actions .phase { font-size: 0.82rem; color: var(--mat-sys-on-surface-variant, #888); white-space: nowrap; }
+    .done-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.82rem; color: #2e7d32; }
+    .done-badge mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; }
   `]
 })
-export class ChessableComponent implements OnInit {
+export class ChessableComponent implements OnInit, OnDestroy {
   credentials: ChessableCredential | null = null;
   bearerInput = '';
   courses: ChessableCourse[] | null = null;
@@ -186,15 +186,11 @@ export class ChessableComponent implements OnInit {
   saving = false;
   testing = false;
   loadingCourses = false;
-  /** bid des aktuell importierenden Kurses (null = kein Import läuft). */
-  importingBid: string | null = null;
-  /** Name des aktuell importierenden Kurses (für den Banner). */
-  importingName: string | null = null;
-  /** aktuelle Phase des laufenden Imports (queued|fetching|importing). */
-  importPhase: string | null = null;
-  importChaptersDone = 0;
-  importChaptersTotal = 0;
-  importLinesDone = 0;
+
+  /** Laufende/wartende Importe, je Kurs-bid. Mehrere gleichzeitig möglich — der Server
+   *  arbeitet sie sequenziell ab; wartende stehen auf Phase "queued". */
+  activeImports: Record<string, ChessableImport> = {};
+  private pollSub?: Subscription;
 
   constructor(
     private chessable: ChessableService,
@@ -204,23 +200,21 @@ export class ChessableComponent implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
-    this.checkRunningImport();
+    this.loadActiveImports();
   }
 
-  /** Beim Laden der Seite einen evtl. noch laufenden Import erkennen und Banner/Polling wieder aufnehmen. */
-  private checkRunningImport(): void {
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  /** Beim Laden der Seite noch laufende/wartende Importe übernehmen + Polling aufnehmen. */
+  private loadActiveImports(): void {
     this.chessable.getImports().subscribe({
       next: list => {
-        const running = list.find(i => i.status === 'running');
-        if (running && !this.importingBid) {
-          this.importingBid = running.bid;
-          this.importingName = running.courseName;
-          this.importPhase = running.phase;
-          this.importChaptersDone = running.chaptersDone;
-          this.importChaptersTotal = running.chaptersTotal;
-          this.importLinesDone = running.linesDone;
-          this.pollImport(running.id, running.target as ChessableImportTarget);
+        for (const imp of list.filter(i => i.status === 'running')) {
+          this.activeImports[imp.bid] = imp;
         }
+        if (this.hasActive()) this.ensurePolling();
       },
       error: () => { /* nicht kritisch */ }
     });
@@ -260,6 +254,8 @@ export class ChessableComponent implements OnInit {
         this.credentials = { hasCredentials: false, maskedBearer: null };
         this.courses = null;
         this.coursesCachedAt = null;
+        this.activeImports = {};
+        this.stopPolling();
         this.snackbar.success(this.translate.instant('chessable.deleted'));
       },
       error: e => this.showError(e)
@@ -290,48 +286,78 @@ export class ChessableComponent implements OnInit {
   }
 
   importCourse(c: ChessableCourse, target: ChessableImportTarget): void {
-    if (this.importingBid) return;
-    this.importingBid = c.bid;
-    this.importingName = c.name;
-    this.importPhase = 'queued';
+    if (this.activeImports[c.bid]) return; // dieser Kurs ist schon in Arbeit/Warteschlange
+    // Optimistischer Platzhalter (id 0) → Zeile zeigt sofort „in Warteschlange".
+    this.activeImports[c.bid] = {
+      id: 0, bid: c.bid, courseName: c.name, target, status: 'running', phase: 'queued',
+      error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
+      chaptersDone: 0, chaptersTotal: 0, linesDone: 0,
+    };
     this.chessable.startImport(c.bid, target, c.name).subscribe({
-      next: imp => this.pollImport(imp.id, target),
-      error: e => { this.resetImporting(); this.showError(e); }
+      next: imp => { this.activeImports[c.bid] = imp; this.ensurePolling(); },
+      error: e => { delete this.activeImports[c.bid]; this.showError(e); }
     });
   }
 
-  private pollImport(id: number, target: ChessableImportTarget): void {
-    timer(1500, 2500).pipe(
-      switchMap(() => this.chessable.getImport(id)),
-      takeWhile(imp => imp.status === 'running', true),
-    ).subscribe({
-      next: imp => {
-        if (imp.status === 'running') {
-          this.importPhase = imp.phase;
-          this.importChaptersDone = imp.chaptersDone;
-          this.importChaptersTotal = imp.chaptersTotal;
-          this.importLinesDone = imp.linesDone;
-          return;
+  /** Text für den Zeilen-Status (Phase + ggf. Kapitel/Linien-Fortschritt). */
+  statusLabel(imp: ChessableImport): string {
+    let s = this.translate.instant('chessable.phase_' + (imp.phase || 'queued'));
+    if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
+      s += ' ' + this.translate.instant('chessable.fetchProgress',
+        { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone });
+    }
+    return s;
+  }
+
+  private hasActive(): boolean {
+    return Object.keys(this.activeImports).length > 0;
+  }
+
+  private ensurePolling(): void {
+    if (this.pollSub) return;
+    this.pollSub = timer(2000, 2500).subscribe(() => this.pollActive());
+  }
+
+  private stopPolling(): void {
+    this.pollSub?.unsubscribe();
+    this.pollSub = undefined;
+  }
+
+  private pollActive(): void {
+    this.chessable.getImports().subscribe({
+      next: list => {
+        const byId = new Map(list.map(i => [i.id, i]));
+        for (const bid of Object.keys(this.activeImports)) {
+          const cur = this.activeImports[bid];
+          if (!cur.id) continue; // Platzhalter — wartet noch auf die Start-Antwort
+          const upd = byId.get(cur.id);
+          if (!upd) continue;
+          if (upd.status === 'running') {
+            this.activeImports[bid] = upd;
+          } else {
+            delete this.activeImports[bid];
+            this.notifyDone(upd);
+          }
         }
-        this.resetImporting();
-        if (imp.status === 'completed') {
-          const key = target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
-          this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
-        } else {
-          this.snackbar.info(this.translate.instant('chessable.importFailed', { error: imp.error ?? '' }));
-        }
+        if (!this.hasActive()) this.stopPolling();
       },
-      error: e => { this.resetImporting(); this.showError(e); }
+      error: () => { /* nächster Tick versucht es erneut */ }
     });
   }
 
-  private resetImporting(): void {
-    this.importingBid = null;
-    this.importingName = null;
-    this.importPhase = null;
-    this.importChaptersDone = 0;
-    this.importChaptersTotal = 0;
-    this.importLinesDone = 0;
+  private notifyDone(imp: ChessableImport): void {
+    if (imp.status === 'completed') {
+      // Kurs-Flag setzen → Button wird sofort zum „erledigt"-Badge (ohne Reload).
+      const course = this.courses?.find(c => c.bid === imp.bid);
+      if (course) {
+        if (imp.target === 'book') course.importedBook = true;
+        else course.importedRepertoire = true;
+      }
+      const key = imp.target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
+      this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
+    } else {
+      this.snackbar.info(this.translate.instant('chessable.importFailed', { error: imp.error ?? '' }));
+    }
   }
 
   private showError(err: any): void {
