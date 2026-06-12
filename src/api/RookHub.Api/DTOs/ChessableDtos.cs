@@ -11,3 +11,22 @@ public record ChessableCourseDto(string Bid, string Name);
 
 /// <summary>Test-Ergebnis: gibt die uid des Bearers und die Anzahl der Kurse zurueck.</summary>
 public record ChessableTestResultDto(string Uid, int CourseCount);
+
+/// <summary>Antwort des piratechess /api/chessable/direct/course-Endpoints (tiefer Kurs-Abruf).</summary>
+public record ChessableCourseDataDto(string Bid, string Name, string Mode, int ChapterCount, int LineCount, string Pgn);
+
+/// <summary>Startet einen Kurs-Import. Target: "repertoire" oder "book". Name optional (Anzeigename).</summary>
+public record StartChessableImportRequest(string Target, string? Name);
+
+/// <summary>Status/Fortschritt eines Chessable-Kurs-Imports (Polling).</summary>
+public record ChessableImportDto(
+    int Id,
+    string Bid,
+    string CourseName,
+    string Target,
+    string Status,
+    string? Error,
+    int? ResultId,
+    int Imported,
+    int Skipped,
+    int Invalid);

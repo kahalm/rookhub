@@ -116,6 +116,7 @@ try
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();
+    builder.Services.AddScoped<ChessableImportService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
@@ -160,9 +161,10 @@ try
     builder.Services.AddHttpClient<ChessableProxyService>(client =>
     {
         client.BaseAddress = chessableUri;
-        // Chessable-Listen koennen lange brauchen (curl-impersonate + ggf. Retry),
-        // aber /direct/test und /direct/courses sind beide eine Handvoll Calls.
-        client.Timeout = TimeSpan.FromSeconds(60);
+        // /direct/test + /direct/courses sind schnell; der tiefe /direct/course-Abruf
+        // (ganzer Kurs, viele sequentielle curl-impersonate-Calls über VPN) kann je nach
+        // Kursgröße viele Minuten dauern → großzügiger Timeout (Import läuft im Hintergrund).
+        client.Timeout = TimeSpan.FromMinutes(15);
         if (!string.IsNullOrEmpty(chessableServiceKey))
             client.DefaultRequestHeaders.Add("X-Service-Key", chessableServiceKey);
     });

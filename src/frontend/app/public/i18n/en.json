@@ -1287,6 +1287,11 @@
     "testOk": "Connection ok. {{count}} courses for UID {{uid}}.",
     "coursesTitle": "Your Chessable courses",
     "noCourses": "No courses found.",
+    "importRepertoire": "As repertoire",
+    "importBook": "As book",
+    "importRepertoireDone": "“{{name}}” imported as repertoire ({{count}} lines) — find it under Repertoires.",
+    "importBookDone": "“{{name}}” imported as book ({{count}} puzzles) — find it under Courses.",
+    "importFailed": "Import failed: {{error}}",
     "error": "Error: {{message}}"
   }
 }

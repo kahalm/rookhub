@@ -42,7 +42,7 @@ public class ChessableControllerTests : IDisposable
         var httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://piratechess-api:8080") };
         _proxy = new ChessableProxyService(httpClient);
 
-        _controller = new ChessableController(_db, _encryption, _proxy, NullLogger<ChessableController>.Instance);
+        _controller = new ChessableController(_db, _encryption, _proxy, new BackgroundTaskQueue(), NullLogger<ChessableController>.Instance);
         SetUser(42);
     }
 
@@ -216,6 +216,47 @@ public class ChessableControllerTests : IDisposable
         {
             Content = JsonContent.Create(payload)
         };
+    }
+
+    // ---- Kurs-Import (async Start) ----
+
+    [Fact]
+    public async Task StartImport_InvalidTarget_Returns400()
+    {
+        await SeedUserAsync(42);
+        var result = await _controller.StartImport("123", new StartChessableImportRequest("nonsense", null));
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task StartImport_NoBearer_Returns400()
+    {
+        await SeedUserAsync(42);
+        var result = await _controller.StartImport("123", new StartChessableImportRequest("repertoire", null));
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task StartImport_Valid_CreatesRunningImport()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42,
+            EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.StartImport("bid-1", new StartChessableImportRequest("book", "My Course"));
+
+        var accepted = Assert.IsType<AcceptedResult>(result);
+        var dto = Assert.IsType<ChessableImportDto>(accepted.Value);
+        Assert.Equal("book", dto.Target);
+        Assert.Equal("running", dto.Status);
+        Assert.Equal("My Course", dto.CourseName);
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.UserId == 42 && i.Bid == "bid-1" && i.Status == "running"));
     }
 
     private class StubHttpMessageHandler : HttpMessageHandler

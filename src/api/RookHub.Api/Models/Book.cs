@@ -15,6 +15,13 @@ public class Book
     [Required, MaxLength(200)]
     public string FileName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Besitzer eines persönlichen Buchs (z. B. ein selbst aus Chessable importierter Kurs).
+    /// <c>null</c> = globales/Admin-Buch (klassisches Verhalten, Sichtbarkeit via Gruppen).
+    /// Ist es gesetzt, sieht NUR dieser User das Buch als Kurs (zusätzlich zu Admins).
+    /// </summary>
+    public int? OwnerUserId { get; set; }
+
     [Required, MaxLength(200)]
     public string DisplayName { get; set; } = string.Empty;
 

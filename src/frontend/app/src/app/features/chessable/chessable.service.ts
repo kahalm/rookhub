@@ -17,6 +17,21 @@ export interface ChessableCourse {
   name: string;
 }
 
+export type ChessableImportTarget = 'repertoire' | 'book';
+
+export interface ChessableImport {
+  id: number;
+  bid: string;
+  courseName: string;
+  target: string;
+  status: 'running' | 'completed' | 'failed';
+  error: string | null;
+  resultId: number | null;
+  imported: number;
+  skipped: number;
+  invalid: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChessableService {
   private readonly apiUrl = '/api/chessable';
@@ -41,5 +56,16 @@ export class ChessableService {
 
   getCourses(): Observable<ChessableCourse[]> {
     return this.http.get<ChessableCourse[]>(`${this.apiUrl}/courses`);
+  }
+
+  /** Startet einen async Kurs-Import (Repertoire oder Buch). Liefert den Import-Satz (status "running"). */
+  startImport(bid: string, target: ChessableImportTarget, name: string): Observable<ChessableImport> {
+    return this.http.post<ChessableImport>(
+      `${this.apiUrl}/courses/${encodeURIComponent(bid)}/import`, { target, name });
+  }
+
+  /** Pollt den Status eines Imports. */
+  getImport(id: number): Observable<ChessableImport> {
+    return this.http.get<ChessableImport>(`${this.apiUrl}/imports/${id}`);
   }
 }

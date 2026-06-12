@@ -23,17 +23,20 @@ public class ChessableController : BaseApiController
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _chessable;
+    private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ChessableController> _logger;
 
     public ChessableController(
         AppDbContext db,
         EncryptionService encryption,
         ChessableProxyService chessable,
+        IBackgroundTaskQueue taskQueue,
         ILogger<ChessableController> logger)
     {
         _db = db;
         _encryption = encryption;
         _chessable = chessable;
+        _taskQueue = taskQueue;
         _logger = logger;
     }
 
@@ -129,6 +132,72 @@ public class ChessableController : BaseApiController
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Startet einen asynchronen Import des Chessable-Kurses {bid} — als persönliches Repertoire
+    /// ("repertoire", jeder User) oder als persönliches Buch/Kurs ("book"). Läuft im Hintergrund;
+    /// das Frontend pollt GET /api/chessable/imports/{id}.
+    /// </summary>
+    [HttpPost("courses/{bid}/import")]
+    public async Task<IActionResult> StartImport(string bid, [FromBody] StartChessableImportRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(bid))
+            return BadRequest(new { message = "bid is required" });
+        var target = (request?.Target ?? "").Trim().ToLowerInvariant();
+        if (target is not ("repertoire" or "book"))
+            return BadRequest(new { message = "target must be 'repertoire' or 'book'" });
+
+        var userId = GetUserId();
+        if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
+            return BadRequest(new { message = "No Chessable bearer saved" });
+
+        var import = new ChessableImport
+        {
+            UserId = userId,
+            Bid = bid,
+            CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
+            Target = target,
+            Status = "running",
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(import);
+        await _db.SaveChangesAsync();
+
+        var importId = import.Id;
+        await _taskQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var svc = sp.GetRequiredService<ChessableImportService>();
+            await svc.RunAsync(importId, ct);
+        });
+
+        return Accepted(ToDto(import));
+    }
+
+    /// <summary>Status/Fortschritt eines Imports (Polling bis status != "running").</summary>
+    [HttpGet("imports/{id:int}")]
+    public async Task<IActionResult> GetImport(int id)
+    {
+        var userId = GetUserId();
+        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId);
+        if (import is null) return NotFound();
+        return Ok(ToDto(import));
+    }
+
+    /// <summary>Die letzten Importe des Users (Verlauf).</summary>
+    [HttpGet("imports")]
+    public async Task<IActionResult> GetImports()
+    {
+        var userId = GetUserId();
+        var list = await _db.ChessableImports
+            .Where(i => i.UserId == userId)
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(20)
+            .ToListAsync();
+        return Ok(list.Select(ToDto));
+    }
+
+    private static ChessableImportDto ToDto(ChessableImport i) => new(
+        i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid);
 
     private async Task<string?> LoadBearerAsync()
     {

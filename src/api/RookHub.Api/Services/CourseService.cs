@@ -34,6 +34,8 @@ public class CourseService
     {
         if (!await _db.Books.AnyAsync(b => b.Id == bookId)) return false;
         if (isAdmin) return true;
+        // Persönliches Buch des Users (z. B. eigener Chessable-Import) ist immer sichtbar.
+        if (await _db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId)) return true;
         return await _db.BookGroupAccesses.AnyAsync(a => a.BookId == bookId &&
             _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
     }
@@ -62,8 +64,9 @@ public class CourseService
         IQueryable<Book> booksQuery = _db.Books;
         if (!isAdmin)
         {
-            booksQuery = booksQuery.Where(b => _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
-                _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)));
+            booksQuery = booksQuery.Where(b => b.OwnerUserId == userId
+                || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
+                    _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)));
         }
 
         var books = await booksQuery
@@ -110,6 +113,7 @@ public class CourseService
     {
         if (isAdmin)
             return await _db.Books.AnyAsync();
+        if (await _db.Books.AnyAsync(b => b.OwnerUserId == userId)) return true;
         return await _db.BookGroupAccesses.AnyAsync(a =>
             _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
     }

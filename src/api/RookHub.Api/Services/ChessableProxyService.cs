@@ -48,6 +48,19 @@ public class ChessableProxyService
         return (await response.Content.ReadFromJsonAsync<List<ChessableCourseDto>>(JsonOpts, ct)) ?? new();
     }
 
+    /// <summary>
+    /// Tiefer Kurs-Abruf: holt die komplette Kursstruktur als ein PGN. <paramref name="mode"/>
+    /// steuert die Trainingsannotation: "None" = Repertoire, "FirstKeyMove" = Buch (erster Key
+    /// trainierbar), "AllKeyMoves". Kann je nach Kursgröße lange dauern (langer Client-Timeout).
+    /// </summary>
+    public async Task<ChessableCourseDataDto> FetchCourseAsync(string bearer, string bid, string mode, CancellationToken ct = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "/api/chessable/direct/course", new { Bearer = bearer, Bid = bid, Mode = mode }, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
+    }
+
     private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;

@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeDaily> PlayTimeDailies => Set<PlayTimeDaily>();
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
+    public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -187,6 +188,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Book>(e =>
         {
             e.HasIndex(b => b.FileName).IsUnique();
+            e.HasIndex(b => b.OwnerUserId);
         });
 
         modelBuilder.Entity<Group>(e =>
@@ -398,6 +400,15 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(c => c.EncryptedBearer).HasColumnType("TEXT");
+        });
+
+        modelBuilder.Entity<ChessableImport>(e =>
+        {
+            e.HasIndex(i => new { i.UserId, i.CreatedAt });
+            e.HasOne(i => i.User)
+             .WithMany()
+             .HasForeignKey(i => i.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UserTrainingGoal>(e =>
