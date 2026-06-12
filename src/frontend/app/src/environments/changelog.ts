@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.107.0';
+export const APP_VERSION = '0.107.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.107.1', date: '2026-06-12', changes: [
+    'Chessable-Requests laufen jetzt über die VPN (gluetun-Proxy): piratechess leitet die curl-Calls explizit über den Proxy, statt mit der Host-IP direkt — damit greift auch die IP-Rotation des Crawlers für Chessable.',
+    'Mehr Beobachtbarkeit in Elasticsearch/Kibana: übersprungene Chessable-Linien und abgebrochene Kurs-Abrufe werden geloggt; RookHub loggt fehlgeschlagene Chessable-Aufrufe nun als Warnung (statt Info); der Crawler protokolliert nach jeder VPN-Rotation die neue IP.',
+  ]},
   { version: '0.107.0', date: '2026-06-11', changes: [
     'Chessable-Integration (Frontend, Etappe 2): Neue Seite unter „Chessable" (im Konto-Menü erreichbar). Eingabefeld für den persönlichen Bearer, Speichern/Löschen/Test, „Kurse laden" listet die eigenen Chessable-Kurse auf — alles ohne Chessable-Login im Browser, die Calls laufen serverseitig über die piratechess-API.',
     'Übersetzungen in alle 25 Sprachen (Deutsch ausführlich, restliche Sprachen mit englischem Fallback-Text).',

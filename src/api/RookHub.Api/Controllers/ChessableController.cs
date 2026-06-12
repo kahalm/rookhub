@@ -107,7 +107,7 @@ public class ChessableController : BaseApiController
         }
         catch (ChessableProxyException ex)
         {
-            _logger.LogInformation("Chessable test failed: {Status} {Message}", ex.Status, ex.Message);
+            _logger.LogWarning("Chessable test failed: {Status} {Message}", ex.Status, ex.Message);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -125,7 +125,7 @@ public class ChessableController : BaseApiController
         }
         catch (ChessableProxyException ex)
         {
-            _logger.LogInformation("Chessable courses failed: {Status} {Message}", ex.Status, ex.Message);
+            _logger.LogWarning("Chessable courses failed: {Status} {Message}", ex.Status, ex.Message);
             return BadRequest(new { message = ex.Message });
         }
     }
