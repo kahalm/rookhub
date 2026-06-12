@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -42,7 +43,9 @@ public class ChessableControllerTests : IDisposable
         var httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://piratechess-api:8080") };
         _proxy = new ChessableProxyService(httpClient);
 
-        _controller = new ChessableController(_db, _encryption, _proxy, new BackgroundTaskQueue(), NullLogger<ChessableController>.Instance);
+        var sp = new ServiceCollection().BuildServiceProvider();
+        _controller = new ChessableController(_db, _encryption, _proxy, new BackgroundTaskQueue(),
+            sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<ChessableController>.Instance);
         SetUser(42);
     }
 
@@ -326,6 +329,27 @@ public class ChessableControllerTests : IDisposable
         var after = Assert.IsType<ChessableDisclaimerDto>(Assert.IsType<OkObjectResult>(await _controller.GetDisclaimer()).Value);
         Assert.True(after.Accepted);
         Assert.True(await _db.UserProfiles.AnyAsync(p => p.UserId == 42 && p.ChessableDisclaimerAcceptedAt != null));
+    }
+
+    [Fact]
+    public async Task StartImport_WhenCached_RunsImmediately_QueuedAheadZero()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42, EncryptedBearer = _encryption.Encrypt("b"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // piratechess meldet: Kurs ist gecacht → sofort verarbeiten, keine Queue-Position.
+        _handler.Reply = (req, _) => req.RequestUri!.AbsolutePath.EndsWith("/cached")
+            ? JsonResponse(HttpStatusCode.OK, new { cached = true })
+            : new HttpResponseMessage(HttpStatusCode.OK);
+
+        var result = await _controller.StartImport("bid-x", new StartChessableImportRequest("repertoire", "X"));
+
+        var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
+        Assert.Equal(0, dto.QueuedAhead);
     }
 
     [Fact]

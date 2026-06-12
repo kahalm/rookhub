@@ -25,6 +25,7 @@ public class ChessableController : BaseApiController
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _chessable;
     private readonly IBackgroundTaskQueue _taskQueue;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChessableController> _logger;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -33,12 +34,14 @@ public class ChessableController : BaseApiController
         EncryptionService encryption,
         ChessableProxyService chessable,
         IBackgroundTaskQueue taskQueue,
+        IServiceScopeFactory scopeFactory,
         ILogger<ChessableController> logger)
     {
         _db = db;
         _encryption = encryption;
         _chessable = chessable;
         _taskQueue = taskQueue;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -223,6 +226,13 @@ public class ChessableController : BaseApiController
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync();
 
+        // Rohdaten schon gecacht → kein Chessable-Abruf nötig → sofort verarbeiten,
+        // nicht hinter den (seriellen) Chessable-Fetches in der Queue warten.
+        if (await _chessable.IsCourseCachedAsync(bid))
+        {
+            RunDetached(import.Id);
+            return Accepted(ToDto(import, 0));
+        }
         await EnqueueRunAsync(import.Id);
         return Accepted(ToDto(import, await QueuedAheadAsync(import)));
     }
@@ -310,6 +320,21 @@ public class ChessableController : BaseApiController
         {
             var svc = sp.GetRequiredService<ChessableImportService>();
             await svc.RunAsync(importId, ct);
+        });
+    }
+
+    /// <summary>Verarbeitet einen Import sofort in einem eigenen Scope (außerhalb der seriellen
+    /// Queue) — für gecachte Kurse, die keinen Chessable-Abruf brauchen.</summary>
+    private void RunDetached(int importId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<ChessableImportService>().RunAsync(importId, CancellationToken.None);
+            }
+            catch { /* RunAsync behandelt Fehler selbst; bleibt der Status 'running', greift der Resume-Service */ }
         });
     }
 

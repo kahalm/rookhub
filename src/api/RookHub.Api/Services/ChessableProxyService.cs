@@ -79,6 +79,23 @@ public class ChessableProxyService
         return await response.Content.ReadFromJsonAsync<ChessableCourseProgressDto>(JsonOpts, ct);
     }
 
+    /// <summary>True, wenn piratechess die Rohdaten des Kurses schon gecacht hat (Import braucht
+    /// dann keinen Chessable-Abruf). Fehler/unerreichbar → false (dann normal über die Queue).</summary>
+    public async Task<bool> IsCourseCachedAsync(string bid, CancellationToken ct = default)
+    {
+        try
+        {
+            var dto = await _httpClient.GetFromJsonAsync<CachedDto>($"/api/chessable/direct/course/{Uri.EscapeDataString(bid)}/cached", JsonOpts, ct);
+            return dto?.Cached ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private record CachedDto(bool Cached);
+
     private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode) return;
