@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { CourseService } from '../courses/course.service';
 import {
   ChessableService,
   ChessableCredential,
@@ -243,6 +244,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private router: Router,
+    private courseService: CourseService,
   ) {}
 
   ngOnInit(): void {
@@ -422,6 +424,8 @@ export class ChessableComponent implements OnInit, OnDestroy {
         if (imp.target === 'book') course.importedBook = true;
         else course.importedRepertoire = true;
       }
+      // Buch importiert → „Kurse"-Menü könnte jetzt sichtbar werden: Navbar neu prüfen lassen.
+      if (imp.target === 'book') this.courseService.notifyAccessChanged();
       const key = imp.target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
       this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
     } else {

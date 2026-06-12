@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
 
 export type CourseMode = 'sequential' | 'random';
@@ -38,6 +38,12 @@ export interface CourseProgress {
 @Injectable({ providedIn: 'root' })
 export class CourseService {
   constructor(private http: HttpClient) {}
+
+  /** Feuert, wenn sich der Kurs-Zugriff geändert haben könnte (z. B. nach einem Buch-Import) —
+   *  die Navbar prüft daraufhin neu, ob das „Kurse"-Menü gezeigt wird. */
+  private readonly accessChanged = new Subject<void>();
+  readonly accessChanged$ = this.accessChanged.asObservable();
+  notifyAccessChanged(): void { this.accessChanged.next(); }
 
   getCourses(): Observable<CourseListItem[]> {
     return this.http.get<CourseListItem[]>('/api/courses');

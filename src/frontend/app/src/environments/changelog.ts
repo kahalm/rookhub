@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.109.1';
+export const APP_VERSION = '0.109.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.109.2', date: '2026-06-12', changes: [
+    'Nach dem Import eines Chessable-Kurses als Buch erscheint das „Kurse"-Menü jetzt sofort (vorher erst nach Neuladen). Es zeigt — wie bisher — nur die eigenen importierten Bücher.',
+  ]},
   { version: '0.109.1', date: '2026-06-12', changes: [
     'Chessable-Haftungsausschluss klarer formuliert (ausdrücklicher Hinweis: ein Bann auf Chessable ist nicht meine Schuld; nur für persönliche Backups).',
   ]},

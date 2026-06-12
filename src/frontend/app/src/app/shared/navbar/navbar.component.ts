@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { of, switchMap, catchError } from 'rxjs';
+import { of, switchMap, catchError, merge, map } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -146,12 +146,16 @@ export class NavbarComponent implements OnInit {
     // Bei jedem Login/Logout neu bestimmen, ob das Kurse-Menü gezeigt wird. switchMap bricht
     // einen laufenden checkAccess()-Call bei erneutem Login-State-Wechsel ab (kein Leak/Race);
     // takeUntilDestroyed räumt die Subscription auf.
-    this.auth.currentUser$.pipe(
-      switchMap(user => {
-        if (!user) return of(false);
+    // Neu bestimmen bei Login/Logout UND wenn sich der Kurs-Zugriff ändert (z. B. nach Buch-Import).
+    merge(
+      this.auth.currentUser$.pipe(map(() => undefined)),
+      this.courseService.accessChanged$,
+    ).pipe(
+      switchMap(() => {
+        if (!this.auth.isLoggedIn) return of(false);
         if (this.auth.isAdmin) return of(true);
         return this.courseService.checkAccess().pipe(
-          switchMap(r => of(r.hasAccess)),
+          map(r => r.hasAccess),
           catchError(() => of(false)),
         );
       }),
