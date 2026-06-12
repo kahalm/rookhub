@@ -1292,6 +1292,10 @@
     "importRepertoireDone": "\"{{name}}\" als Repertoire importiert ({{count}} Linien) — zu finden unter Repertoires.",
     "importBookDone": "\"{{name}}\" als Buch importiert ({{count}} Puzzles) — zu finden unter Kurse.",
     "importFailed": "Import fehlgeschlagen: {{error}}",
+    "phase_queued": "in Warteschlange…",
+    "phase_fetching": "hole Kurs…",
+    "phase_importing": "importiere…",
+    "phase_done": "fertig",
     "error": "Fehler: {{message}}"
   }
 }

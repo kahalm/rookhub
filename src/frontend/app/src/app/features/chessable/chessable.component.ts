@@ -113,6 +113,7 @@ import {
                     <div matListItemMeta class="course-actions">
                       @if (importingBid === c.bid) {
                         <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+                        <span class="phase">{{ ('chessable.phase_' + (importPhase ?? 'queued')) | translate }}</span>
                       } @else {
                         <button mat-stroked-button [disabled]="importingBid !== null"
                                 (click)="importCourse(c, 'repertoire')">
@@ -148,6 +149,7 @@ import {
     .empty { color: var(--mat-sys-on-surface-variant, #888); }
     .bid { font-family: monospace; font-size: 0.8rem; color: var(--mat-sys-on-surface-variant, #888); }
     .course-actions { display: flex; align-items: center; gap: 0.4rem; }
+    .course-actions .phase { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant, #888); }
     .course-actions button { font-size: 0.8rem; }
     .course-actions button mat-icon { margin-right: 0.2rem; }
   `]
@@ -163,6 +165,8 @@ export class ChessableComponent implements OnInit {
   loadingCourses = false;
   /** bid des aktuell importierenden Kurses (null = kein Import läuft). */
   importingBid: string | null = null;
+  /** aktuelle Phase des laufenden Imports (queued|fetching|importing). */
+  importPhase: string | null = null;
 
   constructor(
     private chessable: ChessableService,
@@ -230,9 +234,10 @@ export class ChessableComponent implements OnInit {
   importCourse(c: ChessableCourse, target: ChessableImportTarget): void {
     if (this.importingBid) return;
     this.importingBid = c.bid;
+    this.importPhase = 'queued';
     this.chessable.startImport(c.bid, target, c.name).subscribe({
       next: imp => this.pollImport(imp.id, target),
-      error: e => { this.importingBid = null; this.showError(e); }
+      error: e => { this.importingBid = null; this.importPhase = null; this.showError(e); }
     });
   }
 
@@ -242,8 +247,9 @@ export class ChessableComponent implements OnInit {
       takeWhile(imp => imp.status === 'running', true),
     ).subscribe({
       next: imp => {
-        if (imp.status === 'running') return;
+        if (imp.status === 'running') { this.importPhase = imp.phase; return; }
         this.importingBid = null;
+        this.importPhase = null;
         if (imp.status === 'completed') {
           const key = target === 'book' ? 'chessable.importBookDone' : 'chessable.importRepertoireDone';
           this.snackbar.success(this.translate.instant(key, { name: imp.courseName, count: imp.imported }));
@@ -251,7 +257,7 @@ export class ChessableComponent implements OnInit {
           this.snackbar.info(this.translate.instant('chessable.importFailed', { error: imp.error ?? '' }));
         }
       },
-      error: e => { this.importingBid = null; this.showError(e); }
+      error: e => { this.importingBid = null; this.importPhase = null; this.showError(e); }
     });
   }
 

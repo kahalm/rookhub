@@ -197,7 +197,7 @@ public class ChessableController : BaseApiController
     }
 
     private static ChessableImportDto ToDto(ChessableImport i) => new(
-        i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid);
+        i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid);
 
     private async Task<string?> LoadBearerAsync()
     {

@@ -405,10 +405,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ChessableImport>(e =>
         {
             e.HasIndex(i => new { i.UserId, i.CreatedAt });
+            e.HasIndex(i => i.Status);
             e.HasOne(i => i.User)
              .WithMany()
              .HasForeignKey(i => i.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+            e.Property(i => i.FetchedPgn).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<UserTrainingGoal>(e =>

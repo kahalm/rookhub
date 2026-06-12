@@ -25,6 +25,7 @@ public record ChessableImportDto(
     string CourseName,
     string Target,
     string Status,
+    string Phase,
     string? Error,
     int? ResultId,
     int Imported,

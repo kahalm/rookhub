@@ -9,11 +9,16 @@ namespace RookHub.Api.Services;
 /// <summary>
 /// Führt einen asynchronen Chessable-Kurs-Import durch: holt den Kurs (tief) von piratechess
 /// und legt ihn entweder als persönliches Repertoire (PGN, Mode "None") oder als persönliches
-/// Buch (Puzzles, Mode "FirstKeyMove" → erster Key-Zug trainierbar) für den User an. Läuft im
-/// Hintergrund-Worker; der Fortschritt steht im <see cref="ChessableImport"/>-Satz.
+/// Buch (Puzzles, Mode "FirstKeyMove" → erster Key-Zug trainierbar) für den User an.
+///
+/// Robust gegen Neustarts: der Fortschritt wird in der DB gecheckpointet (Phase + bereits
+/// geholtes PGN + ResultId). Ein nach einem Crash/Deploy resumter Job überspringt den teuren
+/// Chessable-Fetch (PGN ist persistiert) und legt nichts doppelt an (idempotente Schritte).
 /// </summary>
 public class ChessableImportService
 {
+    public const int MaxAttempts = 3;
+
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _proxy;
@@ -37,7 +42,7 @@ public class ChessableImportService
         _logger = logger;
     }
 
-    /// <summary>Verarbeitet den Import-Job <paramref name="importId"/> (im Hintergrund-Scope).</summary>
+    /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
     public async Task RunAsync(int importId, CancellationToken ct = default)
     {
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
@@ -46,31 +51,59 @@ public class ChessableImportService
             _logger.LogWarning("ChessableImport {Id} nicht gefunden", importId);
             return;
         }
+        if (import.Status != "running")
+            return; // bereits abgeschlossen oder fehlgeschlagen — nichts zu tun
+
+        import.Attempts++;
+        if (import.Attempts > MaxAttempts)
+        {
+            await FailAsync(import, $"Abgebrochen nach {MaxAttempts} Versuchen", ct);
+            return;
+        }
+        await _db.SaveChangesAsync(ct);
 
         try
         {
-            var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == import.UserId, ct);
-            if (cred is null)
+            // --- Phase 1: Kurs holen (Checkpoint: PGN wird persistiert) ---
+            var pgn = import.FetchedPgn;
+            if (string.IsNullOrEmpty(pgn))
             {
-                await FailAsync(import, "Kein Chessable-Bearer gespeichert", ct);
-                return;
+                var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == import.UserId, ct);
+                if (cred is null)
+                {
+                    await FailAsync(import, "Kein Chessable-Bearer gespeichert", ct);
+                    return;
+                }
+                var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+
+                import.Phase = "fetching";
+                await _db.SaveChangesAsync(ct);
+
+                var mode = import.Target == "book" ? "FirstKeyMove" : "None";
+                var course = await _proxy.FetchCourseAsync(bearer, import.Bid, mode, ct);
+
+                pgn = course.Pgn ?? "";
+                import.FetchedPgn = pgn;
+                import.LineCount = course.LineCount;
+                if (string.IsNullOrWhiteSpace(import.CourseName))
+                    import.CourseName = !string.IsNullOrWhiteSpace(course.Name) ? course.Name : $"Chessable {import.Bid}";
+                await _db.SaveChangesAsync(ct); // Checkpoint: ab hier kein erneuter Fetch nötig
             }
-            var bearer = _encryption.Decrypt(cred.EncryptedBearer);
 
-            var mode = import.Target == "book" ? "FirstKeyMove" : "None";
-            var course = await _proxy.FetchCourseAsync(bearer, import.Bid, mode, ct);
+            var courseName = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
 
-            var courseName = !string.IsNullOrWhiteSpace(import.CourseName)
-                ? import.CourseName
-                : (!string.IsNullOrWhiteSpace(course.Name) ? course.Name : $"Chessable {import.Bid}");
-            import.CourseName = courseName;
+            // --- Phase 2: Import (idempotent) ---
+            import.Phase = "importing";
+            await _db.SaveChangesAsync(ct);
 
             if (import.Target == "repertoire")
-                await ImportAsRepertoireAsync(import, course, courseName, ct);
+                await ImportAsRepertoireAsync(import, pgn, courseName, ct);
             else
-                await ImportAsBookAsync(import, course, courseName, ct);
+                await ImportAsBookAsync(import, pgn, courseName, ct);
 
             import.Status = "completed";
+            import.Phase = "done";
+            import.FetchedPgn = null; // Checkpoint nicht mehr nötig → Platz freigeben
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation(
@@ -83,49 +116,65 @@ public class ChessableImportService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen", import.Id);
+            _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen (Versuch {Attempt})", import.Id, import.Attempts);
             await FailAsync(import, ex.Message, ct);
         }
     }
 
-    private async Task ImportAsRepertoireAsync(ChessableImport import, ChessableCourseDataDto course, string courseName, CancellationToken ct)
+    private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
-        var rep = await _repertoires.CreateAsync(import.UserId, new CreateRepertoireDto
+        // Resume: Repertoire evtl. in einem vorigen Versuch schon angelegt → nicht doppeln.
+        int repId;
+        if (import.ResultId is int existing
+            && await _db.Repertoires.AnyAsync(r => r.Id == existing && r.UserId == import.UserId, ct))
         {
-            Name = courseName.Length > 200 ? courseName[..200] : courseName,
-            Description = $"Aus Chessable importiert (bid {import.Bid})",
-            Kind = RepertoireKind.Opening,
-            IsPublic = false
-        });
+            repId = existing;
+        }
+        else
+        {
+            var rep = await _repertoires.CreateAsync(import.UserId, new CreateRepertoireDto
+            {
+                Name = Trunc(courseName, 200),
+                Description = $"Aus Chessable importiert (bid {import.Bid})",
+                Kind = RepertoireKind.Opening,
+                IsPublic = false
+            });
+            repId = rep.Id;
+            import.ResultId = repId;
+            await _db.SaveChangesAsync(ct); // Checkpoint: Repertoire-Anlage
+        }
 
-        var fileName = $"chessable-{import.Bid}.pgn";
-        using var ms = new MemoryStream(Encoding.UTF8.GetBytes(course.Pgn));
-        await _repertoires.UploadFileAsync(rep.Id, import.UserId, fileName, ms);
+        // Datei nur hochladen, wenn noch keine da ist (idempotent bei Resume).
+        if (!await _db.RepertoireFiles.AnyAsync(f => f.RepertoireId == repId, ct))
+        {
+            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
+            await _repertoires.UploadFileAsync(repId, import.UserId, $"chessable-{import.Bid}.pgn", ms);
+        }
 
-        import.ResultId = rep.Id;
-        import.Imported = course.LineCount;
+        import.Imported = import.LineCount;
         import.Skipped = 0;
         import.Invalid = 0;
     }
 
-    private async Task ImportAsBookAsync(ChessableImport import, ChessableCourseDataDto course, string courseName, CancellationToken ct)
+    private async Task ImportAsBookAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
-        // Pro-User-eindeutiger Dateiname, damit derselbe Kurs mehrerer User nicht kollidiert.
+        // Pro-User-eindeutiger Dateiname; PgnImportService dedupliziert per LineId → von Natur aus
+        // idempotent, ein Resume legt dieselben Puzzles nicht doppelt an.
         var fileName = $"chessable-u{import.UserId}-{import.Bid}.pgn";
-        var res = await _pgnImport.ImportFileAsync(fileName, course.Pgn, ct);
+        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct);
 
-        // Das gerade angelegte Buch zu einem persönlichen Buch des Users machen + Anzeigenamen setzen.
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
         if (book is not null)
         {
             book.OwnerUserId = import.UserId;
-            book.DisplayName = courseName.Length > 200 ? courseName[..200] : courseName;
+            book.DisplayName = Trunc(courseName, 200);
             book.Tags = "chessable";
             book.UpdatedAt = DateTime.UtcNow;
         }
 
         import.ResultId = res.BookId;
-        import.Imported = res.Imported;
+        // Gesamtzahl der Puzzles im Buch (korrekt auch beim Resume, wo res.Imported nur die neuen zählt).
+        import.Imported = await _db.BookPuzzles.CountAsync(bp => bp.BookId == res.BookId, ct);
         import.Skipped = res.Skipped;
         import.Invalid = res.Invalid;
     }
@@ -133,8 +182,10 @@ public class ChessableImportService
     private async Task FailAsync(ChessableImport import, string error, CancellationToken ct)
     {
         import.Status = "failed";
-        import.Error = error.Length > 1000 ? error[..1000] : error;
+        import.Error = Trunc(error, 1000);
         import.CompletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
+
+    private static string Trunc(string s, int max) => s.Length > max ? s[..max] : s;
 }

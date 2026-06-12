@@ -128,6 +128,8 @@ try
     builder.Services.AddScoped<BookAdminService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
+    // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
+    builder.Services.AddHostedService<ChessableImportResumeService>();
     builder.Services.AddSingleton<AutoSubscriptionService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
     builder.Services.AddHostedService<RoundMonitorService>();

@@ -20,7 +20,23 @@ public class ChessableImport
 
     /// <summary>"running" | "completed" | "failed".</summary>
     public string Status { get; set; } = "running";
+
+    /// <summary>Feinphase innerhalb "running": "queued" | "fetching" | "importing". Für Anzeige + Resume.</summary>
+    public string Phase { get; set; } = "queued";
     public string? Error { get; set; }
+
+    /// <summary>
+    /// Das von piratechess geholte Kurs-PGN (Checkpoint): einmal geholt, wird es hier persistiert,
+    /// damit ein Resume nach einem Neustart NICHT erneut über die VPN bei Chessable abrufen muss.
+    /// Wird nach erfolgreichem Import wieder geleert (Platz sparen).
+    /// </summary>
+    public string? FetchedPgn { get; set; }
+
+    /// <summary>Anzahl Linien im Kurs (aus dem Fetch; für Repertoire-Ergebnismeldung beim Resume).</summary>
+    public int LineCount { get; set; }
+
+    /// <summary>Wie oft der Job (auch via Resume) schon angelaufen ist — begrenzt Endlos-Resumes.</summary>
+    public int Attempts { get; set; }
 
     /// <summary>Bei Erfolg: RepertoireId bzw. BookId des angelegten Ergebnisses.</summary>
     public int? ResultId { get; set; }

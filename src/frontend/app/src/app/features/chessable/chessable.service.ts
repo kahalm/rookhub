@@ -25,6 +25,7 @@ export interface ChessableImport {
   courseName: string;
   target: string;
   status: 'running' | 'completed' | 'failed';
+  phase: string;
   error: string | null;
   resultId: number | null;
   imported: number;

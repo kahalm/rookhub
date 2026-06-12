@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.108.0';
+export const APP_VERSION = '0.108.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.108.1', date: '2026-06-12', changes: [
+    'Chessable-Import robuster: Der Fortschritt wird in der Datenbank gespeichert (inkl. des bereits geholten Kurses). Wird die App während eines Imports neu gestartet, setzt er beim nächsten Start automatisch fort — ohne den Kurs erneut bei Chessable abzurufen und ohne etwas doppelt anzulegen. Während des Imports wird die aktuelle Phase angezeigt (hole Kurs… / importiere…).',
+  ]},
   { version: '0.108.0', date: '2026-06-12', changes: [
     'Chessable-Kurs-Import: In der „Chessable"-Seite kann jetzt jeder gelistete Kurs mit einem Klick importiert werden — entweder „Als Repertoire" (landet als PGN unter Repertoires) oder „Als Buch" (wird zu einem persönlichen, durchspielbaren Kurs unter Kurse; der erste Schlüsselzug jeder Variante ist die trainierbare Lösung).',
     'Der Import läuft im Hintergrund (großer Kurs = viele Stellungen): nach dem Klick erscheint ein Lade-Indikator, das Ergebnis wird gemeldet, sobald es fertig ist.',
