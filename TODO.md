@@ -31,21 +31,27 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
   - [ ] Data-Safety-Formular ausfüllen (gemäß Datenschutzerklärung)
 
 ## Refactoring / Qualität
-- [ ] CI: Docker-Push an grüne Tests koppeln (`needs:`-Gate) — aktuell wird ohne Test-Gate gebaut (CRIT)
-- [ ] Crawler-Standalone-Compose: Default-Passwörter aus `chessresults_crawler/docker-compose.yml` + `.env.example` entfernen (CRIT)
-- [ ] Crawler-`API_KEY` im Standalone-Compose verpflichtend setzen / Middleware fail-closed machen (HIGH)
-- [ ] Token-Refresh implementieren — bei aktivem Polling (Monitor 30 s / Crawl-Job 2 s) plötzlicher `/login`-Redirect bei Ablauf
-- [ ] AdminSeeder: Passwort nur beim ersten Start setzen, nicht bei jedem Deploy (überschreibt UI-Änderungen) (`AdminSeeder.cs:31-36`)
-- [ ] BCrypt Work Factor auf ≥12 erhöhen + `EnhancedHashPassword` verwenden (`AuthService.cs:37`)
-- [ ] JWT `ClockSkew` explizit auf ≤1 min setzen (Default = 5 min Toleranz über `exp` hinaus) (`Program.cs:63`)
-- [ ] Tournament-Detail-Komponente aufteilen (900+ Zeilen; `TeamPlayersDialogComponent` auslagern)
-- [ ] Endless-Puzzle-Komponente: State-Management in dedizierten Service auslagern
-- [ ] `takeUntilDestroyed` durchgängig einsetzen (aktuell nur in DashboardComponent vorbildlich)
-- [ ] Crawler: `HtmlParserService` mit Unit-Tests abdecken
-- [ ] Crawler: `CancellationToken` durch alle Crawl-Methoden durchziehen (`CrawlerService.cs:655`)
-- [ ] Crawler: `RoundDetectionService` kurzzeitigen Cache (60s TTL) ergänzen statt bei jedem Check chess-results.com zu treffen
-- [ ] Retry-Interceptor für 502/503/0 mit Exponential-Backoff im Frontend
-- [ ] gluetun-Control-Server (IP-Rotation) auf API-Key-Auth härten statt `auth = "none"` (HIGH) — aktuell gibt `gluetun-auth/config.toml` im rookhub-schach-dev-Stack die Routen `GET /v1/publicip/ip` + `GET|PUT /v1/vpn/status` unauthentifiziert frei (nur intern via FIREWALL_INPUT_PORTS=8000 im Bridge-Netz erreichbar). Härtung: in der `config.toml` `auth = "apikey"` + `apikey = "<secret>"` setzen, Secret in beide `.env` (`rookhub-schach`/`-dev`), dann `X-API-Key`-Header senden in **piratechess-api** (`VpnRotationService`, `Gluetun__ApiKey`-Env) UND **chessresults_crawler** (`CrawlerService.RotateVpnAsync`/`TryGetPublicIpAsync`); beide Images neu bauen + deployen. Betrifft beide Stacks (prod + dev).
+_Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06-13 (gegen Code geprüft)._
+
+- [ ] CI: Docker-Push an grüne Tests koppeln (`needs:`-Gate) — `docker.yml` hat `push: true` ohne Abhängigkeit von `test.yml`; läuft parallel → Image wird auch bei roten Tests gepusht. Gilt für RookHub + Crawler (CRIT)
+- [ ] Crawler-Standalone-Compose: Default-Passwörter aus `chessresults_crawler/docker-compose.yml` + `.env.example` durch Platzhalter ersetzen (`rootpassword`/`chessresults` o.ä.) (CRIT)
+- [ ] Crawler: `CancellationToken` an der einen fehlenden Stelle durchziehen — `SearchPlayerTournamentsAsync` (`CrawlerService.cs:~654`) hat keinen CT, Schwester-Methode `SearchPlayersAsync` schon (rest ist abgedeckt)
+- [ ] gluetun-Control-Server (IP-Rotation) auf API-Key-Auth härten statt `auth = "none"` (HIGH; Aufwand M, nur intern erreichbar) — `gluetun-auth/config.toml` im rookhub-schach-dev-Stack gibt `GET /v1/publicip/ip` + `GET|PUT /v1/vpn/status` unauthentifiziert frei (nur intern via FIREWALL_INPUT_PORTS=8000 im Bridge-Netz). Härtung: `auth = "apikey"` + `apikey = "<secret>"`, Secret in beide `.env` (`rookhub-schach`/`-dev`), dann `X-API-Key`-Header senden in **piratechess-api** (`VpnRotationService`, `Gluetun__ApiKey`-Env) UND **chessresults_crawler** (`CrawlerService.RotateVpnAsync`/`TryGetPublicIpAsync`); beide Images neu bauen + deployen. Betrifft prod + dev. Liegt im Deploy-Stack (piratechess_docker), nicht im Repo.
+- [ ] Tournament-Detail-Komponente aufteilen (~545 Zeilen; Favoriten-/Polling-/Daten-Logik auslagern — `TeamPlayersDialogComponent` ist bereits ausgelagert). Reiner Wartbarkeits-Gewinn
+- [ ] JWT `ClockSkew` explizit auf ≤1 min setzen (`Program.cs:~92`, aktuell Default 5 min) — 1-Zeilen-Härtung, niedriger Nutzen
+- [ ] Retry-Interceptor erweitern — existiert (`retry.interceptor.ts`: 502/503/0, GET/HEAD, X-Retry-Guard), aber nur **1 Retry ohne Backoff**; ggf. auf Exponential-Backoff + mehr Versuche. Marginal
+- [ ] Endless-Puzzle-Komponente: State-Management in dedizierten Service auslagern (`endless-puzzle.component.ts` ~1211 Zeilen). Großer Umbau, mittleres Regressionsrisiko, nur Wartbarkeit
+- [ ] `takeUntilDestroyed` durchgängig einsetzen — ~228 `.subscribe(`-Stellen, nur 6 Komponenten nutzen es heute; viele mit manuellem `ngOnDestroy`/`clearInterval`. Flächiger Sweep, eher opportunistisch beim Anfassen erledigen als als eigenes Projekt
+
+### Bewusste Entscheidung — kein Bug (nur falls gewünscht umbauen)
+- [ ] Crawler-`API_KEY` ist fail-open (leerer Key = Gate offen, `ApiKeyMiddleware.cs:22-26`) — gewollter Dev-Fallback; allenfalls dokumentieren oder optional fail-closed schalten
+- [ ] Token-Refresh im Frontend — `auth.interceptor.ts` macht bei 401 harten `logout()` (fail-closed, sicher). Refresh-Flow wäre reines Komfort-Feature bei aktivem Polling (Monitor 30 s / Crawl-Job 2 s)
+
+### Bei der Sichtung 2026-06-13 als bereits erledigt verifiziert (entfernt)
+- AdminSeeder setzt PW nur beim ersten Start (`AdminSeeder.cs:35`, `AnyAsync(...) return`)
+- BCrypt Work Factor ist bereits 12 (`AuthService.cs:21`, auch AdminSeeder)
+- Crawler `HtmlParserService` ist durch Tests abgedeckt (`HtmlParserServiceTests.cs`, ~448 Z.)
+- Crawler `RoundDetectionService` cacht bereits 60 s (`:50`)
 
 ## Features
 - [ ] Trainersystem mit eigenen Gruppen einführen — Konzept noch offen. Idee: Trainer-Rolle, die eigene Gruppen anlegen/verwalten und Mitglieder zuweisen kann (heute nur Admin via `/api/admin/groups`), inkl. Trainingsziel-Vorlagen + ggf. Kurs-Freigaben für die eigenen Gruppen. Aufbauen auf bestehender Gruppen-/`GroupTrainingGoals`-/`BookGroupAccess`-Infrastruktur; offene Fragen: Rollenmodell (neue Rolle vs. Flag), Sichtbarkeits-/Berechtigungsgrenzen Trainer ↔ Mitglieder, Einladungsfluss.
