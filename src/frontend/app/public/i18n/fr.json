@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (faible) – 24 (fort)",
       "themes": "Thèmes (facultatif)",
       "themesPlaceholder": "ex. fourchette clouage",
+      "themesHint": "Recherchez et choisissez des thèmes — un seul suffit au problème.",
       "thresholdExplain": "Classements auxquels vous perdez typiquement des vies. Ajustez pour passer les puzzles faciles plus vite ou plus lentement.",
       "firstThreshold": "1er seuil",
       "secondThreshold": "2e seuil",

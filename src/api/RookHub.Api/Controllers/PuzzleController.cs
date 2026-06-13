@@ -121,6 +121,12 @@ public class PuzzleController : BaseApiController
         return Ok(await _puzzleService.GetWorstThemesAsync(GetUserId(), count, minAttempts));
     }
 
+    /// <summary>Alle im Puzzle-Pool vorkommenden Themen (sortiert) — Optionen für den Themen-Filter (Multiselect-Dropdown).</summary>
+    [AllowAnonymous]
+    [HttpGet("themes")]
+    public async Task<ActionResult<List<string>>> GetThemes()
+        => Ok(await _puzzleService.GetAllThemesAsync());
+
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
     [HttpPost("{id}/attempt/anonymous")]

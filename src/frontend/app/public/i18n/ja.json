@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1（弱）〜 24（強）",
       "themes": "テーマ（任意）",
       "themesPlaceholder": "例: fork pin",
+      "themesHint": "テーマを検索して選択 — パズルはどれか1つに合えばOK。",
       "thresholdExplain": "通常ライフを失うレーティングです。調整してより簡単なパズルを速くまたはゆっくりスキップできます。",
       "firstThreshold": "第1閾値",
       "secondThreshold": "第2閾値",

@@ -1061,4 +1061,29 @@ public class PuzzleServiceTests : IDisposable
         var userAfter = await _db.AppUsers.FindAsync(userId);
         Assert.Equal(1480, userAfter!.PuzzleElo);
     }
+
+    [Fact]
+    public async Task GetAllThemesAsync_FromTagTable_ReturnsDistinctSorted()
+    {
+        await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "th1");
+        await CreatePuzzleAsync(rating: 1600, themes: "fork pin", lichessId: "th2");
+        await _service.BackfillPuzzleTagsAsync();   // füllt die Tags-Tabelle (fork, endgame, pin)
+
+        var themes = await _service.GetAllThemesAsync();
+
+        Assert.Equal(new[] { "endgame", "fork", "pin" }, themes);   // distinkt + alphabetisch
+    }
+
+    [Fact]
+    public async Task GetAllThemesAsync_TagTableEmpty_FallsBackToPuzzleThemes()
+    {
+        await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "tf1");
+        await CreatePuzzleAsync(rating: 1600, themes: "pin fork", lichessId: "tf2");
+        // KEIN Backfill → Tags-Tabelle leer → Fallback auf die Puzzle.Themes-Tokens.
+
+        var themes = await _service.GetAllThemesAsync();
+
+        Assert.Empty(await _db.Tags.ToListAsync());
+        Assert.Equal(new[] { "endgame", "fork", "pin" }, themes);
+    }
 }

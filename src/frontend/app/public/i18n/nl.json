@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (zwak) – 24 (sterk)",
       "themes": "Thema's (optioneel)",
       "themesPlaceholder": "bijv. vork pen",
+      "themesHint": "Zoek en kies thema's — een puzzel hoeft er maar één te hebben.",
       "thresholdExplain": "Ratings waarbij je doorgaans levens verliest. Pas aan om makkelijkere puzzels sneller of langzamer over te slaan.",
       "firstThreshold": "1e drempelwaarde",
       "secondThreshold": "2e drempelwaarde",

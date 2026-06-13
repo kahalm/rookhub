@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (yếu) – 24 (mạnh)",
       "themes": "Chủ đề (tùy chọn)",
       "themesPlaceholder": "ví dụ: nĩa ghim",
+      "themesHint": "Tìm và chọn chủ đề — câu đố chỉ cần một trong số đó.",
       "thresholdExplain": "Xếp hạng mà bạn thường mất mạng. Điều chỉnh để bỏ qua bài dễ hơn nhanh hoặc chậm hơn.",
       "firstThreshold": "Ngưỡng thứ 1",
       "secondThreshold": "Ngưỡng thứ 2",

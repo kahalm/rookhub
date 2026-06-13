@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (gyenge) – 24 (erős)",
       "themes": "Témák (opcionális)",
       "themesPlaceholder": "pl. villa szeg",
+      "themesHint": "Témák keresése és kiválasztása — a feladványhoz egy is elég.",
       "thresholdExplain": "Értékelések, ahol általában életet veszítesz. Módosítsd, hogy gyorsabban vagy lassabban ugorj át a könnyebb feladványokon.",
       "firstThreshold": "1. küszöb",
       "secondThreshold": "2. küszöb",

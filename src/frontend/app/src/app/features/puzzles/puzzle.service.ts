@@ -109,6 +109,11 @@ export class PuzzleService {
     }).pipe(map(ts => ts.map(t => t.theme)));
   }
 
+  /** Alle im Pool vorkommenden Themen (alphabetisch) — Optionen für die durchsuchbare Themen-Auswahl. */
+  getAllThemes(): Observable<string[]> {
+    return this.http.get<string[]>('/api/puzzles/themes');
+  }
+
   getById(id: number): Observable<PuzzleDto> {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }

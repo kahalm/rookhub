@@ -9,6 +9,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { COMMA, ENTER, SPACE } from '@angular/cdk/keycodes';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -56,6 +59,7 @@ interface EndlessPuzzleAttempt {
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
+    MatChipsModule, MatAutocompleteModule,
     MatDialogModule, TranslateModule, PuzzleBoardComponent,
     PuzzleRatingCardComponent, PuzzleStatusCardComponent
   ],
@@ -104,6 +108,67 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.worstThemes = [];   // beim nächsten Aktivieren frisch laden
       this.saveConfig();
     }
+  }
+
+  // ── Themen-Auswahl (durchsuchbare Multiselect-Dropdown) ───────────────────────────
+  /** Alle verfügbaren Themen (vom Backend, alphabetisch) — Optionen des Autocomplete-Dropdowns. */
+  allThemes: string[] = [];
+  /** Freitext im Sucheingabefeld der Themen-Auswahl (filtert das Dropdown). */
+  themeInput = '';
+  /** Mit diesen Tasten wird der getippte Text als Chip übernommen (erlaubt freie Themen). */
+  readonly themeSeparatorKeys: number[] = [ENTER, COMMA, SPACE];
+
+  /** Aktuell gewählte Themen als Liste (Backing-Store bleibt der leerzeichengetrennte `config.themes`-String). */
+  get selectedThemes(): string[] {
+    return (this.config.themes || '').trim().split(/\s+/).filter(Boolean);
+  }
+  private setSelectedThemes(themes: string[]): void {
+    // Duplikate raus, Reihenfolge erhalten.
+    this.config.themes = [...new Set(themes)].join(' ');
+    this.saveConfig();
+  }
+
+  /** Optionen fürs Dropdown: noch nicht gewählte Themen, nach dem Suchtext gefiltert. */
+  get filteredThemes(): string[] {
+    const q = this.themeInput.trim().toLowerCase();
+    const selected = new Set(this.selectedThemes);
+    return this.allThemes
+      .filter(t => !selected.has(t))
+      .filter(t => !q || t.toLowerCase().includes(q));
+  }
+
+  /** Lädt die verfügbaren Themen einmalig (best effort; Freitext bleibt auch ohne Liste möglich). */
+  private loadAllThemes(): void {
+    if (this.allThemes.length) return;
+    this.puzzleService.getAllThemes().subscribe({
+      next: t => this.allThemes = t,
+      error: () => {},   // Liste optional — manuelles Tippen funktioniert weiterhin
+    });
+  }
+
+  /** Thema aus dem Dropdown übernommen. */
+  onThemeSelected(event: MatAutocompleteSelectedEvent): void {
+    this.addThemeValue(event.option.value);
+    this.themeInput = '';
+  }
+
+  /** Frei getipptes Thema per Enter/Komma/Leertaste übernehmen (nicht in der Vorschlagsliste). */
+  onThemeInputTokenEnd(event: MatChipInputEvent): void {
+    const value = (event.value || '').trim();
+    if (value) this.addThemeValue(value);
+    event.chipInput?.clear();
+    this.themeInput = '';
+  }
+
+  private addThemeValue(theme: string): void {
+    const normalized = theme.trim();
+    if (!normalized || this.selectedThemes.includes(normalized)) return;
+    this.setSelectedThemes([...this.selectedThemes, normalized]);
+  }
+
+  /** Thema-Chip entfernen. */
+  removeTheme(theme: string): void {
+    this.setSelectedThemes(this.selectedThemes.filter(t => t !== theme));
   }
 
   lives = 3;
@@ -279,6 +344,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   ngOnInit(): void {
+    // Verfügbare Themen fürs Auswahl-Dropdown laden (unabhängig vom Einstiegs-Modus).
+    this.loadAllThemes();
+
     // History-Detail (?session=ID): abgeschlossenen Lauf wie den Game-Over-Screen anzeigen.
     // Stats + Puzzle-Review werden aus dem persistierten Lauf rekonstruiert.
     const sessionParam = this.route.snapshot.queryParamMap.get('session');

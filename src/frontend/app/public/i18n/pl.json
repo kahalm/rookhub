@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (słabe) – 24 (silne)",
       "themes": "Motywy (opcjonalnie)",
       "themesPlaceholder": "np. widelec szpila",
+      "themesHint": "Wyszukaj i wybierz motywy — zadaniu wystarczy jeden.",
       "thresholdExplain": "Oceny, przy których zazwyczaj tracisz życia. Dostosuj, aby szybciej lub wolniej pomijać łatwiejsze zadania.",
       "firstThreshold": "1. próg",
       "secondThreshold": "2. próg",

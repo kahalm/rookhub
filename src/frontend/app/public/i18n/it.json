@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (debole) – 24 (forte)",
       "themes": "Temi (facoltativo)",
       "themesPlaceholder": "es. forchetta inchiodatura",
+      "themesHint": "Cerca e scegli i temi — al puzzle ne basta uno.",
       "thresholdExplain": "Valutazioni in cui si perdono tipicamente le vite. Modifica per saltare i puzzle più semplici più velocemente o lentamente.",
       "firstThreshold": "1ª soglia",
       "secondThreshold": "2ª soglia",

@@ -10,6 +10,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: 2026-06-13 → npm Angular auf 19.2.25/cli 19.2.27 aktualisiert (0.115.1, Build+289 Tests grün). NuGet: alle Updates sind 9→10-Major (.NET-10) → bewusst ausgelassen; Swashbuckle 6.9.0 bleibt gepinnt. Bot (pip `>=`-Floors) aktuell. npm-audit-Vulns (12) nur in Dev-Deps (webpack-dev-server/sockjs) — nicht im Prod-Bundle
 
 ## Bugs
+- [ ] Bauernumwandlung (Pawn Promotion) auf Mobile — Auswahl-Dialog/Interaktion auf dem Handy prüfen & fixen (Promotion-Picker schwer/nicht bedienbar auf Touch/kleinen Screens). Betrifft alle Puzzle-Modi (gemeinsamer `PuzzleBoardComponent`/chessground).
 - [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
 - [x] BookPuzzle: Ladefehler → endloser Spinner → behoben in 0.97.6 (loadError-Flag + Retry-Button)
 - [x] FriendController: return Forbid(ex.Message) → 500 → war bereits behoben in 0.40.9
@@ -101,6 +102,7 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 - [ ] Massen-Übersetzung/Bereinigung der 22 erweiterten Sprachen (je ~174 Keys hinter en + 24 veraltete) — braucht Pipeline-/Tooling-Entscheidung (MT vs. manuell). Aktuell unkritisch (Fallback auf en). en/de/hr sind die gepflegten Sprachen und vollständig.
 
 ## Features
+- [ ] Endless: Start-ELO schneller einpendeln — am Lauf-Anfang die Rating-Schritte größer machen, damit man schnell beim passenden Niveau landet. Multiplikator **×4** (in BEIDE Richtungen: rauf bei gelöst, runter bei nicht gelöst), bis man **mindestens 5 gelöste UND 5 nicht gelöste** Puzzles hat; danach Faktor **×2** bis **10 gelöst / 10 nicht gelöst**; danach normale Schrittweite. Logik sitzt in der Fasttrack-/Chain-Skalierung (`endless-prefetch.util.ts` + `endless-puzzle.component.ts`).
 - [ ] Trainersystem mit eigenen Gruppen einführen — Konzept noch offen. Idee: Trainer-Rolle, die eigene Gruppen anlegen/verwalten und Mitglieder zuweisen kann (heute nur Admin via `/api/admin/groups`), inkl. Trainingsziel-Vorlagen + ggf. Kurs-Freigaben für die eigenen Gruppen. Aufbauen auf bestehender Gruppen-/`GroupTrainingGoals`-/`BookGroupAccess`-Infrastruktur; offene Fragen: Rollenmodell (neue Rolle vs. Flag), Sichtbarkeits-/Berechtigungsgrenzen Trainer ↔ Mitglieder, Einladungsfluss.
 - [ ] Passwort vergessen / E-Mail-Reset
 - [ ] Push-Benachrichtigungen (PWA) — z.B. „Dein Tagespuzzle wartet"

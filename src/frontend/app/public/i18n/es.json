@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (débil) – 24 (fuerte)",
       "themes": "Temas (opcional)",
       "themesPlaceholder": "p. ej. horquilla clavada",
+      "themesHint": "Busca y elige temas — al puzzle le basta con uno.",
       "thresholdExplain": "Puntuaciones donde normalmente pierdes vidas. Ajusta para saltar los ejercicios más fáciles más rápido o más lento.",
       "firstThreshold": "1.º umbral",
       "secondThreshold": "2.º umbral",

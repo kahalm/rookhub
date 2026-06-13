@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (slab) – 24 (puternic)",
       "themes": "Teme (opțional)",
       "themesPlaceholder": "ex. furculiță ac",
+      "themesHint": "Caută și alege teme — puzzle-ului îi ajunge una.",
       "thresholdExplain": "Ratinguri la care pierzi de obicei vieți. Ajustează pentru a sări peste probleme mai ușoare mai rapid sau mai lent.",
       "firstThreshold": "Primul prag",
       "secondThreshold": "Al doilea prag",

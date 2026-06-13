@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1（弱）– 24（强）",
       "themes": "主题（可选）",
       "themesPlaceholder": "例如：闪击 牵制",
+      "themesHint": "搜索并选择主题——谜题只需符合其中一个。",
       "thresholdExplain": "你通常失命的评分段。调整以更快或更慢地跳过简单题目。",
       "firstThreshold": "第 1 阈值",
       "secondThreshold": "第 2 阈值",

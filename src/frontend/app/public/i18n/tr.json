@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (zayıf) – 24 (güçlü)",
       "themes": "Temalar (isteğe bağlı)",
       "themesPlaceholder": "örn. çatal bağlama",
+      "themesHint": "Temaları ara ve seç — bulmaca için biri yeterli.",
       "thresholdExplain": "Genellikle can kaybettiğiniz dereceler. Daha kolay problemleri daha hızlı veya yavaş atlamak için ayarlayın.",
       "firstThreshold": "1. Eşik",
       "secondThreshold": "2. Eşik",

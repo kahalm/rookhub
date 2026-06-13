@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (svag) – 24 (stark)",
       "themes": "Teman (valfritt)",
       "themesPlaceholder": "t.ex. gaffel nål",
+      "themesHint": "Sök och välj teman — pusslet behöver bara ett av dem.",
       "thresholdExplain": "Betyg där du vanligtvis förlorar liv. Justera för att hoppa över lättare uppgifter snabbare eller långsammare.",
       "firstThreshold": "1:a tröskel",
       "secondThreshold": "2:a tröskel",

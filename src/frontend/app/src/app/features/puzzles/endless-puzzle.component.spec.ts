@@ -37,6 +37,7 @@ function makeComponent(): any {
     recordAttempt: () => sub(null),
     recordAnonymousAttempt: () => sub(null),
     ensureSessionId: () => 'sess',
+    getAllThemes: () => sub(['advancedPawn', 'backRankMate', 'endgame', 'fork', 'pin']),
   };
   const storage: any = {
     loadConfig: (c: any) => c,
@@ -118,6 +119,48 @@ describe('EndlessPuzzleComponent analyse', () => {
 
     expect(c.state).toBe('CONFIG');
     expect(c.activeGameState).toBeNull();
+  });
+});
+
+describe('EndlessPuzzleComponent Themen-Multiselect', () => {
+  it('selectedThemes liest die leerzeichengetrennten Themen aus der Config', () => {
+    const c = makeComponent();
+    c.config.themes = 'fork pin';
+    expect(c.selectedThemes).toEqual(['fork', 'pin']);
+  });
+
+  it('addThemeValue hängt ein Thema an und schreibt es als String zurück (keine Duplikate)', () => {
+    const c = makeComponent();
+    c.config.themes = 'fork';
+    (c as any).addThemeValue('pin');
+    expect(c.config.themes).toBe('fork pin');
+    (c as any).addThemeValue('pin');   // Duplikat ignoriert
+    expect(c.config.themes).toBe('fork pin');
+  });
+
+  it('removeTheme entfernt das Thema aus dem String', () => {
+    const c = makeComponent();
+    c.config.themes = 'fork pin endgame';
+    c.removeTheme('pin');
+    expect(c.config.themes).toBe('fork endgame');
+  });
+
+  it('filteredThemes blendet bereits gewählte aus und filtert nach dem Suchtext', () => {
+    const c = makeComponent();
+    c.allThemes = ['advancedPawn', 'backRankMate', 'endgame', 'fork', 'pin'];
+    c.config.themes = 'fork';        // fork ist gewählt → raus aus Vorschlägen
+    c.themeInput = 'ba';             // Suchtext
+    expect(c.filteredThemes).toEqual(['backRankMate']);
+  });
+
+  it('onThemeInputTokenEnd übernimmt frei getippte Themen und leert das Eingabefeld', () => {
+    const c = makeComponent();
+    c.config.themes = '';
+    const clear = jasmine.createSpy('clear');
+    (c as any).onThemeInputTokenEnd({ value: 'zwischenzug', chipInput: { clear } });
+    expect(c.config.themes).toBe('zwischenzug');
+    expect(clear).toHaveBeenCalled();
+    expect(c.themeInput).toBe('');
   });
 });
 

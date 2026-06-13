@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
       "themes": "थीम (वैकल्पिक)",
       "themesPlaceholder": "जैसे fork pin",
+      "themesHint": "थीम खोजें और चुनें — पज़ल को इनमें से एक ही चाहिए।",
       "thresholdExplain": "वे रेटिंग जहाँ आप सामान्यतः जीवन खोते हैं। आसान पहेलियाँ तेज़ या धीरे छोड़ने के लिए समायोजित करें।",
       "firstThreshold": "1ली सीमा",
       "secondThreshold": "2री सीमा",

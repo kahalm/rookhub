@@ -451,6 +451,40 @@ public class PuzzleService
             .ToList();
     }
 
+    /// <summary>
+    /// Alle vorkommenden Puzzle-Themen, alphabetisch sortiert — Optionen für die Themen-Auswahl.
+    /// Quelle ist die normalisierte <c>Tags</c>-Tabelle; ist die (noch) leer (kein Tag-Backfill),
+    /// Fallback auf die distinkten Tokens aus <c>Puzzle.Themes</c>. 1 h gecacht (Themenmenge ändert sich kaum).
+    /// </summary>
+    public async Task<List<string>> GetAllThemesAsync()
+    {
+        const string cacheKey = "puzzle:all-themes";
+        if (_cache.TryGetValue(cacheKey, out List<string>? cached) && cached != null)
+            return cached;
+
+        var themes = await _db.Tags
+            .OrderBy(t => t.Name)
+            .Select(t => t.Name)
+            .ToListAsync();
+
+        if (themes.Count == 0)
+        {
+            // Fallback: Tag-Tabelle noch nicht befüllt → aus den (leerzeichengetrennten) Puzzle.Themes ableiten.
+            var raw = await _db.Puzzles
+                .Where(p => p.Themes != null && p.Themes != "")
+                .Select(p => p.Themes!)
+                .ToListAsync();
+            themes = raw
+                .SelectMany(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(t => t, StringComparer.Ordinal)
+                .ToList();
+        }
+
+        _cache.Set(cacheKey, themes, TimeSpan.FromHours(1));
+        return themes;
+    }
+
     public async Task<(int Min, int Max)?> GetRatingRangeAsync()
     {
         var min = await _db.Puzzles.MinAsync(p => (int?)p.Rating);

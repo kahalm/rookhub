@@ -701,6 +701,7 @@
       "stockfishDepthHint": "1 (weak) – 24 (strong)",
       "themes": "Themes (optional)",
       "themesPlaceholder": "e.g. fork pin (any of them)",
+      "themesHint": "Search and pick themes — a puzzle just needs one of them.",
       "thresholdExplain": "Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.",
       "firstThreshold": "1st Threshold",
       "secondThreshold": "2nd Threshold",

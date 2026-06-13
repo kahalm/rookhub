@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (fraco) – 24 (forte)",
       "themes": "Temas (opcional)",
       "themesPlaceholder": "ex. garfo pregado",
+      "themesHint": "Pesquise e escolha temas — ao puzzle basta um deles.",
       "thresholdExplain": "Classificações onde normalmente perde vidas. Ajuste para saltar puzzles mais fáceis mais rápido ou mais devagar.",
       "firstThreshold": "1.º Limiar",
       "secondThreshold": "2.º Limiar",

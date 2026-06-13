@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (lemah) – 24 (kuat)",
       "themes": "Tema (opsional)",
       "themesPlaceholder": "mis. garpu pin",
+      "themesHint": "Cari dan pilih tema — teka-teki cukup salah satunya.",
       "thresholdExplain": "Rating di mana Anda biasanya kehilangan nyawa. Sesuaikan untuk melewati puzzle yang lebih mudah lebih cepat atau lebih lambat.",
       "firstThreshold": "Ambang Batas ke-1",
       "secondThreshold": "Ambang Batas ke-2",

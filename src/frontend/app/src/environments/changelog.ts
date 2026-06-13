@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.116.1';
+export const APP_VERSION = '0.117.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.117.0', date: '2026-06-13', changes: [
+    'Endless-Modus: Die Themen-Auswahl ist jetzt ein durchsuchbares Mehrfach-Auswahlfeld statt eines freien Textfelds. Einfach tippen, um aus allen verfügbaren Themen zu filtern, und beliebig viele per Klick auswählen — die Auswahl erscheint als entfernbare Chips. Eigene/freie Themen lassen sich weiterhin per Enter, Komma oder Leertaste eintippen.',
+  ]},
   { version: '0.116.1', date: '2026-06-13', changes: [
     'Chessable-Import: Der gerade laufende Import wird in der Warteschlange wieder als „läuft gerade" angezeigt. Bisher konnte er bei vielen (>20) Importen aus der Liste fallen, sodass nur Warteschlangen-Plätze zu sehen waren, obwohl im Hintergrund schon ein Kurs geladen wurde.',
   ]},

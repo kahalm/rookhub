@@ -665,6 +665,7 @@
       "stockfishDepthHint": "1 (slabý) – 24 (silný)",
       "themes": "Témata (volitelné)",
       "themesPlaceholder": "např. vidlička špendlík",
+      "themesHint": "Hledej a vyber témata — úloha potřebuje jen jedno z nich.",
       "thresholdExplain": "Hodnocení, při kterých obvykle ztrácíte životy. Upravte pro rychlejší nebo pomalejší přeskočení lehčích úloh.",
       "firstThreshold": "1. práh",
       "secondThreshold": "2. práh",
