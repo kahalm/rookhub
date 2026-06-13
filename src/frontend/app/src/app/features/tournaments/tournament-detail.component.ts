@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
@@ -20,8 +19,10 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
-import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription, TournamentFavorite } from '../../core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '../../core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
+import { TournamentDetailService } from './tournament-detail.service';
+import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites, filterPairingsByFavorites } from './tournament-favorites.util';
 
 @Component({
   selector: 'app-tournament-detail',
@@ -80,7 +81,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private favoriteIdMap: Map<number, number> = new Map();
   private teamFavoriteIdMap: Map<number, number> = new Map();
 
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
@@ -88,7 +89,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
     if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
     this.loadFavorites();
-    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+    this.api.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
         this.loading = false;
@@ -111,7 +112,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   loadSubscription(): void {
-    this.http.get<Subscription[]>('/api/subscriptions').subscribe({
+    this.api.getSubscriptions().subscribe({
       next: (subs) => {
         this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
       },
@@ -121,10 +122,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   subscribe(): void {
     this.toggling = true;
-    this.http.post<Subscription>('/api/subscriptions', {
-      crawlerTournamentId: this.id,
-      tournamentName: this.tournament?.name ?? ''
-    }).subscribe({
+    this.api.subscribe(this.id, this.tournament?.name ?? '').subscribe({
       next: (sub) => {
         this.subscription = sub;
         this.toggling = false;
@@ -140,7 +138,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   unsubscribe(): void {
     if (!this.subscription) return;
     this.toggling = true;
-    this.http.delete(`/api/subscriptions/${this.subscription.id}`).subscribe({
+    this.api.unsubscribe(this.subscription.id).subscribe({
       next: () => {
         this.subscription = null;
         this.toggling = false;
@@ -154,7 +152,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   loadMonitorStatus(): void {
-    this.http.get<any>(`/api/tournament-monitors/${this.id}`).subscribe({
+    this.api.getMonitor(this.id).subscribe({
       next: (res) => {
         this.monitoring = res.active;
         this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
@@ -170,7 +168,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   toggleMonitor(): void {
     this.monitorToggling = true;
     if (this.monitoring) {
-      this.http.delete(`/api/tournament-monitors/${this.id}`).subscribe({
+      this.api.stopMonitor(this.id).subscribe({
         next: () => {
           this.monitoring = false;
           this.monitorActiveUntil = null;
@@ -185,7 +183,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       });
     } else {
       this.notificationService.requestPermission();
-      this.http.post<any>(`/api/tournament-monitors/${this.id}`, {}).subscribe({
+      this.api.startMonitor(this.id).subscribe({
         next: (res) => {
           this.monitoring = true;
           this.monitorActiveUntil = res.activeUntil ? new Date(res.activeUntil) : null;
@@ -212,7 +210,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.stopMonitorPoll();
         return;
       }
-      this.http.get<any>(`/api/tournament-monitors/${this.id}`).subscribe({
+      this.api.getMonitor(this.id).subscribe({
         next: (res) => {
           if (!res.active) {
             this.monitoring = false;
@@ -254,10 +252,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.refreshing = true;
     // Strip tnr prefix if present - crawler adds it automatically
     const crawlId = this.tournament.chessResultsId.replace(/^tnr/i, '');
-    this.http.post<any>('/api/tournaments/crawl', {
-      chessResultsId: crawlId,
-      jobType: 'Full'
-    }).subscribe({
+    this.api.startCrawl(crawlId).subscribe({
       next: (job) => this.pollRefreshJob(job.id),
       error: () => {
         this.refreshing = false;
@@ -268,7 +263,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   private pollRefreshJob(jobId: number): void {
     this.pollInterval = setInterval(() => {
-      this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
+      this.api.getCrawlJob(jobId).subscribe({
         next: (job) => {
           if (job.status === 'Completed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
@@ -294,7 +289,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   private reloadAll(): void {
-    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+    this.api.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
         if (t.totalRounds) {
@@ -322,7 +317,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadPlayers(): void {
     this.playersLoading = true;
-    this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
+    this.api.getPlayers(this.id).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
       error: () => { this.playersLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPlayersFailed')); }
     });
@@ -330,7 +325,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadTeams(): void {
     this.teamsLoading = true;
-    this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
+    this.api.getTeams(this.id).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedTeams(); },
       error: () => { this.teamsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadTeamsFailed')); }
     });
@@ -338,8 +333,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   loadPairings(): void {
     this.pairingsLoading = true;
-    // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
-    this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
+    this.api.getPairings(this.id, this.selectedRound).subscribe({
       next: (p) => {
         const { pairings, hasTeamPairings } = toDisplayPairings(p);
         this.pairings = pairings;
@@ -356,7 +350,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   // --- Favorites (server-side) ---
 
   private loadFavorites(): void {
-    this.http.get<TournamentFavorite[]>(`/api/tournament-favorites?tournamentId=${this.id}`).subscribe({
+    this.api.getFavorites(this.id).subscribe({
       next: (favs) => {
         this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr!));
         this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
@@ -366,7 +360,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       },
       error: () => {}
     });
-    this.http.get<{ showFavoritesOnly: boolean }>(`/api/tournament-favorites/settings/${this.id}`).subscribe({
+    this.api.getFavoriteSettings(this.id).subscribe({
       next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; this.refreshAllDisplayed(); },
       error: () => {}
     });
@@ -375,7 +369,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
     this.refreshAllDisplayed();
-    this.http.put(`/api/tournament-favorites/settings/${this.id}`, { showFavoritesOnly: checked }).subscribe({
+    this.api.saveFavoriteSettings(this.id, checked).subscribe({
       error: () => {}
     });
   }
@@ -404,49 +398,29 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   private refreshFavoriteHelpers(): void {
-    const teamNames = new Set<string>();
-    for (const t of this.teams) {
-      if (this.favoriteTeamSnrs.has(t.snr)) teamNames.add(t.name);
-    }
-    for (const p of this.players) {
-      if (this.favoriteSnrs.has(p.snr) && p.teamName) teamNames.add(p.teamName);
-    }
+    const { playerNames, teamNames } = computeFavoriteNames(this.players, this.teams, this.favoriteSnrs, this.favoriteTeamSnrs);
+    this._favoriteNames = playerNames;
     this._favoriteTeamNames = teamNames;
-
-    const names = new Set<string>();
-    for (const p of this.players) {
-      if (this.favoriteSnrs.has(p.snr) || (p.teamName && teamNames.has(p.teamName))) {
-        names.add(p.name);
-      }
-    }
-    this._favoriteNames = names;
   }
 
   private refreshDisplayedPlayers(): void {
-    let data = this.players;
-    if (this.showFavoritesOnly) {
-      data = data.filter(p => this.favoriteSnrs.has(p.snr) || (p.teamName && this._favoriteTeamNames.has(p.teamName)));
-    }
+    const data = this.showFavoritesOnly
+      ? filterPlayersByFavorites(this.players, this.favoriteSnrs, this._favoriteTeamNames)
+      : this.players;
     this.displayedPlayers = sortTableData(data, this.playerSort);
   }
 
   private refreshDisplayedTeams(): void {
-    let data = this.teams;
-    if (this.showFavoritesOnly) {
-      data = data.filter(t => this._favoriteTeamNames.has(t.name));
-    }
+    const data = this.showFavoritesOnly
+      ? filterTeamsByFavorites(this.teams, this._favoriteTeamNames)
+      : this.teams;
     this.displayedTeams = sortTableData(data, this.teamSort);
   }
 
   private refreshDisplayedPairings(): void {
-    let data = this.pairings;
-    if (this.showFavoritesOnly) {
-      if (this.hasTeamPairings) {
-        data = data.filter(p => this._favoriteTeamNames.has(p.white) || this._favoriteTeamNames.has(p.black));
-      } else {
-        data = data.filter(p => this._favoriteNames.has(p.white) || this._favoriteNames.has(p.black));
-      }
-    }
+    const data = this.showFavoritesOnly
+      ? filterPairingsByFavorites(this.pairings, this.hasTeamPairings, this._favoriteNames, this._favoriteTeamNames)
+      : this.pairings;
     this.displayedPairings = sortTableData(data, this.pairingSort);
   }
 
@@ -467,7 +441,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
       this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: player.name }));
-      this.http.delete(`/api/tournament-favorites/by-player/${this.id}/${player.snr}`).subscribe({
+      this.api.removePlayerFavorite(this.id, player.snr).subscribe({
         next: () => { this.favoriteIdMap.delete(player.snr); },
         error: () => {}
       });
@@ -476,10 +450,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteSnrs = new Set(this.favoriteSnrs);
       this.refreshAllDisplayed();
       this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: player.name }));
-      this.http.post<TournamentFavorite>('/api/tournament-favorites', {
-        crawlerTournamentId: this.id,
-        playerSnr: player.snr
-      }).subscribe({
+      this.api.addPlayerFavorite(this.id, player.snr).subscribe({
         next: (fav) => { this.favoriteIdMap.set(player.snr, fav.id); },
         error: () => {}
       });
@@ -496,7 +467,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
       this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: team.name }));
-      this.http.delete(`/api/tournament-favorites/by-team/${this.id}/${team.snr}`).subscribe({
+      this.api.removeTeamFavorite(this.id, team.snr).subscribe({
         next: () => { this.teamFavoriteIdMap.delete(team.snr); },
         error: () => {}
       });
@@ -505,10 +476,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
       this.refreshAllDisplayed();
       this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: team.name }));
-      this.http.post<TournamentFavorite>('/api/tournament-favorites/team', {
-        crawlerTournamentId: this.id,
-        teamSnr: team.snr
-      }).subscribe({
+      this.api.addTeamFavorite(this.id, team.snr).subscribe({
         next: (fav) => { this.teamFavoriteIdMap.set(team.snr, fav.id); },
         error: () => {}
       });
@@ -529,7 +497,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
     if (!team) return;
-    this.http.get<TournamentTeam>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
+    this.api.getTeamDetails(this.id, team.snr).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.114.3';
+export const APP_VERSION = '0.114.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.114.4', date: '2026-06-13', changes: [
+    'Internes Refactoring der Turnier-Detailansicht: HTTP-Zugriffe in einen eigenen Service ausgelagert und die Favoriten-Filterlogik in eine getestete Hilfsfunktion verschoben (keine sichtbare Änderung). Außerdem den Frontend-Unit-Test-Lauf wieder repariert (Navbar-Test war seit der Menü-Sichtbarkeit kaputt).',
+  ]},
   { version: '0.114.3', date: '2026-06-13', changes: [
     'Crawler (intern): Bricht ein Client die Spielersuche ab, wird die laufende Anfrage an chess-results.com jetzt sauber abgebrochen statt unnötig zu Ende geführt (CancellationToken durchgereicht).',
   ]},
