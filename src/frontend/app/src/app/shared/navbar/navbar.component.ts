@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
+import { MenuService } from '../../core/menu.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 
@@ -24,15 +25,15 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
         <div class="nav-links">
-          <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
-          <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
-          <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button>
-          <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
-          <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
-          <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
-          @if (showCourses) {
+          @if (can('dashboard')) { <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
+          @if (can('repertoires')) { <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
+          @if (can('tournaments')) { <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
+          @if (can('friends')) { <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
+          @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
+          @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('weekly')) { <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
+          @if (showCourses && can('courses')) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
           @if (auth.isAdmin) {
@@ -43,15 +44,15 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           <mat-icon>menu</mat-icon>
         </button>
         <mat-menu #navMenu="matMenu">
-          <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button>
-          <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button>
-          <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button>
-          <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button>
-          <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
-          <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button>
-          <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
-          <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button>
-          @if (showCourses) {
+          @if (can('dashboard')) { <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
+          @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
+          @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
+          @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
+          @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
+          @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
+          @if (showCourses && can('courses')) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
           @if (auth.isAdmin) {
@@ -69,20 +70,22 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
         </button>
         <mat-menu #userMenu="matMenu">
           <button mat-menu-item routerLink="/profile">{{ 'nav.profile' | translate }}</button>
-          <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button>
+          @if (can('stats')) { <button mat-menu-item routerLink="/stats">{{ 'nav.stats' | translate }}</button> }
           <button mat-menu-item routerLink="/puzzles/endless/history">{{ 'nav.puzzleHistory' | translate }}</button>
-          <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button>
-          <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button>
-          <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button>
+          @if (can('chessable')) { <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button> }
+          @if (can('install')) { <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button> }
+          @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
           <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
       } @else {
-        <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button>
-        <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button>
+        @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+        @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+        @if (can('help')) {
         <button mat-icon-button routerLink="/help" [matTooltip]="'nav.help' | translate" [attr.aria-label]="'nav.help' | translate">
           <mat-icon>help_outline</mat-icon>
         </button>
+        }
         <button mat-icon-button (click)="quickstartClick.emit()" [attr.aria-label]="'nav.info' | translate">
           <mat-icon>info_outline</mat-icon>
         </button>
@@ -124,6 +127,10 @@ export class NavbarComponent implements OnInit {
   /** Kurse-Menü sichtbar: Admin (sofort) oder Nicht-Admin mit mind. einem freigegebenen Kurs. */
   showCourses = false;
 
+  /** Admin-konfigurierte Sichtbarkeit der Menüeinträge (Snapshot für synchrones Binding). */
+  visible = new Set<string>();
+  can(key: string): boolean { return this.visible.has(key); }
+
   private destroyRef = inject(DestroyRef);
 
   get themeIcon(): string {
@@ -140,9 +147,12 @@ export class NavbarComponent implements OnInit {
     return labels[this.theme.preference];
   }
 
-  constructor(public auth: AuthService, private courseService: CourseService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
+  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
 
   ngOnInit(): void {
+    // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
+    this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(set => this.visible = set);
+
     // Bei jedem Login/Logout neu bestimmen, ob das Kurse-Menü gezeigt wird. switchMap bricht
     // einen laufenden checkAccess()-Call bei erneutem Login-State-Wechsel ab (kein Leak/Race);
     // takeUntilDestroyed räumt die Subscription auf.

@@ -886,7 +886,8 @@
       "books": "Books",
       "groups": "Groups",
       "daily": "Daily Puzzle",
-      "puzzles": "Puzzles"
+      "puzzles": "Puzzles",
+      "menu": "Menu"
     },
     "users": {
       "searchLabel": "Search users",
@@ -1009,6 +1010,37 @@
       "backfillConfirm": "Build / refresh the puzzle tag table now? This runs as a background job.",
       "backfillStarted": "Tag backfill started (running in the background).",
       "backfillError": "Could not start the backfill."
+    },
+    "menu": {
+      "title": "Menu visibility",
+      "intro": "Decide who sees each menu entry. Hidden entries are also blocked when the page URL is opened directly. Admins always see everything.",
+      "level": "Visibility",
+      "groups": "Groups",
+      "save": "Save",
+      "saved": "Menu visibility saved.",
+      "saveError": "Could not save menu visibility.",
+      "loadError": "Could not load menu visibility.",
+      "levels": {
+        "All": "Everyone (incl. logged out)",
+        "Registered": "Registered users",
+        "Groups": "Specific groups",
+        "Admin": "Admins only"
+      },
+      "items": {
+        "dashboard": "Dashboard",
+        "repertoires": "Repertoires",
+        "tournaments": "Tournaments",
+        "friends": "Friends",
+        "puzzles": "Puzzles",
+        "training-goals": "Training goals",
+        "analysis": "Analysis",
+        "weekly": "Weekly post",
+        "courses": "Courses",
+        "stats": "Statistics",
+        "chessable": "Chessable import",
+        "install": "Install app",
+        "help": "Help"
+      }
     }
   },
   "analysis": {

@@ -96,6 +96,15 @@ export interface GroupTrainingGoal {
   groupName: string | null;
 }
 
+/** Sichtbarkeitsstufe eines Menüeintrags (serialisiert wie das Server-Enum). */
+export type MenuVisibilityLevel = 'All' | 'Registered' | 'Groups' | 'Admin';
+
+export interface MenuItemConfig {
+  key: string;
+  level: MenuVisibilityLevel;
+  groupIds: number[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private http: HttpClient) {}
@@ -156,6 +165,15 @@ export class AdminService {
   /** Generiert das Tagespuzzle eines Datums neu; mustert das bisherige aus. */
   regenerateDailyPuzzle(date: string): Observable<DailyPuzzleInfo> {
     return this.http.post<DailyPuzzleInfo>(`/api/admin/book-puzzles/daily/${date}/regenerate`, {});
+  }
+
+  // --- Menü-Sichtbarkeit ------------------------------------------------
+  getMenuConfig(): Observable<MenuItemConfig[]> {
+    return this.http.get<MenuItemConfig[]>('/api/admin/menu');
+  }
+
+  saveMenuConfig(items: MenuItemConfig[]): Observable<MenuItemConfig[]> {
+    return this.http.put<MenuItemConfig[]>('/api/admin/menu', items);
   }
 
   // --- Gruppen ----------------------------------------------------------

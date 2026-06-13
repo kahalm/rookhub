@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.111.0';
+export const APP_VERSION = '0.112.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.112.0', date: '2026-06-13', changes: [
+    'Admins können jetzt pro Menüeintrag festlegen, wer ihn sieht: alle (auch ausgeloggt), registrierte Nutzer, bestimmte Gruppen oder nur Admins (Admin → neuer Tab „Menü").',
+    'Ausgeblendete Einträge sind nicht nur in der Navigation versteckt, sondern auch beim direkten Aufruf der Seiten-URL gesperrt.',
+  ]},
   { version: '0.111.0', date: '2026-06-12', changes: [
     'Kurse lassen sich jetzt als PGN herunterladen (Download-Symbol bei jedem Kurs) — ein Spiel je Linie, aus den gespeicherten Puzzles erzeugt.',
     'Repertoires bekommen ebenfalls einen „PGN herunterladen"-Button (kombiniertes PGN aller Dateien).',

@@ -126,6 +126,7 @@ try
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
     builder.Services.AddScoped<BookAdminService>();
+    builder.Services.AddScoped<MenuVisibilityService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.

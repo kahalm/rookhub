@@ -886,7 +886,8 @@
       "books": "Bücher",
       "groups": "Gruppen",
       "daily": "Tagespuzzle",
-      "puzzles": "Puzzles"
+      "puzzles": "Puzzles",
+      "menu": "Menü"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -1009,6 +1010,37 @@
       "backfillConfirm": "Tag-Tabelle jetzt aufbauen/auffrischen? Läuft als Hintergrund-Job.",
       "backfillStarted": "Tag-Backfill gestartet (läuft im Hintergrund).",
       "backfillError": "Backfill konnte nicht gestartet werden."
+    },
+    "menu": {
+      "title": "Menü-Sichtbarkeit",
+      "intro": "Lege fest, wer welchen Menüeintrag sieht. Ausgeblendete Einträge werden auch beim direkten Aufruf der Seiten-URL gesperrt. Admins sehen immer alles.",
+      "level": "Sichtbarkeit",
+      "groups": "Gruppen",
+      "save": "Speichern",
+      "saved": "Menü-Sichtbarkeit gespeichert.",
+      "saveError": "Menü-Sichtbarkeit konnte nicht gespeichert werden.",
+      "loadError": "Menü-Sichtbarkeit konnte nicht geladen werden.",
+      "levels": {
+        "All": "Alle (auch ausgeloggt)",
+        "Registered": "Registrierte Nutzer",
+        "Groups": "Bestimmte Gruppen",
+        "Admin": "Nur Admins"
+      },
+      "items": {
+        "dashboard": "Dashboard",
+        "repertoires": "Repertoires",
+        "tournaments": "Turniere",
+        "friends": "Freunde",
+        "puzzles": "Puzzles",
+        "training-goals": "Trainingsziele",
+        "analysis": "Analyse",
+        "weekly": "Wochenpost",
+        "courses": "Kurse",
+        "stats": "Statistik",
+        "chessable": "Chessable-Import",
+        "install": "App installieren",
+        "help": "Hilfe"
+      }
     }
   },
   "analysis": {

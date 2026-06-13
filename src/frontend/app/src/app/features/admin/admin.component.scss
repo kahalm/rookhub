@@ -41,3 +41,15 @@
     .daily-row { display: flex; gap: 12px; padding: 4px 0; }
     .daily-key { min-width: 120px; color: color-mix(in srgb, currentColor 60%, transparent); font-weight: 500; }
     .daily-lineid { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+
+/* Menü-Sichtbarkeit */
+.menu-list { display: flex; flex-direction: column; gap: 4px; max-width: 760px; margin-bottom: 16px; }
+.menu-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+.menu-row .menu-label { flex: 1 1 160px; font-weight: 500; }
+.menu-row .menu-level { width: 200px; }
+.menu-row .menu-groups { flex: 1 1 240px; min-width: 200px; }
+.menu-row mat-form-field { margin-bottom: -1.25em; }
+.menu-save { margin-top: 8px; }

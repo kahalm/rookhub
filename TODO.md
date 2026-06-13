@@ -53,5 +53,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Push-Benachrichtigungen (PWA) — z.B. „Dein Tagespuzzle wartet"
 - [ ] E-Mail-Benachrichtigung bei neuen Turnierblättchen
 - [ ] Puzzle-Streaks / Achievements
+- [ ] Dinge für Freunde — Stats (Idee: Freunde-bezogene Statistiken / Vergleiche; Konzept noch offen)
+- [ ] Dinge für Freunde — Revenge a Friend (Idee: einem Freund eine Revanche-Aufgabe / Herausforderung stellen)
 - [ ] Admin-Dashboard: User-Übersicht + Aktionen
 - [x] Schach-Bot auf Elasticsearch umbauen (Logging/Events) → umgesetzt im Bot-Repo v2.60.0/2.60.1 (`core/es_client.py`, ESHandler in `log_setup.py`, Events `reaction`+`stat_inc`); Index `schach-bot-logs-*` ist live in Prod. Weitere Event-Typen (Daily-Post, DMs, Webhooks, Commands, Buttons) bei Bedarf später ergänzen.

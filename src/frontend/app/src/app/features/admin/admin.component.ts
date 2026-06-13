@@ -15,7 +15,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
+import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
+import { MenuService } from '../../core/menu.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -74,7 +75,13 @@ export class AdminComponent implements OnInit {
   // --- Puzzles (Standard) -----------------------------------------------
   puzzleTagsBackfilling = false;
 
-  constructor(private adminService: AdminService, private snackbar: SnackbarService, private translate: TranslateService) {}
+  // --- Menü-Sichtbarkeit ------------------------------------------------
+  menuConfig: MenuItemConfig[] = [];
+  menuLoading = false;
+  menuSaving = false;
+  readonly menuLevels: MenuVisibilityLevel[] = ['All', 'Registered', 'Groups', 'Admin'];
+
+  constructor(private adminService: AdminService, private menu: MenuService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     this.loadUsers();
@@ -82,6 +89,7 @@ export class AdminComponent implements OnInit {
     this.loadGroups();
     this.loadAllUsers();
     this.loadDailyPuzzle();
+    this.loadMenuConfig();
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
@@ -268,6 +276,30 @@ export class AdminComponent implements OnInit {
         this.puzzleTagsBackfilling = false;
         this.snackbar.info(err.error?.message || this.translate.instant('admin.puzzles.backfillError'));
       }
+    });
+  }
+
+  // --- Menü-Sichtbarkeit ------------------------------------------------
+  loadMenuConfig(): void {
+    this.menuLoading = true;
+    this.adminService.getMenuConfig().subscribe({
+      next: cfg => { this.menuConfig = cfg; this.menuLoading = false; },
+      error: () => { this.snackbar.info(this.translate.instant('admin.menu.loadError')); this.menuLoading = false; }
+    });
+  }
+
+  saveMenuConfig(): void {
+    this.menuSaving = true;
+    // Gruppen nur bei Level=Groups mitschicken (sonst leeren).
+    const payload = this.menuConfig.map(i => ({ ...i, groupIds: i.level === 'Groups' ? i.groupIds : [] }));
+    this.adminService.saveMenuConfig(payload).subscribe({
+      next: cfg => {
+        this.menuConfig = cfg;
+        this.menuSaving = false;
+        this.menu.refresh(); // eigene Navbar sofort aktualisieren
+        this.snackbar.info(this.translate.instant('admin.menu.saved'));
+      },
+      error: () => { this.snackbar.info(this.translate.instant('admin.menu.saveError')); this.menuSaving = false; }
     });
   }
 

@@ -41,6 +41,8 @@ public class AppDbContext : DbContext
     public DbSet<PlayTimeSync> PlayTimeSyncs => Set<PlayTimeSync>();
     public DbSet<ChessableCredential> ChessableCredentials => Set<ChessableCredential>();
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
+    public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
+    public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -309,6 +311,26 @@ public class AppDbContext : DbContext
 
             e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
             e.HasIndex(cr => new { cr.UserId, cr.BookId });
+        });
+
+        modelBuilder.Entity<MenuItemSetting>(e =>
+        {
+            e.HasKey(s => s.ItemKey);
+            e.Property(s => s.ItemKey).HasMaxLength(50);
+        });
+        modelBuilder.Entity<MenuItemGroupAccess>(e =>
+        {
+            e.HasKey(a => new { a.ItemKey, a.GroupId });
+            e.Property(a => a.ItemKey).HasMaxLength(50);
+            e.HasOne(a => a.Setting)
+             .WithMany(s => s.Groups)
+             .HasForeignKey(a => a.ItemKey)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.Group)
+             .WithMany()
+             .HasForeignKey(a => a.GroupId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(a => a.GroupId);
         });
 
         modelBuilder.Entity<BookGroupAccess>(e =>
