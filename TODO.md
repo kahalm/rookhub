@@ -3,11 +3,11 @@
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Periodisch
-- [ ] Code Review — letzter: 2026-06-08 → 2 QUALITY-Fixes (stockfish toter Ternary + BulkImport Seed/ChainPuzzleIds) in 0.97.11; keine Bugs gefunden
-- [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: 2026-06-08 → alle 840 Keys vorhanden, kein leerer String, kein JSON-Fehler; keine echten Lücken gefunden
-- [ ] Security Review — letzter: 2026-06-08 → 2 Fixes (Swagger nur Dev + RememberMe 1 Jahr) in 0.97.12; keine kritischen Lücken gefunden
-- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-08 → engine_analysis_crash als einziger aktiver Fehler gefunden, in 0.97.10 behoben
-- [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: 2026-06-08 → npm-Patches eingespielt (Angular 19.2.25/cli 19.2.27); NuGet + Angular/TS-Major-Sprünge bewusst ausgelassen
+- [ ] Code Review — letzter: 2026-06-13 → erstmals ALLE Repos auditiert (rookhub API+Frontend, crawler, schach-bot, piratechess, repcheck). Funde gesammelt unter „## Audit-Funde 2026-06-13". Codebases insgesamt sehr sauber. Keine Crash-Bugs; 0.115.0-Feature sauber. (vorher 2026-06-08, nur rookhub)
+- [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: 2026-06-13 → alle 25 Sprachdateien JSON-valide. en+de vollständig (1028 Keys); **hr hatte 73 Lücken → in 0.115.1 ergänzt** (Impersonation/Menü/Chessable). `weekly.oClock` überall leer = Absicht. Die 22 Weltsprachen (ar,cs,el,…) sind je 174 Keys hinter en + 24 veraltet (i18n-worldwide-Drift) → fallen auf en zurück, Massen-Übersetzung offen (siehe Audit-Funde)
+- [ ] Security Review — letzter: 2026-06-13 → alle Repos (siehe „## Audit-Funde 2026-06-13"). Auth/Ownership/HMAC/Injection durchweg solide. Echte Funde v. a. im Crawler (SSRF via Auto-Redirect, Body-Logging→ES behoben) + piratechess (curl-Arg-Injektion via bid, gluetun auth=none). Keine sofort-kritische rookhub-Lücke
+- [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-13 → **NICHT durchführbar**: ES (10.24.13.6:9201/9202) aus der Agent-Umgebung nicht erreichbar (HTTP 000). Muss von einer Maschine im 10.24.13.x-Netz laufen
+- [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: 2026-06-13 → npm Angular auf 19.2.25/cli 19.2.27 aktualisiert (0.115.1, Build+289 Tests grün). NuGet: alle Updates sind 9→10-Major (.NET-10) → bewusst ausgelassen; Swashbuckle 6.9.0 bleibt gepinnt. Bot (pip `>=`-Floors) aktuell. npm-audit-Vulns (12) nur in Dev-Deps (webpack-dev-server/sockjs) — nicht im Prod-Bundle
 
 ## Bugs
 - [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
@@ -52,6 +52,49 @@ _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06
 - BCrypt Work Factor ist bereits 12 (`AuthService.cs:21`, auch AdminSeeder)
 - Crawler `HtmlParserService` ist durch Tests abgedeckt (`HtmlParserServiceTests.cs`, ~448 Z.)
 - Crawler `RoundDetectionService` cacht bereits 60 s (`:50`)
+
+## Audit-Funde 2026-06-13 (Code- + Security-Review aller Repos)
+Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, piratechess_docker, repcheck. Zwei sichere Fixes direkt erledigt (s. u.), Rest geparkt — priorisiert. Adressraum-Hinweis: vieles davon ist intern/VPN-geschützt; Risiko realistisch einordnen.
+
+### chessresults_crawler
+- [x] **Body-Logging nach ES** — `LogCrawlRequest` loggte bei jedem erfolgreichen Fetch bis 500 KB Roh-HTML (Spieler-PII + ES-Bloat). In 0.115.1 entfernt (nur noch Größe). (`CrawlerService.cs:700`)
+- [ ] **CRIT SSRF: Host-Guard greift erst NACH dem Request** — `HttpClient.AllowAutoRedirect=true` folgt chess-results-Redirects automatisch, `EnsureChessResultsHost` prüft erst die finale URL → Redirect auf interne Ziele (gluetun :8000, 169.254.169.254) wird bereits ausgeführt. Betrifft `FetchWithRedirectAsync` (`:471`), `FetchHtmlAsync` (`:505`), `SearchPlayers*` POST (`:637/:678`). Fix: `AllowAutoRedirect=false` + Redirects manuell verfolgen, jede Location vor dem nächsten Hop validieren, nur `https`. **Risiko: bricht ggf. SNode-Erkennung → gegen echtes chess-results.com testen.**
+- [ ] **HIGH `/api/health/ip` offen + triggert Outbound** (`HealthController.cs:21`, in `IsOpenPath` ohne Key/RateLimit) — exponiert VPN-Exit-IP unauth. + erlaubt beliebige externe Calls (ipify). Fix: hinter API-Key oder cachen/rate-limiten.
+- [ ] **HIGH VPN-Rotation läuft im Request-Lock** (`RotateVpnAsync` innerhalb `RateLimitAsync`-Semaphore, `:719-723`) → Rotation (+5×1s IP-Poll) blockiert alle Crawls bis 60s-Timeout → TimeoutException-Kaskade unter Last. Fix: Rotation außerhalb des Request-Locks.
+- [ ] MED verwaiste `Queued`-Jobs ohne Recovery (`CrawlController.cs:69` + DropWrite-Queue) — Crash zwischen SaveChanges und Enqueue blockiert via Unique-ActiveKey alle künftigen Crawls des Turniers. Fix: Startup-Cleanup `Queued/Running` ohne Worker → `Failed`.
+- [ ] MED finaler Status-Save mit bereits gecanceltem Token (`:42/114/134`) → bei Cancellation wirft auch der `Failed`-Save → Status nie persistiert. Fix: finalen Save mit `CancellationToken.None`.
+- [ ] MED Team-Upsert via `ToDictionaryAsync(t => t.Name)` (`:248`) wirft bei doppelten/leeren Teamnamen → ganzer Players-Crawl failt. Fix: `ToLookup`/per Snr matchen.
+- [ ] LOW Retry-Pfad in `FetchWithRedirect`/`FetchHtml` ist copy-paste ohne Schleife, der eine Retry hat kein try/catch (`:486-502`).
+
+### piratechess_docker
+- [ ] **HIGH curl-Arg-Injektion via `bid`** — `bid` (nur „non-empty" validiert, `ChessableDirectController.cs:87`) fließt in `url` → als `"{url}"` in `ProcessStartInfo.Arguments` (String, nicht `ArgumentList`, `ChessableHttpService.cs:362/486`). `"` im bid kann curl-Flags injizieren (`-o`/`--config` → Datei-Write/-Read). ServiceKey-gated (nur rookhub ruft), aber bid ist user-nah. Fix: `bid` strikt `^[0-9]+$` validieren **oder** auf `ArgumentList` umstellen (content-agnostisch).
+- [ ] **HIGH gluetun `auth = "none"`** (`gluetun-auth.toml:6`) — identisch zum bekannten Crawler-Thema (s. Refactoring/Qualität-Block). Control-Port stoppt/startet VPN unauth. im Bridge-Netz.
+- [ ] MED `GET /api/vpn/status` ohne Auth (`VpnController.cs:20`) — liefert reale Exit-IP unauth. (POST /rotate ist `[Authorize]`). Fix: `[ServiceKeyAuth]` auch auf status.
+- [ ] MED Login-Response (enthält frisches Chessable-JWT) wird roh im Klartext persistiert (`ChessableRawResponse.RawJson`, `ChessableHttpService.cs:411`), kein TTL. Fix: Login-Response nicht roh speichern / Token redigieren + Retention.
+- [ ] MED ServiceKey-Vergleich nicht zeitkonstant (`ServiceKeyAuthAttribute.cs:31`, `string.Equals`) — Auth ist aber fail-closed (gut). Fix: `FixedTimeEquals`.
+- [ ] LOW DB-Port `3308:3306` auch in Prod auf Host gemappt; Prod-Compose fehlen `Service__ApiKey`/`Gluetun__*`/`Elasticsearch__*` ggü. dev (Config-Drift → /direct/* in Prod fail-closed 503).
+
+### rookhub API
+- [ ] **HIGH BotStats-HMAC ohne Timestamp/Nonce** (`BotStatsController.cs:64`) — Signatur nur über `discordId` → statisch + unbegrenzt replaybar (liest fremden Trainingsfortschritt, read-only, geringe Datensensibilität). **Cross-Repo-Fix**: Timestamp in HMAC + Header, ±300s-Fenster — in rookhub UND schach-bot (`puzzle/rookhub.py:170`) gleichzeitig.
+- [ ] MED JWT wird bei Passwort-Reset/-Change + Account-Löschung nicht invalidiert (`AuthService.cs`, `Program.cs:90`) — alte Tokens bis 365 Tage gültig; gelöschter Account kann mit altem Token weiter API rufen. Fix: SecurityStamp/TokenVersion-Claim + DB-Check (mind. `DeletedAt` prüfen).
+- [ ] MED AES-CBC ohne Auth-Tag + schwache Key-Ableitung (`EncryptionService.cs`, `PadRight(32,'0')`) für gespeicherten Chessable-Bearer. Fix: AES-GCM + 256-bit-Key verlangen. **Achtung: Datenmigration bestehender Ciphertexts.**
+- [ ] MED Reset-Link inkl. Roh-Token wird bei deaktiviertem SMTP im Klartext geloggt (`PasswordResetService.cs:96`/`SmtpEmailSender.cs:43`) → ES. Fix: Link im Log-Fallback maskieren / Startup-Guard.
+- [ ] LOW Anon-Sessions per erratener `sessionId` claim-/überschreibbar (IDOR, geringe Auswirkung: nur Puzzle-Stats) (`BookPuzzleController.cs:292`, `EndlessProgressService.cs:270`). Fix: Claim an serverseitig ausgegebenen Token binden.
+- [ ] LOW Impersonation-`imp`-Claim wird nirgends ausgewertet — destruktive Aktionen (DeleteAccount/ChangePassword/Token-Create) sollten ihn ablehnen (`AdminController.cs:88`). LOW: `ValidateAsync` schreibt `LastUsedAt` synchron bei jedem Token-Request (Auth-Hot-Path, `ApiTokenService.cs:127`) → throtteln.
+
+### rookhub Frontend
+- [ ] MED i18n-Verstoß: `vizLevelOptions`/`vizLevelDescription` liefern hartcodierte de/en-Mischstrings (`base-puzzle-solver.ts:452`) → für alle Sprachen deutscher Text. Fix: über `puzzles.viz.*`-Keys + `translate.instant`.
+- [ ] LOW `target="_blank"` ohne `rel="noopener noreferrer"` (`tournament-detail.component.html:11`, `public-tournament.component.html:11`; chessable nur `noopener`). LOW: `navigator.clipboard.writeText` ohne `.catch()` (`api-tokens.component.ts:107`); `stopImpersonation()` `JSON.parse` ohne try/catch (`auth.service.ts:75`); diverse `Observable<any>` für Crawler-Job/Monitor-Responses.
+
+### schach-bot (Python) — sehr sauber, keine ≥MED-Funde
+- [ ] LOW `isinstance(puzzle_id, int)` akzeptiert auch bool (`core/webhook_server.py:69`); `_id_cache` ohne TTL/Maxsize (`puzzle/rookhub.py:37`); DM-Chat-RateLimit nur prozesslokal (`commands/chat.py:82`). HMAC/Async/Secrets/Injection alle korrekt.
+
+### repcheck (Browser-Extension, Kopie 1) — nicht in Kopie 2
+- [ ] **HIGH `host_permissions: ["https://*/*","http://*/*"]`** massiv überbreit + Background-Worker ist ungebremster Fetch-Proxy ohne `sender`-/Ziel-Origin-Check (`extension/manifest.json:38`, `background.js:8`). Fix: Permissions einschränken (nur RookHub-Origin, kein `http`), `sender.id`-Check + URL-Allowlist gegen gespeicherte RookHub-URL.
+- [ ] MED Chessable-Bearer-JWT dauerhaft unverschlüsselt in `chrome.storage.local` ohne TTL (`chessable-token.js:41`); `http`-URLs erlauben Token im Klartext. Versions-Drift `content.js`=1.5.1 vs Manifest 1.8.0.
+
+### i18n-Weltsprachen (22 Stück)
+- [ ] Massen-Übersetzung/Bereinigung der 22 erweiterten Sprachen (je ~174 Keys hinter en + 24 veraltete) — braucht Pipeline-/Tooling-Entscheidung (MT vs. manuell). Aktuell unkritisch (Fallback auf en). en/de/hr sind die gepflegten Sprachen und vollständig.
 
 ## Features
 - [ ] Trainersystem mit eigenen Gruppen einführen — Konzept noch offen. Idee: Trainer-Rolle, die eigene Gruppen anlegen/verwalten und Mitglieder zuweisen kann (heute nur Admin via `/api/admin/groups`), inkl. Trainingsziel-Vorlagen + ggf. Kurs-Freigaben für die eigenen Gruppen. Aufbauen auf bestehender Gruppen-/`GroupTrainingGoals`-/`BookGroupAccess`-Infrastruktur; offene Fragen: Rollenmodell (neue Rolle vs. Flag), Sichtbarkeits-/Berechtigungsgrenzen Trainer ↔ Mitglieder, Einladungsfluss.

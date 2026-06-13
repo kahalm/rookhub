@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.115.0';
+export const APP_VERSION = '0.115.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.115.1', date: '2026-06-13', changes: [
+    'Kroatische Übersetzung vervollständigt (73 fehlende Texte ergänzt: u. a. Menü-Sichtbarkeit, „Als Nutzer einsteigen", Chessable-Import).',
+    'Wartung: Angular-Frontend auf den neuesten 19.2-Patch aktualisiert; der Turnier-Crawler protokolliert keine vollständigen Seiteninhalte mehr (schlanker, datensparsamer).',
+  ]},
   { version: '0.115.0', date: '2026-06-13', changes: [
     'Kurs-Trainingszeit zählt jetzt vollständig aufs Tagesziel: Es wird die Zeit JEDES Versuchs erfasst (gelöst, fehlgeschlagen, Aufgeben und Wiederholung) statt nur die erste Lösung — bisher ging viel geübte Zeit verloren.',
     'Bücher haben jetzt eine Art (Admin → Bücher, Spalte „Art“): Bei einem Puzzle-/Taktikbuch zählt die Kurszeit in die Kategorie „Puzzles“, bei einem Studienbuch in „Buch/Kurs“. Bestehende Bücher gelten standardmäßig als Puzzlebuch.',

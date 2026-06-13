@@ -11,7 +11,9 @@
     "retry": "Pokušaj ponovno",
     "loading": "Učitavanje…",
     "ok": "U redu",
-    "remove": "Ukloni"
+    "remove": "Ukloni",
+    "downloadPgn": "Preuzmi PGN",
+    "downloadFailed": "Preuzimanje nije uspjelo."
   },
   "nav": {
     "dashboard": "Nadzorna ploča",
@@ -57,7 +59,11 @@
     },
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",
-    "reload": "Ponovno učitaj"
+    "reload": "Ponovno učitaj",
+    "impersonation": {
+      "banner": "Pregledavate kao {{user}} (administrator: {{admin}})",
+      "exit": "Natrag na administratora"
+    }
   },
   "auth": {
     "login": {
@@ -587,7 +593,9 @@
     "share": {
       "title": "Podijeli zagonetku",
       "copied": "Poveznica kopirana!",
-      "copyFailed": "Kopiranje nije uspjelo"
+      "copyFailed": "Kopiranje nije uspjelo",
+      "current": "Trenutna zagonetka",
+      "previous": "Prethodna zagonetka"
     }
   },
   "courses": {
@@ -606,7 +614,9 @@
     "offlineRemoveTooltip": "Ukloni offline kopiju",
     "offlineSaved": "\"{{name}}\" spremljeno offline ({{count}} zagonetki)",
     "offlineRemoved": "\"{{name}}\" uklonjeno iz offline pohrane",
-    "offlineFailed": "Spremanje knjige offline nije uspjelo"
+    "offlineFailed": "Spremanje knjige offline nije uspjelo",
+    "downloadPgnTooltip": "Preuzmi kao PGN",
+    "downloadFailed": "Preuzimanje PGN-a nije uspjelo."
   },
   "weekly": {
     "title": "Tjedna objava",
@@ -775,7 +785,8 @@
       "archiveRun": "Arhiviraj ovu igru",
       "archived": "Arhivirano",
       "playAgain": "Igraj ponovno",
-      "backToPuzzles": "Natrag na zagonetke"
+      "backToPuzzles": "Natrag na zagonetke",
+      "backToHistory": "Natrag na povijest"
     },
     "history": {
       "title": "Povijest Endless Puzzlea",
@@ -879,7 +890,8 @@
       "books": "Knjige",
       "groups": "Grupe",
       "daily": "Dnevna zagonetka",
-      "puzzles": "Zagonetke"
+      "puzzles": "Zagonetke",
+      "menu": "Izbornik"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
@@ -902,7 +914,10 @@
         "load": "Učitavanje korisnika nije uspjelo",
         "toggleAdmin": "Promjena administratorskog statusa nije uspjela",
         "delete": "Brisanje korisnika nije uspjelo"
-      }
+      },
+      "impersonate": "Prijavi se kao ovaj korisnik",
+      "impersonateStarted": "Sada ste prijavljeni kao {{name}}.",
+      "impersonateFailed": "Prijava kao ovaj korisnik nije uspjela."
     },
     "books": {
       "uploadPgn": "Učitaj PGN-ove",
@@ -1007,6 +1022,37 @@
       "backfillConfirm": "Izgraditi/osvježiti tablicu oznaka sada? Radi kao pozadinski zadatak.",
       "backfillStarted": "Backfill oznaka pokrenut (radi u pozadini).",
       "backfillError": "Backfill se nije mogao pokrenuti."
+    },
+    "menu": {
+      "title": "Vidljivost izbornika",
+      "intro": "Odredite tko vidi svaku stavku izbornika. Skrivene stavke blokirane su i pri izravnom otvaranju URL-a stranice. Administratori uvijek vide sve.",
+      "level": "Vidljivost",
+      "groups": "Grupe",
+      "save": "Spremi",
+      "saved": "Vidljivost izbornika je spremljena.",
+      "saveError": "Spremanje vidljivosti izbornika nije uspjelo.",
+      "loadError": "Učitavanje vidljivosti izbornika nije uspjelo.",
+      "levels": {
+        "All": "Svi (uključujući odjavljene)",
+        "Registered": "Registrirani korisnici",
+        "Groups": "Određene grupe",
+        "Admin": "Samo administratori"
+      },
+      "items": {
+        "dashboard": "Nadzorna ploča",
+        "repertoires": "Repertoari",
+        "tournaments": "Turniri",
+        "friends": "Prijatelji",
+        "puzzles": "Zagonetke",
+        "training-goals": "Trening ciljevi",
+        "analysis": "Analiza",
+        "weekly": "Tjedna objava",
+        "courses": "Tečajevi",
+        "stats": "Statistika",
+        "chessable": "Chessable uvoz",
+        "install": "Instaliraj aplikaciju",
+        "help": "Pomoć"
+      }
     }
   },
   "analysis": {
@@ -1289,6 +1335,41 @@
     "testOk": "Connection ok. {{count}} courses for UID {{uid}}.",
     "coursesTitle": "Your Chessable courses",
     "noCourses": "No courses found.",
-    "error": "Error: {{message}}"
+    "error": "Error: {{message}}",
+    "helpLink": "Kako doći do bearer tokena? (pomoć)",
+    "helpIntro": "Ovako dohvaćaš svoj Chessable bearer token iz preglednika:",
+    "helpStep1": "Otvori Chessable, zatim alate za razvojne programere u pregledniku (F12) → kartica „Mreža”.",
+    "helpStep2": "Ponovno učitaj Chessable nadzornu ploču i pronađi zahtjev „getUserSettings”.",
+    "helpStep3": "U njegovim zaglavljima zahtjeva kopiraj vrijednost iza „authorization: Bearer ” — to je tvoj token (JWT, vrijedi otprilike 7 dana).",
+    "helpNote": "Koristi se samo za dohvaćanje vlastitih kupljenih tečajeva za osobnu sigurnosnu kopiju.",
+    "helpRepcheck": "Alternativno, RepCheck proširenje za preglednik dohvaća token umjesto tebe:",
+    "queueTitle": "Tvoj red čekanja za uvoz",
+    "queuePopup": "Tečaj je dodan u red čekanja — vrati se kasnije. Ispred tebe je još {{ahead}} tečaj(eva).",
+    "queueStarted": "Uvoz je započeo — obrađuje se sada.",
+    "queuePos": "pozicija u redu {{pos}}",
+    "statusPaused": "pauzirano",
+    "importCancelled": "Uvoz „{{name}}” je otkazan.",
+    "pause": "Pauziraj",
+    "resume": "Nastavi",
+    "cancel": "Odustani",
+    "disclaimerTitle": "Korištenje na vlastiti rizik",
+    "disclaimerText": "Korištenje na vlastiti rizik! Ne znam krši li to ikakve uvjete korištenja. Ako te se zabani na Chessableu, to nije moja krivnja. Koristi samo za osobne sigurnosne kopije.",
+    "disclaimerAccept": "Razumijem — nastavi",
+    "disclaimerDecline": "Odustani",
+    "refreshCourses": "Osvježi tečajeve",
+    "coursesCachedAt": "Stanje: {{date}}",
+    "importRepertoire": "Kao repertoar",
+    "importBook": "Kao knjigu",
+    "doneRepertoire": "Repertoar",
+    "doneBook": "Knjiga",
+    "importRepertoireDone": "„{{name}}” uvezen kao repertoar ({{count}} linija) — nalazi se pod Repertoari.",
+    "importBookDone": "„{{name}}” uvezen kao knjiga ({{count}} zagonetki) — nalazi se pod Tečajevi.",
+    "importFailed": "Uvoz nije uspio: {{error}}",
+    "importingBanner": "Uvozim „{{name}}”",
+    "phase_queued": "u redu čekanja…",
+    "phase_fetching": "dohvaćam tečaj…",
+    "phase_importing": "uvozim…",
+    "phase_done": "gotovo",
+    "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija"
   }
 }
