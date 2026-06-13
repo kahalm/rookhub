@@ -59,7 +59,11 @@
     },
     "feedback": "Feedback / Bug melden",
     "updateAvailable": "Eine neue Version ist verfügbar.",
-    "reload": "Neu laden"
+    "reload": "Neu laden",
+    "impersonation": {
+      "banner": "Du bist als {{user}} unterwegs (Admin: {{admin}})",
+      "exit": "Zurück zu Admin"
+    }
   },
   "auth": {
     "login": {
@@ -910,7 +914,10 @@
         "load": "User konnten nicht geladen werden",
         "toggleAdmin": "Admin-Status konnte nicht geändert werden",
         "delete": "User konnte nicht gelöscht werden"
-      }
+      },
+      "impersonate": "Als dieser Nutzer einsteigen",
+      "impersonateStarted": "Du bist jetzt als {{name}} eingestiegen.",
+      "impersonateFailed": "Einstieg als dieser Nutzer fehlgeschlagen."
     },
     "books": {
       "uploadPgn": "PGN(s) hochladen",

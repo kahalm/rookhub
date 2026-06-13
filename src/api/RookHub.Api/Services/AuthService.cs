@@ -121,7 +121,7 @@ public class AuthService
         await _db.SaveChangesAsync();
     }
 
-    private string GenerateJwt(AppUser user, bool rememberMe = false)
+    private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured")));
@@ -135,15 +135,52 @@ public class AuthService
         if (user.IsAdmin)
             claims.Add(new Claim(ClaimTypes.Role, "Admin"));
 
+        if (extraClaims != null)
+            claims.AddRange(extraClaims);
+
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
             // „Eingeloggt bleiben": 1 Jahr, sonst 30 Tage.
-            expires: DateTime.UtcNow.AddDays(rememberMe ? 365 : 30),
+            expires: DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 365 : 30)),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Erzeugt für einen Admin ein Token, mit dem er als Zielnutzer agiert („Als Nutzer einsteigen").
+    /// Das Token trägt die echte Identität/Rollen des Zielnutzers + einen <c>imp</c>-Claim
+    /// (ID des Admins, zur Nachvollziehbarkeit) und läuft bewusst kurz ab.
+    /// </summary>
+    public async Task<AuthResponseDto> ImpersonateAsync(int adminId, string adminUsername, int targetUserId)
+    {
+        if (adminId == targetUserId)
+            throw new InvalidOperationException("Cannot impersonate yourself.");
+
+        var target = await _db.AppUsers.FindAsync(targetUserId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        var token = GenerateJwt(
+            target,
+            extraClaims: new[] { new Claim("imp", adminId.ToString()) },
+            lifetime: TimeSpan.FromHours(2));
+
+        // Sicherheits-/Audit-relevant -> Warning, landet strukturiert in ES/Kibana.
+        _logger.LogWarning(
+            "Impersonation: admin {AdminId} ({AdminName}) steigt als User {UserId} ({UserName}) ein",
+            adminId, adminUsername, target.Id, target.Username);
+
+        return new AuthResponseDto
+        {
+            Token = token,
+            Username = target.Username,
+            UserId = target.Id,
+            IsAdmin = target.IsAdmin,
+            Impersonating = true,
+            ImpersonatorUsername = adminUsername,
+        };
     }
 }

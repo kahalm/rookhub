@@ -59,7 +59,11 @@
     },
     "feedback": "Feedback / Report a bug",
     "updateAvailable": "A new version is available.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "impersonation": {
+      "banner": "You are viewing as {{user}} (admin: {{admin}})",
+      "exit": "Back to admin"
+    }
   },
   "auth": {
     "login": {
@@ -910,7 +914,10 @@
         "load": "Failed to load users",
         "toggleAdmin": "Failed to toggle admin",
         "delete": "Failed to delete user"
-      }
+      },
+      "impersonate": "Log in as this user",
+      "impersonateStarted": "You are now logged in as {{name}}.",
+      "impersonateFailed": "Could not log in as this user."
     },
     "books": {
       "uploadPgn": "Upload PGN(s)",

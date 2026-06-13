@@ -17,6 +17,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MenuService } from '../../core/menu.service';
+import { AuthService } from '../../core/auth.service';
+import { Router } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -81,7 +83,27 @@ export class AdminComponent implements OnInit {
   menuSaving = false;
   readonly menuLevels: MenuVisibilityLevel[] = ['All', 'Registered', 'Groups', 'Admin'];
 
-  constructor(private adminService: AdminService, private menu: MenuService, private snackbar: SnackbarService, private translate: TranslateService) {}
+  impersonatingId: number | null = null;
+
+  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService) {}
+
+  /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
+  impersonate(u: AdminUser): void {
+    this.impersonatingId = u.id;
+    this.adminService.impersonate(u.id).subscribe({
+      next: res => {
+        this.impersonatingId = null;
+        this.auth.impersonate(res);
+        this.menu.refresh();
+        this.snackbar.info(this.translate.instant('admin.users.impersonateStarted', { name: u.username }));
+        this.router.navigate(['/dashboard']);
+      },
+      error: () => {
+        this.impersonatingId = null;
+        this.snackbar.info(this.translate.instant('admin.users.impersonateFailed'));
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadUsers();

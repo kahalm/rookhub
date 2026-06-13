@@ -17,16 +17,18 @@ public class AdminController : BaseApiController
     private readonly BookAdminService _bookAdmin;
     private readonly PuzzleService _puzzleService;
     private readonly PgnImportService _pgnImportService;
+    private readonly AuthService _auth;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly IBackgroundTaskQueue _taskQueue;
 
-    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, IConfiguration config, IWebHostEnvironment env, IBackgroundTaskQueue taskQueue)
+    public AdminController(AdminService admin, BookAdminService bookAdmin, PuzzleService puzzleService, PgnImportService pgnImportService, AuthService auth, IConfiguration config, IWebHostEnvironment env, IBackgroundTaskQueue taskQueue)
     {
         _admin = admin;
         _bookAdmin = bookAdmin;
         _puzzleService = puzzleService;
         _pgnImportService = pgnImportService;
+        _auth = auth;
         _config = config;
         _env = env;
         _taskQueue = taskQueue;
@@ -80,6 +82,16 @@ public class AdminController : BaseApiController
     public async Task<IActionResult> ToggleAdmin(int id)
     {
         try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId())); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
+
+    /// <summary>„Als Nutzer einsteigen": liefert ein Token, mit dem der Admin als Zielnutzer agiert.</summary>
+    [HttpPost("users/{id}/impersonate")]
+    public async Task<IActionResult> Impersonate(int id)
+    {
+        var adminName = User.Identity?.Name ?? string.Empty;
+        try { return Ok(await _auth.ImpersonateAsync(GetUserId(), adminName, id)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
     }

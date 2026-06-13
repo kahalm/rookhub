@@ -65,6 +65,9 @@
                 <ng-container matColumnDef="actions">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.actions' | translate }}</th>
                   <td mat-cell *matCellDef="let u">
+                    <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id" [attr.title]="'admin.users.impersonate' | translate">
+                      <mat-icon>login</mat-icon>
+                    </button>
                     <button mat-icon-button (click)="toggleAdmin(u)" [attr.title]="'admin.users.toggleAdmin' | translate">
                       <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                     </button>

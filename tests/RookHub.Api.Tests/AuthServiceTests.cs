@@ -135,6 +135,44 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Impersonate_ReturnsTargetIdentity_WithImpClaim_AndShortLifetime()
+    {
+        var target = await _authService.RegisterAsync(new RegisterDto { Username = "victim", Email = "v@example.com", Password = "password123" });
+        const int adminId = 999;
+
+        var res = await _authService.ImpersonateAsync(adminId, "rootadmin", target.UserId);
+
+        Assert.True(res.Impersonating);
+        Assert.Equal("rootadmin", res.ImpersonatorUsername);
+        Assert.Equal(target.UserId, res.UserId);
+        Assert.Equal("victim", res.Username);
+        Assert.False(res.IsAdmin);
+
+        var jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(res.Token);
+        // Token trägt die Zielidentität ...
+        Assert.Equal(target.UserId.ToString(), jwt.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+        // ... + den imp-Claim (Admin-Id) zur Nachvollziehbarkeit.
+        Assert.Equal(adminId.ToString(), jwt.Claims.First(c => c.Type == "imp").Value);
+        // Kurzlebig (~2 h), nicht 30 Tage.
+        Assert.True(jwt.ValidTo < DateTime.UtcNow.AddHours(3), "Impersonation-Token sollte kurzlebig sein");
+    }
+
+    [Fact]
+    public async Task Impersonate_Self_Throws()
+    {
+        var u = await _authService.RegisterAsync(new RegisterDto { Username = "admin", Email = "a@example.com", Password = "password123" });
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _authService.ImpersonateAsync(u.UserId, "admin", u.UserId));
+    }
+
+    [Fact]
+    public async Task Impersonate_UnknownUser_Throws()
+    {
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _authService.ImpersonateAsync(1, "admin", 4242));
+    }
+
+    [Fact]
     public async Task Login_InvalidPassword_Throws()
     {
         await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });

@@ -314,6 +314,7 @@ public class CourseControllerTests : IDisposable
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
+            new AuthService(_db, new ConfigurationBuilder().Build(), NullLogger<AuthService>.Instance),
             new ConfigurationBuilder().Build(),
             new FakeWebHostEnvironment(),
             new NoOpTaskQueue());
@@ -352,6 +353,7 @@ public class CourseControllerTests : IDisposable
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
+            new AuthService(_db, new ConfigurationBuilder().Build(), NullLogger<AuthService>.Instance),
             new ConfigurationBuilder().Build(),
             new FakeWebHostEnvironment(),
             new NoOpTaskQueue());

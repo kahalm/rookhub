@@ -6,6 +6,7 @@ import { filter } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
+import { MenuService } from './core/menu.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
 import { OfflinePrefetchService } from './core/offline-prefetch.service';
@@ -22,6 +23,15 @@ import { environment } from '../environments/environment';
   standalone: true,
   imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule],
   template: `
+    @if (auth.isImpersonating) {
+      <div class="imp-banner">
+        <span class="imp-text">
+          <span class="imp-icon">&#x1F464;</span>
+          {{ 'app.impersonation.banner' | translate: { user: auth.currentUser?.username, admin: auth.impersonatorUsername } }}
+        </span>
+        <button class="imp-exit" (click)="exitImpersonation()">{{ 'app.impersonation.exit' | translate }}</button>
+      </div>
+    }
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
@@ -80,6 +90,17 @@ import { environment } from '../environments/environment';
   `,
   styles: [`
     :host { display: block; }
+    .imp-banner {
+      display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+      background: #b71c1c; color: #fff; padding: 6px 12px; font-size: 0.85rem; font-weight: 500;
+      position: sticky; top: 0; z-index: 1100;
+    }
+    .imp-icon { margin-right: 4px; }
+    .imp-exit {
+      background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .imp-exit:hover { background: rgba(255,255,255,0.3); }
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
@@ -123,7 +144,8 @@ export class AppComponent implements OnInit {
   constructor(
     private router: Router,
     locale: LocaleService,
-    private auth: AuthService,
+    public auth: AuthService,
+    private menu: MenuService,
     private discordLink: DiscordLinkService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
@@ -201,5 +223,12 @@ export class AppComponent implements OnInit {
       this.discordLink.stash(token);
       this.snackbar.warn(this.translate.instant('profile.discord.stashed'));
     }
+  }
+
+  /** Impersonation beenden, Menü neu laden und zurück ins Admin-Panel. */
+  exitImpersonation(): void {
+    this.auth.stopImpersonation();
+    this.menu.refresh();
+    this.router.navigate(['/admin']);
   }
 }

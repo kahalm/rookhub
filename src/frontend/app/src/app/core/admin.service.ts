@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { AuthResponse } from './auth.service';
 
 export interface AdminUser {
   id: number;
@@ -126,6 +127,11 @@ export class AdminService {
 
   toggleAdmin(id: number): Observable<AdminUser> {
     return this.http.post<AdminUser>(`/api/admin/users/${id}/toggle-admin`, {});
+  }
+
+  /** „Als Nutzer einsteigen": liefert ein Impersonation-Token für den Zielnutzer. */
+  impersonate(id: number): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`/api/admin/users/${id}/impersonate`, {});
   }
 
   // --- Buch-Puzzles -----------------------------------------------------

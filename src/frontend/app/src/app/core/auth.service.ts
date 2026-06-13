@@ -8,6 +8,10 @@ export interface AuthResponse {
   username: string;
   userId: number;
   isAdmin: boolean;
+  /** Gesetzt, wenn dieses Token via Admin-„Als Nutzer einsteigen" erzeugt wurde. */
+  impersonating?: boolean;
+  /** Benutzername des Admins, der eingestiegen ist (nur bei impersonating). */
+  impersonatorUsername?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,6 +36,50 @@ export class AuthService {
 
   get isAdmin(): boolean {
     return this.getValidUser()?.isAdmin ?? false;
+  }
+
+  private readonly adminBackupKey = 'rookhub_admin_user';
+
+  /** Läuft gerade eine Admin-Impersonation? */
+  get isImpersonating(): boolean {
+    return !!this.getValidUser()?.impersonating && !!localStorage.getItem(this.adminBackupKey);
+  }
+
+  /** Benutzername des Admins, der eingestiegen ist (für das Banner). */
+  get impersonatorUsername(): string | null {
+    return this.getValidUser()?.impersonatorUsername ?? null;
+  }
+
+  /**
+   * „Als Nutzer einsteigen": sichert die aktuelle (Admin-)Session und übernimmt das
+   * vom Server gelieferte Impersonation-Token. Rücksprung via {@link stopImpersonation}.
+   */
+  impersonate(target: AuthResponse): void {
+    const admin = this.currentUserSubject.value;
+    // Nur sichern, wenn wir nicht ohnehin schon in einer Impersonation stecken.
+    if (admin && !admin.impersonating) {
+      localStorage.setItem(this.adminBackupKey, JSON.stringify(admin));
+    }
+    const user: AuthResponse = { ...target, impersonating: true };
+    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    this.currentUserSubject.next(user);
+    this.loadPreferences();
+  }
+
+  /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren. */
+  stopImpersonation(): void {
+    const stored = localStorage.getItem(this.adminBackupKey);
+    if (!stored) return;
+    localStorage.removeItem(this.adminBackupKey);
+    localStorage.setItem('rookhub_user', stored);
+    this.currentUserSubject.next(JSON.parse(stored));
+    this.loadPreferences();
+  }
+
+  private loadPreferences(): void {
+    import('./preferences.service').then(m => {
+      this.injector.get(m.PreferencesService).loadFromServer();
+    });
   }
 
   /**
@@ -84,6 +132,7 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('rookhub_user');
+    localStorage.removeItem('rookhub_admin_user');
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }

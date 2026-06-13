@@ -27,7 +27,10 @@ public class AdminControllerTests : IDisposable
         _config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Kibana:Url"] = "https://kibana-test.example.com/"
+                ["Kibana:Url"] = "https://kibana-test.example.com/",
+                ["Jwt:Key"] = "TestSecretKeyThatIsAtLeast32Characters!",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience"
             })
             .Build();
         _controller = new AdminController(
@@ -35,6 +38,7 @@ public class AdminControllerTests : IDisposable
             new BookAdminService(_db),
             new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(_db),
+            new AuthService(_db, _config, NullLogger<AuthService>.Instance),
             _config,
             new FakeWebHostEnvironment(),
             new NoOpTaskQueue());
@@ -70,6 +74,38 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Impersonate_ReturnsTargetToken()
+    {
+        var target = await CreateUserAsync("victim");
+        SetUser(99); // Admin
+
+        var result = await _controller.Impersonate(target.Id) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var dto = Assert.IsType<RookHub.Api.DTOs.AuthResponseDto>(result!.Value);
+        Assert.True(dto.Impersonating);
+        Assert.Equal(target.Id, dto.UserId);
+        Assert.Equal("victim", dto.Username);
+        Assert.NotEmpty(dto.Token);
+    }
+
+    [Fact]
+    public async Task Impersonate_Self_ReturnsBadRequest()
+    {
+        SetUser(99);
+        var result = await _controller.Impersonate(99);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Impersonate_UnknownUser_ReturnsNotFound()
+    {
+        SetUser(99);
+        var result = await _controller.Impersonate(4242);
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
     public void GetConfig_ReturnsKibanaDashboardDeepLink_TrimmedSlash()
     {
         var result = _controller.GetConfig() as OkObjectResult;
@@ -94,6 +130,7 @@ public class AdminControllerTests : IDisposable
             new BookAdminService(db),
             new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
             new PgnImportService(db),
+            new AuthService(db, emptyConfig, NullLogger<AuthService>.Instance),
             emptyConfig,
             new FakeWebHostEnvironment(),
             new NoOpTaskQueue());

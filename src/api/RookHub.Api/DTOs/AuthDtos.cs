@@ -36,6 +36,10 @@ public class AuthResponseDto
     public string Username { get; set; } = string.Empty;
     public int UserId { get; set; }
     public bool IsAdmin { get; set; }
+    /// <summary>True, wenn dieses Token von einem Admin per „Als Nutzer einsteigen" erzeugt wurde.</summary>
+    public bool Impersonating { get; set; }
+    /// <summary>Benutzername des Admins, der die Impersonation gestartet hat (nur bei Impersonating).</summary>
+    public string? ImpersonatorUsername { get; set; }
 }
 
 public class ChangePasswordDto
