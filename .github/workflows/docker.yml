@@ -9,7 +9,12 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Test-Gate: blockiert alle Image-Pushes, bis Tests grün sind (reusable test.yml)
+  tests:
+    uses: ./.github/workflows/test.yml
+
   build-api:
+    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,6 +42,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
   build-frontend:
+    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
