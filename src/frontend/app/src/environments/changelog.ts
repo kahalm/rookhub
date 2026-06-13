@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.116.0';
+export const APP_VERSION = '0.116.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.116.1', date: '2026-06-13', changes: [
+    'Chessable-Import: Der gerade laufende Import wird in der Warteschlange wieder als „läuft gerade" angezeigt. Bisher konnte er bei vielen (>20) Importen aus der Liste fallen, sodass nur Warteschlangen-Plätze zu sehen waren, obwohl im Hintergrund schon ein Kurs geladen wurde.',
+  ]},
   { version: '0.116.0', date: '2026-06-13', changes: [
     'Chessable: Neues Ein-Klick-Bookmarklet (unter „Wie komme ich an meinen Token?“). Einmal in die Lesezeichenleiste ziehen, nach dem Chessable-Login anklicken — RookHub übernimmt den Token automatisch, kein Kopieren aus den Entwicklertools mehr nötig.',
     'Der Token wird dabei sicher per URL-Fragment übergeben (landet nie in einem Server-Log) und sofort wieder aus der Adresszeile entfernt.',

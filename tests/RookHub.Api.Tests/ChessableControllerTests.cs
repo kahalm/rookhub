@@ -379,6 +379,36 @@ public class ChessableControllerTests : IDisposable
         Assert.Equal(1, list.Single(d => d.Id == mine.Id).QueuedAhead); // 1 Kurs (anderer User) davor
     }
 
+    [Fact]
+    public async Task GetImports_AlwaysIncludesActiveImport_EvenWhenOutsideRecentWindow()
+    {
+        await SeedUserAsync(42);
+        var baseTime = DateTime.UtcNow.AddHours(-1);
+        // Der aktive (gerade verarbeitete) Job ist der ÄLTESTE der offenen Charge.
+        var active = new ChessableImport
+        {
+            UserId = 42, Bid = "active", Target = "book", Status = "running", Phase = "fetching",
+            CreatedAt = baseTime
+        };
+        _db.ChessableImports.Add(active);
+        // 25 neuere, abgeschlossene Importe → würden das 20er-Verlaufsfenster komplett füllen.
+        for (int n = 0; n < 25; n++)
+            _db.ChessableImports.Add(new ChessableImport
+            {
+                UserId = 42, Bid = $"done-{n}", Target = "book", Status = "completed",
+                CreatedAt = baseTime.AddMinutes(n + 1)
+            });
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetImports());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableImportDto>>(ok.Value).ToList();
+
+        var activeDto = list.SingleOrDefault(d => d.Id == active.Id);
+        Assert.NotNull(activeDto); // trotz 25 neuerer Importe sichtbar (vorher durch Take(20) abgeschnitten)
+        Assert.Equal("running", activeDto!.Status);
+        Assert.Equal(0, activeDto.QueuedAhead); // ältester laufender → Position 0 = "läuft gerade"
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

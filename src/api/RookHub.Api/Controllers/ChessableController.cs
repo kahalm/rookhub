@@ -252,11 +252,20 @@ public class ChessableController : BaseApiController
     public async Task<IActionResult> GetImports()
     {
         var userId = GetUserId();
-        var list = await _db.ChessableImports
+        var recent = await _db.ChessableImports
             .Where(i => i.UserId == userId)
             .OrderByDescending(i => i.CreatedAt)
             .Take(20)
             .ToListAsync();
+        // Alle laufenden/pausierten Importe IMMER mitliefern — der gerade verarbeitete Job ist der
+        // älteste der offenen Charge und fiel sonst aus dem 20er-Verlaufsfenster (Take). Folge: das
+        // Frontend bekäme nur Warteschlangen-Plätze und nie den aktiven Import zu sehen.
+        var active = await _db.ChessableImports
+            .Where(i => i.UserId == userId && (i.Status == "running" || i.Status == "paused"))
+            .ToListAsync();
+        var list = recent.UnionBy(active, i => i.Id)
+            .OrderByDescending(i => i.CreatedAt)
+            .ToList();
         var runningIds = await _db.ChessableImports.Where(i => i.Status == "running").Select(i => i.Id).ToListAsync();
         return Ok(list.Select(i => ToDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
     }
