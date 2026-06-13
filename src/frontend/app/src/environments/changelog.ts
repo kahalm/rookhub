@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.115.1';
+export const APP_VERSION = '0.116.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.116.0', date: '2026-06-13', changes: [
+    'Chessable: Neues Ein-Klick-Bookmarklet (unter „Wie komme ich an meinen Token?“). Einmal in die Lesezeichenleiste ziehen, nach dem Chessable-Login anklicken — RookHub übernimmt den Token automatisch, kein Kopieren aus den Entwicklertools mehr nötig.',
+    'Der Token wird dabei sicher per URL-Fragment übergeben (landet nie in einem Server-Log) und sofort wieder aus der Adresszeile entfernt.',
+  ]},
   { version: '0.115.1', date: '2026-06-13', changes: [
     'Kroatische Übersetzung vervollständigt (73 fehlende Texte ergänzt: u. a. Menü-Sichtbarkeit, „Als Nutzer einsteigen", Chessable-Import).',
     'Wartung: Angular-Frontend auf den neuesten 19.2-Patch aktualisiert; der Turnier-Crawler protokolliert keine vollständigen Seiteninhalte mehr (schlanker, datensparsamer).',

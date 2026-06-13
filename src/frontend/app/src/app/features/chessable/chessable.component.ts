@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -128,6 +129,24 @@ import {
                   {{ 'chessable.helpRepcheck' | translate }}
                   <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener">RepCheck</a>.
                 </p>
+
+                @if (bookmarkletHref) {
+                  <div class="bookmarklet-box">
+                    <p class="bookmarklet-title"><mat-icon>bookmark_add</mat-icon> {{ 'chessable.bookmarkletTitle' | translate }}</p>
+                    <p>{{ 'chessable.bookmarkletIntro' | translate }}</p>
+                    <p class="bookmarklet-drag">
+                      {{ 'chessable.bookmarkletDrag' | translate }}
+                      <a class="bookmarklet-link" [href]="bookmarkletHref"
+                         (click)="$event.preventDefault()" draggable="true">{{ 'chessable.bookmarkletLinkLabel' | translate }}</a>
+                    </p>
+                    <ol>
+                      <li>{{ 'chessable.bookmarkletStep1' | translate }}</li>
+                      <li>{{ 'chessable.bookmarkletStep2' | translate }}</li>
+                      <li>{{ 'chessable.bookmarkletStep3' | translate }}</li>
+                    </ol>
+                  </div>
+                }
+
                 <p class="help-note">{{ 'chessable.helpNote' | translate }}</p>
               </div>
             }
@@ -235,6 +254,14 @@ import {
     .help-panel li { margin: 0.2rem 0; }
     .help-note { color: var(--mat-sys-on-surface-variant, #777); font-style: italic; margin-bottom: 0; }
     .help-repcheck { margin: 0.4rem 0 0.2rem; }
+    .bookmarklet-box { margin: 0.6rem 0; padding: 0.5rem 0.75rem; border-radius: 8px;
+      border: 1px dashed var(--mat-sys-outline, #b9b9c9); background: var(--mat-sys-surface, #fff); }
+    .bookmarklet-title { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; margin: 0 0 0.3rem; }
+    .bookmarklet-title mat-icon { font-size: 1.15rem; width: 1.15rem; height: 1.15rem; }
+    .bookmarklet-drag { margin: 0.4rem 0; }
+    .bookmarklet-link { display: inline-block; margin-left: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 6px;
+      background: var(--mat-sys-primary, #3f51b5); color: var(--mat-sys-on-primary, #fff);
+      font-weight: 600; text-decoration: none; cursor: grab; }
     .queue-card { margin-bottom: 1rem; border-left: 4px solid var(--mat-sys-primary, #3f51b5); }
     .queue-title { margin: 0 0 0.5rem; font-size: 1rem; }
     .queue-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0; flex-wrap: wrap; }
@@ -277,6 +304,12 @@ export class ChessableComponent implements OnInit, OnDestroy {
   disclaimerAccepted: boolean | null = null;
   showHelp = false;
 
+  /** Per Bookmarklet via URL-Fragment (#chessbearer=…) übergebener Bearer, der nach
+   *  bestätigtem Disclaimer automatisch gespeichert wird. */
+  private pendingBearer: string | null = null;
+  /** `javascript:`-Bookmarklet zum Ziehen in die Lesezeichenleiste (auf chessable.com geklickt). */
+  bookmarkletHref: SafeUrl | null = null;
+
   loadingStatus = true;
   saving = false;
   testing = false;
@@ -291,11 +324,25 @@ export class ChessableComponent implements OnInit, OnDestroy {
     private chessable: ChessableService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private sanitizer: DomSanitizer,
     private router: Router,
     private courseService: CourseService,
   ) {}
 
   ngOnInit(): void {
+    // Bearer-Übergabe vom Bookmarklet: kommt als URL-Fragment (#chessbearer=…), das
+    // NIE an den Server geschickt wird. Sofort auslesen und aus URL/History tilgen.
+    this.pendingBearer = parseChessbearerFragment(window.location.hash);
+    if (this.pendingBearer) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+
+    const code = buildChessableBookmarklet(
+      `${window.location.origin}/chessable`,
+      this.translate.instant('chessable.bookmarkletNoLogin'),
+    );
+    this.bookmarkletHref = this.sanitizer.bypassSecurityTrustUrl(code);
+
     // Erst den (in der DB gespeicherten) Disclaimer-Status prüfen — ohne Bestätigung kein Zugriff.
     this.chessable.getDisclaimer().subscribe({
       next: r => {
@@ -309,7 +356,15 @@ export class ChessableComponent implements OnInit, OnDestroy {
   private proceed(): void {
     this.refresh();
     this.loadActiveImports();
+    // Per Bookmarklet übergebenen Bearer automatisch übernehmen, sobald der Disclaimer steht.
+    if (this.pendingBearer) {
+      this.bearerInput = this.pendingBearer;
+      this.pendingBearer = null;
+      this.snackbar.info(this.translate.instant('chessable.bookmarkletReceived'));
+      this.save();
+    }
   }
+
 
   acceptDisclaimer(): void {
     this.chessable.acceptDisclaimer().subscribe({
@@ -526,4 +581,40 @@ export class ChessableComponent implements OnInit, OnDestroy {
     const message = err?.error?.message ?? err?.message ?? String(err);
     this.snackbar.info(this.translate.instant('chessable.error', { message }));
   }
+}
+
+/**
+ * Liest den vom Bookmarklet übergebenen Bearer aus einem URL-Fragment
+ * (`#chessbearer=<urlencoded>`). Gibt `null` zurück, wenn keiner enthalten ist.
+ */
+export function parseChessbearerFragment(hash: string): string | null {
+  const m = /[#&]chessbearer=([^&]+)/.exec(hash || '');
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
+}
+
+/**
+ * Baut das `javascript:`-Bookmarklet: auf chessable.com angeklickt fischt es den
+ * eingeloggten Chessable-JWT aus localStorage/sessionStorage/Cookies (robust per
+ * JWT-Form + `user.uid`-Payload, unabhängig vom Storage-Key) und öffnet das RookHub-
+ * Ziel mit dem Bearer im URL-Fragment. `target` = absolute RookHub-/chessable-URL,
+ * `noLoginMsg` = lokalisierter Hinweis, falls kein Login gefunden wird.
+ */
+export function buildChessableBookmarklet(target: string, noLoginMsg: string): string {
+  const msg = (noLoginMsg || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return (
+    "javascript:(function(){" +
+    "function d(j){try{return JSON.parse(atob(j.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))}catch(e){return null}}" +
+    "var h=[];function t(v){if(typeof v=='string'&&/^eyJ[\\w-]+\\.[\\w-]+\\.[\\w-]+$/.test(v))h.push(v)}" +
+    "function p(o){if(typeof o=='string')t(o);else if(o&&typeof o=='object')for(var k in o)p(o[k])}" +
+    "function s(st){try{for(var i=0;i<st.length;i++){var v=st.getItem(st.key(i));t(v);if(v&&(v[0]=='{'||v[0]=='[')){try{p(JSON.parse(v))}catch(e){}}}}catch(e){}}" +
+    "s(localStorage);s(sessionStorage);" +
+    "document.cookie.split(';').forEach(function(c){t(c.split('=').slice(1).join('=').trim())});" +
+    "var j=null;for(var i=0;i<h.length;i++){var x=d(h[i]);if(x&&x.user&&x.user.uid){j=h[i];break}}" +
+    "if(!j)j=h[0]||null;" +
+    "if(!j){alert('" + msg + "');return}" +
+    "var u='" + target + "#chessbearer='+encodeURIComponent(j);" +
+    "if(!window.open(u,'_blank'))location.href=u" +
+    "})();"
+  );
 }
