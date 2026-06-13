@@ -901,7 +901,8 @@
         "random": "यादृच्छिक",
         "blind": "ब्लाइंड",
         "visibleFor": "किसके लिए दृश्यमान (पाठ्यक्रम)",
-        "actions": "क्रियाएँ"
+        "actions": "क्रियाएँ",
+        "kind": "Type"
       },
       "errors": {
         "load": "किताबें लोड करने में विफल",
@@ -909,6 +910,10 @@
         "save": "सहेजना विफल",
         "saveGroups": "समूह एक्सेस अपडेट विफल",
         "delete": "हटाना विफल"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

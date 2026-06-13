@@ -901,7 +901,8 @@
         "random": "随机",
         "blind": "盲棋",
         "visibleFor": "可见范围（课程）",
-        "actions": "操作"
+        "actions": "操作",
+        "kind": "Type"
       },
       "errors": {
         "load": "加载书本失败",
@@ -909,6 +910,10 @@
         "save": "保存失败",
         "saveGroups": "群组权限更新失败",
         "delete": "删除失败"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

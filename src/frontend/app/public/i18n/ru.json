@@ -901,7 +901,8 @@
         "random": "Случайные",
         "blind": "Вслепую",
         "visibleFor": "Видна для (курсы)",
-        "actions": "Действия"
+        "actions": "Действия",
+        "kind": "Type"
       },
       "errors": {
         "load": "Не удалось загрузить книги",
@@ -909,6 +910,10 @@
         "save": "Ошибка сохранения",
         "saveGroups": "Не удалось обновить доступ групп",
         "delete": "Ошибка удаления"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

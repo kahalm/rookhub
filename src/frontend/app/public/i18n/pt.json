@@ -901,7 +901,8 @@
         "random": "Aleatório",
         "blind": "Vendado",
         "visibleFor": "Visível para (cursos)",
-        "actions": "Ações"
+        "actions": "Ações",
+        "kind": "Type"
       },
       "errors": {
         "load": "Falha ao carregar livros",
@@ -909,6 +910,10 @@
         "save": "Falha ao guardar",
         "saveGroups": "Falha ao atualizar acesso de grupos",
         "delete": "Falha ao eliminar"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

@@ -134,6 +134,41 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordResult_LogsCourseAttempt_ForSolvedAndFailed()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("Attempts", 2);
+
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = false, TimeSeconds = 11 });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 22 });
+
+        // Beide Versuche landen im append-only Zeit-Log …
+        var attempts = await _db.CourseAttempts.Where(a => a.BookPuzzleId == ids[0]).OrderBy(a => a.Id).ToListAsync();
+        Assert.Equal(2, attempts.Count);
+        Assert.False(attempts[0].Solved);
+        Assert.Equal(11, attempts[0].TimeSeconds);
+        Assert.True(attempts[1].Solved);
+        Assert.Equal(22, attempts[1].TimeSeconds);
+        Assert.All(attempts, a => Assert.Equal(book.Id, a.BookId));
+
+        // … aber nur die erste Lösung erzeugt eine (idempotente) CoursePuzzleResult-Zeile.
+        Assert.Equal(1, await _db.CoursePuzzleResults.CountAsync(r => r.BookPuzzleId == ids[0]));
+    }
+
+    [Fact]
+    public async Task RecordResult_RepeatedSolve_AddsAttempt_ButKeepsSingleResult()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("Repeat", 2);
+
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 30 });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 40 });
+
+        Assert.Equal(2, await _db.CourseAttempts.CountAsync(a => a.BookPuzzleId == ids[0]));
+        Assert.Equal(1, await _db.CoursePuzzleResults.CountAsync(r => r.BookPuzzleId == ids[0]));
+    }
+
+    [Fact]
     public async Task GetNext_Sequential_ReturnsFirstUnsolvedInOrder()
     {
         await CreateUserAsync();

@@ -366,6 +366,34 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBook_SetsKind()
+    {
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        Assert.Equal(BookKind.Puzzle, book.Kind); // Default
+
+        var result = await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { Kind = BookKind.Study }) as OkObjectResult;
+
+        Assert.NotNull(result);
+        var dto = Assert.IsType<RookHub.Api.DTOs.BookDto>(result!.Value);
+        Assert.Equal(BookKind.Study, dto.Kind);
+        var updated = await _db.Books.FindAsync(book.Id);
+        Assert.Equal(BookKind.Study, updated!.Kind);
+    }
+
+    [Fact]
+    public async Task ImportBooks_DefaultsKindToPuzzle()
+    {
+        var file = MakePgnFile("sample.pgn", SamplePgn);
+
+        await _controller.ImportBooks(new List<Microsoft.AspNetCore.Http.IFormFile> { file }, default);
+
+        var book = await _db.Books.FirstAsync();
+        Assert.Equal(BookKind.Puzzle, book.Kind);
+    }
+
+    [Fact]
     public async Task UpdateBook_NotFound()
     {
         var result = await _controller.UpdateBook(9999, new RookHub.Api.DTOs.UpdateBookDto { ForDaily = true });

@@ -109,6 +109,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   loadError = false;
   private retryFn: (() => void) | null = null;
   private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
+  private courseAttemptRecorded = false; // pro Puzzle-Durchgang nur ein Kurs-Versuch melden (Zeit-Inflation vermeiden)
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -252,7 +253,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
-    this.recordCourseSolved();
+    this.recordCourseAttempt(true);
     this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
     // Einheitlicher Auto-Advance wie Standard/Endless: nach kurzem Countdown zum nächsten
@@ -294,6 +295,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
+    this.recordCourseAttempt(false);
     this.recordWeeklyAttempt(false);
     this.recordBookAttempt(false);
   }
@@ -522,17 +524,21 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.router.navigate(['/weekly']);
   }
 
-  private recordCourseSolved(): void {
-    if (!this.inCourse || this.courseBookId == null || !this.puzzle) return;
+  /** Meldet jeden Kurs-Versuch (gelöst/fehlgeschlagen) ans Backend — Grundlage für die akkumulierte
+   *  Kurs-/Studienzeit im Trainingsziele-Tracker. Pro Puzzle-Durchgang nur einmal (Zeit-Inflation
+   *  durch Online+Offline-Retry vermeiden); Fortschritt wird nur bei `solved` hochgezählt. */
+  private recordCourseAttempt(solved: boolean): void {
+    if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
+    this.courseAttemptRecorded = true;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved: true, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds };
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds };
     if (!navigator.onLine) {
-      // Offline gelöst → lokalen Fortschritt hochzählen + Server-Aufzeichnung vormerken.
+      // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
-      this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
+      if (solved) this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, true, this.courseModeKind, this.elapsedSeconds).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.elapsedSeconds).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -593,6 +599,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private setupPuzzle(puzzle: BookPuzzleDto): void {
     this.clearSolutionPlay();
     this.bookAttemptRecorded = false;
+    this.courseAttemptRecorded = false;
     this.reviewMode = false;
     this.solutionReview = false;
     this.showEval = false;
@@ -613,6 +620,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.gaveUp = true;
     this.state = 'FAILED';
+    this.recordCourseAttempt(false);   // Aufgeben = Versuch mit verbrachter Zeit (zählt fürs Trainingsziel)
     this.recordWeeklyAttempt(false);   // Aufgeben zählt im Wochenpost als ✗ (gespielt, nicht gelöst)
     this.recordBookAttempt(false);
     // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.

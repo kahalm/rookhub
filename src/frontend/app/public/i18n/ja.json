@@ -901,7 +901,8 @@
         "random": "ランダム",
         "blind": "ブラインド",
         "visibleFor": "表示対象（コース）",
-        "actions": "操作"
+        "actions": "操作",
+        "kind": "Type"
       },
       "errors": {
         "load": "ブックの読み込みに失敗しました",
@@ -909,6 +910,10 @@
         "save": "保存に失敗しました",
         "saveGroups": "グループアクセスの更新に失敗しました",
         "delete": "削除に失敗しました"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

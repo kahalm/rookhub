@@ -901,7 +901,8 @@
         "random": "Aléatoire",
         "blind": "À l'aveugle",
         "visibleFor": "Visible pour (cours)",
-        "actions": "Actions"
+        "actions": "Actions",
+        "kind": "Type"
       },
       "errors": {
         "load": "Impossible de charger les livres",
@@ -909,6 +910,10 @@
         "save": "Enregistrement échoué",
         "saveGroups": "Mise à jour des accès de groupe échouée",
         "delete": "Suppression échouée"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

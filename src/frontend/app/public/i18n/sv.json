@@ -901,7 +901,8 @@
         "random": "Slumpmässig",
         "blind": "Blindfold",
         "visibleFor": "Synlig för (kurser)",
-        "actions": "Åtgärder"
+        "actions": "Åtgärder",
+        "kind": "Type"
       },
       "errors": {
         "load": "Det gick inte att läsa in böcker",
@@ -909,6 +910,10 @@
         "save": "Sparandet misslyckades",
         "saveGroups": "Uppdateringen av gruppåtkomst misslyckades",
         "delete": "Borttagningen misslyckades"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

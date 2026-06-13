@@ -901,7 +901,8 @@
         "random": "Aleatoriu",
         "blind": "Orb",
         "visibleFor": "Vizibil pentru (cursuri)",
-        "actions": "Acțiuni"
+        "actions": "Acțiuni",
+        "kind": "Type"
       },
       "errors": {
         "load": "Încărcarea cărților a eșuat",
@@ -909,6 +910,10 @@
         "save": "Salvarea a eșuat",
         "saveGroups": "Actualizarea accesului grupului a eșuat",
         "delete": "Ștergerea a eșuat"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

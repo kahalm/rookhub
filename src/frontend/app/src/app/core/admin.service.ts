@@ -32,6 +32,8 @@ export interface Book {
   forDaily: boolean;
   forRandom: boolean;
   forBlind: boolean;
+  /** Art des Buchs fürs Trainingsziel-Routing der Kurszeit. */
+  kind: 'Puzzle' | 'Study';
   puzzleCount: number;
   /** Gruppen-Ids, die dieses Buch als Kurs sehen dürfen. */
   accessGroupIds: number[];
@@ -50,6 +52,7 @@ export interface UpdateBook {
   forDaily?: boolean;
   forRandom?: boolean;
   forBlind?: boolean;
+  kind?: 'Puzzle' | 'Study';
 }
 
 export interface BookImportResult {

@@ -901,7 +901,8 @@
         "random": "Acak",
         "blind": "Blind",
         "visibleFor": "Terlihat untuk (kursus)",
-        "actions": "Tindakan"
+        "actions": "Tindakan",
+        "kind": "Type"
       },
       "errors": {
         "load": "Gagal memuat buku",
@@ -909,6 +910,10 @@
         "save": "Gagal menyimpan",
         "saveGroups": "Pembaruan akses grup gagal",
         "delete": "Penghapusan gagal"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

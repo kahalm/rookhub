@@ -17,7 +17,8 @@ namespace RookHub.Api.Services;
 ///
 /// Kategorien-Quellen:
 ///  • Puzzles = PuzzleAttempt (Standard) + EndlessSession (Endlos) + BookPuzzleAttempt (Tages-/Buch-Puzzle)
-///  • Buch/Kurs = CoursePuzzleResult.TimeSeconds
+///             + CourseAttempt aus Büchern der Art Puzzle (alle Versuche, akkumuliert)
+///  • Buch/Kurs = CourseAttempt aus Büchern der Art Study (Theorie-/Studienbücher; alle Versuche)
 ///  • Spielen = PlayTimeDaily (extern, Lichess/chess.com): gespielte Rapid-/Classical-Partien je Tag,
 ///    fürs Ziel über die laufende ISO-Woche summiert.
 /// </summary>
@@ -217,11 +218,15 @@ public class TrainingGoalService
                      .Select(s => new { s.CreatedAt, s.DurationSeconds }).ToListAsync())
             Add(puzzle, s.CreatedAt, s.DurationSeconds, PerSessionCapSeconds);
 
-        // Buch/Kurs: gelöste Kurs-Puzzles mit erfasster Zeit.
-        foreach (var r in await _db.CoursePuzzleResults.AsNoTracking()
-                     .Where(r => r.UserId == userId && r.SolvedAt >= windowStartUtc)
-                     .Select(r => new { r.SolvedAt, r.TimeSeconds }).ToListAsync())
-            Add(book, r.SolvedAt, r.TimeSeconds, PerPuzzleCapSeconds);
+        // Kurs-Versuche (gelöst + fehlgeschlagen, akkumuliert): Routing nach Buch-Art —
+        // Puzzle-Buch → Kategorie Puzzles, Studienbuch → Kategorie Buch/Kurs.
+        var courseAttempts = await (
+            from a in _db.CourseAttempts.AsNoTracking()
+            where a.UserId == userId && a.AttemptedAt >= windowStartUtc
+            join b in _db.Books.AsNoTracking() on a.BookId equals b.Id
+            select new { a.AttemptedAt, a.TimeSeconds, b.Kind }).ToListAsync();
+        foreach (var a in courseAttempts)
+            Add(a.Kind == BookKind.Study ? book : puzzle, a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds);
 
         // Spielen: externe Rapid-/Classical-Partien je Tag (Lichess/chess.com) — befüllt PlayTimeDaily.
         foreach (var p in await _db.PlayTimeDailies.AsNoTracking()

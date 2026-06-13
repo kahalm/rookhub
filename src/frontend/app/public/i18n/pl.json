@@ -901,7 +901,8 @@
         "random": "Losowe",
         "blind": "Na ślepo",
         "visibleFor": "Widoczna dla (kursy)",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "kind": "Type"
       },
       "errors": {
         "load": "Nie udało się załadować książek",
@@ -909,6 +910,10 @@
         "save": "Zapisanie nie powiodło się",
         "saveGroups": "Aktualizacja dostępu grup nie powiodła się",
         "delete": "Usunięcie nie powiodło się"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

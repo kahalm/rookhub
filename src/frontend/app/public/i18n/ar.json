@@ -901,7 +901,8 @@
         "random": "عشوائي",
         "blind": "أعمى",
         "visibleFor": "مرئي لـ (الدورات)",
-        "actions": "الإجراءات"
+        "actions": "الإجراءات",
+        "kind": "Type"
       },
       "errors": {
         "load": "فشل تحميل الكتب",
@@ -909,6 +910,10 @@
         "save": "فشل الحفظ",
         "saveGroups": "فشل تحديث صلاحية المجموعة",
         "delete": "فشل الحذف"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

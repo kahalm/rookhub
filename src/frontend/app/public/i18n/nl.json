@@ -901,7 +901,8 @@
         "random": "Willekeurig",
         "blind": "Blind",
         "visibleFor": "Zichtbaar voor (cursussen)",
-        "actions": "Acties"
+        "actions": "Acties",
+        "kind": "Type"
       },
       "errors": {
         "load": "Boeken laden mislukt",
@@ -909,6 +910,10 @@
         "save": "Opslaan mislukt",
         "saveGroups": "Groepstoegang bijwerken mislukt",
         "delete": "Verwijderen mislukt"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

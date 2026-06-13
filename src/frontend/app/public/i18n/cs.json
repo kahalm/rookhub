@@ -901,7 +901,8 @@
         "random": "Náhodný",
         "blind": "Naslepo",
         "visibleFor": "Viditelné pro (kurzy)",
-        "actions": "Akce"
+        "actions": "Akce",
+        "kind": "Type"
       },
       "errors": {
         "load": "Načtení knih se nezdařilo",
@@ -909,6 +910,10 @@
         "save": "Uložení selhalo",
         "saveGroups": "Aktualizace přístupu skupin selhala",
         "delete": "Smazání selhalo"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

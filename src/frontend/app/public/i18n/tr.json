@@ -901,7 +901,8 @@
         "random": "Rastgele",
         "blind": "Kör",
         "visibleFor": "Görünür (kurslar)",
-        "actions": "İşlemler"
+        "actions": "İşlemler",
+        "kind": "Type"
       },
       "errors": {
         "load": "Kitaplar yüklenemedi",
@@ -909,6 +910,10 @@
         "save": "Kaydetme başarısız",
         "saveGroups": "Grup erişimi güncellenemedi",
         "delete": "Silme başarısız"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

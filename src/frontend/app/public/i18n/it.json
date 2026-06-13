@@ -901,7 +901,8 @@
         "random": "Casuale",
         "blind": "Bendato",
         "visibleFor": "Visibile per (corsi)",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "kind": "Type"
       },
       "errors": {
         "load": "Impossibile caricare i libri",
@@ -909,6 +910,10 @@
         "save": "Salvataggio non riuscito",
         "saveGroups": "Aggiornamento accesso gruppi non riuscito",
         "delete": "Eliminazione non riuscita"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

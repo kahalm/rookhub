@@ -211,6 +211,20 @@ public class CourseService
             "CoursePuzzleAttempt: User {UserId} {Result} course-puzzle {PuzzleId} in book {BookId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
             userId, dto.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, startedAt, solvedAt, timeSeconds);
 
+        // JEDEN Versuch (gelöst/fehlgeschlagen/Wiederholung) ins append-only Zeit-Log schreiben —
+        // Grundlage für die akkumulierte Kurs-/Studienzeit im Trainingsziele-Tracker. Eigenes
+        // SaveChanges, damit ein späterer CourseProgress-Konflikt das Log nicht zurückrollt.
+        _db.CourseAttempts.Add(new CourseAttempt
+        {
+            UserId = userId,
+            BookId = bookId,
+            BookPuzzleId = dto.BookPuzzleId,
+            Solved = dto.Solved,
+            TimeSeconds = timeSeconds,
+            AttemptedAt = solvedAt,
+        });
+        await _db.SaveChangesAsync();
+
         // Solve in EIGENEM SaveChanges aufzeichnen — damit ein späterer CourseProgress-Konflikt
         // (paralleler Erstinsert) die gültige Lösung NICHT mit zurückrollt (sonst stiller Solve-Verlust).
         if (dto.Solved)

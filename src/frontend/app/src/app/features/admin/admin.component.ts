@@ -44,7 +44,7 @@ export class AdminComponent implements OnInit {
   books: Book[] = [];
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'groups', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'groups', 'actions'];
 
   groups: Group[] = [];
   groupsLoading = false;
@@ -209,6 +209,7 @@ export class AdminComponent implements OnInit {
       forDaily: book.forDaily,
       forRandom: book.forRandom,
       forBlind: book.forBlind,
+      kind: book.kind,
       minElo: book.minElo,
       maxElo: book.maxElo
     }).subscribe({

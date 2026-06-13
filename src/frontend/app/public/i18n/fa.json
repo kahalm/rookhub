@@ -901,7 +901,8 @@
         "random": "تصادفی",
         "blind": "کور",
         "visibleFor": "قابل مشاهده برای (دوره‌ها)",
-        "actions": "عملیات"
+        "actions": "عملیات",
+        "kind": "Type"
       },
       "errors": {
         "load": "بارگذاری کتاب‌ها ناموفق بود",
@@ -909,6 +910,10 @@
         "save": "ذخیره ناموفق بود",
         "saveGroups": "به‌روزرسانی دسترسی گروه ناموفق بود",
         "delete": "حذف ناموفق بود"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

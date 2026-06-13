@@ -943,7 +943,8 @@
         "random": "Random",
         "blind": "Blind",
         "visibleFor": "Sichtbar für (Kurse)",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "kind": "Art"
       },
       "errors": {
         "load": "Bücher konnten nicht geladen werden",
@@ -951,6 +952,10 @@
         "save": "Speichern fehlgeschlagen",
         "saveGroups": "Gruppen-Freigabe fehlgeschlagen",
         "delete": "Löschen fehlgeschlagen"
+      },
+      "kind": {
+        "puzzle": "Puzzlebuch",
+        "study": "Studienbuch"
       }
     },
     "groups": {

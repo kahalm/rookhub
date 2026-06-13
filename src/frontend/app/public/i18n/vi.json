@@ -901,7 +901,8 @@
         "random": "Ngẫu nhiên",
         "blind": "Bịt mắt",
         "visibleFor": "Hiển thị cho (khóa học)",
-        "actions": "Thao tác"
+        "actions": "Thao tác",
+        "kind": "Type"
       },
       "errors": {
         "load": "Không thể tải sách",
@@ -909,6 +910,10 @@
         "save": "Lưu thất bại",
         "saveGroups": "Cập nhật quyền truy cập nhóm thất bại",
         "delete": "Xóa thất bại"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

@@ -928,7 +928,8 @@
         "random": "Nasumično",
         "blind": "Naslijepo",
         "visibleFor": "Vidljivo za (tečajeve)",
-        "actions": "Radnje"
+        "actions": "Radnje",
+        "kind": "Vrsta"
       },
       "errors": {
         "load": "Učitavanje knjiga nije uspjelo",
@@ -936,6 +937,10 @@
         "save": "Spremanje nije uspjelo",
         "saveGroups": "Ažuriranje pristupa grupa nije uspjelo",
         "delete": "Brisanje nije uspjelo"
+      },
+      "kind": {
+        "puzzle": "Knjiga zagonetki",
+        "study": "Knjiga za učenje"
       }
     },
     "groups": {

@@ -901,7 +901,8 @@
         "random": "Випадкові",
         "blind": "Наосліп",
         "visibleFor": "Видно для (курси)",
-        "actions": "Дії"
+        "actions": "Дії",
+        "kind": "Type"
       },
       "errors": {
         "load": "Не вдалося завантажити книги",
@@ -909,6 +910,10 @@
         "save": "Помилка збереження",
         "saveGroups": "Не вдалося оновити доступ груп",
         "delete": "Помилка видалення"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

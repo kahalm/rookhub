@@ -901,7 +901,8 @@
         "random": "Véletlenszerű",
         "blind": "Vakon",
         "visibleFor": "Látható (tanfolyamok)",
-        "actions": "Műveletek"
+        "actions": "Műveletek",
+        "kind": "Type"
       },
       "errors": {
         "load": "Nem sikerült betölteni a könyveket",
@@ -909,6 +910,10 @@
         "save": "Sikertelen mentés",
         "saveGroups": "Csoport-hozzáférés frissítése sikertelen",
         "delete": "Sikertelen törlés"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

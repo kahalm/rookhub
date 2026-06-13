@@ -943,7 +943,8 @@
         "random": "Random",
         "blind": "Blind",
         "visibleFor": "Visible for (courses)",
-        "actions": "Actions"
+        "actions": "Actions",
+        "kind": "Type"
       },
       "errors": {
         "load": "Failed to load books",
@@ -951,6 +952,10 @@
         "save": "Save failed",
         "saveGroups": "Group access update failed",
         "delete": "Delete failed"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {

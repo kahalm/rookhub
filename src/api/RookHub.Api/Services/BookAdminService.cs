@@ -34,6 +34,7 @@ public class BookAdminService
                 ForDaily = b.ForDaily,
                 ForRandom = b.ForRandom,
                 ForBlind = b.ForBlind,
+                Kind = b.Kind,
                 PuzzleCount = b.Puzzles.Count(),
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
@@ -97,6 +98,7 @@ public class BookAdminService
         if (dto.ForDaily.HasValue) book.ForDaily = dto.ForDaily.Value;
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
+        if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
         book.MinElo = dto.MinElo;
         book.MaxElo = dto.MaxElo;
         book.UpdatedAt = DateTime.UtcNow;
@@ -117,6 +119,7 @@ public class BookAdminService
             ForDaily = book.ForDaily,
             ForRandom = book.ForRandom,
             ForBlind = book.ForBlind,
+            Kind = book.Kind,
             PuzzleCount = count,
             CreatedAt = book.CreatedAt,
             UpdatedAt = book.UpdatedAt,
@@ -133,6 +136,7 @@ public class BookAdminService
         // auf BookPuzzle — EF löscht beim SaveChanges die Dependents (CoursePuzzleResult) vor
         // den Principals (BookPuzzle), sodass die Reihenfolge auch real korrekt ist.
         _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
+        _db.CourseAttempts.RemoveRange(_db.CourseAttempts.Where(a => a.BookId == id));
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
         // BookPuzzleAttempt hat (wie CoursePuzzleResult) eine Restrict-FK auf BookPuzzle →

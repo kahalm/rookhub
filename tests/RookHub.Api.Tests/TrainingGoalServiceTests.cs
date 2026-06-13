@@ -170,19 +170,67 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal("partial", day.Status);
     }
 
+    private async Task<Book> CreateBookAsync(BookKind kind, int id = 1)
+    {
+        var b = new Book { Id = id, FileName = $"b{id}.pgn", DisplayName = $"Book {id}", Kind = kind, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(b);
+        await _db.SaveChangesAsync();
+        return b;
+    }
+
     [Fact]
-    public async Task Tracker_CourseTimeCountsAsBookCategory()
+    public async Task Tracker_CourseTime_StudyBook_CountsAsBookCategory()
     {
         var u = await CreateUserAsync();
         await _service.SetPersonalGoalAsync(u.Id, Input(book: 10)); // 600 s
+        var book = await CreateBookAsync(BookKind.Study);
         var now = DateTime.UtcNow;
 
-        _db.CoursePuzzleResults.Add(new CoursePuzzleResult { UserId = u.Id, BookId = 1, BookPuzzleId = 1, SolvedAt = now, TimeSeconds = 700 });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = book.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 700, AttemptedAt = now });
         await _db.SaveChangesAsync();
 
         var res = await _service.GetTrackerAsync(u.Id, 1);
         var day = Assert.Single(res.Days);
         Assert.Equal(700, day.BookSeconds);
+        Assert.Equal(0, day.PuzzleSeconds);
+        Assert.Equal("full", day.Status);
+    }
+
+    [Fact]
+    public async Task Tracker_CourseTime_PuzzleBook_CountsAsPuzzleCategory()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(puzzle: 10)); // 600 s
+        var book = await CreateBookAsync(BookKind.Puzzle);
+        var now = DateTime.UtcNow;
+
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = book.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 700, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetTrackerAsync(u.Id, 1);
+        var day = Assert.Single(res.Days);
+        Assert.Equal(700, day.PuzzleSeconds);
+        Assert.Equal(0, day.BookSeconds);
+        Assert.Equal("full", day.Status);
+    }
+
+    [Fact]
+    public async Task Tracker_CourseAttempts_AccumulateSolvedAndFailed()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(puzzle: 10)); // 600 s
+        var book = await CreateBookAsync(BookKind.Puzzle);
+        var now = DateTime.UtcNow;
+
+        // Mehrere Versuche am selben Puzzle (gelöst + fehlgeschlagen + Wiederholung) summieren sich.
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = book.Id, BookPuzzleId = 1, Solved = false, TimeSeconds = 200, AttemptedAt = now });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = book.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 250, AttemptedAt = now });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = book.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 300, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetTrackerAsync(u.Id, 1);
+        var day = Assert.Single(res.Days);
+        Assert.Equal(750, day.PuzzleSeconds);   // 200 + 250 + 300, kein Cap (je < 1800)
         Assert.Equal("full", day.Status);
     }
 

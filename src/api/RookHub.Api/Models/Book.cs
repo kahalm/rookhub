@@ -41,6 +41,10 @@ public class Book
     [MaxLength(2000)]
     public string? Description { get; set; }
 
+    /// <summary>Art des Buchs fürs Trainingsziel-Routing: Puzzle-Buch → Kurszeit zählt in die
+    /// Kategorie „Puzzles"; Studienbuch → Kategorie „Buch/Kurs". Default Puzzle (klassisches Verhalten).</summary>
+    public BookKind Kind { get; set; } = BookKind.Puzzle;
+
     /// <summary>Für das deterministische Tagespuzzle nutzbar.</summary>
     public bool ForDaily { get; set; }
 

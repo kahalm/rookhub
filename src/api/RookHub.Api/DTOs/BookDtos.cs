@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.DTOs;
 
@@ -17,6 +18,8 @@ public class BookDto
     public bool ForDaily { get; set; }
     public bool ForRandom { get; set; }
     public bool ForBlind { get; set; }
+    /// <summary>Art des Buchs (Puzzle/Study) fürs Trainingsziel-Routing.</summary>
+    public BookKind Kind { get; set; }
     public int PuzzleCount { get; set; }
     /// <summary>Gruppen-Ids, die dieses Buch als Kurs sehen dürfen (für die Admin-Zuweisung).</summary>
     public List<int> AccessGroupIds { get; set; } = new();
@@ -48,6 +51,8 @@ public class UpdateBookDto
     public bool? ForDaily { get; set; }
     public bool? ForRandom { get; set; }
     public bool? ForBlind { get; set; }
+    /// <summary>Art des Buchs (Puzzle/Study); fürs Trainingsziel-Routing der Kurszeit.</summary>
+    public BookKind? Kind { get; set; }
 }
 
 /// <summary>Ergebnis eines PGN-Buch-Imports.</summary>

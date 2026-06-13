@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
+    public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
     public DbSet<WeeklyPostAttempt> WeeklyPostAttempts => Set<WeeklyPostAttempt>();
@@ -311,6 +312,29 @@ public class AppDbContext : DbContext
 
             e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
             e.HasIndex(cr => new { cr.UserId, cr.BookId });
+        });
+
+        modelBuilder.Entity<CourseAttempt>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.Book)
+             .WithMany()
+             .HasForeignKey(a => a.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Kein zweiter Cascade-Pfad über BookPuzzle (wird via Book kaskadiert) → Restrict,
+            // analog CoursePuzzleResult/BookPuzzleAttempt (MySQL "multiple cascade paths").
+            e.HasOne(a => a.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(a => a.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Fenster-Aggregation je User (AttemptedAt >= windowStart).
+            e.HasIndex(a => new { a.UserId, a.AttemptedAt });
         });
 
         modelBuilder.Entity<MenuItemSetting>(e =>

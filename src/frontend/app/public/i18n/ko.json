@@ -901,7 +901,8 @@
         "random": "랜덤",
         "blind": "블라인드",
         "visibleFor": "표시 대상 (코스)",
-        "actions": "작업"
+        "actions": "작업",
+        "kind": "Type"
       },
       "errors": {
         "load": "교재 로드 실패",
@@ -909,6 +910,10 @@
         "save": "저장 실패",
         "saveGroups": "그룹 접근 업데이트 실패",
         "delete": "삭제 실패"
+      },
+      "kind": {
+        "puzzle": "Puzzle book",
+        "study": "Study book"
       }
     },
     "groups": {
