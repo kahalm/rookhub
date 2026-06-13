@@ -713,4 +713,145 @@ public class BookPuzzleControllerTests : IDisposable
         Assert.Equal(1, after.SolvedCount);         // nur claimer2
         Assert.Equal(0, after.AnonymousSolvedCount); // bbbb wurde gelöscht
     }
+
+    // --- Tagespuzzle-Leaderboards (Monats-Ladder + Hall of Fame) ---------------------------
+
+    /// <summary>Macht <paramref name="puzzle"/> zum Tagespuzzle des UTC-Datums.</summary>
+    private async Task AssignDailyAsync(DateOnly date, BookPuzzle puzzle)
+    {
+        _db.DailyPuzzles.Add(new DailyPuzzle { Date = date, BookPuzzleId = puzzle.Id, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Erfasst einen Versuch mit explizitem Zeitpunkt (für Erstversuch-/Ranking-Kontrolle).</summary>
+    private async Task AddAttemptAsync(BookPuzzle puzzle, AppUser user, bool solved, int timeSeconds, DateTime attemptedAt)
+    {
+        _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
+        {
+            BookPuzzleId = puzzle.Id,
+            UserId = user.Id,
+            Solved = solved,
+            TimeSeconds = timeSeconds,
+            AttemptedAt = attemptedAt
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private static DailyLadderDto LadderOf(IActionResult result)
+        => Assert.IsType<DailyLadderDto>(Assert.IsType<OkObjectResult>(result).Value);
+
+    private static DailyHallOfFameDto HofOf(IActionResult result)
+        => Assert.IsType<DailyHallOfFameDto>(Assert.IsType<OkObjectResult>(result).Value);
+
+    [Fact]
+    public async Task DailyLeaderboard_RanksByPoints_WithSpeedBonus()
+    {
+        var p1 = await CreateBookPuzzleAsync(lineId: "lb.pgn:1", bookFileName: "lb.pgn", round: "1");
+        var p2 = await CreateBookPuzzleAsync(lineId: "lb.pgn:2", bookFileName: "lb.pgn", round: "2");
+        await AssignDailyAsync(new DateOnly(2026, 6, 1), p1);
+        await AssignDailyAsync(new DateOnly(2026, 6, 2), p2);
+
+        var anna = await CreateUserAsync("anna", discordId: "111");
+        var ben = await CreateUserAsync("ben");
+
+        // Tag 1: anna 20s (🥇), ben 40s (🥈)
+        await AddAttemptAsync(p1, anna, true, 20, new DateTime(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p1, ben, true, 40, new DateTime(2026, 6, 1, 9, 0, 0, DateTimeKind.Utc));
+        // Tag 2: ben 15s (🥇), anna gar nicht gelöst
+        await AddAttemptAsync(p2, ben, true, 15, new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p2, anna, false, 5, new DateTime(2026, 6, 2, 8, 30, 0, DateTimeKind.Utc));
+
+        var lb = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
+        Assert.Equal("2026-06", lb.Period);
+        Assert.Equal(2, lb.Entries.Count);
+
+        // anna: Tag1 10+5(🥇) = 15. ben: Tag1 10+3(🥈)=13, Tag2 10+5(🥇)=15 → 28.
+        var benE = lb.Entries.Single(e => e.Name == "ben");
+        var annaE = lb.Entries.Single(e => e.Name == "anna");
+        Assert.Equal(28, benE.Points);
+        Assert.Equal(2, benE.Solved);
+        Assert.Equal(1, benE.Golds);
+        Assert.Equal(15, annaE.Points);
+        Assert.Equal(1, annaE.Solved);
+        Assert.Equal(1, annaE.Golds);
+        // Sortierung: ben (28) vor anna (15)
+        Assert.Equal("ben", lb.Entries[0].Name);
+        Assert.Equal("111", annaE.DiscordId);
+    }
+
+    [Fact]
+    public async Task DailyLeaderboard_OnlyFirstAttemptCounts()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "lbf.pgn:1", bookFileName: "lbf.pgn");
+        await AssignDailyAsync(new DateOnly(2026, 6, 5), p);
+        var carl = await CreateUserAsync("carl");
+
+        // Erster Versuch fehlgeschlagen → zählt NICHT als Löser, auch wenn später gelöst
+        await AddAttemptAsync(p, carl, false, 10, new DateTime(2026, 6, 5, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p, carl, true, 12, new DateTime(2026, 6, 5, 8, 5, 0, DateTimeKind.Utc));
+
+        var lb = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
+        Assert.Empty(lb.Entries);
+    }
+
+    [Fact]
+    public async Task DailyLeaderboard_ExcludesOtherMonths()
+    {
+        var pMay = await CreateBookPuzzleAsync(lineId: "lbm.pgn:1", bookFileName: "lbm.pgn", round: "1");
+        var pJun = await CreateBookPuzzleAsync(lineId: "lbm.pgn:2", bookFileName: "lbm.pgn", round: "2");
+        await AssignDailyAsync(new DateOnly(2026, 5, 31), pMay);
+        await AssignDailyAsync(new DateOnly(2026, 6, 1), pJun);
+        var dora = await CreateUserAsync("dora");
+        await AddAttemptAsync(pMay, dora, true, 10, new DateTime(2026, 5, 31, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(pJun, dora, true, 10, new DateTime(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc));
+
+        var june = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
+        Assert.Equal(1, june.Entries.Single().Solved);   // nur das Juni-Daily
+    }
+
+    [Fact]
+    public async Task DailyLeaderboard_InvalidMonth_BadRequest()
+        => Assert.IsType<BadRequestObjectResult>(await _controller.GetDailyLeaderboard("2026/06"));
+
+    [Fact]
+    public async Task DailyHallOfFame_AggregatesAllTime()
+    {
+        var p1 = await CreateBookPuzzleAsync(lineId: "hof.pgn:1", bookFileName: "hof.pgn", round: "1");
+        var p2 = await CreateBookPuzzleAsync(lineId: "hof.pgn:2", bookFileName: "hof.pgn", round: "2");
+        await AssignDailyAsync(new DateOnly(2026, 4, 10), p1);   // anderer Monat als p2
+        await AssignDailyAsync(new DateOnly(2026, 6, 2), p2);
+
+        var anna = await CreateUserAsync("anna", discordId: "111");
+        var ben = await CreateUserAsync("ben");
+
+        // p1: anna 30s (🥇), ben 50s. p2: anna 9s (🥇, zugleich schnellste je), ben gar nicht.
+        await AddAttemptAsync(p1, anna, true, 30, new DateTime(2026, 4, 10, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p1, ben, true, 50, new DateTime(2026, 4, 10, 9, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p2, anna, true, 9, new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc));
+
+        var hof = HofOf(await _controller.GetDailyHallOfFame(5));
+
+        Assert.Equal("anna", hof.MostSolved[0].Name);
+        Assert.Equal(2, hof.MostSolved[0].Value);
+        Assert.Equal(1, hof.MostSolved.Single(e => e.Name == "ben").Value);
+
+        Assert.Equal("anna", hof.MostGolds[0].Name);
+        Assert.Equal(2, hof.MostGolds[0].Value);            // beide Tage 🥇
+        Assert.DoesNotContain(hof.MostGolds, e => e.Name == "ben");  // 0 Golds → ausgeblendet
+
+        Assert.NotNull(hof.Fastest);
+        Assert.Equal("anna", hof.Fastest!.Name);
+        Assert.Equal(9, hof.Fastest.TimeSeconds);
+        Assert.Equal("2026-06-02", hof.Fastest.Date);
+        Assert.Equal("111", hof.Fastest.DiscordId);
+    }
+
+    [Fact]
+    public async Task DailyHallOfFame_Empty_WhenNoDailies()
+    {
+        var hof = HofOf(await _controller.GetDailyHallOfFame());
+        Assert.Empty(hof.MostSolved);
+        Assert.Empty(hof.MostGolds);
+        Assert.Null(hof.Fastest);
+    }
 }

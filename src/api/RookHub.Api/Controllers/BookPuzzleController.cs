@@ -60,6 +60,51 @@ public class BookPuzzleController : BaseApiController
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
         => Ok(await _service.GetResultsAsync(id, since));
 
+    /// <summary>
+    /// Monats-Wertung des Tagespuzzles. <paramref name="month"/> als <c>yyyy-MM</c> (Default:
+    /// laufender UTC-Monat). Punkte = 10 je Erstversuch-Lösung + Tages-Rang-Bonus (5/3/1).
+    /// Literal-Route — steht bewusst vor <c>daily/{date}</c>.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("daily/leaderboard")]
+    public async Task<IActionResult> GetDailyLeaderboard([FromQuery] string? month = null)
+    {
+        int year, mon;
+        if (string.IsNullOrWhiteSpace(month))
+        {
+            var now = DateTime.UtcNow;
+            year = now.Year;
+            mon = now.Month;
+        }
+        else if (!TryParseMonth(month, out year, out mon))
+        {
+            return BadRequest(new { message = "month must be yyyy-MM." });
+        }
+
+        try { return Ok(await _service.GetDailyLadderAsync(year, mon)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>
+    /// All-time Hall of Fame des Tagespuzzles (meiste Lösungen, meiste 🥇, schnellste Lösung).
+    /// <paramref name="top"/> begrenzt die Listenlänge (1–25). Literal-Route vor <c>daily/{date}</c>.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("daily/hall-of-fame")]
+    public async Task<IActionResult> GetDailyHallOfFame([FromQuery] int top = 5)
+        => Ok(await _service.GetDailyHallOfFameAsync(Math.Clamp(top, 1, 25)));
+
+    /// <summary>Parst <c>yyyy-MM</c> (Jahr 2000–9999, Monat 1–12).</summary>
+    private static bool TryParseMonth(string s, out int year, out int month)
+    {
+        year = 0;
+        month = 0;
+        var parts = s.Split('-');
+        return parts.Length == 2
+            && int.TryParse(parts[0], out year) && year is >= 2000 and <= 9999
+            && int.TryParse(parts[1], out month) && month is >= 1 and <= 12;
+    }
+
     [Authorize]
     [HttpPost("claim-session")]
     public async Task<IActionResult> ClaimSession([FromBody] ClaimBookSessionDto dto)
