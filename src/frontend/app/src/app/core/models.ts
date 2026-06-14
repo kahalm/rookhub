@@ -152,3 +152,23 @@ export interface TournamentFavorite {
   playerSnr: number | null;
   teamSnr: number | null;
 }
+
+// ── Runden-Monitor (TournamentMonitorController) ─────────────────────────
+
+export interface TournamentMonitorStatus {
+  active: boolean;
+  /** ISO-Datum, bis wann der Monitor aktiv ist (null, wenn inaktiv). */
+  activeUntil: string | null;
+  /** Zuletzt erkannte Rundenzahl. */
+  lastKnownRounds: number;
+}
+
+// ── Crawl-Job (vom Crawler durchgereicht) ────────────────────────────────
+
+export type CrawlJobStatus = 'Queued' | 'Running' | 'Completed' | 'Failed';
+
+export interface CrawlJob {
+  id: number;
+  status: CrawlJobStatus;
+  errorMessage?: string | null;
+}

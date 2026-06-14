@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite } from '../../core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob } from '../../core/models';
 
 /**
  * Kapselt alle HTTP-Endpunkte rund um die Turnier-Detailansicht
@@ -42,22 +42,22 @@ export class TournamentDetailService {
   }
 
   // --- Runden-Monitor ---
-  getMonitor(id: string): Observable<any> {
-    return this.http.get<any>(`/api/tournament-monitors/${id}`);
+  getMonitor(id: string): Observable<TournamentMonitorStatus> {
+    return this.http.get<TournamentMonitorStatus>(`/api/tournament-monitors/${id}`);
   }
-  startMonitor(id: string): Observable<any> {
-    return this.http.post<any>(`/api/tournament-monitors/${id}`, {});
+  startMonitor(id: string): Observable<TournamentMonitorStatus> {
+    return this.http.post<TournamentMonitorStatus>(`/api/tournament-monitors/${id}`, {});
   }
   stopMonitor(id: string): Observable<unknown> {
     return this.http.delete(`/api/tournament-monitors/${id}`);
   }
 
   // --- Refresh (Crawl-Job) ---
-  startCrawl(chessResultsId: string): Observable<any> {
-    return this.http.post<any>('/api/tournaments/crawl', { chessResultsId, jobType: 'Full' });
+  startCrawl(chessResultsId: string): Observable<CrawlJob> {
+    return this.http.post<CrawlJob>('/api/tournaments/crawl', { chessResultsId, jobType: 'Full' });
   }
-  getCrawlJob(jobId: number): Observable<any> {
-    return this.http.get<any>(`/api/tournaments/crawl/${jobId}`);
+  getCrawlJob(jobId: number): Observable<CrawlJob> {
+    return this.http.get<CrawlJob>(`/api/tournaments/crawl/${jobId}`);
   }
 
   // --- Favoriten (serverseitig) ---

@@ -54,3 +54,37 @@ describe('AuthService token expiry', () => {
     expect(fresh.isLoggedIn).toBeFalse();
   });
 });
+
+describe('AuthService stopImpersonation', () => {
+  let svc: AuthService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    svc = TestBed.inject(AuthService);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('stellt die gesicherte Admin-Session wieder her', () => {
+    const admin = { token: jwt(3600), username: 'admin', userId: 1, isAdmin: true };
+    localStorage.setItem('rookhub_admin_user', JSON.stringify(admin));
+    localStorage.setItem('rookhub_user', JSON.stringify({ ...admin, username: 'opfer', impersonating: true }));
+
+    svc.stopImpersonation();
+
+    expect(svc.currentUser?.username).toBe('admin');
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+  });
+
+  it('loggt bei beschädigtem Admin-Backup sauber aus statt zu werfen', () => {
+    localStorage.setItem('rookhub_admin_user', '{ kaputt');
+    localStorage.setItem('rookhub_user', JSON.stringify({ token: jwt(3600), username: 'opfer', userId: 2, isAdmin: false }));
+
+    expect(() => svc.stopImpersonation()).not.toThrow();
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+    expect(svc.isLoggedIn).toBeFalse();
+  });
+});

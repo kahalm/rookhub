@@ -105,9 +105,13 @@ export class ShowTokenDialogComponent {
   static pendingToken = '';
 
   copy(): void {
-    navigator.clipboard.writeText(this.token).then(() => {
+    const clip = navigator.clipboard;
+    if (!clip) return; // Clipboard-API fehlt (unsicherer Kontext) — Token bleibt manuell kopierbar
+    clip.writeText(this.token).then(() => {
       this.copied = true;
       setTimeout(() => (this.copied = false), 2000);
+    }).catch(() => {
+      // Schreiben verweigert/nicht verfügbar — kein unbehandeltes Promise-Reject
     });
   }
 }

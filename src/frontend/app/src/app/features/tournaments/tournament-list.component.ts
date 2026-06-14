@@ -13,7 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
-import { Tournament, Subscription } from '../../core/models';
+import { Tournament, Subscription, CrawlJob } from '../../core/models';
 
 @Component({
   selector: 'app-tournament-list',
@@ -210,7 +210,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     this.crawling = true;
     this.crawlError = '';
     this.crawlJobId = null;
-    this.http.post<any>('/api/tournaments/crawl', {
+    this.http.post<CrawlJob>('/api/tournaments/crawl', {
       chessResultsId: id,
       jobType: 'Full'
     }).subscribe({
@@ -227,7 +227,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
 
   private pollCrawlJob(jobId: number): void {
     this.pollInterval = setInterval(() => {
-      this.http.get<any>(`/api/tournaments/crawl/${jobId}`).subscribe({
+      this.http.get<CrawlJob>(`/api/tournaments/crawl/${jobId}`).subscribe({
         next: (job) => {
           if (job.status === 'Completed') {
             if (this.pollInterval) clearInterval(this.pollInterval);

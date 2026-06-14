@@ -70,9 +70,19 @@ export class AuthService {
   stopImpersonation(): void {
     const stored = localStorage.getItem(this.adminBackupKey);
     if (!stored) return;
+    let admin: AuthResponse;
+    try {
+      admin = JSON.parse(stored);
+    } catch {
+      // Beschädigtes Admin-Backup: nicht in einem halben Zustand hängenbleiben —
+      // Reste verwerfen und sauber ausloggen.
+      localStorage.removeItem(this.adminBackupKey);
+      this.logout();
+      return;
+    }
     localStorage.removeItem(this.adminBackupKey);
     localStorage.setItem('rookhub_user', stored);
-    this.currentUserSubject.next(JSON.parse(stored));
+    this.currentUserSubject.next(admin);
     this.loadPreferences();
   }
 
