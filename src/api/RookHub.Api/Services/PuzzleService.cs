@@ -520,8 +520,12 @@ public class PuzzleService
             return MapAttemptToDto(duplicate, puzzle);
 
         var currentElo = GetEloForLevel(user, vizLevel);
-        var attemptCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == vizLevel);
-        var kFactor = attemptCount < 30 ? 40 : 20;
+        // Provisorische Elo-Kalibrierung: am Konto-/Level-Anfang größere Schritte (in BEIDE Richtungen
+        // — der K-Faktor skaliert Gewinn wie Verlust), damit man schnell beim passenden Niveau landet.
+        // Gegated auf gelöste UND gescheiterte Versuche je vizLevel (siehe ProvisionalKFactor).
+        var solvedCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == vizLevel && a.Solved);
+        var failedCount = await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.VisualizationLevel == vizLevel && !a.Solved);
+        var kFactor = ProvisionalKFactor(solvedCount, failedCount);
 
         // Elo nur beim ersten Versuch für dieses Puzzle aktualisieren — verhindert Elo-Inflation.
         var isFirstAttempt = !await _db.PuzzleAttempts.AnyAsync(
@@ -1059,6 +1063,24 @@ public class PuzzleService
         [3] = user.PuzzleEloViz3 ?? GetDefaultElo(3),
         [4] = user.PuzzleEloViz4 ?? GetDefaultElo(4),
     };
+
+    /// <summary>Normaler (eingependelter) Elo-K-Faktor.</summary>
+    internal const int BaseKFactor = 20;
+
+    /// <summary>
+    /// Provisorischer K-Faktor zur schnellen Start-Kalibrierung der Puzzle-Elo. Solange das Niveau
+    /// noch nicht getroffen ist, größere Schritte in BEIDE Richtungen (<see cref="CalculateElo"/>
+    /// skaliert Gewinn und Verlust gleich): ×4 bis mind. 5 gelöste UND 5 gescheiterte Versuche,
+    /// ×2 bis 10 UND 10, danach normale Schrittweite. BEIDES nötig (gelöst und gescheitert), damit
+    /// man wirklich einpendelt statt nur in eine Richtung davonzulaufen (viele leichte Treffer ohne
+    /// einen einzigen Fehlschlag heißt: Niveau noch nicht gefunden → weiter große Schritte).
+    /// </summary>
+    internal static int ProvisionalKFactor(int solvedCount, int failedCount)
+    {
+        if (solvedCount < 5 || failedCount < 5) return BaseKFactor * 4;    // ×4
+        if (solvedCount < 10 || failedCount < 10) return BaseKFactor * 2;  // ×2
+        return BaseKFactor;
+    }
 
     internal static (int newRating, int change) CalculateElo(int userRating, int puzzleRating, bool solved, int kFactor)
     {

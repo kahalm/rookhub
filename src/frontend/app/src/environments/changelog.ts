@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.122.0';
+export const APP_VERSION = '0.123.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.123.0', date: '2026-06-14', changes: [
+    'Puzzle-Elo pendelt sich am Anfang schneller ein: Solange dein Niveau noch nicht gefunden ist, sind die Elo-Schritte größer (in beide Richtungen) — vierfach, bis du mindestens 5 Puzzles gelöst UND 5 nicht gelöst hast, danach doppelt bis 10/10, dann normal. So landest du nach wenigen Puzzles beim passenden Schwierigkeitsgrad statt erst nach vielen.',
+  ]},
   { version: '0.122.0', date: '2026-06-14', changes: [
     'Revenge-Modus als Runde: Wenn du ein gescheitertes Puzzle eines Freundes angehst, bleibst du nach dem Lösen im Revenge-Modus und bekommst direkt das nächste offene Puzzle dieses Freundes — bis alle durch sind. Zum Abschluss gibt es eine Glückwunsch-Meldung mit Feuerwerk und der Anzahl gerächter Puzzles.',
     'Freunde-Revanche-Liste: Bereits gerächte (von dir gelöste) Puzzles verschwinden aus der offenen Liste und sammeln sich in einem neuen Abschnitt „Bereits erledigt".',

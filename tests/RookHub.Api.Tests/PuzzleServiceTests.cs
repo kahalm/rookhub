@@ -29,6 +29,31 @@ public class PuzzleServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    // --- Provisorische Start-Kalibrierung der Puzzle-Elo (schnelleres Einpendeln) ---
+
+    [Theory]
+    [InlineData(0, 0, 80)]    // ganz am Anfang → ×4
+    [InlineData(4, 9, 80)]    // <5 gelöst → ×4
+    [InlineData(9, 4, 80)]    // <5 gescheitert → ×4
+    [InlineData(50, 3, 80)]   // viele gelöst, aber <5 Fehlschläge → Niveau noch nicht getroffen → weiter ×4
+    [InlineData(5, 5, 40)]    // 5 & 5 erreicht → ×2
+    [InlineData(9, 9, 40)]    // <10 → ×2
+    [InlineData(5, 30, 40)]   // gelöst <10 → ×2 (beide Richtungen nötig)
+    [InlineData(10, 10, 20)]  // 10 & 10 → normale Schrittweite
+    [InlineData(40, 25, 20)]  // lange eingependelt → normal
+    public void ProvisionalKFactor_LargerStepsUntilSolvedAndFailedThresholds(int solved, int failed, int expectedK)
+        => Assert.Equal(expectedK, PuzzleService.ProvisionalKFactor(solved, failed));
+
+    [Fact]
+    public void ProvisionalK_TimesCalculateElo_YieldsLargerEarlyEloChange()
+    {
+        // Gleiches Puzzle/Rating: am Anfang (×4) muss der Elo-Schritt deutlich größer sein als eingependelt (×1).
+        var (_, earlyChange) = PuzzleService.CalculateElo(1500, 1500, solved: true, PuzzleService.ProvisionalKFactor(0, 0));
+        var (_, settledChange) = PuzzleService.CalculateElo(1500, 1500, solved: true, PuzzleService.ProvisionalKFactor(10, 10));
+        Assert.True(earlyChange > settledChange, $"early {earlyChange} should exceed settled {settledChange}");
+        Assert.Equal(settledChange * 4, earlyChange); // ×4 zu Beginn
+    }
+
     private async Task<int> CreateUserAsync(string username = "testuser")
     {
         var user = new AppUser
@@ -579,26 +604,25 @@ public class PuzzleServiceTests : IDisposable
         var userId = await CreateUserAsync("elo_prov");
         var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_p1");
 
-        // K=40, equal rating → expected ~0.5 → change ~20
+        // Start-Kalibrierung ×4 (0 gelöst/0 gescheitert) → K=80, gleiches Rating (~0.5) → change ~40
         var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
 
-        Assert.Equal(20, result.EloChange);
+        Assert.Equal(40, result.EloChange);
     }
 
     [Fact]
     public async Task RecordAttempt_EstablishedKFactor_SmallerSwings()
     {
         var userId = await CreateUserAsync("elo_est");
-        // Use different puzzles for the 30 prior attempts so the target puzzle is still a "first attempt"
+        // Eingependelt heißt: mind. 10 gelöste UND 10 gescheiterte Vorversuche (auf anderen Puzzles,
+        // damit das Ziel-Puzzle ein „erster Versuch" bleibt).
         var target = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_e_target");
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < 10; i++)
         {
-            var other = await CreatePuzzleAsync(rating: 1500, lichessId: $"elo_e_prior_{i}");
-            _db.PuzzleAttempts.Add(new PuzzleAttempt
-            {
-                UserId = userId, PuzzleId = other.Id, Solved = true, TimeSpentSeconds = 5,
-                AttemptedAt = DateTime.UtcNow.AddMinutes(-30 + i)
-            });
+            var solvedP = await CreatePuzzleAsync(rating: 1500, lichessId: $"elo_e_solved_{i}");
+            var failedP = await CreatePuzzleAsync(rating: 1500, lichessId: $"elo_e_failed_{i}");
+            _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = solvedP.Id, Solved = true, TimeSpentSeconds = 5, AttemptedAt = DateTime.UtcNow.AddMinutes(-40 + i) });
+            _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = failedP.Id, Solved = false, TimeSpentSeconds = 5, AttemptedAt = DateTime.UtcNow.AddMinutes(-20 + i) });
         }
         await _db.SaveChangesAsync();
 
@@ -609,7 +633,7 @@ public class PuzzleServiceTests : IDisposable
 
         var result = await _service.RecordAttemptAsync(userId, target.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
 
-        // K=20 (30 prior attempts), equal rating → change ~10
+        // K=20 (≥10 gelöst & ≥10 gescheitert → eingependelt), gleiches Rating → change ~10
         Assert.Equal(10, result.EloChange);
     }
 
@@ -745,9 +769,9 @@ public class PuzzleServiceTests : IDisposable
             Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 2
         });
 
-        // Equal rating, K=40, solved → change = +20
-        Assert.Equal(20, result.EloChange);
-        Assert.Equal(1320, result.EloAfter);
+        // Equal rating, Start-Kalibrierung ×4 → K=80, solved → change = +40
+        Assert.Equal(40, result.EloChange);
+        Assert.Equal(1340, result.EloAfter);
     }
 
     [Fact]
@@ -767,14 +791,14 @@ public class PuzzleServiceTests : IDisposable
         }
         await _db.SaveChangesAsync();
 
-        // Level 1 has 0 attempts → K=40 (provisional)
+        // Level 1 hat 0 gelöst/0 gescheitert → Start-Kalibrierung ×4 (K=80), unabhängig von Level 0
         var result = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto
         {
             Solved = true, TimeSpentSeconds = 10, VisualizationLevel = 1
         });
 
-        // Default Elo for L1 = 1400, puzzle = 1400 → equal rating → K=40 → change = 20
-        Assert.Equal(20, result.EloChange);
+        // Default Elo for L1 = 1400, puzzle = 1400 → equal rating → K=80 → change = 40
+        Assert.Equal(40, result.EloChange);
     }
 
     [Fact]
