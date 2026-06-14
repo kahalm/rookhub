@@ -104,11 +104,8 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 ## Features
 - [x] Start-ELO schneller einpendeln (0.123.0) — betraf den **Standard-/Random-Puzzle-Modus** (persönliche Puzzle-Elo), NICHT Endless. Umgesetzt im Backend `PuzzleService.ProvisionalKFactor`: K-Faktor **×4** (in beide Richtungen — K skaliert Gewinn wie Verlust) bis **≥5 gelöst UND ≥5 gescheitert** (je vizLevel), **×2** bis 10/10, danach normaler K (20). Ersetzt das alte `attemptCount<30?40:20`. Tests in `PuzzleServiceTests`.
 - [ ] Trainersystem mit eigenen Gruppen einführen — Konzept noch offen. Idee: Trainer-Rolle, die eigene Gruppen anlegen/verwalten und Mitglieder zuweisen kann (heute nur Admin via `/api/admin/groups`), inkl. Trainingsziel-Vorlagen + ggf. Kurs-Freigaben für die eigenen Gruppen. Aufbauen auf bestehender Gruppen-/`GroupTrainingGoals`-/`BookGroupAccess`-Infrastruktur; offene Fragen: Rollenmodell (neue Rolle vs. Flag), Sichtbarkeits-/Berechtigungsgrenzen Trainer ↔ Mitglieder, Einladungsfluss.
-- [ ] Passwort vergessen / E-Mail-Reset
 - [ ] Push-Benachrichtigungen (PWA) — z.B. „Dein Tagespuzzle wartet"
 - [ ] E-Mail-Benachrichtigung bei neuen Turnierblättchen
 - [ ] Puzzle-Streaks / Achievements
-- [ ] Dinge für Freunde — Stats (Idee: Freunde-bezogene Statistiken / Vergleiche; Konzept noch offen)
-- [ ] Dinge für Freunde — Revenge a Friend (Idee: einem Freund eine Revanche-Aufgabe / Herausforderung stellen)
 - [ ] Admin-Dashboard: User-Übersicht + Aktionen
 - [x] Schach-Bot auf Elasticsearch umbauen (Logging/Events) → umgesetzt im Bot-Repo v2.60.0/2.60.1 (`core/es_client.py`, ESHandler in `log_setup.py`, Events `reaction`+`stat_inc`); Index `schach-bot-logs-*` ist live in Prod. Weitere Event-Typen (Daily-Post, DMs, Webhooks, Commands, Buttons) bei Bedarf später ergänzen.
