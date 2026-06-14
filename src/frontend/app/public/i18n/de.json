@@ -573,7 +573,12 @@
       "easy": "Leicht",
       "normal": "Normal",
       "hard": "Schwer",
-      "veryHard": "Sehr schwer"
+      "veryHard": "Sehr schwer",
+      "veryEasyDesc": "Puzzles ca. 600 Elo unter deinem Niveau — zum Aufwärmen oder Technik üben.",
+      "easyDesc": "Puzzles ca. 300 Elo unter deinem Niveau — für flüssiges Lösen.",
+      "normalDesc": "Puzzles auf deinem Niveau — optimales Training.",
+      "hardDesc": "Puzzles ca. 300 Elo über deinem Niveau — fordert und verbessert.",
+      "veryHardDesc": "Puzzles ca. 600 Elo über deinem Niveau — sehr anspruchsvoll."
     },
     "theme": {
       "mode": "Modus",
@@ -588,7 +593,17 @@
       "countdown": "Figuren verschwinden in {{seconds}}s…",
       "noMoveYet": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
       "show": "Anzeigen",
-      "showing": "Wird angezeigt…"
+      "showing": "Wird angezeigt…",
+      "level0Name": "Normal",
+      "level1Name": "Blindspiel",
+      "level2Name": "Checker",
+      "level3Name": "Dunkel",
+      "level4Name": "Unsichtbar",
+      "level0Desc": "Drag & Drop — Brett sichtbar, keine Einschränkungen.",
+      "level1Desc": "Brett eingefroren, Züge nur als Text sichtbar.",
+      "level2Desc": "Figuren werden nach 3 s durch farbige Spielsteine ersetzt.",
+      "level3Desc": "Figuren werden nach 3 s durch schwarze Steine ersetzt.",
+      "level4Desc": "Figuren verschwinden nach 3 s vollständig."
     },
     "share": {
       "title": "Puzzle teilen",

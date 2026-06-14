@@ -573,7 +573,12 @@
       "easy": "Lako",
       "normal": "Normalno",
       "hard": "Teško",
-      "veryHard": "Vrlo teško"
+      "veryHard": "Vrlo teško",
+      "veryEasyDesc": "Zagonetke ~600 Elo ispod tvoje razine — za zagrijavanje ili uvježbavanje tehnike.",
+      "easyDesc": "Zagonetke ~300 Elo ispod tvoje razine — za tečno rješavanje.",
+      "normalDesc": "Zagonetke na tvojoj razini — optimalan trening.",
+      "hardDesc": "Zagonetke ~300 Elo iznad tvoje razine — izaziva te i poboljšava.",
+      "veryHardDesc": "Zagonetke ~600 Elo iznad tvoje razine — vrlo zahtjevno."
     },
     "theme": {
       "mode": "Način",
@@ -588,7 +593,17 @@
       "countdown": "Figure nestaju za {{seconds}}s…",
       "noMoveYet": "Još nema poteza — kliknite polje-od → ciljno polje.",
       "show": "Prikaži",
-      "showing": "Prikazuje se…"
+      "showing": "Prikazuje se…",
+      "level0Name": "Normalno",
+      "level1Name": "Naslijepo",
+      "level2Name": "Žetoni",
+      "level3Name": "Tamno",
+      "level4Name": "Nevidljivo",
+      "level0Desc": "Povuci i ispusti — ploča vidljiva, bez ograničenja.",
+      "level1Desc": "Ploča zamrznuta, potezi prikazani samo kao tekst.",
+      "level2Desc": "Figure se nakon 3 s zamjenjuju žetonima u boji.",
+      "level3Desc": "Figure se nakon 3 s zamjenjuju crnim žetonima.",
+      "level4Desc": "Figure nakon 3 s potpuno nestaju."
     },
     "share": {
       "title": "Podijeli zagonetku",

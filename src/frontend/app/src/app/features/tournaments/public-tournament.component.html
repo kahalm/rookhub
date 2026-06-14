@@ -8,7 +8,7 @@
             <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-actions class="action-bar">
-            <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank">
+            <a mat-raised-button [href]="'https://chess-results.com/tnr' + tournament.chessResultsId + '.aspx?lan=0'" target="_blank" rel="noopener noreferrer">
               <mat-icon>open_in_new</mat-icon><span class="btn-label"> {{ 'tournaments.actions.chessResults' | translate }}</span>
             </a>
             <button mat-raised-button (click)="share()">

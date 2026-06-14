@@ -127,7 +127,7 @@ import {
                 </ol>
                 <p class="help-repcheck">
                   {{ 'chessable.helpRepcheck' | translate }}
-                  <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener">RepCheck</a>.
+                  <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener noreferrer">RepCheck</a>.
                 </p>
 
                 @if (bookmarkletHref) {

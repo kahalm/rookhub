@@ -573,7 +573,12 @@
       "easy": "Easy",
       "normal": "Normal",
       "hard": "Hard",
-      "veryHard": "Very hard"
+      "veryHard": "Very hard",
+      "veryEasyDesc": "Puzzles ~600 Elo below your level — for warming up or drilling technique.",
+      "easyDesc": "Puzzles ~300 Elo below your level — for smooth solving.",
+      "normalDesc": "Puzzles at your level — optimal training.",
+      "hardDesc": "Puzzles ~300 Elo above your level — challenges and improves you.",
+      "veryHardDesc": "Puzzles ~600 Elo above your level — very demanding."
     },
     "theme": {
       "mode": "Mode",
@@ -588,7 +593,17 @@
       "countdown": "Pieces disappear in {{seconds}}s…",
       "noMoveYet": "No move yet — click from-square → target square.",
       "show": "Show",
-      "showing": "Showing…"
+      "showing": "Showing…",
+      "level0Name": "Normal",
+      "level1Name": "Blindfold",
+      "level2Name": "Checker",
+      "level3Name": "Dark",
+      "level4Name": "Invisible",
+      "level0Desc": "Drag & drop — board visible, no restrictions.",
+      "level1Desc": "Board frozen, moves shown only as text.",
+      "level2Desc": "Pieces are replaced by colored checkers after 3s.",
+      "level3Desc": "Pieces are replaced by black tokens after 3s.",
+      "level4Desc": "Pieces disappear completely after 3s."
     },
     "share": {
       "title": "Share Puzzle",

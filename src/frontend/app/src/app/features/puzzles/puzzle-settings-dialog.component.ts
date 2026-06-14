@@ -96,7 +96,7 @@ export interface PuzzleSettingsDialogResult {
           </span>
           <mat-select [(ngModel)]="visualizationModeEdit" class="psd-select">
             @for (opt of vizLevelOptions; track opt.value) {
-              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+              <mat-option [value]="opt.value">{{ opt.label | translate }}</mat-option>
             }
           </mat-select>
         </div>
@@ -104,8 +104,8 @@ export interface PuzzleSettingsDialogResult {
           <div class="psd-viz-info">
             @for (opt of vizLevelOptions; track opt.value) {
               <div class="psd-viz-info-row" [class.current]="visualizationModeEdit === opt.value">
-                <span class="psd-viz-name">{{ opt.label }}</span>
-                <span class="psd-viz-desc">{{ opt.description }}</span>
+                <span class="psd-viz-name">{{ opt.label | translate }}</span>
+                <span class="psd-viz-desc">{{ opt.description | translate }}</span>
               </div>
             }
           </div>
@@ -146,7 +146,7 @@ export interface PuzzleSettingsDialogResult {
               @for (opt of difficultyInfoOptions; track opt.value) {
                 <div class="psd-viz-info-row" [class.current]="difficultyEdit === opt.value">
                   <span class="psd-viz-name">{{ opt.label | translate }}</span>
-                  <span class="psd-viz-desc">{{ opt.description }}</span>
+                  <span class="psd-viz-desc">{{ opt.description | translate }}</span>
                 </div>
               }
             </div>
@@ -289,22 +289,22 @@ export class PuzzleSettingsDialogComponent {
   }
 
   get vizLevelOptions(): { value: number; label: string; description: string }[] {
-    return [
-      { value: 0, label: 'Normal',    description: 'Drag & Drop — Brett sichtbar, keine Einschränkungen.' },
-      { value: 1, label: 'Blindfold', description: 'Brett eingefroren, Züge nur als Text sichtbar.' },
-      { value: 2, label: 'Checker',   description: 'Figuren werden nach 3 s durch farbige Spielsteine ersetzt.' },
-      { value: 3, label: 'Dark',      description: 'Figuren werden nach 3 s durch schwarze Steine ersetzt.' },
-      { value: 4, label: 'Invisible', description: 'Figuren verschwinden nach 3 s vollständig.' },
-    ];
+    // label/description sind i18n-Keys; im Template via `| translate` aufgelöst.
+    return [0, 1, 2, 3, 4].map(v => ({
+      value: v,
+      label: `puzzles.viz.level${v}Name`,
+      description: `puzzles.viz.level${v}Desc`,
+    }));
   }
 
   get difficultyInfoOptions(): { value: string; label: string; description: string }[] {
+    // label/description sind i18n-Keys; im Template via `| translate` aufgelöst.
     return [
-      { value: 'sehr_leicht', label: 'puzzles.difficulty.veryEasy', description: 'Puzzles ca. 600 Elo unter deinem Niveau — zum Aufwärmen oder Technik üben.' },
-      { value: 'leicht',      label: 'puzzles.difficulty.easy',    description: 'Puzzles ca. 300 Elo unter deinem Niveau — für flüssiges Lösen.' },
-      { value: 'normal',      label: 'puzzles.difficulty.normal',  description: 'Puzzles auf deinem Niveau — optimales Training.' },
-      { value: 'schwer',      label: 'puzzles.difficulty.hard',    description: 'Puzzles ca. 300 Elo über deinem Niveau — fordert und verbessert.' },
-      { value: 'sehr_schwer', label: 'puzzles.difficulty.veryHard', description: 'Puzzles ca. 600 Elo über deinem Niveau — sehr anspruchsvoll.' },
+      { value: 'sehr_leicht', label: 'puzzles.difficulty.veryEasy',  description: 'puzzles.difficulty.veryEasyDesc' },
+      { value: 'leicht',      label: 'puzzles.difficulty.easy',      description: 'puzzles.difficulty.easyDesc' },
+      { value: 'normal',      label: 'puzzles.difficulty.normal',    description: 'puzzles.difficulty.normalDesc' },
+      { value: 'schwer',      label: 'puzzles.difficulty.hard',      description: 'puzzles.difficulty.hardDesc' },
+      { value: 'sehr_schwer', label: 'puzzles.difficulty.veryHard',  description: 'puzzles.difficulty.veryHardDesc' },
     ];
   }
 

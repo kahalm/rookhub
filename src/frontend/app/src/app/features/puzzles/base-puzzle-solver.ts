@@ -449,24 +449,6 @@ export abstract class BasePuzzleSolver {
     this.vizOpponentLastMove = undefined;
   }
 
-  get vizLevelOptions(): { value: number; label: string }[] {
-    return [0, 1, 2, 3, 4].map(v => {
-      const labels = ['Normal', 'Blindfold', 'Checker', 'Dark', 'Invisible'];
-      return { value: v, label: labels[v] };
-    });
-  }
-
-  get vizLevelDescription(): string {
-    switch (this.visualizationMode) {
-      case 0: return 'Normal — Drag & Drop';
-      case 1: return 'Blindfold — Brett eingefroren, Züge als Text';
-      case 2: return 'Checker — Figuren werden nach 3s durch Spielsteine ersetzt';
-      case 3: return 'Dark — Figuren werden nach 3s durch schwarze Steine ersetzt';
-      case 4: return 'Invisible — Figuren verschwinden nach 3s komplett';
-      default: return '';
-    }
-  }
-
   // ===== Lösungs-Durchsicht (geteilt) =====
   /** Endzustand-Review: ans Ende springen (keine Auto-Wiedergabe) — für gelöst/falsch. */
   protected enterSolutionReview(): void {

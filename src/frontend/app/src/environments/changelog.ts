@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.117.0';
+export const APP_VERSION = '0.117.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.117.1', date: '2026-06-14', changes: [
+    'Mehrsprachigkeit: Die Erklärungen der Visualisierungs-Stufen (Normal/Blindspiel/Checker/Dunkel/Unsichtbar) und der Schwierigkeitsgrade in den Puzzle-Einstellungen erscheinen jetzt in der gewählten Sprache statt fest auf Deutsch.',
+    'Sicherheit/Wartung: Externe Links (Chess-Results, RepCheck) öffnen jetzt durchgängig mit rel="noopener noreferrer". Aufräumen: ungenutzter Visualisierungs-Code entfernt.',
+  ]},
   { version: '0.117.0', date: '2026-06-13', changes: [
     'Endless-Modus: Die Themen-Auswahl ist jetzt ein durchsuchbares Mehrfach-Auswahlfeld statt eines freien Textfelds. Einfach tippen, um aus allen verfügbaren Themen zu filtern, und beliebig viele per Klick auswählen — die Auswahl erscheint als entfernbare Chips. Eigene/freie Themen lassen sich weiterhin per Enter, Komma oder Leertaste eintippen.',
   ]},

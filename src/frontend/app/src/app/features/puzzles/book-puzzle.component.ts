@@ -116,17 +116,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return this.puzzle.bookFileName.replace(/_firstkey\.pgn$/, '').replace(/_/g, ' ');
   }
 
-  override get vizLevelDescription(): string {
-    switch (this.visualizationMode) {
-      case 0: return this.translate.instant('book.viz.level0');
-      case 1: return this.translate.instant('book.viz.level1');
-      case 2: return this.translate.instant('book.viz.level2');
-      case 3: return this.translate.instant('book.viz.level3');
-      case 4: return this.translate.instant('book.viz.level4');
-      default: return '';
-    }
-  }
-
   constructor(
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
