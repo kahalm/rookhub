@@ -334,6 +334,17 @@
       "noThemes": "Noch keine gemeinsamen Themen-Daten.",
       "loadError": "Statistik konnte nicht geladen werden"
     },
+    "revenge": {
+      "menu": "Revenge a Friend",
+      "title": "Revanche gegen {{name}}",
+      "hint": "Puzzles, an denen {{name}} gescheitert ist und sie noch nicht gelöst hat — knack sie und mach es besser!",
+      "back": "Zurück zu Freunden",
+      "ratingLabel": "Wertung {{rating}}",
+      "failCount": "{{count}}× gescheitert",
+      "solve": "Lösen",
+      "empty": "{{name}} hat keine offenen Niederlagen — nichts zu rächen!",
+      "loadError": "Revenge-Liste konnte nicht geladen werden"
+    },
     "errors": {
       "loadFriends": "Freunde konnten nicht geladen werden",
       "loadRequests": "Anfragen konnten nicht geladen werden",

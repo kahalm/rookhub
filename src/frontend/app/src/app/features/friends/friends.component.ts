@@ -67,6 +67,10 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
                             [attr.aria-label]="'friends.stats.compare' | translate" [matTooltip]="'friends.stats.compare' | translate">
                       <mat-icon>bar_chart</mat-icon>
                     </button>
+                    <button mat-icon-button color="primary" [routerLink]="['/friends', friend.userId, 'revenge']"
+                            [attr.aria-label]="'friends.revenge.menu' | translate" [matTooltip]="'friends.revenge.menu' | translate">
+                      <mat-icon>sports_martial_arts</mat-icon>
+                    </button>
                     <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)">
                       <mat-icon>person_remove</mat-icon>
                     </button>

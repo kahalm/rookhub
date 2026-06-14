@@ -334,6 +334,17 @@
       "noThemes": "Još nema zajedničkih podataka o temama.",
       "loadError": "Statistiku nije moguće učitati"
     },
+    "revenge": {
+      "menu": "Osveta prijatelju",
+      "title": "Osveta protiv {{name}}",
+      "hint": "Zagonetke koje {{name}} nije riješio/la — riješi ih i budi bolji/a!",
+      "back": "Natrag na prijatelje",
+      "ratingLabel": "Rejting {{rating}}",
+      "failCount": "{{count}}× neuspješno",
+      "solve": "Riješi",
+      "empty": "{{name}} nema otvorenih poraza — nema se što osvetiti!",
+      "loadError": "Popis za osvetu nije moguće učitati"
+    },
     "errors": {
       "loadFriends": "Učitavanje prijatelja nije uspjelo",
       "loadRequests": "Učitavanje zahtjeva nije uspjelo",

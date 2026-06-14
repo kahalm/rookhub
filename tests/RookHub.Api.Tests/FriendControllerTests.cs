@@ -406,4 +406,58 @@ public class FriendControllerTests : IDisposable
         var status = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(403, status.StatusCode);
     }
+
+    // ---- GetRevenge ----
+
+    private async Task<Puzzle> CreatePuzzleAsync(string lichessId, int rating, string themes)
+    {
+        var p = new Puzzle { LichessId = lichessId, Fen = "fen", Moves = "e2e4", Rating = rating, Themes = themes };
+        _db.Puzzles.Add(p);
+        await _db.SaveChangesAsync();
+        return p;
+    }
+
+    [Fact]
+    public async Task GetRevenge_ReturnsOnlyUnsolvedFailures_WhenFriends()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+
+        var failedOnly = await CreatePuzzleAsync("p1", 1700, "fork");      // 2x gescheitert, nie gelöst → drin
+        var failedThenSolved = await CreatePuzzleAsync("p2", 1500, "pin"); // gescheitert, dann gelöst → raus
+        var solvedOnly = await CreatePuzzleAsync("p3", 1400, "skewer");    // nur gelöst → raus
+
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = failedOnly.Id, Solved = false, TimeSpentSeconds = 12, AttemptedAt = new DateTime(2026, 6, 1) },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = failedOnly.Id, Solved = false, TimeSpentSeconds = 9, AttemptedAt = new DateTime(2026, 6, 10) },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = failedThenSolved.Id, Solved = false, TimeSpentSeconds = 8 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = failedThenSolved.Id, Solved = true, TimeSpentSeconds = 6 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = solvedOnly.Id, Solved = true, TimeSpentSeconds = 5 });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.GetRevenge(friend.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<RevengeListDto>(ok.Value);
+        Assert.Single(dto.Puzzles);
+        var rev = dto.Puzzles[0];
+        Assert.Equal(failedOnly.Id, rev.PuzzleId);
+        Assert.Equal(2, rev.FailCount);
+        Assert.Equal(1700, rev.Rating);
+    }
+
+    [Fact]
+    public async Task GetRevenge_Returns403_WhenNotFriends()
+    {
+        var me = await CreateUserAsync("me");
+        var stranger = await CreateUserAsync("stranger");
+
+        SetUser(me.Id);
+        var result = await _controller.GetRevenge(stranger.Id);
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+    }
 }

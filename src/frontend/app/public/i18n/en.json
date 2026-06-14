@@ -334,6 +334,17 @@
       "noThemes": "No shared theme data yet.",
       "loadError": "Could not load stats"
     },
+    "revenge": {
+      "menu": "Revenge a Friend",
+      "title": "Revenge on {{name}}",
+      "hint": "Puzzles {{name}} failed and hasn't solved yet — crack them and do better!",
+      "back": "Back to friends",
+      "ratingLabel": "Rating {{rating}}",
+      "failCount": "failed {{count}}×",
+      "solve": "Solve",
+      "empty": "{{name}} has no open losses — nothing to avenge!",
+      "loadError": "Could not load revenge list"
+    },
     "errors": {
       "loadFriends": "Failed to load friends",
       "loadRequests": "Failed to load requests",

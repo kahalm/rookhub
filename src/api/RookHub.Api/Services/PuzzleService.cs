@@ -880,6 +880,61 @@ public class PuzzleService
         return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };
     }
 
+    /// <summary>
+    /// Standard-Puzzles, an denen der User mindestens einmal gescheitert ist und die er bis heute
+    /// NICHT gelöst hat — die „offenen Niederlagen" für das Freunde-Feature „Revenge a Friend".
+    /// Sortiert nach jüngstem Fehlversuch zuerst.
+    /// </summary>
+    public async Task<List<RevengePuzzleDto>> GetUnsolvedFailuresAsync(int userId, int limit = 100)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+
+        // Puzzle-Ids, die der User irgendwann gelöst hat → diese sind keine offene Rechnung mehr.
+        var solvedIds = _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.Solved)
+            .Select(a => a.PuzzleId);
+
+        // Fehlversuche auf nie gelösten Puzzles, je Puzzle aggregiert.
+        var failures = await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && !a.Solved && !solvedIds.Contains(a.PuzzleId))
+            .GroupBy(a => a.PuzzleId)
+            .Select(g => new
+            {
+                PuzzleId = g.Key,
+                FailCount = g.Count(),
+                LastFailedAt = g.Max(x => x.AttemptedAt)
+            })
+            .OrderByDescending(x => x.LastFailedAt)
+            .Take(limit)
+            .ToListAsync();
+
+        if (failures.Count == 0)
+            return new List<RevengePuzzleDto>();
+
+        var ids = failures.Select(f => f.PuzzleId).ToList();
+        var puzzles = await _db.Puzzles
+            .Where(p => ids.Contains(p.Id))
+            .Select(p => new { p.Id, p.LichessId, p.Rating, p.Themes })
+            .ToDictionaryAsync(p => p.Id);
+
+        return failures
+            .Where(f => puzzles.ContainsKey(f.PuzzleId))
+            .Select(f =>
+            {
+                var p = puzzles[f.PuzzleId];
+                return new RevengePuzzleDto
+                {
+                    PuzzleId = p.Id,
+                    LichessId = p.LichessId,
+                    Rating = p.Rating,
+                    Themes = p.Themes,
+                    FailCount = f.FailCount,
+                    LastFailedAt = f.LastFailedAt
+                };
+            })
+            .ToList();
+    }
+
     public async Task<int> ImportFromCsvAsync(Stream csvStream, int? minRating, int? maxRating, int? maxCount, CancellationToken ct = default)
     {
         var existingIds = await _db.Puzzles.Select(p => p.LichessId).ToHashSetAsync(ct);

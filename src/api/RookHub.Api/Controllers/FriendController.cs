@@ -50,6 +50,29 @@ public class FriendController : BaseApiController
         });
     }
 
+    /// <summary>„Revenge a Friend": Puzzles, an denen der Freund gescheitert ist und die er nie gelöst hat —
+    /// du kannst sie nun selbst lösen. Nur zwischen akzeptierten Freunden.</summary>
+    [HttpGet("{userId}/revenge")]
+    public async Task<ActionResult<RevengeListDto>> GetRevenge(int userId)
+    {
+        if (!await _friendService.AreFriendsAsync(GetUserId(), userId))
+            return StatusCode(403, new { message = "Not friends with this user." });
+
+        var basic = await _friendService.GetUserBasicAsync(userId);
+        if (basic == null)
+            return NotFound(new { message = "User not found." });
+
+        var puzzles = await _puzzleService.GetUnsolvedFailuresAsync(userId);
+
+        return Ok(new RevengeListDto
+        {
+            UserId = userId,
+            Username = basic.Username,
+            DisplayName = basic.DisplayName,
+            Puzzles = puzzles
+        });
+    }
+
     [HttpGet("requests")]
     public async Task<ActionResult<List<FriendRequestDto>>> GetRequests()
     {
