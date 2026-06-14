@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -19,11 +20,21 @@ public class ChessableImportService
 {
     public const int MaxAttempts = 3;
 
+    // Poll-Tuning (intern überschreibbar für Tests). piratechess holt bewusst LANGSAM
+    // (Inter-Request-Delay 2–5 s + Linien-Retries + VPN-Rotation) → ein großer Kurs dauert
+    // leicht >15 min. Der Abruf darf daher NICHT an einem festen Zeit-Limit scheitern, solange
+    // er Fortschritt macht. Nur echter Stillstand (FetchStallPolls Polls ohne Fortschritt) bzw.
+    // der großzügige Absolut-Backstop beenden das Polling.
+    internal int PollDelayMs = 2500;
+    internal int FetchStallPolls = 240;   // aufeinanderfolgende Polls OHNE Fortschritt → Stillstand (≈10 min)
+    internal int FetchMaxPolls = 2160;    // Absolut-Backstop (≈90 min) gegen echte Endlosschleifen
+
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _proxy;
     private readonly RepertoireService _repertoires;
     private readonly PgnImportService _pgnImport;
+    private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ChessableImportService> _logger;
 
     public ChessableImportService(
@@ -32,6 +43,7 @@ public class ChessableImportService
         ChessableProxyService proxy,
         RepertoireService repertoires,
         PgnImportService pgnImport,
+        IBackgroundTaskQueue taskQueue,
         ILogger<ChessableImportService> logger)
     {
         _db = db;
@@ -39,7 +51,18 @@ public class ChessableImportService
         _proxy = proxy;
         _repertoires = repertoires;
         _pgnImport = pgnImport;
+        _taskQueue = taskQueue;
         _logger = logger;
+    }
+
+    /// <summary>Reiht den Import zum (Resume-)Verarbeiten in die serielle Background-Queue ein.</summary>
+    private async Task EnqueueResumeAsync(int importId)
+    {
+        await _taskQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var svc = sp.GetRequiredService<ChessableImportService>();
+            await svc.RunAsync(importId, ct);
+        });
     }
 
     /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
@@ -88,8 +111,15 @@ public class ChessableImportService
                     await _db.SaveChangesAsync(ct);
                 }
 
-                // Poll-Schleife (max ~15 min bei 2,5 s Takt) — Fortschritt in die DB schreiben.
-                for (int i = 0; i < 360 && string.IsNullOrEmpty(pgn); i++)
+                // Poll-Schleife — FORTSCHRITTS-bewusst statt festem Zeit-Limit (der frühere
+                // 360×2,5s≈15min-Deckel killte langsame, aber gesunde Abrufe großer Kurse).
+                // Solange ChaptersDone/LinesDone steigen, läuft der Abruf weiter; nur echter
+                // Stillstand (FetchStallPolls) bzw. der Absolut-Backstop (FetchMaxPolls) beendet ihn.
+                int lastMarker = import.ChaptersDone + import.LinesDone;
+                int noProgressPolls = 0;
+                int totalPolls = 0;
+
+                while (string.IsNullOrEmpty(pgn))
                 {
                     // Externen Abbruch/Pause erkennen (anderer Request setzt Status) — Checkpoint bleibt erhalten.
                     await _db.Entry(import).ReloadAsync(ct);
@@ -106,7 +136,7 @@ public class ChessableImportService
                         var start = await _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct);
                         import.FetchJobId = start.JobId;
                         await _db.SaveChangesAsync(ct);
-                        await Task.Delay(2500, ct);
+                        await Task.Delay(PollDelayMs, ct);
                         continue;
                     }
 
@@ -127,12 +157,43 @@ public class ChessableImportService
                     if (prog.Status == "failed")
                         throw new InvalidOperationException(prog.Error ?? "Kurs-Abruf fehlgeschlagen");
 
+                    // Stillstand erkennen: Stall-Zähler NUR bei echtem Fortschritt zurücksetzen.
+                    int marker = prog.ChaptersDone + prog.LinesDone;
+                    if (marker > lastMarker)
+                    {
+                        lastMarker = marker;
+                        noProgressPolls = 0;
+                    }
+                    else
+                    {
+                        noProgressPolls++;
+                    }
+
                     await _db.SaveChangesAsync(ct); // Fortschritt fürs Frontend sichtbar machen
-                    await Task.Delay(2500, ct);
+
+                    if (noProgressPolls >= FetchStallPolls || ++totalPolls >= FetchMaxPolls)
+                        break; // Stillstand / Absolut-Grenze → unten Resume oder (nach MaxAttempts) Fehler
+
+                    await Task.Delay(PollDelayMs, ct);
                 }
 
                 if (string.IsNullOrEmpty(pgn))
-                    throw new TimeoutException("Zeitüberschreitung beim Kurs-Abruf");
+                {
+                    // Abruf kam nicht durch (Stillstand/Absolut-Grenze). Resume-fähig → bis MaxAttempts
+                    // AUTOMATISCH neu einreihen statt hart zu scheitern: FetchJobId/FetchedPgn-Checkpoint
+                    // bleibt erhalten, der piratechess-Job läuft weiter bzw. die Rohdaten sind dann gecacht.
+                    if (import.Attempts < MaxAttempts)
+                    {
+                        import.Phase = "queued";
+                        await _db.SaveChangesAsync(ct);
+                        _logger.LogWarning(
+                            "Chessable-Import {Id} Hol-Phase ohne Fortschritt (Versuch {Attempt}/{Max}) — wird automatisch neu eingereiht",
+                            import.Id, import.Attempts, MaxAttempts);
+                        await EnqueueResumeAsync(import.Id);
+                        return;
+                    }
+                    throw new TimeoutException("Zeitüberschreitung beim Kurs-Abruf (kein Fortschritt)");
+                }
             }
 
             var courseName = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
