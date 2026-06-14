@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.119.0';
+export const APP_VERSION = '0.120.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.120.0', date: '2026-06-14', changes: [
+    'Freunde-Challenges: Nach dem Lösen eines Puzzles kannst du es per „An Freund schicken" direkt an einen Freund als Challenge weitergeben. Der Freund sieht sie im neuen Challenges-Tab (Posteingang) und am Glocken-Zähler in der Navigation; nach dem Lösen wird dir das Ergebnis (gelöst/gescheitert + Zeit) unter „Gesendet" zurückgemeldet.',
+  ]},
   { version: '0.119.0', date: '2026-06-14', changes: [
     'Freunde: „Revenge a Friend" — über das neue Symbol in der Freundesliste siehst du Puzzles, an denen ein Freund gescheitert ist und die er bis heute nicht gelöst hat. Mit einem Klick löst du dasselbe Puzzle selbst und machst es besser. Liste sortiert nach jüngstem Fehlversuch, mit Wertung, Themen und Anzahl der Fehlversuche.',
   ]},

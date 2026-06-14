@@ -5,7 +5,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatMenuModule } from '@angular/material/menu';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
@@ -21,6 +23,9 @@ import { takeFromPool, takeNearestFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { ChallengeService } from '../../core/challenge.service';
+import { Friend } from '../../core/models';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
@@ -36,7 +41,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
+    MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
     PuzzleRatingCardComponent, PuzzleStatusCardComponent
   ],
   templateUrl: './puzzle.component.html',
@@ -74,6 +79,13 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private initialFen = '';
 
   private routePuzzleId: number | null = null;
+
+  /** Gesetzt, wenn dieses Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
+  private challengeId: number | null = null;
+  private challengeResolved = false;
+  /** Freunde für das „An Freund schicken"-Menü (faul geladen beim Öffnen). */
+  challengeFriends: Friend[] = [];
+
   lastSolvedPuzzleId: number | null = null;
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
@@ -92,7 +104,11 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private route: ActivatedRoute,
     private dialog: MatDialog,
     private offline: OfflineService,
-    private offlineQueue: OfflineQueueService
+    private offlineQueue: OfflineQueueService,
+    private snackbar: SnackbarService,
+    private challengeService: ChallengeService,
+    private translate: TranslateService,
+    private http: HttpClient
   ) {
     super(stockfish);
     this.loadConfig();
@@ -206,6 +222,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       this.routePuzzleId = Number(idParam);
+    }
+
+    // Aus einer Freundes-Challenge geöffnet → nach dem Versuch das Ergebnis zurückmelden.
+    const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
+    if (challengeParam) {
+      this.challengeId = Number(challengeParam) || null;
     }
 
     const stats$ = this.isLoggedIn
@@ -478,12 +500,35 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         },
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
+      this.resolveChallengeIfNeeded(solved);
     } else {
       this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
     }
+  }
+
+  /** Meldet das Ergebnis genau einmal an eine offene Challenge zurück (fire-and-forget). */
+  private resolveChallengeIfNeeded(solved: boolean): void {
+    if (this.challengeId == null || this.challengeResolved) return;
+    this.challengeResolved = true;
+    this.challengeService.resolve(this.challengeId, solved, this.elapsedSeconds).subscribe({ next: () => {}, error: () => {} });
+  }
+
+  /** Freundesliste fürs „An Freund schicken"-Menü faul laden (nur einmal). */
+  loadFriendsForChallenge(): void {
+    if (this.challengeFriends.length > 0) return;
+    this.http.get<Friend[]>('/api/friends').subscribe({ next: f => this.challengeFriends = f, error: () => {} });
+  }
+
+  /** Aktuelles Puzzle als Challenge an einen Freund schicken. */
+  sendChallenge(friendUserId: number): void {
+    if (!this.puzzle) return;
+    this.challengeService.send(friendUserId, this.puzzle.id).subscribe({
+      next: () => this.snackbar.success(this.translate.instant('puzzles.challenge.sent')),
+      error: (err) => this.snackbar.info(err.error?.message || this.translate.instant('puzzles.challenge.error')),
+    });
   }
 
   toggleEval(): void {

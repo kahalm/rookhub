@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
+import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../core/challenge.service';
 
 @Component({
   selector: 'app-friends',
@@ -102,6 +103,40 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
             }
           </mat-list>
         </mat-tab>
+        <mat-tab [label]="'friends.challenges.tab' | translate:{ count: incoming.length }">
+          <h3 class="section-title">{{ 'friends.challenges.inbox' | translate }}</h3>
+          <mat-list>
+            @for (c of incoming; track c.id) {
+              <mat-list-item>
+                <span matListItemTitle>{{ 'friends.challenges.fromLine' | translate:{ name: c.fromDisplayName || c.fromUsername, rating: c.rating } }}</span>
+                <span matListItemLine class="themes">{{ formatThemes(c.themes) }}</span>
+                <button mat-raised-button color="primary" matListItemMeta (click)="solveChallenge(c)">
+                  <mat-icon>sports_esports</mat-icon> {{ 'friends.challenges.solve' | translate }}
+                </button>
+              </mat-list-item>
+            } @empty {
+              <p class="empty-text">{{ 'friends.challenges.emptyInbox' | translate }}</p>
+            }
+          </mat-list>
+
+          <h3 class="section-title">{{ 'friends.challenges.sent' | translate }}</h3>
+          <mat-list>
+            @for (c of outgoing; track c.id) {
+              <mat-list-item>
+                <span matListItemTitle>{{ 'friends.challenges.toLine' | translate:{ name: c.toDisplayName || c.toUsername, rating: c.rating } }}</span>
+                <span matListItemLine class="status" [class.solved]="c.status === 'Solved'" [class.failed]="c.status === 'Failed'">
+                  @switch (c.status) {
+                    @case ('Solved') { ✓ {{ 'friends.challenges.statusSolved' | translate:{ time: c.timeSpentSeconds } }} }
+                    @case ('Failed') { ✗ {{ 'friends.challenges.statusFailed' | translate }} }
+                    @default { ⏳ {{ 'friends.challenges.statusPending' | translate }} }
+                  }
+                </span>
+              </mat-list-item>
+            } @empty {
+              <p class="empty-text">{{ 'friends.challenges.emptySent' | translate }}</p>
+            }
+          </mat-list>
+        </mat-tab>
       </mat-tab-group>
     </div>
   `,
@@ -111,6 +146,11 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
     .search-field { flex: 1; min-width: 0; margin-bottom: -1.25em; }
     .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
     .chess-identities { font-size: 0.75rem; color: color-mix(in srgb, currentColor 40%, transparent); }
+    .section-title { margin: 1rem 1rem 0; font-size: 0.95rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .themes { font-size: 0.8rem; color: color-mix(in srgb, currentColor 50%, transparent); }
+    .status { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+    .status.solved { color: #2e7d32; }
+    .status.failed { color: #c62828; }
     @media (max-width: 768px) {
       .friends-container { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }
@@ -123,10 +163,18 @@ export class FriendsComponent implements OnInit {
   friends: Friend[] = [];
   requests: FriendRequest[] = [];
   searchResults: UserSearchResult[] = [];
+  incoming: IncomingChallenge[] = [];
+  outgoing: OutgoingChallenge[] = [];
   searchQuery = '';
   loading = true;
 
-  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(
+    private http: HttpClient,
+    private snackbar: SnackbarService,
+    private translate: TranslateService,
+    private router: Router,
+    private challenge: ChallengeService
+  ) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -142,6 +190,22 @@ export class FriendsComponent implements OnInit {
       next: r => this.requests = r,
       error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
     });
+    this.loadChallenges();
+  }
+
+  loadChallenges(): void {
+    // getIncoming() aktualisiert dabei den Navbar-Badge-Zähler.
+    this.challenge.getIncoming().subscribe({ next: c => this.incoming = c, error: () => {} });
+    this.challenge.getOutgoing().subscribe({ next: c => this.outgoing = c, error: () => {} });
+  }
+
+  /** Eingehende Challenge lösen: zum Puzzle navigieren, challengeId mitgeben → Resolve nach dem Versuch. */
+  solveChallenge(c: IncomingChallenge): void {
+    this.router.navigate(['/puzzles', c.puzzleId], { queryParams: { challengeId: c.id } });
+  }
+
+  formatThemes(themes: string | null): string {
+    return themes ? themes.split(' ').filter(t => t).slice(0, 4).join(', ') : '';
   }
 
   search(): void {

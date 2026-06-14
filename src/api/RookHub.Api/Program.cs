@@ -111,6 +111,7 @@ try
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<FriendService>();
+    builder.Services.AddScoped<ChallengeService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireAnalyzeService>();
     builder.Services.AddScoped<PlayerSearchService>();

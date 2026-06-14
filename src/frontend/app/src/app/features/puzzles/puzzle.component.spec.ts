@@ -12,11 +12,15 @@ function makeComponent(): any {
   const auth: any = { isLoggedIn: false };
   const puzzleService: any = {};
   const router: any = { navigate: jasmine.createSpy('navigate') };
-  const route: any = { snapshot: { paramMap: { get: () => null } } };
+  const route: any = { snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } } };
   const dialog: any = {};
   const offline: any = { puzzleCount: 0, endlessRuns: 0 };
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
-  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue);
+  const snackbar: any = { success: () => {}, info: () => {} };
+  const challengeService: any = { send: () => ({ subscribe: () => {} }), resolve: () => ({ subscribe: () => {} }) };
+  const translate: any = { instant: (k: string) => k };
+  const http: any = { get: () => ({ subscribe: () => {} }) };
+  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, translate, http);
 }
 
 const PUZZLE = { id: 1, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };

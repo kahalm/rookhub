@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<PuzzleChallenge> PuzzleChallenges => Set<PuzzleChallenge>();
     public DbSet<Repertoire> Repertoires => Set<Repertoire>();
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
     public DbSet<TournamentSubscription> TournamentSubscriptions => Set<TournamentSubscription>();
@@ -88,6 +89,31 @@ public class AppDbContext : DbContext
             e.Property<int>("PairLow").HasComputedColumnSql("LEAST(RequesterId, AddresseeId)", stored: true);
             e.Property<int>("PairHigh").HasComputedColumnSql("GREATEST(RequesterId, AddresseeId)", stored: true);
             e.HasIndex("PairLow", "PairHigh").IsUnique();
+        });
+
+        modelBuilder.Entity<PuzzleChallenge>(e =>
+        {
+            // Zwei FKs auf AppUser → Restrict (wie Friendship), sonst mehrere Cascade-Pfade.
+            // Konten werden ohnehin anonymisiert statt hart gelöscht (DSGVO-Flow).
+            e.HasOne(c => c.FromUser)
+             .WithMany()
+             .HasForeignKey(c => c.FromUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(c => c.ToUser)
+             .WithMany()
+             .HasForeignKey(c => c.ToUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(c => c.Puzzle)
+             .WithMany()
+             .HasForeignKey(c => c.PuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Posteingang/Badge: offene Challenges an einen Empfänger.
+            e.HasIndex(c => new { c.ToUserId, c.Status });
+            // Gesendete Challenges eines Absenders.
+            e.HasIndex(c => c.FromUserId);
         });
 
         modelBuilder.Entity<Repertoire>(e =>

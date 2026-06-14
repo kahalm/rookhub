@@ -5,6 +5,7 @@ import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
+import { ChallengeService } from '../../core/challenge.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService } from '../../core/theme.service';
 
@@ -17,6 +18,7 @@ describe('NavbarComponent', () => {
         { provide: AuthService, useValue: { currentUser$: of(null), isAdmin: false } },
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
+        { provide: ChallengeService, useValue: { incomingCount$: of(0), refreshCount: () => {} } },
         { provide: LocaleService, useValue: {} },
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
@@ -26,6 +28,7 @@ describe('NavbarComponent', () => {
       TestBed.inject(AuthService),
       TestBed.inject(CourseService),
       TestBed.inject(MenuService),
+      TestBed.inject(ChallengeService),
       TestBed.inject(LocaleService),
       TestBed.inject(ThemeService),
       TestBed.inject(TranslateService),

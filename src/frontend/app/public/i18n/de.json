@@ -345,6 +345,19 @@
       "empty": "{{name}} hat keine offenen Niederlagen — nichts zu rächen!",
       "loadError": "Revenge-Liste konnte nicht geladen werden"
     },
+    "challenges": {
+      "tab": "Challenges ({{count}})",
+      "inbox": "Posteingang",
+      "sent": "Gesendet",
+      "fromLine": "Von {{name}} · Wertung {{rating}}",
+      "toLine": "An {{name}} · Wertung {{rating}}",
+      "solve": "Lösen",
+      "emptyInbox": "Keine offenen Challenges.",
+      "emptySent": "Noch keine Challenges verschickt.",
+      "statusSolved": "gelöst in {{time}}s",
+      "statusFailed": "gescheitert",
+      "statusPending": "offen"
+    },
     "errors": {
       "loadFriends": "Freunde konnten nicht geladen werden",
       "loadRequests": "Anfragen konnten nicht geladen werden",
@@ -554,7 +567,13 @@
       "loadPuzzle": "Puzzle laden",
       "reviewLast": "Letztes Puzzle ansehen",
       "endlessMode": "Endlos-Modus",
-      "analyze": "Analysieren"
+      "analyze": "Analysieren",
+      "challengeFriend": "An Freund schicken",
+      "noFriends": "Keine Freunde zum Herausfordern"
+    },
+    "challenge": {
+      "sent": "Challenge gesendet",
+      "error": "Challenge konnte nicht gesendet werden"
     },
     "info": {
       "rating": "Wertung"

@@ -345,6 +345,19 @@
       "empty": "{{name}} nema otvorenih poraza — nema se što osvetiti!",
       "loadError": "Popis za osvetu nije moguće učitati"
     },
+    "challenges": {
+      "tab": "Izazovi ({{count}})",
+      "inbox": "Pristigli",
+      "sent": "Poslani",
+      "fromLine": "Od {{name}} · rejting {{rating}}",
+      "toLine": "Za {{name}} · rejting {{rating}}",
+      "solve": "Riješi",
+      "emptyInbox": "Nema otvorenih izazova.",
+      "emptySent": "Još nema poslanih izazova.",
+      "statusSolved": "riješeno za {{time}}s",
+      "statusFailed": "neuspješno",
+      "statusPending": "otvoreno"
+    },
     "errors": {
       "loadFriends": "Učitavanje prijatelja nije uspjelo",
       "loadRequests": "Učitavanje zahtjeva nije uspjelo",
@@ -554,7 +567,13 @@
       "loadPuzzle": "Učitaj zagonetku",
       "reviewLast": "Pregledaj zadnju zagonetku",
       "endlessMode": "Beskonačni način",
-      "analyze": "Analiziraj"
+      "analyze": "Analiziraj",
+      "challengeFriend": "Pošalji prijatelju",
+      "noFriends": "Nema prijatelja za izazov"
+    },
+    "challenge": {
+      "sent": "Izazov poslan",
+      "error": "Izazov nije moguće poslati"
     },
     "info": {
       "rating": "Ocjena"

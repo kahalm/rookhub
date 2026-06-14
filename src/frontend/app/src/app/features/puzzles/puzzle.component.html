@@ -114,6 +114,22 @@
             />
           }
 
+          @if (puzzle && isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
+            <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="loadFriendsForChallenge()">
+              <mat-icon>send</mat-icon>
+              {{ 'puzzles.actions.challengeFriend' | translate }}
+            </button>
+            <mat-menu #friendMenu="matMenu">
+              @if (challengeFriends.length === 0) {
+                <button mat-menu-item disabled>{{ 'puzzles.actions.noFriends' | translate }}</button>
+              } @else {
+                @for (f of challengeFriends; track f.userId) {
+                  <button mat-menu-item (click)="sendChallenge(f.userId)">{{ f.displayName || f.username }}</button>
+                }
+              }
+            </mat-menu>
+          }
+
           @if (stats) {
             <mat-card class="stats-card">
               <mat-card-header>

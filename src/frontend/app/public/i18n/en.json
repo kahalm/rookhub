@@ -345,6 +345,19 @@
       "empty": "{{name}} has no open losses — nothing to avenge!",
       "loadError": "Could not load revenge list"
     },
+    "challenges": {
+      "tab": "Challenges ({{count}})",
+      "inbox": "Inbox",
+      "sent": "Sent",
+      "fromLine": "From {{name}} · rating {{rating}}",
+      "toLine": "To {{name}} · rating {{rating}}",
+      "solve": "Solve",
+      "emptyInbox": "No open challenges.",
+      "emptySent": "No challenges sent yet.",
+      "statusSolved": "solved in {{time}}s",
+      "statusFailed": "failed",
+      "statusPending": "pending"
+    },
     "errors": {
       "loadFriends": "Failed to load friends",
       "loadRequests": "Failed to load requests",
@@ -554,7 +567,13 @@
       "loadPuzzle": "Load Puzzle",
       "reviewLast": "Review last puzzle",
       "endlessMode": "Endless Mode",
-      "analyze": "Analyze"
+      "analyze": "Analyze",
+      "challengeFriend": "Send to a friend",
+      "noFriends": "No friends to challenge"
+    },
+    "challenge": {
+      "sent": "Challenge sent",
+      "error": "Could not send challenge"
     },
     "info": {
       "rating": "Rating"

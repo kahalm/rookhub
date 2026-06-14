@@ -8,17 +8,19 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
+import { ChallengeService } from '../../core/challenge.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, TranslateModule],
+  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatBadgeModule, TranslateModule],
   template: `
     <mat-toolbar color="primary">
       <span class="logo" routerLink="/dashboard">RookHub</span>
@@ -28,7 +30,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('dashboard')) { <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
           @if (can('repertoires')) { <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
           @if (can('tournaments')) { <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
+          @if (can('friends')) { <button mat-button routerLink="/friends" [matBadge]="challengeCount" [matBadgeHidden]="challengeCount === 0" matBadgeColor="warn" matBadgeSize="small">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
@@ -47,7 +49,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('dashboard')) { <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
           @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
           @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
+          @if (can('friends')) { <button mat-menu-item routerLink="/friends" [matBadge]="challengeCount" [matBadgeHidden]="challengeCount === 0" matBadgeColor="warn" matBadgeSize="small" matBadgeOverlap="false">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
@@ -131,6 +133,9 @@ export class NavbarComponent implements OnInit {
   visible = new Set<string>();
   can(key: string): boolean { return this.visible.has(key); }
 
+  /** Anzahl offener eingehender Puzzle-Challenges (Badge am Freunde-Menü). */
+  challengeCount = 0;
+
   private destroyRef = inject(DestroyRef);
 
   get themeIcon(): string {
@@ -147,7 +152,7 @@ export class NavbarComponent implements OnInit {
     return labels[this.theme.preference];
   }
 
-  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
+  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private challenge: ChallengeService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
@@ -171,5 +176,12 @@ export class NavbarComponent implements OnInit {
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(show => this.showCourses = show);
+
+    // Badge offener Challenges: reaktiv aus dem ChallengeService, neu laden bei jedem Login.
+    this.challenge.incomingCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.challengeCount = c);
+    this.auth.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.auth.isLoggedIn) this.challenge.refreshCount();
+      else this.challengeCount = 0;
+    });
   }
 }
