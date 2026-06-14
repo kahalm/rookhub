@@ -343,6 +343,8 @@
       "failCount": "{{count}}× gescheitert",
       "solve": "Lösen",
       "empty": "{{name}} hat keine offenen Niederlagen — nichts zu rächen!",
+      "doneTitle": "Bereits erledigt ({{count}})",
+      "review": "Puzzle ansehen",
       "loadError": "Revenge-Liste konnte nicht geladen werden"
     },
     "challenges": {
@@ -581,6 +583,11 @@
     "challenge": {
       "sent": "Challenge gesendet",
       "error": "Challenge konnte nicht gesendet werden"
+    },
+    "revengeDone": {
+      "title": "Revanche abgeschlossen!",
+      "summary": "Du hast {{solved}} von {{total}} Puzzles von {{name}} gerächt.",
+      "backToFriend": "Zurück zur Revanche-Liste"
     },
     "info": {
       "rating": "Wertung"

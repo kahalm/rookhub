@@ -460,4 +460,30 @@ public class FriendControllerTests : IDisposable
         var status = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(403, status.StatusCode);
     }
+
+    [Fact]
+    public async Task GetRevenge_FlagsSolvedByViewer_WhenViewerAlreadySolvedIt()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+
+        var avenged = await CreatePuzzleAsync("p1", 1700, "fork");  // ich (me) habe es schon gelöst
+        var open = await CreatePuzzleAsync("p2", 1650, "pin");      // noch offen
+
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = avenged.Id, Solved = false, TimeSpentSeconds = 10 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = open.Id, Solved = false, TimeSpentSeconds = 10 },
+            new PuzzleAttempt { UserId = me.Id, PuzzleId = avenged.Id, Solved = true, TimeSpentSeconds = 7 });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.GetRevenge(friend.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<RevengeListDto>(ok.Value);
+        Assert.Equal(2, dto.Puzzles.Count);
+        Assert.True(dto.Puzzles.Single(p => p.PuzzleId == avenged.Id).SolvedByViewer);
+        Assert.False(dto.Puzzles.Single(p => p.PuzzleId == open.Id).SolvedByViewer);
+    }
 }

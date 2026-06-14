@@ -1,4 +1,24 @@
     <div class="puzzle-page">
+      @if (revengeComplete) {
+        <div class="revenge-done">
+          <div class="fireworks" aria-hidden="true">
+            @for (i of fireworkDots; track i) {
+              <span class="spark"
+                    [style.--rot]="(i * 12.857) + 'deg'"
+                    [style.background]="'hsl(' + (i * 51 % 360) + ',90%,58%)'"
+                    [style.animation-delay]="((i % 7) * 0.16) + 's'"></span>
+            }
+          </div>
+          <div class="revenge-done-card">
+            <div class="trophy">🎆🏆🎆</div>
+            <h2>{{ 'puzzles.revengeDone.title' | translate }}</h2>
+            <p class="summary">{{ 'puzzles.revengeDone.summary' | translate:{ solved: revengeSolvedCount, total: revengeTotalCount, name: revengeFriendName } }}</p>
+            <button mat-raised-button color="primary" (click)="goToRevengeList()">
+              <mat-icon>arrow_back</mat-icon> {{ 'puzzles.revengeDone.backToFriend' | translate }}
+            </button>
+          </div>
+        </div>
+      } @else {
       <div class="puzzle-layout">
         <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
           <app-puzzle-board
@@ -89,8 +109,8 @@
               (mouseslipClicked)="mouseslip()"
               (giveUpClicked)="giveUp()"
               (retryClicked)="retry()"
-              (nextClicked)="loadNext()"
-              (failedNextClicked)="loadNext()"
+              (nextClicked)="onNext()"
+              (failedNextClicked)="onNext()"
               (analyzeClicked)="analyze()"
               (reviewPrev)="reviewPrev()"
               (reviewNext)="reviewNext()"
@@ -169,4 +189,5 @@
           </button>
         </div>
       </div>
+      }
     </div>

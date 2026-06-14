@@ -343,6 +343,8 @@
       "failCount": "{{count}}× neuspješno",
       "solve": "Riješi",
       "empty": "{{name}} nema otvorenih poraza — nema se što osvetiti!",
+      "doneTitle": "Već riješeno ({{count}})",
+      "review": "Pregledaj zagonetku",
       "loadError": "Popis za osvetu nije moguće učitati"
     },
     "challenges": {
@@ -581,6 +583,11 @@
     "challenge": {
       "sent": "Izazov poslan",
       "error": "Izazov nije moguće poslati"
+    },
+    "revengeDone": {
+      "title": "Osveta dovršena!",
+      "summary": "Osvetio/la si {{solved}} od {{total}} zagonetki korisnika {{name}}.",
+      "backToFriend": "Natrag na popis osvete"
     },
     "info": {
       "rating": "Ocjena"

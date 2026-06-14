@@ -88,6 +88,15 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   /** Gesetzt, wenn dieses Puzzle als Revanche an einem gescheiterten Puzzle dieses Users geöffnet wurde (?revengeUserId=…). */
   private revengeUserId: number | null = null;
   private revengeNotified = false;
+  /** Warteschlange der noch offenen Revenge-Puzzle-Ids des Freundes (ohne das aktuelle). */
+  private revengeQueue: number[] = [];
+  /** Revanche-Runde durch → Glückwunsch-/Feuerwerk-Card statt nächstem Puzzle. */
+  revengeComplete = false;
+  revengeFriendName = '';
+  revengeSolvedCount = 0;
+  revengeTotalCount = 0;
+  /** Indizes für die Feuerwerk-Funken im Template. */
+  readonly fireworkDots = Array.from({ length: 28 }, (_, i) => i);
   /** Freunde für das „An Freund schicken"-Menü (faul geladen beim Öffnen). */
   challengeFriends: Friend[] = [];
 
@@ -236,10 +245,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.challengeId = Number(challengeParam) || null;
     }
 
-    // Als Revanche an einem gescheiterten Puzzle eines Freundes geöffnet → den Freund informieren.
+    // Als Revanche an einem gescheiterten Puzzle eines Freundes geöffnet → den Freund informieren
+    // und im Revenge-Modus bleiben (offene Puzzles des Freundes nacheinander durchspielen).
     const revengeParam = this.route.snapshot.queryParamMap.get('revengeUserId');
     if (revengeParam) {
       this.revengeUserId = Number(revengeParam) || null;
+      if (this.revengeUserId) this.loadRevengeQueue(this.revengeUserId);
     }
 
     const stats$ = this.isLoggedIn
@@ -285,6 +296,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
     this.attemptRecorded = false;
+    this.revengeNotified = false;
     this.gaveUp = false;
     this.stopTimer();
     this.stopCountdown();
@@ -533,7 +545,48 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private notifyRevengeIfNeeded(solved: boolean): void {
     if (this.revengeUserId == null || this.revengeNotified || !this.puzzle) return;
     this.revengeNotified = true;
+    if (solved) this.revengeSolvedCount++;
     this.revengeService.recordResult(this.revengeUserId, this.puzzle.id, solved).subscribe({ next: () => {}, error: () => {} });
+  }
+
+  /** Offene Revenge-Puzzles des Freundes laden und als Warteschlange für die Revanche-Runde merken. */
+  private loadRevengeQueue(friendUserId: number): void {
+    this.http.get<{ displayName: string | null; username: string; puzzles: { puzzleId: number; solvedByViewer: boolean }[] }>(
+      `/api/friends/${friendUserId}/revenge`
+    ).subscribe({
+      next: d => {
+        this.revengeFriendName = d.displayName || d.username;
+        const openIds = d.puzzles.filter(p => !p.solvedByViewer).map(p => p.puzzleId);
+        this.revengeTotalCount = openIds.length;
+        // Das aktuell geladene Puzzle wird zuerst gespielt → aus der Restschlange nehmen.
+        this.revengeQueue = openIds.filter(id => id !== this.routePuzzleId && id !== this.puzzle?.id);
+      },
+      error: () => {}
+    });
+  }
+
+  /** „Nächstes": im Revenge-Modus das nächste offene Puzzle des Freundes, sonst normales Zufallspuzzle. */
+  onNext(): void {
+    if (this.revengeUserId != null) { this.advanceRevenge(); return; }
+    this.loadNext();
+  }
+
+  /** Nächstes Puzzle der Revanche-Runde laden; ist die Schlange leer → Glückwunsch/Feuerwerk. */
+  private advanceRevenge(): void {
+    const nextId = this.revengeQueue.shift();
+    if (nextId == null) {
+      this.stopTimer();
+      this.stopCountdown();
+      this.revengeComplete = true;
+      return;
+    }
+    this.routePuzzleId = nextId;
+    this.loadNext();
+  }
+
+  /** Von der Feuerwerk-Card zurück zur Revanche-Liste des Freundes (zeigt jetzt die erledigten). */
+  goToRevengeList(): void {
+    if (this.revengeUserId != null) this.router.navigate(['/friends', this.revengeUserId, 'revenge']);
   }
 
   /** Freundesliste fürs „An Freund schicken"-Menü faul laden (nur einmal). */

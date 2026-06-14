@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.121.0';
+export const APP_VERSION = '0.122.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.122.0', date: '2026-06-14', changes: [
+    'Revenge-Modus als Runde: Wenn du ein gescheitertes Puzzle eines Freundes angehst, bleibst du nach dem Lösen im Revenge-Modus und bekommst direkt das nächste offene Puzzle dieses Freundes — bis alle durch sind. Zum Abschluss gibt es eine Glückwunsch-Meldung mit Feuerwerk und der Anzahl gerächter Puzzles.',
+    'Freunde-Revanche-Liste: Bereits gerächte (von dir gelöste) Puzzles verschwinden aus der offenen Liste und sammeln sich in einem neuen Abschnitt „Bereits erledigt".',
+  ]},
   { version: '0.121.0', date: '2026-06-14', changes: [
     'Revenge-Benachrichtigungen: Wenn ein Freund eines deiner gescheiterten Puzzles im Revenge-Modus angeht, wirst du jetzt informiert — egal ob er es löst oder ebenfalls scheitert. Die Meldungen erscheinen im Challenges-Tab unter „Revanche an deinen Puzzles" und zählen mit ins Glocken-Badge der Navigation (wird beim Öffnen der Freunde-Seite als gelesen markiert).',
   ]},

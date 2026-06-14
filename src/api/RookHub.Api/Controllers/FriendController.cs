@@ -62,7 +62,7 @@ public class FriendController : BaseApiController
         if (basic == null)
             return NotFound(new { message = "User not found." });
 
-        var puzzles = await _puzzleService.GetUnsolvedFailuresAsync(userId);
+        var puzzles = await _puzzleService.GetUnsolvedFailuresAsync(userId, GetUserId());
 
         return Ok(new RevengeListDto
         {

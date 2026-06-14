@@ -343,6 +343,8 @@
       "failCount": "failed {{count}}×",
       "solve": "Solve",
       "empty": "{{name}} has no open losses — nothing to avenge!",
+      "doneTitle": "Already done ({{count}})",
+      "review": "Review puzzle",
       "loadError": "Could not load revenge list"
     },
     "challenges": {
@@ -581,6 +583,11 @@
     "challenge": {
       "sent": "Challenge sent",
       "error": "Could not send challenge"
+    },
+    "revengeDone": {
+      "title": "Revenge complete!",
+      "summary": "You avenged {{solved}} of {{total}} puzzles from {{name}}.",
+      "backToFriend": "Back to revenge list"
     },
     "info": {
       "rating": "Rating"

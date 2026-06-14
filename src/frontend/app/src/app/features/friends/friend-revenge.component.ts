@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -18,6 +19,7 @@ export interface RevengePuzzle {
   themes: string | null;
   failCount: number;
   lastFailedAt: string;
+  solvedByViewer: boolean;
 }
 
 export interface RevengeList {
@@ -36,7 +38,7 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
 @Component({
   selector: 'app-friend-revenge',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="rev-container">
       <a mat-button routerLink="/friends" class="back-link">
@@ -51,7 +53,7 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
 
         <mat-card>
           <mat-list>
-            @for (p of data.puzzles; track p.puzzleId) {
+            @for (p of open; track p.puzzleId) {
               <mat-list-item>
                 <span matListItemTitle>{{ 'friends.revenge.ratingLabel' | translate:{ rating: p.rating } }}</span>
                 <span matListItemLine class="themes">{{ formatThemes(p.themes) }}</span>
@@ -66,6 +68,25 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
             }
           </mat-list>
         </mat-card>
+
+        @if (done.length > 0) {
+          <h2 class="done-title">{{ 'friends.revenge.doneTitle' | translate:{ count: done.length } }}</h2>
+          <mat-card class="done-card">
+            <mat-list>
+              @for (p of done; track p.puzzleId) {
+                <mat-list-item>
+                  <mat-icon matListItemIcon class="done-icon">check_circle</mat-icon>
+                  <span matListItemTitle>{{ 'friends.revenge.ratingLabel' | translate:{ rating: p.rating } }}</span>
+                  <span matListItemLine class="themes">{{ formatThemes(p.themes) }}</span>
+                  <button mat-icon-button matListItemMeta [routerLink]="['/puzzles', p.puzzleId]"
+                          [matTooltip]="'friends.revenge.review' | translate">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                </mat-list-item>
+              }
+            </mat-list>
+          </mat-card>
+        }
       }
     </div>
   `,
@@ -78,6 +99,9 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
     .themes { font-size: 0.8rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .fail { font-size: 0.75rem; color: color-mix(in srgb, currentColor 45%, transparent); }
     .empty-text { padding: 1rem; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .done-title { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .done-card { opacity: 0.85; }
+    .done-icon { color: #2e7d32; }
     @media (max-width: 768px) {
       .rev-container { padding: 0.75rem; }
       h1 { font-size: 1.3rem; }
@@ -87,6 +111,10 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
 export class FriendRevengeComponent implements OnInit {
   loading = true;
   data: RevengeList | null = null;
+  /** Noch offene Revanchen (vom Rächer noch nicht gelöst). */
+  open: RevengePuzzle[] = [];
+  /** Bereits erledigte Revanchen (vom Rächer gelöst). */
+  done: RevengePuzzle[] = [];
 
   constructor(
     private http: HttpClient,
@@ -100,7 +128,12 @@ export class FriendRevengeComponent implements OnInit {
     if (!userId) { this.loading = false; return; }
 
     this.http.get<RevengeList>(`/api/friends/${userId}/revenge`).subscribe({
-      next: d => { this.data = d; this.loading = false; },
+      next: d => {
+        this.data = d;
+        this.open = d.puzzles.filter(p => !p.solvedByViewer);
+        this.done = d.puzzles.filter(p => p.solvedByViewer);
+        this.loading = false;
+      },
       error: () => {
         this.loading = false;
         this.snackbar.info(this.translate.instant('friends.revenge.loadError'));

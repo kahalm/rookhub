@@ -49,6 +49,8 @@ public class RevengePuzzleDto
     public int FailCount { get; set; }
     /// <summary>Letzter Fehlversuch des Freundes (für die Sortierung „zuletzt gescheitert zuerst").</summary>
     public DateTime LastFailedAt { get; set; }
+    /// <summary>Hat der aufrufende User (der „Rächer") dieses Puzzle bereits gelöst? Dann ist die Rechnung beglichen.</summary>
+    public bool SolvedByViewer { get; set; }
 }
 
 /// <summary>Revenge-Liste eines Freundes: offene Niederlagen, die du nun selbst lösen kannst.</summary>

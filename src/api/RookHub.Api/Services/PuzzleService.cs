@@ -881,22 +881,24 @@ public class PuzzleService
     }
 
     /// <summary>
-    /// Standard-Puzzles, an denen der User mindestens einmal gescheitert ist und die er bis heute
-    /// NICHT gelöst hat — die „offenen Niederlagen" für das Freunde-Feature „Revenge a Friend".
-    /// Sortiert nach jüngstem Fehlversuch zuerst.
+    /// Standard-Puzzles, an denen <paramref name="targetUserId"/> mindestens einmal gescheitert ist und die
+    /// er bis heute NICHT gelöst hat — die „offenen Niederlagen" für „Revenge a Friend". Sortiert nach
+    /// jüngstem Fehlversuch. <paramref name="viewerUserId"/> ist der Rächer: pro Puzzle wird vermerkt, ob er
+    /// es selbst schon gelöst hat (<see cref="RevengePuzzleDto.SolvedByViewer"/>), damit das Frontend
+    /// erledigte von offenen Revanchen trennen kann.
     /// </summary>
-    public async Task<List<RevengePuzzleDto>> GetUnsolvedFailuresAsync(int userId, int limit = 100)
+    public async Task<List<RevengePuzzleDto>> GetUnsolvedFailuresAsync(int targetUserId, int viewerUserId, int limit = 200)
     {
         limit = Math.Clamp(limit, 1, 500);
 
-        // Puzzle-Ids, die der User irgendwann gelöst hat → diese sind keine offene Rechnung mehr.
+        // Puzzle-Ids, die der Target irgendwann gelöst hat → keine offene Rechnung mehr.
         var solvedIds = _db.PuzzleAttempts
-            .Where(a => a.UserId == userId && a.Solved)
+            .Where(a => a.UserId == targetUserId && a.Solved)
             .Select(a => a.PuzzleId);
 
         // Fehlversuche auf nie gelösten Puzzles, je Puzzle aggregiert.
         var failures = await _db.PuzzleAttempts
-            .Where(a => a.UserId == userId && !a.Solved && !solvedIds.Contains(a.PuzzleId))
+            .Where(a => a.UserId == targetUserId && !a.Solved && !solvedIds.Contains(a.PuzzleId))
             .GroupBy(a => a.PuzzleId)
             .Select(g => new
             {
@@ -917,6 +919,14 @@ public class PuzzleService
             .Select(p => new { p.Id, p.LichessId, p.Rating, p.Themes })
             .ToDictionaryAsync(p => p.Id);
 
+        // Welche dieser Puzzles hat der Rächer (viewer) selbst schon gelöst?
+        var viewerSolved = (await _db.PuzzleAttempts
+            .Where(a => a.UserId == viewerUserId && a.Solved && ids.Contains(a.PuzzleId))
+            .Select(a => a.PuzzleId)
+            .Distinct()
+            .ToListAsync())
+            .ToHashSet();
+
         return failures
             .Where(f => puzzles.ContainsKey(f.PuzzleId))
             .Select(f =>
@@ -929,7 +939,8 @@ public class PuzzleService
                     Rating = p.Rating,
                     Themes = p.Themes,
                     FailCount = f.FailCount,
-                    LastFailedAt = f.LastFailedAt
+                    LastFailedAt = f.LastFailedAt,
+                    SolvedByViewer = viewerSolved.Contains(p.Id)
                 };
             })
             .ToList();

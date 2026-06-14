@@ -86,3 +86,43 @@
       .board-section { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* --- Revanche-Runde abgeschlossen: Glückwunsch + Feuerwerk --- */
+    .revenge-done {
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 60vh; padding: 2rem 1rem; overflow: hidden;
+    }
+    .revenge-done-card {
+      position: relative; z-index: 2; text-align: center;
+      padding: 2rem 2.5rem; border-radius: 16px;
+      background: color-mix(in srgb, var(--mat-sys-surface, #fff) 92%, transparent);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      animation: revenge-pop 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+    }
+    .revenge-done-card .trophy { font-size: 2.8rem; line-height: 1; margin-bottom: 0.5rem; }
+    .revenge-done-card h2 { margin: 0.25rem 0 0.5rem; font-size: 1.6rem; }
+    .revenge-done-card .summary { margin: 0 0 1.25rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+    @keyframes revenge-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .fireworks {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    }
+    .fireworks .spark {
+      position: absolute; top: 38%; left: 50%;
+      width: 10px; height: 10px; border-radius: 50%;
+      /* Richtung (--rot), Farbe + Delay kommen per Inline-Style aus dem Template. */
+      transform: rotate(var(--rot)) translateY(0) scale(1);
+      opacity: 0;
+      animation: spark-burst 1.6s ease-out infinite;
+    }
+    @keyframes spark-burst {
+      0%   { opacity: 0; transform: rotate(var(--rot)) translateY(0) scale(0.3); }
+      12%  { opacity: 1; }
+      70%  { opacity: 0.9; }
+      100% { opacity: 0; transform: rotate(var(--rot)) translateY(-220px) scale(0.6); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fireworks { display: none; }
+      .revenge-done-card { animation: none; }
+    }
