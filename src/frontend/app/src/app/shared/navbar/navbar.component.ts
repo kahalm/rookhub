@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { of, switchMap, catchError, merge, map } from 'rxjs';
+import { of, switchMap, catchError, merge, map, combineLatest } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -14,6 +14,7 @@ import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
 import { ChallengeService } from '../../core/challenge.service';
+import { RevengeService } from '../../core/revenge.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 
@@ -133,7 +134,7 @@ export class NavbarComponent implements OnInit {
   visible = new Set<string>();
   can(key: string): boolean { return this.visible.has(key); }
 
-  /** Anzahl offener eingehender Puzzle-Challenges (Badge am Freunde-Menü). */
+  /** Badge am Freunde-Menü: offene eingehende Challenges + ungelesene Revanche-Benachrichtigungen. */
   challengeCount = 0;
 
   private destroyRef = inject(DestroyRef);
@@ -152,7 +153,7 @@ export class NavbarComponent implements OnInit {
     return labels[this.theme.preference];
   }
 
-  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private challenge: ChallengeService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
+  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private challenge: ChallengeService, private revenge: RevengeService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
 
   ngOnInit(): void {
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
@@ -177,10 +178,12 @@ export class NavbarComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(show => this.showCourses = show);
 
-    // Badge offener Challenges: reaktiv aus dem ChallengeService, neu laden bei jedem Login.
-    this.challenge.incomingCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.challengeCount = c);
+    // Badge: offene Challenges + ungelesene Revanche-Benachrichtigungen; bei jedem Login neu laden.
+    combineLatest([this.challenge.incomingCount$, this.revenge.unseenCount$])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([c, r]) => this.challengeCount = c + r);
     this.auth.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.auth.isLoggedIn) this.challenge.refreshCount();
+      if (this.auth.isLoggedIn) { this.challenge.refreshCount(); this.revenge.refreshCount(); }
       else this.challengeCount = 0;
     });
   }

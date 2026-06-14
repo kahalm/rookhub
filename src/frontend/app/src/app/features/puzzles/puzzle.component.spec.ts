@@ -18,9 +18,10 @@ function makeComponent(): any {
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   const snackbar: any = { success: () => {}, info: () => {} };
   const challengeService: any = { send: () => ({ subscribe: () => {} }), resolve: () => ({ subscribe: () => {} }) };
+  const revengeService: any = { recordResult: () => ({ subscribe: () => {} }) };
   const translate: any = { instant: (k: string) => k };
   const http: any = { get: () => ({ subscribe: () => {} }) };
-  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, translate, http);
+  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, revengeService, translate, http);
 }
 
 const PUZZLE = { id: 1, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };

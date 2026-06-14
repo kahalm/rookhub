@@ -358,6 +358,13 @@
       "statusFailed": "failed",
       "statusPending": "pending"
     },
+    "revengeNotifications": {
+      "title": "Revenge on your puzzles",
+      "solved": "{{name}} solved the puzzle you failed (rating {{rating}}) 😈",
+      "failed": "{{name}} also failed your puzzle (rating {{rating}}) 😅",
+      "openPuzzle": "Open puzzle",
+      "empty": "No revenge attempts on your puzzles yet."
+    },
     "errors": {
       "loadFriends": "Failed to load friends",
       "loadRequests": "Failed to load requests",

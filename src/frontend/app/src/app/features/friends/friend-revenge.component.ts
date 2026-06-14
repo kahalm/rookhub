@@ -56,7 +56,8 @@ export function formatRevengeThemes(themes: string | null, max = 4): string {
                 <span matListItemTitle>{{ 'friends.revenge.ratingLabel' | translate:{ rating: p.rating } }}</span>
                 <span matListItemLine class="themes">{{ formatThemes(p.themes) }}</span>
                 <span matListItemLine class="fail">{{ 'friends.revenge.failCount' | translate:{ count: p.failCount } }}</span>
-                <button mat-raised-button color="primary" matListItemMeta [routerLink]="['/puzzles', p.puzzleId]">
+                <button mat-raised-button color="primary" matListItemMeta
+                        [routerLink]="['/puzzles', p.puzzleId]" [queryParams]="{ revengeUserId: data.userId }">
                   <mat-icon>sports_martial_arts</mat-icon> {{ 'friends.revenge.solve' | translate }}
                 </button>
               </mat-list-item>

@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<PuzzleChallenge> PuzzleChallenges => Set<PuzzleChallenge>();
+    public DbSet<RevengeNotification> RevengeNotifications => Set<RevengeNotification>();
     public DbSet<Repertoire> Repertoires => Set<Repertoire>();
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
     public DbSet<TournamentSubscription> TournamentSubscriptions => Set<TournamentSubscription>();
@@ -114,6 +115,28 @@ public class AppDbContext : DbContext
             e.HasIndex(c => new { c.ToUserId, c.Status });
             // Gesendete Challenges eines Absenders.
             e.HasIndex(c => c.FromUserId);
+        });
+
+        modelBuilder.Entity<RevengeNotification>(e =>
+        {
+            // Zwei FKs auf AppUser → Restrict (wie Friendship/PuzzleChallenge).
+            e.HasOne(n => n.AvengerUser)
+             .WithMany()
+             .HasForeignKey(n => n.AvengerUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(n => n.TargetUser)
+             .WithMany()
+             .HasForeignKey(n => n.TargetUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(n => n.Puzzle)
+             .WithMany()
+             .HasForeignKey(n => n.PuzzleId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Feed + Badge: (un)gelesene Benachrichtigungen eines Targets.
+            e.HasIndex(n => new { n.TargetUserId, n.SeenAt });
         });
 
         modelBuilder.Entity<Repertoire>(e =>

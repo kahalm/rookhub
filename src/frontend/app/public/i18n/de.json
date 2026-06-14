@@ -358,6 +358,13 @@
       "statusFailed": "gescheitert",
       "statusPending": "offen"
     },
+    "revengeNotifications": {
+      "title": "Revanche an deinen Puzzles",
+      "solved": "{{name}} hat dein gescheitertes Puzzle (Wertung {{rating}}) gelöst 😈",
+      "failed": "{{name}} ist an deinem Puzzle (Wertung {{rating}}) ebenfalls gescheitert 😅",
+      "openPuzzle": "Puzzle öffnen",
+      "empty": "Noch keine Revanche-Versuche an deinen Puzzles."
+    },
     "errors": {
       "loadFriends": "Freunde konnten nicht geladen werden",
       "loadRequests": "Anfragen konnten nicht geladen werden",

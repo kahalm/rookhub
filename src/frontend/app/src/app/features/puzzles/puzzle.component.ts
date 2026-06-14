@@ -25,6 +25,7 @@ import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ChallengeService } from '../../core/challenge.service';
+import { RevengeService } from '../../core/revenge.service';
 import { Friend } from '../../core/models';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { Chess } from 'chess.js';
@@ -83,6 +84,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   /** Gesetzt, wenn dieses Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
   private challengeId: number | null = null;
   private challengeResolved = false;
+
+  /** Gesetzt, wenn dieses Puzzle als Revanche an einem gescheiterten Puzzle dieses Users geöffnet wurde (?revengeUserId=…). */
+  private revengeUserId: number | null = null;
+  private revengeNotified = false;
   /** Freunde für das „An Freund schicken"-Menü (faul geladen beim Öffnen). */
   challengeFriends: Friend[] = [];
 
@@ -107,6 +112,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private offlineQueue: OfflineQueueService,
     private snackbar: SnackbarService,
     private challengeService: ChallengeService,
+    private revengeService: RevengeService,
     private translate: TranslateService,
     private http: HttpClient
   ) {
@@ -228,6 +234,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
     if (challengeParam) {
       this.challengeId = Number(challengeParam) || null;
+    }
+
+    // Als Revanche an einem gescheiterten Puzzle eines Freundes geöffnet → den Freund informieren.
+    const revengeParam = this.route.snapshot.queryParamMap.get('revengeUserId');
+    if (revengeParam) {
+      this.revengeUserId = Number(revengeParam) || null;
     }
 
     const stats$ = this.isLoggedIn
@@ -501,6 +513,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
       this.resolveChallengeIfNeeded(solved);
+      this.notifyRevengeIfNeeded(solved);
     } else {
       this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
@@ -514,6 +527,13 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (this.challengeId == null || this.challengeResolved) return;
     this.challengeResolved = true;
     this.challengeService.resolve(this.challengeId, solved, this.elapsedSeconds).subscribe({ next: () => {}, error: () => {} });
+  }
+
+  /** Informiert genau einmal den Freund, dessen gescheitertes Puzzle gerade gerächt wurde (fire-and-forget). */
+  private notifyRevengeIfNeeded(solved: boolean): void {
+    if (this.revengeUserId == null || this.revengeNotified || !this.puzzle) return;
+    this.revengeNotified = true;
+    this.revengeService.recordResult(this.revengeUserId, this.puzzle.id, solved).subscribe({ next: () => {}, error: () => {} });
   }
 
   /** Freundesliste fürs „An Freund schicken"-Menü faul laden (nur einmal). */

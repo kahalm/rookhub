@@ -16,6 +16,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../core/challenge.service';
+import { RevengeService, RevengeNotification } from '../../core/revenge.service';
 
 @Component({
   selector: 'app-friends',
@@ -136,6 +137,28 @@ import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../co
               <p class="empty-text">{{ 'friends.challenges.emptySent' | translate }}</p>
             }
           </mat-list>
+
+          <h3 class="section-title">{{ 'friends.revengeNotifications.title' | translate }}</h3>
+          <mat-list>
+            @for (n of revengeNotifications; track n.id) {
+              <mat-list-item [class.unseen]="!n.seen">
+                <span matListItemTitle>
+                  @if (n.solved) {
+                    {{ 'friends.revengeNotifications.solved' | translate:{ name: n.avengerDisplayName || n.avengerUsername, rating: n.rating } }}
+                  } @else {
+                    {{ 'friends.revengeNotifications.failed' | translate:{ name: n.avengerDisplayName || n.avengerUsername, rating: n.rating } }}
+                  }
+                </span>
+                <span matListItemLine class="when">{{ n.createdAt | date:'short' }}</span>
+                <button mat-icon-button matListItemMeta [routerLink]="['/puzzles', n.puzzleId]"
+                        [matTooltip]="'friends.revengeNotifications.openPuzzle' | translate">
+                  <mat-icon>open_in_new</mat-icon>
+                </button>
+              </mat-list-item>
+            } @empty {
+              <p class="empty-text">{{ 'friends.revengeNotifications.empty' | translate }}</p>
+            }
+          </mat-list>
         </mat-tab>
       </mat-tab-group>
     </div>
@@ -151,6 +174,8 @@ import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../co
     .status { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
     .status.solved { color: #2e7d32; }
     .status.failed { color: #c62828; }
+    .when { font-size: 0.72rem; color: color-mix(in srgb, currentColor 40%, transparent); }
+    .unseen { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 10%, transparent); border-radius: 6px; }
     @media (max-width: 768px) {
       .friends-container { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }
@@ -165,6 +190,7 @@ export class FriendsComponent implements OnInit {
   searchResults: UserSearchResult[] = [];
   incoming: IncomingChallenge[] = [];
   outgoing: OutgoingChallenge[] = [];
+  revengeNotifications: RevengeNotification[] = [];
   searchQuery = '';
   loading = true;
 
@@ -173,7 +199,8 @@ export class FriendsComponent implements OnInit {
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private router: Router,
-    private challenge: ChallengeService
+    private challenge: ChallengeService,
+    private revenge: RevengeService
   ) {}
 
   ngOnInit(): void {
@@ -197,6 +224,14 @@ export class FriendsComponent implements OnInit {
     // getIncoming() aktualisiert dabei den Navbar-Badge-Zähler.
     this.challenge.getIncoming().subscribe({ next: c => this.incoming = c, error: () => {} });
     this.challenge.getOutgoing().subscribe({ next: c => this.outgoing = c, error: () => {} });
+    // Revanche-Benachrichtigungen laden und (da der User sie jetzt sieht) als gelesen markieren → Badge leert sich.
+    this.revenge.getNotifications().subscribe({
+      next: n => {
+        this.revengeNotifications = n;
+        if (n.some(x => !x.seen)) this.revenge.markSeen().subscribe({ next: () => {}, error: () => {} });
+      },
+      error: () => {}
+    });
   }
 
   /** Eingehende Challenge lösen: zum Puzzle navigieren, challengeId mitgeben → Resolve nach dem Versuch. */

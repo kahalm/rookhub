@@ -358,6 +358,13 @@
       "statusFailed": "neuspješno",
       "statusPending": "otvoreno"
     },
+    "revengeNotifications": {
+      "title": "Osveta na tvojim zagonetkama",
+      "solved": "{{name}} je riješio/la zagonetku koju ti nisi (rejting {{rating}}) 😈",
+      "failed": "{{name}} također nije riješio/la tvoju zagonetku (rejting {{rating}}) 😅",
+      "openPuzzle": "Otvori zagonetku",
+      "empty": "Još nema pokušaja osvete na tvojim zagonetkama."
+    },
     "errors": {
       "loadFriends": "Učitavanje prijatelja nije uspjelo",
       "loadRequests": "Učitavanje zahtjeva nije uspjelo",
