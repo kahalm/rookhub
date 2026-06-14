@@ -21,6 +21,7 @@ public class ChessableImportServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly RepertoireService _repertoires;
+    private readonly FakeQueue _queue = new();
     private readonly ChessableImportService _svc;
 
     public ChessableImportServiceTests()
@@ -44,7 +45,7 @@ public class ChessableImportServiceTests : IDisposable
     {
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
         return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
-            NullLogger<ChessableImportService>.Instance);
+            _queue, NullLogger<ChessableImportService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -167,8 +168,103 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
     }
 
+    // --- Fortschritts-bewusster Fetch-Timeout (Regression: fixe 15-min-Grenze killte langsame,
+    //     aber gesunde Abrufe großer Kurse → TimeoutException, prod-Importe 99/100) ---
+
+    private void SeedFetchUserAndImport(int attempts, out int importId)
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = "running", Phase = "queued", Attempts = attempts, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        _db.SaveChanges();
+        importId = imp.Id;
+    }
+
+    private static HttpResponseMessage FetchingStatic() => JsonOk(new
+    {
+        status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
+        chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null
+    });
+
+    [Fact]
+    public async Task RunAsync_FetchStallsBelowMaxAttempts_AutoReEnqueues()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        // Statischer „fetching"-Fortschritt → Stillstand. Kein harter Fehler, sondern Resume.
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic()));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal("running", reloaded!.Status);   // NICHT failed
+        Assert.Equal(1, reloaded.Attempts);
+        Assert.Equal(1, _queue.Count);               // automatisch neu eingereiht (Auto-Restart)
+    }
+
+    [Fact]
+    public async Task RunAsync_SlowButProgressing_DoesNotTimeOut()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        // Fortschritt über viele Polls hinweg (> FetchStallPolls): der Stall-Zähler wird durch
+        // jeden echten Fortschritt zurückgesetzt → KEIN Timeout, am Ende completed.
+        int n = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            n++;
+            return n < 5
+                ? JsonOk(new { status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
+                : JsonOk(new { status = "completed", chaptersDone = 5, chaptersTotal = 5, linesDone = 5, chapterCount = 5, lineCount = 5, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000; // 5 Polls > Stall-Fenster 2
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(0, _queue.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchStallsAtMaxAttempts_Fails()
+    {
+        SeedFetchUserAndImport(attempts: ChessableImportService.MaxAttempts - 1, out var id);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic()));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal("failed", reloaded!.Status); // letzter Versuch erschöpft → terminal
+        Assert.Equal(0, _queue.Count);            // kein weiterer Resume
+    }
+
     private static HttpResponseMessage JsonOk(object payload) =>
         new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
+
+    private sealed class FakeQueue : IBackgroundTaskQueue
+    {
+        public int Count { get; private set; }
+        public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+        {
+            Count++;
+            return ValueTask.CompletedTask;
+        }
+        public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken ct)
+            => throw new NotSupportedException();
+    }
 
     private sealed class ScriptedHandler : HttpMessageHandler
     {
