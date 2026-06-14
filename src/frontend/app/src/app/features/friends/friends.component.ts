@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -17,7 +19,7 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -60,9 +62,15 @@ import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
                 <mat-list-item>
                   <span matListItemTitle>{{ friend.username }}</span>
                   <span matListItemLine>{{ friend.displayName || '' }}</span>
-                  <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)" matListItemMeta>
-                    <mat-icon>person_remove</mat-icon>
-                  </button>
+                  <div matListItemMeta>
+                    <button mat-icon-button color="primary" [routerLink]="['/friends', friend.userId, 'stats']"
+                            [attr.aria-label]="'friends.stats.compare' | translate" [matTooltip]="'friends.stats.compare' | translate">
+                      <mat-icon>bar_chart</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)">
+                      <mat-icon>person_remove</mat-icon>
+                    </button>
+                  </div>
                 </mat-list-item>
               } @empty {
                 <p class="empty-text">{{ 'friends.empty.friends' | translate }}</p>

@@ -26,3 +26,14 @@ public class UserSearchResultDto
     public string? LichessUsername { get; set; }
     public string? FideId { get; set; }
 }
+
+/// <summary>Puzzle-Statistik eines Freundes — für den Vergleich „Du vs. Freund" auf der Freunde-Stats-Seite.</summary>
+public class FriendStatsDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+    public PuzzleStatsDto Stats { get; set; } = new();
+    /// <summary>Themen-Aufschlüsselung (Versuche/Gelöst je Thema) für den Themen-Vergleich.</summary>
+    public List<ThemeStatDto> Themes { get; set; } = new();
+}

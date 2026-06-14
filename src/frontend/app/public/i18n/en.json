@@ -324,6 +324,16 @@
     },
     "sentOn": "Sent {{date}}",
     "requestSent": "Friend request sent",
+    "stats": {
+      "title": "Stats comparison",
+      "compare": "Compare stats",
+      "you": "You",
+      "back": "Back to friends",
+      "themes": "Theme comparison",
+      "theme": "Theme",
+      "noThemes": "No shared theme data yet.",
+      "loadError": "Could not load stats"
+    },
     "errors": {
       "loadFriends": "Failed to load friends",
       "loadRequests": "Failed to load requests",

@@ -324,6 +324,16 @@
     },
     "sentOn": "Gesendet am {{date}}",
     "requestSent": "Freundschaftsanfrage gesendet",
+    "stats": {
+      "title": "Statistik-Vergleich",
+      "compare": "Statistik vergleichen",
+      "you": "Du",
+      "back": "Zurück zu Freunden",
+      "themes": "Themen-Vergleich",
+      "theme": "Thema",
+      "noThemes": "Noch keine gemeinsamen Themen-Daten.",
+      "loadError": "Statistik konnte nicht geladen werden"
+    },
     "errors": {
       "loadFriends": "Freunde konnten nicht geladen werden",
       "loadRequests": "Anfragen konnten nicht geladen werden",

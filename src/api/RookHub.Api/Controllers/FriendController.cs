@@ -12,13 +12,42 @@ namespace RookHub.Api.Controllers;
 public class FriendController : BaseApiController
 {
     private readonly FriendService _friendService;
+    private readonly PuzzleService _puzzleService;
 
-    public FriendController(FriendService friendService) => _friendService = friendService;
+    public FriendController(FriendService friendService, PuzzleService puzzleService)
+    {
+        _friendService = friendService;
+        _puzzleService = puzzleService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<FriendDto>>> GetFriends()
     {
         return Ok(await _friendService.GetFriendsAsync(GetUserId()));
+    }
+
+    /// <summary>Puzzle-Statistik eines Freundes für den Vergleich „Du vs. Freund". Nur zwischen Freunden sichtbar.</summary>
+    [HttpGet("{userId}/stats")]
+    public async Task<ActionResult<FriendStatsDto>> GetFriendStats(int userId)
+    {
+        if (!await _friendService.AreFriendsAsync(GetUserId(), userId))
+            return StatusCode(403, new { message = "Not friends with this user." });
+
+        var basic = await _friendService.GetUserBasicAsync(userId);
+        if (basic == null)
+            return NotFound(new { message = "User not found." });
+
+        var stats = await _puzzleService.GetStatsAsync(userId);
+        var breakdown = await _puzzleService.GetBreakdownAsync(userId);
+
+        return Ok(new FriendStatsDto
+        {
+            UserId = userId,
+            Username = basic.Username,
+            DisplayName = basic.DisplayName,
+            Stats = stats,
+            Themes = breakdown.Themes
+        });
     }
 
     [HttpGet("requests")]

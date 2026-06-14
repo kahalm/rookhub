@@ -11,6 +11,31 @@ public class FriendService
 
     public FriendService(AppDbContext db) => _db = db;
 
+    /// <summary>Sind die beiden User befreundet (akzeptierte Freundschaft, egal in welche Richtung angefragt)?
+    /// Basis für die Sichtbarkeit von Freund-Stats/Revenge — nur Freunde dürfen die Puzzle-Historie sehen.</summary>
+    public async Task<bool> AreFriendsAsync(int userId, int otherUserId)
+    {
+        if (userId == otherUserId) return false;
+        return await _db.Friendships.AnyAsync(f =>
+            f.Status == FriendshipStatus.Accepted &&
+            ((f.RequesterId == userId && f.AddresseeId == otherUserId) ||
+             (f.RequesterId == otherUserId && f.AddresseeId == userId)));
+    }
+
+    /// <summary>Basis-Anzeigedaten (Username + DisplayName) eines Users — für Stats-/Revenge-Header.</summary>
+    public async Task<FriendDto?> GetUserBasicAsync(int userId)
+    {
+        return await _db.AppUsers
+            .Where(u => u.Id == userId)
+            .Select(u => new FriendDto
+            {
+                UserId = u.Id,
+                Username = u.Username,
+                DisplayName = u.Profile != null ? u.Profile.DisplayName : null
+            })
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<List<FriendDto>> GetFriendsAsync(int userId)
     {
         var friendships = await _db.Friendships

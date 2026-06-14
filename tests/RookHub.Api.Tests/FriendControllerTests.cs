@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -14,6 +16,7 @@ public class FriendControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly FriendService _friendService;
+    private readonly PuzzleService _puzzleService;
     private readonly FriendController _controller;
 
     public FriendControllerTests()
@@ -23,7 +26,8 @@ public class FriendControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _friendService = new FriendService(_db);
-        _controller = new FriendController(_friendService);
+        _puzzleService = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
+        _controller = new FriendController(_friendService, _puzzleService);
     }
 
     public void Dispose() => _db.Dispose();
@@ -336,5 +340,70 @@ public class FriendControllerTests : IDisposable
         var result = await _controller.Search(longQuery);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    // ---- GetFriendStats ----
+
+    private async Task MakeFriendsAsync(int requesterId, int addresseeId)
+    {
+        _db.Friendships.Add(new Friendship
+        {
+            RequesterId = requesterId,
+            AddresseeId = addresseeId,
+            Status = FriendshipStatus.Accepted
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetFriendStats_ReturnsStats_WhenFriends()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+
+        var puzzle = new Puzzle { LichessId = "abc", Fen = "fen", Moves = "e2e4", Rating = 1500, Themes = "fork" };
+        _db.Puzzles.Add(puzzle);
+        await _db.SaveChangesAsync();
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = friend.Id, PuzzleId = puzzle.Id, Solved = true, TimeSpentSeconds = 5 });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.GetFriendStats(friend.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<FriendStatsDto>(ok.Value);
+        Assert.Equal(friend.Id, dto.UserId);
+        Assert.Equal("friend", dto.Username);
+        Assert.Equal(1, dto.Stats.Solved);
+        Assert.Equal(1, dto.Stats.TotalAttempts);
+    }
+
+    [Fact]
+    public async Task GetFriendStats_Returns403_WhenNotFriends()
+    {
+        var me = await CreateUserAsync("me");
+        var stranger = await CreateUserAsync("stranger");
+
+        SetUser(me.Id);
+        var result = await _controller.GetFriendStats(stranger.Id);
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetFriendStats_Returns403_WhenOnlyPendingRequest()
+    {
+        var me = await CreateUserAsync("me");
+        var other = await CreateUserAsync("other");
+        _db.Friendships.Add(new Friendship { RequesterId = me.Id, AddresseeId = other.Id, Status = FriendshipStatus.Pending });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.GetFriendStats(other.Id);
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
     }
 }

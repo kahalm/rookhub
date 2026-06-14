@@ -324,6 +324,16 @@
     },
     "sentOn": "Poslano {{date}}",
     "requestSent": "Zahtjev za prijateljstvo poslan",
+    "stats": {
+      "title": "Usporedba statistike",
+      "compare": "Usporedi statistiku",
+      "you": "Ti",
+      "back": "Natrag na prijatelje",
+      "themes": "Usporedba tema",
+      "theme": "Tema",
+      "noThemes": "Još nema zajedničkih podataka o temama.",
+      "loadError": "Statistiku nije moguće učitati"
+    },
     "errors": {
       "loadFriends": "Učitavanje prijatelja nije uspjelo",
       "loadRequests": "Učitavanje zahtjeva nije uspjelo",
