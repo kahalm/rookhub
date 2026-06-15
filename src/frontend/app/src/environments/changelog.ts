@@ -12,11 +12,11 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   { version: '0.140.0', date: '2026-06-15', changes: [
-    'Blindspiel (Visualisierung Level 1): Es gibt jetzt auch hier den „Anzeigen"-Button. Da das Brett im Level 1 dauerhaft auf der Startstellung eingefroren ist, blendet der Button für 3 Sekunden die tatsächliche aktuelle Stellung ein und kehrt danach wieder zur eingefrorenen Startstellung zurück — in allen Modi (Standard, Buch/Kurs/Tagespuzzle, Endlos).',
+    'Blindfold (Visualization Level 1): The "Show" button is now available here too. Since the board in Level 1 stays permanently frozen on the starting position, the button reveals the actual current position for 3 seconds and then returns to the frozen starting position — in all modes (Standard, Book/Course/Daily puzzle, Endless).',
   ]},
   { version: '0.139.0', date: '2026-06-15', changes: [
-    'Endlosmodus: Dein allererster Lauf (solange noch keine abgeschlossene Session vorliegt) folgt jetzt einer bewusst steilen Schwierigkeitskurve — Rating 2000 nach 15 Puzzles, 3000 nach 30 — damit der erste Puzzle-Rush relativ schnell sicher endet. Ab dem zweiten Lauf greift wieder die adaptive Kurve, die sich an deinem bisherigen Niveau orientiert.',
-    'Die Phasenanzeige (Phase 1/2/3) richtet sich im ersten Lauf passend nach dieser steilen Kurve (Grenzen bei Puzzle 15 und 30).',
+    'Endless mode: Your very first run (as long as no completed session exists yet) now follows a deliberately steep difficulty curve — rating 2000 after 15 puzzles, 3000 after 30 — so the first puzzle rush reliably ends fairly quickly. From the second run onward, the adaptive curve based on your previous level takes over again.',
+    'The phase indicator (Phase 1/2/3) follows this steep curve accordingly during the first run (boundaries at puzzle 15 and 30).',
   ]},
   { version: '0.138.0', date: '2026-06-15', changes: [
     'Im „Puzzle teilen"-Popup kannst du das Puzzle jetzt auch direkt an Freunde schicken (gleicher Mehrfach-Auswahl-Button wie nach dem Lösen) — und zwar sowohl für das aktuelle als auch, sofern vorhanden, für das vorherige Puzzle (per Umschalter im Dialog).',
