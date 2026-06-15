@@ -146,11 +146,6 @@ public class AdminMessageService
     public async Task<int> CountUnreadForUserAsync(int userId)
         => await _db.AdminMessages.CountAsync(m => m.UserId == userId && m.FromAdmin && m.SeenByUserAt == null);
 
-    /// <summary>Hat der User überhaupt eine Konversation (mind. eine Nachricht bekommen/geschrieben)?
-    /// Steuert, ob das Navbar-Nachrichten-Icon eingeblendet wird.</summary>
-    public async Task<bool> HasThreadForUserAsync(int userId)
-        => await _db.AdminMessages.AnyAsync(m => m.UserId == userId);
-
     private static AdminMessageDto ToDto(AdminMessage m) => new(
         m.Id,
         m.FromAdmin,

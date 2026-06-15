@@ -142,7 +142,7 @@ Der Admin startet einen Thread mit einem User; danach können beide Seiten belie
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/messages` | Auth | Eigener Thread (chronologisch); leer, wenn der Admin nie schrieb |
-| GET | `/api/messages/status` | Auth | Navbar-Status: `{ unread, hasMessages }` — Mail-Icon wird nur bei `hasMessages` eingeblendet |
+| GET | `/api/messages/unread-count` | Auth | Ungelesene Admin-Nachrichten (Navbar-Badge) |
 | POST | `/api/messages/reply` | Auth | Antwort des Users `{ body }` (400, wenn noch kein Thread existiert) |
 | POST | `/api/messages/seen` | Auth | Eigene Admin-Nachrichten als gelesen markieren |
 | GET | `/api/admin/messages/threads` | Admin | Alle Konversationen (je User: letzte Nachricht + Anzahl ungelesener User-Antworten) |
@@ -494,7 +494,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.142.1` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- **Aktuelle Version**: `0.142.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)
