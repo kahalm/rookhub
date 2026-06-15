@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -69,6 +70,24 @@ public class ProfileService
         var oldFirstName = profile.FirstName;
         var oldFideId = profile.FideId;
 
+        // E-Mail: null = unverändert lassen; "" = entfernen; sonst validieren + auf Dublette prüfen.
+        // Normalisierung (trim + lowercase) wie bei der Registrierung, damit der Unique-Index greift.
+        if (dto.Email != null)
+        {
+            var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email)
+                ? null
+                : dto.Email.Trim().ToLowerInvariant();
+
+            if (normalizedEmail != null && !new EmailAddressAttribute().IsValid(normalizedEmail))
+                throw new ArgumentException("Email is not a valid email address.");
+
+            if (normalizedEmail != null && await _db.AppUsers
+                    .AnyAsync(u => u.Id != userId && u.Email == normalizedEmail))
+                throw new InvalidOperationException("This email address is already in use.");
+
+            user.Email = normalizedEmail;
+        }
+
         if (dto.FirstName != null) profile.FirstName = dto.FirstName;
         if (dto.LastName != null) profile.LastName = dto.LastName;
         if (dto.DisplayName != null) profile.DisplayName = dto.DisplayName;
@@ -82,7 +101,17 @@ public class ProfileService
         if (dto.PuzzleDifficulty != null) profile.PuzzleDifficulty = dto.PuzzleDifficulty;
         if (dto.BookStockfishDepth != null) profile.BookStockfishDepth = Math.Clamp(dto.BookStockfishDepth.Value, 1, 24);
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (dto.Email != null)
+        {
+            // TOCTOU: zwei Konten setzen (fast) gleichzeitig dieselbe E-Mail → die Vorab-Prüfung
+            // passiert beide, der zweite Insert verletzt den Unique-Index auf Email. Sauber als
+            // Kollision (409) statt 500 behandeln.
+            throw new InvalidOperationException("This email address is already in use.");
+        }
 
         // Trigger auto-subscription nur, wenn sich die Schach-Identität tatsächlich geändert hat
         // (ChessResultsId/LastName/FirstName/FideId) UND ChessResultsId + LastName gesetzt sind.
@@ -228,6 +257,7 @@ public class ProfileService
     {
         UserId = user.Id,
         Username = user.Username,
+        Email = user.Email,
         FirstName = user.Profile?.FirstName,
         LastName = user.Profile?.LastName,
         DisplayName = user.Profile?.DisplayName,

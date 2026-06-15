@@ -294,4 +294,55 @@ public class ProfileServiceTests : IDisposable
         await service.UpdateProfileAsync(userId, new UpdateProfileDto { FideId = "999" });
         Assert.Equal(3, queue.EnqueuedCount);
     }
+
+    [Fact]
+    public async Task UpdateProfile_SetsEmail_NormalizedLowercaseTrimmed()
+    {
+        var userId = await CreateUserAsync();
+        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "  New.Mail@Example.COM  " });
+        Assert.Equal("new.mail@example.com", result.Email);
+        Assert.Equal("new.mail@example.com", (await _db.AppUsers.FindAsync(userId))!.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_EmptyEmail_ClearsEmail()
+    {
+        var userId = await CreateUserAsync(); // startet mit testuser@example.com
+        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "" });
+        Assert.Null(result.Email);
+        Assert.Null((await _db.AppUsers.FindAsync(userId))!.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_NullEmail_LeavesEmailUnchanged()
+    {
+        var userId = await CreateUserAsync();
+        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { DisplayName = "X" });
+        Assert.Equal("testuser@example.com", result.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_InvalidEmail_Throws()
+    {
+        var userId = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "not-an-email" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_DuplicateEmail_Throws()
+    {
+        await CreateUserAsync("alice");          // alice@example.com
+        var bobId = await CreateUserAsync("bob"); // bob@example.com
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _profileService.UpdateProfileAsync(bobId, new UpdateProfileDto { Email = "ALICE@example.com" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_SameEmailAsOwn_Succeeds()
+    {
+        var userId = await CreateUserAsync(); // testuser@example.com
+        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "testuser@example.com" });
+        Assert.Equal("testuser@example.com", result.Email);
+    }
 }

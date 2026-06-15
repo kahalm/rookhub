@@ -25,6 +25,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
 interface Profile {
   userId: number;
   username: string;
+  email: string | null;
   firstName: string | null;
   lastName: string | null;
   displayName: string | null;
@@ -138,6 +139,12 @@ interface PlayerSearchItem {
                 </div>
               }
 
+              <mat-form-field appearance="outline">
+                <mat-label>{{ 'profile.email' | translate }}</mat-label>
+                <input matInput type="email" [(ngModel)]="profile.email" name="email"
+                       autocomplete="email" inputmode="email">
+                <mat-hint>{{ 'profile.emailHint' | translate }}</mat-hint>
+              </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'profile.displayName' | translate }}</mat-label>
                 <input matInput [(ngModel)]="profile.displayName" name="displayName">
@@ -468,6 +475,7 @@ export class ProfileComponent implements OnInit {
     if (!this.profile) return;
     this.saving = true;
     this.http.put<Profile>('/api/profile', {
+      email: this.profile.email ?? '',
       firstName: this.profile.firstName,
       lastName: this.profile.lastName,
       displayName: this.profile.displayName,
@@ -481,9 +489,12 @@ export class ProfileComponent implements OnInit {
         this.saving = false;
         this.snackbar.success(this.translate.instant('profile.saved'));
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
-        this.snackbar.info(this.translate.instant('profile.saveFailed'));
+        const key = err?.status === 409 ? 'profile.emailTaken'
+          : err?.status === 400 ? 'profile.emailInvalid'
+          : 'profile.saveFailed';
+        this.snackbar.info(this.translate.instant(key));
       }
     });
   }

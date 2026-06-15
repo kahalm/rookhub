@@ -6,6 +6,7 @@ public class ProfileDto
 {
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
+    public string? Email { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? DisplayName { get; set; }
@@ -43,6 +44,13 @@ public class PublicProfileDto
 
 public class UpdateProfileDto
 {
+    /// <summary>
+    /// E-Mail-Adresse. <c>null</c> = unverändert lassen (z. B. reine Einstellungs-Saves).
+    /// Leerer String = hinterlegte E-Mail entfernen. Format-/Dublettenprüfung im Service.
+    /// </summary>
+    [MaxLength(255)]
+    public string? Email { get; set; }
+
     [MaxLength(50)]
     public string? FirstName { get; set; }
 
