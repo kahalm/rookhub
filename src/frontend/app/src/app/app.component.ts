@@ -52,8 +52,8 @@ import { environment } from '../environments/environment';
             <div class="changelog-entry">
               <strong>v{{ entry.version }}</strong> <span class="changelog-date">{{ entry.date }}</span>
               <ul>
-                @for (change of entry.changes; track change) {
-                  <li>{{ change }}</li>
+                @for (change of entry.changes; track change.en) {
+                  <li>{{ changeText(change) }}</li>
                 }
               </ul>
             </div>
@@ -140,6 +140,11 @@ export class AppComponent implements OnInit {
   showQuickstart = false;
 
   private dlHandled = false;
+
+  /** Changelog-Eintrag in der aktiven UI-Sprache (de → Deutsch, sonst Englisch als Default/Fallback). */
+  changeText(change: { en: string; de: string }): string {
+    return this.translate.currentLang === 'de' ? change.de : change.en;
+  }
 
   constructor(
     private router: Router,
