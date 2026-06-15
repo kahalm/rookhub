@@ -62,8 +62,10 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           }
         </mat-menu>
         <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
-                [matBadge]="notifCount" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="small"
-                [matTooltip]="'notifications.title' | translate" [attr.aria-label]="'notifications.title' | translate">
+                class="notif-bell" [class.has-unseen]="notifCount > 0"
+                matBadge="!" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="medium"
+                [matTooltip]="('notifications.title' | translate) + (notifCount > 0 ? ' (' + notifCount + ')' : '')"
+                [attr.aria-label]="'notifications.title' | translate">
           <mat-icon>notifications</mat-icon>
         </button>
         <mat-menu #notifMenu="matMenu" class="notif-menu">
@@ -139,6 +141,21 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
     .notif-item .notif-text { white-space: normal; line-height: 1.25; }
     .notif-item.notif-unseen { font-weight: 600; }
     .notif-item.notif-unseen mat-icon { color: var(--mat-sys-primary, #3f51b5); }
+    /* Auffälliger Hinweis bei neuen Benachrichtigungen: fettes rotes „!" + leichtes Pulsieren. */
+    .notif-bell.has-unseen mat-icon { color: #d32f2f; }
+    .notif-bell ::ng-deep .mat-badge-content {
+      background: #d32f2f; color: #fff; font-weight: 800; font-size: 15px;
+      width: 19px; height: 19px; line-height: 19px;
+      box-shadow: 0 0 0 2px var(--mat-sys-surface, #fff);
+    }
+    .notif-bell.has-unseen ::ng-deep .mat-badge-content { animation: bell-pulse 1.5s ease-in-out infinite; }
+    @keyframes bell-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.28); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .notif-bell.has-unseen ::ng-deep .mat-badge-content { animation: none; }
+    }
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .mobile-menu-btn { display: inline-flex; }
