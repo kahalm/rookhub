@@ -25,6 +25,29 @@ import {
   ChessableImportTarget,
 } from './chessable.service';
 
+/**
+ * Hol-Durchsatz (Prod-Messung 2026-06-15, inkl. VPN-Rotationspausen): grob ~15–20 Zeilen/min.
+ * Für Schätzungen konservativ die Faustregel 500 Zeilen ≈ 30 Min (≈ 16,7/min) verwenden.
+ */
+export const CHESSABLE_LINES_PER_MIN = 500 / 30;
+
+/** Lineare Hochrechnung der Gesamt-Zeilenzahl aus dem Kapitel-Fortschritt. 0 = (noch) nicht schätzbar. */
+export function estimateTotalLines(linesDone: number, chaptersDone: number, chaptersTotal: number): number {
+  if (linesDone <= 0 || chaptersDone <= 0 || chaptersTotal <= 0) return 0;
+  return Math.round((linesDone * chaptersTotal) / chaptersDone);
+}
+
+/**
+ * Geschätzte Rest-Holzeit in Minuten: Gesamt-Zeilen aus den bisher geholten Kapiteln hochrechnen,
+ * Rest durch den Durchsatz teilen. 0 = nicht schätzbar (zu wenig Fortschritt). Aufgerundet.
+ */
+export function estimateRemainingMinutes(linesDone: number, chaptersDone: number, chaptersTotal: number): number {
+  const total = estimateTotalLines(linesDone, chaptersDone, chaptersTotal);
+  if (total <= 0) return 0;
+  const remaining = Math.max(0, total - linesDone);
+  return Math.ceil(remaining / CHESSABLE_LINES_PER_MIN);
+}
+
 @Component({
   selector: 'app-chessable',
   standalone: true,
@@ -195,6 +218,7 @@ import {
             }
           </mat-card-header>
           <mat-card-content>
+            <p class="throughput-hint"><mat-icon>schedule</mat-icon> {{ 'chessable.throughputHint' | translate }}</p>
             @if (courses.length === 0) {
               <p class="empty">{{ 'chessable.noCourses' | translate }}</p>
             } @else {
@@ -307,6 +331,8 @@ import {
     .actions button mat-icon { margin-right: 0.25rem; }
     .courses-card { margin-top: 1rem; }
     .empty { color: var(--mat-sys-on-surface-variant, #888); }
+    .throughput-hint { display: flex; align-items: center; gap: 6px; color: var(--mat-sys-on-surface-variant, #888); font-size: 0.85rem; margin: 0 0 0.75rem; }
+    .throughput-hint mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
     .course-list { display: flex; flex-direction: column; }
     .course-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
@@ -565,6 +591,9 @@ export class ChessableComponent implements OnInit, OnDestroy {
     if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
       s += ' ' + this.translate.instant('chessable.fetchProgress',
         { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone });
+      // Restzeit aus dem bisherigen Kapitel-Fortschritt hochrechnen (sobald genug Daten da sind).
+      const eta = estimateRemainingMinutes(imp.linesDone, imp.chaptersDone, imp.chaptersTotal);
+      if (eta > 0) s += ' · ' + this.translate.instant('chessable.etaRemaining', { min: eta });
     }
     return s;
   }

@@ -1494,6 +1494,8 @@
     "phase_fetching": "dohvaćam tečaj…",
     "phase_importing": "uvozim…",
     "phase_done": "gotovo",
-    "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija"
+    "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija",
+    "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",
+    "etaRemaining": "još ~{{min}} min"
   }
 }

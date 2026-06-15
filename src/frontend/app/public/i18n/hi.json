@@ -1114,6 +1114,8 @@
     "testOk": "Connection ok. {{count}} courses for UID {{uid}}.",
     "coursesTitle": "Your Chessable courses",
     "noCourses": "No courses found.",
-    "error": "Error: {{message}}"
+    "error": "Error: {{message}}",
+    "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
+    "etaRemaining": "~{{min}} min left"
   }
 }
