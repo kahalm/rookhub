@@ -14,6 +14,7 @@ import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
+import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 
@@ -80,6 +81,10 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
               </button>
             }
           }
+          <button mat-menu-item class="notif-all" routerLink="/notifications">
+            <mat-icon>history</mat-icon>
+            <span>{{ 'notifications.viewAll' | translate }}</span>
+          </button>
         </mat-menu>
         <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
           <mat-icon>{{ themeIcon }}</mat-icon>
@@ -244,30 +249,11 @@ export class NavbarComponent implements OnInit {
 
   /** Material-Icon je Benachrichtigungstyp. */
   iconFor(n: AppNotification): string {
-    switch (n.type) {
-      case 'chessable_import_completed': return 'menu_book';
-      case 'chessable_import_failed': return 'error_outline';
-      case 'friend_request_received': return 'person_add';
-      case 'friend_request_accepted': return 'how_to_reg';
-      case 'revenge_performed': return 'sports_kabaddi';
-      case 'challenge_received': return 'sports_esports';
-      case 'challenge_resolved': return 'emoji_events';
-      default: return 'notifications';
-    }
+    return notificationIcon(n);
   }
 
   /** Lokalisierter Text; Typen mit Ausgang (gelöst/gescheitert) wählen die passende Variante. */
   textFor(n: AppNotification): string {
-    const data = n.data ?? {};
-    let key = 'notifications.type.' + n.type;
-    if (n.type === 'challenge_resolved' || n.type === 'revenge_performed')
-      key += data['solved'] === 'true' ? '_solved' : '_failed';
-    let text = this.translate.instant(key, data);
-    // Fertig-Import: Hol-/Wartezeit als Suffix anhängen, falls vorhanden (alte Benachrichtigungen
-    // ohne diese Felder bleiben unverändert — kein Platzhalter-Leak).
-    if (n.type === 'chessable_import_completed' && data['fetchTime']) {
-      text += ' · ' + this.translate.instant('notifications.chessableDuration', data);
-    }
-    return text;
+    return notificationText(this.translate, n);
   }
 }

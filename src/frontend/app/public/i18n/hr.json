@@ -29,7 +29,11 @@
       "challenge_resolved_solved": "{{username}} je riješio tvoj izazov",
       "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov"
     },
-    "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}"
+    "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
+    "viewAll": "Prikaži sve",
+    "historyTitle": "Obavijesti",
+    "loadMore": "Učitaj još",
+    "shownOf": "{{shown}} od {{total}}"
   },
   "nav": {
     "dashboard": "Nadzorna ploča",

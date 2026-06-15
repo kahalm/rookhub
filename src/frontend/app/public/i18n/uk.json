@@ -1120,6 +1120,10 @@
     "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
   },
   "notifications": {
-    "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}"
+    "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
+    "viewAll": "View all",
+    "historyTitle": "Notifications",
+    "loadMore": "Load more",
+    "shownOf": "{{shown}} of {{total}}"
   }
 }

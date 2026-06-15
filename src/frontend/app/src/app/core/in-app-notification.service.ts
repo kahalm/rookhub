@@ -13,6 +13,12 @@ export interface AppNotification {
   seen: boolean;
 }
 
+/** Eine Seite der vollständigen Benachrichtigungs-History + Gesamtzahl (für „mehr laden"). */
+export interface NotificationHistory {
+  items: AppNotification[];
+  total: number;
+}
+
 /**
  * Holt/zählt die generischen In-App-Benachrichtigungen des eingeloggten Users
  * (`/api/notifications`) und hält den Ungelesen-Zähler fürs Glocken-Badge.
@@ -38,6 +44,11 @@ export class InAppNotificationService {
   /** Letzte Benachrichtigungen (neueste zuerst). */
   list(take = 20): Observable<AppNotification[]> {
     return this.http.get<AppNotification[]>(`${this.apiUrl}?take=${take}`);
+  }
+
+  /** Eine Seite der vollständigen History (neueste zuerst) + Gesamtzahl. */
+  history(page = 1, pageSize = 30): Observable<NotificationHistory> {
+    return this.http.get<NotificationHistory>(`${this.apiUrl}/history?page=${page}&pageSize=${pageSize}`);
   }
 
   /** Alle als gelesen markieren (beim Öffnen der Glocke) — leert das Badge sofort. */

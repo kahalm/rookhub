@@ -29,7 +29,11 @@
       "challenge_resolved_solved": "{{username}} solved your challenge",
       "challenge_resolved_failed": "{{username}} did not solve your challenge"
     },
-    "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}"
+    "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
+    "viewAll": "View all",
+    "historyTitle": "Notifications",
+    "loadMore": "Load more",
+    "shownOf": "{{shown}} of {{total}}"
   },
   "nav": {
     "dashboard": "Dashboard",

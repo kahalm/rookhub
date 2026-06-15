@@ -38,6 +38,42 @@ public class NotificationTests : IDisposable
     // ---- Service ----
 
     [Fact]
+    public async Task GetHistoryAsync_PaginatesAndScopesToUser()
+    {
+        await UserAsync(1, "u1");
+        await UserAsync(2, "u2");
+        for (var i = 0; i < 5; i++) await _service.CreateAsync(1, NotificationType.FriendRequestReceived);
+        await _service.CreateAsync(2, NotificationType.FriendRequestReceived); // anderer User
+
+        var p1 = await _service.GetHistoryAsync(1, page: 1, pageSize: 2);
+        var p2 = await _service.GetHistoryAsync(1, page: 2, pageSize: 2);
+        var p3 = await _service.GetHistoryAsync(1, page: 3, pageSize: 2);
+
+        Assert.Equal(5, p1.Total); // nur die eigenen, nicht User 2
+        Assert.Equal(2, p1.Items.Count);
+        Assert.Equal(2, p2.Items.Count);
+        Assert.Single(p3.Items);
+        var ids = p1.Items.Concat(p2.Items).Concat(p3.Items).Select(n => n.Id).ToList();
+        Assert.Equal(5, ids.Distinct().Count()); // keine Überschneidung, alle abgedeckt
+    }
+
+    [Fact]
+    public async Task GetHistoryAsync_NewestFirst()
+    {
+        await UserAsync(1, "u1");
+        for (var i = 0; i < 3; i++) await _service.CreateAsync(1, NotificationType.FriendRequestReceived);
+        // CreatedAt eindeutig staffeln (id-aufsteigend = zeit-aufsteigend).
+        var rows = await _db.Notifications.OrderBy(n => n.Id).ToListAsync();
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < rows.Count; i++) rows[i].CreatedAt = t0.AddMinutes(i);
+        await _db.SaveChangesAsync();
+
+        var page = await _service.GetHistoryAsync(1, page: 1, pageSize: 10);
+        Assert.Equal(rows[^1].Id, page.Items[0].Id);  // neuester zuerst
+        Assert.Equal(rows[0].Id, page.Items[^1].Id);
+    }
+
+    [Fact]
     public async Task CreateAsync_StoresUnseenWithData()
     {
         await UserAsync(1, "u1");

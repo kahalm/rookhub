@@ -12,3 +12,7 @@ public record NotificationDto(
 
 /// <summary>Ungelesen-Zähler für das Navbar-Glocken-Badge.</summary>
 public record NotificationCountDto(int Count);
+
+/// <summary>Eine Seite der vollständigen Benachrichtigungs-History (neueste zuerst) + Gesamtzahl
+/// (für „mehr laden"/Pager).</summary>
+public record NotificationHistoryDto(List<NotificationDto> Items, int Total);

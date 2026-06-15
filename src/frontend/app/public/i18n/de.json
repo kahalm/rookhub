@@ -29,7 +29,11 @@
       "challenge_resolved_solved": "{{username}} hat deine Challenge gelöst",
       "challenge_resolved_failed": "{{username}} hat deine Challenge nicht gelöst"
     },
-    "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}"
+    "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
+    "viewAll": "Alle anzeigen",
+    "historyTitle": "Benachrichtigungen",
+    "loadMore": "Mehr laden",
+    "shownOf": "{{shown}} von {{total}}"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -20,6 +20,11 @@ public class NotificationController : BaseApiController
     public async Task<IActionResult> GetAll([FromQuery] int take = 20)
         => Ok(await _notifications.GetForUserAsync(GetUserId(), take));
 
+    /// <summary>Vollständige History (paginiert, neueste zuerst) + Gesamtzahl.</summary>
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 30)
+        => Ok(await _notifications.GetHistoryAsync(GetUserId(), page, pageSize));
+
     /// <summary>Anzahl ungelesener Benachrichtigungen (Badge/„!").</summary>
     [HttpGet("count")]
     public async Task<IActionResult> GetCount()

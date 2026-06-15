@@ -132,6 +132,7 @@ Eine zentrale Navbar-Glocke mit „!"-Indikator. `Notifications`-Tabelle (`UserI
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/notifications?take=20` | Letzte Benachrichtigungen (neueste zuerst) |
+| GET | `/api/notifications/history?page=&pageSize=` | Vollständige History (paginiert, neueste zuerst) + Gesamtzahl — für die `/notifications`-Seite |
 | GET | `/api/notifications/count` | Anzahl ungelesener (Glocken-Badge) |
 | POST | `/api/notifications/seen` | Alle als gelesen markieren (beim Öffnen der Glocke) |
 
@@ -477,7 +478,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.132.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
+- **Aktuelle Version**: `0.133.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)

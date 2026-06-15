@@ -44,6 +44,21 @@ public class NotificationService
         return list.Select(ToDto).ToList();
     }
 
+    /// <summary>Eine Seite der vollständigen History eines Users (neueste zuerst) + Gesamtzahl.</summary>
+    public async Task<NotificationHistoryDto> GetHistoryAsync(int userId, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var q = _db.Notifications.Where(n => n.UserId == userId);
+        var total = await q.CountAsync();
+        var list = await q
+            .OrderByDescending(n => n.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        return new NotificationHistoryDto(list.Select(ToDto).ToList(), total);
+    }
+
     /// <summary>Anzahl ungelesener Benachrichtigungen — für das Glocken-Badge.</summary>
     public async Task<int> CountUnseenAsync(int userId)
         => await _db.Notifications.CountAsync(n => n.UserId == userId && n.SeenAt == null);
