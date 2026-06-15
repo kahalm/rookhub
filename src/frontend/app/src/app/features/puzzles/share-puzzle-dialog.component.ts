@@ -6,11 +6,13 @@ import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { ChallengeFriendsComponent } from './challenge-friends.component';
+import { PuzzleChallengeSource } from '../../core/challenge.service';
 
 @Component({
   selector: 'app-share-puzzle-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QRCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QRCodeComponent, ChallengeFriendsComponent],
   template: `
     <h2 class="dialog-title">{{ 'puzzles.share.title' | translate }}</h2>
     <div class="which-label" *ngIf="data.previousUrl">
@@ -25,6 +27,11 @@ import { QRCodeComponent } from 'angularx-qrcode';
         <mat-icon>content_copy</mat-icon>
       </button>
     </div>
+    @if (data.canChallenge && activePuzzleId) {
+      <div class="challenge-row">
+        <app-challenge-friends [puzzleId]="activePuzzleId" [source]="data.source ?? 'standard'" />
+      </div>
+    }
     <div class="dialog-actions">
       <button mat-stroked-button *ngIf="data.previousUrl" (click)="toggle()">
         {{ (showingPrevious ? 'puzzles.share.current' : 'puzzles.share.previous') | translate }}
@@ -39,6 +46,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
     .which-label { text-align: center; margin-bottom: 0.5rem; font-size: 0.9rem; opacity: 0.7; }
     .qr-container { display: flex; justify-content: center; margin-bottom: 1rem; }
     .link-row { display: flex; align-items: center; gap: 0.5rem; }
+    .challenge-row { display: flex; justify-content: center; margin-top: 0.85rem; }
     .link-input {
       flex: 1; padding: 0.5rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 4px;
       font-size: 0.85rem; background: var(--mat-sys-surface-container, #f5f5f5); color: inherit;
@@ -51,13 +59,27 @@ export class SharePuzzleDialogComponent {
   showingPrevious = false;
 
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { url: string; previousUrl?: string },
+    @Inject(MAT_DIALOG_DATA) public data: {
+      url: string;
+      previousUrl?: string;
+      /** Puzzle-IDs + Quelle für „An Freund schicken" direkt aus dem Dialog (optional). */
+      puzzleId?: number;
+      previousPuzzleId?: number;
+      source?: PuzzleChallengeSource;
+      /** Nur eingeloggt anzeigen (Senden braucht Auth). */
+      canChallenge?: boolean;
+    },
     private snackbar: SnackbarService,
     private translate: TranslateService
   ) {}
 
   get activeUrl(): string {
     return this.showingPrevious && this.data.previousUrl ? this.data.previousUrl : this.data.url;
+  }
+
+  /** Puzzle-ID passend zur aktuell angezeigten Seite (aktuell vs. vorher). */
+  get activePuzzleId(): number | undefined {
+    return this.showingPrevious && this.data.previousPuzzleId ? this.data.previousPuzzleId : this.data.puzzleId;
   }
 
   toggle(): void {

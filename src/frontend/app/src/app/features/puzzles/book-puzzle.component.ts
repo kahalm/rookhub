@@ -149,7 +149,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   sharePuzzle(): void {
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}`;
-    this.dialog.open(SharePuzzleDialogComponent, { data: { url }, width: '400px' });
+    this.dialog.open(SharePuzzleDialogComponent, {
+      data: {
+        url,
+        puzzleId: this.puzzle.id,
+        source: 'book',
+        // Wochenpost-Puzzles haben keine dauerhafte ID → dort keine Challenge.
+        canChallenge: this.isLoggedIn && !this.inWeekly,
+      },
+      width: '400px',
+    });
   }
 
   /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */

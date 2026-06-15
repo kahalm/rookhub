@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -55,7 +55,7 @@ import { Friend } from '../../core/models';
     .challenge-menu-send button { width: 100%; }
   `]
 })
-export class ChallengeFriendsComponent {
+export class ChallengeFriendsComponent implements OnChanges {
   /** ID des Puzzles, das verschickt wird (Puzzles.Id bzw. BookPuzzles.Id je nach `source`). */
   @Input() puzzleId!: number;
   /** Quelle des Puzzles — bestimmt Tabelle + Deep-Link beim Empfänger. */
@@ -75,6 +75,11 @@ export class ChallengeFriendsComponent {
     private snackbar: SnackbarService,
     private translate: TranslateService
   ) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Wechselt das Puzzle (z.B. aktuell↔vorher im Teilen-Dialog), die bisherige Auswahl verwerfen.
+    if (changes['puzzleId'] && !changes['puzzleId'].firstChange) this.selected.clear();
+  }
 
   get allSelected(): boolean { return this.friends.length > 0 && this.selected.size === this.friends.length; }
   get someSelected(): boolean { return this.selected.size > 0 && this.selected.size < this.friends.length; }

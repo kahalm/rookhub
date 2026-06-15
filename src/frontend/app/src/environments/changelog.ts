@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.137.1';
+export const APP_VERSION = '0.138.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.138.0', date: '2026-06-15', changes: [
+    'Im „Puzzle teilen"-Popup kannst du das Puzzle jetzt auch direkt an Freunde schicken (gleicher Mehrfach-Auswahl-Button wie nach dem Lösen) — und zwar sowohl für das aktuelle als auch, sofern vorhanden, für das vorherige Puzzle (per Umschalter im Dialog).',
+  ]},
   { version: '0.137.1', date: '2026-06-15', changes: [
     'Challenge verschicken im Endlos-/Kurs-/Buchmodus: Sobald du das „An Freund schicken"-Menü öffnest, stoppt der automatische Weiter-Countdown — du hast jetzt Zeit, in Ruhe Freunde auszuwählen, ohne dass das Puzzle weiterspringt.',
   ]},

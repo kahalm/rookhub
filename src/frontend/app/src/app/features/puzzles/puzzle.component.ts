@@ -214,7 +214,16 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const previousUrl = this.previousPuzzleId
       ? `${window.location.origin}/puzzles/${this.previousPuzzleId}`
       : undefined;
-    this.dialog.open(SharePuzzleDialogComponent, { data: { url, previousUrl }, width: '400px' });
+    this.dialog.open(SharePuzzleDialogComponent, {
+      data: {
+        url, previousUrl,
+        puzzleId: this.puzzle.id,
+        previousPuzzleId: this.previousPuzzleId ?? undefined,
+        source: 'standard',
+        canChallenge: this.isLoggedIn,
+      },
+      width: '400px',
+    });
   }
 
   /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */
