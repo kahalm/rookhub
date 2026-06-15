@@ -28,7 +28,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Select manifest variant
         working-directory: twa
@@ -41,18 +41,18 @@ jobs:
           fi
           cat twa-manifest.json | head -20
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
       # Android SDK bereitstellen + Lizenzen akzeptieren.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           accept-android-sdk-licenses: true
 
@@ -94,7 +94,7 @@ jobs:
         run: bubblewrap build --skipPwaValidation
 
       - name: Upload AAB + APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rookhub-android-${{ inputs.variant }}
           path: |

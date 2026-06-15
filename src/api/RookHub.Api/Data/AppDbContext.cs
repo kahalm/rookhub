@@ -47,6 +47,7 @@ public class AppDbContext : DbContext
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -153,6 +154,21 @@ public class AppDbContext : DbContext
 
             // Feed + Badge: (un)gelesene Benachrichtigungen eines Users.
             e.HasIndex(n => new { n.UserId, n.SeenAt });
+        });
+
+        modelBuilder.Entity<AdminMessage>(e =>
+        {
+            // Thread-Schlüssel = der Nicht-Admin-Teilnehmer; wird mit dem User gelöscht.
+            e.HasOne(m => m.User)
+             .WithMany()
+             .HasForeignKey(m => m.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(m => m.Body).HasMaxLength(4000);
+
+            // Thread laden (UserId, chronologisch) + Admin-Badge (ungelesene User-Antworten).
+            e.HasIndex(m => new { m.UserId, m.CreatedAt });
+            e.HasIndex(m => new { m.FromAdmin, m.SeenByAdminAt });
         });
 
         modelBuilder.Entity<Repertoire>(e =>

@@ -415,5 +415,99 @@
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.messages' | translate">
+          <div class="tab-content">
+            <h2>{{ 'admin.messages.title' | translate }}</h2>
+            <p class="hint">{{ 'admin.messages.intro' | translate }}</p>
+
+            <div class="msg-layout">
+              <!-- Linke Spalte: Thread-Liste + neue Konversation -->
+              <div class="msg-threads">
+                <div class="msg-new">
+                  <mat-form-field appearance="outline" class="msg-search">
+                    <mat-label>{{ 'admin.messages.searchUser' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="msgUserSearch" (keyup)="searchMsgUsers()">
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+                  @if (msgUserResults.length > 0) {
+                    <div class="msg-search-results">
+                      @for (u of msgUserResults; track u.id) {
+                        <button mat-menu-item (click)="startConversation(u)">
+                          <mat-icon>person</mat-icon> <span>{{ u.username }}</span>
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (threadsLoading) {
+                  <app-loading-spinner />
+                } @else if (threads.length === 0) {
+                  <p class="empty">{{ 'admin.messages.noThreads' | translate }}</p>
+                } @else {
+                  @for (t of threads; track t.userId) {
+                    <button class="msg-thread-row" [class.active]="t.userId === selectedThreadUserId"
+                            (click)="openThread(t.userId, t.username)">
+                      <div class="msg-thread-top">
+                        <span class="msg-thread-name">{{ t.username }}</span>
+                        @if (t.unreadFromUser > 0) {
+                          <span class="msg-unread-dot">{{ t.unreadFromUser }}</span>
+                        }
+                      </div>
+                      <div class="msg-thread-preview">
+                        <span class="msg-dir">{{ (t.lastFromAdmin ? ('messages.adminTeam' | translate) : t.username) }}:</span>
+                        {{ t.lastMessagePreview }}
+                      </div>
+                      <div class="msg-thread-date">{{ t.lastMessageAt | date:'short' }}</div>
+                    </button>
+                  }
+                }
+              </div>
+
+              <!-- Rechte Spalte: ausgewählter Thread -->
+              <div class="msg-detail">
+                @if (selectedThreadUserId == null) {
+                  <p class="empty">{{ 'admin.messages.selectThread' | translate }}</p>
+                } @else {
+                  <div class="msg-detail-header">
+                    <h3>{{ selectedThreadName }}</h3>
+                    <button mat-icon-button (click)="closeThread()" [attr.aria-label]="'common.close' | translate">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                  @if (threadLoading) {
+                    <app-loading-spinner />
+                  } @else {
+                    <div class="msg-thread-view">
+                      @if (threadMessages.length === 0) {
+                        <p class="empty">{{ 'admin.messages.emptyThread' | translate }}</p>
+                      }
+                      @for (m of threadMessages; track m.id) {
+                        <div class="bubble-row" [class.mine]="m.fromAdmin">
+                          <div class="bubble" [class.admin]="m.fromAdmin">
+                            <div class="sender">{{ m.fromAdmin ? ('messages.adminTeam' | translate) : selectedThreadName }}</div>
+                            <div class="body">{{ m.body }}</div>
+                            <div class="meta">{{ m.createdAt | date:'short' }}</div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                  <div class="msg-reply">
+                    <mat-form-field appearance="outline" class="msg-reply-field">
+                      <mat-label>{{ 'admin.messages.writeLabel' | translate }}</mat-label>
+                      <textarea matInput [(ngModel)]="adminDraft" rows="3" maxlength="4000"
+                                (keydown.control.enter)="sendAdminMessage()" [disabled]="adminSending"></textarea>
+                    </mat-form-field>
+                    <button mat-raised-button color="primary" (click)="sendAdminMessage()" [disabled]="adminSending || !adminDraft.trim()">
+                      <mat-icon>send</mat-icon> {{ 'messages.send' | translate }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     </div>

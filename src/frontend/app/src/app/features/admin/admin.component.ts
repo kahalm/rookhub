@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
+import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
@@ -85,7 +86,22 @@ export class AdminComponent implements OnInit {
 
   impersonatingId: number | null = null;
 
-  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService) {}
+  // --- Nachrichten (Admin↔User) ----------------------------------------
+  threads: AdminThreadSummary[] = [];
+  threadsLoading = false;
+  /** Aktuell geöffneter Thread (null = keiner ausgewählt). */
+  selectedThreadUserId: number | null = null;
+  selectedThreadName = '';
+  threadMessages: ChatMessage[] = [];
+  threadLoading = false;
+  adminDraft = '';
+  adminSending = false;
+  /** Neue Konversation: User-Suche. */
+  msgUserSearch = '';
+  msgUserResults: AdminUser[] = [];
+  msgSearching = false;
+
+  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
   impersonate(u: AdminUser): void {
@@ -112,10 +128,90 @@ export class AdminComponent implements OnInit {
     this.loadAllUsers();
     this.loadDailyPuzzle();
     this.loadMenuConfig();
+    this.loadThreads();
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
     });
+  }
+
+  // --- Nachrichten (Admin↔User) ----------------------------------------
+
+  loadThreads(): void {
+    this.threadsLoading = true;
+    this.messageService.getThreads().subscribe({
+      next: list => { this.threads = list; this.threadsLoading = false; this.messageService.refreshAdminUnread(); },
+      error: () => { this.threadsLoading = false; },
+    });
+  }
+
+  /** Bestehenden Thread öffnen + User-Antworten als gelesen markieren. */
+  openThread(userId: number, username: string): void {
+    this.selectedThreadUserId = userId;
+    this.selectedThreadName = username;
+    this.msgUserResults = [];
+    this.msgUserSearch = '';
+    this.threadLoading = true;
+    this.messageService.getAdminThread(userId).subscribe({
+      next: list => {
+        this.threadMessages = list;
+        this.threadLoading = false;
+        if (list.some(m => !m.fromAdmin && !m.readByRecipient)) {
+          this.messageService.markAdminSeen(userId).subscribe({
+            next: () => this.loadThreads(),
+            error: () => {},
+          });
+        }
+      },
+      error: () => { this.threadLoading = false; },
+    });
+  }
+
+  /** Nachricht des Admins absenden (startet den Thread, falls neu). */
+  sendAdminMessage(): void {
+    const body = this.adminDraft.trim();
+    if (!body || this.adminSending || this.selectedThreadUserId == null) return;
+    this.adminSending = true;
+    this.messageService.sendToUser(this.selectedThreadUserId, body).subscribe({
+      next: m => {
+        this.threadMessages = [...this.threadMessages, m];
+        this.adminDraft = '';
+        this.adminSending = false;
+        this.loadThreads();
+      },
+      error: () => {
+        this.adminSending = false;
+        this.snackbar.show(this.translate.instant('messages.sendError'), { duration: 3000 });
+      },
+    });
+  }
+
+  /** User für eine neue Konversation suchen (Username/E-Mail). */
+  searchMsgUsers(): void {
+    const q = this.msgUserSearch.trim();
+    if (q.length < 1) { this.msgUserResults = []; return; }
+    this.msgSearching = true;
+    this.adminService.getUsers(q, 1, 10).subscribe({
+      next: res => { this.msgUserResults = res.items; this.msgSearching = false; },
+      error: () => { this.msgSearching = false; },
+    });
+  }
+
+  /** Neue (oder bestehende) Konversation mit dem gewählten User beginnen. */
+  startConversation(user: AdminUser): void {
+    const existing = this.threads.find(t => t.userId === user.id);
+    if (existing) { this.openThread(user.id, user.username); return; }
+    this.selectedThreadUserId = user.id;
+    this.selectedThreadName = user.username;
+    this.threadMessages = [];
+    this.msgUserResults = [];
+    this.msgUserSearch = '';
+  }
+
+  closeThread(): void {
+    this.selectedThreadUserId = null;
+    this.threadMessages = [];
+    this.adminDraft = '';
   }
 
   loadUsers(): void {

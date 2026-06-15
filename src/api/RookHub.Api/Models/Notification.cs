@@ -39,4 +39,8 @@ public static class NotificationType
     public const string RevengePerformed = "revenge_performed";
     public const string ChallengeReceived = "challenge_received";
     public const string ChallengeResolved = "challenge_resolved";
+    /// <summary>Admin hat dem User eine Direktnachricht geschickt (→ User-Glocke, Link „/messages").</summary>
+    public const string AdminMessageReceived = "admin_message_received";
+    /// <summary>User hat im Thread geantwortet (→ Glocke aller Admins, Link „/admin").</summary>
+    public const string UserMessageReceived = "user_message_received";
 }

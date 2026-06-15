@@ -27,7 +27,9 @@
       "revenge_performed_failed": "{{username}} hat versucht, dein Puzzle zu rächen (gescheitert)",
       "challenge_received": "{{username}} hat dir eine Puzzle-Challenge geschickt",
       "challenge_resolved_solved": "{{username}} hat deine Challenge gelöst",
-      "challenge_resolved_failed": "{{username}} hat deine Challenge nicht gelöst"
+      "challenge_resolved_failed": "{{username}} hat deine Challenge nicht gelöst",
+      "admin_message_received": "Das Admin-Team hat dir eine Nachricht geschickt",
+      "user_message_received": "{{username}} hat auf deine Nachricht geantwortet"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -63,7 +65,8 @@
     "themeLight": "Helles Design",
     "themeDark": "Dunkles Design",
     "help": "Hilfe",
-    "chessable": "Chessable"
+    "chessable": "Chessable",
+    "messages": "Nachrichten"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1007,7 +1010,8 @@
       "groups": "Gruppen",
       "daily": "Tagespuzzle",
       "puzzles": "Puzzles",
-      "menu": "Menü"
+      "menu": "Menü",
+      "messages": "Nachrichten"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -1169,6 +1173,15 @@
         "install": "App installieren",
         "help": "Hilfe"
       }
+    },
+    "messages": {
+      "title": "Direktnachrichten",
+      "intro": "Schreibe einem User; er kann hier antworten. Die Konversation läuft als Thread weiter.",
+      "searchUser": "User finden…",
+      "noThreads": "Noch keine Konversationen.",
+      "selectThread": "Wähle eine Konversation oder starte eine neue.",
+      "emptyThread": "Noch keine Nachrichten — schreib die erste.",
+      "writeLabel": "Deine Nachricht"
     }
   },
   "analysis": {
@@ -1511,5 +1524,14 @@
     "throughputHint": "Das Holen schafft grob 15–20 Zeilen/min (inkl. VPN-Pausen). Ein Kurs mit 500 Zeilen dauert ca. 30 Min, 1000 Zeilen ca. 1 Std.",
     "etaRemaining": "noch ca. {{min}} Min",
     "importDuration": "Wartezeit {{queue}} · Holzeit {{fetch}}"
+  },
+  "messages": {
+    "title": "Nachrichten",
+    "emptyUser": "Noch keine Nachrichten. Das Admin-Team erreicht dich hier.",
+    "adminTeam": "Admin-Team",
+    "you": "Du",
+    "replyLabel": "Deine Antwort",
+    "send": "Senden",
+    "sendError": "Nachricht konnte nicht gesendet werden."
   }
 }

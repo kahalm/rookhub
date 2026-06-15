@@ -27,7 +27,9 @@
       "revenge_performed_failed": "{{username}} tried to avenge your puzzle (failed)",
       "challenge_received": "{{username}} sent you a puzzle challenge",
       "challenge_resolved_solved": "{{username}} solved your challenge",
-      "challenge_resolved_failed": "{{username}} did not solve your challenge"
+      "challenge_resolved_failed": "{{username}} did not solve your challenge",
+      "admin_message_received": "The admin team sent you a message",
+      "user_message_received": "{{username}} replied to your message"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -63,7 +65,8 @@
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
     "help": "Help",
-    "chessable": "Chessable"
+    "chessable": "Chessable",
+    "messages": "Messages"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1007,7 +1010,8 @@
       "groups": "Groups",
       "daily": "Daily Puzzle",
       "puzzles": "Puzzles",
-      "menu": "Menu"
+      "menu": "Menu",
+      "messages": "Messages"
     },
     "users": {
       "searchLabel": "Search users",
@@ -1169,6 +1173,15 @@
         "install": "Install app",
         "help": "Help"
       }
+    },
+    "messages": {
+      "title": "Direct messages",
+      "intro": "Write to a user; they can reply here. The conversation continues as a thread.",
+      "searchUser": "Find user…",
+      "noThreads": "No conversations yet.",
+      "selectThread": "Select a conversation or start a new one.",
+      "emptyThread": "No messages yet — write the first one.",
+      "writeLabel": "Your message"
     }
   },
   "analysis": {
@@ -1511,5 +1524,14 @@
     "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
     "etaRemaining": "~{{min}} min left",
     "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
+  },
+  "messages": {
+    "title": "Messages",
+    "emptyUser": "No messages yet. The admin team will reach you here.",
+    "adminTeam": "Admin team",
+    "you": "You",
+    "replyLabel": "Your reply",
+    "send": "Send",
+    "sendError": "Could not send the message."
   }
 }

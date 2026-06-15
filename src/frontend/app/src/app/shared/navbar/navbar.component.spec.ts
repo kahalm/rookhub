@@ -7,6 +7,7 @@ import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
+import { MessageService } from '../../core/message.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService } from '../../core/theme.service';
 
@@ -21,6 +22,7 @@ describe('NavbarComponent', () => {
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
         { provide: InAppNotificationService, useValue: notif },
+        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
         { provide: LocaleService, useValue: {} },
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
@@ -32,6 +34,7 @@ describe('NavbarComponent', () => {
       TestBed.inject(CourseService),
       TestBed.inject(MenuService),
       TestBed.inject(InAppNotificationService),
+      TestBed.inject(MessageService),
       TestBed.inject(LocaleService),
       TestBed.inject(ThemeService),
       TestBed.inject(TranslateService),

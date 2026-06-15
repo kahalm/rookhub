@@ -29,6 +29,8 @@ export function notificationIcon(n: AppNotification): string {
     case 'revenge_performed': return 'sports_kabaddi';
     case 'challenge_received': return 'sports_esports';
     case 'challenge_resolved': return 'emoji_events';
+    case 'admin_message_received': return 'mail';
+    case 'user_message_received': return 'mark_email_unread';
     default: return 'notifications';
   }
 }

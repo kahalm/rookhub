@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.141.0';
+export const APP_VERSION = '0.142.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,13 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.142.0", date: "2026-06-15", changes: [
+    { en: "Direct messages: The admin team can now send a message to a user, and the user can reply right here — the conversation continues as a thread. A new \"Messages\" page (mail icon in the navbar, with an unread badge) shows your conversation; you get a bell notification for every new admin message.", de: "Direktnachrichten: Das Admin-Team kann einem User jetzt eine Nachricht schicken, und der User kann direkt hier antworten — die Konversation läuft als Thread weiter. Eine neue Seite „Nachrichten\" (Brief-Symbol in der Navigation, mit Ungelesen-Markierung) zeigt deine Konversation; bei jeder neuen Admin-Nachricht gibt es eine Glocken-Benachrichtigung." },
+    { en: "Admin area: A new \"Messages\" tab lists all conversations (with an unread-replies badge), lets you open a thread, write to a user, and start a new conversation via user search.", de: "Admin-Bereich: Ein neuer Tab „Nachrichten\" listet alle Konversationen (mit Markierung ungelesener Antworten), öffnet einen Thread, schreibt einem User und startet per User-Suche eine neue Konversation." },
+  ]},
+  { version: "0.141.1", date: "2026-06-15", changes: [
+    { en: "Build pipeline (CI): All GitHub Actions were updated to versions running on Node.js 24, removing the deprecation warning about Node.js 20 (which GitHub will stop supporting on the build runners). No effect on the app itself.", de: "Build-Pipeline (CI): Alle GitHub-Actions wurden auf Versionen aktualisiert, die unter Node.js 24 laufen — damit entfällt die Verfallswarnung zu Node.js 20 (das GitHub auf den Build-Runnern künftig nicht mehr unterstützt). Keine Auswirkung auf die App selbst." },
+  ]},
   { version: "0.140.2", date: "2026-06-15", changes: [
     { en: "Analysis board more robust against engine crashes: If the local Stockfish crashes on a certain position, it is no longer reloaded several times in a row (which reloaded the ~7 MB engine each time and immediately crashed again on the same position) — the analysis now gives up cleanly on that position instead of \"thrashing\". In addition, no calculation is started at all for checkmate/stalemate positions.", de: "Analyse-Brett robuster gegen Engine-Abstürze: Stürzt der lokale Stockfish auf einer bestimmten Stellung ab, wird er nicht mehr mehrfach hintereinander neu geladen (das lud jedes Mal die ~7 MB große Engine neu und brachte dieselbe Stellung sofort wieder zum Absturz) — die Analyse gibt auf dieser Stellung jetzt sauber auf, statt zu „thrashen\". Außerdem wird auf Matt-/Patt-Stellungen gar keine Berechnung mehr gestartet." },
     { en: "The crash report now includes the affected position (FEN), so that such engine crashes can be reproduced and fixed in a targeted way.", de: "Die Absturzmeldung enthält jetzt die betroffene Stellung (FEN), damit solche Engine-Abstürze gezielt nachgestellt und behoben werden können." },

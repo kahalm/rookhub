@@ -14,6 +14,7 @@ import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
+import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
@@ -62,6 +63,12 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </mat-menu>
+        <button mat-icon-button routerLink="/messages" class="msg-mail"
+                [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
+                [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
+                [attr.aria-label]="'messages.title' | translate">
+          <mat-icon>mail</mat-icon>
+        </button>
         <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
                 class="notif-bell" [class.has-unseen]="notifCount > 0"
                 matBadge="!" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="medium"
@@ -194,6 +201,9 @@ export class NavbarComponent implements OnInit {
   /** Im Dropdown angezeigte Benachrichtigungen (beim Öffnen geladen). */
   notifications: AppNotification[] = [];
 
+  /** Mail-Badge: ungelesene Admin-Nachrichten des Users. */
+  messagesUnread = 0;
+
   private destroyRef = inject(DestroyRef);
 
   get themeIcon(): string {
@@ -210,7 +220,7 @@ export class NavbarComponent implements OnInit {
     return labels[this.theme.preference];
   }
 
-  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private notif: InAppNotificationService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router) {}
+  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router) {}
 
   ngOnInit(): void {
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
@@ -238,12 +248,13 @@ export class NavbarComponent implements OnInit {
     // Glocken-Badge: ungelesene In-App-Benachrichtigungen. Zähler-Strom binden, bei Login/Logout
     // sofort aktualisieren und im Hintergrund alle 60 s nachziehen (zeigt „Neues" ohne Reload).
     this.notif.unseenCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.notifCount = c);
+    this.messages.userUnread$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.messagesUnread = c);
     this.auth.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.auth.isLoggedIn) this.notif.refreshCount();
-      else { this.notif.reset(); this.notifications = []; }
+      if (this.auth.isLoggedIn) { this.notif.refreshCount(); this.messages.refreshUserUnread(); }
+      else { this.notif.reset(); this.messages.reset(); this.notifications = []; }
     });
     timer(0, 60000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.auth.isLoggedIn) this.notif.refreshCount();
+      if (this.auth.isLoggedIn) { this.notif.refreshCount(); this.messages.refreshUserUnread(); }
     });
   }
 
