@@ -53,6 +53,15 @@ public class ChessableImport
     public int Skipped { get; set; }
     public int Invalid { get; set; }
 
+    /// <summary>
+    /// Round-Robin-„Runde" für die faire Queue-Reihenfolge, bei der Anlage eingefroren: Anzahl der
+    /// zu diesem Zeitpunkt bereits aktiven (Status "running") Importe DESSELBEN Users. Der 1. Job
+    /// eines Users hat Runde 0, sein 2. Runde 1 usw. Sortiert man wartende Jobs nach (QueueRound,
+    /// CreatedAt), rückt der erste Job eines neu hinzukommenden Users direkt hinter den ersten des
+    /// bereits wartenden Users — danach wird abgewechselt. Eingefroren ⇒ stabil über Abschlüsse hinweg.
+    /// </summary>
+    public int QueueRound { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>Zeitpunkt, an dem der Job aus der Queue gezogen wurde und das Holen begann

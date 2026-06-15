@@ -214,6 +214,9 @@ public class ChessableController : BaseApiController
         if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
             return BadRequest(new { message = "No Chessable bearer saved" });
 
+        // Round-Robin-Runde einfrieren: wie viele Importe dieses Users sind GERADE schon aktiv?
+        // (0 = erster ⇒ Runde 0). Bestimmt die faire Position; siehe ChessableImportService.FairOrder.
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == userId && x.Status == "running");
         var import = new ChessableImport
         {
             UserId = userId,
@@ -221,19 +224,24 @@ public class ChessableController : BaseApiController
             CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
             Target = target,
             Status = "running",
+            QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow
         };
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync();
 
         // Rohdaten schon gecacht → kein Chessable-Abruf nötig → sofort verarbeiten,
-        // nicht hinter den (seriellen) Chessable-Fetches in der Queue warten.
+        // nicht hinter den (seriellen) Chessable-Fetches in der Queue warten. Phase/StartedAt sofort
+        // setzen → der faire Picker (RunNextAsync, greift nur Phase "queued") überspringt diesen Job.
         if (await _chessable.IsCourseCachedAsync(bid))
         {
+            import.Phase = "fetching";
+            import.StartedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
             RunDetached(import.Id);
             return Accepted(ToDto(import, 0));
         }
-        await EnqueueRunAsync(import.Id);
+        await EnqueueNextAsync();
         return Accepted(ToDto(import, await QueuedAheadAsync(import)));
     }
 
@@ -341,7 +349,7 @@ public class ChessableController : BaseApiController
             import.Phase = "queued";
             import.Attempts = 0;
             await _db.SaveChangesAsync();
-            await EnqueueRunAsync(import.Id);
+            await EnqueueNextAsync();
         }
         return Ok(ToDto(import, await QueuedAheadAsync(import)));
     }
@@ -352,12 +360,15 @@ public class ChessableController : BaseApiController
         return await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == id && i.UserId == userId);
     }
 
-    private async Task EnqueueRunAsync(int importId)
+    /// <summary>Reiht ein Ticket ein, das den fair als Nächstes dran befindlichen Import verarbeitet
+    /// (Round-Robin über die User), nicht zwingend den gerade angelegten — siehe
+    /// <see cref="ChessableImportService.RunNextAsync"/>.</summary>
+    private async Task EnqueueNextAsync()
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
         {
             var svc = sp.GetRequiredService<ChessableImportService>();
-            await svc.RunAsync(importId, ct);
+            await svc.RunNextAsync(ct);
         });
     }
 
@@ -376,11 +387,18 @@ public class ChessableController : BaseApiController
         });
     }
 
-    /// <summary>Globale Warteschlangen-Position: Anzahl laufender/wartender Importe (aller User) davor.</summary>
+    /// <summary>Globale Warteschlangen-Position (aller User): Anzahl der Importe, die fair vor diesem
+    /// verarbeitet werden — die gerade laufenden (Phase ≠ "queued") plus die in fairer Reihenfolge
+    /// davor wartenden. 0, wenn dieser Import bereits läuft oder nicht mehr wartet.</summary>
     private async Task<int> QueuedAheadAsync(ChessableImport i)
-        => i.Status == "running"
-            ? await _db.ChessableImports.CountAsync(x => x.Status == "running" && x.Id < i.Id)
-            : 0;
+    {
+        if (i.Status != "running" || i.Phase != "queued") return 0;
+        var running = await _db.ChessableImports.Where(x => x.Status == "running").ToListAsync();
+        var inProgress = running.Count(x => x.Phase != "queued");
+        var order = ChessableImportService.FairOrder(running.Where(x => x.Phase == "queued"));
+        var idx = order.FindIndex(x => x.Id == i.Id);
+        return inProgress + (idx < 0 ? 0 : idx);
+    }
 
     private static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(
         i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,

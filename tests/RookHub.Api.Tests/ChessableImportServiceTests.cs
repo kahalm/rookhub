@@ -119,6 +119,86 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal("—", ChessableImportService.FormatDuration(TimeSpan.FromSeconds(-5)));
     }
 
+    // ===== Faire Queue-Reihenfolge (Round-Robin über User) =====
+
+    private static ChessableImport Q(int id, int userId, int round, DateTime created) =>
+        new() { Id = id, UserId = userId, QueueRound = round, CreatedAt = created, Status = "running", Phase = "queued" };
+
+    [Fact]
+    public void FairOrder_NewUserGoesSecond_ThenContinuesFirstUser()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // User1 reiht 3 ein (Runden 0,1,2), danach User2 einen (Runde 0).
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(1, 1, 0, t0), Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)),
+            Q(4, 2, 0, t0.AddSeconds(3)),
+        });
+        // U2 rückt auf Platz 2 (hinter U1s ersten), dann folgen U1s restliche.
+        Assert.Equal(new[] { 1, 4, 2, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public void FairOrder_StableWhenEarlierJobsCompleted()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // U1s erster (Runde 0) ist bereits fertig und raus → verbleiben U1b(1), U1c(2), U2a(0).
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)), Q(4, 2, 0, t0.AddSeconds(3)),
+        });
+        // Eingefrorene Runde ⇒ U2a (Runde 0) kommt weiterhin vor U1s Folge-Jobs.
+        Assert.Equal(new[] { 4, 2, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public void FairOrder_TwoUsersInterleave()
+    {
+        var t0 = new DateTime(2026, 6, 15, 10, 0, 0, DateTimeKind.Utc);
+        // U1: 3 Jobs (0,1,2), U2: 2 Jobs (0,1) → abwechselnd, U1 zuerst je Runde.
+        var order = ChessableImportService.FairOrder(new[]
+        {
+            Q(1, 1, 0, t0), Q(2, 1, 1, t0.AddSeconds(1)), Q(3, 1, 2, t0.AddSeconds(2)),
+            Q(4, 2, 0, t0.AddSeconds(3)), Q(5, 2, 1, t0.AddSeconds(4)),
+        });
+        Assert.Equal(new[] { 1, 4, 2, 5, 3 }, order.Select(i => i.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task RunNextAsync_ProcessesQueuedImportsInFairOrder()
+    {
+        // User 1 reiht zuerst 2 Kurse ein (Runden 0,1), dann User 2 einen (Runde 0).
+        // Faire Reihenfolge: U1a, U2a, U1b — der Kurs von User2 rückt vor U1s zweiten.
+        foreach (var uid in new[] { 1, 2 })
+            if (!await _db.AppUsers.AnyAsync(u => u.Id == uid))
+                _db.AppUsers.Add(new AppUser { Id = uid, Username = $"u{uid}", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var u1a = new ChessableImport { UserId = 1, Bid = "u1a", CourseName = "U1A", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u1b = new ChessableImport { UserId = 1, Bid = "u1b", CourseName = "U1B", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        var u2a = new ChessableImport { UserId = 2, Bid = "u2a", CourseName = "U2A", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t0.AddSeconds(2), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(u1a, u1b, u2a);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync();
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u1a.Id))!.Status);
+        Assert.Equal("running", (await _db.ChessableImports.FindAsync(u2a.Id))!.Status); // wartet noch
+
+        await _svc.RunNextAsync();
+        // User2 ist vor U1s zweitem Kurs dran.
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u2a.Id))!.Status);
+        Assert.Equal("running", (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+
+        await _svc.RunNextAsync();
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(u1b.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RunNextAsync_NoQueued_IsNoOp()
+    {
+        await _svc.RunNextAsync(); // keine wartenden Importe → kein Fehler
+        Assert.Equal(0, await _db.ChessableImports.CountAsync());
+    }
+
     [Fact]
     public async Task RunAsync_AlreadyCompleted_IsNoOp()
     {

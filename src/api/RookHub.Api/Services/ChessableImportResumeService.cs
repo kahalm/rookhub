@@ -34,18 +34,24 @@ public class ChessableImportResumeService : IHostedService
 
             var running = await db.ChessableImports
                 .Where(i => i.Status == "running")
-                .Select(i => i.Id)
                 .ToListAsync(cancellationToken);
 
             if (running.Count == 0) return;
 
+            // Unterbrochene Importe (auch mitten in "fetching"/"importing") als wartend markieren,
+            // damit sie der faire Picker (RunNextAsync, greift nur Phase "queued") wieder aufnimmt.
+            // RunAsync ist resume-fähig (PGN-Checkpoint, idempotent). Je Import ein Ticket.
+            foreach (var imp in running)
+                imp.Phase = "queued";
+            await db.SaveChangesAsync(cancellationToken);
+
             _logger.LogInformation("Resume: {Count} unterbrochene Chessable-Importe werden fortgesetzt", running.Count);
-            foreach (var id in running)
+            foreach (var _ in running)
             {
                 await _queue.EnqueueAsync(async (sp, ct) =>
                 {
                     var svc = sp.GetRequiredService<ChessableImportService>();
-                    await svc.RunAsync(id, ct);
+                    await svc.RunNextAsync(ct);
                 });
             }
         }

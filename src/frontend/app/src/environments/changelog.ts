@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.131.0';
+export const APP_VERSION = '0.132.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.132.0', date: '2026-06-15', changes: [
+    'Chessable-Warteschlange ist jetzt fair: Reiht ein Nutzer viele Kurse hintereinander ein und ein anderer kommt dazu, rückt dessen erster Kurs direkt an die zweite Stelle — danach werden die Importe der Nutzer abwechselnd verarbeitet (Round-Robin), statt dass einer alle anderen blockiert.',
+  ]},
   { version: '0.131.0', date: '2026-06-15', changes: [
     'Chessable-Import: Die „Kurs fertig"-Benachrichtigung zeigt jetzt, wie lange der Import gedauert hat — Wartezeit in der Warteschlange und reine Holzeit. In der Admin-Übersicht steht die Dauer zusätzlich bei jedem abgeschlossenen Import.',
   ]},

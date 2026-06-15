@@ -58,14 +58,41 @@ public class ChessableImportService
         _logger = logger;
     }
 
-    /// <summary>Reiht den Import zum (Resume-)Verarbeiten in die serielle Background-Queue ein.</summary>
-    private async Task EnqueueResumeAsync(int importId)
+    /// <summary>Reiht ein Ticket ein, das den fair als Nächstes dran befindlichen wartenden Import
+    /// verarbeitet (nicht einen festen). So bestimmt die faire Reihenfolge — nicht die FIFO-Position
+    /// in der geteilten Background-Queue —, welcher Import als Nächstes läuft.</summary>
+    private async Task EnqueueNextAsync()
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
         {
             var svc = sp.GetRequiredService<ChessableImportService>();
-            await svc.RunAsync(importId, ct);
+            await svc.RunNextAsync(ct);
         });
+    }
+
+    /// <summary>
+    /// Faire Reihenfolge wartender Importe: nach der bei Anlage eingefrorenen
+    /// <see cref="ChessableImport.QueueRound"/> (Round-Robin über die User), dann nach Einreih-Zeit.
+    /// Folge: der erste Job eines neu hinzukommenden Users (Runde 0) rückt vor die noch wartenden
+    /// Folge-Jobs (Runde ≥ 1) des Erst-Users — also auf die 2. Stelle, danach wird abgewechselt.
+    /// Da <see cref="ChessableImport.QueueRound"/> eingefroren ist, bleibt die Reihenfolge auch dann
+    /// stabil, wenn frühere Jobs fertig werden. Rein/testbar.
+    /// </summary>
+    public static List<ChessableImport> FairOrder(IEnumerable<ChessableImport> queued) =>
+        queued
+            .OrderBy(i => i.QueueRound).ThenBy(i => i.CreatedAt).ThenBy(i => i.Id)
+            .ToList();
+
+    /// <summary>Verarbeitet den fair als Nächstes dran befindlichen wartenden Import (Phase "queued").
+    /// No-op, wenn keiner wartet (z. B. Ticket-Überschuss nach einem Abbruch).</summary>
+    public async Task RunNextAsync(CancellationToken ct = default)
+    {
+        var queued = await _db.ChessableImports
+            .Where(i => i.Status == "running" && i.Phase == "queued")
+            .ToListAsync(ct);
+        var next = FairOrder(queued).FirstOrDefault();
+        if (next is null) return;
+        await RunAsync(next.Id, ct);
     }
 
     /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
@@ -194,7 +221,7 @@ public class ChessableImportService
                         _logger.LogWarning(
                             "Chessable-Import {Id} Hol-Phase ohne Fortschritt (Versuch {Attempt}/{Max}) — wird automatisch neu eingereiht",
                             import.Id, import.Attempts, MaxAttempts);
-                        await EnqueueResumeAsync(import.Id);
+                        await EnqueueNextAsync();
                         return;
                     }
                     throw new TimeoutException("Zeitüberschreitung beim Kurs-Abruf (kein Fortschritt)");
