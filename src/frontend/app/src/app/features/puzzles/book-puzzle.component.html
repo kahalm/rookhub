@@ -29,7 +29,7 @@
               } @else {
                 {{ 'book.viz.noMoveYet' | translate }}
               }
-              @if (vizPiecesHidden) {
+              @if (vizPiecesHidden || visualizationMode === 1) {
                 <button class="board-hint-show" (click)="onVizShow()">
                   {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
                 </button>

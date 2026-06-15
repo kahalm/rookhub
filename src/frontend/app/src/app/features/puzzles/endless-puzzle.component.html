@@ -238,7 +238,7 @@
                   } @else {
                     {{ 'endless.game.vizNoMove' | translate }}
                   }
-                  @if (vizPiecesHidden) {
+                  @if (vizPiecesHidden || visualizationMode === 1) {
                     <button class="board-hint-show" (click)="onVizShow()">
                       {{ (vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate }}
                     </button>

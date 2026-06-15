@@ -372,9 +372,18 @@ export abstract class BasePuzzleSolver {
     // Visualisierung: Brett auf der eingefrorenen Startstellung halten, solange gelöst wird;
     // am Ende (Endzustand der Komponente) das echte Brett aufdecken.
     if (this.visualizationMode && (this.isSolving || this.state === 'SETUP')) {
-      this.boardFen = this.frozenFen || this.actualFen;
-      this.turnColor = this.orientation;
-      this.isCheck = false;
+      // Level 1 („Blindspiel"): Beim Drücken von „Anzeigen" kurz die TATSÄCHLICHE aktuelle
+      // Stellung zeigen (sonst bleibt das Brett auf der eingefrorenen Startstellung). Ab Level 2
+      // deckt stattdessen CSS die Figuren auf — das Brett bleibt dort immer eingefroren.
+      if (this.visualizationMode === 1 && this.vizShowPressed) {
+        this.boardFen = this.actualFen;
+        this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
+        this.isCheck = this.chess.isCheck();
+      } else {
+        this.boardFen = this.frozenFen || this.actualFen;
+        this.turnColor = this.orientation;
+        this.isCheck = false;
+      }
       this.dests = new Map();
       return;
     }
@@ -415,9 +424,13 @@ export abstract class BasePuzzleSolver {
     if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
     this.vizShowPressed = true;
     this.vizShowCount++;
+    // Level 1: Brett auf die tatsächliche aktuelle Stellung umstellen (Level 2–4 decken per CSS auf).
+    if (this.visualizationMode === 1) this.updateBoard();
     this.vizShowTimer = setTimeout(() => {
       this.vizShowPressed = false;
       this.vizShowTimer = undefined;
+      // Level 1: wieder auf die eingefrorene Startstellung zurück.
+      if (this.visualizationMode === 1) this.updateBoard();
     }, 3000);
   }
 
