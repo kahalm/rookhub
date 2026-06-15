@@ -35,6 +35,7 @@ public class ChessableImportService
     private readonly RepertoireService _repertoires;
     private readonly PgnImportService _pgnImport;
     private readonly IBackgroundTaskQueue _taskQueue;
+    private readonly NotificationService _notifications;
     private readonly ILogger<ChessableImportService> _logger;
 
     public ChessableImportService(
@@ -44,6 +45,7 @@ public class ChessableImportService
         RepertoireService repertoires,
         PgnImportService pgnImport,
         IBackgroundTaskQueue taskQueue,
+        NotificationService notifications,
         ILogger<ChessableImportService> logger)
     {
         _db = db;
@@ -52,6 +54,7 @@ public class ChessableImportService
         _repertoires = repertoires;
         _pgnImport = pgnImport;
         _taskQueue = taskQueue;
+        _notifications = notifications;
         _logger = logger;
     }
 
@@ -215,6 +218,11 @@ public class ChessableImportService
             _logger.LogInformation(
                 "Chessable-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
                 import.Id, import.Target, courseName, import.Bid, import.Imported);
+
+            // User benachrichtigen: Kurs ist fertig importiert → direkt zur passenden Ansicht.
+            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
+                new Dictionary<string, string> { ["courseName"] = courseName, ["target"] = import.Target },
+                import.Target == "book" ? "/courses" : "/repertoires");
         }
         catch (ChessableProxyException ex)
         {
@@ -291,6 +299,11 @@ public class ChessableImportService
         import.Error = Trunc(error, 1000);
         import.CompletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // User benachrichtigen: Import fehlgeschlagen.
+        var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
+        await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportFailed,
+            new Dictionary<string, string> { ["courseName"] = name }, "/chessable");
     }
 
     private static string Trunc(string s, int max) => s.Length > max ? s[..max] : s;

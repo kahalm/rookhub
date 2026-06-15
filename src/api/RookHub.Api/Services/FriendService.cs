@@ -8,8 +8,13 @@ namespace RookHub.Api.Services;
 public class FriendService
 {
     private readonly AppDbContext _db;
+    private readonly NotificationService _notifications;
 
-    public FriendService(AppDbContext db) => _db = db;
+    public FriendService(AppDbContext db, NotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
 
     /// <summary>Sind die beiden User befreundet (akzeptierte Freundschaft, egal in welche Richtung angefragt)?
     /// Basis für die Sichtbarkeit von Freund-Stats/Revenge — nur Freunde dürfen die Puzzle-Historie sehen.</summary>
@@ -114,6 +119,11 @@ public class FriendService
             throw new InvalidOperationException("A friendship or request already exists.");
         }
 
+        // Adressat benachrichtigen: neue Freundschaftsanfrage.
+        var requesterName = await UsernameAsync(requesterId);
+        await _notifications.CreateAsync(addresseeId, NotificationType.FriendRequestReceived,
+            new Dictionary<string, string> { ["username"] = requesterName }, "/friends");
+
         return friendship;
     }
 
@@ -130,7 +140,15 @@ public class FriendService
 
         friendship.Status = FriendshipStatus.Accepted;
         await _db.SaveChangesAsync();
+
+        // Ursprünglichen Anfrager benachrichtigen: Anfrage angenommen.
+        var accepterName = await UsernameAsync(userId);
+        await _notifications.CreateAsync(friendship.RequesterId, NotificationType.FriendRequestAccepted,
+            new Dictionary<string, string> { ["username"] = accepterName }, "/friends");
     }
+
+    private async Task<string> UsernameAsync(int userId)
+        => await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
 
     public async Task DeclineRequestAsync(int friendshipId, int userId)
     {

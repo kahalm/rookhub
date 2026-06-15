@@ -25,7 +25,7 @@ public class FriendControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _friendService = new FriendService(_db);
+        _friendService = new FriendService(_db, new NotificationService(_db));
         _puzzleService = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
         _controller = new FriendController(_friendService, _puzzleService);
     }

@@ -45,7 +45,7 @@ public class ChessableImportServiceTests : IDisposable
     {
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
         return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
-            _queue, NullLogger<ChessableImportService>.Instance);
+            _queue, new NotificationService(_db), NullLogger<ChessableImportService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -81,6 +81,8 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(3, reloaded.Imported); // LineCount
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
         Assert.Equal(1, await _db.RepertoireFiles.CountAsync());
+        // Glocke: User wird über den fertigen Import benachrichtigt.
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted));
     }
 
     [Fact]
@@ -128,6 +130,8 @@ public class ChessableImportServiceTests : IDisposable
         var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
         Assert.Equal("failed", reloaded!.Status);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
+        // Glocke: User wird über den fehlgeschlagenen Import benachrichtigt.
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportFailed));
     }
 
     [Fact]

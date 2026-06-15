@@ -46,6 +46,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +138,21 @@ public class AppDbContext : DbContext
 
             // Feed + Badge: (un)gelesene Benachrichtigungen eines Targets.
             e.HasIndex(n => new { n.TargetUserId, n.SeenAt });
+        });
+
+        modelBuilder.Entity<Notification>(e =>
+        {
+            // Generische In-App-Benachrichtigung; wird mit dem User gelöscht.
+            e.HasOne(n => n.User)
+             .WithMany()
+             .HasForeignKey(n => n.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.Property(n => n.Type).HasMaxLength(60);
+            e.Property(n => n.Link).HasMaxLength(300);
+
+            // Feed + Badge: (un)gelesene Benachrichtigungen eines Users.
+            e.HasIndex(n => new { n.UserId, n.SeenAt });
         });
 
         modelBuilder.Entity<Repertoire>(e =>

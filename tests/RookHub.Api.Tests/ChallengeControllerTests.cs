@@ -22,7 +22,7 @@ public class ChallengeControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new ChallengeService(_db, new FriendService(_db));
+        _service = new ChallengeService(_db, new FriendService(_db, new NotificationService(_db)), new NotificationService(_db));
         _controller = new ChallengeController(_service);
     }
 

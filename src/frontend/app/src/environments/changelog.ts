@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.124.0';
+export const APP_VERSION = '0.125.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.125.0', date: '2026-06-15', changes: [
+    'Neue Benachrichtigungs-Glocke oben in der Navigation: ein roter Punkt zeigt, wenn etwas Neues da ist. Im Dropdown siehst du die letzten Ereignisse und springst mit einem Klick zur passenden Stelle; beim Öffnen gilt alles als gelesen.',
+    'Du wirst jetzt benachrichtigt bei: fertig importiertem Chessable-Kurs (oder fehlgeschlagenem Import), neuer Freundschaftsanfrage, angenommener Anfrage, einer an dich gesendeten/aufgelösten Puzzle-Challenge sowie wenn ein Freund eines deiner Puzzles im Revenge-Modus angeht. (E-Mail/Push folgen später.)',
+    'Der bisherige Zähler am Freunde-Menü ist in die zentrale Glocke umgezogen.',
+  ]},
   { version: '0.124.0', date: '2026-06-15', changes: [
     'Chessable (Admin): Im Chessable-Tab sehen Admins jetzt einen neuen Bereich „Alle Importe (Admin)" mit sämtlichen Kurs-Importen aller Nutzer — inklusive Absender, Status und vollständigem Verlauf, live aktualisiert.',
     'Dashboard (Admin): Sobald irgendwo ein Chessable-Import läuft oder wartet, erscheint für Admins auf dem Dashboard eine Karte „Chessable-Warteschlange" mit der Anzahl und einer Liste der aktiven Importe (Kurs, Nutzer, Fortschritt).',

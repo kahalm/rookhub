@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Output, OnInit, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { of, switchMap, catchError, merge, map, combineLatest } from 'rxjs';
+import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,8 +13,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { MenuService } from '../../core/menu.service';
-import { ChallengeService } from '../../core/challenge.service';
-import { RevengeService } from '../../core/revenge.service';
+import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 
@@ -31,7 +30,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('dashboard')) { <button mat-button routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
           @if (can('repertoires')) { <button mat-button routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
           @if (can('tournaments')) { <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-button routerLink="/friends" [matBadge]="challengeCount" [matBadgeHidden]="challengeCount === 0" matBadgeColor="warn" matBadgeSize="small">{{ 'nav.friends' | translate }}</button> }
+          @if (can('friends')) { <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
@@ -50,7 +49,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('dashboard')) { <button mat-menu-item routerLink="/dashboard">{{ 'nav.dashboard' | translate }}</button> }
           @if (can('repertoires')) { <button mat-menu-item routerLink="/repertoires">{{ 'nav.repertoires' | translate }}</button> }
           @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
-          @if (can('friends')) { <button mat-menu-item routerLink="/friends" [matBadge]="challengeCount" [matBadgeHidden]="challengeCount === 0" matBadgeColor="warn" matBadgeSize="small" matBadgeOverlap="false">{{ 'nav.friends' | translate }}</button> }
+          @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
@@ -60,6 +59,24 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           }
           @if (auth.isAdmin) {
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
+          }
+        </mat-menu>
+        <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
+                [matBadge]="notifCount" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="small"
+                [matTooltip]="'notifications.title' | translate" [attr.aria-label]="'notifications.title' | translate">
+          <mat-icon>notifications</mat-icon>
+        </button>
+        <mat-menu #notifMenu="matMenu" class="notif-menu">
+          <div class="notif-header">{{ 'notifications.title' | translate }}</div>
+          @if (notifications.length === 0) {
+            <div class="notif-empty">{{ 'notifications.empty' | translate }}</div>
+          } @else {
+            @for (n of notifications; track n.id) {
+              <button mat-menu-item class="notif-item" [class.notif-unseen]="!n.seen" (click)="openNotification(n)">
+                <mat-icon>{{ iconFor(n) }}</mat-icon>
+                <span class="notif-text">{{ textFor(n) }}</span>
+              </button>
+            }
           }
         </mat-menu>
         <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
@@ -117,6 +134,11 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
     .spacer { flex: 1 1 auto; }
     .mobile-menu-btn { display: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
+    .notif-header { padding: 8px 16px 4px; font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
+    .notif-empty { padding: 8px 16px 12px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .notif-item .notif-text { white-space: normal; line-height: 1.25; }
+    .notif-item.notif-unseen { font-weight: 600; }
+    .notif-item.notif-unseen mat-icon { color: var(--mat-sys-primary, #3f51b5); }
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .mobile-menu-btn { display: inline-flex; }
@@ -134,8 +156,10 @@ export class NavbarComponent implements OnInit {
   visible = new Set<string>();
   can(key: string): boolean { return this.visible.has(key); }
 
-  /** Badge am Freunde-Menü: offene eingehende Challenges + ungelesene Revanche-Benachrichtigungen. */
-  challengeCount = 0;
+  /** Glocken-Badge: Anzahl ungelesener In-App-Benachrichtigungen. */
+  notifCount = 0;
+  /** Im Dropdown angezeigte Benachrichtigungen (beim Öffnen geladen). */
+  notifications: AppNotification[] = [];
 
   private destroyRef = inject(DestroyRef);
 
@@ -153,7 +177,7 @@ export class NavbarComponent implements OnInit {
     return labels[this.theme.preference];
   }
 
-  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private challenge: ChallengeService, private revenge: RevengeService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService) {}
+  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private notif: InAppNotificationService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router) {}
 
   ngOnInit(): void {
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
@@ -178,13 +202,49 @@ export class NavbarComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(show => this.showCourses = show);
 
-    // Badge: offene Challenges + ungelesene Revanche-Benachrichtigungen; bei jedem Login neu laden.
-    combineLatest([this.challenge.incomingCount$, this.revenge.unseenCount$])
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(([c, r]) => this.challengeCount = c + r);
+    // Glocken-Badge: ungelesene In-App-Benachrichtigungen. Zähler-Strom binden, bei Login/Logout
+    // sofort aktualisieren und im Hintergrund alle 60 s nachziehen (zeigt „Neues" ohne Reload).
+    this.notif.unseenCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.notifCount = c);
     this.auth.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      if (this.auth.isLoggedIn) { this.challenge.refreshCount(); this.revenge.refreshCount(); }
-      else this.challengeCount = 0;
+      if (this.auth.isLoggedIn) this.notif.refreshCount();
+      else { this.notif.reset(); this.notifications = []; }
     });
+    timer(0, 60000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.auth.isLoggedIn) this.notif.refreshCount();
+    });
+  }
+
+  /** Glocke geöffnet: Liste laden und alle als gelesen markieren (leert das Badge). */
+  onBellOpened(): void {
+    this.notif.list().subscribe({ next: list => this.notifications = list, error: () => {} });
+    this.notif.markAllSeen().subscribe({ error: () => {} });
+  }
+
+  /** Klick auf eine Benachrichtigung → zur hinterlegten Route navigieren. */
+  openNotification(n: AppNotification): void {
+    if (n.link) this.router.navigateByUrl(n.link);
+  }
+
+  /** Material-Icon je Benachrichtigungstyp. */
+  iconFor(n: AppNotification): string {
+    switch (n.type) {
+      case 'chessable_import_completed': return 'menu_book';
+      case 'chessable_import_failed': return 'error_outline';
+      case 'friend_request_received': return 'person_add';
+      case 'friend_request_accepted': return 'how_to_reg';
+      case 'revenge_performed': return 'sports_kabaddi';
+      case 'challenge_received': return 'sports_esports';
+      case 'challenge_resolved': return 'emoji_events';
+      default: return 'notifications';
+    }
+  }
+
+  /** Lokalisierter Text; Typen mit Ausgang (gelöst/gescheitert) wählen die passende Variante. */
+  textFor(n: AppNotification): string {
+    const data = n.data ?? {};
+    let key = 'notifications.type.' + n.type;
+    if (n.type === 'challenge_resolved' || n.type === 'revenge_performed')
+      key += data['solved'] === 'true' ? '_solved' : '_failed';
+    return this.translate.instant(key, data);
   }
 }

@@ -15,6 +15,21 @@
     "ok": "OK",
     "remove": "Entfernen"
   },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Keine Benachrichtigungen",
+    "type": {
+      "chessable_import_completed": "Kurs „{{courseName}}“ ist fertig importiert",
+      "chessable_import_failed": "Import von „{{courseName}}“ fehlgeschlagen",
+      "friend_request_received": "{{username}} möchte dich als Freund hinzufügen",
+      "friend_request_accepted": "{{username}} hat deine Freundschaftsanfrage angenommen",
+      "revenge_performed_solved": "{{username}} hat dein Puzzle gerächt (gelöst)",
+      "revenge_performed_failed": "{{username}} hat versucht, dein Puzzle zu rächen (gescheitert)",
+      "challenge_received": "{{username}} hat dir eine Puzzle-Challenge geschickt",
+      "challenge_resolved_solved": "{{username}} hat deine Challenge gelöst",
+      "challenge_resolved_failed": "{{username}} hat deine Challenge nicht gelöst"
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "repertoires": "Repertoires",

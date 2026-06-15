@@ -9,11 +9,13 @@ public class RevengeNotificationService
 {
     private readonly AppDbContext _db;
     private readonly FriendService _friendService;
+    private readonly NotificationService _notifications;
 
-    public RevengeNotificationService(AppDbContext db, FriendService friendService)
+    public RevengeNotificationService(AppDbContext db, FriendService friendService, NotificationService notifications)
     {
         _db = db;
         _friendService = friendService;
+        _notifications = notifications;
     }
 
     /// <summary>
@@ -38,6 +40,11 @@ public class RevengeNotificationService
             Solved = solved
         });
         await _db.SaveChangesAsync();
+
+        // In die generische Glocke spiegeln (Ziel-User informieren).
+        var avengerName = await _db.AppUsers.Where(u => u.Id == avengerId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
+        await _notifications.CreateAsync(targetId, NotificationType.RevengePerformed,
+            new Dictionary<string, string> { ["username"] = avengerName, ["solved"] = solved ? "true" : "false" }, "/friends");
         return true;
     }
 

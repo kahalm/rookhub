@@ -15,7 +15,7 @@ public class FriendServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _friendService = new FriendService(_db);
+        _friendService = new FriendService(_db, new NotificationService(_db));
     }
 
     public void Dispose() => _db.Dispose();

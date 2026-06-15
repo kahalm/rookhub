@@ -15,6 +15,21 @@
     "downloadPgn": "Preuzmi PGN",
     "downloadFailed": "Preuzimanje nije uspjelo."
   },
+  "notifications": {
+    "title": "Obavijesti",
+    "empty": "Nema obavijesti",
+    "type": {
+      "chessable_import_completed": "Tečaj „{{courseName}}“ je uvezen",
+      "chessable_import_failed": "Uvoz tečaja „{{courseName}}“ nije uspio",
+      "friend_request_received": "{{username}} te želi dodati kao prijatelja",
+      "friend_request_accepted": "{{username}} je prihvatio tvoj zahtjev za prijateljstvo",
+      "revenge_performed_solved": "{{username}} je osvetio tvoju zagonetku (riješeno)",
+      "revenge_performed_failed": "{{username}} je pokušao osvetiti tvoju zagonetku (neuspješno)",
+      "challenge_received": "{{username}} ti je poslao izazov",
+      "challenge_resolved_solved": "{{username}} je riješio tvoj izazov",
+      "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov"
+    }
+  },
   "nav": {
     "dashboard": "Nadzorna ploča",
     "repertoires": "Repertoari",

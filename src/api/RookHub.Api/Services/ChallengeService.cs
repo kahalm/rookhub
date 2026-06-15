@@ -9,11 +9,13 @@ public class ChallengeService
 {
     private readonly AppDbContext _db;
     private readonly FriendService _friendService;
+    private readonly NotificationService _notifications;
 
-    public ChallengeService(AppDbContext db, FriendService friendService)
+    public ChallengeService(AppDbContext db, FriendService friendService, NotificationService notifications)
     {
         _db = db;
         _friendService = friendService;
+        _notifications = notifications;
     }
 
     /// <summary>Schickt ein Puzzle als Challenge an einen Freund. Verhindert Doppel-Versand derselben
@@ -43,6 +45,12 @@ public class ChallengeService
         };
         _db.PuzzleChallenges.Add(challenge);
         await _db.SaveChangesAsync();
+
+        // Empfänger benachrichtigen: neue Puzzle-Challenge.
+        var fromName = await UsernameAsync(fromUserId);
+        await _notifications.CreateAsync(toUserId, NotificationType.ChallengeReceived,
+            new Dictionary<string, string> { ["username"] = fromName }, "/friends");
+
         return challenge;
     }
 
@@ -110,5 +118,13 @@ public class ChallengeService
         challenge.ResolvedAt = DateTime.UtcNow;
         challenge.TimeSpentSeconds = Math.Clamp(timeSpentSeconds, 0, 3600);
         await _db.SaveChangesAsync();
+
+        // Absender benachrichtigen: Empfänger hat die Challenge gelöst/nicht gelöst.
+        var byName = await UsernameAsync(userId);
+        await _notifications.CreateAsync(challenge.FromUserId, NotificationType.ChallengeResolved,
+            new Dictionary<string, string> { ["username"] = byName, ["solved"] = solved ? "true" : "false" }, "/friends");
     }
+
+    private async Task<string> UsernameAsync(int userId)
+        => await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
 }

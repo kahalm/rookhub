@@ -1,0 +1,70 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+
+namespace RookHub.Api.Services;
+
+/// <summary>
+/// Generischer In-App-Benachrichtigungs-Strom: legt Benachrichtigungen an (von den jeweiligen
+/// Domänen-Services per fire-and-forget aufgerufen) und liefert Liste/Zähler/„als gesehen" für
+/// die Navbar-Glocke. Bewusst schlank — spätere Kanäle (Mail/Push) docken hier an.
+/// </summary>
+public class NotificationService
+{
+    private readonly AppDbContext _db;
+    private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
+    public NotificationService(AppDbContext db) => _db = db;
+
+    /// <summary>Legt eine Benachrichtigung für <paramref name="userId"/> an.</summary>
+    public async Task CreateAsync(int userId, string type,
+        IReadOnlyDictionary<string, string>? data = null, string? link = null)
+    {
+        _db.Notifications.Add(new Notification
+        {
+            UserId = userId,
+            Type = type,
+            DataJson = data is { Count: > 0 } ? JsonSerializer.Serialize(data, JsonOpts) : null,
+            Link = link,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Letzte Benachrichtigungen eines Users (neueste zuerst).</summary>
+    public async Task<List<NotificationDto>> GetForUserAsync(int userId, int take = 20)
+    {
+        take = Math.Clamp(take, 1, 100);
+        var list = await _db.Notifications
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(take)
+            .ToListAsync();
+        return list.Select(ToDto).ToList();
+    }
+
+    /// <summary>Anzahl ungelesener Benachrichtigungen — für das Glocken-Badge.</summary>
+    public async Task<int> CountUnseenAsync(int userId)
+        => await _db.Notifications.CountAsync(n => n.UserId == userId && n.SeenAt == null);
+
+    /// <summary>Markiert alle ungelesenen Benachrichtigungen eines Users als gesehen (Glocke geöffnet).</summary>
+    public async Task MarkAllSeenAsync(int userId)
+    {
+        var unseen = await _db.Notifications
+            .Where(n => n.UserId == userId && n.SeenAt == null)
+            .ToListAsync();
+        if (unseen.Count == 0) return;
+        var now = DateTime.UtcNow;
+        foreach (var n in unseen) n.SeenAt = now;
+        await _db.SaveChangesAsync();
+    }
+
+    private static NotificationDto ToDto(Notification n) => new(
+        n.Id,
+        n.Type,
+        n.DataJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(n.DataJson, JsonOpts),
+        n.Link,
+        n.CreatedAt,
+        n.SeenAt != null);
+}
