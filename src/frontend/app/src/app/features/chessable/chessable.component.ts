@@ -13,6 +13,7 @@ import { Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../courses/course.service';
 import {
   ChessableService,
@@ -20,6 +21,7 @@ import {
   ChessableCourse,
   ChessableTestResult,
   ChessableImport,
+  ChessableAdminImport,
   ChessableImportTarget,
 } from './chessable.service';
 
@@ -238,6 +240,33 @@ import {
           </mat-card-content>
         </mat-card>
       }
+
+      @if (isAdmin && adminImports !== null) {
+        <mat-card class="admin-imports-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>admin_panel_settings</mat-icon>
+            <mat-card-title>{{ 'chessable.adminImportsTitle' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'chessable.adminImportsSubtitle' | translate }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (adminImports.length === 0) {
+              <p class="empty">{{ 'chessable.adminNoImports' | translate }}</p>
+            } @else {
+              <div class="admin-list">
+                @for (imp of adminImports; track imp.id) {
+                  <div class="admin-row" [class.active]="imp.status === 'running' || imp.status === 'paused'">
+                    <span class="admin-user"><mat-icon>person</mat-icon> {{ imp.username }}</span>
+                    <span class="admin-name">{{ imp.courseName || imp.bid }}</span>
+                    <span class="admin-target">{{ ('chessable.target_' + imp.target) | translate }}</span>
+                    <span class="admin-status" [attr.data-status]="imp.status">{{ adminStatusLabel(imp) }}</span>
+                    <span class="admin-date">{{ imp.createdAt | date:'short' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
       }
     </div>
   `,
@@ -292,6 +321,27 @@ import {
     .course-actions .phase { font-size: 0.82rem; color: var(--mat-sys-on-surface-variant, #888); white-space: nowrap; }
     .done-badge { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.82rem; color: #2e7d32; }
     .done-badge mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; }
+
+    .admin-imports-card { margin-top: 1rem; border-left: 4px solid var(--mat-sys-tertiary, #7b1fa2); }
+    .admin-list { display: flex; flex-direction: column; }
+    .admin-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(120px, 2fr) auto auto auto;
+      align-items: center; gap: 0.5rem 0.75rem; padding: 0.45rem 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant, #e3e3e3); font-size: 0.88rem; }
+    .admin-row:last-child { border-bottom: none; }
+    .admin-row.active { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 7%, transparent); }
+    .admin-row .admin-user { display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 500; overflow-wrap: anywhere; }
+    .admin-row .admin-user mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; color: var(--mat-sys-on-surface-variant, #888); }
+    .admin-row .admin-name { overflow-wrap: anywhere; }
+    .admin-row .admin-target { font-size: 0.8rem; color: var(--mat-sys-on-surface-variant, #777); }
+    .admin-row .admin-status { font-size: 0.8rem; }
+    .admin-row .admin-status[data-status="completed"] { color: #2e7d32; }
+    .admin-row .admin-status[data-status="failed"] { color: #c62828; }
+    .admin-row .admin-status[data-status="cancelled"] { color: var(--mat-sys-on-surface-variant, #888); }
+    .admin-row .admin-date { font-size: 0.78rem; color: var(--mat-sys-on-surface-variant, #888); white-space: nowrap; }
+    @media (max-width: 600px) {
+      .admin-row { grid-template-columns: 1fr auto; }
+      .admin-row .admin-date { grid-column: 2; }
+    }
   `]
 })
 export class ChessableComponent implements OnInit, OnDestroy {
@@ -320,6 +370,10 @@ export class ChessableComponent implements OnInit, OnDestroy {
   activeImports: Record<string, ChessableImport> = {};
   private pollSub?: Subscription;
 
+  /** Admin-Sicht: alle Importe aller User (Verlauf + aktive). null = (noch) nicht geladen / kein Admin. */
+  adminImports: ChessableAdminImport[] | null = null;
+  private adminPollSub?: Subscription;
+
   constructor(
     private chessable: ChessableService,
     private snackbar: SnackbarService,
@@ -327,7 +381,12 @@ export class ChessableComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     private router: Router,
     private courseService: CourseService,
+    private auth: AuthService,
   ) {}
+
+  get isAdmin(): boolean {
+    return this.auth.isAdmin;
+  }
 
   ngOnInit(): void {
     // Bearer-Übergabe vom Bookmarklet: kommt als URL-Fragment (#chessbearer=…), das
@@ -356,6 +415,8 @@ export class ChessableComponent implements OnInit, OnDestroy {
   private proceed(): void {
     this.refresh();
     this.loadActiveImports();
+    // Admins sehen zusätzlich ALLE Importe aller User (Verlauf + aktive), live aktualisiert.
+    if (this.isAdmin) this.startAdminPolling();
     // Per Bookmarklet übergebenen Bearer automatisch übernehmen, sobald der Disclaimer steht.
     if (this.pendingBearer) {
       this.bearerInput = this.pendingBearer;
@@ -379,6 +440,26 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.adminPollSub?.unsubscribe();
+  }
+
+  /** Admin: alle Importe laden + alle 5 s aktualisieren (zeigt aktive Queue + Verlauf live). */
+  private startAdminPolling(): void {
+    this.loadAdminImports();
+    this.adminPollSub = timer(5000, 5000).subscribe(() => this.loadAdminImports());
+  }
+
+  private loadAdminImports(): void {
+    this.chessable.getAllImportsAdmin().subscribe({
+      next: list => this.adminImports = list,
+      error: () => { /* nicht kritisch */ }
+    });
+  }
+
+  /** Zeilen-Status in der Admin-Liste: aktive nutzen die Queue-/Phasen-Anzeige, erledigte den Endstatus. */
+  adminStatusLabel(imp: ChessableAdminImport): string {
+    if (imp.status === 'running' || imp.status === 'paused') return this.queueLabel(imp);
+    return this.translate.instant('chessable.adminStatus_' + imp.status);
   }
 
   /** Beim Laden der Seite noch laufende/wartende Importe übernehmen + Polling aufnehmen. */

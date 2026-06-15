@@ -270,6 +270,35 @@ public class ChessableController : BaseApiController
         return Ok(list.Select(i => ToDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
     }
 
+    /// <summary>ADMIN: Alle Importe ALLER User (Verlauf, neueste zuerst) inkl. Besitzer-Username.
+    /// Laufende/pausierte bekommen ihre globale Warteschlangen-Position.</summary>
+    [HttpGet("admin/imports")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllImportsAdmin()
+    {
+        var imports = await _db.ChessableImports
+            .Include(i => i.User)
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(200)
+            .ToListAsync();
+        var runningIds = await _db.ChessableImports.Where(i => i.Status == "running").Select(i => i.Id).ToListAsync();
+        return Ok(imports.Select(i => ToAdminDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
+    }
+
+    /// <summary>ADMIN: Nur die aktiven (laufenden/pausierten) Importe aller User — fürs Dashboard-Widget.</summary>
+    [HttpGet("admin/active")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetActiveImportsAdmin()
+    {
+        var active = await _db.ChessableImports
+            .Include(i => i.User)
+            .Where(i => i.Status == "running" || i.Status == "paused")
+            .OrderBy(i => i.CreatedAt)
+            .ToListAsync();
+        var runningIds = active.Where(i => i.Status == "running").Select(i => i.Id).ToList();
+        return Ok(active.Select(i => ToAdminDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
+    }
+
     /// <summary>Bricht einen eigenen Import ab (wartend oder laufend).</summary>
     [HttpPost("imports/{id:int}/cancel")]
     public async Task<IActionResult> CancelImport(int id)
@@ -356,6 +385,11 @@ public class ChessableController : BaseApiController
     private static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(
         i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,
         i.ChaptersDone, i.ChaptersTotal, i.LinesDone, queuedAhead);
+
+    private static ChessableAdminImportDto ToAdminDto(ChessableImport i, int queuedAhead) => new(
+        i.Id, i.UserId, i.User?.Username ?? "?", i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error,
+        i.ResultId, i.Imported, i.Skipped, i.Invalid, i.ChaptersDone, i.ChaptersTotal, i.LinesDone, queuedAhead,
+        i.CreatedAt, i.CompletedAt);
 
     private async Task<string?> LoadBearerAsync()
     {

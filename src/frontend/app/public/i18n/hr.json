@@ -139,6 +139,12 @@
       "title": "Repertoari",
       "count": "{{count}} repertoara",
       "viewAll": "Prikaži sve"
+    },
+    "chessableQueue": {
+      "title": "Chessable red",
+      "count": "{{count}} aktivnih uvoza",
+      "view": "Prikaži sve",
+      "heading": "Aktivni Chessable uvozi"
     }
   },
   "pgnViewer": {
@@ -1406,6 +1412,16 @@
     "coursesTitle": "Your Chessable courses",
     "noCourses": "No courses found.",
     "error": "Error: {{message}}",
+    "adminImportsTitle": "Svi uvozi (Admin)",
+    "adminImportsSubtitle": "Chessable uvozi svih korisnika — trenutni red i povijest.",
+    "adminNoImports": "Još nema uvoza.",
+    "target_repertoire": "Repertoar",
+    "target_book": "Knjiga",
+    "adminStatus_completed": "dovršeno",
+    "adminStatus_failed": "neuspješno",
+    "adminStatus_cancelled": "otkazano",
+    "adminStatus_running": "u tijeku",
+    "adminStatus_paused": "pauzirano",
     "helpLink": "Kako doći do bearer tokena? (pomoć)",
     "helpIntro": "Ovako dohvaćaš svoj Chessable bearer token iz preglednika:",
     "helpStep1": "Otvori Chessable, zatim alate za razvojne programere u pregledniku (F12) → kartica „Mreža”.",

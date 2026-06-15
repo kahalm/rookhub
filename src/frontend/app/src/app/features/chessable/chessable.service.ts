@@ -44,6 +44,14 @@ export interface ChessableImport {
   queuedAhead: number;
 }
 
+/** Import-Satz in der Admin-Ansicht: zusätzlich Besitzer + Zeitstempel. */
+export interface ChessableAdminImport extends ChessableImport {
+  userId: number;
+  username: string;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChessableService {
   private readonly apiUrl = '/api/chessable';
@@ -94,6 +102,16 @@ export class ChessableService {
   /** Letzte Importe des Users (z. B. um beim Laden der Seite einen laufenden Import zu erkennen). */
   getImports(): Observable<ChessableImport[]> {
     return this.http.get<ChessableImport[]>(`${this.apiUrl}/imports`);
+  }
+
+  /** ADMIN: Alle Importe aller User (Verlauf + aktive). */
+  getAllImportsAdmin(): Observable<ChessableAdminImport[]> {
+    return this.http.get<ChessableAdminImport[]>(`${this.apiUrl}/admin/imports`);
+  }
+
+  /** ADMIN: Nur aktive (laufende/pausierte) Importe aller User — fürs Dashboard. */
+  getActiveImportsAdmin(): Observable<ChessableAdminImport[]> {
+    return this.http.get<ChessableAdminImport[]>(`${this.apiUrl}/admin/active`);
   }
 
   cancelImport(id: number): Observable<ChessableImport> {

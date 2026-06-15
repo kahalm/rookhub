@@ -139,6 +139,12 @@
       "title": "Repertoires",
       "count": "{{count}} repertoires",
       "viewAll": "View All"
+    },
+    "chessableQueue": {
+      "title": "Chessable Queue",
+      "count": "{{count}} active import(s)",
+      "view": "View all",
+      "heading": "Active Chessable Imports"
     }
   },
   "pgnViewer": {
@@ -1449,6 +1455,16 @@
     "phase_importing": "importing…",
     "phase_done": "done",
     "fetchProgress": "chapter {{ch}}/{{total}} · {{lines}} lines",
+    "adminImportsTitle": "All imports (Admin)",
+    "adminImportsSubtitle": "Every user's Chessable imports — current queue and history.",
+    "adminNoImports": "No imports yet.",
+    "target_repertoire": "Repertoire",
+    "target_book": "Book",
+    "adminStatus_completed": "completed",
+    "adminStatus_failed": "failed",
+    "adminStatus_cancelled": "cancelled",
+    "adminStatus_running": "running",
+    "adminStatus_paused": "paused",
     "error": "Error: {{message}}"
   }
 }

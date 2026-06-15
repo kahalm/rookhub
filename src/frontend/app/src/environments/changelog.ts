@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.123.1';
+export const APP_VERSION = '0.124.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.124.0', date: '2026-06-15', changes: [
+    'Chessable (Admin): Im Chessable-Tab sehen Admins jetzt einen neuen Bereich „Alle Importe (Admin)" mit sämtlichen Kurs-Importen aller Nutzer — inklusive Absender, Status und vollständigem Verlauf, live aktualisiert.',
+    'Dashboard (Admin): Sobald irgendwo ein Chessable-Import läuft oder wartet, erscheint für Admins auf dem Dashboard eine Karte „Chessable-Warteschlange" mit der Anzahl und einer Liste der aktiven Importe (Kurs, Nutzer, Fortschritt).',
+  ]},
   { version: '0.123.1', date: '2026-06-14', changes: [
     'Chessable-Kurs-Import: Große Kurse brechen nicht mehr mit „Zeitüberschreitung" ab. Der Abruf läuft jetzt so lange weiter, wie er Fortschritt macht (statt nach festen 15 Minuten zu stoppen) — und wird bei einem echten Stillstand automatisch neu gestartet, statt fehlzuschlagen.',
   ]},

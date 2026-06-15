@@ -409,6 +409,46 @@ public class ChessableControllerTests : IDisposable
         Assert.Equal(0, activeDto.QueuedAhead); // ältester laufender → Position 0 = "läuft gerade"
     }
 
+    // ---- Admin-Sicht: alle Importe + aktive Queue ----
+
+    [Fact]
+    public async Task GetAllImportsAdmin_ReturnsImportsOfAllUsersWithUsername()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "alice", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "a", CourseName = "Alice Kurs", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow.AddMinutes(-5) });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "b", CourseName = "Mein Kurs", Target = "repertoire", Status = "running", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetAllImportsAdmin());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
+
+        Assert.Equal(2, list.Count); // beide User
+        Assert.Contains(list, d => d.Username == "alice" && d.CourseName == "Alice Kurs");
+        Assert.Contains(list, d => d.Username == "u42" && d.CourseName == "Mein Kurs");
+        Assert.Equal("running", list[0].Status); // neueste zuerst
+    }
+
+    [Fact]
+    public async Task GetActiveImportsAdmin_ReturnsOnlyActiveWithQueuePosition()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "alice", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "old", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow.AddHours(-2) });
+        var first = new ChessableImport { UserId = 7, Bid = "r1", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
+        var second = new ChessableImport { UserId = 42, Bid = "r2", Target = "book", Status = "running", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.AddRange(first, second);
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
+
+        Assert.Equal(2, list.Count); // nur die laufenden, nicht der abgeschlossene
+        Assert.DoesNotContain(list, d => d.Bid == "old");
+        Assert.Equal(0, list.Single(d => d.Id == first.Id).QueuedAhead);  // ältester läuft
+        Assert.Equal(1, list.Single(d => d.Id == second.Id).QueuedAhead); // einer davor
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

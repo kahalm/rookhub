@@ -6,12 +6,13 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { TranslateModule } from '@ngx-translate/core';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { forkJoin, of, timer } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/models';
+import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -67,7 +68,33 @@ import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/mod
             </mat-card-actions>
           </mat-card>
         }
+
+        @if (auth.isAdmin && chessableActive.length > 0) {
+          <mat-card class="chessable-queue-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>cloud_download</mat-icon>
+              <mat-card-title>{{ 'dashboard.chessableQueue.title' | translate }}</mat-card-title>
+              <mat-card-subtitle>{{ 'dashboard.chessableQueue.count' | translate:{ count: chessableActive.length } }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-actions>
+              <button mat-button routerLink="/chessable">{{ 'dashboard.chessableQueue.view' | translate }}</button>
+            </mat-card-actions>
+          </mat-card>
+        }
       </div>
+
+      @if (auth.isAdmin && chessableActive.length > 0) {
+        <h2>{{ 'dashboard.chessableQueue.heading' | translate }}</h2>
+        <mat-list>
+          @for (imp of chessableActive; track imp.id) {
+            <mat-list-item>
+              <mat-icon matListItemIcon>cloud_download</mat-icon>
+              <span matListItemTitle>{{ imp.courseName || imp.bid }} — {{ imp.username }}</span>
+              <span matListItemLine>{{ chessableStatus(imp) }}</span>
+            </mat-list-item>
+          }
+        </mat-list>
+      }
 
       @if (subscriptions.length > 0) {
         <h2>{{ 'dashboard.subscribedTournaments' | translate }}</h2>
@@ -106,9 +133,25 @@ export class DashboardComponent implements OnInit {
   puzzleElo = 1500;
   subscriptions: Subscription[] = [];
 
-  constructor(public auth: AuthService, private http: HttpClient) {}
+  /** Admin: aktive Chessable-Importe aller User (laufend/pausiert), live gepollt. */
+  chessableActive: ChessableAdminImport[] = [];
+
+  constructor(
+    public auth: AuthService,
+    private http: HttpClient,
+    private chessable: ChessableService,
+    private translate: TranslateService,
+  ) {}
 
   ngOnInit(): void {
+    // Admin: aktive Chessable-Queue laufend anzeigen (sofort + alle 10 s).
+    if (this.auth.isAdmin) {
+      timer(0, 10000).pipe(
+        switchMap(() => this.chessable.getActiveImportsAdmin().pipe(catchError(() => of([] as ChessableAdminImport[])))),
+        takeUntilDestroyed(this.destroyRef),
+      ).subscribe(list => this.chessableActive = list);
+    }
+
     forkJoin({
       repertoires: this.http.get<Repertoire[]>('/api/repertoires').pipe(catchError(() => of([]))),
       subscriptions: this.http.get<Subscription[]>('/api/subscriptions').pipe(catchError(() => of([]))),
@@ -127,5 +170,17 @@ export class DashboardComponent implements OnInit {
       this.puzzleAccuracy = puzzleStats.accuracy || 0;
       this.puzzleElo = puzzleStats.puzzleElo || 1500;
     });
+  }
+
+  /** Kurz-Status eines aktiven Imports: pausiert / Warteschlangen-Position / Hol-Fortschritt. */
+  chessableStatus(imp: ChessableAdminImport): string {
+    if (imp.status === 'paused') return this.translate.instant('chessable.statusPaused');
+    if (imp.phase === 'queued') return this.translate.instant('chessable.queuePos', { pos: imp.queuedAhead + 1 });
+    let s = this.translate.instant('chessable.phase_' + (imp.phase || 'queued'));
+    if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
+      s += ' ' + this.translate.instant('chessable.fetchProgress',
+        { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone });
+    }
+    return s;
   }
 }
