@@ -39,12 +39,14 @@ describe('MessageService', () => {
     expect(count).toBe(0);
   });
 
-  it('refreshUserUnread aktualisiert den Zähler aus der API', () => {
-    let count = -1;
+  it('refreshUserUnread liest Zähler + hasMessages aus /status', () => {
+    let count = -1; let has = false;
     svc.userUnread$.subscribe(c => count = c);
+    svc.hasMessages$.subscribe(h => has = h);
     svc.refreshUserUnread();
-    http.expectOne('/api/messages/unread-count').flush({ count: 3 });
+    http.expectOne('/api/messages/status').flush({ unread: 3, hasMessages: true });
     expect(count).toBe(3);
+    expect(has).toBeTrue();
   });
 
   it('Admin: sendToUser postet an den Thread-Endpoint', () => {
@@ -66,14 +68,16 @@ describe('MessageService', () => {
     expect(count).toBe(2);
   });
 
-  it('reset setzt beide Zähler zurück', () => {
-    let u = -1, a = -1;
+  it('reset setzt Zähler + hasMessages zurück', () => {
+    let u = -1, a = -1, has = true;
     svc.userUnread$.subscribe(c => u = c);
     svc.adminUnread$.subscribe(c => a = c);
+    svc.hasMessages$.subscribe(h => has = h);
     svc.refreshUserUnread();
-    http.expectOne('/api/messages/unread-count').flush({ count: 4 });
+    http.expectOne('/api/messages/status').flush({ unread: 4, hasMessages: true });
     svc.reset();
     expect(u).toBe(0);
     expect(a).toBe(0);
+    expect(has).toBeFalse();
   });
 });

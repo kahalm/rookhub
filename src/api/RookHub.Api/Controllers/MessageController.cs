@@ -21,10 +21,16 @@ public class MessageController : BaseApiController
     public async Task<IActionResult> GetThread()
         => Ok(await _messages.GetUserThreadAsync(GetUserId()));
 
-    /// <summary>Anzahl ungelesener Admin-Nachrichten (Navbar-Badge).</summary>
-    [HttpGet("unread-count")]
-    public async Task<IActionResult> GetUnreadCount()
-        => Ok(new MessageUnreadCountDto(await _messages.CountUnreadForUserAsync(GetUserId())));
+    /// <summary>Navbar-Status: Ungelesen-Anzahl + ob der User überhaupt eine Konversation hat
+    /// (das Mail-Icon wird nur eingeblendet, wenn er schon einmal eine Nachricht bekommen hat).</summary>
+    [HttpGet("status")]
+    public async Task<IActionResult> GetStatus()
+    {
+        var userId = GetUserId();
+        return Ok(new UserMessageStatusDto(
+            await _messages.CountUnreadForUserAsync(userId),
+            await _messages.HasThreadForUserAsync(userId)));
+    }
 
     /// <summary>Antwort des Users im eigenen Thread (400, wenn noch keine Konversation existiert).</summary>
     [HttpPost("reply")]

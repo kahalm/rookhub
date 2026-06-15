@@ -22,7 +22,7 @@ describe('NavbarComponent', () => {
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
         { provide: InAppNotificationService, useValue: notif },
-        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: MessageService, useValue: { userUnread$: of(0), hasMessages$: of(false), refreshUserUnread: () => {}, reset: () => {} } },
         { provide: LocaleService, useValue: {} },
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },

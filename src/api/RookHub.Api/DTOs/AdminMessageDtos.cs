@@ -21,5 +21,9 @@ public record AdminThreadSummaryDto(
     bool LastFromAdmin,
     int UnreadFromUser);
 
-/// <summary>Ungelesen-Zähler (User-Nachrichten-Badge bzw. Admin-Tab-Badge).</summary>
+/// <summary>Ungelesen-Zähler (Admin-Tab-Badge).</summary>
 public record MessageUnreadCountDto(int Count);
+
+/// <summary>Nachrichten-Status des Users für die Navbar: Ungelesen-Anzahl + ob überhaupt eine
+/// Konversation existiert (steuert das Einblenden des Mail-Icons).</summary>
+public record UserMessageStatusDto(int Unread, bool HasMessages);

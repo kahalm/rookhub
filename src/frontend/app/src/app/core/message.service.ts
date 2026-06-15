@@ -34,6 +34,10 @@ export class MessageService {
   /** Ungelesene Admin-Nachrichten des eingeloggten Users (Navbar-Mail-Badge). */
   userUnread$ = this.userUnread.asObservable();
 
+  private hasMessages = new BehaviorSubject<boolean>(false);
+  /** Hat der User überhaupt eine Konversation? Steuert das Einblenden des Navbar-Mail-Icons. */
+  hasMessages$ = this.hasMessages.asObservable();
+
   private adminUnread = new BehaviorSubject<number>(0);
   /** Ungelesene User-Antworten über alle Threads (Admin-Tab-Badge). */
   adminUnread$ = this.adminUnread.asObservable();
@@ -57,10 +61,10 @@ export class MessageService {
     return this.http.post('/api/messages/seen', {}).pipe(tap(() => this.userUnread.next(0)));
   }
 
-  /** Ungelesen-Zähler des Users neu laden (Login + Polling). */
+  /** Navbar-Status neu laden (Login + Polling): Ungelesen-Zähler + ob eine Konversation existiert. */
   refreshUserUnread(): void {
-    this.http.get<{ count: number }>('/api/messages/unread-count').subscribe({
-      next: r => this.userUnread.next(r.count),
+    this.http.get<{ unread: number; hasMessages: boolean }>('/api/messages/status').subscribe({
+      next: r => { this.userUnread.next(r.unread); this.hasMessages.next(r.hasMessages); },
       error: () => { /* nicht kritisch */ },
     });
   }
@@ -99,5 +103,6 @@ export class MessageService {
   reset(): void {
     this.userUnread.next(0);
     this.adminUnread.next(0);
+    this.hasMessages.next(false);
   }
 }

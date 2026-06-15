@@ -63,12 +63,14 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </mat-menu>
-        <button mat-icon-button routerLink="/messages" class="msg-mail"
-                [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
-                [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
-                [attr.aria-label]="'messages.title' | translate">
-          <mat-icon>mail</mat-icon>
-        </button>
+        @if (hasMessages) {
+          <button mat-icon-button routerLink="/messages" class="msg-mail"
+                  [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
+                  [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
+                  [attr.aria-label]="'messages.title' | translate">
+            <mat-icon>mail</mat-icon>
+          </button>
+        }
         <button mat-icon-button [matMenuTriggerFor]="notifMenu" (menuOpened)="onBellOpened()"
                 class="notif-bell" [class.has-unseen]="notifCount > 0"
                 matBadge="!" [matBadgeHidden]="notifCount === 0" matBadgeColor="warn" matBadgeSize="medium"
@@ -203,6 +205,8 @@ export class NavbarComponent implements OnInit {
 
   /** Mail-Badge: ungelesene Admin-Nachrichten des Users. */
   messagesUnread = 0;
+  /** Mail-Icon nur einblenden, wenn der User schon eine Konversation hat. */
+  hasMessages = false;
 
   private destroyRef = inject(DestroyRef);
 
@@ -249,6 +253,7 @@ export class NavbarComponent implements OnInit {
     // sofort aktualisieren und im Hintergrund alle 60 s nachziehen (zeigt „Neues" ohne Reload).
     this.notif.unseenCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.notifCount = c);
     this.messages.userUnread$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(c => this.messagesUnread = c);
+    this.messages.hasMessages$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(h => this.hasMessages = h);
     this.auth.currentUser$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       if (this.auth.isLoggedIn) { this.notif.refreshCount(); this.messages.refreshUserUnread(); }
       else { this.notif.reset(); this.messages.reset(); this.notifications = []; }

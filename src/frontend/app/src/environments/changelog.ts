@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.142.0';
+export const APP_VERSION = '0.142.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.142.1", date: "2026-06-15", changes: [
+    { en: "The \"Messages\" mail icon in the top navigation bar now only appears once you actually have a conversation (i.e. once the admin team has written to you). Until then it stays hidden.", de: "Das „Nachrichten\"-Brief-Symbol oben in der Navigationsleiste erscheint jetzt erst, wenn du tatsächlich eine Konversation hast (also sobald dich das Admin-Team angeschrieben hat). Vorher bleibt es ausgeblendet." },
+  ]},
   { version: "0.142.0", date: "2026-06-15", changes: [
     { en: "Direct messages: The admin team can now send a message to a user, and the user can reply right here — the conversation continues as a thread. A new \"Messages\" page (mail icon in the navbar, with an unread badge) shows your conversation; you get a bell notification for every new admin message.", de: "Direktnachrichten: Das Admin-Team kann einem User jetzt eine Nachricht schicken, und der User kann direkt hier antworten — die Konversation läuft als Thread weiter. Eine neue Seite „Nachrichten\" (Brief-Symbol in der Navigation, mit Ungelesen-Markierung) zeigt deine Konversation; bei jeder neuen Admin-Nachricht gibt es eine Glocken-Benachrichtigung." },
     { en: "Admin area: A new \"Messages\" tab lists all conversations (with an unread-replies badge), lets you open a thread, write to a user, and start a new conversation via user search.", de: "Admin-Bereich: Ein neuer Tab „Nachrichten\" listet alle Konversationen (mit Markierung ungelesener Antworten), öffnet einen Thread, schreibt einem User und startet per User-Suche eine neue Konversation." },

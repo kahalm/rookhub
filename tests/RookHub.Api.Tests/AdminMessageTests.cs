@@ -149,6 +149,17 @@ public class AdminMessageTests : IDisposable
     }
 
     [Fact]
+    public async Task HasThreadForUser_FalseUntilAdminWrites()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+
+        Assert.False(await _service.HasThreadForUserAsync(2));   // noch keine Nachricht → Icon ausgeblendet
+        await _service.SendFromAdminAsync(1, 2, "hallo");
+        Assert.True(await _service.HasThreadForUserAsync(2));    // jetzt vorhanden → Icon sichtbar
+    }
+
+    [Fact]
     public async Task ReadByRecipient_ReflectsSeenState()
     {
         await UserAsync(1, "admin", admin: true);
@@ -224,13 +235,14 @@ public class AdminMessageTests : IDisposable
         // Admin schreibt
         Assert.IsType<OkObjectResult>(await AdminController(1).Send(2, new SendMessageDto("Hallo Bob")));
 
-        // User sieht 1 ungelesen, lädt Thread, markiert gelesen
-        var unread = Assert.IsType<MessageUnreadCountDto>(Assert.IsType<OkObjectResult>(await UserController(2).GetUnreadCount()).Value);
-        Assert.Equal(1, unread.Count);
+        // User sieht 1 ungelesen + hat eine Konversation, lädt Thread, markiert gelesen
+        var status = Assert.IsType<UserMessageStatusDto>(Assert.IsType<OkObjectResult>(await UserController(2).GetStatus()).Value);
+        Assert.Equal(1, status.Unread);
+        Assert.True(status.HasMessages);
         var thread = Assert.IsAssignableFrom<IEnumerable<AdminMessageDto>>(Assert.IsType<OkObjectResult>(await UserController(2).GetThread()).Value).ToList();
         Assert.Single(thread);
         Assert.IsType<NoContentResult>(await UserController(2).MarkSeen());
-        Assert.Equal(0, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await UserController(2).GetUnreadCount()).Value!).Count);
+        Assert.Equal(0, ((UserMessageStatusDto)Assert.IsType<OkObjectResult>(await UserController(2).GetStatus()).Value!).Unread);
 
         // User antwortet → Admin sieht ungelesen, liest, markiert
         Assert.IsType<OkObjectResult>(await UserController(2).Reply(new SendMessageDto("Hi!")));
