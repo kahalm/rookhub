@@ -8,7 +8,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { CourseService, CourseListItem } from './course.service';
+import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
 
@@ -72,6 +72,43 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
           @if (c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount) {
             <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
           }
+
+          @if (c.puzzleCount > 0) {
+            <div class="chapters-block">
+              <button mat-button class="chapters-toggle" (click)="toggleChapters(c)"
+                      [attr.aria-expanded]="expandedBook === c.bookId">
+                <mat-icon>{{ expandedBook === c.bookId ? 'expand_less' : 'expand_more' }}</mat-icon>
+                {{ 'courses.chapters' | translate }}@if (chaptersByBook[c.bookId]) { ({{ chaptersByBook[c.bookId].length }}) }
+              </button>
+              @if (expandedBook === c.bookId) {
+                @if (loadingChapters === c.bookId) {
+                  <app-loading-spinner />
+                } @else if (chaptersByBook[c.bookId]?.length) {
+                  <ul class="chapter-list">
+                    @for (ch of chaptersByBook[c.bookId]; track ch.index) {
+                      <li class="chapter-row">
+                        <span class="chapter-name" [title]="ch.name || ('courses.noChapter' | translate)">
+                          {{ ch.name || ('courses.noChapter' | translate) }}
+                        </span>
+                        <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                        <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}</span>
+                        <button mat-icon-button color="primary" [matTooltip]="'courses.sequential' | translate"
+                                [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'sequential']">
+                          <mat-icon>format_list_numbered</mat-icon>
+                        </button>
+                        <button mat-icon-button [matTooltip]="'courses.random' | translate"
+                                [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'random']">
+                          <mat-icon>shuffle</mat-icon>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="chapter-empty">{{ 'courses.chaptersEmpty' | translate }}</p>
+                }
+              }
+            </div>
+          }
         </mat-card-content>
         <mat-card-actions class="course-actions">
           <button mat-raised-button color="primary"
@@ -120,6 +157,15 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
     .done-hint mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .course-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .spacer { flex: 1 1 auto; }
+    .chapters-block { margin-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding-top: 4px; }
+    .chapters-toggle { padding: 0 8px; min-width: 0; font-weight: 500; }
+    .chapter-list { list-style: none; margin: 4px 0 0; padding: 0; }
+    .chapter-row { display: grid; grid-template-columns: minmax(80px, 1fr) 90px auto auto auto; align-items: center; gap: 8px; padding: 2px 0; }
+    .chapter-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+    .chapter-bar { width: 90px; }
+    .chapter-label { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 70%, transparent); white-space: nowrap; }
+    .chapter-row .mat-mdc-icon-button { width: 36px; height: 36px; padding: 6px; }
+    .chapter-empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; font-size: 0.85rem; margin: 4px 0 0; }
   `]
 })
 export class CourseListComponent implements OnInit {
@@ -128,6 +174,13 @@ export class CourseListComponent implements OnInit {
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
   private offlineFiles = new Set<string>();
+
+  /** Aufgeklapptes Buch (Kapitelübersicht) bzw. null. */
+  expandedBook: number | null = null;
+  /** Lazy geladene Kapitel je Buch (bookId → Kapitel). */
+  chaptersByBook: Record<number, CourseChapter[]> = {};
+  /** Buch, dessen Kapitel gerade geladen werden. */
+  loadingChapters: number | null = null;
 
   constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
@@ -143,6 +196,24 @@ export class CourseListComponent implements OnInit {
 
   isOffline(c: CourseListItem): boolean {
     return this.offlineFiles.has(c.fileName);
+  }
+
+  /** Kapitelübersicht eines Buchs auf-/zuklappen; Kapitel werden beim ersten Öffnen lazy geladen. */
+  toggleChapters(c: CourseListItem): void {
+    if (this.expandedBook === c.bookId) { this.expandedBook = null; return; }
+    this.expandedBook = c.bookId;
+    if (this.chaptersByBook[c.bookId]) return; // schon geladen
+    this.loadingChapters = c.bookId;
+    this.courseService.getChapters(c.bookId).subscribe({
+      next: chapters => {
+        this.chaptersByBook[c.bookId] = chapters;
+        this.loadingChapters = null;
+      },
+      error: () => {
+        this.loadingChapters = null;
+        this.snackbar.info(this.translate.instant('courses.chaptersLoadFailed'), { action: 'common.ok', duration: 3000 });
+      }
+    });
   }
 
   /** Buch offline speichern (alle Puzzles laden + cachen) bzw. den Cache wieder entfernen. */
@@ -193,6 +264,7 @@ export class CourseListComponent implements OnInit {
       next: p => {
         course.solvedCount = p.solvedCount;
         course.progressPercent = p.progressPercent;
+        delete this.chaptersByBook[course.bookId]; // Kapitel-Fortschritt neu laden beim nächsten Öffnen
       },
       error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
     });

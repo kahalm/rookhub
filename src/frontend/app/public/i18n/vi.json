@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Xóa bản sao ngoại tuyến",
     "offlineSaved": "Đã lưu \"{{name}}\" ngoại tuyến ({{count}} bài tập)",
     "offlineRemoved": "Đã xóa \"{{name}}\" khỏi bộ nhớ ngoại tuyến",
-    "offlineFailed": "Không thể lưu sách ngoại tuyến"
+    "offlineFailed": "Không thể lưu sách ngoại tuyến",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Tuần này",

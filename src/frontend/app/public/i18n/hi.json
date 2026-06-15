@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "ऑफ़लाइन प्रति हटाएं",
     "offlineSaved": "\"{{name}}\" ऑफ़लाइन सहेजी गई ({{count}} पहेलियाँ)",
     "offlineRemoved": "\"{{name}}\" ऑफ़लाइन से हटाई गई",
-    "offlineFailed": "किताब ऑफ़लाइन सहेजने में विफल"
+    "offlineFailed": "किताब ऑफ़लाइन सहेजने में विफल",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "साप्ताहिक",

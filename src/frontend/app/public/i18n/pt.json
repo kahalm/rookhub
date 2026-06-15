@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Remover cópia offline",
     "offlineSaved": "\"{{name}}\" guardado offline ({{count}} puzzles)",
     "offlineRemoved": "\"{{name}}\" removido do offline",
-    "offlineFailed": "Não foi possível guardar o livro offline"
+    "offlineFailed": "Não foi possível guardar o livro offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Semanal",

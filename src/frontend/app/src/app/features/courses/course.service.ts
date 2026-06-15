@@ -21,6 +21,15 @@ export interface CourseListItem {
   isOwned: boolean;
 }
 
+export interface CourseChapter {
+  index: number;
+  /** null = Sammelgruppe „ohne Kapitel". */
+  name: string | null;
+  puzzleCount: number;
+  solvedCount: number;
+  progressPercent: number;
+}
+
 export interface CourseNextPuzzle {
   puzzle: BookPuzzleDto | null;
   solvedCount: number;
@@ -66,15 +75,21 @@ export class CourseService {
     return this.http.get<{ hasAccess: boolean }>('/api/courses/access');
   }
 
-  getNext(bookId: number, mode: CourseMode, after?: number, exclude?: number): Observable<CourseNextPuzzle> {
+  /** Kapitel eines Buchs in Lesereihenfolge inkl. Fortschritt (für die Kapitelübersicht). */
+  getChapters(bookId: number): Observable<CourseChapter[]> {
+    return this.http.get<CourseChapter[]>(`/api/courses/${bookId}/chapters`);
+  }
+
+  getNext(bookId: number, mode: CourseMode, after?: number, exclude?: number, chapterIndex?: number): Observable<CourseNextPuzzle> {
     let params = new HttpParams().set('mode', mode);
     if (after != null) params = params.set('after', after);
     if (exclude != null) params = params.set('exclude', exclude);
+    if (chapterIndex != null) params = params.set('chapterIndex', chapterIndex);
     return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params });
   }
 
-  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0): Observable<CourseProgress> {
-    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds });
+  recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0, chapterIndex?: number): Observable<CourseProgress> {
+    return this.http.post<CourseProgress>(`/api/courses/${bookId}/results`, { bookPuzzleId, solved, mode, timeSeconds, chapterIndex });
   }
 
   reset(bookId: number): Observable<CourseProgress> {

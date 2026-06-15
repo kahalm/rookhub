@@ -24,6 +24,22 @@ public class CourseListItemDto
     public bool IsOwned { get; set; }
 }
 
+/// <summary>
+/// Ein Kapitel eines Buchs (= eindeutiger <see cref="Models.BookPuzzle.Chapter"/>-Wert, in
+/// Lesereihenfolge) inkl. nutzerbezogenem Fortschritt. <see cref="Index"/> ist die 0-basierte
+/// Position in der Lesereihenfolge und dient als stabiler Selektor für die Kapitel-Navigation.
+/// </summary>
+public class CourseChapterDto
+{
+    public int Index { get; set; }
+    /// <summary>Kapitelname; <c>null</c> für Puzzles ohne Kapitelangabe (Sammel-„ohne Kapitel").</summary>
+    public string? Name { get; set; }
+    public int PuzzleCount { get; set; }
+    public int SolvedCount { get; set; }
+    /// <summary>0–100, gerundet.</summary>
+    public int ProgressPercent { get; set; }
+}
+
 /// <summary>Nächstes zu lösendes Puzzle eines Kurses + aktueller Fortschritt.</summary>
 public class CourseNextPuzzleDto
 {
@@ -43,6 +59,9 @@ public class RecordCourseResultDto
     public string? Mode { get; set; }
     /// <summary>Optional: am Puzzle verbrachte Zeit in Sekunden (nur fürs Logging der Startzeit).</summary>
     public int TimeSeconds { get; set; }
+    /// <summary>Optional: 0-basierter Kapitel-Index. Gesetzt → der zurückgegebene Fortschritt
+    /// wird auf dieses Kapitel beschränkt (Kapitel-Modus); sonst buchweit.</summary>
+    public int? ChapterIndex { get; set; }
 }
 
 /// <summary>Fortschritt eines Kurses (Buch) für den aktuellen User.</summary>

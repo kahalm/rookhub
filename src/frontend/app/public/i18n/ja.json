@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "オフラインコピーを削除",
     "offlineSaved": "「{{name}}」をオフラインで保存しました（{{count}} 問）",
     "offlineRemoved": "「{{name}}」のオフラインコピーを削除しました",
-    "offlineFailed": "ブックをオフラインで保存できませんでした"
+    "offlineFailed": "ブックをオフラインで保存できませんでした",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "週刊",

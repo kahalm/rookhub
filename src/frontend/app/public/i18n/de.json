@@ -714,7 +714,11 @@
     "offlineRemoveTooltip": "Offline-Kopie entfernen",
     "offlineSaved": "\"{{name}}\" offline gespeichert ({{count}} Puzzles)",
     "offlineRemoved": "\"{{name}}\" aus dem Offline-Cache entfernt",
-    "offlineFailed": "Buch konnte nicht offline gespeichert werden"
+    "offlineFailed": "Buch konnte nicht offline gespeichert werden",
+    "chapters": "Kapitel",
+    "noChapter": "(ohne Kapitel)",
+    "chaptersEmpty": "Keine Kapitel",
+    "chaptersLoadFailed": "Kapitel konnten nicht geladen werden"
   },
   "weekly": {
     "title": "Wochenpost",

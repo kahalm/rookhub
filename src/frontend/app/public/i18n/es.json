@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Eliminar copia sin conexión",
     "offlineSaved": "\"{{name}}\" guardado sin conexión ({{count}} ejercicios)",
     "offlineRemoved": "\"{{name}}\" eliminado de sin conexión",
-    "offlineFailed": "No se pudo guardar el libro sin conexión"
+    "offlineFailed": "No se pudo guardar el libro sin conexión",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Semanal",

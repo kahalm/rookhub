@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Odebrat offline kopii",
     "offlineSaved": "\"{{name}}\" uloženo offline ({{count}} úloh)",
     "offlineRemoved": "\"{{name}}\" odebráno z offline",
-    "offlineFailed": "Uložení knihy offline se nezdařilo"
+    "offlineFailed": "Uložení knihy offline se nezdařilo",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Týdenní",

@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "오프라인 복사본 제거",
     "offlineSaved": "\"{{name}}\" 오프라인 저장됨 ({{count}}개 퍼즐)",
     "offlineRemoved": "\"{{name}}\" 오프라인에서 제거됨",
-    "offlineFailed": "교재 오프라인 저장 실패"
+    "offlineFailed": "교재 오프라인 저장 실패",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "주간",

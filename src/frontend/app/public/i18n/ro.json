@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Elimină copia offline",
     "offlineSaved": "„{{name}}“ salvată offline ({{count}} probleme)",
     "offlineRemoved": "„{{name}}“ eliminată din offline",
-    "offlineFailed": "Cartea nu a putut fi salvată offline"
+    "offlineFailed": "Cartea nu a putut fi salvată offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Săptămânal",

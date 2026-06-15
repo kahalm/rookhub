@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Αφαίρεση αντιγράφου εκτός σύνδεσης",
     "offlineSaved": "Το «{{name}}» αποθηκεύτηκε εκτός σύνδεσης ({{count}} ασκήσεις)",
     "offlineRemoved": "Το «{{name}}» αφαιρέθηκε από τη λειτουργία εκτός σύνδεσης",
-    "offlineFailed": "Αδύνατη αποθήκευση βιβλίου εκτός σύνδεσης"
+    "offlineFailed": "Αδύνατη αποθήκευση βιβλίου εκτός σύνδεσης",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Εβδομαδιαίο",

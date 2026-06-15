@@ -56,6 +56,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   inCourse = false;
   courseBookId: number | null = null;
   courseModeKind: CourseMode = 'sequential';
+  /** Im Kapitel-Modus gesetzt: 0-basierter Kapitel-Index → Pool + Fortschritt aufs Kapitel beschränkt. */
+  courseChapterIndex: number | null = null;
   courseSolved = 0;
   courseTotal = 0;
   courseCompleted = false;
@@ -327,6 +329,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.inCourse = true;
       this.courseBookId = Number(bookIdParam);
       this.courseModeKind = modeParam === 'random' ? 'random' : 'sequential';
+      const chapterParam = this.route.snapshot.paramMap.get('chapterIndex');
+      this.courseChapterIndex = chapterParam != null ? Number(chapterParam) : null;
       this.loadCourseNext();
       return;
     }
@@ -371,7 +375,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.retryFn = () => this.loadCourseNext(after, exclude);
     if (!hadPuzzle) this.state = 'LOADING';
 
-    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude).subscribe({
+    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined).subscribe({
       next: res => {
         this.courseSolved = res.solvedCount;
         this.courseTotal = res.total;
@@ -520,14 +524,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds };
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds, chapterIndex: this.courseChapterIndex ?? undefined };
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
       if (solved) this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.elapsedSeconds).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.elapsedSeconds, this.courseChapterIndex ?? undefined).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });

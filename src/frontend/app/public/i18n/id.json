@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Hapus salinan offline",
     "offlineSaved": "\"{{name}}\" disimpan offline ({{count}} puzzle)",
     "offlineRemoved": "\"{{name}}\" dihapus dari offline",
-    "offlineFailed": "Gagal menyimpan buku offline"
+    "offlineFailed": "Gagal menyimpan buku offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Mingguan",

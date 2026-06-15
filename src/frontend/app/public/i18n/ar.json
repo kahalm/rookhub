@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "إزالة النسخة غير المتصلة",
     "offlineSaved": "تم حفظ \"{{name}}\" غير المتصل ({{count}} لغز)",
     "offlineRemoved": "تمت إزالة \"{{name}}\" من غير المتصل",
-    "offlineFailed": "تعذّر حفظ الكتاب غير المتصل"
+    "offlineFailed": "تعذّر حفظ الكتاب غير المتصل",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "أسبوعي",

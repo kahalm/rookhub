@@ -714,7 +714,11 @@
     "offlineRemoved": "\"{{name}}\" uklonjeno iz offline pohrane",
     "offlineFailed": "Spremanje knjige offline nije uspjelo",
     "downloadPgnTooltip": "Preuzmi kao PGN",
-    "downloadFailed": "Preuzimanje PGN-a nije uspjelo."
+    "downloadFailed": "Preuzimanje PGN-a nije uspjelo.",
+    "chapters": "Poglavlja",
+    "noChapter": "(bez poglavlja)",
+    "chaptersEmpty": "Nema poglavlja",
+    "chaptersLoadFailed": "Učitavanje poglavlja nije uspjelo"
   },
   "weekly": {
     "title": "Tjedna objava",

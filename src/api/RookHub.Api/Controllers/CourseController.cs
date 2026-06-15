@@ -54,15 +54,25 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> HasAnyAccess()
         => Ok(new { hasAccess = await _service.HasAnyAccessAsync(GetUserId(), IsAdmin) });
 
-    /// <summary>Nächstes ungelöstes Puzzle des Kurses (sequential/random); aktualisiert den letzten Modus.</summary>
+    /// <summary>Kapitel eines (zugänglichen) Buchs in Lesereihenfolge inkl. Fortschritt — Basis der Kapitelübersicht.</summary>
+    [HttpGet("{bookId}/chapters")]
+    public async Task<ActionResult<List<CourseChapterDto>>> GetChapters(int bookId)
+    {
+        try { return Ok(await _service.GetChaptersAsync(GetUserId(), bookId, IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Nächstes ungelöstes Puzzle des Kurses (sequential/random); aktualisiert den letzten Modus.
+    /// Mit <paramref name="chapterIndex"/> wird der Pool + Fortschritt auf das Kapitel beschränkt.</summary>
     [HttpGet("{bookId}/next")]
     public async Task<IActionResult> GetNext(
         int bookId,
         [FromQuery] string mode = "sequential",
         [FromQuery] int? after = null,
-        [FromQuery] int? exclude = null)
+        [FromQuery] int? exclude = null,
+        [FromQuery] int? chapterIndex = null)
     {
-        try { return Ok(await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin)); }
+        try { return Ok(await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin, chapterIndex)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 

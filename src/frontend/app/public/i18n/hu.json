@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Offline példány eltávolítása",
     "offlineSaved": "\"{{name}}\" elmentve offline ({{count}} feladvány)",
     "offlineRemoved": "\"{{name}}\" eltávolítva az offline tárból",
-    "offlineFailed": "Nem sikerült menteni a könyvet offline"
+    "offlineFailed": "Nem sikerült menteni a könyvet offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Heti",

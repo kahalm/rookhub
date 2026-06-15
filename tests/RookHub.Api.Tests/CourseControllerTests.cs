@@ -513,4 +513,147 @@ public class CourseControllerTests : IDisposable
         Assert.IsType<NoContentResult>(await groupController.Delete(groupId));
         Assert.Equal(0, await _db.BookGroupAccesses.CountAsync());
     }
+
+    // ===== Kapitelübersicht =====
+
+    /// <summary>Buch, dessen Puzzles (in Reihenfolge) die gegebenen Kapitelnamen tragen. Gibt Buch + Ids zurück.</summary>
+    private async Task<(Book book, List<int> puzzleIds)> SeedBookWithChaptersAsync(string name, params string?[] chapters)
+    {
+        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        var ids = new List<int>();
+        for (var i = 0; i < chapters.Length; i++)
+        {
+            var p = new BookPuzzle
+            {
+                LineId = $"{name}-{i}", BookFileName = book.FileName, BookId = book.Id,
+                Round = "1", Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", Moves = "a1a2",
+                Chapter = chapters[i],
+            };
+            _db.BookPuzzles.Add(p);
+            await _db.SaveChangesAsync();
+            ids.Add(p.Id);
+        }
+        return (book, ids);
+    }
+
+    [Fact]
+    public async Task GetChapters_ReturnsChaptersInReadingOrderWithCounts()
+    {
+        await CreateUserAsync();
+        // Reihenfolge nach Id: A, A, B, C, C, C
+        var (book, _) = await SeedBookWithChaptersAsync("Multi", "A", "A", "B", "C", "C", "C");
+
+        var chapters = Unwrap<List<CourseChapterDto>>((await _controller.GetChapters(book.Id)).Result!);
+
+        Assert.Equal(3, chapters.Count);
+        Assert.Equal(new[] { "A", "B", "C" }, chapters.Select(c => c.Name).ToArray());
+        Assert.Equal(new[] { 0, 1, 2 }, chapters.Select(c => c.Index).ToArray());
+        Assert.Equal(new[] { 2, 1, 3 }, chapters.Select(c => c.PuzzleCount).ToArray());
+        Assert.All(chapters, c => Assert.Equal(0, c.SolvedCount));
+    }
+
+    [Fact]
+    public async Task GetChapters_ReflectsPerChapterProgress()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("Prog", "A", "A", "B", "B");
+        // Eines aus Kapitel A lösen.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+
+        var chapters = Unwrap<List<CourseChapterDto>>((await _controller.GetChapters(book.Id)).Result!);
+
+        var a = chapters.Single(c => c.Name == "A");
+        var b = chapters.Single(c => c.Name == "B");
+        Assert.Equal(1, a.SolvedCount);
+        Assert.Equal(50, a.ProgressPercent);
+        Assert.Equal(0, b.SolvedCount);
+        Assert.Equal(0, b.ProgressPercent);
+    }
+
+    [Fact]
+    public async Task GetChapters_GroupsBlankChapterAsNoChapter()
+    {
+        await CreateUserAsync();
+        // null und "" sollen in dieselbe „ohne Kapitel"-Gruppe (Name=null) fallen.
+        var (book, _) = await SeedBookWithChaptersAsync("Blank", null, "", "X");
+
+        var chapters = Unwrap<List<CourseChapterDto>>((await _controller.GetChapters(book.Id)).Result!);
+
+        Assert.Equal(2, chapters.Count);
+        var none = chapters.Single(c => c.Name == null);
+        Assert.Equal(2, none.PuzzleCount);
+        Assert.Equal("X", chapters.Single(c => c.Index == 1).Name);
+    }
+
+    [Fact]
+    public async Task GetNext_WithChapterIndex_StaysWithinChapter()
+    {
+        await CreateUserAsync();
+        // Index 0 = A (ids 0,1), Index 1 = B (ids 2,3).
+        var (book, ids) = await SeedBookWithChaptersAsync("Scoped", "A", "A", "B", "B");
+
+        var first = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", chapterIndex: 1));
+        Assert.Equal(ids[2], first.Puzzle!.Id);
+        Assert.Equal(2, first.Total); // nur Kapitel B zählt
+
+        // Erstes in B lösen -> nächstes ist das zweite in B, NICHT etwas aus A.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[2], Solved = true, ChapterIndex = 1 });
+        var second = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", chapterIndex: 1));
+        Assert.Equal(ids[3], second.Puzzle!.Id);
+
+        // Beide in B gelöst -> Kapitel abgeschlossen, obwohl A komplett offen ist.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[3], Solved = true, ChapterIndex = 1 });
+        var done = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", chapterIndex: 1));
+        Assert.True(done.Completed);
+        Assert.Equal(2, done.SolvedCount);
+        Assert.Equal(2, done.Total);
+    }
+
+    [Fact]
+    public async Task GetNext_WithChapterIndex_ScopesProgressNotWholeBook()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("ScopeCount", "A", "A", "B", "B");
+        // Ein Puzzle in A lösen (buchweit 1/4, Kapitel B aber 0/2).
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+
+        var inB = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", chapterIndex: 1));
+        Assert.Equal(0, inB.SolvedCount);
+        Assert.Equal(2, inB.Total);
+
+        // Buchweit (ohne chapterIndex) bleibt 1/4.
+        var whole = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.Equal(1, whole.SolvedCount);
+        Assert.Equal(4, whole.Total);
+    }
+
+    [Fact]
+    public async Task RecordResult_WithChapterIndex_ReturnsChapterScopedProgress()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("RecScope", "A", "A", "B", "B");
+
+        var progress = Unwrap<CourseProgressDto>(
+            await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[2], Solved = true, ChapterIndex = 1 }));
+
+        // Kapitel B: 1 von 2 gelöst.
+        Assert.Equal(1, progress.SolvedCount);
+        Assert.Equal(2, progress.Total);
+        Assert.Equal(50, progress.ProgressPercent);
+        Assert.False(progress.Completed);
+    }
+
+    [Fact]
+    public async Task GetNext_InvalidChapterIndex_FallsBackToWholeBook()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("Fallback", "A", "B");
+
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", chapterIndex: 99));
+        Assert.Equal(2, next.Total); // ganzes Buch
+        Assert.Equal(ids[0], next.Puzzle!.Id);
+    }
 }

@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "移除离线副本",
     "offlineSaved": "「{{name}}」已离线保存（{{count}} 道题）",
     "offlineRemoved": "「{{name}}」已从离线中移除",
-    "offlineFailed": "无法离线保存书本"
+    "offlineFailed": "无法离线保存书本",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "每周精选",

@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Ta bort offlinekopia",
     "offlineSaved": "\"{{name}}\" sparad offline ({{count}} uppgifter)",
     "offlineRemoved": "\"{{name}}\" borttagen från offline",
-    "offlineFailed": "Kunde inte spara bok offline"
+    "offlineFailed": "Kunde inte spara bok offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Veckoinlägg",

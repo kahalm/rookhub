@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Usuń kopię offline",
     "offlineSaved": "„{{name}}” zapisano offline ({{count}} zadań)",
     "offlineRemoved": "„{{name}}” usunięto z trybu offline",
-    "offlineFailed": "Nie udało się zapisać książki offline"
+    "offlineFailed": "Nie udało się zapisać książki offline",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Tygodniowy",

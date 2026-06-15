@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Видалити офлайн-копію",
     "offlineSaved": "«{{name}}» збережено офлайн ({{count}} задач)",
     "offlineRemoved": "«{{name}}» видалено з офлайн",
-    "offlineFailed": "Не вдалося зберегти книгу офлайн"
+    "offlineFailed": "Не вдалося зберегти книгу офлайн",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Тижневик",

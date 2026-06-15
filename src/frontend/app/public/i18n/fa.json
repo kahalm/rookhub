@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "حذف نسخه آفلاین",
     "offlineSaved": "«{{name}}» آفلاین ذخیره شد ({{count}} تاکتیک)",
     "offlineRemoved": "«{{name}}» از آفلاین حذف شد",
-    "offlineFailed": "ذخیره کتاب به‌صورت آفلاین ناموفق بود"
+    "offlineFailed": "ذخیره کتاب به‌صورت آفلاین ناموفق بود",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "هفتگی",

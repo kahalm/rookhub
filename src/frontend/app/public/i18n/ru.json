@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Удалить офлайн-копию",
     "offlineSaved": "«{{name}}» сохранена офлайн ({{count}} задач)",
     "offlineRemoved": "«{{name}}» удалена из офлайн",
-    "offlineFailed": "Не удалось сохранить книгу офлайн"
+    "offlineFailed": "Не удалось сохранить книгу офлайн",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Еженедельно",

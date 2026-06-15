@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Çevrimdışı kopyayı kaldır",
     "offlineSaved": "\"{{name}}\" çevrimdışı kaydedildi ({{count}} problem)",
     "offlineRemoved": "\"{{name}}\" çevrimdışından kaldırıldı",
-    "offlineFailed": "Kitap çevrimdışı kaydedilemedi"
+    "offlineFailed": "Kitap çevrimdışı kaydedilemedi",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Haftalık",

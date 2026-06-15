@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Offline kopie verwijderen",
     "offlineSaved": "\"{{name}}\" offline opgeslagen ({{count}} puzzels)",
     "offlineRemoved": "\"{{name}}\" verwijderd uit offline",
-    "offlineFailed": "Boek offline opslaan mislukt"
+    "offlineFailed": "Boek offline opslaan mislukt",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Wekelijks",

@@ -588,7 +588,11 @@
     "offlineRemoveTooltip": "Supprimer la copie hors ligne",
     "offlineSaved": "« {{name}} » sauvegardé hors ligne ({{count}} puzzles)",
     "offlineRemoved": "« {{name}} » supprimé du hors ligne",
-    "offlineFailed": "Impossible de sauvegarder le livre hors ligne"
+    "offlineFailed": "Impossible de sauvegarder le livre hors ligne",
+    "chapters": "Chapters",
+    "noChapter": "(no chapter)",
+    "chaptersEmpty": "No chapters",
+    "chaptersLoadFailed": "Could not load chapters"
   },
   "weekly": {
     "title": "Hebdomadaire",
