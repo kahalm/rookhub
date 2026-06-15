@@ -33,7 +33,8 @@
     "viewAll": "Alle anzeigen",
     "historyTitle": "Benachrichtigungen",
     "loadMore": "Mehr laden",
-    "shownOf": "{{shown}} von {{total}}"
+    "shownOf": "{{shown}} von {{total}}",
+    "markAllRead": "Alle als gelesen markieren"
   },
   "nav": {
     "dashboard": "Dashboard",

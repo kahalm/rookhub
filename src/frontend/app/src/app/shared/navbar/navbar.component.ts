@@ -70,7 +70,15 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           <mat-icon>notifications</mat-icon>
         </button>
         <mat-menu #notifMenu="matMenu" class="notif-menu">
-          <div class="notif-header">{{ 'notifications.title' | translate }}</div>
+          <div class="notif-header">
+            <span class="notif-header-title">{{ 'notifications.title' | translate }}</span>
+            @if (hasUnseen()) {
+              <button mat-button class="notif-mark-all" (click)="markAllRead($event)">
+                <mat-icon>done_all</mat-icon>
+                <span>{{ 'notifications.markAllRead' | translate }}</span>
+              </button>
+            }
+          </div>
           @if (notifications.length === 0) {
             <div class="notif-empty">{{ 'notifications.empty' | translate }}</div>
           } @else {
@@ -141,7 +149,10 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
     .spacer { flex: 1 1 auto; }
     .mobile-menu-btn { display: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
-    .notif-header { padding: 8px 16px 4px; font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
+    .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
+    .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
+    .notif-mark-all { font-size: 0.72rem; line-height: 1.4; min-width: 0; padding: 0 8px; }
+    .notif-mark-all mat-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; margin-right: 2px; }
     .notif-empty { padding: 8px 16px 12px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .notif-item .notif-text { white-space: normal; line-height: 1.25; }
     .notif-item.notif-unseen { font-weight: 600; }
@@ -236,10 +247,21 @@ export class NavbarComponent implements OnInit {
     });
   }
 
-  /** Glocke geöffnet: Liste laden und alle als gelesen markieren (leert das Badge). */
+  /** Glocke geöffnet: nur die Liste laden — Ungelesene bleiben markiert, bis der User „Alle als gelesen" klickt. */
   onBellOpened(): void {
     this.notif.list().subscribe({ next: list => this.notifications = list, error: () => {} });
+  }
+
+  /** Gibt es im aktuell geladenen Dropdown ungelesene Benachrichtigungen? (steuert den „Alle als gelesen"-Button) */
+  hasUnseen(): boolean {
+    return this.notifications.some(n => !n.seen);
+  }
+
+  /** „Alle als gelesen markieren": Badge leeren + offene Liste lokal als gelesen kennzeichnen, ohne das Menü zu schließen. */
+  markAllRead(event: Event): void {
+    event.stopPropagation();
     this.notif.markAllSeen().subscribe({ error: () => {} });
+    this.notifications = this.notifications.map(n => ({ ...n, seen: true }));
   }
 
   /** Klick auf eine Benachrichtigung → zur hinterlegten Route navigieren. */

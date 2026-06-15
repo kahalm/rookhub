@@ -13,13 +13,14 @@ import { ThemeService } from '../../core/theme.service';
 describe('NavbarComponent', () => {
   // Über TestBed in einem Injection-Context bauen: NavbarComponent nutzt
   // inject(DestroyRef) als Field-Initializer, ein nacktes `new` würde NG0203 werfen.
-  function build(): NavbarComponent {
+  function build(notifMock?: Partial<InAppNotificationService>): NavbarComponent {
+    const notif = { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null), ...notifMock };
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: { currentUser$: of(null), isAdmin: false } },
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
-        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: InAppNotificationService, useValue: notif },
         { provide: LocaleService, useValue: {} },
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
@@ -40,5 +41,26 @@ describe('NavbarComponent', () => {
 
   it('baut ohne Fehler (App-Installation verlinkt jetzt auf /install statt Dialog)', () => {
     expect(build()).toBeTruthy();
+  });
+
+  it('onBellOpened lädt die Liste, markiert aber NICHT automatisch als gelesen', () => {
+    const markAllSeen = jasmine.createSpy('markAllSeen').and.returnValue(of(null));
+    const list = jasmine.createSpy('list').and.returnValue(of([{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }]));
+    const nav = build({ list, markAllSeen });
+    nav.onBellOpened();
+    expect(list).toHaveBeenCalled();
+    expect(markAllSeen).not.toHaveBeenCalled();
+    expect(nav.hasUnseen()).toBeTrue();
+  });
+
+  it('markAllRead markiert die offene Liste lokal als gelesen, ruft den Service und hält das Menü offen', () => {
+    const markAllSeen = jasmine.createSpy('markAllSeen').and.returnValue(of(null));
+    const nav = build({ markAllSeen });
+    nav.notifications = [{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }];
+    const event = { stopPropagation: jasmine.createSpy('stopPropagation') } as unknown as Event;
+    nav.markAllRead(event);
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(markAllSeen).toHaveBeenCalled();
+    expect(nav.hasUnseen()).toBeFalse();
   });
 });

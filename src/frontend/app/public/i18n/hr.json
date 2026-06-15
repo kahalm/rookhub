@@ -33,7 +33,8 @@
     "viewAll": "Prikaži sve",
     "historyTitle": "Obavijesti",
     "loadMore": "Učitaj još",
-    "shownOf": "{{shown}} od {{total}}"
+    "shownOf": "{{shown}} od {{total}}",
+    "markAllRead": "Označi sve kao pročitano"
   },
   "nav": {
     "dashboard": "Nadzorna ploča",

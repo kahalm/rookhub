@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.133.0';
+export const APP_VERSION = '0.134.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.134.0', date: '2026-06-15', changes: [
+    'Benachrichtigungs-Glocke: Das bloße Öffnen markiert nicht mehr automatisch alles als gelesen — ungelesene Einträge bleiben hervorgehoben. Stattdessen gibt es oben im Glocken-Menü einen Button „Alle als gelesen markieren", der das Badge leert.',
+  ]},
   { version: '0.133.0', date: '2026-06-15', changes: [
     'Benachrichtigungen: Über „Alle anzeigen" in der Glocke gibt es jetzt eine eigene Seite mit der vollständigen Benachrichtigungs-History (paginiert, „Mehr laden") — nicht nur die letzten paar.',
   ]},
