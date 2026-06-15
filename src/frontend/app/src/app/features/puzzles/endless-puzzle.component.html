@@ -315,7 +315,7 @@
               }
 
               @if (puzzle && isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
-                <app-challenge-friends [puzzleId]="puzzle.id" source="standard" />
+                <app-challenge-friends [puzzleId]="puzzle.id" source="standard" (opened)="stopCountdown()" />
               }
 
               <mat-card class="stats-card">

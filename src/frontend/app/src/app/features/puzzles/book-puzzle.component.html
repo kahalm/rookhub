@@ -264,7 +264,7 @@
                 <mat-icon>share</mat-icon> {{ 'book.actions.sharePuzzle' | translate }}
               </button>
               @if (!inWeekly && isLoggedIn && (state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
-                <app-challenge-friends [puzzleId]="puzzle.id" source="book" />
+                <app-challenge-friends [puzzleId]="puzzle.id" source="book" (opened)="stopCountdown()" />
               }
             </div>
           }

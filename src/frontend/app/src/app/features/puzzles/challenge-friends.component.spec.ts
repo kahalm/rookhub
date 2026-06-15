@@ -80,6 +80,15 @@ describe('ChallengeFriendsComponent', () => {
     expect(c.sending).toBeFalse();
   });
 
+  it('onMenuOpened emits opened (so the host can stop auto-advance) and loads friends', () => {
+    const c = create().componentInstance;
+    let emitted = false;
+    c.opened.subscribe(() => emitted = true);
+    c.onMenuOpened();
+    httpMock.expectOne('/api/friends').flush(friends);
+    expect(emitted).toBeTrue();
+  });
+
   it('send() does nothing without a selection', () => {
     const c = create().componentInstance;
     c.send();

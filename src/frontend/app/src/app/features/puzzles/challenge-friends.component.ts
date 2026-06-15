@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +20,7 @@ import { Friend } from '../../core/models';
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslateModule],
   template: `
-    <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="loadFriends()">
+    <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="onMenuOpened()">
       <mat-icon>send</mat-icon>
       {{ 'puzzles.actions.challengeFriend' | translate }}
     </button>
@@ -60,6 +60,9 @@ export class ChallengeFriendsComponent {
   @Input() puzzleId!: number;
   /** Quelle des Puzzles — bestimmt Tabelle + Deep-Link beim Empfänger. */
   @Input() source: PuzzleChallengeSource = 'standard';
+  /** Feuert beim Öffnen des Menüs — der Host kann damit den Auto-Advance-Countdown stoppen,
+   *  damit das Puzzle nicht weggewechselt wird, während man Freunde auswählt. */
+  @Output() opened = new EventEmitter<void>();
 
   friends: Friend[] = [];
   selected = new Set<number>();
@@ -75,6 +78,11 @@ export class ChallengeFriendsComponent {
 
   get allSelected(): boolean { return this.friends.length > 0 && this.selected.size === this.friends.length; }
   get someSelected(): boolean { return this.selected.size > 0 && this.selected.size < this.friends.length; }
+
+  onMenuOpened(): void {
+    this.opened.emit();
+    this.loadFriends();
+  }
 
   loadFriends(): void {
     if (this.loaded) return;

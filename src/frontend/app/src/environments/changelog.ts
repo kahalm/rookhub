@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.137.0';
+export const APP_VERSION = '0.137.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.137.1', date: '2026-06-15', changes: [
+    'Challenge verschicken im Endlos-/Kurs-/Buchmodus: Sobald du das „An Freund schicken"-Menü öffnest, stoppt der automatische Weiter-Countdown — du hast jetzt Zeit, in Ruhe Freunde auszuwählen, ohne dass das Puzzle weiterspringt.',
+  ]},
   { version: '0.137.0', date: '2026-06-15', changes: [
     '„An Freund schicken" gibt es jetzt in allen Puzzle-Modi: Standard, Endlos, Einzel-Buchpuzzle, Tagespuzzle und Kurs (Wochenpost ausgenommen). Buch-/Kurspuzzles lassen sich damit ebenso verschicken wie klassische Puzzles.',
     'Du kannst ein Puzzle jetzt an mehrere Freunde gleichzeitig schicken: Im Menü pro Freund eine Checkbox, „Alle auswählen" und „Senden (n)". Der Empfänger löst die Challenge wie gewohnt; das Ergebnis (gelöst/gescheitert) wird dir zurückgemeldet.',
