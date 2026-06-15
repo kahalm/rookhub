@@ -11,12 +11,22 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
-  TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus,
+  TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
 } from './training-goals.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 export interface GoalCell { date: string; status: GoalStatus; level: number; } // level -1 = Zukunft (leer)
+
+/** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
+export function toMinutes(seconds: number): number {
+  return Math.round(seconds / 60);
+}
+
+/** Tageshistory-Reihenfolge: neueste zuerst (die Tracker-Tage kommen aufsteigend sortiert). */
+export function orderHistory(days: TrackerDay[]): TrackerDay[] {
+  return [...days].reverse();
+}
 
 /** Heatmap-Level je Tagesstatus: voll = 4 (Stern/Gold), teilweise = 2 (Amber), sonst 0 (leer). */
 export function statusLevel(status: GoalStatus): number {
@@ -180,6 +190,37 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
             </mat-card-content>
           </mat-card>
         }
+
+        <!-- Tageshistory: pro Tag je Kategorie die Zahl -->
+        @if (historyDays.length) {
+          <mat-card>
+            <mat-card-header><mat-card-title>{{ 'trainingGoals.history' | translate }}</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="history-wrap">
+                <table class="history">
+                  <thead>
+                    <tr>
+                      <th class="th-date">{{ 'trainingGoals.dateCol' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.puzzles' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.book' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.play' | translate }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (d of historyDays; track d.date) {
+                      <tr>
+                        <td class="td-date">{{ d.date }}</td>
+                        <td>{{ mins(d.puzzleSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ mins(d.bookSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </div>
   `,
@@ -219,6 +260,14 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
     .sw.gl0 { background: color-mix(in srgb, currentColor 10%, transparent); } .sw.gl2 { background: #fdd835; } .sw.gl4 { background: #f5b301; }
+    .history-wrap { overflow-x: auto; }
+    table.history { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    table.history th, table.history td { text-align: right; padding: 6px 10px; white-space: nowrap; }
+    table.history th.th-date, table.history td.td-date { text-align: left; font-variant-numeric: tabular-nums; }
+    table.history thead th { font-weight: 600; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+    table.history tbody tr { border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+    table.history td { font-variant-numeric: tabular-nums; }
+    table.history .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
   `]
 })
 export class TrainingGoalsComponent implements OnInit {
@@ -228,6 +277,8 @@ export class TrainingGoalsComponent implements OnInit {
   goal: TrainingGoal | null = null;
   today: TodayProgress | null = null;
   tracker: GoalCell[][] = [];
+  /** Tage mit Aktivität, neueste zuerst — für die Tageshistory-Tabelle. */
+  historyDays: TrackerDay[] = [];
   edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
 
   constructor(
@@ -239,6 +290,11 @@ export class TrainingGoalsComponent implements OnInit {
   get hasGoal(): boolean {
     const g = this.goal;
     return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.playGames > 0);
+  }
+
+  /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
+  mins(seconds: number): number {
+    return toMinutes(seconds);
   }
 
   ngOnInit(): void { this.reload(); }
@@ -254,6 +310,7 @@ export class TrainingGoalsComponent implements OnInit {
         this.applyGoal(goal);
         this.today = today;
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
+        this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.loading = false;
       },
       error: () => { this.loading = false; },

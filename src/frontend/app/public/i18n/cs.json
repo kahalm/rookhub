@@ -1082,7 +1082,9 @@
       "play": "Hraní"
     },
     "syncPlay": "Aktualizovat herní čas",
-    "syncDone": "Herní čas aktualizován."
+    "syncDone": "Herní čas aktualizován.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

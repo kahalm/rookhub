@@ -1,10 +1,37 @@
-import { buildGoalTracker, statusLevel } from './training-goals.component';
+import { buildGoalTracker, statusLevel, toMinutes, orderHistory } from './training-goals.component';
+import { TrackerDay } from './training-goals.service';
 
 describe('statusLevel', () => {
   it('maps full→4, partial→2, none→0', () => {
     expect(statusLevel('full')).toBe(4);
     expect(statusLevel('partial')).toBe(2);
     expect(statusLevel('none')).toBe(0);
+  });
+});
+
+describe('toMinutes', () => {
+  it('rounds seconds to nearest minute', () => {
+    expect(toMinutes(0)).toBe(0);
+    expect(toMinutes(29)).toBe(0);
+    expect(toMinutes(30)).toBe(1);
+    expect(toMinutes(90)).toBe(2);
+    expect(toMinutes(600)).toBe(10);
+  });
+});
+
+describe('orderHistory', () => {
+  const day = (date: string): TrackerDay => ({ date, puzzleSeconds: 0, bookSeconds: 0, playGames: 0, status: 'none' });
+
+  it('returns days newest-first without mutating the input', () => {
+    const input = [day('2026-06-01'), day('2026-06-02'), day('2026-06-03')];
+    const out = orderHistory(input);
+    expect(out.map(d => d.date)).toEqual(['2026-06-03', '2026-06-02', '2026-06-01']);
+    // Eingabe bleibt unangetastet (aufsteigend).
+    expect(input.map(d => d.date)).toEqual(['2026-06-01', '2026-06-02', '2026-06-03']);
+  });
+
+  it('handles an empty list', () => {
+    expect(orderHistory([])).toEqual([]);
   });
 });
 

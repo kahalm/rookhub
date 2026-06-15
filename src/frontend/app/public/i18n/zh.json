@@ -1082,7 +1082,9 @@
       "play": "对局"
     },
     "syncPlay": "更新对局时间",
-    "syncDone": "对局时间已更新。"
+    "syncDone": "对局时间已更新。",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

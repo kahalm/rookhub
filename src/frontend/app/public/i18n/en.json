@@ -1235,7 +1235,9 @@
       "play": "Playing"
     },
     "syncPlay": "Update playing time",
-    "syncDone": "Playing time updated."
+    "syncDone": "Playing time updated.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "pageTitle": "Install RookHub",

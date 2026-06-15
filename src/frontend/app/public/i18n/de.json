@@ -1235,7 +1235,9 @@
       "play": "Spielen"
     },
     "syncPlay": "Spielzeit aktualisieren",
-    "syncDone": "Spielzeit aktualisiert."
+    "syncDone": "Spielzeit aktualisiert.",
+    "history": "Tageshistory",
+    "dateCol": "Datum"
   },
   "install": {
     "pageTitle": "RookHub installieren",

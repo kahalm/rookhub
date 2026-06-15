@@ -1082,7 +1082,9 @@
       "play": "Παιχνίδι"
     },
     "syncPlay": "Ενημέρωση χρόνου παιχνιδιού",
-    "syncDone": "Ο χρόνος παιχνιδιού ενημερώθηκε."
+    "syncDone": "Ο χρόνος παιχνιδιού ενημερώθηκε.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

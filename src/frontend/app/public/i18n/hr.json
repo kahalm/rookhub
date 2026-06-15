@@ -1235,7 +1235,9 @@
       "play": "Igranje"
     },
     "syncPlay": "Ažuriraj vrijeme igranja",
-    "syncDone": "Vrijeme igranja ažurirano."
+    "syncDone": "Vrijeme igranja ažurirano.",
+    "history": "Dnevna povijest",
+    "dateCol": "Datum"
   },
   "install": {
     "pageTitle": "Instaliraj RookHub",

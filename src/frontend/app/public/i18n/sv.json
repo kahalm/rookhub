@@ -1082,7 +1082,9 @@
       "play": "Spelande"
     },
     "syncPlay": "Uppdatera speltid",
-    "syncDone": "Speltid uppdaterad."
+    "syncDone": "Speltid uppdaterad.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

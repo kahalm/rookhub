@@ -1082,7 +1082,9 @@
       "play": "Bermain"
     },
     "syncPlay": "Perbarui waktu bermain",
-    "syncDone": "Waktu bermain diperbarui."
+    "syncDone": "Waktu bermain diperbarui.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

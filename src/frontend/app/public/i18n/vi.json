@@ -1082,7 +1082,9 @@
       "play": "Chơi cờ"
     },
     "syncPlay": "Cập nhật thời gian chơi",
-    "syncDone": "Đã cập nhật thời gian chơi."
+    "syncDone": "Đã cập nhật thời gian chơi.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

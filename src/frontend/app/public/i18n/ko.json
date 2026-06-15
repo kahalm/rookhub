@@ -1082,7 +1082,9 @@
       "play": "플레이"
     },
     "syncPlay": "플레이 시간 업데이트",
-    "syncDone": "플레이 시간이 업데이트되었습니다."
+    "syncDone": "플레이 시간이 업데이트되었습니다.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

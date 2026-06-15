@@ -1082,7 +1082,9 @@
       "play": "بازی"
     },
     "syncPlay": "به‌روزرسانی زمان بازی",
-    "syncDone": "زمان بازی به‌روز شد."
+    "syncDone": "زمان بازی به‌روز شد.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",

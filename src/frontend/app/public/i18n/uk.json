@@ -1082,7 +1082,9 @@
       "play": "Гра"
     },
     "syncPlay": "Оновити час гри",
-    "syncDone": "Час гри оновлено."
+    "syncDone": "Час гри оновлено.",
+    "history": "Daily history",
+    "dateCol": "Date"
   },
   "install": {
     "title": "Install RookHub on Android",
