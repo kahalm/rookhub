@@ -42,14 +42,16 @@ export interface ChessableImport {
   chaptersTotal: number;
   linesDone: number;
   queuedAhead: number;
+  createdAt: string;
+  /** Hol-Beginn (aus der Queue gezogen); null solange noch wartend. */
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
-/** Import-Satz in der Admin-Ansicht: zusätzlich Besitzer + Zeitstempel. */
+/** Import-Satz in der Admin-Ansicht: zusätzlich Besitzer. */
 export interface ChessableAdminImport extends ChessableImport {
   userId: number;
   username: string;
-  createdAt: string;
-  completedAt: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

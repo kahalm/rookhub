@@ -28,7 +28,8 @@
       "challenge_received": "{{username}} ti je poslao izazov",
       "challenge_resolved_solved": "{{username}} je riješio tvoj izazov",
       "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov"
-    }
+    },
+    "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}"
   },
   "nav": {
     "dashboard": "Nadzorna ploča",
@@ -1496,6 +1497,7 @@
     "phase_done": "gotovo",
     "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija",
     "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",
-    "etaRemaining": "još ~{{min}} min"
+    "etaRemaining": "još ~{{min}} min",
+    "importDuration": "Čekanje {{queue}} · Dohvat {{fetch}}"
   }
 }

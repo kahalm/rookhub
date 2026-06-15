@@ -86,6 +86,40 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_StampsStartedAt_AndNotifiesWithDurations()
+    {
+        var imp = await SeedImportAsync("repertoire");
+
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.NotNull(reloaded!.StartedAt);   // Hol-Beginn gestempelt (für Wartezeit/Holzeit)
+        Assert.NotNull(reloaded.CompletedAt);
+        Assert.True(reloaded.StartedAt >= reloaded.CreatedAt);
+
+        // Fertig-Benachrichtigung trägt Hol-/Wartezeit als i18n-Parameter.
+        var notif = await _db.Notifications.SingleAsync(
+            n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted);
+        Assert.Contains("fetchTime", notif.DataJson);
+        Assert.Contains("queueTime", notif.DataJson);
+    }
+
+    [Theory]
+    [InlineData(0, "0 s")]
+    [InlineData(45, "45 s")]
+    [InlineData(90, "1 min")]
+    [InlineData(3661, "1 h 1 min")]
+    public void FormatDuration_FormatsCompactly(int seconds, string expected)
+        => Assert.Equal(expected, ChessableImportService.FormatDuration(TimeSpan.FromSeconds(seconds)));
+
+    [Fact]
+    public void FormatDuration_NullOrNegative_IsDash()
+    {
+        Assert.Equal("—", ChessableImportService.FormatDuration(null));
+        Assert.Equal("—", ChessableImportService.FormatDuration(TimeSpan.FromSeconds(-5)));
+    }
+
+    [Fact]
     public async Task RunAsync_AlreadyCompleted_IsNoOp()
     {
         var imp = await SeedImportAsync("repertoire", status: "completed");

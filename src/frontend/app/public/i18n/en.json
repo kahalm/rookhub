@@ -28,7 +28,8 @@
       "challenge_received": "{{username}} sent you a puzzle challenge",
       "challenge_resolved_solved": "{{username}} solved your challenge",
       "challenge_resolved_failed": "{{username}} did not solve your challenge"
-    }
+    },
+    "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1496,6 +1497,7 @@
     "adminStatus_paused": "paused",
     "error": "Error: {{message}}",
     "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
-    "etaRemaining": "~{{min}} min left"
+    "etaRemaining": "~{{min}} min left",
+    "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
   }
 }

@@ -54,7 +54,10 @@ public record ChessableImportDto(
     int ChaptersDone,
     int ChaptersTotal,
     int LinesDone,
-    int QueuedAhead);
+    int QueuedAhead,
+    DateTime CreatedAt,
+    DateTime? StartedAt,
+    DateTime? CompletedAt);
 
 /// <summary>Import-Satz für die Admin-Ansicht: wie <see cref="ChessableImportDto"/>, zusätzlich
 /// Besitzer (UserId/Username) und Zeitstempel (für „alle Jobs + Verlauf" und das Dashboard-Widget).</summary>
@@ -77,4 +80,5 @@ public record ChessableAdminImportDto(
     int LinesDone,
     int QueuedAhead,
     DateTime CreatedAt,
+    DateTime? StartedAt,
     DateTime? CompletedAt);

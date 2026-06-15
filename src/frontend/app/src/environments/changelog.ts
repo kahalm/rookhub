@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.130.0';
+export const APP_VERSION = '0.131.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.131.0', date: '2026-06-15', changes: [
+    'Chessable-Import: Die „Kurs fertig"-Benachrichtigung zeigt jetzt, wie lange der Import gedauert hat — Wartezeit in der Warteschlange und reine Holzeit. In der Admin-Übersicht steht die Dauer zusätzlich bei jedem abgeschlossenen Import.',
+  ]},
   { version: '0.130.0', date: '2026-06-15', changes: [
     'Chessable-Import: Auf der Chessable-Seite steht jetzt ein Hinweis zum Hol-Tempo (grob 15–20 Zeilen/min — ein Kurs mit 500 Zeilen dauert ca. 30 Min, 1000 Zeilen ca. 1 Std). Während des Holens wird aus dem bisherigen Kapitel-Fortschritt eine geschätzte Restzeit eingeblendet.',
   ]},

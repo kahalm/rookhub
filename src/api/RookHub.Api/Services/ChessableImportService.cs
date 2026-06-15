@@ -80,6 +80,8 @@ public class ChessableImportService
         if (import.Status != "running")
             return; // bereits abgeschlossen oder fehlgeschlagen — nichts zu tun
 
+        // Hol-Beginn festhalten (erste Bearbeitung aus der Queue) — trennt Wartezeit von Holzeit.
+        import.StartedAt ??= DateTime.UtcNow;
         import.Attempts++;
         if (import.Attempts > MaxAttempts)
         {
@@ -220,8 +222,17 @@ public class ChessableImportService
                 import.Id, import.Target, courseName, import.Bid, import.Imported);
 
             // User benachrichtigen: Kurs ist fertig importiert → direkt zur passenden Ansicht.
+            // Inkl. Dauer-Aufschlüsselung: Wartezeit (in der Queue) + reine Holzeit.
+            var queueTime = FormatDuration(import.StartedAt - import.CreatedAt);
+            var fetchTime = FormatDuration(import.CompletedAt - (import.StartedAt ?? import.CreatedAt));
             await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
-                new Dictionary<string, string> { ["courseName"] = courseName, ["target"] = import.Target },
+                new Dictionary<string, string>
+                {
+                    ["courseName"] = courseName,
+                    ["target"] = import.Target,
+                    ["queueTime"] = queueTime,
+                    ["fetchTime"] = fetchTime,
+                },
                 import.Target == "book" ? "/courses" : "/repertoires");
         }
         catch (ChessableProxyException ex)
@@ -307,4 +318,14 @@ public class ChessableImportService
     }
 
     private static string Trunc(string s, int max) => s.Length > max ? s[..max] : s;
+
+    /// <summary>Kompakte, sprachneutrale Dauer für Meldungen: "1 h 5 min", "12 min", "45 s"; "—" wenn unbekannt.</summary>
+    internal static string FormatDuration(TimeSpan? span)
+    {
+        if (span is null || span.Value < TimeSpan.Zero) return "—";
+        var t = span.Value;
+        if (t.TotalHours >= 1) return $"{(int)t.TotalHours} h {t.Minutes} min";
+        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes} min";
+        return $"{(int)t.TotalSeconds} s";
+    }
 }

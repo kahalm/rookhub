@@ -262,6 +262,12 @@ export class NavbarComponent implements OnInit {
     let key = 'notifications.type.' + n.type;
     if (n.type === 'challenge_resolved' || n.type === 'revenge_performed')
       key += data['solved'] === 'true' ? '_solved' : '_failed';
-    return this.translate.instant(key, data);
+    let text = this.translate.instant(key, data);
+    // Fertig-Import: Hol-/Wartezeit als Suffix anhängen, falls vorhanden (alte Benachrichtigungen
+    // ohne diese Felder bleiben unverändert — kein Platzhalter-Leak).
+    if (n.type === 'chessable_import_completed' && data['fetchTime']) {
+      text += ' · ' + this.translate.instant('notifications.chessableDuration', data);
+    }
+    return text;
   }
 }

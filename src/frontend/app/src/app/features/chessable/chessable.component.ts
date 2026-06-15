@@ -31,6 +31,15 @@ import {
  */
 export const CHESSABLE_LINES_PER_MIN = 500 / 30;
 
+/** Kompakte Dauer aus Millisekunden: "1 h 5 min", "12 min", "45 s"; "—" bei ungültig/negativ. */
+export function formatDuration(ms: number): string {
+  if (!isFinite(ms) || ms < 0) return '—';
+  const s = Math.floor(ms / 1000);
+  if (s >= 3600) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+  if (s >= 60) return `${Math.floor(s / 60)} min`;
+  return `${s} s`;
+}
+
 /** Lineare Hochrechnung der Gesamt-Zeilenzahl aus dem Kapitel-Fortschritt. 0 = (noch) nicht schätzbar. */
 export function estimateTotalLines(linesDone: number, chaptersDone: number, chaptersTotal: number): number {
   if (linesDone <= 0 || chaptersDone <= 0 || chaptersTotal <= 0) return 0;
@@ -283,6 +292,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                     <span class="admin-name">{{ imp.courseName || imp.bid }}</span>
                     <span class="admin-target">{{ ('chessable.target_' + imp.target) | translate }}</span>
                     <span class="admin-status" [attr.data-status]="imp.status">{{ adminStatusLabel(imp) }}</span>
+                    @if (importDurationLabel(imp); as dur) { <span class="admin-duration">{{ dur }}</span> }
                     <span class="admin-date">{{ imp.createdAt | date:'short' }}</span>
                   </div>
                 }
@@ -363,6 +373,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
     .admin-row .admin-status[data-status="completed"] { color: #2e7d32; }
     .admin-row .admin-status[data-status="failed"] { color: #c62828; }
     .admin-row .admin-status[data-status="cancelled"] { color: var(--mat-sys-on-surface-variant, #888); }
+    .admin-row .admin-duration { font-size: 0.78rem; color: var(--mat-sys-on-surface-variant, #888); white-space: nowrap; }
     .admin-row .admin-date { font-size: 0.78rem; color: var(--mat-sys-on-surface-variant, #888); white-space: nowrap; }
     @media (max-width: 600px) {
       .admin-row { grid-template-columns: 1fr auto; }
@@ -573,6 +584,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
       id: 0, bid: c.bid, courseName: c.name, target, status: 'running', phase: 'queued',
       error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
       chaptersDone: 0, chaptersTotal: 0, linesDone: 0, queuedAhead: 0,
+      createdAt: new Date().toISOString(), startedAt: null, completedAt: null,
     };
     this.chessable.startImport(c.bid, target, c.name).subscribe({
       next: imp => {
@@ -596,6 +608,14 @@ export class ChessableComponent implements OnInit, OnDestroy {
       if (eta > 0) s += ' · ' + this.translate.instant('chessable.etaRemaining', { min: eta });
     }
     return s;
+  }
+
+  /** „Wartezeit X · Holzeit Y" eines abgeschlossenen Imports; '' solange keine Zeiten vorliegen. */
+  importDurationLabel(imp: ChessableImport): string {
+    if (!imp.startedAt || !imp.completedAt) return '';
+    const queue = formatDuration(Date.parse(imp.startedAt) - Date.parse(imp.createdAt));
+    const fetch = formatDuration(Date.parse(imp.completedAt) - Date.parse(imp.startedAt));
+    return this.translate.instant('chessable.importDuration', { queue, fetch });
   }
 
   /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben). */

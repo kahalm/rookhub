@@ -54,5 +54,11 @@ public class ChessableImport
     public int Invalid { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Zeitpunkt, an dem der Job aus der Queue gezogen wurde und das Holen begann
+    /// — für die Aufteilung Wartezeit (Created→Started) vs. Holzeit (Started→Completed).
+    /// Null solange der Job noch in der Warteschlange liegt.</summary>
+    public DateTime? StartedAt { get; set; }
+
     public DateTime? CompletedAt { get; set; }
 }

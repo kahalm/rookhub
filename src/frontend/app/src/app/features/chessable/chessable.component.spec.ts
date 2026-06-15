@@ -1,6 +1,6 @@
 import {
   buildChessableBookmarklet, parseChessbearerFragment,
-  estimateTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN,
+  estimateTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN, formatDuration,
 } from './chessable.component';
 
 describe('parseChessbearerFragment', () => {
@@ -44,6 +44,20 @@ describe('estimateRemainingMinutes', () => {
   it('is 0 when already done or not estimable', () => {
     expect(estimateRemainingMinutes(100, 10, 10)).toBe(0); // alle Kapitel durch → 0 verbleibend
     expect(estimateRemainingMinutes(0, 0, 0)).toBe(0);
+  });
+});
+
+describe('formatDuration', () => {
+  it('formats ms compactly as h/min/s', () => {
+    expect(formatDuration(0)).toBe('0 s');
+    expect(formatDuration(45_000)).toBe('45 s');
+    expect(formatDuration(90_000)).toBe('1 min');
+    expect(formatDuration(3_661_000)).toBe('1 h 1 min');
+  });
+
+  it('returns a dash for invalid/negative input', () => {
+    expect(formatDuration(-5)).toBe('—');
+    expect(formatDuration(NaN)).toBe('—');
   });
 });
 
