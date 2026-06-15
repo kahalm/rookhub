@@ -168,8 +168,10 @@ public class AuthService
             extraClaims: new[] { new Claim("imp", adminId.ToString()) },
             lifetime: TimeSpan.FromHours(2));
 
-        // Sicherheits-/Audit-relevant -> Warning, landet strukturiert in ES/Kibana.
-        _logger.LogWarning(
+        // Audit-relevant -> landet strukturiert in ES/Kibana (auditierbar bleibt es auf Information).
+        // Bewusst NICHT Warning: Impersonation ist ein legitimer Admin-Vorgang und verfälschte sonst
+        // die Warn-Rate (log-watcher warn_spike). Severity hier = Information.
+        _logger.LogInformation(
             "Impersonation: admin {AdminId} ({AdminName}) steigt als User {UserId} ({UserName}) ein",
             adminId, adminUsername, target.Id, target.Username);
 

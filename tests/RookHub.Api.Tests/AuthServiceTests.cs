@@ -155,6 +155,11 @@ public class AuthServiceTests : IDisposable
         Assert.Equal(adminId.ToString(), jwt.Claims.First(c => c.Type == "imp").Value);
         // Kurzlebig (~2 h), nicht 30 Tage.
         Assert.True(jwt.ValidTo < DateTime.UtcNow.AddHours(3), "Impersonation-Token sollte kurzlebig sein");
+
+        // Audit-Log wird geschrieben, aber auf Information (nicht Warning) — sonst verfälscht
+        // der legitime Admin-Vorgang die Warn-Rate (log-watcher warn_spike).
+        var audit = Assert.Single(_logger.Events, e => e.Message.Contains("Impersonation"));
+        Assert.Equal(LogLevel.Information, audit.Level);
     }
 
     [Fact]
@@ -278,7 +283,7 @@ public class AuthServiceTests : IDisposable
     // Minimaler ILogger, der Events samt strukturierter Properties mitschreibt.
     private sealed class CapturingLogger<T> : ILogger<T>
     {
-        public sealed record Entry(string Message, IReadOnlyDictionary<string, object?> State);
+        public sealed record Entry(LogLevel Level, string Message, IReadOnlyDictionary<string, object?> State);
 
         public List<Entry> Events { get; } = new();
 
@@ -292,7 +297,7 @@ public class AuthServiceTests : IDisposable
             if (state is IEnumerable<KeyValuePair<string, object?>> kvps)
                 foreach (var kv in kvps)
                     dict[kv.Key] = kv.Value;
-            Events.Add(new Entry(formatter(state, exception), dict));
+            Events.Add(new Entry(logLevel, formatter(state, exception), dict));
         }
     }
 }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.140.0';
+export const APP_VERSION = '0.140.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.140.1', date: '2026-06-15', changes: [
+    'Internes Monitoring: Das „Als Nutzer einsteigen"-Audit-Log (Admin-Impersonation) wird jetzt auf Stufe „Information" statt „Warnung" geschrieben. Es bleibt vollständig in Kibana nachvollziehbar, verfälscht aber nicht mehr die Warn-Rate (vermied einen Fehlalarm des Log-Watchers).',
+  ]},
   { version: '0.140.0', date: '2026-06-15', changes: [
     'Blindfold (Visualization Level 1): The "Show" button is now available here too. Since the board in Level 1 stays permanently frozen on the starting position, the button reveals the actual current position for 3 seconds and then returns to the frozen starting position — in all modes (Standard, Book/Course/Daily puzzle, Endless).',
   ]},
