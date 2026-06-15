@@ -60,7 +60,13 @@ try
     // Database
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
+            // Transiente DB-Fehler (z. B. kurzer Verbindungsverlust beim MariaDB-Neustart/Recreate)
+            // automatisch wiederholen, statt Background-Tasks/Requests hart fehlschlagen zu lassen.
+            mySql => mySql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null)));
 
     // JWT Authentication
     var jwtKey = builder.Configuration["Jwt:Key"]

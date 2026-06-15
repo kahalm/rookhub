@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.134.1';
+export const APP_VERSION = '0.134.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.134.2', date: '2026-06-15', changes: [
+    'Intern: API wiederholt transiente Datenbankfehler jetzt automatisch (EF Core EnableRetryOnFailure) — kurze Verbindungsverluste beim MariaDB-Neustart/Recreate lassen Background-Tasks/Requests nicht mehr hart fehlschlagen.',
+  ]},
   { version: '0.134.1', date: '2026-06-15', changes: [
     'Intern: Stehengebliebenen CourseService-Test nachgezogen (Kurs-Ergebnis-POST enthält seit der Kapitelübersicht zusätzlich chapterIndex) — Test-Gate wieder grün.',
   ]},

@@ -109,17 +109,24 @@ public class AdminService
             return;
         }
 
-        await using var tx = await _db.Database.BeginTransactionAsync();
-        try
+        // EnableRetryOnFailure aktiviert eine Execution-Strategy, die user-initiierte
+        // Transaktionen nur innerhalb von ExecuteAsync erlaubt (sonst wird der Retry-Umfang
+        // mehrdeutig) — daher die komplette Transaktion in die Strategy einschließen.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            await _db.PuzzleAttempts.ExecuteDeleteAsync();
-            await _db.Puzzles.ExecuteDeleteAsync();
-            await tx.CommitAsync();
-        }
-        catch
-        {
-            await tx.RollbackAsync();
-            throw;
-        }
+            await using var tx = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                await _db.PuzzleAttempts.ExecuteDeleteAsync();
+                await _db.Puzzles.ExecuteDeleteAsync();
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        });
     }
 }
