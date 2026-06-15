@@ -32,14 +32,35 @@ public class AdminMessageService
         return body.Length > MaxBodyLength ? body[..MaxBodyLength] : body;
     }
 
+    /// <summary>Stellt sicher, dass die Thread-Metazeile existiert (für Zuweisung/Claim).</summary>
+    private async Task<MessageThread> EnsureThreadAsync(int userId)
+    {
+        var thread = await _db.MessageThreads.FindAsync(userId);
+        if (thread is null)
+        {
+            thread = new MessageThread { UserId = userId };
+            _db.MessageThreads.Add(thread);
+        }
+        return thread;
+    }
+
     // ---- Admin-Seite ----
 
-    /// <summary>Admin schickt/antwortet einem User (legt den Thread an, falls erste Nachricht).</summary>
+    /// <summary>Admin schickt/antwortet einem User (legt den Thread an, falls erste Nachricht). Ein
+    /// unbearbeiteter Thread wird dabei automatisch von diesem Admin übernommen.</summary>
     public async Task<AdminMessageDto> SendFromAdminAsync(int adminId, int targetUserId, string? body)
     {
         var text = Normalize(body);
         var exists = await _db.AppUsers.AnyAsync(u => u.Id == targetUserId);
         if (!exists) throw new KeyNotFoundException("User not found.");
+
+        var thread = await EnsureThreadAsync(targetUserId);
+        // Antworten = übernehmen: noch nicht zugewiesener Thread geht an diesen Admin.
+        if (thread.ClaimedByAdminId is null)
+        {
+            thread.ClaimedByAdminId = adminId;
+            thread.ClaimedAt = DateTime.UtcNow;
+        }
 
         var msg = new AdminMessage { UserId = targetUserId, SenderId = adminId, FromAdmin = true, Body = text };
         _db.AdminMessages.Add(msg);
@@ -48,6 +69,25 @@ public class AdminMessageService
         // Glocke beim Empfänger (Link auf die Nachrichten-Seite).
         await _notifications.CreateAsync(targetUserId, NotificationType.AdminMessageReceived, null, "/messages");
         return ToDto(msg);
+    }
+
+    /// <summary>Admin übernimmt einen Thread (Zuweisung an sich). Legt die Thread-Zeile bei Bedarf an.</summary>
+    public async Task ClaimThreadAsync(int adminId, int targetUserId)
+    {
+        var thread = await EnsureThreadAsync(targetUserId);
+        thread.ClaimedByAdminId = adminId;
+        thread.ClaimedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Gibt einen Thread wieder frei (keine Zuweisung mehr).</summary>
+    public async Task ReleaseThreadAsync(int targetUserId)
+    {
+        var thread = await _db.MessageThreads.FindAsync(targetUserId);
+        if (thread is null) return;
+        thread.ClaimedByAdminId = null;
+        thread.ClaimedAt = null;
+        await _db.SaveChangesAsync();
     }
 
     /// <summary>Alle Threads (ein Eintrag je User) mit letzter Nachricht + Anzahl ungelesener User-Antworten.</summary>
@@ -60,18 +100,32 @@ public class AdminMessageService
             .Select(m => new { m.UserId, m.Body, m.CreatedAt, m.FromAdmin, m.SeenByAdminAt, Username = m.User.Username })
             .ToListAsync();
 
+        // Zuweisung (Claim) je Thread + Admin-Namen für die Anzeige auflösen.
+        var claims = await _db.MessageThreads
+            .Where(t => t.ClaimedByAdminId != null)
+            .Select(t => new { t.UserId, t.ClaimedByAdminId })
+            .ToListAsync();
+        var claimByUser = claims.ToDictionary(c => c.UserId, c => c.ClaimedByAdminId);
+        var adminIds = claims.Select(c => c.ClaimedByAdminId!.Value).Distinct().ToList();
+        var adminNames = await _db.AppUsers
+            .Where(u => adminIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.Username);
+
         return rows
             .GroupBy(m => m.UserId)
             .Select(g =>
             {
                 var last = g.First();   // bereits absteigend sortiert ⇒ neueste
+                claimByUser.TryGetValue(g.Key, out var claimedBy);
                 return new AdminThreadSummaryDto(
                     g.Key,
                     last.Username,
                     last.Body.Length > 80 ? last.Body[..80] : last.Body,
                     last.CreatedAt,
                     last.FromAdmin,
-                    g.Count(m => !m.FromAdmin && m.SeenByAdminAt == null));
+                    g.Count(m => !m.FromAdmin && m.SeenByAdminAt == null),
+                    claimedBy,
+                    claimedBy is int cb && adminNames.TryGetValue(cb, out var n) ? n : null);
             })
             .OrderByDescending(t => t.LastMessageAt)
             .ToList();
@@ -109,12 +163,12 @@ public class AdminMessageService
     public async Task<List<AdminMessageDto>> GetUserThreadAsync(int userId)
         => await GetThreadAsync(userId);
 
-    /// <summary>User antwortet im eigenen Thread. Nur erlaubt, wenn der Admin den Thread gestartet hat.</summary>
-    public async Task<AdminMessageDto> ReplyFromUserAsync(int userId, string? body)
+    /// <summary>User schreibt dem Admin-Team — startet die Konversation selbst oder antwortet im
+    /// bestehenden Thread. Alle Admins werden benachrichtigt; ein Admin kann den Thread übernehmen.</summary>
+    public async Task<AdminMessageDto> SendFromUserAsync(int userId, string? body)
     {
         var text = Normalize(body);
-        var hasThread = await _db.AdminMessages.AnyAsync(m => m.UserId == userId);
-        if (!hasThread) throw new InvalidOperationException("No conversation to reply to.");
+        await EnsureThreadAsync(userId);
 
         var msg = new AdminMessage { UserId = userId, SenderId = userId, FromAdmin = false, Body = text };
         _db.AdminMessages.Add(msg);

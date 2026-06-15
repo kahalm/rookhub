@@ -1181,7 +1181,12 @@
       "noThreads": "Noch keine Konversationen.",
       "selectThread": "Wähle eine Konversation oder starte eine neue.",
       "emptyThread": "Noch keine Nachrichten — schreib die erste.",
-      "writeLabel": "Deine Nachricht"
+      "writeLabel": "Deine Nachricht",
+      "unclaimed": "offen",
+      "claimedBy": "Übernommen von {{name}}",
+      "claim": "Übernehmen",
+      "takeOver": "Übernehmen",
+      "release": "Freigeben"
     }
   },
   "analysis": {
@@ -1532,6 +1537,8 @@
     "you": "Du",
     "replyLabel": "Deine Antwort",
     "send": "Senden",
-    "sendError": "Nachricht konnte nicht gesendet werden."
+    "sendError": "Nachricht konnte nicht gesendet werden.",
+    "emptyUserCanWrite": "Noch keine Nachrichten. Schreib dem Admin-Team unten — du bekommst die Antwort hier.",
+    "writeLabel": "Deine Nachricht"
   }
 }

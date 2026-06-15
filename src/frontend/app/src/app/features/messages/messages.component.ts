@@ -21,26 +21,28 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 
       @if (loading) {
         <app-loading-spinner />
-      } @else if (messages.length === 0) {
-        <p class="empty">{{ 'messages.emptyUser' | translate }}</p>
       } @else {
-        <mat-card>
-          <mat-card-content class="thread">
-            @for (m of messages; track m.id) {
-              <div class="bubble-row" [class.mine]="!m.fromAdmin">
-                <div class="bubble" [class.admin]="m.fromAdmin">
-                  <div class="sender">{{ (m.fromAdmin ? 'messages.adminTeam' : 'messages.you') | translate }}</div>
-                  <div class="body">{{ m.body }}</div>
-                  <div class="meta">{{ m.createdAt | date:'short' }}</div>
+        @if (messages.length === 0) {
+          <p class="empty">{{ 'messages.emptyUserCanWrite' | translate }}</p>
+        } @else {
+          <mat-card>
+            <mat-card-content class="thread">
+              @for (m of messages; track m.id) {
+                <div class="bubble-row" [class.mine]="!m.fromAdmin">
+                  <div class="bubble" [class.admin]="m.fromAdmin">
+                    <div class="sender">{{ (m.fromAdmin ? 'messages.adminTeam' : 'messages.you') | translate }}</div>
+                    <div class="body">{{ m.body }}</div>
+                    <div class="meta">{{ m.createdAt | date:'short' }}</div>
+                  </div>
                 </div>
-              </div>
-            }
-          </mat-card-content>
-        </mat-card>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
 
         <div class="reply">
           <mat-form-field appearance="outline" class="reply-field">
-            <mat-label>{{ 'messages.replyLabel' | translate }}</mat-label>
+            <mat-label>{{ (messages.length === 0 ? 'messages.writeLabel' : 'messages.replyLabel') | translate }}</mat-label>
             <textarea matInput [(ngModel)]="draft" rows="3" maxlength="4000"
                       (keydown.control.enter)="send()" [disabled]="sending"></textarea>
           </mat-form-field>
@@ -96,7 +98,7 @@ export class MessagesComponent implements OnInit {
     const body = this.draft.trim();
     if (!body || this.sending) return;
     this.sending = true;
-    this.messageService.reply(body).subscribe({
+    this.messageService.send(body).subscribe({
       next: m => { this.messages = [...this.messages, m]; this.draft = ''; this.sending = false; },
       error: () => { this.sending = false; },
     });

@@ -47,4 +47,20 @@ public class AdminMessageController : BaseApiController
         await _messages.MarkSeenByAdminAsync(userId);
         return NoContent();
     }
+
+    /// <summary>Übernimmt den Thread (Zuweisung an den aufrufenden Admin).</summary>
+    [HttpPost("threads/{userId:int}/claim")]
+    public async Task<IActionResult> Claim(int userId)
+    {
+        await _messages.ClaimThreadAsync(GetUserId(), userId);
+        return NoContent();
+    }
+
+    /// <summary>Gibt den Thread wieder frei (keine Zuweisung).</summary>
+    [HttpPost("threads/{userId:int}/release")]
+    public async Task<IActionResult> Release(int userId)
+    {
+        await _messages.ReleaseThreadAsync(userId);
+        return NoContent();
+    }
 }

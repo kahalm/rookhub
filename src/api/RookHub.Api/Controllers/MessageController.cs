@@ -26,11 +26,12 @@ public class MessageController : BaseApiController
     public async Task<IActionResult> GetUnreadCount()
         => Ok(new MessageUnreadCountDto(await _messages.CountUnreadForUserAsync(GetUserId())));
 
-    /// <summary>Antwort des Users im eigenen Thread (400, wenn noch keine Konversation existiert).</summary>
+    /// <summary>Der User schreibt dem Admin-Team — startet die Konversation selbst oder antwortet
+    /// im bestehenden Thread (400 nur bei leerem Text).</summary>
     [HttpPost("reply")]
-    public async Task<IActionResult> Reply([FromBody] SendMessageDto dto)
+    public async Task<IActionResult> Send([FromBody] SendMessageDto dto)
     {
-        try { return Ok(await _messages.ReplyFromUserAsync(GetUserId(), dto.Body)); }
+        try { return Ok(await _messages.SendFromUserAsync(GetUserId(), dto.Body)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 

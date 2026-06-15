@@ -48,6 +48,7 @@ public class AppDbContext : DbContext
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
+    public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -169,6 +170,16 @@ public class AppDbContext : DbContext
             // Thread laden (UserId, chronologisch) + Admin-Badge (ungelesene User-Antworten).
             e.HasIndex(m => new { m.UserId, m.CreatedAt });
             e.HasIndex(m => new { m.FromAdmin, m.SeenByAdminAt });
+        });
+
+        modelBuilder.Entity<MessageThread>(e =>
+        {
+            // Schlüssel = User; wird mit dem User gelöscht. ClaimedByAdminId bewusst ohne FK.
+            e.HasKey(t => t.UserId);
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Repertoire>(e =>

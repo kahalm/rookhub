@@ -88,3 +88,11 @@
 .msg-reply button { align-self: flex-end; }
 .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 8px 0; }
 @media (max-width: 768px) { .msg-layout { flex-direction: column; } .msg-threads { flex-basis: auto; max-width: none; width: 100%; } }
+
+/* --- Claim/Übernahme-Anzeige Nachrichten --- */
+.msg-thread-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 2px; }
+.msg-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.msg-claim { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; opacity: 0.75; }
+.msg-claim mat-icon { font-size: 15px; width: 15px; height: 15px; }
+.msg-claim.mine { color: var(--mat-sys-primary, #3f51b5); opacity: 1; font-weight: 600; }
+.msg-claim.unclaimed { color: #d4820a; }

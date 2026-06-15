@@ -79,30 +79,79 @@ public class AdminMessageTests : IDisposable
         Assert.Equal(AdminMessageService.MaxBodyLength, dto.Body.Length);
     }
 
-    // ---- Service: User antwortet ----
+    // ---- Service: User schreibt/antwortet ----
 
     [Fact]
-    public async Task ReplyFromUser_WithoutThread_Throws()
+    public async Task SendFromUser_CanInitiate_CreatesThread_AndNotifiesAllAdmins()
     {
+        await UserAsync(1, "admin1", admin: true);
         await UserAsync(2, "bob");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.ReplyFromUserAsync(2, "darf ich nicht"));
+        await UserAsync(3, "admin2", admin: true);
+
+        // Der User startet die Konversation SELBST (kein Admin hat vorher geschrieben).
+        var dto = await _service.SendFromUserAsync(2, "Hallo Admins");
+
+        Assert.False(dto.FromAdmin);
+        Assert.True(await _db.MessageThreads.AnyAsync(t => t.UserId == 2));   // Thread angelegt
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+        Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.UserMessageReceived));
     }
 
     [Fact]
-    public async Task ReplyFromUser_AfterAdminStarted_NotifiesAllAdmins()
+    public async Task SendFromUser_AfterAdminStarted_NotifiesAllAdmins()
     {
         await UserAsync(1, "admin1", admin: true);
         await UserAsync(2, "bob");
         await UserAsync(3, "admin2", admin: true);
         await _service.SendFromAdminAsync(1, 2, "Hallo");
 
-        var dto = await _service.ReplyFromUserAsync(2, "Hi zurück");
+        var dto = await _service.SendFromUserAsync(2, "Hi zurück");
 
         Assert.False(dto.FromAdmin);
-        // beide Admins werden informiert, der User selbst nicht
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
         Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    [Fact]
+    public async Task SendFromAdmin_AutoClaimsUnassignedThread()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "Hilfe!");   // User startet → unbearbeitet
+
+        await _service.SendFromAdminAsync(1, 2, "Klar, gerne");   // Admin antwortet → übernimmt
+
+        var thread = await _db.MessageThreads.FindAsync(2);
+        Assert.Equal(1, thread!.ClaimedByAdminId);
+    }
+
+    [Fact]
+    public async Task Claim_And_Release_Thread()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "Frage");
+
+        await _service.ClaimThreadAsync(1, 2);
+        Assert.Equal(1, (await _db.MessageThreads.FindAsync(2))!.ClaimedByAdminId);
+
+        await _service.ReleaseThreadAsync(2);
+        Assert.Null((await _db.MessageThreads.FindAsync(2))!.ClaimedByAdminId);
+    }
+
+    [Fact]
+    public async Task GetThreads_IncludesClaimInfo()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await _service.SendFromUserAsync(2, "hallo");
+        await _service.ClaimThreadAsync(1, 2);
+
+        var t = (await _service.GetThreadsAsync()).Single(x => x.UserId == 2);
+        Assert.Equal(1, t.ClaimedByAdminId);
+        Assert.Equal("admin1", t.ClaimedByAdminName);
     }
 
     // ---- Service: Thread + Read-Receipts ----
@@ -113,7 +162,7 @@ public class AdminMessageTests : IDisposable
         await UserAsync(1, "admin", admin: true);
         await UserAsync(2, "bob");
         await _service.SendFromAdminAsync(1, 2, "erste");
-        await _service.ReplyFromUserAsync(2, "zweite");
+        await _service.SendFromUserAsync(2, "zweite");
         await _service.SendFromAdminAsync(1, 2, "dritte");
 
         var thread = await _service.GetThreadAsync(2);
@@ -140,8 +189,8 @@ public class AdminMessageTests : IDisposable
         await UserAsync(1, "admin", admin: true);
         await UserAsync(2, "bob");
         await _service.SendFromAdminAsync(1, 2, "a");          // zählt NICHT (vom Admin)
-        await _service.ReplyFromUserAsync(2, "r1");
-        await _service.ReplyFromUserAsync(2, "r2");
+        await _service.SendFromUserAsync(2, "r1");
+        await _service.SendFromUserAsync(2, "r2");
 
         Assert.Equal(2, await _service.CountUnreadForAdminAsync());
         await _service.MarkSeenByAdminAsync(2);
@@ -167,7 +216,7 @@ public class AdminMessageTests : IDisposable
         await UserAsync(2, "bob");
         await UserAsync(3, "carol");
         await _service.SendFromAdminAsync(1, 2, "an bob");
-        await _service.ReplyFromUserAsync(2, "bob antwortet");   // 1 ungelesen (Admin-Sicht)
+        await _service.SendFromUserAsync(2, "bob antwortet");   // 1 ungelesen (Admin-Sicht)
         await _service.SendFromAdminAsync(1, 3, "an carol");
 
         var threads = await _service.GetThreadsAsync();
@@ -208,11 +257,20 @@ public class AdminMessageTests : IDisposable
     }
 
     [Fact]
-    public async Task UserReply_WithoutThread_Returns400()
+    public async Task UserCanInitiate_WithoutExistingThread()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        var result = await UserController(2).Send(new SendMessageDto("Hallo Admins"));
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Single(await _service.GetThreadAsync(2));
+    }
+
+    [Fact]
+    public async Task UserSend_EmptyBody_Returns400()
     {
         await UserAsync(2, "bob");
-        var result = await UserController(2).Reply(new SendMessageDto("hallo"));
-        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.IsType<BadRequestObjectResult>(await UserController(2).Send(new SendMessageDto("   ")));
     }
 
     [Fact]
@@ -233,7 +291,7 @@ public class AdminMessageTests : IDisposable
         Assert.Equal(0, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await UserController(2).GetUnreadCount()).Value!).Count);
 
         // User antwortet → Admin sieht ungelesen, liest, markiert
-        Assert.IsType<OkObjectResult>(await UserController(2).Reply(new SendMessageDto("Hi!")));
+        Assert.IsType<OkObjectResult>(await UserController(2).Send(new SendMessageDto("Hi!")));
         Assert.Equal(1, ((MessageUnreadCountDto)Assert.IsType<OkObjectResult>(await AdminController(1).GetUnreadCount()).Value!).Count);
         var threads = Assert.IsAssignableFrom<IEnumerable<AdminThreadSummaryDto>>(Assert.IsType<OkObjectResult>(await AdminController(1).GetThreads()).Value).ToList();
         Assert.Single(threads);

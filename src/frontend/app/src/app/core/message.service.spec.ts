@@ -23,12 +23,23 @@ describe('MessageService', () => {
     expect((result as unknown[]).length).toBe(1);
   });
 
-  it('sendet eine User-Antwort an /api/messages/reply', () => {
-    svc.reply('hallo').subscribe();
+  it('sendet eine User-Nachricht an /api/messages/reply', () => {
+    svc.send('hallo').subscribe();
     const req = http.expectOne('/api/messages/reply');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ body: 'hallo' });
     req.flush({ id: 2, fromAdmin: false, body: 'hallo', createdAt: '', readByRecipient: false });
+  });
+
+  it('Admin: claim + release posten auf die Thread-Endpoints', () => {
+    svc.claimThread(7).subscribe();
+    const c = http.expectOne('/api/admin/messages/threads/7/claim');
+    expect(c.request.method).toBe('POST');
+    c.flush({});
+    svc.releaseThread(7).subscribe();
+    const r = http.expectOne('/api/admin/messages/threads/7/release');
+    expect(r.request.method).toBe('POST');
+    r.flush({});
   });
 
   it('markUserSeen leert den User-Ungelesen-Zähler', () => {

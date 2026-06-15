@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.142.0';
+export const APP_VERSION = '0.143.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.143.0", date: "2026-06-15", changes: [
+    { en: "Messages now go both ways: you can contact the admin team yourself directly from the \"Messages\" page (mail icon, always available) — no need to wait for an admin to write first. All admins are notified of your message.", de: "Nachrichten gehen jetzt in beide Richtungen: Du kannst das Admin-Team direkt über die Seite „Nachrichten\" (Brief-Symbol, immer verfügbar) selbst kontaktieren — du musst nicht mehr warten, bis ein Admin zuerst schreibt. Alle Admins werden über deine Nachricht benachrichtigt." },
+    { en: "Admin area: incoming conversations can be \"taken over\" — every admin sees all conversations and who is handling which one (replying to an unassigned conversation claims it automatically; it can also be claimed or released manually).", de: "Admin-Bereich: Eingehende Konversationen lassen sich „übernehmen" — jeder Admin sieht alle Konversationen und wer welche bearbeitet (wer auf eine offene Konversation antwortet, übernimmt sie automatisch; übernehmen/freigeben geht auch manuell)." },
+  ]},
   { version: "0.142.0", date: "2026-06-15", changes: [
     { en: "Direct messages: The admin team can now send a message to a user, and the user can reply right here — the conversation continues as a thread. A new \"Messages\" page (mail icon in the navbar, with an unread badge) shows your conversation; you get a bell notification for every new admin message.", de: "Direktnachrichten: Das Admin-Team kann einem User jetzt eine Nachricht schicken, und der User kann direkt hier antworten — die Konversation läuft als Thread weiter. Eine neue Seite „Nachrichten\" (Brief-Symbol in der Navigation, mit Ungelesen-Markierung) zeigt deine Konversation; bei jeder neuen Admin-Nachricht gibt es eine Glocken-Benachrichtigung." },
     { en: "Admin area: A new \"Messages\" tab lists all conversations (with an unread-replies badge), lets you open a thread, write to a user, and start a new conversation via user search.", de: "Admin-Bereich: Ein neuer Tab „Nachrichten\" listet alle Konversationen (mit Markierung ungelesener Antworten), öffnet einen Thread, schreibt einem User und startet per User-Suche eine neue Konversation." },

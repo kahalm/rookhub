@@ -458,7 +458,16 @@
                         <span class="msg-dir">{{ (t.lastFromAdmin ? ('messages.adminTeam' | translate) : t.username) }}:</span>
                         {{ t.lastMessagePreview }}
                       </div>
-                      <div class="msg-thread-date">{{ t.lastMessageAt | date:'short' }}</div>
+                      <div class="msg-thread-foot">
+                        <span class="msg-thread-date">{{ t.lastMessageAt | date:'short' }}</span>
+                        @if (t.claimedByAdminId) {
+                          <span class="msg-claim" [class.mine]="t.claimedByAdminId === myId">
+                            <mat-icon>assignment_ind</mat-icon>{{ t.claimedByAdminName }}
+                          </span>
+                        } @else {
+                          <span class="msg-claim unclaimed"><mat-icon>person_off</mat-icon>{{ 'admin.messages.unclaimed' | translate }}</span>
+                        }
+                      </div>
                     </button>
                   }
                 }
@@ -471,9 +480,24 @@
                 } @else {
                   <div class="msg-detail-header">
                     <h3>{{ selectedThreadName }}</h3>
-                    <button mat-icon-button (click)="closeThread()" [attr.aria-label]="'common.close' | translate">
-                      <mat-icon>close</mat-icon>
-                    </button>
+                    <div class="msg-detail-actions">
+                      @if (selectedThread?.claimedByAdminId) {
+                        <span class="msg-claim" [class.mine]="selectedThread?.claimedByAdminId === myId">
+                          <mat-icon>assignment_ind</mat-icon>{{ 'admin.messages.claimedBy' | translate:{ name: selectedThread?.claimedByAdminName } }}
+                        </span>
+                        @if (selectedThread?.claimedByAdminId !== myId) {
+                          <button mat-stroked-button (click)="claimThread(selectedThreadUserId!)">{{ 'admin.messages.takeOver' | translate }}</button>
+                        }
+                        <button mat-stroked-button (click)="releaseThread(selectedThreadUserId!)">{{ 'admin.messages.release' | translate }}</button>
+                      } @else {
+                        <button mat-stroked-button color="primary" (click)="claimThread(selectedThreadUserId!)">
+                          <mat-icon>assignment_ind</mat-icon> {{ 'admin.messages.claim' | translate }}
+                        </button>
+                      }
+                      <button mat-icon-button (click)="closeThread()" [attr.aria-label]="'common.close' | translate">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </div>
                   </div>
                   @if (threadLoading) {
                     <app-loading-spinner />

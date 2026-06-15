@@ -214,6 +214,32 @@ export class AdminComponent implements OnInit {
     this.adminDraft = '';
   }
 
+  /** Übersicht-Eintrag des gerade offenen Threads (für Claim-Status im Detail-Header). */
+  get selectedThread(): AdminThreadSummary | null {
+    return this.threads.find(t => t.userId === this.selectedThreadUserId) ?? null;
+  }
+
+  /** Eigene Admin-Id (zum Erkennen „von mir übernommen"). */
+  get myId(): number | null {
+    return this.auth.currentUser?.userId ?? null;
+  }
+
+  /** Thread übernehmen (Zuweisung an mich). */
+  claimThread(userId: number): void {
+    this.messageService.claimThread(userId).subscribe({
+      next: () => this.loadThreads(),
+      error: () => {},
+    });
+  }
+
+  /** Thread wieder freigeben. */
+  releaseThread(userId: number): void {
+    this.messageService.releaseThread(userId).subscribe({
+      next: () => this.loadThreads(),
+      error: () => {},
+    });
+  }
+
   loadUsers(): void {
     this.usersLoading = true;
     this.adminService.getUsers(this.userSearch, this.usersPage, this.usersPageSize).subscribe({

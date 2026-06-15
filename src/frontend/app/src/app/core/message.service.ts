@@ -21,6 +21,9 @@ export interface AdminThreadSummary {
   lastMessageAt: string;
   lastFromAdmin: boolean;
   unreadFromUser: number;
+  /** Admin, der den Thread übernommen hat (null = unbearbeitet). */
+  claimedByAdminId: number | null;
+  claimedByAdminName: string | null;
 }
 
 /**
@@ -47,8 +50,8 @@ export class MessageService {
     return this.http.get<ChatMessage[]>('/api/messages');
   }
 
-  /** Antwort des Users (nur möglich, sobald der Admin den Thread gestartet hat). */
-  reply(body: string): Observable<ChatMessage> {
+  /** Der User schreibt dem Admin-Team — startet die Konversation selbst oder antwortet. */
+  send(body: string): Observable<ChatMessage> {
     return this.http.post<ChatMessage>('/api/messages/reply', { body });
   }
 
@@ -85,6 +88,16 @@ export class MessageService {
   /** User-Antworten eines Threads als vom Admin gelesen markieren. */
   markAdminSeen(userId: number): Observable<unknown> {
     return this.http.post(`/api/admin/messages/threads/${userId}/seen`, {});
+  }
+
+  /** Thread übernehmen (Zuweisung an den aufrufenden Admin). */
+  claimThread(userId: number): Observable<unknown> {
+    return this.http.post(`/api/admin/messages/threads/${userId}/claim`, {});
+  }
+
+  /** Thread wieder freigeben. */
+  releaseThread(userId: number): Observable<unknown> {
+    return this.http.post(`/api/admin/messages/threads/${userId}/release`, {});
   }
 
   /** Admin-Ungelesen-Zähler (über alle Threads) neu laden. */

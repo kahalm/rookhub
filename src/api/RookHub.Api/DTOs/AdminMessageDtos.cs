@@ -19,7 +19,9 @@ public record AdminThreadSummaryDto(
     string LastMessagePreview,
     DateTime LastMessageAt,
     bool LastFromAdmin,
-    int UnreadFromUser);
+    int UnreadFromUser,
+    int? ClaimedByAdminId,
+    string? ClaimedByAdminName);
 
 /// <summary>Ungelesen-Zähler (User-Nachrichten-Badge bzw. Admin-Tab-Badge).</summary>
 public record MessageUnreadCountDto(int Count);
