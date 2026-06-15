@@ -778,6 +778,7 @@
       "noActiveSessions": "جلسه فعالی وجود ندارد.",
       "colDate": "تاریخ",
       "colMaxRating": "حداکثر رتبه",
+      "colEloDelta": "Elo ±",
       "colSolved": "حل‌شده",
       "colDuration": "مدت زمان",
       "colConfig": "تنظیمات",

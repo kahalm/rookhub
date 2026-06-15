@@ -778,6 +778,7 @@
       "noActiveSessions": "Tidak ada sesi aktif.",
       "colDate": "Tanggal",
       "colMaxRating": "Rating Tertinggi",
+      "colEloDelta": "Elo ±",
       "colSolved": "Diselesaikan",
       "colDuration": "Durasi",
       "colConfig": "Konfigurasi",

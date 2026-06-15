@@ -778,6 +778,7 @@
       "noActiveSessions": "कोई सक्रिय सत्र नहीं।",
       "colDate": "दिनांक",
       "colMaxRating": "अधिकतम रेटिंग",
+      "colEloDelta": "Elo ±",
       "colSolved": "हल किए",
       "colDuration": "अवधि",
       "colConfig": "कॉन्फ़िग",

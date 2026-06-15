@@ -778,6 +778,7 @@
       "noActiveSessions": "Žádná aktivní sezení.",
       "colDate": "Datum",
       "colMaxRating": "Max. hodnocení",
+      "colEloDelta": "Elo ±",
       "colSolved": "Vyřešeno",
       "colDuration": "Trvání",
       "colConfig": "Konfigurace",

@@ -778,6 +778,7 @@
       "noActiveSessions": "暂无进行中记录。",
       "colDate": "日期",
       "colMaxRating": "最高评分",
+      "colEloDelta": "Elo ±",
       "colSolved": "已解",
       "colDuration": "时长",
       "colConfig": "配置",

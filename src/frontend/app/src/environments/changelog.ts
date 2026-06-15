@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.135.0';
+export const APP_VERSION = '0.136.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.136.0', date: '2026-06-15', changes: [
+    'Endlosrun-History: Neue Spalte „Elo ±" zeigt je Lauf, wie viel Elo du gestiegen (grün, z. B. +340) oder gefallen (rot) bist — gemessen als erreichtes Max-Rating minus Start-Elo des Laufs.',
+  ]},
   { version: '0.135.0', date: '2026-06-15', changes: [
     'Repertoires: Beim Bearbeiten/Anlegen gibt es jetzt die Option „Für die Extension verwenden". Nur so markierte Repertoires werden von der Browser-Erweiterung/dem Userscript fürs Listing und die Abweichungserkennung genutzt (bestehende Repertoires bleiben aktiv). Der Hinweis im Repertoires-Tab stellt außerdem klar, dass die Extension Abweichungen nur im Analysemodus (Analysebrett) auf chess.com/lichess.org anzeigt.',
   ]},

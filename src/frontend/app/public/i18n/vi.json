@@ -778,6 +778,7 @@
       "noActiveSessions": "Không có phiên nào đang hoạt động.",
       "colDate": "Ngày",
       "colMaxRating": "Xếp hạng tối đa",
+      "colEloDelta": "Elo ±",
       "colSolved": "Đã giải",
       "colDuration": "Thời lượng",
       "colConfig": "Cấu hình",

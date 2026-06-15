@@ -778,6 +778,7 @@
       "noActiveSessions": "Δεν υπάρχουν ενεργές συνεδρίες.",
       "colDate": "Ημερομηνία",
       "colMaxRating": "Μέγιστη βαθμολογία",
+      "colEloDelta": "Elo ±",
       "colSolved": "Λυμένες",
       "colDuration": "Διάρκεια",
       "colConfig": "Ρυθμίσεις",

@@ -778,6 +778,7 @@
       "noActiveSessions": "Inga aktiva sessioner.",
       "colDate": "Datum",
       "colMaxRating": "Maxbetyg",
+      "colEloDelta": "Elo ±",
       "colSolved": "Lösta",
       "colDuration": "Varaktighet",
       "colConfig": "Konfiguration",

@@ -778,6 +778,7 @@
       "noActiveSessions": "Nicio sesiune activă.",
       "colDate": "Dată",
       "colMaxRating": "Rating maxim",
+      "colEloDelta": "Elo ±",
       "colSolved": "Rezolvate",
       "colDuration": "Durată",
       "colConfig": "Configurare",

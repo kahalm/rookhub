@@ -778,6 +778,7 @@
       "noActiveSessions": "Geen actieve sessies.",
       "colDate": "Datum",
       "colMaxRating": "Maximale rating",
+      "colEloDelta": "Elo ±",
       "colSolved": "Opgelost",
       "colDuration": "Duur",
       "colConfig": "Configuratie",

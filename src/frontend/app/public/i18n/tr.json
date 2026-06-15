@@ -778,6 +778,7 @@
       "noActiveSessions": "Aktif oturum yok.",
       "colDate": "Tarih",
       "colMaxRating": "Maks. Derece",
+      "colEloDelta": "Elo ±",
       "colSolved": "Çözüldü",
       "colDuration": "Süre",
       "colConfig": "Yapılandırma",

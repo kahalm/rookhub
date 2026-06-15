@@ -116,6 +116,10 @@ interface EndlessHistoryResponse {
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMaxRating' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ s.maxRating }}</td>
                   </ng-container>
+                  <ng-container matColumnDef="elo">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colEloDelta' | translate }}</th>
+                    <td mat-cell *matCellDef="let s" [class]="eloDeltaClass(s)">{{ formatEloDelta(s) }}</td>
+                  </ng-container>
                   <ng-container matColumnDef="solved">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colSolved' | translate }}</th>
                     <td mat-cell *matCellDef="let s">{{ s.totalSolved }}</td>
@@ -159,6 +163,10 @@ interface EndlessHistoryResponse {
                       <div class="session-stat">
                         <span class="session-stat-value">{{ s.maxRating }}</span>
                         <span class="session-stat-label">{{ 'endless.history.colMaxRating' | translate }}</span>
+                      </div>
+                      <div class="session-stat">
+                        <span class="session-stat-value" [class]="eloDeltaClass(s)">{{ formatEloDelta(s) }}</span>
+                        <span class="session-stat-label">{{ 'endless.history.colEloDelta' | translate }}</span>
                       </div>
                       <div class="session-stat">
                         <span class="session-stat-value">{{ s.totalSolved }}</span>
@@ -213,6 +221,8 @@ interface EndlessHistoryResponse {
     .history-table { width: 100%; }
     .back-link { margin-top: 1rem; }
     th.mat-mdc-header-cell { font-weight: 600; }
+    .elo-pos { color: #4caf50; font-weight: 600; }
+    .elo-neg { color: #f44336; font-weight: 600; }
     .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .bulk-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
     .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
@@ -256,7 +266,7 @@ export class EndlessHistoryComponent implements OnInit {
   pageSize = 20;
   loading = true;
   archiveFilter: boolean | null = null;
-  displayedColumns = ['select', 'date', 'maxRating', 'solved', 'duration', 'config', 'mistakes'];
+  displayedColumns = ['select', 'date', 'maxRating', 'elo', 'solved', 'duration', 'config', 'mistakes'];
   selection = new SelectionModel<EndlessSessionDto>(true, []);
 
   constructor(private http: HttpClient, public router: Router) {}
@@ -364,6 +374,31 @@ export class EndlessHistoryComponent implements OnInit {
     } catch {
       return '-';
     }
+  }
+
+  /** Elo-Aufstieg im Lauf = erreichtes Max-Rating minus Start-Elo (aus der Lauf-Config). null wenn unbekannt. */
+  eloDelta(s: EndlessSessionDto): number | null {
+    try {
+      const start = JSON.parse(s.configJson)?.startElo;
+      if (typeof start !== 'number') return null;
+      return s.maxRating - start;
+    } catch {
+      return null;
+    }
+  }
+
+  formatEloDelta(s: EndlessSessionDto): string {
+    const d = this.eloDelta(s);
+    if (d === null) return '-';
+    if (d > 0) return `+${d}`;
+    if (d < 0) return `−${-d}`; // echtes Minus-Zeichen (−)
+    return '±0'; // ±0
+  }
+
+  eloDeltaClass(s: EndlessSessionDto): string {
+    const d = this.eloDelta(s);
+    if (d === null || d === 0) return '';
+    return d > 0 ? 'elo-pos' : 'elo-neg';
   }
 
   formatMistakes(mistakeAtRatings: string): string {

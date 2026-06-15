@@ -778,6 +778,7 @@
       "noActiveSessions": "Nincsenek aktív menetek.",
       "colDate": "Dátum",
       "colMaxRating": "Max. értékelés",
+      "colEloDelta": "Elo ±",
       "colSolved": "Megoldva",
       "colDuration": "Időtartam",
       "colConfig": "Konfiguráció",

@@ -778,6 +778,7 @@
       "noActiveSessions": "Aucune partie active.",
       "colDate": "Date",
       "colMaxRating": "Classement max",
+      "colEloDelta": "Elo ±",
       "colSolved": "Résolus",
       "colDuration": "Durée",
       "colConfig": "Config",

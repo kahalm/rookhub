@@ -778,6 +778,7 @@
       "noActiveSessions": "Активних сесій немає.",
       "colDate": "Дата",
       "colMaxRating": "Макс. рейтинг",
+      "colEloDelta": "Elo ±",
       "colSolved": "Розв'язано",
       "colDuration": "Тривалість",
       "colConfig": "Конфіг",

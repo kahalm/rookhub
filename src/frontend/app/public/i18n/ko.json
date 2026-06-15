@@ -778,6 +778,7 @@
       "noActiveSessions": "활성 세션이 없습니다.",
       "colDate": "날짜",
       "colMaxRating": "최고 등급",
+      "colEloDelta": "Elo ±",
       "colSolved": "풀음",
       "colDuration": "소요 시간",
       "colConfig": "설정",

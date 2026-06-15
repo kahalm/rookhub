@@ -778,6 +778,7 @@
       "noActiveSessions": "لا جلسات نشطة.",
       "colDate": "التاريخ",
       "colMaxRating": "أعلى تقييم",
+      "colEloDelta": "Elo ±",
       "colSolved": "محلول",
       "colDuration": "المدة",
       "colConfig": "الإعداد",

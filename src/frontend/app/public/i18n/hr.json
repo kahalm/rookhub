@@ -913,6 +913,7 @@
       "noActiveSessions": "Nema aktivnih sesija.",
       "colDate": "Datum",
       "colMaxRating": "Maksimalni rejting",
+      "colEloDelta": "Elo ±",
       "colSolved": "Riješeno",
       "colDuration": "Trajanje",
       "colConfig": "Konfiguracija",

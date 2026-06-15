@@ -913,6 +913,7 @@
       "noActiveSessions": "Keine aktiven Sessions.",
       "colDate": "Datum",
       "colMaxRating": "Max Rating",
+      "colEloDelta": "Elo ±",
       "colSolved": "Gelöst",
       "colDuration": "Dauer",
       "colConfig": "Konfiguration",
