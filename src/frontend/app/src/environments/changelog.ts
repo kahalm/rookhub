@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.136.0';
+export const APP_VERSION = '0.136.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.136.1', date: '2026-06-15', changes: [
+    'Endlosmodus-Fix: Bei 0 Herzen ist der Lauf endgültig vorbei. Das tödliche Puzzle lässt sich per „Retry" zwar nochmal spielen, ein gelöstes Retry belebt den Lauf aber nicht mehr — man spielt nicht länger mit 0 Herzen weiter (vorher konnte man so über die Herzgrenze hinaus weiterspielen).',
+  ]},
   { version: '0.136.0', date: '2026-06-15', changes: [
     'Endlosrun-History: Neue Spalte „Elo ±" zeigt je Lauf, wie viel Elo du gestiegen (grün, z. B. +340) oder gefallen (rot) bist — gemessen als erreichtes Max-Rating minus Start-Elo des Laufs.',
   ]},

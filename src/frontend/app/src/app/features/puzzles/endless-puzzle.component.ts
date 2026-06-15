@@ -865,6 +865,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       return;
     }
 
+    // Bei 0 Herzen (gelöstes Retry am tödlichen Puzzle) gibt es kein nächstes Puzzle mehr →
+    // keinen Auto-Advance-Countdown starten; „Weiter" führt über continueAfterSolve ins Game Over.
+    if (this.lives <= 0) {
+      return;
+    }
+
     // Kurzer, sichtbarer Countdown bis zum nächsten Puzzle (wie Standard) — überspringbar
     // per „Weiter"-Klick; Interaktion mit der Lösungs-Durchsicht bricht ihn ab.
     this.startSolvedCountdown(() => this.continueAfterSolve());
@@ -874,6 +880,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.reviewMode = false;
     this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);  // pending Auto-Advance verwerfen
+    // 0 Herzen = Lauf vorbei. Das tödliche Puzzle darf per Retry nochmal gespielt werden,
+    // aber ein gelöstes Retry belebt den Run NICHT wieder (kein Weiterspielen mit 0 Herzen).
+    if (this.lives <= 0) {
+      this.endGame();
+      return;
+    }
     this.advance();
   }
 

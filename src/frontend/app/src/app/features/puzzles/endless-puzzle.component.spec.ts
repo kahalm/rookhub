@@ -229,6 +229,19 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     c.ngOnDestroy();
   });
 
+  it('Lösen eines Retry bei 0 Leben belebt den Lauf NICHT (Game Over statt Weiterspielen mit 0 Herzen)', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.lives = 1;
+    c['loseLife']();                 // letztes Leben weg → lives 0, Status FAILED
+    c.retry();                       // tödliches Puzzle erneut spielbar, lives bleibt 0
+    expect(c.lives).toBe(0);
+    c.continueAfterSolve();          // Retry gelöst → „Weiter"
+    expect(c.state).toBe('GAME_OVER');
+    expect(c.chainIndex).toBe(0);    // kein Weiterrücken trotz gelöstem Retry
+    c.ngOnDestroy();
+  });
+
   it('Kette offline durchgespielt → „You win"', () => {
     const c = makeComponent();
     c['chain'] = [{ ...CHAIN[0] }];
