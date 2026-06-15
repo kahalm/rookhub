@@ -37,22 +37,27 @@ import { Repertoire } from '../../core/models';
           </mat-select>
         </mat-form-field>
         <mat-checkbox [(ngModel)]="isPublic" name="isPublic">{{ 'repertoire.dialog.public' | translate }}</mat-checkbox>
+        <mat-checkbox [(ngModel)]="useForExtension" name="useForExtension">{{ 'repertoire.dialog.useForExtension' | translate }}</mat-checkbox>
+        <p class="ext-note">{{ 'repertoire.dialog.useForExtensionHint' | translate }}</p>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, description, isPublic, kind })">
+      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, description, isPublic, kind, useForExtension })">
         {{ (editMode ? 'repertoire.dialog.save' : 'repertoire.dialog.create') | translate }}
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: 300px; } mat-form-field { width: 100%; }`]
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: 300px; } mat-form-field { width: 100%; }
+    .ext-note { margin: 0 0 0 30px; font-size: 0.78rem; line-height: 1.3; color: color-mix(in srgb, currentColor 60%, transparent); }`]
 })
 export class CreateRepertoireDialogComponent {
   name = '';
   description = '';
   isPublic = false;
   kind: RepertoireKind = 0;
+  /** Default true: neue Repertoires werden standardmaessig von der Extension genutzt (abwaehlbar). */
+  useForExtension = true;
   editMode = false;
 
   constructor(
@@ -65,6 +70,7 @@ export class CreateRepertoireDialogComponent {
       this.description = data.description ?? '';
       this.isPublic = data.isPublic;
       this.kind = data.kind as RepertoireKind;
+      this.useForExtension = data.useForExtension;
     }
   }
 }

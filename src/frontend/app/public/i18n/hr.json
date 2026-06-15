@@ -423,7 +423,7 @@
       "deleteConfirm": "Izbrisati ovaj repertoar?",
       "deleteFailed": "Brisanje repertoara nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
-      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (trenutačno za Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org.",
+      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (trenutačno za Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
       "extHintLink": "Saznaj više u pomoći"
     },
     "detail": {
@@ -440,7 +440,9 @@
       "kind": "Kategorija",
       "create": "Stvori",
       "editTitle": "Uredi repertoar",
-      "save": "Spremi"
+      "save": "Spremi",
+      "useForExtension": "Koristi za proširenje",
+      "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika/userscript koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu."
     },
     "kind": {
       "none": "—",

@@ -112,6 +112,24 @@ public class RepertoireServiceExtendedTests : IDisposable
     }
 
     [Fact]
+    public async Task UseForExtension_DefaultsTrue_AndCanBeToggled()
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _service.CreateAsync(userId, new CreateRepertoireDto { Name = "Rep" });
+        Assert.True(rep.UseForExtension); // Default true (bestehendes Verhalten)
+
+        var off = await _service.UpdateAsync(rep.Id, userId, new UpdateRepertoireDto { UseForExtension = false });
+        Assert.False(off.UseForExtension);
+
+        // Teil-Update ohne das Feld laesst es unveraendert.
+        var nameOnly = await _service.UpdateAsync(rep.Id, userId, new UpdateRepertoireDto { Name = "Renamed" });
+        Assert.False(nameOnly.UseForExtension);
+
+        var on = await _service.UpdateAsync(rep.Id, userId, new UpdateRepertoireDto { UseForExtension = true });
+        Assert.True(on.UseForExtension);
+    }
+
+    [Fact]
     public async Task Update_NotFound_Throws()
     {
         var userId = await CreateUserAsync();

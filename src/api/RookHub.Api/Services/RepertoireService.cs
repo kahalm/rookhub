@@ -46,7 +46,8 @@ public class RepertoireService
                 Kind = r.Kind,
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt,
-                FileCount = r.Files.Count
+                FileCount = r.Files.Count,
+                UseForExtension = r.UseForExtension
             })
             .ToListAsync();
     }
@@ -73,7 +74,8 @@ public class RepertoireService
                 FileName = f.FileName,
                 FileSize = f.FileSize,
                 UploadedAt = f.UploadedAt
-            }).ToList()
+            }).ToList(),
+            UseForExtension = rep.UseForExtension
         };
     }
 
@@ -89,7 +91,8 @@ public class RepertoireService
             Name = dto.Name,
             Description = dto.Description,
             IsPublic = dto.IsPublic,
-            Kind = dto.Kind
+            Kind = dto.Kind,
+            UseForExtension = dto.UseForExtension
         };
 
         _db.Repertoires.Add(rep);
@@ -104,7 +107,8 @@ public class RepertoireService
             Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
-            FileCount = 0
+            FileCount = 0,
+            UseForExtension = rep.UseForExtension
         };
     }
 
@@ -119,10 +123,13 @@ public class RepertoireService
         if (dto.IsPublic.HasValue) rep.IsPublic = dto.IsPublic.Value;
         var kindChanged = dto.Kind.HasValue && dto.Kind.Value != rep.Kind;
         if (dto.Kind.HasValue) rep.Kind = dto.Kind.Value;
+        // Aenderung am Extension-Flag aendert das analysierte Positions-Set → Cache verwerfen.
+        var extChanged = dto.UseForExtension.HasValue && dto.UseForExtension.Value != rep.UseForExtension;
+        if (dto.UseForExtension.HasValue) rep.UseForExtension = dto.UseForExtension.Value;
         rep.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-        if (kindChanged) _analyzeCache.Invalidate(userId);
+        if (kindChanged || extChanged) _analyzeCache.Invalidate(userId);
 
         var fileCount = await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == id);
 
@@ -135,7 +142,8 @@ public class RepertoireService
             Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
-            FileCount = fileCount
+            FileCount = fileCount,
+            UseForExtension = rep.UseForExtension
         };
     }
 
@@ -240,7 +248,7 @@ public class RepertoireService
     /// </summary>
     public async Task<List<ExtensionRepertoireDto>> GetExtensionListAsync(int userId, RepertoireKind? kind = null)
     {
-        var q = _db.Repertoires.Where(r => r.UserId == userId);
+        var q = _db.Repertoires.Where(r => r.UserId == userId && r.UseForExtension);
         if (kind.HasValue)
             q = q.Where(r => r.Kind == kind.Value);
         return await q

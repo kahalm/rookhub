@@ -423,7 +423,7 @@
       "deleteConfirm": "Dieses Repertoire löschen?",
       "deleteFailed": "Repertoire konnte nicht gelöscht werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
-      "extHint": "Tipp: Mit der passenden Browser-Erweiterung (derzeit für Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org.",
+      "extHint": "Tipp: Mit der passenden Browser-Erweiterung (derzeit für Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
       "extHintLink": "Mehr dazu in der Hilfe"
     },
     "detail": {
@@ -440,7 +440,9 @@
       "kind": "Kategorie",
       "create": "Erstellen",
       "editTitle": "Repertoire bearbeiten",
-      "save": "Speichern"
+      "save": "Speichern",
+      "useForExtension": "Für die Extension verwenden",
+      "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung/das Userscript dieses Repertoire zur Abweichungserkennung im Analysemodus."
     },
     "kind": {
       "none": "—",

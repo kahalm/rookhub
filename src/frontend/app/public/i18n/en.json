@@ -423,7 +423,7 @@
       "deleteConfirm": "Delete this repertoire?",
       "deleteFailed": "Failed to delete repertoire",
       "updateFailed": "Repertoire could not be updated",
-      "extHint": "Tip: with the matching browser extension (currently for Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org.",
+      "extHint": "Tip: with the matching browser extension (currently for Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
       "extHintLink": "Learn more in the help"
     },
     "detail": {
@@ -440,7 +440,9 @@
       "kind": "Category",
       "create": "Create",
       "editTitle": "Edit Repertoire",
-      "save": "Save"
+      "save": "Save",
+      "useForExtension": "Use for the extension",
+      "useForExtensionHint": "When enabled, the browser extension/userscript uses this repertoire for deviation detection while you analyze a game."
     },
     "kind": {
       "none": "—",

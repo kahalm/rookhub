@@ -13,6 +13,7 @@ public class RepertoireDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int FileCount { get; set; }
+    public bool UseForExtension { get; set; }
 }
 
 public class RepertoireDetailDto
@@ -25,6 +26,7 @@ public class RepertoireDetailDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<RepertoireFileDto> Files { get; set; } = new();
+    public bool UseForExtension { get; set; }
 }
 
 public class RepertoireFileDto
@@ -44,6 +46,8 @@ public class CreateRepertoireDto
     public string? Description { get; set; }
     public bool IsPublic { get; set; }
     public RepertoireKind Kind { get; set; } = RepertoireKind.None;
+    /// <summary>Von der Extension nutzbar? Default true (bestehendes Verhalten).</summary>
+    public bool UseForExtension { get; set; } = true;
 }
 
 public class UpdateRepertoireDto
@@ -55,6 +59,7 @@ public class UpdateRepertoireDto
     public string? Description { get; set; }
     public bool? IsPublic { get; set; }
     public RepertoireKind? Kind { get; set; }
+    public bool? UseForExtension { get; set; }
 }
 
 public class ExtensionRepertoireDto

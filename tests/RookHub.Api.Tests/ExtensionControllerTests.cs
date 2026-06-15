@@ -156,6 +156,23 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRepertoires_ExcludesNotFlaggedForExtension()
+    {
+        var user = await CreateUserAsync();
+        _db.Repertoires.AddRange(
+            new Repertoire { UserId = user.Id, Name = "on", UseForExtension = true },
+            new Repertoire { UserId = user.Id, Name = "off", UseForExtension = false }
+        );
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var result = (await _controller.GetRepertoires()).Result as OkObjectResult;
+        var reps = (List<ExtensionRepertoireDto>)result!.Value!;
+        Assert.Single(reps);
+        Assert.Equal("on", reps[0].Name);
+    }
+
+    [Fact]
     public async Task GetRepertoires_InvalidKind_Returns400()
     {
         var user = await CreateUserAsync();

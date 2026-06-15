@@ -111,6 +111,8 @@ export interface Repertoire {
   /** 0=None, 1=Opening, 2=Middlegame, 3=Endgame (siehe `RepertoireKind`). */
   kind: number;
   fileCount: number;
+  /** Soll dieses Repertoire von der Browser-Extension/dem Userscript genutzt werden? */
+  useForExtension: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,6 +124,7 @@ export interface RepertoireDetail {
   isPublic: boolean;
   kind: number;
   files: RepertoireFile[];
+  useForExtension: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -96,7 +96,7 @@ public class RepertoireAnalyzeService
             return (cached.Positions, cached.FileCount);
 
         var pgnTexts = await _db.RepertoireFiles
-            .Where(f => f.Repertoire.UserId == userId && f.Repertoire.Kind == kind)
+            .Where(f => f.Repertoire.UserId == userId && f.Repertoire.Kind == kind && f.Repertoire.UseForExtension)
             .Select(f => f.PgnContent)
             .ToListAsync();
 
