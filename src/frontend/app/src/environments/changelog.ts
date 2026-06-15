@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.125.0';
+export const APP_VERSION = '0.126.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.126.0', date: '2026-06-15', changes: [
+    'Die Kurs-Übersicht ist jetzt in zwei Bereiche aufgeteilt: „Öffentliche Kurse" (über deine Gruppen freigegeben) und „Chessable-Kurse" (von dir selbst importiert). Bereiche ohne Kurse werden ausgeblendet.',
+  ]},
   { version: '0.125.0', date: '2026-06-15', changes: [
     'Neue Benachrichtigungs-Glocke oben in der Navigation: ein roter Punkt zeigt, wenn etwas Neues da ist. Im Dropdown siehst du die letzten Ereignisse und springst mit einem Klick zur passenden Stelle; beim Öffnen gilt alles als gelesen.',
     'Du wirst jetzt benachrichtigt bei: fertig importiertem Chessable-Kurs (oder fehlgeschlagenem Import), neuer Freundschaftsanfrage, angenommener Anfrage, einer an dich gesendeten/aufgelösten Puzzle-Challenge sowie wenn ein Freund eines deiner Puzzles im Revenge-Modus angeht. (E-Mail/Push folgen später.)',

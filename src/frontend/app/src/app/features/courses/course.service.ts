@@ -17,6 +17,8 @@ export interface CourseListItem {
   solvedCount: number;
   progressPercent: number;
   lastMode: string | null;
+  /** true = eigener (selbst importierter) Chessable-Kurs; false = über eine Gruppe freigegebener öffentlicher Kurs. */
+  isOwned: boolean;
 }
 
 export interface CourseNextPuzzle {

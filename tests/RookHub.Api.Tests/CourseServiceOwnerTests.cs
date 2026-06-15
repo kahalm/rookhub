@@ -80,4 +80,47 @@ public class CourseServiceOwnerTests : IDisposable
         Assert.True(await _svc.HasAnyAccessAsync(userId: 1, isAdmin: false));
         Assert.False(await _svc.HasAnyAccessAsync(userId: 2, isAdmin: false));
     }
+
+    /// <summary>Buch über eine Gruppe freigegeben (kein OwnerUserId) — öffentlicher Kurs.</summary>
+    private async Task<Book> SeedGroupBookAsync(int groupId, int memberUserId)
+    {
+        var book = new Book
+        {
+            FileName = $"group-{groupId}.pgn",
+            DisplayName = "Group Course",
+            OwnerUserId = null,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _db.Books.Add(book);
+        _db.UserGroups.Add(new UserGroup { UserId = memberUserId, GroupId = groupId });
+        await _db.SaveChangesAsync();
+        _db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = groupId });
+        await _db.SaveChangesAsync();
+        return book;
+    }
+
+    [Fact]
+    public async Task GetCourses_MarksPersonalBook_AsOwned()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.True(courses.Single(c => c.BookId == book.Id).IsOwned);
+    }
+
+    [Fact]
+    public async Task GetCourses_MarksGroupBook_AsNotOwned()
+    {
+        var book = await SeedGroupBookAsync(groupId: 5, memberUserId: 1);
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.False(courses.Single(c => c.BookId == book.Id).IsOwned);
+    }
+
+    [Fact]
+    public async Task GetCourses_OtherUsersPersonalBook_NotOwned_ForAdmin()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        var courses = await _svc.GetCoursesAsync(userId: 99, isAdmin: true);
+        Assert.False(courses.Single(c => c.BookId == book.Id).IsOwned);
+    }
 }

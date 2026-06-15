@@ -29,61 +29,85 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
       } @else if (courses.length === 0) {
         <p class="empty-hint">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
-        <div class="course-grid">
-          @for (c of courses; track c.bookId) {
-            <mat-card class="course-card">
-              <mat-card-header>
-                <mat-card-title>{{ c.displayName }}</mat-card-title>
-                <mat-card-subtitle>
-                  {{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}
-                  @if (c.difficulty) { · {{ c.difficulty }} }
-                  @if (c.rating) { · {{ c.rating }}/10 }
-                </mat-card-subtitle>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="progress-row">
-                  <mat-progress-bar mode="determinate" [value]="c.progressPercent"></mat-progress-bar>
-                  <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }} ({{ c.progressPercent }}%)</span>
-                </div>
-                @if (c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount) {
-                  <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
-                }
-              </mat-card-content>
-              <mat-card-actions class="course-actions">
-                <button mat-raised-button color="primary"
-                        [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
-                  <mat-icon>format_list_numbered</mat-icon> {{ 'courses.sequential' | translate }}
-                </button>
-                <button mat-stroked-button
-                        [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
-                  <mat-icon>shuffle</mat-icon> {{ 'courses.random' | translate }}
-                </button>
-                <button mat-icon-button
-                        [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
-                        [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
-                        (click)="toggleOffline(c)">
-                  <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
-                </button>
-                <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
-                        [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
-                  <mat-icon>download</mat-icon>
-                </button>
-                <span class="spacer"></span>
-                <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
-                        [disabled]="c.solvedCount === 0" (click)="reset(c)">
-                  <mat-icon>restart_alt</mat-icon>
-                </button>
-              </mat-card-actions>
-            </mat-card>
-          }
-        </div>
+        @if (publicCourses.length > 0) {
+          <section class="course-section">
+            <h2>{{ 'courses.sectionPublic' | translate }}</h2>
+            <p class="section-hint">{{ 'courses.sectionPublicHint' | translate }}</p>
+            <div class="course-grid">
+              @for (c of publicCourses; track c.bookId) {
+                <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: c }"></ng-container>
+              }
+            </div>
+          </section>
+        }
+        @if (chessableCourses.length > 0) {
+          <section class="course-section">
+            <h2>{{ 'courses.sectionChessable' | translate }}</h2>
+            <p class="section-hint">{{ 'courses.sectionChessableHint' | translate }}</p>
+            <div class="course-grid">
+              @for (c of chessableCourses; track c.bookId) {
+                <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: c }"></ng-container>
+              }
+            </div>
+          </section>
+        }
       }
     </div>
+
+    <ng-template #cardTpl let-c>
+      <mat-card class="course-card">
+        <mat-card-header>
+          <mat-card-title>{{ c.displayName }}</mat-card-title>
+          <mat-card-subtitle>
+            {{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}
+            @if (c.difficulty) { · {{ c.difficulty }} }
+            @if (c.rating) { · {{ c.rating }}/10 }
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="progress-row">
+            <mat-progress-bar mode="determinate" [value]="c.progressPercent"></mat-progress-bar>
+            <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }} ({{ c.progressPercent }}%)</span>
+          </div>
+          @if (c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount) {
+            <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
+          }
+        </mat-card-content>
+        <mat-card-actions class="course-actions">
+          <button mat-raised-button color="primary"
+                  [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
+            <mat-icon>format_list_numbered</mat-icon> {{ 'courses.sequential' | translate }}
+          </button>
+          <button mat-stroked-button
+                  [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
+            <mat-icon>shuffle</mat-icon> {{ 'courses.random' | translate }}
+          </button>
+          <button mat-icon-button
+                  [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
+                  [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
+                  (click)="toggleOffline(c)">
+            <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+          </button>
+          <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
+                  [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
+            <mat-icon>download</mat-icon>
+          </button>
+          <span class="spacer"></span>
+          <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
+                  [disabled]="c.solvedCount === 0" (click)="reset(c)">
+            <mat-icon>restart_alt</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </ng-template>
   `,
   styles: [`
     .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+    .course-section { margin-bottom: 28px; }
+    .course-section h2 { font-size: 1.15rem; font-weight: 600; margin: 0 0 2px; }
+    .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; margin: 0 0 12px; }
     .course-grid {
       display: grid; gap: 16px;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -106,6 +130,16 @@ export class CourseListComponent implements OnInit {
   private offlineFiles = new Set<string>();
 
   constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
+
+  /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
+  get publicCourses(): CourseListItem[] {
+    return this.courses.filter(c => !c.isOwned);
+  }
+
+  /** Eigene, selbst importierte Chessable-Kurse. */
+  get chessableCourses(): CourseListItem[] {
+    return this.courses.filter(c => c.isOwned);
+  }
 
   isOffline(c: CourseListItem): boolean {
     return this.offlineFiles.has(c.fileName);

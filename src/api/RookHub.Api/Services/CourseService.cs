@@ -88,6 +88,7 @@ public class CourseService
             .Select(b => new
             {
                 b.Id, b.FileName, b.DisplayName, b.Difficulty, b.Rating, b.Tags, b.Description,
+                b.OwnerUserId,
                 PuzzleCount = b.Puzzles.Count()
             })
             .ToListAsync();
@@ -118,6 +119,7 @@ public class CourseService
                 SolvedCount = Math.Min(solved, b.PuzzleCount),
                 ProgressPercent = Percent(solved, b.PuzzleCount),
                 LastMode = modeByBook.TryGetValue(b.Id, out var m) ? m : null,
+                IsOwned = b.OwnerUserId == userId,
             };
         }).ToList();
     }
