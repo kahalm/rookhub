@@ -1,6 +1,7 @@
 import {
   takeFromPool, takeNearestFromPool, autoFasttrackThresholds, fasttrackSteps,
-  chainRatingAt, buildChainWindows, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK
+  chainRatingAt, firstRunRatingAt, buildChainWindows, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK,
+  FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX
 } from './endless-prefetch.util';
 import { PuzzleDto } from './puzzle.service';
 
@@ -87,6 +88,38 @@ describe('chainRatingAt (Gauntlet-Kurve)', () => {
   it('drückt nach T2 nur noch leicht höher', () => {
     expect(chainRatingAt(CHAIN_T2_INDEX + 2, start, t1, t2)).toBeGreaterThan(t2);
     expect(chainRatingAt(CHAIN_T2_INDEX + 2, start, t1, t2)).toBeLessThan(t2 + 100);
+  });
+});
+
+describe('firstRunRatingAt (steile Erst-Lauf-Kurve)', () => {
+  it('trifft die Anker exakt: 2000 nach 15, 3000 nach 30 Puzzles', () => {
+    expect(firstRunRatingAt(0, 700)).toBe(700);
+    expect(firstRunRatingAt(FIRST_RUN_ANCHOR1_INDEX, 700)).toBe(2000);
+    expect(firstRunRatingAt(FIRST_RUN_ANCHOR2_INDEX, 700)).toBe(3000);
+  });
+
+  it('steigt monoton und drückt nach dem 2. Anker nur noch leicht höher', () => {
+    let prev = -1;
+    for (let n = 0; n <= FIRST_RUN_ANCHOR2_INDEX; n++) {
+      const r = firstRunRatingAt(n, 700);
+      expect(r).toBeGreaterThanOrEqual(prev);
+      prev = r;
+    }
+    expect(firstRunRatingAt(FIRST_RUN_ANCHOR2_INDEX + 2, 700)).toBeGreaterThan(3000);
+    expect(firstRunRatingAt(FIRST_RUN_ANCHOR2_INDEX + 2, 700)).toBeLessThan(3100);
+  });
+
+  it('chainRatingAt(firstRun=true) nutzt die Erst-Lauf-Kurve statt der adaptiven', () => {
+    expect(chainRatingAt(FIRST_RUN_ANCHOR1_INDEX, 700, 1100, 1800, true)).toBe(2000);
+    expect(chainRatingAt(FIRST_RUN_ANCHOR2_INDEX, 700, 1100, 1800, true)).toBe(3000);
+    // ohne firstRun bleibt die adaptive Kurve deutlich niedriger
+    expect(chainRatingAt(FIRST_RUN_ANCHOR1_INDEX, 700, 1100, 1800, false)).toBeLessThan(2000);
+  });
+
+  it('buildChainWindows(firstRun=true) zentriert die Fenster auf der steilen Kurve', () => {
+    const w = buildChainWindows(700, 1100, 1800, 4000, ENDLESS_CHAIN_BLOCK, 0, true);
+    expect(w[FIRST_RUN_ANCHOR1_INDEX]).toEqual({ minRating: 1980, maxRating: 2020 }); // 2000 ±20
+    expect(w[0]).toEqual({ minRating: 680, maxRating: 720 });                          // Start 700 ±20
   });
 });
 

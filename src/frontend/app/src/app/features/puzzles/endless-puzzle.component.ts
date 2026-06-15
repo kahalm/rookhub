@@ -24,7 +24,7 @@ import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { buildChainWindows, autoFasttrackThresholds, fasttrackSteps, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
+import { buildChainWindows, autoFasttrackThresholds, fasttrackSteps, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
@@ -405,16 +405,36 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   get currentRating(): number { return this._currentMinRating; }
 
   get currentPhaseLabel(): string {
+    if (this.isFirstRun) {
+      // Erster Lauf: Phasengrenzen folgen der steilen Erst-Lauf-Kurve (Anker 15/30),
+      // step = durchschnittlicher Rating-Zuwachs je Puzzle in dieser Phase.
+      const s = this.config.startElo;
+      if (this.chainIndex < FIRST_RUN_ANCHOR1_INDEX)
+        return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: Math.round((FIRST_RUN_ANCHOR1_RATING - s) / FIRST_RUN_ANCHOR1_INDEX) });
+      if (this.chainIndex < FIRST_RUN_ANCHOR2_INDEX)
+        return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: Math.round((FIRST_RUN_ANCHOR2_RATING - FIRST_RUN_ANCHOR1_RATING) / (FIRST_RUN_ANCHOR2_INDEX - FIRST_RUN_ANCHOR1_INDEX)) });
+      return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: CHAIN_FLAT_STEP });
+    }
     if (this.chainIndex < CHAIN_T1_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: this.fasttrackPhase1Step });
     if (this.chainIndex < CHAIN_T2_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: this.fasttrackPhase2Step });
     return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: 20 });
   }
 
+  /**
+   * Erster Lauf des Users (keine abgeschlossene Session in der Historie) → bewusst steile,
+   * schnell tödliche Kurve (2000 nach 15, 3000 nach 30 Puzzles), bis genug Daten für die
+   * adaptive Kurve vorliegen.
+   */
+  get isFirstRun(): boolean { return this.sessionHistory.length === 0; }
+
   /** Vorschau der Ketten-Kurve: Rating an markanten Stellen (Start, T1 ≈ Puzzle 6, T2 ≈ Puzzle 21, Block-Ende). */
   get chainPreview(): { puzzle: number; rating: number }[] {
     const s = this.config.startElo, t1 = this.fasttrackAvgFirst, t2 = this.fasttrackAvgSecond;
-    return [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK - 1]
-      .map(i => ({ puzzle: i + 1, rating: chainRatingAt(i, s, t1, t2) }));
+    const fr = this.isFirstRun;
+    const marks = fr
+      ? [0, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX, ENDLESS_CHAIN_BLOCK - 1]
+      : [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK - 1];
+    return marks.map(i => ({ puzzle: i + 1, rating: chainRatingAt(i, s, t1, t2, fr) }));
   }
 
   private clampConfig(): void {
@@ -579,7 +599,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   private generateChainBlock(startIndex: number, then?: () => void, count = ENDLESS_CHAIN_BLOCK): void {
     const windows = buildChainWindows(
-      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, count, startIndex
+      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, count, startIndex, this.isFirstRun
     );
     this.ensureWorstThemes(() => {
     const { themes, themesAny } = this.batchThemes();
@@ -618,7 +638,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private prefetchRun(): void {
     this.computeFasttrackSteps();
     const windows = buildChainWindows(
-      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max
+      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, ENDLESS_CHAIN_BLOCK, 0, this.isFirstRun
     );
     if (!windows.length) return;
     this.ensureWorstThemes(() => {

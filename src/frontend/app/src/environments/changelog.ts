@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.138.0';
+export const APP_VERSION = '0.139.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.139.0', date: '2026-06-15', changes: [
+    'Endlosmodus: Dein allererster Lauf (solange noch keine abgeschlossene Session vorliegt) folgt jetzt einer bewusst steilen Schwierigkeitskurve — Rating 2000 nach 15 Puzzles, 3000 nach 30 — damit der erste Puzzle-Rush relativ schnell sicher endet. Ab dem zweiten Lauf greift wieder die adaptive Kurve, die sich an deinem bisherigen Niveau orientiert.',
+    'Die Phasenanzeige (Phase 1/2/3) richtet sich im ersten Lauf passend nach dieser steilen Kurve (Grenzen bei Puzzle 15 und 30).',
+  ]},
   { version: '0.138.0', date: '2026-06-15', changes: [
     'Im „Puzzle teilen"-Popup kannst du das Puzzle jetzt auch direkt an Freunde schicken (gleicher Mehrfach-Auswahl-Button wie nach dem Lösen) — und zwar sowohl für das aktuelle als auch, sofern vorhanden, für das vorherige Puzzle (per Umschalter im Dialog).',
   ]},

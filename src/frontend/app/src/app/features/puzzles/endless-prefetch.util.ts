@@ -11,6 +11,16 @@ export const CHAIN_T2_INDEX = 25;         // T2 (Ø Max der letzten 5 Runs) nach
 export const CHAIN_FLAT_STEP = 15;        // ab T2: leichtes Plus je Puzzle (oberhalb des eigenen Maximums)
 export const ENDLESS_CHAIN_BLOCK = 30;    // Puzzles je generiertem Block
 
+/**
+ * Erster Lauf (keine Historie): bewusst steile Kurve, damit der allererste Puzzle-Rush
+ * relativ schnell sicher tödlich wird — bevor genug Daten für die adaptive Kurve da sind.
+ * Anker: 2000 nach 15 Puzzles, 3000 nach 30 Puzzles (linear, danach weiter mit CHAIN_FLAT_STEP).
+ */
+export const FIRST_RUN_ANCHOR1_INDEX = 15;
+export const FIRST_RUN_ANCHOR1_RATING = 2000;
+export const FIRST_RUN_ANCHOR2_INDEX = 30;
+export const FIRST_RUN_ANCHOR2_RATING = 3000;
+
 /** Strukturelle Minimalformen (entkoppelt von EndlessConfig/EndlessSession). */
 interface FasttrackConfig { startElo: number; fasttrackThreshold1?: number; fasttrackThreshold2?: number; }
 interface FasttrackSession { mistakeAtRatings: number[]; maxRating?: number; }
@@ -50,10 +60,27 @@ function logEase(x: number): number {
 }
 
 /**
+ * Steile Kurve für den ERSTEN Lauf (linear durch die festen Anker, danach flach weiter):
+ * startElo → {@link FIRST_RUN_ANCHOR1_RATING} (bei {@link FIRST_RUN_ANCHOR1_INDEX})
+ *          → {@link FIRST_RUN_ANCHOR2_RATING} (bei {@link FIRST_RUN_ANCHOR2_INDEX}), dann + CHAIN_FLAT_STEP/Puzzle.
+ */
+export function firstRunRatingAt(n: number, startElo: number): number {
+  if (n <= 0) return startElo;
+  if (n < FIRST_RUN_ANCHOR1_INDEX)
+    return Math.round(startElo + (FIRST_RUN_ANCHOR1_RATING - startElo) * (n / FIRST_RUN_ANCHOR1_INDEX));
+  if (n < FIRST_RUN_ANCHOR2_INDEX)
+    return Math.round(FIRST_RUN_ANCHOR1_RATING + (FIRST_RUN_ANCHOR2_RATING - FIRST_RUN_ANCHOR1_RATING)
+      * ((n - FIRST_RUN_ANCHOR1_INDEX) / (FIRST_RUN_ANCHOR2_INDEX - FIRST_RUN_ANCHOR1_INDEX)));
+  return Math.round(FIRST_RUN_ANCHOR2_RATING + (n - FIRST_RUN_ANCHOR2_INDEX) * CHAIN_FLAT_STEP);
+}
+
+/**
  * Rating des n-ten Ketten-Puzzles (0-basiert) entlang der ~logarithmischen Kurve:
  * startElo → T1 (bei {@link CHAIN_T1_INDEX}) → T2 (bei {@link CHAIN_T2_INDEX}), danach leicht über T2.
+ * `firstRun` schaltet auf die bewusst steile Erst-Lauf-Kurve ({@link firstRunRatingAt}) um.
  */
-export function chainRatingAt(n: number, startElo: number, t1: number, t2: number): number {
+export function chainRatingAt(n: number, startElo: number, t1: number, t2: number, firstRun = false): number {
+  if (firstRun) return firstRunRatingAt(n, startElo);
   if (n <= 0) return startElo;
   if (n < CHAIN_T1_INDEX)
     return Math.round(startElo + (t1 - startElo) * logEase(n / CHAIN_T1_INDEX));
@@ -74,11 +101,12 @@ export function buildChainWindows(
   ratingMax: number,
   count = ENDLESS_CHAIN_BLOCK,
   startIndex = 0,
+  firstRun = false,
 ): RatingWindow[] {
   const half = Math.round(ENDLESS_RATING_WINDOW / 2);
   const windows: RatingWindow[] = [];
   for (let i = 0; i < count; i++) {
-    const r = Math.min(chainRatingAt(startIndex + i, startElo, t1, t2), ratingMax);
+    const r = Math.min(chainRatingAt(startIndex + i, startElo, t1, t2, firstRun), ratingMax);
     windows.push({ minRating: Math.max(0, r - half), maxRating: r + half });
   }
   return windows;
