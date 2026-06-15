@@ -98,6 +98,31 @@ describe('AnalysisEngineService crash recovery', () => {
 
     expect(state.running).toBeFalse();
   });
+
+  it('gives up immediately on a repeat crash of the SAME position (no WASM re-instantiation thrash)', async () => {
+    const eng = new TestEngine();
+    let state: AnalysisState = { fen: '', depth: 0, lines: [], running: false };
+    eng.analysis$.subscribe(s => state = s);
+
+    await eng.analyze(FEN);            // Worker 1
+    eng.last.crash(); await tick;      // 1. Crash → genau EIN sauberer Neustart
+    expect(eng.workers.length).toBe(2);
+
+    eng.last.crash(); await tick;      // 2. Crash auf DERSELBEN Stellung → aufgeben, KEIN Worker 3
+    expect(eng.workers.length).toBe(2);
+    expect(state.running).toBeFalse();
+  });
+
+  it('includes the crashing FEN in the crash telemetry (so it can be reproduced)', async () => {
+    const eng = new TestEngine();
+    const details: string[] = [];
+    eng.reportEngineEvent = (_kind, detail) => details.push(detail ?? '');
+
+    await eng.analyze(FEN);
+    eng.last.crash();
+
+    expect(details.some(d => d.includes(FEN))).toBeTrue();
+  });
 });
 
 describe('AnalysisEngineService stall watchdog', () => {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.140.1';
+export const APP_VERSION = '0.140.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.140.2', date: '2026-06-15', changes: [
+    'Analyse-Brett robuster gegen Engine-Abstürze: Stürzt der lokale Stockfish auf einer bestimmten Stellung ab, wird er nicht mehr mehrfach hintereinander neu geladen (das lud jedes Mal die ~7 MB große Engine neu und brachte dieselbe Stellung sofort wieder zum Absturz) — die Analyse gibt auf dieser Stellung jetzt sauber auf, statt zu „thrashen". Außerdem wird auf Matt-/Patt-Stellungen gar keine Berechnung mehr gestartet.',
+    'Die Absturzmeldung enthält jetzt die betroffene Stellung (FEN), damit solche Engine-Abstürze gezielt nachgestellt und behoben werden können.',
+  ]},
   { version: '0.140.1', date: '2026-06-15', changes: [
     'Internes Monitoring: Das „Als Nutzer einsteigen"-Audit-Log (Admin-Impersonation) wird jetzt auf Stufe „Information" statt „Warnung" geschrieben. Es bleibt vollständig in Kibana nachvollziehbar, verfälscht aber nicht mehr die Warn-Rate (vermied einen Fehlalarm des Log-Watchers).',
   ]},

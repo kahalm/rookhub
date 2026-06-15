@@ -53,6 +53,10 @@ export class AnalysisEngineService implements OnDestroy {
   /** Aufeinanderfolgende Crashes ohne erfolgreiche Antwort — gegen Endlos-Recovery-Loops. */
   private crashStreak = 0;
 
+  /** FEN des letzten Crashes. Crasht DIESELBE Stellung erneut → deterministisch kaputt → nicht
+   *  weiter neu instanziieren (ein Neustart lädt ~7 MB WASM, v. a. mobil ein Memory-Thrash). */
+  private lastCrashFen: string | null = null;
+
   /** UCI-Sequencing: neue Suche erst nach `readyok` starten (nicht mitten in laufender Suche). */
   private pendingGoFen: string | null = null;
   private awaitingReady = false;
@@ -99,7 +103,9 @@ export class AnalysisEngineService implements OnDestroy {
           worker.removeEventListener('message', onReady);
           clearTimeout(timeout);
           // Ab jetzt: dauerhafter Crash-Handler + Analyse-Listener.
-          worker.onerror = (e: ErrorEvent) => { this.reportEngineEvent?.('crash', e?.message || ''); this.handleCrash(); };
+          // FEN ins Crash-Log: ohne die konkrete Stellung ist „RuntimeError: unreachable" nicht
+          // reproduzierbar (alle Crashes sähen identisch aus). So lässt sich der Auslöser nachstellen.
+          worker.onerror = (e: ErrorEvent) => { this.reportEngineEvent?.('crash', `${e?.message || 'worker error'} @ ${this.currentFen}`); this.handleCrash(); };
           worker.addEventListener('message', (ev) => this.onMessage(ev));
           resolve();
         }
@@ -126,12 +132,17 @@ export class AnalysisEngineService implements OnDestroy {
     const fen = this.currentFen;
     const wasRunning = this.state$.value.running;
     this.crashStreak++;
-    if (fen && wasRunning && this.crashStreak <= 3) {
-      // Nahtlos neu initialisieren + dieselbe Stellung erneut analysieren.
+    // Crasht DIESELBE Stellung erneut, ist sie deterministisch kaputt: ein weiterer Neustart
+    // würde nur wieder ~7 MB WASM instanziieren (Memory-Thrash) und dieselbe Stellung erneut
+    // zum Absturz bringen → sofort aufgeben statt zu thrashen (und die Logs zu vervielfachen).
+    const sameCrash = !!fen && fen === this.lastCrashFen;
+    this.lastCrashFen = fen || null;
+    if (fen && wasRunning && !sameCrash && this.crashStreak <= 3) {
+      // Erster Crash auf dieser Stellung (oder Stellung hat gewechselt) → einmal sauber neu starten.
       this.analyze(fen).catch(() => this.state$.next({ fen, depth: 0, lines: [], running: false }));
     } else {
-      // Zu viele Crashes hintereinander → aufgeben statt Endlos-Loop.
-      this.reportEngineEvent?.('giveup', `streak=${this.crashStreak}`);
+      // Wiederholter Crash auf derselben Stellung ODER zu viele Crashes hintereinander → aufgeben.
+      this.reportEngineEvent?.('giveup', sameCrash ? `repeat-crash @ ${fen}` : `streak=${this.crashStreak}`);
       this.fatalError$.next('crash');
       this.state$.next({ fen, depth: 0, lines: [], running: false });
     }
@@ -154,6 +165,9 @@ export class AnalysisEngineService implements OnDestroy {
   /** Startet (oder wechselt) die Analyse auf eine Stellung. */
   async analyze(fen: string): Promise<void> {
     await this.init();
+    // Neue, vom Nutzer angesteuerte Stellung → Crash-Budget zurücksetzen. Der Recovery-Retry aus
+    // handleCrash ruft analyze() mit DERSELBEN FEN auf und setzt deshalb bewusst nichts zurück.
+    if (fen !== this.currentFen) { this.crashStreak = 0; this.lastCrashFen = null; }
     this.gen++;
     this.currentFen = fen;
     this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
@@ -230,6 +244,7 @@ export class AnalysisEngineService implements OnDestroy {
 
     this.clearWatchdog();   // Engine antwortet → kein Hänger
     this.crashStreak = 0;   // Engine liefert wieder → Recovery-Zähler zurücksetzen
+    this.lastCrashFen = null;
     this.fatalError$.next(null);
     this.partial.set(parsed.multipv, parsed);
     const lines = [...this.partial.values()].sort((a, b) => a.multipv - b.multipv);

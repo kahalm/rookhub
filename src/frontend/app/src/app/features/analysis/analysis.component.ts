@@ -329,7 +329,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.shapes = [];
     this.displayLines = [];
     this.depth = 0;
-    if (this.engineOn) this.engine.analyze(fen);
+    // Terminale Stellung (Matt/Patt → keine legalen Züge): der Engine kein `go` schicken. Ein
+    // Suchlauf ohne legale Züge ist sinnlos und ein vermeidbarer Sonderfall im WASM-Kern.
+    if (this.engineOn && this.dests.size > 0) this.engine.analyze(fen);
     else { this.engine.stop(); this.updateEval(null); }
   }
 
