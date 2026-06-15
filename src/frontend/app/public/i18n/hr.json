@@ -615,6 +615,10 @@
     },
     "challenge": {
       "sent": "Izazov poslan",
+      "sentCount": "Izazov poslan za {{count}} prijatelja",
+      "selectAll": "Odaberi sve",
+      "send": "Pošalji ({{count}})",
+      "batchResult": "Poslano za {{sent}}, preskočeno {{skipped}}",
       "error": "Izazov nije moguće poslati"
     },
     "revengeDone": {

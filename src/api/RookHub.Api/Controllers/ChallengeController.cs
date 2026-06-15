@@ -14,18 +14,18 @@ public class ChallengeController : BaseApiController
 
     public ChallengeController(ChallengeService challengeService) => _challengeService = challengeService;
 
-    /// <summary>Schickt ein Puzzle als Challenge an einen Freund.</summary>
+    /// <summary>Schickt ein Puzzle als Challenge an einen oder mehrere Freunde. Ungültige Empfänger
+    /// (man selbst / kein Freund / bereits offene gleiche Challenge) werden übersprungen und im Ergebnis
+    /// gemeldet; 404 nur, wenn das Puzzle selbst fehlt.</summary>
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateChallengeDto dto)
+    public async Task<ActionResult<ChallengeBatchResultDto>> Create([FromBody] CreateChallengeBatchDto dto)
     {
         try
         {
-            var challenge = await _challengeService.CreateAsync(GetUserId(), dto.ToUserId, dto.PuzzleId);
-            return Ok(new { id = challenge.Id, message = "Challenge sent." });
+            var result = await _challengeService.CreateBatchAsync(GetUserId(), dto.ToUserIds, dto.PuzzleId, dto.Source);
+            return Ok(result);
         }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
     /// <summary>Offene Challenges an mich (Posteingang).</summary>

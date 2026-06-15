@@ -615,6 +615,10 @@
     },
     "challenge": {
       "sent": "Challenge sent",
+      "sentCount": "Challenge sent to {{count}} friend(s)",
+      "selectAll": "Select all",
+      "send": "Send ({{count}})",
+      "batchResult": "Sent to {{sent}}, {{skipped}} skipped",
       "error": "Could not send challenge"
     },
     "revengeDone": {

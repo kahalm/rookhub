@@ -314,6 +314,10 @@
                 />
               }
 
+              @if (puzzle && isLoggedIn && (state === 'SOLVED' || state === 'FAILED')) {
+                <app-challenge-friends [puzzleId]="puzzle.id" source="standard" />
+              }
+
               <mat-card class="stats-card">
                 <mat-card-content>
                   <div class="stats-grid">

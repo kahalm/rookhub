@@ -29,8 +29,8 @@ describe('ChallengeService', () => {
 
     service.getIncoming().subscribe();
     const incoming: IncomingChallenge[] = [
-      { id: 1, fromUserId: 2, fromUsername: 'a', fromDisplayName: null, puzzleId: 5, rating: 1500, themes: null, createdAt: '' },
-      { id: 2, fromUserId: 3, fromUsername: 'b', fromDisplayName: null, puzzleId: 6, rating: 1600, themes: null, createdAt: '' },
+      { id: 1, fromUserId: 2, fromUsername: 'a', fromDisplayName: null, puzzleId: 5, source: 'Standard', rating: 1500, themes: null, title: null, createdAt: '' },
+      { id: 2, fromUserId: 3, fromUsername: 'b', fromDisplayName: null, puzzleId: 6, source: 'Book', rating: 1600, themes: null, title: 'Kap. 1', createdAt: '' },
     ];
     httpMock.expectOne('/api/challenges/incoming').flush(incoming);
 
@@ -47,11 +47,18 @@ describe('ChallengeService', () => {
     expect(count).toBe(4);
   });
 
-  it('send() posts toUserId + puzzleId', () => {
-    service.send(7, 42).subscribe();
+  it('sendMany() posts toUserIds + puzzleId + source', () => {
+    service.sendMany([7, 8], 42, 'book').subscribe();
     const req = httpMock.expectOne('/api/challenges');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ toUserId: 7, puzzleId: 42 });
-    req.flush({ id: 99 });
+    expect(req.request.body).toEqual({ toUserIds: [7, 8], puzzleId: 42, source: 'book' });
+    req.flush({ sent: 2, skipped: [] });
+  });
+
+  it('sendMany() defaults source to standard', () => {
+    service.sendMany([7], 42).subscribe();
+    const req = httpMock.expectOne('/api/challenges');
+    expect(req.request.body).toEqual({ toUserIds: [7], puzzleId: 42, source: 'standard' });
+    req.flush({ sent: 1, skipped: [] });
   });
 });

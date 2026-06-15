@@ -59,7 +59,18 @@ public class ChallengeControllerTests : IDisposable
         return p;
     }
 
-    // ---- Create ----
+    private async Task<BookPuzzle> CreateBookPuzzleAsync(string lineId = "b1", int rating = 1800, string? title = "Kapitel 1", string? tags = "pin")
+    {
+        var p = new BookPuzzle { LineId = lineId, BookFileName = "book.pgn", Fen = "fen", Moves = "e2e4", BookRating = rating, Title = title, Tags = tags };
+        _db.BookPuzzles.Add(p);
+        await _db.SaveChangesAsync();
+        return p;
+    }
+
+    private static ChallengeBatchResultDto Batch(ActionResult<ChallengeBatchResultDto> r)
+        => Assert.IsType<ChallengeBatchResultDto>(Assert.IsType<OkObjectResult>(r.Result).Value);
+
+    // ---- Create (Batch) ----
 
     [Fact]
     public async Task Create_CreatesChallenge_WhenFriends()
@@ -70,33 +81,55 @@ public class ChallengeControllerTests : IDisposable
         var puzzle = await CreatePuzzleAsync();
 
         SetUser(me.Id);
-        var result = await _controller.Create(new CreateChallengeDto { ToUserId = friend.Id, PuzzleId = puzzle.Id });
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = puzzle.Id });
 
-        Assert.IsType<OkObjectResult>(result);
-        Assert.Single(_db.PuzzleChallenges);
-        var c = _db.PuzzleChallenges.Single();
+        Assert.Equal(1, Batch(result).Sent);
+        var c = Assert.Single(_db.PuzzleChallenges);
         Assert.Equal(ChallengeStatus.Pending, c.Status);
         Assert.Equal(me.Id, c.FromUserId);
         Assert.Equal(friend.Id, c.ToUserId);
+        Assert.Equal(PuzzleSource.Standard, c.Source);
     }
 
     [Fact]
-    public async Task Create_Returns403_WhenNotFriends()
+    public async Task Create_SendsToMultipleFriends_AtOnce()
     {
         var me = await CreateUserAsync("me");
-        var stranger = await CreateUserAsync("stranger");
+        var a = await CreateUserAsync("a");
+        var b = await CreateUserAsync("b");
+        await MakeFriendsAsync(me.Id, a.Id);
+        await MakeFriendsAsync(me.Id, b.Id);
         var puzzle = await CreatePuzzleAsync();
 
         SetUser(me.Id);
-        var result = await _controller.Create(new CreateChallengeDto { ToUserId = stranger.Id, PuzzleId = puzzle.Id });
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { a.Id, b.Id }, PuzzleId = puzzle.Id });
 
-        var status = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, status.StatusCode);
-        Assert.Empty(_db.PuzzleChallenges);
+        Assert.Equal(2, Batch(result).Sent);
+        Assert.Equal(2, _db.PuzzleChallenges.Count());
     }
 
     [Fact]
-    public async Task Create_Returns409_OnDuplicatePending()
+    public async Task Create_SkipsNonFriends_WithReason()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        var stranger = await CreateUserAsync("stranger");
+        await MakeFriendsAsync(me.Id, friend.Id);
+        var puzzle = await CreatePuzzleAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id, stranger.Id }, PuzzleId = puzzle.Id });
+
+        var batch = Batch(result);
+        Assert.Equal(1, batch.Sent);
+        var skip = Assert.Single(batch.Skipped);
+        Assert.Equal(stranger.Id, skip.ToUserId);
+        Assert.Equal("not_friends", skip.Reason);
+        Assert.Single(_db.PuzzleChallenges);
+    }
+
+    [Fact]
+    public async Task Create_SkipsDuplicatePending_WithReason()
     {
         var me = await CreateUserAsync("me");
         var friend = await CreateUserAsync("friend");
@@ -104,10 +137,12 @@ public class ChallengeControllerTests : IDisposable
         var puzzle = await CreatePuzzleAsync();
 
         SetUser(me.Id);
-        await _controller.Create(new CreateChallengeDto { ToUserId = friend.Id, PuzzleId = puzzle.Id });
-        var second = await _controller.Create(new CreateChallengeDto { ToUserId = friend.Id, PuzzleId = puzzle.Id });
+        await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = puzzle.Id });
+        var second = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = puzzle.Id });
 
-        Assert.IsType<ConflictObjectResult>(second);
+        var batch = Batch(second);
+        Assert.Equal(0, batch.Sent);
+        Assert.Equal("duplicate", Assert.Single(batch.Skipped).Reason);
         Assert.Single(_db.PuzzleChallenges);
     }
 
@@ -119,9 +154,57 @@ public class ChallengeControllerTests : IDisposable
         await MakeFriendsAsync(me.Id, friend.Id);
 
         SetUser(me.Id);
-        var result = await _controller.Create(new CreateChallengeDto { ToUserId = friend.Id, PuzzleId = 9999 });
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = 9999 });
 
-        Assert.IsType<NotFoundObjectResult>(result);
+        Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Create_CreatesBookChallenge_WhenSourceBook()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+        var book = await CreateBookPuzzleAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = book.Id, Source = PuzzleSource.Book });
+
+        Assert.Equal(1, Batch(result).Sent);
+        var c = Assert.Single(_db.PuzzleChallenges);
+        Assert.Equal(PuzzleSource.Book, c.Source);
+        Assert.Equal(book.Id, c.PuzzleId);
+    }
+
+    [Fact]
+    public async Task Create_Returns404_WhenBookPuzzleMissing()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+
+        SetUser(me.Id);
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id }, PuzzleId = 9999, Source = PuzzleSource.Book });
+
+        Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Create_DedupesAndIgnoresSelf_AcrossRecipients()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+        var puzzle = await CreatePuzzleAsync();
+
+        SetUser(me.Id);
+        // friend doppelt + man selbst → 1 gesendet, self übersprungen.
+        var result = await _controller.Create(new CreateChallengeBatchDto { ToUserIds = new() { friend.Id, friend.Id, me.Id }, PuzzleId = puzzle.Id });
+
+        var batch = Batch(result);
+        Assert.Equal(1, batch.Sent);
+        Assert.Contains(batch.Skipped, s => s.ToUserId == me.Id && s.Reason == "self");
+        Assert.Single(_db.PuzzleChallenges);
     }
 
     // ---- Incoming / Outgoing / Count ----
@@ -145,6 +228,29 @@ public class ChallengeControllerTests : IDisposable
         Assert.Single(list);
         Assert.Equal("friend", list[0].FromUsername);
         Assert.Equal(puzzle.Rating, list[0].Rating);
+        Assert.Equal("Standard", list[0].Source);
+    }
+
+    [Fact]
+    public async Task Incoming_ProjectsBookMetadata_ForBookSource()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        await MakeFriendsAsync(me.Id, friend.Id);
+        var book = await CreateBookPuzzleAsync(rating: 1850, title: "Mein Kapitel", tags: "pin endgame");
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = friend.Id, ToUserId = me.Id, PuzzleId = book.Id, Source = PuzzleSource.Book, Status = ChallengeStatus.Pending });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.Incoming();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsType<List<IncomingChallengeDto>>(ok.Value);
+        var dto = Assert.Single(list);
+        Assert.Equal("Book", dto.Source);
+        Assert.Equal(1850, dto.Rating);
+        Assert.Equal("pin endgame", dto.Themes);
+        Assert.Equal("Mein Kapitel", dto.Title);
     }
 
     [Fact]

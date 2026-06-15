@@ -18,46 +18,90 @@ public class ChallengeService
         _notifications = notifications;
     }
 
-    /// <summary>Schickt ein Puzzle als Challenge an einen Freund. Verhindert Doppel-Versand derselben
-    /// offenen Challenge. Wirft, wenn die beiden nicht befreundet sind oder das Puzzle fehlt.</summary>
-    public async Task<PuzzleChallenge> CreateAsync(int fromUserId, int toUserId, int puzzleId)
+    /// <summary>Schickt ein Puzzle als Challenge an genau einen Freund (Convenience-Wrapper um den Batch).</summary>
+    public async Task<PuzzleChallenge> CreateAsync(int fromUserId, int toUserId, int puzzleId, PuzzleSource source = PuzzleSource.Standard)
     {
-        if (fromUserId == toUserId)
-            throw new InvalidOperationException("Cannot challenge yourself.");
+        var result = await CreateBatchAsync(fromUserId, new[] { toUserId }, puzzleId, source);
+        if (result.Sent == 1)
+            // Frisch angelegte Challenge zurückgeben (für Single-Caller/Tests).
+            return await _db.PuzzleChallenges
+                .Where(c => c.FromUserId == fromUserId && c.ToUserId == toUserId &&
+                            c.PuzzleId == puzzleId && c.Source == source)
+                .OrderByDescending(c => c.Id)
+                .FirstAsync();
 
-        if (!await _friendService.AreFriendsAsync(fromUserId, toUserId))
-            throw new UnauthorizedAccessException("You can only challenge friends.");
+        // Einziger Empfänger wurde übersprungen → denselben Fehler wie früher werfen.
+        var reason = result.Skipped.FirstOrDefault()?.Reason;
+        throw reason switch
+        {
+            "self" => new InvalidOperationException("Cannot challenge yourself."),
+            "not_friends" => new UnauthorizedAccessException("You can only challenge friends."),
+            "duplicate" => new InvalidOperationException("You already sent this puzzle to that friend."),
+            _ => new InvalidOperationException("Challenge could not be created.")
+        };
+    }
 
-        if (!await _db.Puzzles.AnyAsync(p => p.Id == puzzleId))
+    /// <summary>Schickt ein Puzzle als Challenge an mehrere Freunde auf einmal. Tolerant: ungültige Empfänger
+    /// (man selbst / kein Freund / bereits offene gleiche Challenge) werden übersprungen und gemeldet.
+    /// Wirft nur, wenn das Puzzle selbst fehlt.</summary>
+    public async Task<ChallengeBatchResultDto> CreateBatchAsync(int fromUserId, IEnumerable<int> toUserIds, int puzzleId, PuzzleSource source = PuzzleSource.Standard)
+    {
+        if (!await PuzzleExistsAsync(source, puzzleId))
             throw new KeyNotFoundException("Puzzle not found.");
 
-        var duplicate = await _db.PuzzleChallenges.AnyAsync(c =>
-            c.FromUserId == fromUserId && c.ToUserId == toUserId &&
-            c.PuzzleId == puzzleId && c.Status == ChallengeStatus.Pending);
-        if (duplicate)
-            throw new InvalidOperationException("You already sent this puzzle to that friend.");
-
-        var challenge = new PuzzleChallenge
-        {
-            FromUserId = fromUserId,
-            ToUserId = toUserId,
-            PuzzleId = puzzleId
-        };
-        _db.PuzzleChallenges.Add(challenge);
-        await _db.SaveChangesAsync();
-
-        // Empfänger benachrichtigen: neue Puzzle-Challenge.
+        var result = new ChallengeBatchResultDto();
         var fromName = await UsernameAsync(fromUserId);
-        await _notifications.CreateAsync(toUserId, NotificationType.ChallengeReceived,
-            new Dictionary<string, string> { ["username"] = fromName }, "/friends");
+        var created = new List<int>(); // Empfänger, die benachrichtigt werden sollen.
 
-        return challenge;
+        foreach (var toUserId in toUserIds.Distinct())
+        {
+            if (toUserId == fromUserId)
+            {
+                result.Skipped.Add(new ChallengeSkipDto { ToUserId = toUserId, Reason = "self" });
+                continue;
+            }
+
+            if (!await _friendService.AreFriendsAsync(fromUserId, toUserId))
+            {
+                result.Skipped.Add(new ChallengeSkipDto { ToUserId = toUserId, Reason = "not_friends" });
+                continue;
+            }
+
+            var duplicate = await _db.PuzzleChallenges.AnyAsync(c =>
+                c.FromUserId == fromUserId && c.ToUserId == toUserId &&
+                c.PuzzleId == puzzleId && c.Source == source && c.Status == ChallengeStatus.Pending);
+            if (duplicate)
+            {
+                result.Skipped.Add(new ChallengeSkipDto { ToUserId = toUserId, Reason = "duplicate" });
+                continue;
+            }
+
+            _db.PuzzleChallenges.Add(new PuzzleChallenge
+            {
+                FromUserId = fromUserId,
+                ToUserId = toUserId,
+                PuzzleId = puzzleId,
+                Source = source
+            });
+            created.Add(toUserId);
+        }
+
+        if (created.Count > 0)
+            await _db.SaveChangesAsync();
+
+        // Empfänger benachrichtigen: neue Puzzle-Challenge (fire-and-forget Effekt, hier awaited für Konsistenz).
+        foreach (var toUserId in created)
+            await _notifications.CreateAsync(toUserId, NotificationType.ChallengeReceived,
+                new Dictionary<string, string> { ["username"] = fromName }, "/friends");
+
+        result.Sent = created.Count;
+        return result;
     }
 
     /// <summary>Offene Challenges, die an den User geschickt wurden (Posteingang).</summary>
     public async Task<List<IncomingChallengeDto>> GetIncomingAsync(int userId)
     {
-        return await _db.PuzzleChallenges
+        var rows = await _db.PuzzleChallenges
             .Where(c => c.ToUserId == userId && c.Status == ChallengeStatus.Pending)
             .OrderByDescending(c => c.CreatedAt)
             .Select(c => new IncomingChallengeDto
@@ -67,18 +111,21 @@ public class ChallengeService
                 FromUsername = c.FromUser.Username,
                 FromDisplayName = c.FromUser.Profile != null ? c.FromUser.Profile.DisplayName : null,
                 PuzzleId = c.PuzzleId,
-                Rating = c.Puzzle.Rating,
-                Themes = c.Puzzle.Themes,
+                Source = c.Source.ToString(),
                 CreatedAt = c.CreatedAt
             })
             .ToListAsync();
+
+        await FillPuzzleMetadataAsync(rows, r => r.PuzzleId, r => r.Source,
+            (r, rating, themes, title) => { r.Rating = rating; r.Themes = themes; r.Title = title; });
+        return rows;
     }
 
     /// <summary>Vom User gesendete Challenges inkl. Ergebnis-Status des Empfängers.</summary>
     public async Task<List<OutgoingChallengeDto>> GetOutgoingAsync(int userId, int limit = 100)
     {
         limit = Math.Clamp(limit, 1, 500);
-        return await _db.PuzzleChallenges
+        var rows = await _db.PuzzleChallenges
             .Where(c => c.FromUserId == userId)
             .OrderByDescending(c => c.CreatedAt)
             .Take(limit)
@@ -89,13 +136,17 @@ public class ChallengeService
                 ToUsername = c.ToUser.Username,
                 ToDisplayName = c.ToUser.Profile != null ? c.ToUser.Profile.DisplayName : null,
                 PuzzleId = c.PuzzleId,
-                Rating = c.Puzzle.Rating,
+                Source = c.Source.ToString(),
                 Status = c.Status.ToString(),
                 CreatedAt = c.CreatedAt,
                 ResolvedAt = c.ResolvedAt,
                 TimeSpentSeconds = c.TimeSpentSeconds
             })
             .ToListAsync();
+
+        await FillPuzzleMetadataAsync(rows, r => r.PuzzleId, r => r.Source,
+            (r, rating, themes, title) => { r.Rating = rating; r.Title = title; });
+        return rows;
     }
 
     /// <summary>Anzahl offener eingehender Challenges — für das Navbar-Badge.</summary>
@@ -123,6 +174,51 @@ public class ChallengeService
         var byName = await UsernameAsync(userId);
         await _notifications.CreateAsync(challenge.FromUserId, NotificationType.ChallengeResolved,
             new Dictionary<string, string> { ["username"] = byName, ["solved"] = solved ? "true" : "false" }, "/friends");
+    }
+
+    /// <summary>Existiert das Puzzle in der zur Quelle passenden Tabelle?</summary>
+    private Task<bool> PuzzleExistsAsync(PuzzleSource source, int puzzleId) => source switch
+    {
+        PuzzleSource.Book => _db.BookPuzzles.AnyAsync(p => p.Id == puzzleId),
+        _ => _db.Puzzles.AnyAsync(p => p.Id == puzzleId)
+    };
+
+    /// <summary>Reichert eine Liste von Challenge-DTOs mit Rating/Themes/Titel je Quelle an. Da die Quellen in
+    /// zwei verschiedenen Tabellen liegen, wird pro Quelle ein Lookup gemacht und in-memory zusammengeführt.</summary>
+    private async Task FillPuzzleMetadataAsync<T>(
+        List<T> rows,
+        Func<T, int> puzzleId,
+        Func<T, string> sourceName,
+        Action<T, int, string?, string?> assign)
+    {
+        if (rows.Count == 0) return;
+
+        var standardIds = rows.Where(r => sourceName(r) == nameof(PuzzleSource.Standard)).Select(puzzleId).Distinct().ToList();
+        var bookIds = rows.Where(r => sourceName(r) == nameof(PuzzleSource.Book)).Select(puzzleId).Distinct().ToList();
+
+        var standard = standardIds.Count == 0
+            ? new Dictionary<int, (int Rating, string? Themes)>()
+            : await _db.Puzzles.Where(p => standardIds.Contains(p.Id))
+                .Select(p => new { p.Id, p.Rating, p.Themes })
+                .ToDictionaryAsync(p => p.Id, p => (Rating: p.Rating, Themes: p.Themes));
+
+        var book = bookIds.Count == 0
+            ? new Dictionary<int, (int Rating, string? Themes, string? Title)>()
+            : await _db.BookPuzzles.Where(p => bookIds.Contains(p.Id))
+                .Select(p => new { p.Id, p.BookRating, p.Tags, p.Title })
+                .ToDictionaryAsync(p => p.Id, p => (Rating: p.BookRating ?? 0, Themes: p.Tags, Title: p.Title));
+
+        foreach (var r in rows)
+        {
+            if (sourceName(r) == nameof(PuzzleSource.Book))
+            {
+                if (book.TryGetValue(puzzleId(r), out var b)) assign(r, b.Rating, b.Themes, b.Title);
+            }
+            else
+            {
+                if (standard.TryGetValue(puzzleId(r), out var s)) assign(r, s.Rating, s.Themes, null);
+            }
+        }
     }
 
     private async Task<string> UsernameAsync(int userId)

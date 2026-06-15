@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.136.1';
+export const APP_VERSION = '0.137.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -11,6 +11,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.137.0', date: '2026-06-15', changes: [
+    '„An Freund schicken" gibt es jetzt in allen Puzzle-Modi: Standard, Endlos, Einzel-Buchpuzzle, Tagespuzzle und Kurs (Wochenpost ausgenommen). Buch-/Kurspuzzles lassen sich damit ebenso verschicken wie klassische Puzzles.',
+    'Du kannst ein Puzzle jetzt an mehrere Freunde gleichzeitig schicken: Im Menü pro Freund eine Checkbox, „Alle auswählen" und „Senden (n)". Der Empfänger löst die Challenge wie gewohnt; das Ergebnis (gelöst/gescheitert) wird dir zurückgemeldet.',
+  ]},
   { version: '0.136.1', date: '2026-06-15', changes: [
     'Endlosmodus-Fix: Bei 0 Herzen ist der Lauf endgültig vorbei. Das tödliche Puzzle lässt sich per „Retry" zwar nochmal spielen, ein gelöstes Retry belebt den Lauf aber nicht mehr — man spielt nicht länger mit 0 Herzen weiter (vorher konnte man so über die Herzgrenze hinaus weiterspielen).',
   ]},

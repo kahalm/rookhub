@@ -16,6 +16,8 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
+import { ChallengeFriendsComponent } from './challenge-friends.component';
+import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -40,7 +42,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, PuzzleTagsComponent,
-    TranslateModule, PuzzleStatusCardComponent
+    TranslateModule, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -112,6 +114,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private retryFn: (() => void) | null = null;
   private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
   private courseAttemptRecorded = false; // pro Puzzle-Durchgang nur ein Kurs-Versuch melden (Zeit-Inflation vermeiden)
+  /** Gesetzt, wenn dieses Buch-Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
+  private challengeId: number | null = null;
+  private challengeResolved = false;
+
+  get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -130,7 +137,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private translate: TranslateService,
     private auth: AuthService,
     private snackbar: SnackbarService,
-    private offlineQueue: OfflineQueueService
+    private offlineQueue: OfflineQueueService,
+    private challengeService: ChallengeService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -298,6 +306,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordBookAttempt(solved: boolean): void {
     if (!this.standalone || this.bookAttemptRecorded || !this.puzzle) return;
     this.bookAttemptRecorded = true;
+    // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone, einmalig).
+    this.resolveChallengeIfNeeded(solved);
     if (this.auth.isLoggedIn) {
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
       const body = { solved, timeSeconds: this.elapsedSeconds };
@@ -347,8 +357,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
+      // Aus einer Freundes-Challenge geöffnet (nur Standalone-Buch-Modus) → Ergebnis zurückmelden.
+      const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
+      if (challengeParam) this.challengeId = Number(challengeParam) || null;
       this.loadPuzzle(Number(idParam));
     }
+  }
+
+  /** Meldet das Ergebnis genau einmal an eine offene Buch-Challenge zurück (fire-and-forget). */
+  private resolveChallengeIfNeeded(solved: boolean): void {
+    if (this.challengeId == null || this.challengeResolved) return;
+    this.challengeResolved = true;
+    this.challengeService.resolve(this.challengeId, solved, this.elapsedSeconds).subscribe({ next: () => {}, error: () => {} });
   }
 
   ngOnDestroy(): void {

@@ -107,15 +107,15 @@ public class AppDbContext : DbContext
              .HasForeignKey(c => c.ToUserId)
              .OnDelete(DeleteBehavior.Restrict);
 
-            e.HasOne(c => c.Puzzle)
-             .WithMany()
-             .HasForeignKey(c => c.PuzzleId)
-             .OnDelete(DeleteBehavior.Restrict);
+            // PuzzleId ist polymorph (Puzzles ODER BookPuzzles, je nach Source) → bewusst KEIN FK.
+            // Existenz wird je Quelle im ChallengeService geprüft.
 
             // Posteingang/Badge: offene Challenges an einen Empfänger.
             e.HasIndex(c => new { c.ToUserId, c.Status });
             // Gesendete Challenges eines Absenders.
             e.HasIndex(c => c.FromUserId);
+            // Dedup offener Challenges je Quelle+Puzzle.
+            e.HasIndex(c => new { c.Source, c.PuzzleId });
         });
 
         modelBuilder.Entity<RevengeNotification>(e =>

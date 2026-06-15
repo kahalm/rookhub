@@ -13,6 +13,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
+import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
@@ -26,7 +27,6 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
-import { Friend } from '../../core/models';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
@@ -43,7 +43,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
-    PuzzleRatingCardComponent, PuzzleStatusCardComponent
+    PuzzleRatingCardComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],
@@ -97,9 +97,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   revengeTotalCount = 0;
   /** Indizes für die Feuerwerk-Funken im Template. */
   readonly fireworkDots = Array.from({ length: 28 }, (_, i) => i);
-  /** Freunde für das „An Freund schicken"-Menü (faul geladen beim Öffnen). */
-  challengeFriends: Friend[] = [];
-
   lastSolvedPuzzleId: number | null = null;
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
@@ -590,20 +587,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   /** Freundesliste fürs „An Freund schicken"-Menü faul laden (nur einmal). */
-  loadFriendsForChallenge(): void {
-    if (this.challengeFriends.length > 0) return;
-    this.http.get<Friend[]>('/api/friends').subscribe({ next: f => this.challengeFriends = f, error: () => {} });
-  }
-
-  /** Aktuelles Puzzle als Challenge an einen Freund schicken. */
-  sendChallenge(friendUserId: number): void {
-    if (!this.puzzle) return;
-    this.challengeService.send(friendUserId, this.puzzle.id).subscribe({
-      next: () => this.snackbar.success(this.translate.instant('puzzles.challenge.sent')),
-      error: (err) => this.snackbar.info(err.error?.message || this.translate.instant('puzzles.challenge.error')),
-    });
-  }
-
   toggleEval(): void {
     this.showEval = !this.showEval;
     if (this.showEval) {

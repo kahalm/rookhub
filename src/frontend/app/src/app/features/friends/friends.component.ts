@@ -110,7 +110,7 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
             @for (c of incoming; track c.id) {
               <mat-list-item>
                 <span matListItemTitle>{{ 'friends.challenges.fromLine' | translate:{ name: c.fromDisplayName || c.fromUsername, rating: c.rating } }}</span>
-                <span matListItemLine class="themes">{{ formatThemes(c.themes) }}</span>
+                <span matListItemLine class="themes">{{ c.title || formatThemes(c.themes) }}</span>
                 <button mat-raised-button color="primary" matListItemMeta (click)="solveChallenge(c)">
                   <mat-icon>sports_esports</mat-icon> {{ 'friends.challenges.solve' | translate }}
                 </button>
@@ -234,9 +234,11 @@ export class FriendsComponent implements OnInit {
     });
   }
 
-  /** Eingehende Challenge lösen: zum Puzzle navigieren, challengeId mitgeben → Resolve nach dem Versuch. */
+  /** Eingehende Challenge lösen: zum passenden Solver navigieren (Standard- vs. Buch-Puzzle),
+   *  challengeId mitgeben → Resolve nach dem Versuch. */
   solveChallenge(c: IncomingChallenge): void {
-    this.router.navigate(['/puzzles', c.puzzleId], { queryParams: { challengeId: c.id } });
+    const path = c.source === 'Book' ? ['/puzzles/book', c.puzzleId] : ['/puzzles', c.puzzleId];
+    this.router.navigate(path, { queryParams: { challengeId: c.id } });
   }
 
   formatThemes(themes: string | null): string {

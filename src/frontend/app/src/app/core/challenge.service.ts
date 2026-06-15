@@ -2,14 +2,19 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 
+/** Quelle des Puzzles einer Challenge — bestimmt Tabelle (Backend) + Deep-Link beim Empfänger. */
+export type PuzzleChallengeSource = 'standard' | 'book';
+
 export interface IncomingChallenge {
   id: number;
   fromUserId: number;
   fromUsername: string;
   fromDisplayName: string | null;
   puzzleId: number;
+  source: 'Standard' | 'Book';
   rating: number;
   themes: string | null;
+  title: string | null;
   createdAt: string;
 }
 
@@ -19,11 +24,19 @@ export interface OutgoingChallenge {
   toUsername: string;
   toDisplayName: string | null;
   puzzleId: number;
+  source: 'Standard' | 'Book';
   rating: number;
+  title: string | null;
   status: 'Pending' | 'Solved' | 'Failed';
   createdAt: string;
   resolvedAt: string | null;
   timeSpentSeconds: number | null;
+}
+
+/** Ergebnis eines Batch-Versands. */
+export interface ChallengeBatchResult {
+  sent: number;
+  skipped: { toUserId: number; reason: string }[];
 }
 
 /**
@@ -38,8 +51,9 @@ export class ChallengeService {
 
   constructor(private http: HttpClient) {}
 
-  send(toUserId: number, puzzleId: number): Observable<{ id: number }> {
-    return this.http.post<{ id: number }>('/api/challenges', { toUserId, puzzleId });
+  /** Schickt ein Puzzle als Challenge an einen oder mehrere Freunde auf einmal. */
+  sendMany(toUserIds: number[], puzzleId: number, source: PuzzleChallengeSource = 'standard'): Observable<ChallengeBatchResult> {
+    return this.http.post<ChallengeBatchResult>('/api/challenges', { toUserIds, puzzleId, source });
   }
 
   getIncoming(): Observable<IncomingChallenge[]> {
