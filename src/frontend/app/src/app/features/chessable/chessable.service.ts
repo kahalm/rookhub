@@ -136,10 +136,10 @@ export class ChessableService {
       refresh ? { params: { refresh: 'true' } } : {});
   }
 
-  /** ADMIN: Lädt den Kurs {bid} eines Users ins eigene (Admin-)Konto als Repertoire. */
-  importForUserAdmin(userId: number, bid: string, name: string): Observable<ChessableImport> {
+  /** ADMIN: Lädt den Kurs {bid} eines Users ins eigene (Admin-)Konto — als Repertoire oder Buch. */
+  importForUserAdmin(userId: number, bid: string, target: ChessableImportTarget, name: string): Observable<ChessableImport> {
     return this.http.post<ChessableImport>(
-      `${this.apiUrl}/admin/users/${userId}/import/${encodeURIComponent(bid)}`, { name });
+      `${this.apiUrl}/admin/users/${userId}/import/${encodeURIComponent(bid)}`, { target, name });
   }
 
   cancelImport(id: number): Observable<ChessableImport> {

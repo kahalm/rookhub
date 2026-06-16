@@ -18,7 +18,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
-import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport } from '../chessable/chessable.service';
+import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget } from '../chessable/chessable.service';
 import { timer, Subscription } from 'rxjs';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
@@ -318,12 +318,12 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Kurs des Users ins eigene Admin-Konto (als Repertoire) herunterladen. */
-  dlImport(course: ChessableCourse): void {
+  /** Kurs des Users ins eigene Admin-Konto herunterladen — als Repertoire oder Buch. */
+  dlImport(course: ChessableCourse, target: ChessableImportTarget): void {
     if (this.dlSelectedUserId == null) return;
     const bid = course.bid;
-    this.dlImports[bid] = { ...(this.dlImports[bid] ?? {} as ChessableImport), status: 'running', phase: 'queued', bid } as ChessableImport;
-    this.chessable.importForUserAdmin(this.dlSelectedUserId, bid, course.name).subscribe({
+    this.dlImports[bid] = { ...(this.dlImports[bid] ?? {} as ChessableImport), status: 'running', phase: 'queued', bid, target } as ChessableImport;
+    this.chessable.importForUserAdmin(this.dlSelectedUserId, bid, target, course.name).subscribe({
       next: imp => { this.dlImports[bid] = imp; this.pollDlImport(bid, imp.id); },
       error: err => {
         delete this.dlImports[bid];

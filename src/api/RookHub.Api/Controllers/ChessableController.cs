@@ -344,14 +344,18 @@ public class ChessableController : BaseApiController
     }
 
     /// <summary>ADMIN: Lädt den Kurs {bid} eines Users (mit dessen Bearer) in das EIGENE (Admin-)Konto
-    /// als Repertoire herunter. Besitzer/Empfänger der Benachrichtigung = der aufrufende Admin;
-    /// nur der Bearer stammt vom Ziel-User.</summary>
+    /// herunter — als Repertoire ("repertoire", Default) oder als Buch/Kurs ("book").
+    /// Besitzer/Empfänger der Benachrichtigung = der aufrufende Admin; nur der Bearer stammt vom Ziel-User.</summary>
     [HttpPost("admin/users/{userId:int}/import/{bid}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request)
     {
         if (string.IsNullOrWhiteSpace(bid))
             return BadRequest(new { message = "bid is required" });
+        // Leeres Ziel ⇒ "repertoire" (Default + rückwärtskompatibel zu Clients ohne target).
+        var target = string.IsNullOrWhiteSpace(request?.Target) ? "repertoire" : request!.Target!.Trim().ToLowerInvariant();
+        if (target is not ("repertoire" or "book"))
+            return BadRequest(new { message = "target must be 'repertoire' or 'book'" });
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
             return NotFound(new { message = "User not found" });
         if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
@@ -361,11 +365,11 @@ public class ChessableController : BaseApiController
         var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == "running");
         var import = new ChessableImport
         {
-            UserId = adminId,          // Ergebnis (Repertoire) + Benachrichtigung gehören dem Admin
+            UserId = adminId,          // Ergebnis (Repertoire/Buch) + Benachrichtigung gehören dem Admin
             BearerUserId = userId,     // gefetcht wird mit dem Bearer des Ziel-Users
             Bid = bid,
             CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
-            Target = "repertoire",
+            Target = target,
             Status = "running",
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow

@@ -565,6 +565,37 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task AdminStartImport_TargetBook_CreatesBookImport()
+    {
+        await SeedUserAsync(42);          // Admin
+        await SeedUserAsync(7);           // Ziel-User
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.StartImportForUserAdmin(7, "bid-b", new AdminChessableImportRequest("Buchkurs", "book"));
+
+        var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
+        Assert.Equal("book", dto.Target);                 // landet als Buch/Kurs
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "bid-b");
+        Assert.Equal("book", imp.Target);
+        Assert.Equal(42, imp.UserId);                     // Besitzer weiterhin Admin
+        Assert.Equal(7, imp.BearerUserId);
+    }
+
+    [Fact]
+    public async Task AdminStartImport_InvalidTarget_Returns400()
+    {
+        await SeedUserAsync(42);
+        await SeedUserAsync(7);
+        var result = await _controller.StartImportForUserAdmin(7, "bid-x", new AdminChessableImportRequest(null, "video"));
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task AdminCredentialedUsers_ListsOnlyUsersWithBearer()
     {
         await SeedUserAsync(42);
