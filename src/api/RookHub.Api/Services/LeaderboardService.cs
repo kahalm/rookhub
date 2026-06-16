@@ -66,10 +66,24 @@ public class LeaderboardService
             .ToListAsync())
             .ToDictionary(x => x.UserId, x => x.Count);
 
+        // #daily puzzles: einzigartige gelöste Tagespuzzles je Nutzer. Daily = Buch-Puzzle, das
+        // in DailyPuzzles einem Datum zugeordnet ist; gezählt wird ein gelöster BookPuzzleAttempt
+        // (im Fenster nach Lösezeit), distinct je BookPuzzleId.
+        var dailyIds = await _db.DailyPuzzles.Select(d => d.BookPuzzleId).Distinct().ToListAsync();
+        var dailyPairs = await _db.BookPuzzleAttempts
+            .Where(a => a.UserId != null && a.Solved && a.AttemptedAt >= from && dailyIds.Contains(a.BookPuzzleId))
+            .Select(a => new { UserId = a.UserId!.Value, a.BookPuzzleId })
+            .Distinct()
+            .ToListAsync();
+        var dailyPerUser = dailyPairs
+            .GroupBy(p => p.UserId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         // Identitäten (Name + Discord) für alle vorkommenden Nutzer einmal auflösen.
         var allIds = puzzlePerUser.Keys
             .Concat(endlessPerUser.Keys)
             .Concat(linesPerUser.Keys)
+            .Concat(dailyPerUser.Keys)
             .Distinct()
             .ToList();
         var (names, profiles) = await ResolveUsersAsync(allIds);
@@ -80,6 +94,7 @@ public class LeaderboardService
             Puzzles = BuildEntries(puzzlePerUser, names, profiles, top),
             EndlessRuns = BuildEntries(endlessPerUser, names, profiles, top),
             CourseLines = BuildEntries(linesPerUser, names, profiles, top),
+            DailyPuzzles = BuildEntries(dailyPerUser, names, profiles, top),
         };
     }
 

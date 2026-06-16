@@ -20,4 +20,6 @@ public class LeaderboardsDto
     public List<LeaderboardEntryDto> Puzzles { get; set; } = new();
     public List<LeaderboardEntryDto> EndlessRuns { get; set; } = new();
     public List<LeaderboardEntryDto> CourseLines { get; set; } = new();
+    /// <summary>Einzigartige gelöste Tagespuzzles (Buch-Puzzles, die als Daily zugeordnet waren/sind).</summary>
+    public List<LeaderboardEntryDto> DailyPuzzles { get; set; } = new();
 }

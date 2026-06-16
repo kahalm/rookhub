@@ -8,7 +8,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { LeaderboardService, Leaderboards, LeaderboardEntry, LeaderboardPeriod } from './leaderboard.service';
 
 interface CategoryDef {
-  key: 'puzzles' | 'endlessRuns' | 'courseLines';
+  key: 'puzzles' | 'endlessRuns' | 'courseLines' | 'dailyPuzzles';
   titleKey: string;
   icon: string;
   unitKey: string;
@@ -93,6 +93,7 @@ export class LeaderboardsComponent implements OnInit {
 
   readonly categories: CategoryDef[] = [
     { key: 'puzzles', titleKey: 'leaderboards.category.puzzles', icon: 'extension', unitKey: 'leaderboards.unit.puzzles' },
+    { key: 'dailyPuzzles', titleKey: 'leaderboards.category.dailyPuzzles', icon: 'today', unitKey: 'leaderboards.unit.daily' },
     { key: 'endlessRuns', titleKey: 'leaderboards.category.endlessRuns', icon: 'all_inclusive', unitKey: 'leaderboards.unit.runs' },
     { key: 'courseLines', titleKey: 'leaderboards.category.courseLines', icon: 'menu_book', unitKey: 'leaderboards.unit.lines' },
   ];

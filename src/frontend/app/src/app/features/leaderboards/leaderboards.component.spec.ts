@@ -8,6 +8,7 @@ function data(period: string): Leaderboards {
     puzzles: [{ name: 'anna', count: 3 }, { name: 'ben', count: 1 }],
     endlessRuns: [{ name: 'anna', count: 2 }],
     courseLines: [],
+    dailyPuzzles: [{ name: 'anna', count: 4 }],
   };
 }
 

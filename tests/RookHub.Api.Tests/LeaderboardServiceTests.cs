@@ -50,6 +50,12 @@ public class LeaderboardServiceTests : IDisposable
     private void AddCourseLine(int userId, int bookPuzzleId, DateTime solvedAt)
         => _db.CoursePuzzleResults.Add(new CoursePuzzleResult { UserId = userId, BookId = 1, BookPuzzleId = bookPuzzleId, SolvedAt = solvedAt });
 
+    private void AddDaily(DateOnly date, int bookPuzzleId)
+        => _db.DailyPuzzles.Add(new DailyPuzzle { Date = date, BookPuzzleId = bookPuzzleId });
+
+    private void AddBookSolve(int userId, int bookPuzzleId, bool solved, DateTime at)
+        => _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt { UserId = userId, BookPuzzleId = bookPuzzleId, Solved = solved, AttemptedAt = at });
+
     [Fact]
     public async Task GetAsync_CountsUniquePuzzles_OrdersByCountDesc_WithDiscord()
     {
@@ -132,6 +138,37 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal("anna", res.EndlessRuns[0].Name);
         Assert.Equal("ben", res.CourseLines[0].Name);           // ben: 2 Linien führt
         Assert.Equal(2, res.CourseLines[0].Count);
+    }
+
+    [Fact]
+    public async Task GetAsync_CountsUniqueSolvedDailyPuzzles_OnlyDailyOnes()
+    {
+        var anna = await CreateUserAsync("anna");
+        var ben = await CreateUserAsync("ben");
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+
+        // Buch-Puzzles 100 + 101 sind Tagespuzzles; 999 ist KEIN Tagespuzzle.
+        AddDaily(today, 100);
+        AddDaily(today.AddDays(-1), 101);
+
+        // anna: 100 zweimal gelöst (zählt einmal) + 101 gelöst → 2 einzigartige Dailies.
+        AddBookSolve(anna.Id, 100, true, now);
+        AddBookSolve(anna.Id, 100, true, now);
+        AddBookSolve(anna.Id, 101, true, now);
+        // ben: 100 gelöst (1 Daily) + 999 gelöst (kein Daily → zählt nicht) + 101 nur versucht (nicht gelöst).
+        AddBookSolve(ben.Id, 100, true, now);
+        AddBookSolve(ben.Id, 999, true, now);
+        AddBookSolve(ben.Id, 101, false, now);
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime");
+
+        Assert.Equal(2, res.DailyPuzzles.Count);
+        Assert.Equal("anna", res.DailyPuzzles[0].Name);
+        Assert.Equal(2, res.DailyPuzzles[0].Count);
+        Assert.Equal("ben", res.DailyPuzzles[1].Name);
+        Assert.Equal(1, res.DailyPuzzles[1].Count);   // nur das Daily, nicht 999
     }
 
     [Fact]

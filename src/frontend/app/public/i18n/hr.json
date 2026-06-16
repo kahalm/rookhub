@@ -1530,12 +1530,14 @@
     "category": {
       "puzzles": "Riješene zagonetke",
       "endlessRuns": "Beskonačni nizovi",
-      "courseLines": "Linije iz tečaja"
+      "courseLines": "Linije iz tečaja",
+      "dailyPuzzles": "Riješene dnevne zagonetke"
     },
     "unit": {
       "puzzles": "zagonetke",
       "runs": "nizovi",
-      "lines": "linije"
+      "lines": "linije",
+      "daily": "dnevne zagonetke"
     }
   }
 }

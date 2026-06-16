@@ -16,6 +16,7 @@ export interface Leaderboards {
   puzzles: LeaderboardEntry[];
   endlessRuns: LeaderboardEntry[];
   courseLines: LeaderboardEntry[];
+  dailyPuzzles: LeaderboardEntry[];
 }
 
 @Injectable({ providedIn: 'root' })

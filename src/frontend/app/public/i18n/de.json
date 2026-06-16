@@ -1574,12 +1574,14 @@
     "category": {
       "puzzles": "Gelöste Puzzles",
       "endlessRuns": "Endlos-Läufe",
-      "courseLines": "Kurs-Linien"
+      "courseLines": "Kurs-Linien",
+      "dailyPuzzles": "Gelöste Tagespuzzles"
     },
     "unit": {
       "puzzles": "Puzzles",
       "runs": "Läufe",
-      "lines": "Linien"
+      "lines": "Linien",
+      "daily": "Tagespuzzles"
     }
   }
 }
