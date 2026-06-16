@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.150.0';
+export const APP_VERSION = '0.151.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.151.0", date: "2026-06-16", changes: [
+    { en: "Leaderboards now show only the top 5 plus your own position (two above and two below) in each category — your row is highlighted, with a gap shown when you're below the top 5.", de: "Bestenlisten zeigen jetzt je Kategorie nur noch die besten 5 plus deinen eigenen Platz (zwei darüber und zwei darunter) — deine Zeile ist hervorgehoben, mit einer Lücke, wenn du unter den Top 5 stehst." },
+  ]},
   { version: "0.149.2", date: "2026-06-16", changes: [
     { en: "Chessable connect help: the \"get your bearer token\" instructions now mention that you can right-click the \"authorization\" header and choose \"Copy value\" in DevTools.", de: "Chessable-Verbinden-Hilfe: Die Anleitung zum Holen des Bearer-Tokens weist jetzt darauf hin, dass man in den DevTools mit Rechtsklick auf den „authorization\"-Header „Copy value\" wählen kann." },
   ]},

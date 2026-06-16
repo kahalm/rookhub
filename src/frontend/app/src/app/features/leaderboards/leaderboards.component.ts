@@ -49,10 +49,13 @@ interface CategoryDef {
                   <p class="lb-empty">{{ 'leaderboards.empty' | translate }}</p>
                 } @else {
                   <ol class="lb-list">
-                    @for (e of rows(cat.key); track $index) {
-                      <li class="lb-row" [class.lb-me]="false">
-                        <span class="lb-rank" [class.lb-medal]="$index < 3" [attr.data-rank]="$index + 1">
-                          @if ($index === 0) { 🥇 } @else if ($index === 1) { 🥈 } @else if ($index === 2) { 🥉 } @else { {{ $index + 1 }} }
+                    @for (e of rows(cat.key); track e.rank; let i = $index) {
+                      @if (i > 0 && e.rank > rows(cat.key)[i - 1].rank + 1) {
+                        <li class="lb-gap" aria-hidden="true">⋯</li>
+                      }
+                      <li class="lb-row" [class.lb-me]="e.isMe">
+                        <span class="lb-rank" [class.lb-medal]="e.rank <= 3" [attr.data-rank]="e.rank">
+                          @if (e.rank === 1) { 🥇 } @else if (e.rank === 2) { 🥈 } @else if (e.rank === 3) { 🥉 } @else { {{ e.rank }} }
                         </span>
                         <span class="lb-name">{{ e.name }}</span>
                         <span class="lb-count">{{ e.count }} <small>{{ cat.unitKey | translate }}</small></span>
@@ -75,8 +78,10 @@ interface CategoryDef {
     .lb-card mat-card-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1.1em; }
     .lb-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; }
     .lb-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
-    .lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    .lb-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 6px; }
     .lb-row:last-child { border-bottom: none; }
+    .lb-row.lb-me { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 14%, transparent); font-weight: 600; }
+    .lb-gap { text-align: center; color: color-mix(in srgb, currentColor 45%, transparent); letter-spacing: 0.2em; padding: 0.1rem 0; user-select: none; }
     .lb-rank { flex: 0 0 2rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lb-rank.lb-medal { font-size: 1.2em; }
     .lb-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

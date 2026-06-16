@@ -32,7 +32,7 @@ public class LeaderboardService
         };
     }
 
-    public async Task<LeaderboardsDto> GetAsync(string period, int top = 100)
+    public async Task<LeaderboardsDto> GetAsync(string period, int viewerId, int top = 5, int around = 2)
     {
         if (!Periods.Contains(period)) period = "alltime";
         var from = WindowStart(period, DateTime.UtcNow);
@@ -91,20 +91,27 @@ public class LeaderboardService
         return new LeaderboardsDto
         {
             Period = period,
-            Puzzles = BuildEntries(puzzlePerUser, names, profiles, top),
-            EndlessRuns = BuildEntries(endlessPerUser, names, profiles, top),
-            CourseLines = BuildEntries(linesPerUser, names, profiles, top),
-            DailyPuzzles = BuildEntries(dailyPerUser, names, profiles, top),
+            Puzzles = BuildEntries(puzzlePerUser, names, profiles, viewerId, top, around),
+            EndlessRuns = BuildEntries(endlessPerUser, names, profiles, viewerId, top, around),
+            CourseLines = BuildEntries(linesPerUser, names, profiles, viewerId, top, around),
+            DailyPuzzles = BuildEntries(dailyPerUser, names, profiles, viewerId, top, around),
         };
     }
 
+    /// <summary>Baut die Kategorie als Top-<paramref name="top"/> PLUS dem Fenster ±<paramref name="around"/>
+    /// um den Eintrag des Viewers. Jeder Eintrag trägt seinen ECHTEN Rang (1-basiert über die ganze
+    /// Kategorie); die zurückgegebene Liste ist nach Rang sortiert und kann eine Lücke zwischen Top-Block
+    /// und Viewer-Fenster haben. Steht der Viewer in den Top, gibt es einfach keine Lücke.</summary>
     private static List<LeaderboardEntryDto> BuildEntries(
         Dictionary<int, int> perUser,
         Dictionary<int, string> names,
         Dictionary<int, UserProfile> profiles,
-        int top)
+        int viewerId,
+        int top,
+        int around)
     {
-        return perUser
+        // Vollständige, gerankte Reihenfolge (Count desc, dann Name) — Rang = Position+1.
+        var ranked = perUser
             .Select(kv =>
             {
                 profiles.TryGetValue(kv.Key, out var prof);
@@ -115,12 +122,19 @@ public class LeaderboardService
                     DiscordId = prof?.DiscordId,
                     DiscordUsername = prof?.DiscordUsername,
                     Count = kv.Value,
+                    IsMe = kv.Key == viewerId,
                 };
             })
             .OrderByDescending(e => e.Count)
             .ThenBy(e => e.Name)
-            .Take(top)
             .ToList();
+        for (var i = 0; i < ranked.Count; i++) ranked[i].Rank = i + 1;
+
+        // Top-N immer; zusätzlich das ±-Fenster um den eigenen Platz (falls der Viewer gelistet ist).
+        var meIdx = ranked.FindIndex(e => e.IsMe);
+        return ranked
+            .Where((e, i) => i < top || (meIdx >= 0 && Math.Abs(i - meIdx) <= around))
+            .ToList(); // bereits nach Rang sortiert
     }
 
     private async Task<(Dictionary<int, string> names, Dictionary<int, UserProfile> profiles)> ResolveUsersAsync(List<int> userIds)

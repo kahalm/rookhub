@@ -9,6 +9,10 @@ export interface LeaderboardEntry {
   discordId?: string | null;
   discordUsername?: string | null;
   count: number;
+  /** Echte 1-basierte Platzierung (die Liste zeigt nur Top-N + eigenes Fenster, kann also Lücken haben). */
+  rank: number;
+  /** True für den eigenen Eintrag (Hervorhebung). */
+  isMe: boolean;
 }
 
 export interface Leaderboards {
@@ -23,8 +27,9 @@ export interface Leaderboards {
 export class LeaderboardService {
   constructor(private http: HttpClient) {}
 
-  get(period: LeaderboardPeriod, top = 100): Observable<Leaderboards> {
-    const params = new HttpParams().set('period', period).set('top', top);
+  /** Holt je Kategorie die besten `top` plus das Fenster ±`around` um den eigenen Platz. */
+  get(period: LeaderboardPeriod, top = 5, around = 2): Observable<Leaderboards> {
+    const params = new HttpParams().set('period', period).set('top', top).set('around', around);
     return this.http.get<Leaderboards>('/api/leaderboards', { params });
   }
 }

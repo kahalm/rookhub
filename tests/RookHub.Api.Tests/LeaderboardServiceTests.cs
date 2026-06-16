@@ -73,7 +73,7 @@ public class LeaderboardServiceTests : IDisposable
         AddPuzzleSolve(ben.Id, 13, false, now);
         await _db.SaveChangesAsync();
 
-        var res = await _service.GetAsync("alltime");
+        var res = await _service.GetAsync("alltime", viewerId: 0);
 
         Assert.Equal("alltime", res.Period);
         Assert.Equal(2, res.Puzzles.Count);
@@ -93,7 +93,7 @@ public class LeaderboardServiceTests : IDisposable
         _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = null, AnonymousSessionId = "anon", PuzzleId = 2, Solved = true, AttemptedAt = now });
         await _db.SaveChangesAsync();
 
-        var res = await _service.GetAsync("alltime");
+        var res = await _service.GetAsync("alltime", viewerId: 0);
         Assert.Single(res.Puzzles);
         Assert.Equal("anna", res.Puzzles[0].Name);
         Assert.Equal(1, res.Puzzles[0].Count);
@@ -108,11 +108,11 @@ public class LeaderboardServiceTests : IDisposable
         AddPuzzleSolve(anna.Id, 2, true, now.AddDays(-2));      // vor 2 Tagen
         await _db.SaveChangesAsync();
 
-        var daily = await _service.GetAsync("daily");
+        var daily = await _service.GetAsync("daily", viewerId: 0);
         Assert.Single(daily.Puzzles);
         Assert.Equal(1, daily.Puzzles[0].Count);                // nur das heutige
 
-        var alltime = await _service.GetAsync("alltime");
+        var alltime = await _service.GetAsync("alltime", viewerId: 0);
         Assert.Equal(2, alltime.Puzzles[0].Count);              // beide
     }
 
@@ -132,7 +132,7 @@ public class LeaderboardServiceTests : IDisposable
         AddCourseLine(ben.Id, 101, now);
         await _db.SaveChangesAsync();
 
-        var res = await _service.GetAsync("alltime");
+        var res = await _service.GetAsync("alltime", viewerId: 0);
 
         Assert.Equal(2, res.EndlessRuns[0].Count);              // anna: 2 Läufe
         Assert.Equal("anna", res.EndlessRuns[0].Name);
@@ -162,7 +162,7 @@ public class LeaderboardServiceTests : IDisposable
         AddBookSolve(ben.Id, 101, false, now);
         await _db.SaveChangesAsync();
 
-        var res = await _service.GetAsync("alltime");
+        var res = await _service.GetAsync("alltime", viewerId: 0);
 
         Assert.Equal(2, res.DailyPuzzles.Count);
         Assert.Equal("anna", res.DailyPuzzles[0].Name);
@@ -180,5 +180,50 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal(new DateTime(2026, 6, 15), LeaderboardService.WindowStart("weekly", now));   // Montag dieser Woche
         Assert.Equal(new DateTime(2026, 6, 1), LeaderboardService.WindowStart("monthly", now));
         Assert.Equal(DateTime.MinValue, LeaderboardService.WindowStart("alltime", now));
+    }
+
+    [Fact]
+    public async Task GetAsync_SetsTrueRankAndMarksViewer()
+    {
+        var anna = await CreateUserAsync("anna");
+        var ben = await CreateUserAsync("ben");
+        var now = DateTime.UtcNow;
+        AddPuzzleSolve(anna.Id, 1, true, now);
+        AddPuzzleSolve(anna.Id, 2, true, now);   // anna 2 → Rang 1
+        AddPuzzleSolve(ben.Id, 1, true, now);    // ben 1 → Rang 2
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime", viewerId: ben.Id);
+
+        Assert.Equal(1, res.Puzzles[0].Rank);
+        Assert.False(res.Puzzles[0].IsMe);       // anna
+        Assert.Equal(2, res.Puzzles[1].Rank);
+        Assert.True(res.Puzzles[1].IsMe);        // ben = Viewer
+    }
+
+    [Fact]
+    public async Task GetAsync_ReturnsTop5PlusViewerWindow_WithGap()
+    {
+        var now = DateTime.UtcNow;
+        var users = new List<AppUser>();
+        for (var i = 1; i <= 11; i++)
+        {
+            var u = await CreateUserAsync($"u{i:D2}");
+            users.Add(u);
+            var count = 12 - i;                  // u01=11 … u11=1 → echte Ränge 1..11
+            for (var j = 0; j < count; j++)
+                AddPuzzleSolve(u.Id, i * 100 + j, true, now);
+        }
+        await _db.SaveChangesAsync();
+
+        var viewer = users[8];                   // u09 → Rang 9
+        var res = await _service.GetAsync("alltime", viewerId: viewer.Id, top: 5, around: 2);
+
+        var ranks = res.Puzzles.Select(e => e.Rank).ToList();
+        // Top 5 (Ränge 1–5) + Fenster ±2 um Rang 9 (Ränge 7–11); Rang 6 fällt raus → Lücke.
+        Assert.Equal(new[] { 1, 2, 3, 4, 5, 7, 8, 9, 10, 11 }, ranks);
+        Assert.DoesNotContain(6, ranks);
+        Assert.True(res.Puzzles.Single(e => e.Rank == 9).IsMe);
+        Assert.Equal("u09", res.Puzzles.Single(e => e.IsMe).Name);
     }
 }

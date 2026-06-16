@@ -5,10 +5,10 @@ import { Leaderboards } from './leaderboard.service';
 function data(period: string): Leaderboards {
   return {
     period,
-    puzzles: [{ name: 'anna', count: 3 }, { name: 'ben', count: 1 }],
-    endlessRuns: [{ name: 'anna', count: 2 }],
+    puzzles: [{ name: 'anna', count: 3, rank: 1, isMe: false }, { name: 'ben', count: 1, rank: 2, isMe: true }],
+    endlessRuns: [{ name: 'anna', count: 2, rank: 1, isMe: false }],
     courseLines: [],
-    dailyPuzzles: [{ name: 'anna', count: 4 }],
+    dailyPuzzles: [{ name: 'anna', count: 4, rank: 1, isMe: false }],
   };
 }
 

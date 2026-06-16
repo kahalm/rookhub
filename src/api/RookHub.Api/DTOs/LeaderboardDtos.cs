@@ -8,6 +8,11 @@ public class LeaderboardEntryDto
     public string? DiscordUsername { get; set; }
     /// <summary>Zählwert: einzigartige gelöste Puzzles, abgeschlossene Endlos-Läufe bzw. gelöste Kurs-Linien.</summary>
     public int Count { get; set; }
+    /// <summary>Echte 1-basierte Platzierung in der vollständigen Kategorie (nicht der Listenindex —
+    /// die Liste enthält nur Top-N + das Fenster um den eigenen Platz, kann also Lücken haben).</summary>
+    public int Rank { get; set; }
+    /// <summary>True für den Eintrag des anfragenden Nutzers (zum Hervorheben + Basis des ±-Fensters).</summary>
+    public bool IsMe { get; set; }
 }
 
 /// <summary>
