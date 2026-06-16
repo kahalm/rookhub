@@ -58,6 +58,10 @@ public class BackgroundTaskWorker : BackgroundService
                 using var scope = _scopeFactory.CreateScope();
                 await workItem(scope.ServiceProvider, stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // App faehrt herunter — abgebrochene Work-Items sind kein Fehler, nicht als Error loggen.
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Background task failed");

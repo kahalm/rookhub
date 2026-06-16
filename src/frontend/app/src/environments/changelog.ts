@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.151.3';
+export const APP_VERSION = '0.151.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.151.4", date: "2026-06-16", changes: [
+    { en: "Chessable imports interrupted by a server restart/deploy are no longer wrongly marked as failed — they now resume automatically on the next start instead of getting stuck.", de: "Chessable-Importe, die durch einen Server-Neustart/Deploy unterbrochen werden, werden nicht mehr fälschlich als fehlgeschlagen markiert — sie werden beim nächsten Start automatisch fortgesetzt, statt hängen zu bleiben." },
+  ]},
   { version: "0.151.3", date: "2026-06-16", changes: [
     { en: "Player/tournament search now fails fast with a clear \"chess-results.com unavailable\" error instead of hanging for 30 seconds when chess-results.com is slow or unreachable.", de: "Die Spieler-/Turniersuche bricht jetzt schnell mit einer klaren Meldung „chess-results.com nicht erreichbar\" ab, statt 30 Sekunden zu hängen, wenn chess-results.com langsam oder nicht erreichbar ist." },
   ]},

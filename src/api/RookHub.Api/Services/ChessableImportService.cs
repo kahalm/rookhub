@@ -112,7 +112,7 @@ public class ChessableImportService
         import.Attempts++;
         if (import.Attempts > MaxAttempts)
         {
-            await FailAsync(import, $"Abgebrochen nach {MaxAttempts} Versuchen", ct);
+            await FailAsync(import, $"Abgebrochen nach {MaxAttempts} Versuchen");
             return;
         }
         await _db.SaveChangesAsync(ct);
@@ -128,7 +128,7 @@ public class ChessableImportService
                 var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == bearerUserId, ct);
                 if (cred is null)
                 {
-                    await FailAsync(import, "Kein Chessable-Bearer gespeichert", ct);
+                    await FailAsync(import, "Kein Chessable-Bearer gespeichert");
                     return;
                 }
                 var bearer = _encryption.Decrypt(cred.EncryptedBearer);
@@ -264,14 +264,23 @@ public class ChessableImportService
                 },
                 import.Target == "book" ? "/courses" : "/repertoires");
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // App faehrt herunter (BackgroundTaskWorker-stoppingToken) — das ist KEIN Import-Fehler.
+            // Der Job bleibt auf "running" (Checkpoint FetchedPgn/FetchJobId bleibt erhalten) und wird
+            // vom ChessableImportResumeService beim naechsten Start automatisch fortgesetzt. Nicht als
+            // "failed" markieren und nicht als Fehler loggen (sonst Fehlalarm im log-watcher).
+            _logger.LogInformation(
+                "Chessable-Import {Id} durch Shutdown unterbrochen — wird beim Neustart fortgesetzt", import.Id);
+        }
         catch (ChessableProxyException ex)
         {
-            await FailAsync(import, ex.Message, ct);
+            await FailAsync(import, ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen (Versuch {Attempt})", import.Id, import.Attempts);
-            await FailAsync(import, ex.Message, ct);
+            await FailAsync(import, ex.Message);
         }
     }
 
@@ -333,12 +342,15 @@ public class ChessableImportService
         import.Invalid = res.Invalid;
     }
 
-    private async Task FailAsync(ChessableImport import, string error, CancellationToken ct)
+    private async Task FailAsync(ChessableImport import, string error)
     {
         import.Status = "failed";
         import.Error = Trunc(error, 1000);
         import.CompletedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
+        // Terminalen Status mit CancellationToken.None festschreiben: scheitert ein Import WEGEN einer
+        // (Timeout-)Cancellation, muss er trotzdem als "failed" persistiert werden — sonst bliebe er als
+        // Zombie auf "running" haengen und wuerde beim Neustart endlos resumed.
+        await _db.SaveChangesAsync(CancellationToken.None);
 
         // User benachrichtigen: Import fehlgeschlagen.
         var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";

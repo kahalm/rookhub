@@ -286,6 +286,43 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
     }
 
+    [Fact]
+    public async Task RunAsync_ShutdownDuringFetch_LeavesImportRunning_NotFailed()
+    {
+        // Regression: ein durch App-Shutdown (stoppingToken) abgebrochener Import wurde faelschlich
+        // als "failed" behandelt — und FailAsync konnte mit dem schon gecancelten Token nicht mehr
+        // speichern → OperationCanceledException blubberte als "Background task failed" (Error) hoch.
+        // Erwartung: KEIN Fehler, Job bleibt "running" → ChessableImportResumeService setzt ihn fort.
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        using var cts = new CancellationTokenSource();
+        // Simuliert Shutdown mitten in der Hol-Phase: Token canceln + Abbruch werfen.
+        var svc = BuildSvc(new ScriptedHandler(_ =>
+        {
+            cts.Cancel();
+            throw new OperationCanceledException(cts.Token);
+        }));
+
+        // Darf NICHT werfen (sauberer Shutdown, kein Background-Task-Fehler).
+        await svc.RunAsync(imp.Id, cts.Token);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("running", reloaded!.Status);   // NICHT "failed"
+        Assert.Null(reloaded.Error);
+    }
+
     // --- Fortschritts-bewusster Fetch-Timeout (Regression: fixe 15-min-Grenze killte langsame,
     //     aber gesunde Abrufe großer Kurse → TimeoutException, prod-Importe 99/100) ---
 
