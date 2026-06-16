@@ -40,6 +40,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (showCourses && can('courses')) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
+          @if (can('leaderboards')) { <button mat-button routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           @if (auth.isAdmin) {
             <button mat-button routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
@@ -59,6 +60,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (showCourses && can('courses')) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
+          @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           @if (auth.isAdmin) {
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }

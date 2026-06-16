@@ -66,7 +66,8 @@
     "themeDark": "Dark theme",
     "help": "Help",
     "chessable": "Chessable",
-    "messages": "Messages"
+    "messages": "Messages",
+    "leaderboards": "Leaderboards"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1175,7 +1176,8 @@
         "stats": "Statistics",
         "chessable": "Chessable import",
         "install": "Install app",
-        "help": "Help"
+        "help": "Help",
+        "leaderboards": "Leaderboards"
       }
     },
     "messages": {
@@ -1558,5 +1560,26 @@
     "sendError": "Could not send the message.",
     "emptyUserCanWrite": "No messages yet. Write to the admin team below — they will get back to you here.",
     "writeLabel": "Your message"
+  },
+  "leaderboards": {
+    "title": "Leaderboards",
+    "error": "Could not load the leaderboards.",
+    "empty": "No entries yet.",
+    "period": {
+      "daily": "Today",
+      "weekly": "This week",
+      "monthly": "This month",
+      "alltime": "All time"
+    },
+    "category": {
+      "puzzles": "Puzzles solved",
+      "endlessRuns": "Endless runs",
+      "courseLines": "Course lines"
+    },
+    "unit": {
+      "puzzles": "puzzles",
+      "runs": "runs",
+      "lines": "lines"
+    }
   }
 }

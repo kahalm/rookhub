@@ -132,6 +132,7 @@ try
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<TrainingGoalService>();
     builder.Services.AddScoped<WeeklyPostService>();
+    builder.Services.AddScoped<LeaderboardService>();
     builder.Services.AddScoped<BotStatsService>();
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();

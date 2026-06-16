@@ -63,7 +63,8 @@
     "themeLight": "Svijetla tema",
     "themeDark": "Tamna tema",
     "help": "Pomoć",
-    "chessable": "Chessable"
+    "chessable": "Chessable",
+    "leaderboards": "Ljestvice"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -1170,7 +1171,8 @@
         "stats": "Statistika",
         "chessable": "Chessable uvoz",
         "install": "Instaliraj aplikaciju",
-        "help": "Pomoć"
+        "help": "Pomoć",
+        "leaderboards": "Ljestvice"
       }
     }
   },
@@ -1514,5 +1516,26 @@
     "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",
     "etaRemaining": "još ~{{min}} min",
     "importDuration": "Čekanje {{queue}} · Dohvat {{fetch}}"
+  },
+  "leaderboards": {
+    "title": "Ljestvice",
+    "error": "Ljestvice nije moguće učitati.",
+    "empty": "Još nema unosa.",
+    "period": {
+      "daily": "Danas",
+      "weekly": "Ovaj tjedan",
+      "monthly": "Ovaj mjesec",
+      "alltime": "Sveukupno"
+    },
+    "category": {
+      "puzzles": "Riješene zagonetke",
+      "endlessRuns": "Beskonačni nizovi",
+      "courseLines": "Linije iz tečaja"
+    },
+    "unit": {
+      "puzzles": "zagonetke",
+      "runs": "nizovi",
+      "lines": "linije"
+    }
   }
 }

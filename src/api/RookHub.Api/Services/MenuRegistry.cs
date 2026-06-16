@@ -22,6 +22,7 @@ public static class MenuRegistry
         new MenuItemDef("analysis", MenuVisibilityLevel.All),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),
+        new MenuItemDef("leaderboards", MenuVisibilityLevel.Registered),
         new MenuItemDef("stats", MenuVisibilityLevel.Registered),
         new MenuItemDef("chessable", MenuVisibilityLevel.Registered),
         new MenuItemDef("install", MenuVisibilityLevel.All),

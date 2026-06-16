@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.145.0';
+export const APP_VERSION = '0.146.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.146.0", date: "2026-06-16", changes: [
+    { en: "New \"Leaderboards\" page (logged-in users): ranking lists for three categories — unique puzzles solved, endless runs, and solved course lines — each for today, this week, this month, or all time.", de: "Neue Seite „Bestenlisten\" (für eingeloggte Nutzer): Ranglisten für drei Kategorien — einzigartige gelöste Puzzles, Endlos-Läufe und gelöste Kurs-Linien — jeweils für heute, diese Woche, diesen Monat oder gesamt." },
+  ]},
   { version: "0.144.0", date: "2026-06-16", changes: [
     { en: "Puzzles: If you finish a puzzle with a different winning line than the one intended (an \"alternative solution\"), a new \"Show original solution\" button now appears — it plays back the move sequence the puzzle was actually looking for. Available in all modes (Standard, Book/Course/Daily, Endless).", de: "Puzzles: Wenn du ein Puzzle mit einer anderen gewinnenden Zugfolge als der vorgesehenen löst (eine „alternative Lösung\"), erscheint jetzt ein neuer Knopf „Originale Lösung zeigen\" — er spielt die Zugfolge durch, die das Puzzle eigentlich sehen wollte. In allen Modi verfügbar (Standard, Buch/Kurs/Tagespuzzle, Endlos)." },
   ]},

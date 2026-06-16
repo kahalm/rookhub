@@ -66,7 +66,8 @@
     "themeDark": "Dunkles Design",
     "help": "Hilfe",
     "chessable": "Chessable",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "leaderboards": "Bestenlisten"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -1175,7 +1176,8 @@
         "stats": "Statistik",
         "chessable": "Chessable-Import",
         "install": "App installieren",
-        "help": "Hilfe"
+        "help": "Hilfe",
+        "leaderboards": "Bestenlisten"
       }
     },
     "messages": {
@@ -1558,5 +1560,26 @@
     "sendError": "Nachricht konnte nicht gesendet werden.",
     "emptyUserCanWrite": "Noch keine Nachrichten. Schreib dem Admin-Team unten — du bekommst die Antwort hier.",
     "writeLabel": "Deine Nachricht"
+  },
+  "leaderboards": {
+    "title": "Bestenlisten",
+    "error": "Die Bestenlisten konnten nicht geladen werden.",
+    "empty": "Noch keine Einträge.",
+    "period": {
+      "daily": "Heute",
+      "weekly": "Diese Woche",
+      "monthly": "Dieser Monat",
+      "alltime": "Gesamt"
+    },
+    "category": {
+      "puzzles": "Gelöste Puzzles",
+      "endlessRuns": "Endlos-Läufe",
+      "courseLines": "Kurs-Linien"
+    },
+    "unit": {
+      "puzzles": "Puzzles",
+      "runs": "Läufe",
+      "lines": "Linien"
+    }
   }
 }

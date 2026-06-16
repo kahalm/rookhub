@@ -29,6 +29,7 @@ export const routes: Routes = [
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('weekly')] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'stats', loadComponent: () => import('./features/stats/stats.component').then(m => m.StatsComponent), canActivate: [authGuard, menuGuard('stats')] },
+  { path: 'leaderboards', loadComponent: () => import('./features/leaderboards/leaderboards.component').then(m => m.LeaderboardsComponent), canActivate: [authGuard, menuGuard('leaderboards')] },
   { path: 'training-goals', loadComponent: () => import('./features/training-goals/training-goals.component').then(m => m.TrainingGoalsComponent), canActivate: [authGuard, menuGuard('training-goals')] },
   { path: 'notifications', loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent), canActivate: [authGuard] },
   { path: 'messages', loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent), canActivate: [authGuard] },
