@@ -65,6 +65,12 @@ public class RevengeControllerTests : IDisposable
         await _db.SaveChangesAsync();
     }
 
+    private async Task SolvePuzzleAsync(int userId, int puzzleId)
+    {
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = userId, PuzzleId = puzzleId, Solved = true, TimeSpentSeconds = 10 });
+        await _db.SaveChangesAsync();
+    }
+
     // ---- Result ----
 
     [Fact]
@@ -75,6 +81,7 @@ public class RevengeControllerTests : IDisposable
         await MakeFriendsAsync(avenger.Id, target.Id);
         var puzzle = await CreatePuzzleAsync();
         await FailPuzzleAsync(target.Id, puzzle.Id);
+        await SolvePuzzleAsync(avenger.Id, puzzle.Id); // Avenger hat das Puzzle echt gelöst (Ergebnis serverseitig hergeleitet)
 
         SetUser(avenger.Id);
         var result = await _controller.Result(new RevengeResultDto { TargetUserId = target.Id, PuzzleId = puzzle.Id, Solved = true });
@@ -95,6 +102,7 @@ public class RevengeControllerTests : IDisposable
         await MakeFriendsAsync(avenger.Id, target.Id);
         var puzzle = await CreatePuzzleAsync();
         await FailPuzzleAsync(target.Id, puzzle.Id);
+        await FailPuzzleAsync(avenger.Id, puzzle.Id); // Avenger hat es versucht, aber NICHT gelöst → solved=false hergeleitet
 
         SetUser(avenger.Id);
         await _controller.Result(new RevengeResultDto { TargetUserId = target.Id, PuzzleId = puzzle.Id, Solved = false });

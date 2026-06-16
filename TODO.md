@@ -54,6 +54,44 @@ _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06
 - Crawler `HtmlParserService` ist durch Tests abgedeckt (`HtmlParserServiceTests.cs`, ~448 Z.)
 - Crawler `RoundDetectionService` cacht bereits 60 s (`:50`)
 
+## Audit-Funde 2026-06-16 (Code-Review aller Repos)
+Read-only-Review über rookhub (API+Frontend), chessresults_crawler, schach-bot, piratechess_docker. **5 Top-Funde direkt gefixt** (in v0.149.2 / piratechess): #1 Revenge-`solved` serverseitig hergeleitet+Dedupe, #3 Job-Feld-Data-Race (Gate/Complete/Snapshot), #4 Per-Bid-Lock gegen Doppel-Fetch, #5 Admin-Deep-Link via queryParamMap-Abo, #8 `GetThreadsAsync` auf GROUP-BY/bounded umgebaut. Rest hier geparkt (priorisiert; vieles intern/VPN-geschützt → Risiko realistisch einordnen):
+
+### rookhub API
+- [ ] HIGH `EncryptionService`: AES-Key aus `PadRight('0')` statt KDF, CBC ohne MAC, kein Längen-Guard in `Decrypt` (Key-Rotation → 500 auf jeder Credentials-Seite). → `AesGcm` + `SHA256(key)`/Längenvalidierung + `TryDecrypt`. (Gleiche Klasse dupliziert in piratechess `EncryptionService`.)
+- [ ] HIGH `AdminMessageService.EnsureThreadAsync`: PK-Race bei gleichzeitiger Erst-Nachricht (Admin+User parallel) → `DbUpdateException`/500. → Insert in try/catch(DbUpdateException)+Reload oder Upsert.
+- [ ] HIGH ChessableImport: kein atomarer Claim beim Job-Picking (`RunNextAsync`+`RunDetached`) — bei Skalierung/Resume-Sturm Doppelverarbeitung möglich. → RowVersion/`ExecuteUpdate`-Claim der Phase.
+- [ ] MED Challenge-`ResolveAsync`: `solved`/`timeSpentSeconds` clientseitig geglaubt (wie Revenge, aber auf eigene Challenge begrenzt). Serverseitig herleiten erwägen.
+- [ ] MED N+1 im Challenge-Batch (`AreFriendsAsync`+Duplicate-Check je Empfänger); `NotificationService.CreateAsync` macht `SaveChanges` je Admin in Schleife (Teil-Benachrichtigung bei Fehler) → Batch-`CreateMany`.
+- [ ] MED `FriendService.SearchUsersAsync`: `LIKE %q%` über 6 Spalten ohne Index (Full-Scan, MariaDB-Profil); Auth-Rate-Limiter IP- statt account-basiert (Credential-Stuffing über viele IPs).
+- [ ] LOW `RunDetached` leerer `catch{}` ohne Log; `Mask` zeigt 8 Zeichen des Bearer; `GetUserCoursesAdmin` ohne User-Existenz-Check (irreführende 400).
+
+### rookhub Frontend
+- [ ] HIGH Test-Lücke: `InAppNotificationService`, `notification-text.ts`, `messages.component`, `notifications.component` ohne Spec (CLAUDE.md macht Tests zur Pflicht).
+- [ ] MED `/messages` pollt nicht → neue Admin-Nachricht: Badge steigt, Thread bleibt alt (Read-State driftet). → leichtes Polling/Refresh-on-focus.
+- [ ] MED hartcodierter `messagesTabIndex=6` (bricht bei Tab-Umsortierung still); Deep-Link schreibt `tab` nicht in die URL zurück (Reload/Back verliert Tab).
+- [ ] MED Label-Methoden im Template (`translate.instant` je CD-Zyklus während Polling) in chessable/admin/dashboard → beim Update einmal berechnen/cachen.
+- [ ] MED Badge-Flackern: optimistisches `markSeen`-Dekrement vs. 60-s-`refreshCount` (server-getrieben vs. optimistisch).
+- [ ] LOW `dlImport`-Polling stoppt bei `paused` (Fortschritt friert ein) — Stop-Bedingung an Haupt-Component angleichen; `loadAllUsers` ohne Error-Callback + 500er-Limit; `availableUsers()`/`acceptDisclaimer`-Doppelsubmit; `bypassSecurityTrustUrl`-Bookmarklet-Kommentar/Guard.
+
+### piratechess_docker
+- [ ] HIGH „Chessable"-HttpClient nie in `Program.cs` registriert → `WaitForProxyReadyAsync`/VPN-Statusfallback laufen am Proxy vorbei (Readiness-Probe nach Rotation wirkungslos, Status meldet Host-IP). → `AddChessableHttpClient` registrieren.
+- [ ] HIGH `ServiceKeyAuth`: nicht-timing-safer Vergleich → `CryptographicOperations.FixedTimeEquals` + `StringValues.Count==1`-Guard.
+- [ ] MED globaler Rotations-Zähler von Parallel-Fetches geteilt (RotateAfter=10 verwässert); Job-Store-Leak (nie abgeholte Jobs bleiben mit MB-PGN im RAM → TTL/Reaper + Obergrenze); `RunFetchAsync` ohne CancellationToken (Shutdown hängt in Linien-Retries); `course/{bid}/cached` dekomprimiert riesige Blobs nur für ein bool → billige `AnyAsync`-Variante.
+- [ ] LOW `.Wait()` auf SignalR-Send in Export-Progress (sync-over-async); `int.Parse(claim)` ohne Guard; Upsert ohne Unique-Index (`CachedCourse`/`GeneratedPgn`); `ChessableRawResponses` append-on-every-retry (Wachstumstreiber).
+
+### chessresults_crawler
+- [ ] HIGH Voll-HTML-Body (bis 500 KB) auf `Information` → ES-Bloat + personenbez. Daten in unauth. ES/Kibana → nur Größe/Status auf Info loggen.
+- [ ] HIGH VPN-Rotation läuft IM gehaltenen Semaphor → blockiert alle Parallel-Crawls bis ~8 s (Timeout-Risiko); 429/5xx von chess-results.com lösen kein Backoff aus (harter Job-Fail) → `Retry-After`/Polly.
+- [ ] MED `ExtractHiddenField` per Regex (bricht bei Markup-Drift) → AngleSharp; kein Response-Größenlimit (`zeilen=99999`→Heap); Encoding-Annahme (windows-1252-Umlaute → Datenkorruption); Player/Team-Upsert ohne Transaktion/normalisiertes Matching.
+- [ ] LOW `ApiKeyMiddleware` offen ohne Key (Fail-Fast in Prod); `/api/health/ip` unauth + externer Call; Phantom-Runden aus beliebigen `rd=`-Links (gegen TotalRounds clampen).
+
+### schach-bot
+- [ ] HIGH Webhook ohne Replay-/Timestamp-Schutz (Port `0.0.0.0:9000` exponiert) + `daily-regenerate` kann Daily-Posts wiederholt auslösen (puzzleId nur geloggt, nicht validiert) → Timestamp signieren + Idempotenz über puzzleId + Port nicht veröffentlichen.
+- [ ] HIGH `asyncio.create_task`-Schwarm (Reinforcement-/Slacker-DMs) ohne Referenz/Drossel → Discord-429/Claude-Limits, GC-Risiko → Tasks sammeln + Semaphore.
+- [ ] MED KI-Chat für ALLE DM-User offen (kein Tages-/Token-Cap → Claude-Kosten); `analyze_move` `fen_override` erlaubt Engine-Analyse beliebiger Stellungen; `_check_rate_limit`-Dict wächst unbegrenzt; Motivations-Loop ohne Claude-Timeout.
+- [ ] LOW SFTPGo-Share-Passwort im Klartext in DM; Webhook ohne `client_max_size`; Help-Definitionen aus `bot.py` auslagern (zyklische Kopplung mit `chat_tools`).
+
 ## Audit-Funde 2026-06-13 (Code- + Security-Review aller Repos)
 Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, piratechess_docker, repcheck. Zwei sichere Fixes direkt erledigt (s. u.), Rest geparkt — priorisiert. Adressraum-Hinweis: vieles davon ist intern/VPN-geschützt; Risiko realistisch einordnen.
 
