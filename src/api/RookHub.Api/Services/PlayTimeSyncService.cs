@@ -39,7 +39,7 @@ public class PlayTimeSyncService : BackgroundService
         }
     }
 
-    private async Task RunOnceAsync(CancellationToken ct)
+    internal async Task RunOnceAsync(CancellationToken ct)
     {
         try
         {
@@ -68,9 +68,12 @@ public class PlayTimeSyncService : BackgroundService
             if (synced > 0)
                 _logger.LogInformation("PlayTimeSyncService: {Count} User synchronisiert.", synced);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "PlayTimeSyncService: Durchlauf fehlgeschlagen.");
         }
+        // OperationCanceledException = App-Shutdown (stoppingToken) → kein Fehler. Propagiert sauber
+        // aus ExecuteAsync (normaler BackgroundService-Stop), wird NICHT als Error geloggt
+        // (sonst Fehlalarm im log-watcher bei jedem Deploy mitten im Sync).
     }
 }

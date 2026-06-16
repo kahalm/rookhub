@@ -21,9 +21,14 @@ public class CrawlerExceptionFilter : IAsyncExceptionFilter
             var statusCode = (int)crawlerEx.StatusCode;
             _logger.LogWarning("Crawler returned {StatusCode}: {Body}", statusCode, crawlerEx.ResponseBody);
 
-            if (statusCode >= 400 && statusCode < 500)
+            // 4xx sowie die Gateway-Status des Crawlers (502 Upstream weg, 503 Crawler ueberlastet,
+            // 504 chess-results.com-Timeout — vom UpstreamErrorMiddleware des Crawlers gemappt) werden
+            // 1:1 inkl. Body durchgereicht, damit der Aufrufer die echte Fehlerursache sieht (statt alles
+            // pauschal als 502 zu maskieren). Nur uneindeutige 5xx (500/501/…) werden auf 502 normalisiert.
+            var passThrough = (statusCode >= 400 && statusCode < 500)
+                || statusCode is 502 or 503 or 504;
+            if (passThrough)
             {
-                // Forward 4xx as-is
                 object body;
                 try
                 {
@@ -37,7 +42,7 @@ public class CrawlerExceptionFilter : IAsyncExceptionFilter
             }
             else
             {
-                // 5xx → 502
+                // Sonstige 5xx → 502
                 context.Result = new ObjectResult(new { message = "Crawler service error." }) { StatusCode = 502 };
             }
             context.ExceptionHandled = true;
