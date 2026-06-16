@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.149.0';
+export const APP_VERSION = '0.149.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.149.1", date: "2026-06-16", changes: [
+    { en: "The mail icon in the navbar now turns red when you have unread messages (matching the notification bell).", de: "Das Mail-Symbol in der Navigationsleiste wird jetzt rot, wenn ungelesene Nachrichten vorliegen (analog zur Benachrichtigungs-Glocke)." },
+  ]},
   { version: "0.149.0", date: "2026-06-16", changes: [
     { en: "Notification bell now shows only unread notifications. Once read (clicked or via \"Mark all read\"), a notification disappears from the bell and stays visible only on the \"View all\" page.", de: "Die Benachrichtigungs-Glocke zeigt jetzt nur noch ungelesene Benachrichtigungen. Sobald eine gelesen ist (angeklickt oder über „Alle als gelesen\"), verschwindet sie aus der Glocke und bleibt nur noch auf der Seite „Alle anzeigen\" sichtbar." },
   ]},

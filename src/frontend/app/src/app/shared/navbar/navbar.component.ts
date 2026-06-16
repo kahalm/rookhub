@@ -65,7 +65,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
             <button mat-menu-item routerLink="/admin">{{ 'nav.admin' | translate }}</button>
           }
         </mat-menu>
-        <button mat-icon-button routerLink="/messages" class="msg-mail"
+        <button mat-icon-button routerLink="/messages" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
                 [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
                 [matTooltip]="('messages.title' | translate) + (messagesUnread > 0 ? ' (' + messagesUnread + ')' : '')"
                 [attr.aria-label]="'messages.title' | translate">
@@ -168,6 +168,8 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
     .notif-item.notif-unseen mat-icon { color: var(--mat-sys-primary, #3f51b5); }
     /* Auffälliger Hinweis bei neuen Benachrichtigungen: fettes rotes „!" + leichtes Pulsieren. */
     .notif-bell.has-unseen mat-icon { color: #d32f2f; }
+    /* Mail-Symbol ebenfalls rot, sobald ungelesene Nachrichten vorliegen. */
+    .msg-mail.has-unseen mat-icon { color: #d32f2f; }
     .notif-bell ::ng-deep .mat-badge-content {
       background: #d32f2f; color: #fff; font-weight: 800; font-size: 15px;
       width: 19px; height: 19px; line-height: 19px;
