@@ -91,6 +91,28 @@ describe('PuzzleComponent give-up', () => {
 
     c.ngOnDestroy();
   }));
+
+  it('showOriginalSolution plays the intended solution from the start (after an alternative solve)', fakeAsync(() => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    // Zustand nach alternativem (eigenem) Mattweg: gelöst, aber abweichend von der vorgesehenen Zugfolge.
+    c.state = 'SOLVED';
+    c.alternativeSolve = true;
+    // Laufender Auto-Advance-Countdown soll durch das Anzeigen gestoppt werden.
+    (c as any).startSolvedCountdown(() => {});
+
+    c.showOriginalSolution();
+
+    expect(c.solvedCountdown).toBe(0);   // Countdown gestoppt → kein Auto-Weiter beim Zuschauen
+    expect(c.reviewMode).toBeTrue();
+    expect(c.reviewIndex).toBe(0);       // startet an der Anfangsstellung der vorgesehenen Lösung
+
+    tick(900); expect(c.reviewIndex).toBe(1);
+    tick(900); expect(c.reviewIndex).toBe(2);
+    tick(900); expect(c.reviewIndex).toBe(3); // = reviewTotal, fertig
+
+    c.ngOnDestroy();
+  }));
 });
 
 describe('PuzzleComponent offline pool exhaustion', () => {

@@ -611,7 +611,8 @@
       "endlessMode": "Beskonačni način",
       "analyze": "Analiziraj",
       "challengeFriend": "Pošalji prijatelju",
-      "noFriends": "Nema prijatelja za izazov"
+      "noFriends": "Nema prijatelja za izazov",
+      "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "challenge": {
       "sent": "Izazov poslan",
@@ -878,7 +879,8 @@
       "statLevel": "Razina",
       "statSolved": "Riješeno",
       "statTime": "Vrijeme",
-      "phaseLabel": "Faza {{phase}} (korak {{step}})"
+      "phaseLabel": "Faza {{phase}} (korak {{step}})",
+      "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "gameOver": {
       "title": "Game Over",
@@ -957,7 +959,8 @@
       "prevDaily": "Prethodni dan",
       "nextDaily": "Sljedeći dan",
       "sharePuzzle": "Podijeli zagonetku",
-      "backToPuzzle": "Natrag na zagonetku"
+      "backToPuzzle": "Natrag na zagonetku",
+      "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "settings": {
       "title": "Postavke",

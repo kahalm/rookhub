@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.143.0';
+export const APP_VERSION = '0.144.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.144.0", date: "2026-06-16", changes: [
+    { en: "Puzzles: If you finish a puzzle with a different winning line than the one intended (an \"alternative solution\"), a new \"Show original solution\" button now appears — it plays back the move sequence the puzzle was actually looking for. Available in all modes (Standard, Book/Course/Daily, Endless).", de: "Puzzles: Wenn du ein Puzzle mit einer anderen gewinnenden Zugfolge als der vorgesehenen löst (eine „alternative Lösung\"), erscheint jetzt ein neuer Knopf „Originale Lösung zeigen\" — er spielt die Zugfolge durch, die das Puzzle eigentlich sehen wollte. In allen Modi verfügbar (Standard, Buch/Kurs/Tagespuzzle, Endlos)." },
+  ]},
   { version: "0.143.0", date: "2026-06-15", changes: [
     { en: "Messages now go both ways: you can contact the admin team yourself directly from the \"Messages\" page (mail icon, always available) — no need to wait for an admin to write first. All admins are notified of your message.", de: "Nachrichten gehen jetzt in beide Richtungen: Du kannst das Admin-Team direkt über die Seite „Nachrichten\" (Brief-Symbol, immer verfügbar) selbst kontaktieren — du musst nicht mehr warten, bis ein Admin zuerst schreibt. Alle Admins werden über deine Nachricht benachrichtigt." },
     { en: "Admin area: incoming conversations can be \"taken over\" — every admin sees all conversations and who is handling which one (replying to an unassigned conversation claims it automatically; it can also be claimed or released manually).", de: "Admin-Bereich: Eingehende Konversationen lassen sich „übernehmen“ — jeder Admin sieht alle Konversationen und wer welche bearbeitet (wer auf eine offene Konversation antwortet, übernimmt sie automatisch; übernehmen/freigeben geht auch manuell)." },

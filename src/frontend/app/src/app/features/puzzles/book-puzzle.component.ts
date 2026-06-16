@@ -743,6 +743,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     else this.reviewGoTo(this.reviewIndex - 1);
   }
 
+  /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
+  showOriginalSolution(): void { this.stopCountdown(); this.playSolutionFromStart(); }
+
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     const moves = this.puzzle.moves.split(' ').filter(m => m);

@@ -21,6 +21,7 @@ const CK = {
     nextPuzzle: 'puzzles.actions.nextPuzzle',
     failedNext: 'puzzles.actions.nextPuzzle',
     analyze: 'puzzles.actions.analyze',
+    showOriginalSolution: 'puzzles.actions.showOriginalSolution',
   },
   endless: {
     loading: 'endless.game.loadingPuzzle',
@@ -34,6 +35,7 @@ const CK = {
     nextPuzzle: 'endless.game.continue',
     failedNext: 'endless.game.continue',
     analyze: 'endless.game.analyze',
+    showOriginalSolution: 'endless.game.showOriginalSolution',
   },
   book: {
     loading: 'book.status.loading',
@@ -47,6 +49,7 @@ const CK = {
     nextPuzzle: 'book.actions.nextPuzzle',
     failedNext: 'book.actions.nextPuzzle',
     analyze: 'book.actions.analyze',
+    showOriginalSolution: 'book.actions.showOriginalSolution',
   },
 } as const;
 
@@ -167,6 +170,11 @@ const CK = {
                 <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal"
                   (prev)="reviewPrev.emit()" (next)="reviewNext.emit()" />
                 <div class="psc-actions">
+                  @if (alternativeSolve) {
+                    <button mat-button (click)="showOriginalSolutionClicked.emit()">
+                      <mat-icon>replay</mat-icon> {{ ck.showOriginalSolution | translate }}
+                    </button>
+                  }
                   <button mat-raised-button color="primary" (click)="nextClicked.emit()">
                     {{ ck.nextPuzzle | translate }}@if (solvedCountdown > 0) { ({{ solvedCountdown }})}
                   </button>
@@ -256,6 +264,8 @@ export class PuzzleStatusCardComponent {
   @Output() reviewPrev = new EventEmitter<void>();
   @Output() reviewNext = new EventEmitter<void>();
   @Output() exitReviewClicked = new EventEmitter<void>();
+  /** „Originale Lösung zeigen" — nur bei alternativem (eigenem) Mattweg sichtbar. */
+  @Output() showOriginalSolutionClicked = new EventEmitter<void>();
 
   get ck() { return CK[this.mode]; }
 

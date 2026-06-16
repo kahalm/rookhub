@@ -614,7 +614,8 @@
       "endlessMode": "Endlos-Modus",
       "analyze": "Analysieren",
       "challengeFriend": "An Freund schicken",
-      "noFriends": "Keine Freunde zum Herausfordern"
+      "noFriends": "Keine Freunde zum Herausfordern",
+      "showOriginalSolution": "Originale Lösung zeigen"
     },
     "challenge": {
       "sent": "Challenge gesendet",
@@ -881,7 +882,8 @@
       "statLevel": "Level",
       "statSolved": "Gelöst",
       "statTime": "Zeit",
-      "phaseLabel": "Phase {{phase}} (step {{step}})"
+      "phaseLabel": "Phase {{phase}} (step {{step}})",
+      "showOriginalSolution": "Originale Lösung zeigen"
     },
     "gameOver": {
       "title": "Game Over",
@@ -960,7 +962,8 @@
       "prevDaily": "Voriger Tag",
       "nextDaily": "Nächster Tag",
       "sharePuzzle": "Puzzle teilen",
-      "backToPuzzle": "Zurück zum Puzzle"
+      "backToPuzzle": "Zurück zum Puzzle",
+      "showOriginalSolution": "Originale Lösung zeigen"
     },
     "settings": {
       "title": "Einstellungen",
