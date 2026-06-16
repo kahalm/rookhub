@@ -1014,7 +1014,8 @@
       "daily": "Daily Puzzle",
       "puzzles": "Puzzles",
       "menu": "Menu",
-      "messages": "Messages"
+      "messages": "Messages",
+      "courseDl": "Course download"
     },
     "users": {
       "searchLabel": "Search users",
@@ -1190,6 +1191,20 @@
       "claim": "Take over",
       "takeOver": "Take over",
       "release": "Release"
+    },
+    "courseDl": {
+      "title": "Download courses from users",
+      "intro": "Pull a Chessable course that a user owns into your own account as a repertoire — using their stored Chessable access. Only users who saved a Chessable bearer are listed.",
+      "selectUser": "User",
+      "refresh": "Refresh list",
+      "noUsers": "No user has stored a Chessable access yet.",
+      "noCourses": "No courses found for this user.",
+      "loadError": "Could not load the course list.",
+      "importError": "Could not start the download.",
+      "import": "Download to my account",
+      "done": "In your repertoires",
+      "failed": "Failed",
+      "queued": "position {{n}} in queue"
     }
   },
   "analysis": {

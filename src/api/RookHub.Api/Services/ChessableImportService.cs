@@ -123,7 +123,9 @@ public class ChessableImportService
             var pgn = import.FetchedPgn;
             if (string.IsNullOrEmpty(pgn))
             {
-                var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == import.UserId, ct);
+                // Bearer-Quelle: i.d.R. der Besitzer; beim Admin-Download „im Namen eines Users" der Ziel-User.
+                var bearerUserId = import.BearerUserId ?? import.UserId;
+                var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == bearerUserId, ct);
                 if (cred is null)
                 {
                     await FailAsync(import, "Kein Chessable-Bearer gespeichert", ct);

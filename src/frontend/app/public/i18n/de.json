@@ -1014,7 +1014,8 @@
       "daily": "Tagespuzzle",
       "puzzles": "Puzzles",
       "menu": "Menü",
-      "messages": "Nachrichten"
+      "messages": "Nachrichten",
+      "courseDl": "Kurse holen"
     },
     "users": {
       "searchLabel": "User suchen",
@@ -1190,6 +1191,20 @@
       "claim": "Übernehmen",
       "takeOver": "Übernehmen",
       "release": "Freigeben"
+    },
+    "courseDl": {
+      "title": "Kurse von Usern herunterladen",
+      "intro": "Hol dir einen Chessable-Kurs, den ein User besitzt, als Repertoire in dein eigenes Konto — über dessen hinterlegten Chessable-Zugang. Gelistet werden nur User, die einen Chessable-Bearer gespeichert haben.",
+      "selectUser": "User",
+      "refresh": "Liste aktualisieren",
+      "noUsers": "Noch kein User hat einen Chessable-Zugang hinterlegt.",
+      "noCourses": "Keine Kurse für diesen User gefunden.",
+      "loadError": "Kursliste konnte nicht geladen werden.",
+      "importError": "Download konnte nicht gestartet werden.",
+      "import": "In mein Konto laden",
+      "done": "In deinen Repertoires",
+      "failed": "Fehlgeschlagen",
+      "queued": "Position {{n}} in der Warteschlange"
     }
   },
   "analysis": {

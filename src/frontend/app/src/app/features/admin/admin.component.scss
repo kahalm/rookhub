@@ -96,3 +96,15 @@
 .msg-claim mat-icon { font-size: 15px; width: 15px; height: 15px; }
 .msg-claim.mine { color: var(--mat-sys-primary, #3f51b5); opacity: 1; font-weight: 600; }
 .msg-claim.unclaimed { color: #d4820a; }
+
+/* --- Kurse von Usern holen --- */
+.dl-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.dl-user { min-width: 240px; }
+.dl-courses { display: flex; flex-direction: column; gap: 6px; }
+.dl-course-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; border: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 8px; }
+.dl-course-name { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-status { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; opacity: 0.85; white-space: nowrap; }
+.dl-status mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.dl-status .ok { color: #2e7d32; }
+.dl-status .err { color: #d32f2f; }

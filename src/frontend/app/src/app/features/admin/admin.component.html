@@ -533,5 +533,65 @@
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.courseDl' | translate">
+          <div class="tab-content">
+            <h2>{{ 'admin.courseDl.title' | translate }}</h2>
+            <p class="hint">{{ 'admin.courseDl.intro' | translate }}</p>
+
+            <div class="dl-controls">
+              <mat-form-field appearance="outline" class="dl-user">
+                <mat-label>{{ 'admin.courseDl.selectUser' | translate }}</mat-label>
+                <mat-select [(ngModel)]="dlSelectedUserId" (selectionChange)="onDlUserChange()">
+                  @for (u of dlUsers; track u.userId) {
+                    <mat-option [value]="u.userId">{{ u.username }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (dlSelectedUserId != null) {
+                <button mat-stroked-button [disabled]="dlCoursesLoading" (click)="loadDlCourses(true)">
+                  <mat-icon>refresh</mat-icon> {{ 'admin.courseDl.refresh' | translate }}
+                </button>
+              }
+            </div>
+
+            @if (dlUsers.length === 0 && !dlUsersLoading) {
+              <p class="empty">{{ 'admin.courseDl.noUsers' | translate }}</p>
+            }
+
+            @if (dlCoursesLoading) {
+              <app-loading-spinner />
+            } @else if (dlCoursesError) {
+              <p class="empty">{{ dlCoursesError }}</p>
+            } @else if (dlSelectedUserId != null && dlCourses.length > 0) {
+              <div class="dl-courses">
+                @for (c of dlCourses; track c.bid) {
+                  <div class="dl-course-row">
+                    <span class="dl-course-name">{{ c.name || c.bid }}</span>
+                    @if (dlImports[c.bid]; as imp) {
+                      <span class="dl-status">
+                        @if (imp.status === 'running') {
+                          {{ ('chessable.phase_' + imp.phase) | translate }}
+                          @if (imp.chaptersTotal > 0) { · {{ imp.chaptersDone }}/{{ imp.chaptersTotal }} }
+                          @if (imp.queuedAhead > 0) { · {{ 'admin.courseDl.queued' | translate:{ n: imp.queuedAhead } }} }
+                        } @else if (imp.status === 'completed') {
+                          <mat-icon class="ok">check_circle</mat-icon> {{ 'admin.courseDl.done' | translate }}
+                        } @else {
+                          <mat-icon class="err">error_outline</mat-icon> {{ imp.error || ('admin.courseDl.failed' | translate) }}
+                        }
+                      </span>
+                    } @else {
+                      <button mat-stroked-button color="primary" (click)="dlImport(c)">
+                        <mat-icon>download</mat-icon> {{ 'admin.courseDl.import' | translate }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            } @else if (dlSelectedUserId != null) {
+              <p class="empty">{{ 'admin.courseDl.noCourses' | translate }}</p>
+            }
+          </div>
+        </mat-tab>
+
       </mat-tab-group>
     </div>

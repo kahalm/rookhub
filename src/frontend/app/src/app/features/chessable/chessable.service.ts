@@ -54,6 +54,13 @@ export interface ChessableAdminImport extends ChessableImport {
   username: string;
 }
 
+/** ADMIN: ein User mit hinterlegtem Chessable-Bearer (Auswahl für „Kurse holen"). */
+export interface ChessableCredentialedUser {
+  userId: number;
+  username: string;
+  coursesCachedAt: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChessableService {
   private readonly apiUrl = '/api/chessable';
@@ -114,6 +121,23 @@ export class ChessableService {
   /** ADMIN: Nur aktive (laufende/pausierte) Importe aller User — fürs Dashboard. */
   getActiveImportsAdmin(): Observable<ChessableAdminImport[]> {
     return this.http.get<ChessableAdminImport[]>(`${this.apiUrl}/admin/active`);
+  }
+
+  /** ADMIN: User mit hinterlegtem Chessable-Bearer (für „Kurse von Usern holen"). */
+  getCredentialedUsersAdmin(): Observable<ChessableCredentialedUser[]> {
+    return this.http.get<ChessableCredentialedUser[]>(`${this.apiUrl}/admin/credentialed-users`);
+  }
+
+  /** ADMIN: Kursliste eines Users (mit dessen Bearer). */
+  getUserCoursesAdmin(userId: number, refresh = false): Observable<ChessableCoursesResult> {
+    return this.http.get<ChessableCoursesResult>(`${this.apiUrl}/admin/users/${userId}/courses`,
+      refresh ? { params: { refresh: 'true' } } : {});
+  }
+
+  /** ADMIN: Lädt den Kurs {bid} eines Users ins eigene (Admin-)Konto als Repertoire. */
+  importForUserAdmin(userId: number, bid: string, name: string): Observable<ChessableImport> {
+    return this.http.post<ChessableImport>(
+      `${this.apiUrl}/admin/users/${userId}/import/${encodeURIComponent(bid)}`, { name });
   }
 
   cancelImport(id: number): Observable<ChessableImport> {

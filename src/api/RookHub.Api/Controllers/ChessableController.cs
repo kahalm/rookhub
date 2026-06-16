@@ -293,6 +293,91 @@ public class ChessableController : BaseApiController
         return Ok(imports.Select(i => ToAdminDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
     }
 
+    /// <summary>ADMIN: User, die einen Chessable-Bearer hinterlegt haben (für die „Kurse holen"-Auswahl).</summary>
+    [HttpGet("admin/credentialed-users")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetCredentialedUsersAdmin()
+    {
+        var users = await _db.ChessableCredentials
+            .Include(c => c.User)
+            .OrderBy(c => c.User!.Username)
+            .Select(c => new ChessableCredentialedUserDto(c.UserId, c.User!.Username, c.CoursesCachedAt))
+            .ToListAsync();
+        return Ok(users);
+    }
+
+    /// <summary>ADMIN: Kursliste eines beliebigen Users (mit dessen Bearer). Cache wie bei /courses;
+    /// Import-Status wird gegen die EIGENEN (Admin-)Importe markiert.</summary>
+    [HttpGet("admin/users/{userId:int}/courses")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetUserCoursesAdmin(int userId, [FromQuery] bool refresh, CancellationToken ct)
+    {
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
+        if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
+
+        if (!refresh && !string.IsNullOrEmpty(cred.CachedCoursesJson))
+        {
+            var cached = JsonSerializer.Deserialize<List<ChessableCourseDto>>(cred.CachedCoursesJson, JsonOpts) ?? new();
+            return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(cached, GetUserId(), ct), cred.CoursesCachedAt));
+        }
+        try
+        {
+            var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+            var courses = await _chessable.GetCoursesAsync(bearer, ct);
+            cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
+            cred.CoursesCachedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(courses, GetUserId(), ct), cred.CoursesCachedAt));
+        }
+        catch (ChessableProxyException ex)
+        {
+            _logger.LogWarning("Admin Chessable courses (user {UserId}) failed: {Status} {Message}", userId, ex.Status, ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>ADMIN: Lädt den Kurs {bid} eines Users (mit dessen Bearer) in das EIGENE (Admin-)Konto
+    /// als Repertoire herunter. Besitzer/Empfänger der Benachrichtigung = der aufrufende Admin;
+    /// nur der Bearer stammt vom Ziel-User.</summary>
+    [HttpPost("admin/users/{userId:int}/import/{bid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request)
+    {
+        if (string.IsNullOrWhiteSpace(bid))
+            return BadRequest(new { message = "bid is required" });
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
+            return NotFound(new { message = "User not found" });
+        if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
+            return BadRequest(new { message = "User has no Chessable bearer saved" });
+
+        var adminId = GetUserId();
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == "running");
+        var import = new ChessableImport
+        {
+            UserId = adminId,          // Ergebnis (Repertoire) + Benachrichtigung gehören dem Admin
+            BearerUserId = userId,     // gefetcht wird mit dem Bearer des Ziel-Users
+            Bid = bid,
+            CourseName = string.IsNullOrWhiteSpace(request?.Name) ? "" : request!.Name!.Trim(),
+            Target = "repertoire",
+            Status = "running",
+            QueueRound = queueRound,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(import);
+        await _db.SaveChangesAsync();
+
+        if (await _chessable.IsCourseCachedAsync(bid))
+        {
+            import.Phase = "fetching";
+            import.StartedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            RunDetached(import.Id);
+            return Accepted(ToDto(import, 0));
+        }
+        await EnqueueNextAsync();
+        return Accepted(ToDto(import, await QueuedAheadAsync(import)));
+    }
+
     /// <summary>ADMIN: Nur die aktiven (laufenden/pausierten) Importe aller User — fürs Dashboard-Widget.</summary>
     [HttpGet("admin/active")]
     [Authorize(Roles = "Admin")]

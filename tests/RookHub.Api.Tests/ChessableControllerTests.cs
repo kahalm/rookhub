@@ -449,6 +449,68 @@ public class ChessableControllerTests : IDisposable
         Assert.Equal(1, list.Single(d => d.Id == second.Id).QueuedAhead); // einer davor
     }
 
+    // ---- Admin: Kurse im Namen eines Users holen ----
+
+    [Fact]
+    public async Task AdminStartImport_UnknownUser_Returns404()
+    {
+        await SeedUserAsync(42); // Aufrufer = Admin
+        var result = await _controller.StartImportForUserAdmin(999, "bid-1", new AdminChessableImportRequest(null));
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AdminStartImport_TargetUserHasNoBearer_Returns400()
+    {
+        await SeedUserAsync(42);
+        await SeedUserAsync(7); // Ziel-User ohne Bearer
+        var result = await _controller.StartImportForUserAdmin(7, "bid-1", new AdminChessableImportRequest(null));
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AdminStartImport_Valid_CreatesImportOwnedByAdmin_FetchedWithTargetUserBearer()
+    {
+        await SeedUserAsync(42);          // Admin (Aufrufer)
+        await SeedUserAsync(7);           // Ziel-User
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.StartImportForUserAdmin(7, "bid-9", new AdminChessableImportRequest("Holzkurs"));
+
+        var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
+        Assert.Equal("repertoire", dto.Target);           // landet als Repertoire
+        Assert.Equal("Holzkurs", dto.CourseName);
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "bid-9");
+        Assert.Equal(42, imp.UserId);                     // Besitzer = Admin
+        Assert.Equal(7, imp.BearerUserId);                // Bearer vom Ziel-User
+        Assert.Equal("running", imp.Status);
+    }
+
+    [Fact]
+    public async Task AdminCredentialedUsers_ListsOnlyUsersWithBearer()
+    {
+        await SeedUserAsync(42);
+        await SeedUserAsync(7);
+        await SeedUserAsync(8); // ohne Bearer → nicht gelistet
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("b"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetCredentialedUsersAdmin());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableCredentialedUserDto>>(ok.Value).ToList();
+        Assert.Single(list);
+        Assert.Equal(7, list[0].UserId);
+        Assert.Equal("u7", list[0].Username);
+    }
+
     private class StubHttpMessageHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }

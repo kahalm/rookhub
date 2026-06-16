@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -17,6 +17,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
+import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport } from '../chessable/chessable.service';
+import { timer, Subscription } from 'rxjs';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
@@ -33,7 +35,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
   users: AdminUser[] = [];
   userSearch = '';
   usersPage = 1;
@@ -101,7 +103,18 @@ export class AdminComponent implements OnInit {
   msgUserResults: AdminUser[] = [];
   msgSearching = false;
 
-  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService) {}
+  // --- Kurse von Usern holen (Chessable-Download im Namen eines Users) ---
+  dlUsers: ChessableCredentialedUser[] = [];
+  dlUsersLoading = false;
+  dlSelectedUserId: number | null = null;
+  dlCourses: ChessableCourse[] = [];
+  dlCoursesLoading = false;
+  dlCoursesError: string | null = null;
+  /** Laufende/abgeschlossene Admin-Importe je bid (für Fortschritt + Button-Status). */
+  dlImports: Record<string, ChessableImport> = {};
+  private dlPollSubs: Record<string, Subscription> = {};
+
+  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService, private chessable: ChessableService) {}
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
   impersonate(u: AdminUser): void {
@@ -129,6 +142,7 @@ export class AdminComponent implements OnInit {
     this.loadDailyPuzzle();
     this.loadMenuConfig();
     this.loadThreads();
+    this.loadDlUsers();
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
@@ -238,6 +252,67 @@ export class AdminComponent implements OnInit {
       next: () => this.loadThreads(),
       error: () => {},
     });
+  }
+
+  // --- Kurse von Usern holen ---------------------------------------------
+
+  loadDlUsers(): void {
+    this.dlUsersLoading = true;
+    this.chessable.getCredentialedUsersAdmin().subscribe({
+      next: list => { this.dlUsers = list; this.dlUsersLoading = false; },
+      error: () => { this.dlUsersLoading = false; },
+    });
+  }
+
+  /** User gewählt → dessen Chessable-Kursliste laden. */
+  onDlUserChange(): void {
+    this.dlCourses = [];
+    this.dlCoursesError = null;
+    if (this.dlSelectedUserId != null) this.loadDlCourses(false);
+  }
+
+  loadDlCourses(refresh: boolean): void {
+    if (this.dlSelectedUserId == null) return;
+    this.dlCoursesLoading = true;
+    this.dlCoursesError = null;
+    this.chessable.getUserCoursesAdmin(this.dlSelectedUserId, refresh).subscribe({
+      next: res => { this.dlCourses = res.courses; this.dlCoursesLoading = false; },
+      error: err => {
+        this.dlCoursesError = err?.error?.message || this.translate.instant('admin.courseDl.loadError');
+        this.dlCoursesLoading = false;
+      },
+    });
+  }
+
+  /** Kurs des Users ins eigene Admin-Konto (als Repertoire) herunterladen. */
+  dlImport(course: ChessableCourse): void {
+    if (this.dlSelectedUserId == null) return;
+    const bid = course.bid;
+    this.dlImports[bid] = { ...(this.dlImports[bid] ?? {} as ChessableImport), status: 'running', phase: 'queued', bid } as ChessableImport;
+    this.chessable.importForUserAdmin(this.dlSelectedUserId, bid, course.name).subscribe({
+      next: imp => { this.dlImports[bid] = imp; this.pollDlImport(bid, imp.id); },
+      error: err => {
+        delete this.dlImports[bid];
+        this.snackbar.show(err?.error?.message || this.translate.instant('admin.courseDl.importError'), { duration: 3500 });
+      },
+    });
+  }
+
+  private pollDlImport(bid: string, id: number): void {
+    this.dlPollSubs[bid]?.unsubscribe();
+    this.dlPollSubs[bid] = timer(2500, 2500).subscribe(() => {
+      this.chessable.getImport(id).subscribe({
+        next: imp => {
+          this.dlImports[bid] = imp;
+          if (imp.status !== 'running') { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; }
+        },
+        error: () => { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; },
+      });
+    });
+  }
+
+  ngOnDestroy(): void {
+    Object.values(this.dlPollSubs).forEach(s => s.unsubscribe());
   }
 
   loadUsers(): void {

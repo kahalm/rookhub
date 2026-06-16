@@ -3,6 +3,12 @@ namespace RookHub.Api.DTOs;
 /// <summary>Speichert/aktualisiert den Chessable-Bearer eines Users.</summary>
 public record SaveChessableBearerRequest(string Bearer);
 
+/// <summary>ADMIN: Kurs im Namen eines Users holen (Ziel ist fix das Admin-Repertoire); optional ein Name.</summary>
+public record AdminChessableImportRequest(string? Name);
+
+/// <summary>ADMIN: Ein User mit hinterlegtem Chessable-Bearer (Auswahl für „Kurse holen").</summary>
+public record ChessableCredentialedUserDto(int UserId, string Username, System.DateTime? CoursesCachedAt);
+
 /// <summary>Ob der User den Chessable-Haftungsausschluss bestätigt hat.</summary>
 public record ChessableDisclaimerDto(bool Accepted);
 

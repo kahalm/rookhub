@@ -8,8 +8,14 @@ namespace RookHub.Api.Models;
 public class ChessableImport
 {
     public int Id { get; set; }
+
+    /// <summary>Besitzer des Imports: dem das Ergebnis (Repertoire/Buch) gehört + Benachrichtigung.</summary>
     public int UserId { get; set; }
     public AppUser User { get; set; } = null!;
+
+    /// <summary>Optional: User, dessen Chessable-Bearer zum Holen verwendet wird (Admin-Download „im
+    /// Namen eines Users"). null ⇒ es wird der Bearer von <see cref="UserId"/> genutzt.</summary>
+    public int? BearerUserId { get; set; }
 
     /// <summary>Chessable-Buch-ID (bid).</summary>
     public string Bid { get; set; } = string.Empty;
