@@ -33,11 +33,12 @@ public class NotificationService
     }
 
     /// <summary>Letzte Benachrichtigungen eines Users (neueste zuerst).</summary>
-    public async Task<List<NotificationDto>> GetForUserAsync(int userId, int take = 20)
+    public async Task<List<NotificationDto>> GetForUserAsync(int userId, int take = 20, bool unseenOnly = false)
     {
         take = Math.Clamp(take, 1, 100);
-        var list = await _db.Notifications
-            .Where(n => n.UserId == userId)
+        var q = _db.Notifications.Where(n => n.UserId == userId);
+        if (unseenOnly) q = q.Where(n => n.SeenAt == null);
+        var list = await q
             .OrderByDescending(n => n.CreatedAt)
             .Take(take)
             .ToListAsync();

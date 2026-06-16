@@ -138,6 +138,25 @@ public class NotificationTests : IDisposable
         Assert.False(list[0].Seen);
     }
 
+    [Fact]
+    public async Task GetForUser_UnseenOnly_ExcludesAlreadyReadNotifications()
+    {
+        await UserAsync(1, "u1");
+        await _service.CreateAsync(1, NotificationType.FriendRequestReceived);
+        await _service.CreateAsync(1, NotificationType.ChallengeReceived);
+        // die erste als gelesen markieren
+        var first = await _db.Notifications.OrderBy(n => n.Id).FirstAsync();
+        await _service.MarkSeenAsync(1, first.Id);
+
+        var all = await _service.GetForUserAsync(1);                       // Glocke alt / History: alles
+        var unseen = await _service.GetForUserAsync(1, unseenOnly: true);  // Glocke neu: nur ungelesen
+
+        Assert.Equal(2, all.Count);
+        Assert.Single(unseen);
+        Assert.DoesNotContain(unseen, n => n.Id == first.Id); // gelesene verschwindet aus der Glocke
+        Assert.All(unseen, n => Assert.False(n.Seen));
+    }
+
     // ---- Controller ----
 
     private NotificationController ControllerFor(int userId)
@@ -167,6 +186,12 @@ public class NotificationTests : IDisposable
         Assert.IsType<NoContentResult>(await ctrl.MarkSeen());
         var after = Assert.IsType<NotificationCountDto>(Assert.IsType<OkObjectResult>(await ctrl.GetCount()).Value);
         Assert.Equal(0, after.Count);
+
+        // Nach „alle gelesen" ist die Glocke (unseenOnly) leer, die volle Liste zeigt sie weiter.
+        var bell = Assert.IsAssignableFrom<IEnumerable<NotificationDto>>(Assert.IsType<OkObjectResult>(await ctrl.GetAll(20, unseenOnly: true)).Value).ToList();
+        Assert.Empty(bell);
+        var full = Assert.IsAssignableFrom<IEnumerable<NotificationDto>>(Assert.IsType<OkObjectResult>(await ctrl.GetAll(20)).Value).ToList();
+        Assert.Single(full);
     }
 
     // ---- Domänen-Trigger ----

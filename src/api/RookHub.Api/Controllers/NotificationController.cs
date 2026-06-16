@@ -15,10 +15,11 @@ public class NotificationController : BaseApiController
 
     public NotificationController(NotificationService notifications) => _notifications = notifications;
 
-    /// <summary>Letzte Benachrichtigungen (neueste zuerst).</summary>
+    /// <summary>Letzte Benachrichtigungen (neueste zuerst). <paramref name="unseenOnly"/>=true liefert
+    /// nur ungelesene — die Glocke zeigt nur diese, gelesene bleiben über „Alle anzeigen" (History) sichtbar.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int take = 20)
-        => Ok(await _notifications.GetForUserAsync(GetUserId(), take));
+    public async Task<IActionResult> GetAll([FromQuery] int take = 20, [FromQuery] bool unseenOnly = false)
+        => Ok(await _notifications.GetForUserAsync(GetUserId(), take, unseenOnly));
 
     /// <summary>Vollständige History (paginiert, neueste zuerst) + Gesamtzahl.</summary>
     [HttpGet("history")]

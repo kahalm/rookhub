@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.148.2';
+export const APP_VERSION = '0.149.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.149.0", date: "2026-06-16", changes: [
+    { en: "Notification bell now shows only unread notifications. Once read (clicked or via \"Mark all read\"), a notification disappears from the bell and stays visible only on the \"View all\" page.", de: "Die Benachrichtigungs-Glocke zeigt jetzt nur noch ungelesene Benachrichtigungen. Sobald eine gelesen ist (angeklickt oder über „Alle als gelesen\"), verschwindet sie aus der Glocke und bleibt nur noch auf der Seite „Alle anzeigen\" sichtbar." },
+  ]},
   { version: "0.148.2", date: "2026-06-16", changes: [
     { en: "Chessable import queue: the displayed queue position now reflects the fair processing order. When several users have courses waiting, imports are processed alternating between users (round-robin) — the shown positions now match that order instead of listing all of one user's courses first.", de: "Chessable-Import-Warteschlange: Die angezeigte Queue-Position spiegelt jetzt die faire Verarbeitungsreihenfolge wider. Wenn mehrere User Kurse wartend haben, werden Importe abwechselnd zwischen den Usern verarbeitet (Round-Robin) — die angezeigten Positionen entsprechen jetzt dieser Reihenfolge, statt zuerst alle Kurse eines Users aufzulisten." },
   ]},

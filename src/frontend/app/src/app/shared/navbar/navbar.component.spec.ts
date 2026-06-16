@@ -46,17 +46,17 @@ describe('NavbarComponent', () => {
     expect(build()).toBeTruthy();
   });
 
-  it('onBellOpened lädt die Liste, markiert aber NICHT automatisch als gelesen', () => {
+  it('onBellOpened lädt NUR die ungelesenen, markiert aber NICHT automatisch als gelesen', () => {
     const markAllSeen = jasmine.createSpy('markAllSeen').and.returnValue(of(null));
     const list = jasmine.createSpy('list').and.returnValue(of([{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }]));
     const nav = build({ list, markAllSeen });
     nav.onBellOpened();
-    expect(list).toHaveBeenCalled();
+    expect(list).toHaveBeenCalledWith(20, true); // unseenOnly = true → gelesene verschwinden aus der Glocke
     expect(markAllSeen).not.toHaveBeenCalled();
     expect(nav.hasUnseen()).toBeTrue();
   });
 
-  it('markAllRead markiert die offene Liste lokal als gelesen, ruft den Service und hält das Menü offen', () => {
+  it('markAllRead leert die Glocke, ruft den Service und hält das Menü offen', () => {
     const markAllSeen = jasmine.createSpy('markAllSeen').and.returnValue(of(null));
     const nav = build({ markAllSeen });
     nav.notifications = [{ id: 1, type: 't', data: null, link: null, createdAt: '', seen: false }];
@@ -64,6 +64,16 @@ describe('NavbarComponent', () => {
     nav.markAllRead(event);
     expect(event.stopPropagation).toHaveBeenCalled();
     expect(markAllSeen).toHaveBeenCalled();
-    expect(nav.hasUnseen()).toBeFalse();
+    expect(nav.notifications.length).toBe(0); // gelesene bleiben nur über „Alle anzeigen" sichtbar
+  });
+
+  it('openNotification markiert als gelesen und entfernt die Benachrichtigung aus der Glocke', () => {
+    const markSeen = jasmine.createSpy('markSeen').and.returnValue(of(null));
+    const nav = build({ markSeen });
+    const n = { id: 1, type: 't', data: null, link: null, createdAt: '', seen: false };
+    nav.notifications = [n, { id: 2, type: 't', data: null, link: null, createdAt: '', seen: false }];
+    nav.openNotification(n);
+    expect(markSeen).toHaveBeenCalledWith(1);
+    expect(nav.notifications.map(x => x.id)).toEqual([2]); // geklickte verschwindet, Rest bleibt
   });
 });

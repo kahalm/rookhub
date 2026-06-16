@@ -260,9 +260,10 @@ export class NavbarComponent implements OnInit {
     });
   }
 
-  /** Glocke geöffnet: nur die Liste laden — Ungelesene bleiben markiert, bis der User „Alle als gelesen" klickt. */
+  /** Glocke geöffnet: nur die UNGELESENEN laden — gelesene verschwinden aus der Glocke und
+   * bleiben nur über „Alle anzeigen" (History) sichtbar. */
   onBellOpened(): void {
-    this.notif.list().subscribe({ next: list => this.notifications = list, error: () => {} });
+    this.notif.list(20, true).subscribe({ next: list => this.notifications = list, error: () => {} });
   }
 
   /** Gibt es im aktuell geladenen Dropdown ungelesene Benachrichtigungen? (steuert den „Alle als gelesen"-Button) */
@@ -270,16 +271,19 @@ export class NavbarComponent implements OnInit {
     return this.notifications.some(n => !n.seen);
   }
 
-  /** „Alle als gelesen markieren": Badge leeren + offene Liste lokal als gelesen kennzeichnen, ohne das Menü zu schließen. */
+  /** „Alle als gelesen markieren": Badge leeren + die Glocke leeren (gelesene bleiben über
+   * „Alle anzeigen" sichtbar), ohne das Menü zu schließen. */
   markAllRead(event: Event): void {
     event.stopPropagation();
     this.notif.markAllSeen().subscribe({ error: () => {} });
-    this.notifications = this.notifications.map(n => ({ ...n, seen: true }));
+    this.notifications = [];
   }
 
-  /** Klick auf eine Benachrichtigung → als gelesen markieren + zur hinterlegten Route navigieren. */
+  /** Klick auf eine Benachrichtigung → als gelesen markieren (verschwindet aus der Glocke)
+   * + zur hinterlegten Route navigieren. */
   openNotification(n: AppNotification): void {
-    if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); n.seen = true; }
+    if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); }
+    this.notifications = this.notifications.filter(x => x.id !== n.id);
     if (n.link) this.router.navigateByUrl(n.link);
   }
 

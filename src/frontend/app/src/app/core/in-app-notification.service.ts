@@ -41,9 +41,10 @@ export class InAppNotificationService {
     });
   }
 
-  /** Letzte Benachrichtigungen (neueste zuerst). */
-  list(take = 20): Observable<AppNotification[]> {
-    return this.http.get<AppNotification[]>(`${this.apiUrl}?take=${take}`);
+  /** Letzte Benachrichtigungen (neueste zuerst). `unseenOnly`=true liefert nur ungelesene
+   * (die Glocke zeigt nur diese; gelesene bleiben über „Alle anzeigen" sichtbar). */
+  list(take = 20, unseenOnly = false): Observable<AppNotification[]> {
+    return this.http.get<AppNotification[]>(`${this.apiUrl}?take=${take}&unseenOnly=${unseenOnly}`);
   }
 
   /** Eine Seite der vollständigen History (neueste zuerst) + Gesamtzahl. */
