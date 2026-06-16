@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.151.2';
+export const APP_VERSION = '0.151.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.151.3", date: "2026-06-16", changes: [
+    { en: "Player/tournament search now fails fast with a clear \"chess-results.com unavailable\" error instead of hanging for 30 seconds when chess-results.com is slow or unreachable.", de: "Die Spieler-/Turniersuche bricht jetzt schnell mit einer klaren Meldung „chess-results.com nicht erreichbar\" ab, statt 30 Sekunden zu hängen, wenn chess-results.com langsam oder nicht erreichbar ist." },
+  ]},
   { version: "0.151.2", date: "2026-06-16", changes: [
     { en: "Notification bell: the \"mark all as read\" action is now a compact icon button (✓✓) instead of a text label.", de: "Benachrichtigungs-Glocke: „Alle als gelesen\" ist jetzt ein kompakter Icon-Knopf (✓✓) statt eines Text-Labels." },
   ]},
