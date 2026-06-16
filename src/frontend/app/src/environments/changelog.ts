@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.151.1';
+export const APP_VERSION = '0.151.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.151.2", date: "2026-06-16", changes: [
+    { en: "Notification bell: the \"mark all as read\" action is now a compact icon button (✓✓) instead of a text label.", de: "Benachrichtigungs-Glocke: „Alle als gelesen\" ist jetzt ein kompakter Icon-Knopf (✓✓) statt eines Text-Labels." },
+  ]},
   { version: "0.151.0", date: "2026-06-16", changes: [
     { en: "Leaderboards now show only the top 5 plus your own position (two above and two below) in each category — your row is highlighted, with a gap shown when you're below the top 5.", de: "Bestenlisten zeigen jetzt je Kategorie nur noch die besten 5 plus deinen eigenen Platz (zwei darüber und zwei darunter) — deine Zeile ist hervorgehoben, mit einer Lücke, wenn du unter den Top 5 stehst." },
   ]},

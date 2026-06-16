@@ -82,9 +82,10 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           <div class="notif-header">
             <span class="notif-header-title">{{ 'notifications.title' | translate }}</span>
             @if (hasUnseen()) {
-              <button mat-button class="notif-mark-all" (click)="markAllRead($event)">
+              <button mat-icon-button class="notif-mark-all" (click)="markAllRead($event)"
+                      [matTooltip]="'notifications.markAllRead' | translate"
+                      [attr.aria-label]="'notifications.markAllRead' | translate">
                 <mat-icon>done_all</mat-icon>
-                <span>{{ 'notifications.markAllRead' | translate }}</span>
               </button>
             }
           </div>
@@ -160,8 +161,8 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
-    .notif-mark-all { font-size: 0.72rem; line-height: 1.4; min-width: 0; padding: 0 8px; }
-    .notif-mark-all mat-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; margin-right: 2px; }
+    .notif-mark-all { width: 32px; height: 32px; line-height: 32px; padding: 0; }
+    .notif-mark-all mat-icon { font-size: 19px; width: 19px; height: 19px; }
     .notif-empty { padding: 8px 16px 12px; font-size: 0.9rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .notif-item .notif-text { white-space: normal; line-height: 1.25; }
     .notif-item.notif-unseen { font-weight: 600; }
