@@ -281,8 +281,8 @@ public class ChessableController : BaseApiController
         var list = recent.UnionBy(active, i => i.Id)
             .OrderByDescending(i => i.CreatedAt)
             .ToList();
-        var runningIds = await _db.ChessableImports.Where(i => i.Status == "running").Select(i => i.Id).ToListAsync();
-        return Ok(list.Select(i => ToDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
+        var positions = await FairQueuePositionsAsync();
+        return Ok(list.Select(i => ToDto(i, positions.GetValueOrDefault(i.Id, 0))));
     }
 
     /// <summary>ADMIN: Alle Importe ALLER User (Verlauf, neueste zuerst) inkl. Besitzer-Username.
@@ -296,8 +296,8 @@ public class ChessableController : BaseApiController
             .OrderByDescending(i => i.CreatedAt)
             .Take(200)
             .ToListAsync();
-        var runningIds = await _db.ChessableImports.Where(i => i.Status == "running").Select(i => i.Id).ToListAsync();
-        return Ok(imports.Select(i => ToAdminDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
+        var positions = await FairQueuePositionsAsync();
+        return Ok(imports.Select(i => ToAdminDto(i, positions.GetValueOrDefault(i.Id, 0))));
     }
 
     /// <summary>ADMIN: User, die einen Chessable-Bearer hinterlegt haben (für die „Kurse holen"-Auswahl).</summary>
@@ -393,10 +393,17 @@ public class ChessableController : BaseApiController
         var active = await _db.ChessableImports
             .Include(i => i.User)
             .Where(i => i.Status == "running" || i.Status == "paused")
-            .OrderBy(i => i.CreatedAt)
             .ToListAsync();
-        var runningIds = active.Where(i => i.Status == "running").Select(i => i.Id).ToList();
-        return Ok(active.Select(i => ToAdminDto(i, i.Status == "running" ? runningIds.Count(id => id < i.Id) : 0)));
+        var positions = await FairQueuePositionsAsync();
+        // Anzeige in fairer Verarbeitungsreihenfolge: gerade laufende/holende zuerst (nicht in der
+        // Positions-Map), dann die wartenden in fairer Reihenfolge (Round-Robin über die User),
+        // pausierte zuletzt. So liest das Widget top-down genau so, wie abgearbeitet wird.
+        var ordered = active
+            .OrderBy(i => i.Status == "paused" ? 2 : positions.ContainsKey(i.Id) ? 1 : 0)
+            .ThenBy(i => positions.GetValueOrDefault(i.Id, 0))
+            .ThenBy(i => i.CreatedAt)
+            .ToList();
+        return Ok(ordered.Select(i => ToAdminDto(i, positions.GetValueOrDefault(i.Id, 0))));
     }
 
     /// <summary>Bricht einen eigenen Import ab (wartend oder laufend).</summary>
@@ -479,17 +486,29 @@ public class ChessableController : BaseApiController
         });
     }
 
-    /// <summary>Globale Warteschlangen-Position (aller User): Anzahl der Importe, die fair vor diesem
-    /// verarbeitet werden — die gerade laufenden (Phase ≠ "queued") plus die in fairer Reihenfolge
-    /// davor wartenden. 0, wenn dieser Import bereits läuft oder nicht mehr wartet.</summary>
-    private async Task<int> QueuedAheadAsync(ChessableImport i)
+    /// <summary>Faire globale Warteschlangen-Position (aller User) je Import-Id: die gerade laufenden
+    /// (Phase ≠ "queued") belegen die vorderen Plätze, danach die wartenden Importe in fairer
+    /// Reihenfolge (Round-Robin über die User, siehe <see cref="ChessableImportService.FairOrder"/>).
+    /// Spiegelt damit EXAKT die Reihenfolge, in der <see cref="ChessableImportService.RunNextAsync"/>
+    /// sie abarbeitet — NICHT die Einreih-/Id-Reihenfolge. Nur wartende Importe stehen in der Map;
+    /// laufende/pausierte fehlen (⇒ Position 0, die Anzeige zeigt für die ohnehin den Phasen-Status).</summary>
+    private async Task<Dictionary<int, int>> FairQueuePositionsAsync()
     {
-        if (i.Status != "running" || i.Phase != "queued") return 0;
         var running = await _db.ChessableImports.Where(x => x.Status == "running").ToListAsync();
         var inProgress = running.Count(x => x.Phase != "queued");
         var order = ChessableImportService.FairOrder(running.Where(x => x.Phase == "queued"));
-        var idx = order.FindIndex(x => x.Id == i.Id);
-        return inProgress + (idx < 0 ? 0 : idx);
+        var map = new Dictionary<int, int>();
+        for (var idx = 0; idx < order.Count; idx++)
+            map[order[idx].Id] = inProgress + idx;
+        return map;
+    }
+
+    /// <summary>Faire globale Warteschlangen-Position eines einzelnen Imports (siehe
+    /// <see cref="FairQueuePositionsAsync"/>). 0, wenn er bereits läuft oder nicht mehr wartet.</summary>
+    private async Task<int> QueuedAheadAsync(ChessableImport i)
+    {
+        if (i.Status != "running" || i.Phase != "queued") return 0;
+        return (await FairQueuePositionsAsync()).GetValueOrDefault(i.Id, 0);
     }
 
     private static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(

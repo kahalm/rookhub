@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.148.1';
+export const APP_VERSION = '0.148.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.148.2", date: "2026-06-16", changes: [
+    { en: "Chessable import queue: the displayed queue position now reflects the fair processing order. When several users have courses waiting, imports are processed alternating between users (round-robin) — the shown positions now match that order instead of listing all of one user's courses first.", de: "Chessable-Import-Warteschlange: Die angezeigte Queue-Position spiegelt jetzt die faire Verarbeitungsreihenfolge wider. Wenn mehrere User Kurse wartend haben, werden Importe abwechselnd zwischen den Usern verarbeitet (Round-Robin) — die angezeigten Positionen entsprechen jetzt dieser Reihenfolge, statt zuerst alle Kurse eines Users aufzulisten." },
+  ]},
   { version: "0.148.1", date: "2026-06-16", changes: [
     { en: "Notifications: clicking a notification in the bell now marks it as read (the badge updates immediately).", de: "Benachrichtigungen: Ein Klick auf eine Benachrichtigung in der Glocke markiert sie jetzt als gelesen (das Badge aktualisiert sich sofort)." },
     { en: "When a user writes to the admin team, the notification is now clearer (\"… sent the admin team a message\") and clicking it opens that conversation directly.", de: "Wenn ein Nutzer dem Admin-Team schreibt, ist die Benachrichtigung jetzt eindeutiger („… hat dem Admin-Team eine Nachricht geschickt\") und ein Klick öffnet direkt diese Konversation." },

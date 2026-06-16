@@ -472,6 +472,56 @@ public class ChessableControllerTests : IDisposable
         Assert.Equal(1, list.Single(d => d.Id == second.Id).QueuedAhead); // einer davor
     }
 
+    // Regression: Die angezeigte Queue-Position MUSS die faire Round-Robin-Reihenfolge
+    // (QueueRound) widerspiegeln — nicht die Einreih-/Id-Reihenfolge. Szenario: User A reiht 3 Kurse
+    // ein (Runde 0,1,2), danach User B 1 Kurs (Runde 0). Fair wird B's Runde-0-Kurs an Position 1
+    // gezogen (gleich nach A's erstem), VOR A's Folge-Kursen. Die alte Id-Zählung hätte B ans Ende
+    // (Position 3) gesetzt.
+    [Fact]
+    public async Task GetActiveImportsAdmin_OrdersByFairRoundRobin_NotByInsertionId()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "userB", PasswordHash = "x" });
+        var t = DateTime.UtcNow.AddMinutes(-10);
+        var a1 = new ChessableImport { UserId = 42, Bid = "a1", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(1) };
+        var a2 = new ChessableImport { UserId = 42, Bid = "a2", Target = "book", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t.AddSeconds(2) };
+        var a3 = new ChessableImport { UserId = 42, Bid = "a3", Target = "book", Status = "running", Phase = "queued", QueueRound = 2, CreatedAt = t.AddSeconds(3) };
+        var b1 = new ChessableImport { UserId = 7, Bid = "b1", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(4) };
+        _db.ChessableImports.AddRange(a1, a2, a3, b1);
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
+
+        Assert.Equal(0, list.Single(d => d.Id == a1.Id).QueuedAhead); // A Runde 0
+        Assert.Equal(1, list.Single(d => d.Id == b1.Id).QueuedAhead); // B Runde 0 — fair an 2. Stelle (alt: 3)
+        Assert.Equal(2, list.Single(d => d.Id == a2.Id).QueuedAhead); // A Runde 1
+        Assert.Equal(3, list.Single(d => d.Id == a3.Id).QueuedAhead); // A Runde 2
+        // Die zurückgegebene Liste ist bereits in fairer Verarbeitungsreihenfolge sortiert.
+        Assert.Equal(new[] { "a1", "b1", "a2", "a3" }, list.Select(d => d.Bid).ToArray());
+    }
+
+    // Regression: laufender/holender Import steht oben, wartende folgen in fairer Reihenfolge.
+    [Fact]
+    public async Task GetActiveImportsAdmin_FetchingFirstThenFairQueue()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "userB", PasswordHash = "x" });
+        var t = DateTime.UtcNow.AddMinutes(-10);
+        var fetching = new ChessableImport { UserId = 7, Bid = "fetch", Target = "book", Status = "running", Phase = "fetching", QueueRound = 0, CreatedAt = t.AddSeconds(1) };
+        var qA = new ChessableImport { UserId = 42, Bid = "qA", Target = "book", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = t.AddSeconds(2) };
+        var qB = new ChessableImport { UserId = 7, Bid = "qB", Target = "book", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t.AddSeconds(3) };
+        _db.ChessableImports.AddRange(fetching, qA, qB);
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
+
+        Assert.Equal(new[] { "fetch", "qA", "qB" }, list.Select(d => d.Bid).ToArray()); // holender oben
+        Assert.Equal(1, list.Single(d => d.Id == qA.Id).QueuedAhead); // 1 in Arbeit davor
+        Assert.Equal(2, list.Single(d => d.Id == qB.Id).QueuedAhead);
+    }
+
     // ---- Admin: Kurse im Namen eines Users holen ----
 
     [Fact]
