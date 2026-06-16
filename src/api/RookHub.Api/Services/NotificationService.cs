@@ -63,6 +63,16 @@ public class NotificationService
     public async Task<int> CountUnseenAsync(int userId)
         => await _db.Notifications.CountAsync(n => n.UserId == userId && n.SeenAt == null);
 
+    /// <summary>Markiert eine einzelne Benachrichtigung als gesehen (Klick darauf). No-op, wenn sie
+    /// nicht dem User gehört oder bereits gesehen ist.</summary>
+    public async Task MarkSeenAsync(int userId, int id)
+    {
+        var n = await _db.Notifications.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+        if (n is null || n.SeenAt != null) return;
+        n.SeenAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
     /// <summary>Markiert alle ungelesenen Benachrichtigungen eines Users als gesehen (Glocke geöffnet).</summary>
     public async Task MarkAllSeenAsync(int userId)
     {

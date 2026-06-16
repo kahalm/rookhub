@@ -177,9 +177,11 @@ public class AdminMessageService
         // Glocke bei allen Admins (Link in den Admin-Bereich).
         var senderName = (await _db.AppUsers.FindAsync(userId))?.Username ?? "user";
         var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+        // Deep-Link: öffnet im Admin-Bereich direkt den Nachrichten-Tab + diese Konversation.
+        var link = $"/admin?tab=messages&thread={userId}";
         foreach (var adminId in adminIds)
             await _notifications.CreateAsync(adminId, NotificationType.UserMessageReceived,
-                new Dictionary<string, string> { ["username"] = senderName }, "/admin");
+                new Dictionary<string, string> { ["username"] = senderName }, link);
 
         return ToDto(msg);
     }

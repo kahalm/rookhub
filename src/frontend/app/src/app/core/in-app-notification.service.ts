@@ -56,6 +56,11 @@ export class InAppNotificationService {
     return this.http.post(`${this.apiUrl}/seen`, {}).pipe(tap(() => this.unseen.next(0)));
   }
 
+  /** Eine einzelne Benachrichtigung als gelesen markieren (Klick darauf) — Badge -1. */
+  markSeen(id: number): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${id}/seen`, {}).pipe(tap(() => this.unseen.next(Math.max(0, this.unseen.value - 1))));
+  }
+
   /** Beim Logout den Zähler lokal zurücksetzen. */
   reset(): void {
     this.unseen.next(0);

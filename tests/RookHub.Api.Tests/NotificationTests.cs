@@ -104,6 +104,24 @@ public class NotificationTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkSeen_Single_OnlyThatOne_AndScopedToUser()
+    {
+        await UserAsync(1, "u1");
+        await UserAsync(2, "u2");
+        await _service.CreateAsync(1, NotificationType.AdminMessageReceived);
+        await _service.CreateAsync(1, NotificationType.FriendRequestReceived);
+        var first = await _db.Notifications.OrderBy(n => n.Id).FirstAsync(n => n.UserId == 1);
+        await _service.CreateAsync(2, NotificationType.AdminMessageReceived);
+        var foreign = await _db.Notifications.FirstAsync(n => n.UserId == 2);
+
+        await _service.MarkSeenAsync(1, first.Id);
+        Assert.Equal(1, await _service.CountUnseenAsync(1));   // nur eine der zwei eigenen weg
+
+        await _service.MarkSeenAsync(1, foreign.Id);            // fremde Notification → no-op
+        Assert.Equal(1, await _service.CountUnseenAsync(2));
+    }
+
+    [Fact]
     public async Task GetForUser_NewestFirst_ScopedToUser_ParsesData()
     {
         await UserAsync(1, "u1");

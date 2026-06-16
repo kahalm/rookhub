@@ -21,7 +21,7 @@ import { ChessableService, ChessableCredentialedUser, ChessableCourse, Chessable
 import { timer, Subscription } from 'rxjs';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 @Component({
@@ -114,7 +114,14 @@ export class AdminComponent implements OnInit, OnDestroy {
   dlImports: Record<string, ChessableImport> = {};
   private dlPollSubs: Record<string, Subscription> = {};
 
-  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private snackbar: SnackbarService, private translate: TranslateService, private chessable: ChessableService) {}
+  /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Reihenfolge siehe admin.component.html. */
+  selectedTabIndex = 0;
+  /** Index des „Nachrichten"-Tabs (0-basiert in der mat-tab-group). */
+  private readonly messagesTabIndex = 6;
+  /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
+  private pendingThreadUserId: number | null = null;
+
+  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService, private chessable: ChessableService) {}
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
   impersonate(u: AdminUser): void {
@@ -141,6 +148,12 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadAllUsers();
     this.loadDailyPuzzle();
     this.loadMenuConfig();
+    // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>
+    const qp = this.route.snapshot.queryParamMap;
+    if (qp.get('tab') === 'messages') this.selectedTabIndex = this.messagesTabIndex;
+    const thread = qp.get('thread');
+    if (thread && !isNaN(+thread)) this.pendingThreadUserId = +thread;
+
     this.loadThreads();
     this.loadDlUsers();
     this.adminService.getConfig().subscribe({
@@ -154,7 +167,18 @@ export class AdminComponent implements OnInit, OnDestroy {
   loadThreads(): void {
     this.threadsLoading = true;
     this.messageService.getThreads().subscribe({
-      next: list => { this.threads = list; this.threadsLoading = false; this.messageService.refreshAdminUnread(); },
+      next: list => {
+        this.threads = list;
+        this.threadsLoading = false;
+        this.messageService.refreshAdminUnread();
+        // Deep-Link-Ziel öffnen, sobald die Liste (mit Usernamen) da ist.
+        if (this.pendingThreadUserId != null) {
+          const uid = this.pendingThreadUserId;
+          this.pendingThreadUserId = null;
+          const t = this.threads.find(x => x.userId === uid);
+          if (t) this.openThread(uid, t.username);
+        }
+      },
       error: () => { this.threadsLoading = false; },
     });
   }

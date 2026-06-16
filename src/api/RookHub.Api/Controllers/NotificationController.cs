@@ -37,4 +37,12 @@ public class NotificationController : BaseApiController
         await _notifications.MarkAllSeenAsync(GetUserId());
         return NoContent();
     }
+
+    /// <summary>Markiert EINE Benachrichtigung als gesehen (Klick darauf).</summary>
+    [HttpPost("{id:int}/seen")]
+    public async Task<IActionResult> MarkOneSeen(int id)
+    {
+        await _notifications.MarkSeenAsync(GetUserId(), id);
+        return NoContent();
+    }
 }

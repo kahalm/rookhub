@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.148.0';
+export const APP_VERSION = '0.148.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.148.1", date: "2026-06-16", changes: [
+    { en: "Notifications: clicking a notification in the bell now marks it as read (the badge updates immediately).", de: "Benachrichtigungen: Ein Klick auf eine Benachrichtigung in der Glocke markiert sie jetzt als gelesen (das Badge aktualisiert sich sofort)." },
+    { en: "When a user writes to the admin team, the notification is now clearer (\"… sent the admin team a message\") and clicking it opens that conversation directly.", de: "Wenn ein Nutzer dem Admin-Team schreibt, ist die Benachrichtigung jetzt eindeutiger („… hat dem Admin-Team eine Nachricht geschickt\") und ein Klick öffnet direkt diese Konversation." },
+  ]},
   { version: "0.148.0", date: "2026-06-16", changes: [
     { en: "Chessable courses: courses whose data is already cached on the server now show a ⚡ icon — these import almost instantly (no fresh Chessable fetch needed).", de: "Chessable-Kurse: Kurse, deren Daten bereits auf dem Server zwischengespeichert sind, zeigen jetzt ein ⚡-Symbol — diese werden quasi sofort importiert (kein erneuter Chessable-Abruf nötig)." },
   ]},

@@ -277,8 +277,9 @@ export class NavbarComponent implements OnInit {
     this.notifications = this.notifications.map(n => ({ ...n, seen: true }));
   }
 
-  /** Klick auf eine Benachrichtigung → zur hinterlegten Route navigieren. */
+  /** Klick auf eine Benachrichtigung → als gelesen markieren + zur hinterlegten Route navigieren. */
   openNotification(n: AppNotification): void {
+    if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); n.seen = true; }
     if (n.link) this.router.navigateByUrl(n.link);
   }
 

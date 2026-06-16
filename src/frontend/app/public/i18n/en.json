@@ -29,7 +29,7 @@
       "challenge_resolved_solved": "{{username}} solved your challenge",
       "challenge_resolved_failed": "{{username}} did not solve your challenge",
       "admin_message_received": "The admin team sent you a message",
-      "user_message_received": "{{username}} replied to your message"
+      "user_message_received": "{{username}} sent the admin team a message"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",

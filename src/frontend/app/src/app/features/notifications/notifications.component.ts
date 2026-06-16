@@ -94,6 +94,7 @@ export class NotificationsComponent implements OnInit {
   }
 
   open(n: AppNotification): void {
+    if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); n.seen = true; }
     if (n.link) this.router.navigateByUrl(n.link);
   }
 
