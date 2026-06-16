@@ -507,7 +507,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.151.0` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). Hinweis: 0.145.0 (Admin-Kurs-Download im Namen eines Users) + 0.150.0 (selbiger Download zusätzlich als Repertoire ODER Buch wählbar) **bewusst NICHT im CHANGELOG** (internes Admin-Tool); 0.144.0 = „Originale Lösung zeigen", 0.147.0 = Bestenlisten (beide parallel gepusht); 0.148.0 = Chessable ⚡-Cached-Symbol
+- **Aktuelle Version**: `0.151.1` — Details + Historie ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source: `APP_VERSION` + `CHANGELOG`). Hinweis: 0.145.0 (Admin-Kurs-Download im Namen eines Users) + 0.150.0 (Download als Repertoire ODER Buch wählbar) + 0.151.1 (Admin-Download merkt sich bereits importierte Kurse → blendet je Ziel den Button aus, „erledigt"-Badge) **bewusst NICHT im CHANGELOG** (internes Admin-Tool); 0.144.0 = „Originale Lösung zeigen", 0.147.0 = Bestenlisten (beide parallel gepusht); 0.148.0 = Chessable ⚡-Cached-Symbol
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)

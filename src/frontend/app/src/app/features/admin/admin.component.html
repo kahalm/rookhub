@@ -586,12 +586,20 @@
                       </span>
                     } @else {
                       <span class="dl-import-actions">
-                        <button mat-stroked-button color="primary" (click)="dlImport(c, 'repertoire')">
-                          <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
-                        </button>
-                        <button mat-stroked-button color="primary" (click)="dlImport(c, 'book')">
-                          <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
-                        </button>
+                        @if (c.importedRepertoire) {
+                          <span class="dl-done"><mat-icon class="ok">check_circle</mat-icon> {{ 'chessable.doneRepertoire' | translate }}</span>
+                        } @else {
+                          <button mat-stroked-button color="primary" (click)="dlImport(c, 'repertoire')">
+                            <mat-icon>library_books</mat-icon> {{ 'chessable.importRepertoire' | translate }}
+                          </button>
+                        }
+                        @if (c.importedBook) {
+                          <span class="dl-done"><mat-icon class="ok">check_circle</mat-icon> {{ 'chessable.doneBook' | translate }}</span>
+                        } @else {
+                          <button mat-stroked-button color="primary" (click)="dlImport(c, 'book')">
+                            <mat-icon>school</mat-icon> {{ 'chessable.importBook' | translate }}
+                          </button>
+                        }
                       </span>
                     }
                   </div>

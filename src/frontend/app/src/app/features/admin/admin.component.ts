@@ -339,6 +339,15 @@ export class AdminComponent implements OnInit, OnDestroy {
         next: imp => {
           this.dlImports[bid] = imp;
           if (imp.status !== 'running') { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; }
+          // Erfolgreich → das passende „erledigt"-Flag am Kurs setzen (Button verschwindet, Badge
+          // erscheint — wie beim normalen Chessable-Feature) und den Live-Status entfernen.
+          if (imp.status === 'completed') {
+            const course = this.dlCourses.find(c => c.bid === bid);
+            if (course) {
+              if (imp.target === 'book') course.importedBook = true; else course.importedRepertoire = true;
+            }
+            delete this.dlImports[bid];
+          }
         },
         error: () => { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; },
       });

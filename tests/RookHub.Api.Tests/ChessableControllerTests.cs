@@ -317,6 +317,36 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetUserCoursesAdmin_MarksImportsAgainstAdminNotTargetUser()
+    {
+        await SeedUserAsync(42);          // Admin (Aufrufer, Controller-User)
+        await SeedUserAsync(7);           // Ziel-User (dessen Bearer/Kursliste)
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7,
+            EncryptedBearer = _encryption.Encrypt("b"),
+            CachedCoursesJson = "[{\"bid\":\"1\",\"name\":\"A\"},{\"bid\":\"2\",\"name\":\"B\"}]",
+            CoursesCachedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        // Admin (42) hat Kurs 1 schon als Repertoire → muss markiert sein.
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "completed", CreatedAt = DateTime.UtcNow });
+        // Ziel-User (7) hat Kurs 2 als Buch → darf NICHT markiert sein (Markierung gilt für den Admin).
+        _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
+
+        var body = Assert.IsType<ChessableCoursesDto>(Assert.IsType<OkObjectResult>(result).Value);
+        var a = body.Courses.Single(c => c.Bid == "1");
+        var b = body.Courses.Single(c => c.Bid == "2");
+        Assert.True(a.ImportedRepertoire);   // Admin hat es → Button weg
+        Assert.False(a.ImportedBook);
+        Assert.False(b.ImportedBook);        // gehört User 7, nicht dem Admin → weiterhin Button
+        Assert.False(b.ImportedRepertoire);
+    }
+
+    [Fact]
     public async Task Courses_MarksCachedCourses()
     {
         await SeedUserAsync(42);
