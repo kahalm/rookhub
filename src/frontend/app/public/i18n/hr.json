@@ -1473,7 +1473,7 @@
     "helpIntro": "Ovako dohvaćaš svoj Chessable bearer token iz preglednika:",
     "helpStep1": "Otvori Chessable, zatim alate za razvojne programere u pregledniku (F12) → kartica „Mreža”.",
     "helpStep2": "Ponovno učitaj Chessable nadzornu ploču i pronađi zahtjev „getUserSettings”.",
-    "helpStep3": "U njegovim zaglavljima zahtjeva kopiraj vrijednost iza „authorization: Bearer ” — to je tvoj token (JWT, vrijedi otprilike 7 dana).",
+    "helpStep3": "U njegovim zaglavljima zahtjeva pronađi „authorization” — desnim klikom na vrijednost odaberi „Copy value” (ili ručno kopiraj dio iza „authorization: Bearer ”). To je tvoj token (JWT, vrijedi otprilike 7 dana).",
     "helpNote": "Koristi se samo za dohvaćanje vlastitih kupljenih tečajeva za osobnu sigurnosnu kopiju.",
     "helpRepcheck": "Alternativno, RepCheck proširenje za preglednik dohvaća token umjesto tebe:",
     "bookmarkletTitle": "Bookmarklet u jednom kliku",

@@ -235,12 +235,49 @@ public class NotificationTests : IDisposable
         _db.Friendships.Add(new Friendship { RequesterId = 1, AddresseeId = 2, Status = FriendshipStatus.Accepted });
         _db.Puzzles.Add(new Puzzle { Id = 100, Rating = 1400 });
         _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 2, PuzzleId = 100, Solved = false }); // Target ist gescheitert
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 1, PuzzleId = 100, Solved = true });   // Avenger hat es echt gelöst
         await _db.SaveChangesAsync();
         var revenge = new RevengeNotificationService(_db, new FriendService(_db, _service), _service);
 
-        var created = await revenge.RecordAsync(avengerId: 1, targetId: 2, puzzleId: 100, solved: true);
+        var created = await revenge.RecordAsync(avengerId: 1, targetId: 2, puzzleId: 100); // solved serverseitig hergeleitet
 
         Assert.True(created);
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.RevengePerformed));
+        Assert.True(await _db.RevengeNotifications.AnyAsync(n => n.AvengerUserId == 1 && n.Solved)); // aus echtem Versuch
+    }
+
+    [Fact]
+    public async Task Revenge_Record_RejectsFabricated_WhenAvengerNeverAttempted()
+    {
+        await UserAsync(1, "avenger");
+        await UserAsync(2, "target");
+        _db.Friendships.Add(new Friendship { RequesterId = 1, AddresseeId = 2, Status = FriendshipStatus.Accepted });
+        _db.Puzzles.Add(new Puzzle { Id = 100, Rating = 1400 });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 2, PuzzleId = 100, Solved = false });
+        await _db.SaveChangesAsync();
+        var revenge = new RevengeNotificationService(_db, new FriendService(_db, _service), _service);
+
+        // Avenger hat das Puzzle NIE versucht → darf keine (gefälschte) Benachrichtigung erzeugen.
+        var created = await revenge.RecordAsync(avengerId: 1, targetId: 2, puzzleId: 100);
+
+        Assert.False(created);
+        Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.RevengePerformed));
+    }
+
+    [Fact]
+    public async Task Revenge_Record_DedupesPerAvengerTargetPuzzle()
+    {
+        await UserAsync(1, "avenger");
+        await UserAsync(2, "target");
+        _db.Friendships.Add(new Friendship { RequesterId = 1, AddresseeId = 2, Status = FriendshipStatus.Accepted });
+        _db.Puzzles.Add(new Puzzle { Id = 100, Rating = 1400 });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 2, PuzzleId = 100, Solved = false });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 1, PuzzleId = 100, Solved = true });
+        await _db.SaveChangesAsync();
+        var revenge = new RevengeNotificationService(_db, new FriendService(_db, _service), _service);
+
+        Assert.True(await revenge.RecordAsync(1, 2, 100));
+        Assert.False(await revenge.RecordAsync(1, 2, 100)); // zweiter Aufruf → kein Spam
+        Assert.Equal(1, await _db.RevengeNotifications.CountAsync(n => n.AvengerUserId == 1 && n.TargetUserId == 2 && n.PuzzleId == 100));
     }
 }

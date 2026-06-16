@@ -93,12 +93,30 @@ public class AdminMessageService
     /// <summary>Alle Threads (ein Eintrag je User) mit letzter Nachricht + Anzahl ungelesener User-Antworten.</summary>
     public async Task<List<AdminThreadSummaryDto>> GetThreadsAsync()
     {
-        // Bewusst alle Nachrichten laden und in-memory gruppieren: robust gegen EF-GroupBy-Übersetzung
-        // (InMemory-Tests + MariaDB) und das Volumen ist moderat (Admin-Support-Konversationen).
-        var rows = await _db.AdminMessages
-            .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new { m.UserId, m.Body, m.CreatedAt, m.FromAdmin, m.SeenByAdminAt, Username = m.User.Username })
+        // Aggregat je Thread per GROUP BY auf DB-Ebene — das Ergebnis ist durch die ANZAHL DER THREADS
+        // beschränkt, nicht durch die Gesamt-Nachrichtenzahl. Lädt also nicht mehr alle (bis zu 4000 Zeichen
+        // langen) Bodies aller User in den Speicher. (Aggregat-GroupBy übersetzt EF sowohl gegen MariaDB als
+        // auch InMemory korrekt.)
+        var agg = await _db.AdminMessages
+            .GroupBy(m => m.UserId)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                LastAt = g.Max(m => m.CreatedAt),
+                Unread = g.Count(m => !m.FromAdmin && m.SeenByAdminAt == null),
+            })
             .ToListAsync();
+        if (agg.Count == 0) return new List<AdminThreadSummaryDto>();
+
+        // Nur die jeweils JÜNGSTE Nachricht je Thread nachladen (≈ eine Zeile pro Thread) für Preview/Richtung.
+        var lastAts = agg.Select(a => a.LastAt).Distinct().ToList();
+        var lastMsgs = await _db.AdminMessages
+            .Where(m => lastAts.Contains(m.CreatedAt))
+            .Select(m => new { m.UserId, m.Body, m.CreatedAt, m.FromAdmin, Username = m.User.Username })
+            .ToListAsync();
+        var lastByUser = lastMsgs
+            .GroupBy(m => m.UserId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(m => m.CreatedAt).First());
 
         // Zuweisung (Claim) je Thread + Admin-Namen für die Anzeige auflösen.
         var claims = await _db.MessageThreads
@@ -111,23 +129,23 @@ public class AdminMessageService
             .Where(u => adminIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.Username);
 
-        return rows
-            .GroupBy(m => m.UserId)
-            .Select(g =>
+        return agg
+            .OrderByDescending(a => a.LastAt)
+            .Select(a =>
             {
-                var last = g.First();   // bereits absteigend sortiert ⇒ neueste
-                claimByUser.TryGetValue(g.Key, out var claimedBy);
+                lastByUser.TryGetValue(a.UserId, out var last);
+                claimByUser.TryGetValue(a.UserId, out var claimedBy);
+                var body = last?.Body ?? "";
                 return new AdminThreadSummaryDto(
-                    g.Key,
-                    last.Username,
-                    last.Body.Length > 80 ? last.Body[..80] : last.Body,
-                    last.CreatedAt,
-                    last.FromAdmin,
-                    g.Count(m => !m.FromAdmin && m.SeenByAdminAt == null),
+                    a.UserId,
+                    last?.Username ?? "?",
+                    body.Length > 80 ? body[..80] : body,
+                    a.LastAt,
+                    last?.FromAdmin ?? false,
+                    a.Unread,
                     claimedBy,
                     claimedBy is int cb && adminNames.TryGetValue(cb, out var n) ? n : null);
             })
-            .OrderByDescending(t => t.LastMessageAt)
             .ToList();
     }
 

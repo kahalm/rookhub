@@ -20,17 +20,34 @@ public class RevengeNotificationService
 
     /// <summary>
     /// Hält fest, dass <paramref name="avengerId"/> ein gescheitertes Puzzle von <paramref name="targetId"/>
-    /// angegangen ist (gelöst oder nicht), damit der Ziel-User informiert wird. Legt nur an, wenn die beiden
-    /// befreundet sind UND der Target an diesem Puzzle tatsächlich mal gescheitert ist — sonst stillschweigend
-    /// ignoriert (der Aufruf ist ein fire-and-forget vom Puzzle-Solver). Gibt true zurück, wenn angelegt.
+    /// angegangen ist (gelöst oder nicht), damit der Ziel-User informiert wird. Legt nur an, wenn: die beiden
+    /// befreundet sind, der Target an diesem Puzzle tatsächlich gescheitert ist, UND der Avenger das Puzzle
+    /// wirklich versucht hat. Das Ergebnis (<c>solved</c>) wird BEWUSST aus den echten <see cref="PuzzleAttempt"/>
+    /// des Avengers hergeleitet, NICHT dem Client geglaubt — sonst könnte jeder eingeloggte User beliebige
+    /// „X hat gelöst"-Benachrichtigungen bei jedem Freund fabrizieren/spammen. Zusätzlich Dedupe je
+    /// (Avenger, Target, Puzzle). Fire-and-forget vom Puzzle-Solver; true = angelegt.
     /// </summary>
-    public async Task<bool> RecordAsync(int avengerId, int targetId, int puzzleId, bool solved)
+    public async Task<bool> RecordAsync(int avengerId, int targetId, int puzzleId)
     {
         if (avengerId == targetId) return false;
         if (!await _friendService.AreFriendsAsync(avengerId, targetId)) return false;
 
         var targetFailedIt = await _db.PuzzleAttempts.AnyAsync(a => a.UserId == targetId && a.PuzzleId == puzzleId && !a.Solved);
         if (!targetFailedIt) return false;
+
+        // Ergebnis serverseitig aus den tatsächlichen Versuchen des Avengers herleiten (nicht dem Client glauben).
+        // Kein Versuch des Avengers für dieses Puzzle → keine (fabrizierbare) Benachrichtigung.
+        var avengerAttempts = await _db.PuzzleAttempts
+            .Where(a => a.UserId == avengerId && a.PuzzleId == puzzleId)
+            .Select(a => a.Solved)
+            .ToListAsync();
+        if (avengerAttempts.Count == 0) return false;
+        var solved = avengerAttempts.Any(s => s);
+
+        // Spam-/Doppel-Schutz: höchstens eine Revanche-Benachrichtigung je (Avenger, Target, Puzzle).
+        if (await _db.RevengeNotifications.AnyAsync(n =>
+                n.AvengerUserId == avengerId && n.TargetUserId == targetId && n.PuzzleId == puzzleId))
+            return false;
 
         _db.RevengeNotifications.Add(new RevengeNotification
         {

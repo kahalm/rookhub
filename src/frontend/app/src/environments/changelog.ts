@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.149.1';
+export const APP_VERSION = '0.149.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.149.2", date: "2026-06-16", changes: [
+    { en: "Chessable connect help: the \"get your bearer token\" instructions now mention that you can right-click the \"authorization\" header and choose \"Copy value\" in DevTools.", de: "Chessable-Verbinden-Hilfe: Die Anleitung zum Holen des Bearer-Tokens weist jetzt darauf hin, dass man in den DevTools mit Rechtsklick auf den „authorization\"-Header „Copy value\" wählen kann." },
+  ]},
   { version: "0.149.1", date: "2026-06-16", changes: [
     { en: "The mail icon in the navbar now turns red when you have unread messages (matching the notification bell).", de: "Das Mail-Symbol in der Navigationsleiste wird jetzt rot, wenn ungelesene Nachrichten vorliegen (analog zur Benachrichtigungs-Glocke)." },
   ]},

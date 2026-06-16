@@ -1481,7 +1481,7 @@
     "helpIntro": "Get your Chessable bearer token from the browser:",
     "helpStep1": "Open Chessable, then the browser DevTools (F12) → Network tab.",
     "helpStep2": "Reload the Chessable dashboard and find the request \"getUserSettings\".",
-    "helpStep3": "In its request headers, copy the value after \"authorization: Bearer \" — that is your token (a JWT, valid about 7 days).",
+    "helpStep3": "In its request headers, find \"authorization\" — right-click the value and choose \"Copy value\" (or manually copy the part after \"authorization: Bearer \"). That is your token (a JWT, valid about 7 days).",
     "helpNote": "Used only to fetch your own purchased courses for personal backup.",
     "helpRepcheck": "Alternatively, the RepCheck browser extension fetches the token for you:",
     "bookmarkletTitle": "One-click bookmarklet",

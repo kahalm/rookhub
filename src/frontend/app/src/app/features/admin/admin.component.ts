@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -120,6 +121,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private readonly messagesTabIndex = 6;
   /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
   private pendingThreadUserId: number | null = null;
+  private destroyRef = inject(DestroyRef);
 
   constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService, private chessable: ChessableService) {}
 
@@ -148,11 +150,19 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadAllUsers();
     this.loadDailyPuzzle();
     this.loadMenuConfig();
-    // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>
-    const qp = this.route.snapshot.queryParamMap;
-    if (qp.get('tab') === 'messages') this.selectedTabIndex = this.messagesTabIndex;
-    const thread = qp.get('thread');
-    if (thread && !isNaN(+thread)) this.pendingThreadUserId = +thread;
+    // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>. Als laufendes Abo (nicht
+    // nur snapshot), damit aufeinanderfolgende Glocken-Klicks auf verschiedene Threads — ohne Component-
+    // Neuerstellung — jeweils greifen: Tab wechseln + die richtige Konversation öffnen.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
+      if (qp.get('tab') === 'messages') this.selectedTabIndex = this.messagesTabIndex;
+      const thread = qp.get('thread');
+      if (thread && !isNaN(+thread)) {
+        const uid = +thread;
+        const t = this.threads.find(x => x.userId === uid);
+        if (t) this.openThread(uid, t.username);   // Liste schon geladen → sofort öffnen
+        else this.pendingThreadUserId = uid;        // sonst öffnet loadThreads(), sobald die Liste da ist
+      }
+    });
 
     this.loadThreads();
     this.loadDlUsers();

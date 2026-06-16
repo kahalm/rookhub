@@ -18,7 +18,9 @@ public class RevengeController : BaseApiController
     [HttpPost("result")]
     public async Task<IActionResult> Result([FromBody] RevengeResultDto dto)
     {
-        var created = await _service.RecordAsync(GetUserId(), dto.TargetUserId, dto.PuzzleId, dto.Solved);
+        // dto.Solved wird bewusst ignoriert — das Ergebnis leitet der Service serverseitig aus den
+        // echten Puzzle-Versuchen des Avengers her (Schutz vor fabrizierten/Spam-Benachrichtigungen).
+        var created = await _service.RecordAsync(GetUserId(), dto.TargetUserId, dto.PuzzleId);
         return Ok(new { created });
     }
 
