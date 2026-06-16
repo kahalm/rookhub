@@ -94,7 +94,23 @@ public class ChessableProxyService
         }
     }
 
+    /// <summary>Alle gecachten Kurs-Bids auf einmal (für die Kurslisten-Anreicherung mit „gecacht"-Flag).
+    /// Fehler/unerreichbar → leeres Set (dann eben keine Flags, kein harter Fehler).</summary>
+    public async Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var dto = await _httpClient.GetFromJsonAsync<CachedBidsDto>("/api/chessable/direct/courses/cached", JsonOpts, ct);
+            return dto?.Bids is { Count: > 0 } ? new HashSet<string>(dto.Bids) : new HashSet<string>();
+        }
+        catch
+        {
+            return new HashSet<string>();
+        }
+    }
+
     private record CachedDto(bool Cached);
+    private record CachedBidsDto(List<string> Bids);
 
     private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct)
     {

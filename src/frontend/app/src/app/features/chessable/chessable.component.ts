@@ -237,7 +237,12 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                     <div class="course-info">
                       <mat-icon>menu_book</mat-icon>
                       <div class="course-text">
-                        <div class="course-name">{{ c.name }}</div>
+                        <div class="course-name">
+                          {{ c.name }}
+                          @if (c.cached) {
+                            <mat-icon class="cached-badge" [matTooltip]="'chessable.cachedHint' | translate">bolt</mat-icon>
+                          }
+                        </div>
                         <div class="bid">bid {{ c.bid }}</div>
                       </div>
                     </div>
@@ -351,6 +356,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
     .course-info { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1 1 240px; }
     .course-text { min-width: 0; }
     .course-name { font-weight: 500; overflow-wrap: anywhere; }
+    .cached-badge { color: #f9a825; font-size: 18px; width: 18px; height: 18px; vertical-align: text-bottom; margin-left: 4px; }
     .bid { font-family: monospace; font-size: 0.78rem; color: var(--mat-sys-on-surface-variant, #888); }
     .course-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
     .course-actions button mat-icon { margin-right: 0.2rem; }

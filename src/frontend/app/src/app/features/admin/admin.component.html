@@ -566,7 +566,12 @@
               <div class="dl-courses">
                 @for (c of dlCourses; track c.bid) {
                   <div class="dl-course-row">
-                    <span class="dl-course-name">{{ c.name || c.bid }}</span>
+                    <span class="dl-course-name">
+                      {{ c.name || c.bid }}
+                      @if (c.cached) {
+                        <mat-icon class="cached-badge" [matTooltip]="'chessable.cachedHint' | translate">bolt</mat-icon>
+                      }
+                    </span>
                     @if (dlImports[c.bid]; as imp) {
                       <span class="dl-status">
                         @if (imp.status === 'running') {

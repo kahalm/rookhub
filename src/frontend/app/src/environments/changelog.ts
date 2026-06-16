@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.147.0';
+export const APP_VERSION = '0.148.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.148.0", date: "2026-06-16", changes: [
+    { en: "Chessable courses: courses whose data is already cached on the server now show a ⚡ icon — these import almost instantly (no fresh Chessable fetch needed).", de: "Chessable-Kurse: Kurse, deren Daten bereits auf dem Server zwischengespeichert sind, zeigen jetzt ein ⚡-Symbol — diese werden quasi sofort importiert (kein erneuter Chessable-Abruf nötig)." },
+  ]},
   { version: "0.147.0", date: "2026-06-16", changes: [
     { en: "New \"Leaderboards\" page (logged-in users): ranking lists for four categories — unique puzzles solved, daily puzzles solved, endless runs, and solved course lines — each for today, this week, this month, or all time.", de: "Neue Seite „Bestenlisten\" (für eingeloggte Nutzer): Ranglisten für vier Kategorien — einzigartige gelöste Puzzles, gelöste Tagespuzzles, Endlos-Läufe und gelöste Kurs-Linien — jeweils für heute, diese Woche, diesen Monat oder gesamt." },
   ]},

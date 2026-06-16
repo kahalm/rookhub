@@ -17,6 +17,8 @@ export interface ChessableCourse {
   name: string;
   importedRepertoire?: boolean;
   importedBook?: boolean;
+  /** Rohdaten in der DB gecacht → Import quasi sofort verfügbar. */
+  cached?: boolean;
 }
 
 export interface ChessableCoursesResult {

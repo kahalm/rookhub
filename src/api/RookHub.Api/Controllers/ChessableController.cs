@@ -191,8 +191,15 @@ public class ChessableController : BaseApiController
             .ToListAsync(ct);
         var rep = done.Where(d => d.Target == "repertoire").Select(d => d.Bid).ToHashSet();
         var book = done.Where(d => d.Target == "book").Select(d => d.Bid).ToHashSet();
+        // Gecachte Kurse (Rohdaten in der piratechess-DB) → sofort verfügbar. 1 Bulk-Call; Fehler → leer.
+        var cached = await _chessable.GetCachedBidsAsync(ct);
         return courses
-            .Select(c => c with { ImportedRepertoire = rep.Contains(c.Bid), ImportedBook = book.Contains(c.Bid) })
+            .Select(c => c with
+            {
+                ImportedRepertoire = rep.Contains(c.Bid),
+                ImportedBook = book.Contains(c.Bid),
+                Cached = cached.Contains(c.Bid),
+            })
             .ToList();
     }
 

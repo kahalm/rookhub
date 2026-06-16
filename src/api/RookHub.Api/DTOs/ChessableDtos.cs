@@ -22,6 +22,8 @@ public record ChessableCourseDto(string Bid, string Name)
     public bool ImportedRepertoire { get; init; }
     /// <summary>Dieser Kurs wurde vom User bereits als Buch importiert.</summary>
     public bool ImportedBook { get; init; }
+    /// <summary>Rohdaten liegen in der piratechess-DB (gecacht) → Import quasi sofort (kein Chessable-Abruf).</summary>
+    public bool Cached { get; init; }
 }
 
 /// <summary>Kursliste + Zeitpunkt des Abrufs (aus dem DB-Cache oder frisch geholt).</summary>

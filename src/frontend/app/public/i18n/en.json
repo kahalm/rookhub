@@ -1548,7 +1548,8 @@
     "error": "Error: {{message}}",
     "throughputHint": "Fetching runs at roughly 15–20 lines/min (including VPN pauses). A course with 500 lines takes about 30 min, 1000 lines about 1 hour.",
     "etaRemaining": "~{{min}} min left",
-    "importDuration": "Queue {{queue}} · Fetch {{fetch}}"
+    "importDuration": "Queue {{queue}} · Fetch {{fetch}}",
+    "cachedHint": "Cached — available almost instantly (no Chessable fetch needed)"
   },
   "messages": {
     "title": "Messages",

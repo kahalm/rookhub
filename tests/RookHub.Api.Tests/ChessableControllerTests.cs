@@ -317,6 +317,29 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Courses_MarksCachedCourses()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("real-bearer-1234567890"));
+
+        _handler.Reply = (req, _) =>
+        {
+            var path = req.RequestUri!.AbsolutePath;
+            if (path == "/api/chessable/direct/courses")
+                return JsonResponse(HttpStatusCode.OK, new[] { new ChessableCourseDto("100", "A"), new ChessableCourseDto("200", "B") });
+            if (path == "/api/chessable/direct/courses/cached")
+                return JsonResponse(HttpStatusCode.OK, new { bids = new[] { "200" } });   // nur B gecacht
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        };
+
+        var result = await _controller.Courses(refresh: true, CancellationToken.None);
+
+        var body = Assert.IsType<ChessableCoursesDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.False(body.Courses.Single(c => c.Bid == "100").Cached);
+        Assert.True(body.Courses.Single(c => c.Bid == "200").Cached);
+    }
+
+    [Fact]
     public async Task Disclaimer_DefaultFalse_ThenAcceptPersists()
     {
         await SeedUserAsync(42);

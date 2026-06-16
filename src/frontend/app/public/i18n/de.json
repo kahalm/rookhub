@@ -1548,7 +1548,8 @@
     "error": "Fehler: {{message}}",
     "throughputHint": "Das Holen schafft grob 15–20 Zeilen/min (inkl. VPN-Pausen). Ein Kurs mit 500 Zeilen dauert ca. 30 Min, 1000 Zeilen ca. 1 Std.",
     "etaRemaining": "noch ca. {{min}} Min",
-    "importDuration": "Wartezeit {{queue}} · Holzeit {{fetch}}"
+    "importDuration": "Wartezeit {{queue}} · Holzeit {{fetch}}",
+    "cachedHint": "Zwischengespeichert — quasi sofort verfügbar (kein Chessable-Abruf nötig)"
   },
   "messages": {
     "title": "Nachrichten",
