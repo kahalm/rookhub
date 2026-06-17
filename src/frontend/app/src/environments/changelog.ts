@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.152.6';
+export const APP_VERSION = '0.152.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.152.7", date: "2026-06-17", changes: [
+    { en: "Sending a puzzle to several friends at once is now faster and notifies all recipients in one atomic step (instead of one database round-trip per friend).", de: "Ein Puzzle an mehrere Freunde gleichzeitig zu schicken ist jetzt schneller und benachrichtigt alle Empfänger in einem atomaren Schritt (statt einer Datenbank-Abfrage pro Freund)." },
+  ]},
   { version: "0.152.5", date: "2026-06-17", changes: [
     { en: "Reliability: starting a conversation with the admin team no longer fails if a user and an admin happen to send their very first message at the same moment — the shared message thread is now created race-safely.", de: "Zuverlässigkeit: Das Starten einer Konversation mit dem Admin-Team schlägt nicht mehr fehl, wenn ein User und ein Admin zufällig im selben Moment ihre allererste Nachricht senden — die gemeinsame Nachrichten-Thread-Zeile wird jetzt rennsicher angelegt." },
   ]},

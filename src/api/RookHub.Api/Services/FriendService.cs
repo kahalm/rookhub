@@ -27,6 +27,23 @@ public class FriendService
              (f.RequesterId == otherUserId && f.AddresseeId == userId)));
     }
 
+    /// <summary>Filtert aus <paramref name="candidates"/> die mit <paramref name="userId"/> per akzeptierter
+    /// Freundschaft verbundenen Ids heraus — in EINER Abfrage (Batch statt N× <see cref="AreFriendsAsync"/>,
+    /// gegen N+1 z. B. beim Verschicken einer Challenge an mehrere Freunde). `userId` selbst wird nie zurückgegeben.</summary>
+    public async Task<HashSet<int>> GetAcceptedFriendIdsAsync(int userId, IEnumerable<int> candidates)
+    {
+        var ids = candidates.Where(id => id != userId).Distinct().ToList();
+        if (ids.Count == 0) return new HashSet<int>();
+        var rows = await _db.Friendships
+            .Where(f => f.Status == FriendshipStatus.Accepted &&
+                ((f.RequesterId == userId && ids.Contains(f.AddresseeId)) ||
+                 (f.AddresseeId == userId && ids.Contains(f.RequesterId))))
+            .Select(f => new { f.RequesterId, f.AddresseeId })
+            .ToListAsync();
+        // Die jeweils ANDERE Seite ist der Freund (in-memory, um keine CASE-Projektion zu übersetzen).
+        return rows.Select(r => r.RequesterId == userId ? r.AddresseeId : r.RequesterId).ToHashSet();
+    }
+
     /// <summary>Basis-Anzeigedaten (Username + DisplayName) eines Users — für Stats-/Revenge-Header.</summary>
     public async Task<FriendDto?> GetUserBasicAsync(int userId)
     {

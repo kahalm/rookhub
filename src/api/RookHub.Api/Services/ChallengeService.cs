@@ -53,7 +53,17 @@ public class ChallengeService
         var fromName = await UsernameAsync(fromUserId);
         var created = new List<int>(); // Empfänger, die benachrichtigt werden sollen.
 
-        foreach (var toUserId in toUserIds.Distinct())
+        var candidates = toUserIds.Distinct().ToList();
+        // Freundschaften + bereits offene gleiche Challenges in JE EINER Abfrage vorladen (statt 2×N
+        // Einzelabfragen in der Schleife → kein N+1 mehr bei vielen Empfängern).
+        var friendIds = await _friendService.GetAcceptedFriendIdsAsync(fromUserId, candidates);
+        var alreadyChallenged = (await _db.PuzzleChallenges
+            .Where(c => c.FromUserId == fromUserId && c.PuzzleId == puzzleId && c.Source == source &&
+                        c.Status == ChallengeStatus.Pending && candidates.Contains(c.ToUserId))
+            .Select(c => c.ToUserId)
+            .ToListAsync()).ToHashSet();
+
+        foreach (var toUserId in candidates)
         {
             if (toUserId == fromUserId)
             {
@@ -61,16 +71,13 @@ public class ChallengeService
                 continue;
             }
 
-            if (!await _friendService.AreFriendsAsync(fromUserId, toUserId))
+            if (!friendIds.Contains(toUserId))
             {
                 result.Skipped.Add(new ChallengeSkipDto { ToUserId = toUserId, Reason = "not_friends" });
                 continue;
             }
 
-            var duplicate = await _db.PuzzleChallenges.AnyAsync(c =>
-                c.FromUserId == fromUserId && c.ToUserId == toUserId &&
-                c.PuzzleId == puzzleId && c.Source == source && c.Status == ChallengeStatus.Pending);
-            if (duplicate)
+            if (alreadyChallenged.Contains(toUserId))
             {
                 result.Skipped.Add(new ChallengeSkipDto { ToUserId = toUserId, Reason = "duplicate" });
                 continue;
@@ -87,12 +94,12 @@ public class ChallengeService
         }
 
         if (created.Count > 0)
+        {
             await _db.SaveChangesAsync();
-
-        // Empfänger benachrichtigen: neue Puzzle-Challenge (fire-and-forget Effekt, hier awaited für Konsistenz).
-        foreach (var toUserId in created)
-            await _notifications.CreateAsync(toUserId, NotificationType.ChallengeReceived,
+            // Empfänger in EINEM Schritt benachrichtigen (atomar, statt eines Saves je Empfänger).
+            await _notifications.CreateManyAsync(created, NotificationType.ChallengeReceived,
                 new Dictionary<string, string> { ["username"] = fromName }, "/friends");
+        }
 
         result.Sent = created.Count;
         return result;

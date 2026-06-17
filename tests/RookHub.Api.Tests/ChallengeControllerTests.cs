@@ -109,6 +109,33 @@ public class ChallengeControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_NotifiesEveryCreatedRecipient_ButNotSkippedOnes()
+    {
+        var me = await CreateUserAsync("me");
+        var a = await CreateUserAsync("a");
+        var b = await CreateUserAsync("b");
+        var stranger = await CreateUserAsync("stranger");
+        await MakeFriendsAsync(me.Id, a.Id);
+        await MakeFriendsAsync(me.Id, b.Id);   // stranger ist NICHT befreundet
+        var puzzle = await CreatePuzzleAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.Create(new CreateChallengeBatchDto
+        {
+            ToUserIds = new() { a.Id, b.Id, stranger.Id, me.Id },
+            PuzzleId = puzzle.Id,
+        });
+
+        Assert.Equal(2, Batch(result).Sent);
+        // Glocke nur für die tatsächlich erstellten Empfänger (a, b) — nicht für stranger/self.
+        Assert.True(_db.Notifications.Any(n => n.UserId == a.Id && n.Type == NotificationType.ChallengeReceived));
+        Assert.True(_db.Notifications.Any(n => n.UserId == b.Id && n.Type == NotificationType.ChallengeReceived));
+        Assert.False(_db.Notifications.Any(n => n.UserId == stranger.Id));
+        Assert.False(_db.Notifications.Any(n => n.UserId == me.Id));
+        Assert.Equal(2, _db.Notifications.Count(n => n.Type == NotificationType.ChallengeReceived));
+    }
+
+    [Fact]
     public async Task Create_SkipsNonFriends_WithReason()
     {
         var me = await CreateUserAsync("me");
