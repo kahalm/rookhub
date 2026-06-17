@@ -101,3 +101,28 @@ public class AnalyzeGameResponseDto
     /// <summary>Ply, bei dem ein Zug nicht parsbar war (illegale SAN). Null = alle Zuege OK.</summary>
     public int? IllegalMoveAt { get; set; }
 }
+
+/// <summary>Eingabe fuer „Remember line": eine auf chessable.com gemerkte Stellung
+/// (<c>POST /api/extension/remember-line</c>). Zeitstempel wird serverseitig gesetzt.</summary>
+public class RememberLineInputDto
+{
+    [Required]
+    [MaxLength(120)]
+    public string Fen { get; set; } = string.Empty;
+
+    [MaxLength(32)]
+    public string? CourseId { get; set; }
+
+    [MaxLength(1000)]
+    public string? SourceUrl { get; set; }
+}
+
+/// <summary>Eine gemerkte Stellung (Ausgabe von <c>GET /api/extension/remembered-lines</c>).</summary>
+public class RememberedPositionDto
+{
+    public int Id { get; set; }
+    public string Fen { get; set; } = string.Empty;
+    public string? CourseId { get; set; }
+    public string? SourceUrl { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

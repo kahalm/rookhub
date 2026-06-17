@@ -27,7 +27,8 @@ public class ExtensionControllerTests : IDisposable
         var analyzeService = new RepertoireAnalyzeService(_db, cache);
         _service = new RepertoireService(_db, analyzeService);
         var trainingGoalService = new TrainingGoalService(_db);
-        _controller = new ExtensionController(_service, analyzeService, trainingGoalService);
+        var rememberedService = new RememberedPositionService(_db);
+        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService);
     }
 
     public void Dispose() => _db.Dispose();
@@ -248,5 +249,49 @@ public class ExtensionControllerTests : IDisposable
 
         Assert.IsType<ForbidResult>(result);
         Assert.Empty(_db.ChessableActivities.Where(a => a.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task RememberLine_PersistsAndIsListed()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        const string fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+
+        var save = await _controller.RememberLine(new RememberLineInputDto { Fen = fen, CourseId = "228856", SourceUrl = "https://www.chessable.com/course/228856/1/" });
+        Assert.IsType<OkObjectResult>(save.Result);
+
+        var row = Assert.Single(_db.RememberedPositions.Where(p => p.UserId == user.Id));
+        Assert.Equal(fen, row.Fen);
+        Assert.Equal("228856", row.CourseId);
+
+        var list = (await _controller.GetRememberedLines()).Result as OkObjectResult;
+        var items = (List<RememberedPositionDto>)list!.Value!;
+        Assert.Single(items);
+        Assert.Equal(fen, items[0].Fen);
+    }
+
+    [Fact]
+    public async Task RememberLine_RejectsInvalidFen()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var result = await _controller.RememberLine(new RememberLineInputDto { Fen = "not-a-fen" });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(_db.RememberedPositions.Where(p => p.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task RememberLine_WithForeignScope_Forbidden()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "admin");
+
+        var result = await _controller.RememberLine(new RememberLineInputDto { Fen = "8/8/8/8/8/8/8/8 w - - 0 1" });
+
+        Assert.IsType<ForbidResult>(result.Result);
+        Assert.Empty(_db.RememberedPositions.Where(p => p.UserId == user.Id));
     }
 }

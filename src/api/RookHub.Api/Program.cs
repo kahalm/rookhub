@@ -131,6 +131,7 @@ try
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<TrainingGoalService>();
+    builder.Services.AddScoped<RememberedPositionService>();
     builder.Services.AddScoped<WeeklyPostService>();
     builder.Services.AddScoped<LeaderboardService>();
     builder.Services.AddScoped<BotStatsService>();

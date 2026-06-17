@@ -17,13 +17,15 @@ public class ExtensionController : BaseApiController
     private readonly RepertoireService _repertoireService;
     private readonly RepertoireAnalyzeService _analyzeService;
     private readonly TrainingGoalService _trainingGoalService;
+    private readonly RememberedPositionService _rememberedPositionService;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
-        TrainingGoalService trainingGoalService)
+        TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
         _trainingGoalService = trainingGoalService;
+        _rememberedPositionService = rememberedPositionService;
     }
 
     /// <summary>
@@ -104,5 +106,26 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "secondsActive required and > 0." });
         await _trainingGoalService.RecordChessableActivityAsync(GetUserId(), dto);
         return Ok(new { recorded = true });
+    }
+
+    /// <summary>
+    /// Merkt eine auf chessable.com angezeigte Stellung (Button „Remember line"): FEN + Kontext
+    /// (Kurs-ID, Seiten-URL) werden append-only gespeichert. Verwendungszweck noch offen.
+    /// </summary>
+    [HttpPost("remember-line")]
+    public async Task<ActionResult<RememberedPositionDto>> RememberLine([FromBody] RememberLineInputDto dto)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || !RememberedPositionService.LooksLikeFen(dto.Fen))
+            return BadRequest(new { message = "Valid fen required." });
+        return Ok(await _rememberedPositionService.SaveAsync(GetUserId(), dto));
+    }
+
+    /// <summary>Listet die gemerkten Stellungen des Users (neueste zuerst).</summary>
+    [HttpGet("remembered-lines")]
+    public async Task<ActionResult<List<RememberedPositionDto>>> GetRememberedLines([FromQuery] int take = 200)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        return Ok(await _rememberedPositionService.ListAsync(GetUserId(), take));
     }
 }

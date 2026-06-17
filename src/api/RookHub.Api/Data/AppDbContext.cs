@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
+    public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -439,6 +440,18 @@ public class AppDbContext : DbContext
 
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<RememberedPosition>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(p => p.Fen).HasMaxLength(120);
+            e.Property(p => p.CourseId).HasMaxLength(32);
+            e.Property(p => p.SourceUrl).HasMaxLength(1000);
+            e.HasIndex(p => new { p.UserId, p.CreatedAt });
         });
 
         modelBuilder.Entity<MenuItemSetting>(e =>

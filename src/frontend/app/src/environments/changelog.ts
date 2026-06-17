@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.153.0';
+export const APP_VERSION = '0.154.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.154.0", date: "2026-06-17", changes: [
+    { en: "RepCheck extension: you can now \"Remember line\" on chessable.com — the current position (FEN) is sent to RookHub and stored for later use.", de: "RepCheck-Extension: Auf chessable.com kannst du jetzt eine Stellung „merken\" (Remember line) — die aktuelle Stellung (FEN) wird an RookHub geschickt und dort für später gespeichert." },
+  ]},
   { version: "0.153.0", date: "2026-06-17", changes: [
     { en: "Training goals: new \"Chessable\" category. The RepCheck browser extension now measures your active training time on chessable.com and reports it to RookHub, where it counts towards a daily Chessable minutes goal — shown in Today, the tracker heatmap and the daily history alongside Puzzles and Book/Course.", de: "Trainingsziele: neue Kategorie „Chessable\". Die RepCheck-Browser-Extension misst jetzt deine aktive Trainingszeit auf chessable.com und meldet sie an RookHub, wo sie auf ein tägliches Chessable-Minutenziel einzahlt — sichtbar in „Heute\", in der Tracker-Heatmap und in der Tageshistory neben Puzzles und Buch/Kurs." },
   ]},
