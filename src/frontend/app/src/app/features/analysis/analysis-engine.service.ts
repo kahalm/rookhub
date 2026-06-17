@@ -57,9 +57,15 @@ export class AnalysisEngineService implements OnDestroy {
    *  weiter neu instanziieren (ein Neustart lädt ~7 MB WASM, v. a. mobil ein Memory-Thrash). */
   private lastCrashFen: string | null = null;
 
-  /** UCI-Sequencing: neue Suche erst nach `readyok` starten (nicht mitten in laufender Suche). */
+  /** UCI-Sequencing: die nächste zu suchende Stellung. Wird erst als `position`+`go` rausgeschickt,
+   *  wenn eine evtl. laufende Suche ihr `bestmove` gemeldet hat (siehe `searching`). */
   private pendingGoFen: string | null = null;
-  private awaitingReady = false;
+
+  /** True solange ein `go` läuft und noch kein (terminales) `bestmove` zurückkam. Ein neues `go` in
+   *  den asyncify-Abbau der laufenden Suche zu schieben crasht den lite-single-WASM-Kern mit
+   *  „RuntimeError: unreachable" (reproduziert: crasht nach ~7 Stellungswechseln). Deshalb bei
+   *  Navigation erst `stop`, dann das `bestmove` der alten Suche abwarten, DANN das nächste `go`. */
+  private searching = false;
 
   /** Hänger-Watchdog: liefert die Engine nach `go` binnen `watchdogMs` keine Info-Line → Stall. */
   protected watchdogMs = 9000;
@@ -127,7 +133,7 @@ export class AnalysisEngineService implements OnDestroy {
     this.worker = undefined;
     this.initPromise = undefined;
     this.partial = new Map();
-    this.awaitingReady = false;
+    this.searching = false;
     this.pendingGoFen = null;
     const fen = this.currentFen;
     const wasRunning = this.state$.value.running;
@@ -174,21 +180,30 @@ export class AnalysisEngineService implements OnDestroy {
     this.partial = new Map();
     this.clearWatchdog();
     this.state$.next({ fen, depth: 0, lines: [], running: true });
-    // Sauberes Sequencing: stop → (isready/readyok) → position+go. So wird 'position' nie
-    // mitten in eine laufende Suche geschickt (sonst verschluckt Stockfish sie → keine
-    // Info-Lines → ewiges „calculating"). Nur EIN isready offen halten; bei schneller
-    // Navigation gewinnt die zuletzt angeforderte Stellung.
+    // Sequencing gegen den asyncify-Crash: das `go` für die neue Stellung erst absetzen, wenn
+    // eine evtl. laufende Suche WIRKLICH beendet ist (ihr `bestmove` zurückkam) — NICHT bloß nach
+    // `readyok` (das beantwortet die Engine auch mitten in der Suche sofort, also keine echte
+    // Barriere). Läuft noch eine Suche → nur `stop`; das `bestmove` startet dann die pending-Suche.
     this.pendingGoFen = fen;
-    this.send('setoption name MultiPV value ' + this.multiPv);
-    this.send('stop');
-    if (!this.awaitingReady) {
-      this.awaitingReady = true;
-      this.send('isready');
+    if (this.searching) {
+      this.send('stop');
+      this.armWatchdog();   // greift, falls auf das stoppende `bestmove` ein Hänger folgt
+    } else {
+      this.launchPending();
     }
-    // Watchdog schon ab HIER scharf stellen — deckt auch die isready→readyok-Phase ab.
-    // Bleibt readyok aus (Worker-Hänger ohne onerror), greift sonst nichts: awaitingReady
-    // bliebe für immer true und keine spätere analyze() würde je wieder isready senden.
-    this.armWatchdog();
+  }
+
+  /** Schickt die in `pendingGoFen` vorgemerkte Stellung als `position`+`go` (nur wenn keine Suche
+   *  mehr läuft — vom Aufrufer sicherzustellen). Setzt `searching` und stellt den Watchdog scharf. */
+  private launchPending(): void {
+    const fen = this.pendingGoFen;
+    if (fen === null || !this.worker) return;
+    this.pendingGoFen = null;
+    this.send('setoption name MultiPV value ' + this.multiPv);
+    this.send('position fen ' + fen);
+    this.send('go depth ' + this.depthCap);
+    this.searching = true;
+    this.armWatchdog();   // ab jetzt Info-Lines erwarten
   }
 
   stop(): void {
@@ -213,24 +228,21 @@ export class AnalysisEngineService implements OnDestroy {
     const line = e.data;
     if (typeof line !== 'string') return;
 
-    if (line.startsWith('readyok')) {
-      this.awaitingReady = false;
-      const fen = this.pendingGoFen;
-      if (fen !== null) {
-        this.pendingGoFen = null;
-        this.send('position fen ' + fen);
-        this.send('go depth ' + this.depthCap);
-        this.armWatchdog();   // ab jetzt Info-Lines erwarten
-      }
-      return;
-    }
+    // readyok wird im analyze-Pfad nicht mehr als Gate genutzt (nur init() wartet darauf, mit
+    // eigenem Listener). Hier daher nur abfangen, damit es nicht als info-Zeile fehlinterpretiert wird.
+    if (line.startsWith('readyok')) return;
 
     const genAtSend = this.gen;
 
     if (line.startsWith('bestmove')) {
-      // 'bestmove' eines gestoppten Suchlaufs ignorieren, wenn schon ein neuer ansteht.
-      if (this.pendingGoFen !== null || this.awaitingReady) return;
-      this.clearWatchdog();   // Suche regulär beendet
+      // Die laufende Suche ist beendet (regulär ODER durch `stop`). Erst JETZT ist es sicher,
+      // das nächste `go` abzusetzen — steht eine Stellung an, jetzt starten.
+      this.searching = false;
+      if (this.pendingGoFen !== null) {
+        this.launchPending();
+        return;
+      }
+      this.clearWatchdog();   // Suche regulär beendet, nichts steht an
       const s = this.state$.value;
       if (s.running) this.state$.next({ ...s, running: false });
       return;
@@ -294,7 +306,7 @@ export class AnalysisEngineService implements OnDestroy {
       this.worker = undefined;
       this.initPromise = undefined;
     }
-    this.awaitingReady = false;
+    this.searching = false;
     this.pendingGoFen = null;
     this.crashStreak = 0;
     this.fatalError$.next(null);

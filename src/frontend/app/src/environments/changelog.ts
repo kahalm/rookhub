@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.152.0';
+export const APP_VERSION = '0.152.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.152.1", date: "2026-06-17", changes: [
+    { en: "Analysis board: fixed an engine crash (\"RuntimeError: unreachable\") that could occur when clicking quickly through moves — the engine now waits for the current search to finish before starting the next position, instead of crashing the analysis.", de: "Analysebrett: Ein Engine-Absturz („RuntimeError: unreachable\") behoben, der beim schnellen Durchklicken von Zügen auftreten konnte — die Engine wartet jetzt das Ende der laufenden Suche ab, bevor sie die nächste Stellung startet, statt die Analyse abstürzen zu lassen." },
+  ]},
   { version: "0.152.0", date: "2026-06-17", changes: [
     { en: "Analysis board: pawn promotion now lets you pick the piece (queen, rook, bishop or knight) instead of always auto-queening — using the same picker as the puzzle board, including the mobile ghost-tap protection.", de: "Analysebrett: Bei der Bauernumwandlung kannst du jetzt die Figur wählen (Dame, Turm, Läufer oder Springer) statt automatisch immer die Dame zu bekommen — mit demselben Auswahl-Dialog wie im Puzzle-Brett, inkl. Schutz gegen den versehentlichen Touch-Ghost-Tap." },
   ]},

@@ -143,16 +143,52 @@ describe('AnalysisEngineService stall watchdog', () => {
 });
 
 describe('AnalysisEngineService UCI sequencing', () => {
-  it('sends position/go only after stop + readyok (not mid-search)', async () => {
+  const FEN2 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+
+  it('starts the first search directly with position + go', async () => {
     const eng = new TestEngine();
-    await eng.analyze(FEN);            // FakeWorker beantwortet isready automatisch mit readyok
+    await eng.analyze(FEN);
     const posted = eng.last.posted;
-    const lastStop = posted.lastIndexOf('stop');
-    const lastReady = posted.lastIndexOf('isready');
     const iPos = posted.findIndex(c => c.startsWith('position fen'));
     const iGo = posted.findIndex(c => c.startsWith('go depth'));
-    expect(lastReady).toBeGreaterThan(lastStop);   // erst stoppen, dann auf bereit warten
-    expect(iPos).toBeGreaterThan(lastReady);        // Stellung erst NACH readyok
-    expect(iGo).toBeGreaterThan(iPos);
+    expect(iPos).toBeGreaterThan(-1);
+    expect(iGo).toBeGreaterThan(iPos);              // position vor go
+  });
+
+  it('defers the next search until the running one reports bestmove (no go mid-search → no WASM trap)', async () => {
+    const eng = new TestEngine();
+    await eng.analyze(FEN);                          // 1. Suche läuft (go gesendet)
+    eng.last.emit('info depth 10 multipv 1 score cp 20 pv e2e4');
+    const posted = eng.last.posted;
+
+    await eng.analyze(FEN2);                         // Navigation, während die 1. Suche noch läuft
+    expect(posted.filter(c => c.startsWith('go depth')).length).toBe(1);   // KEIN zweites go
+    expect(posted.includes('stop')).toBeTrue();                            // stattdessen erst stop
+    expect(posted.some(c => c.startsWith('position fen ' + FEN2))).toBeFalse();
+
+    eng.last.emit('bestmove e2e4');                 // 1. Suche sauber beendet → Gate öffnet
+    expect(posted.filter(c => c.startsWith('go depth')).length).toBe(2);   // jetzt erst das 2. go
+    expect(posted.some(c => c.startsWith('position fen ' + FEN2))).toBeTrue();
+    const iStop = posted.lastIndexOf('stop');
+    const iPos2 = posted.indexOf('position fen ' + FEN2);
+    expect(iPos2).toBeGreaterThan(iStop);           // 2. position erst NACH stop
+  });
+
+  it('coalesces rapid navigation to the latest position (only the last pending search runs)', async () => {
+    const eng = new TestEngine();
+    const FEN3 = '8/8/8/8/8/8/8/k1K5 w - - 0 1';
+    await eng.analyze(FEN);
+    eng.last.emit('info depth 8 multipv 1 score cp 10 pv e2e4');
+    const posted = eng.last.posted;
+
+    await eng.analyze(FEN2);                         // verworfen
+    await eng.analyze(FEN3);                         // gewinnt
+    expect(posted.filter(c => c.startsWith('go depth')).length).toBe(1);   // noch nichts Neues gestartet
+
+    eng.last.emit('bestmove e2e4');                 // Gate öffnet → nur die ZULETZT gewünschte Stellung
+    const positions = posted.filter(c => c.startsWith('position fen'));
+    expect(positions[positions.length - 1]).toBe('position fen ' + FEN3);
+    expect(posted.some(c => c.startsWith('position fen ' + FEN2))).toBeFalse();
+    expect(posted.filter(c => c.startsWith('go depth')).length).toBe(2);
   });
 });
