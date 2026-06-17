@@ -1250,6 +1250,7 @@
     "cat": {
       "puzzles": "Zagonetke",
       "book": "Knjiga / Tečaj",
+      "chessable": "Chessable",
       "play": "Igranje"
     },
     "syncPlay": "Ažuriraj vrijeme igranja",

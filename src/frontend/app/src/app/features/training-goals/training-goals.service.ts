@@ -8,6 +8,8 @@ export type GoalStatus = 'none' | 'partial' | 'full';
 export interface TrainingGoal {
   puzzleMinutes: number;
   bookMinutes: number;
+  /** Tagesziel Chessable-Training in Minuten (aktive Zeit von der RepCheck-Extension). */
+  chessableMinutes: number;
   /** Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche. */
   playGames: number;
   weeklyDaysTarget: number;
@@ -18,6 +20,7 @@ export interface TrainingGoal {
 export interface TrainingGoalInput {
   puzzleMinutes: number;
   bookMinutes: number;
+  chessableMinutes: number;
   playGames: number;
   weeklyDaysTarget: number;
 }
@@ -26,7 +29,9 @@ export interface TrackerDay {
   date: string;
   puzzleSeconds: number;
   bookSeconds: number;
-  /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch). */
+  /** Aktiv trainierte Chessable-Sekunden an diesem Tag. */
+  chessableSeconds: number;
+  /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch/Chessable). */
   playGames: number;
   status: GoalStatus;
 }
@@ -54,6 +59,7 @@ export interface TodayProgress {
   goal: TrainingGoal;
   puzzles: CategoryProgress;
   book: CategoryProgress;
+  chessable: CategoryProgress;
   play: PlayProgress;
   status: GoalStatus;
   weekDaysMet: number;

@@ -16,11 +16,14 @@ public class ExtensionController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
     private readonly RepertoireAnalyzeService _analyzeService;
+    private readonly TrainingGoalService _trainingGoalService;
 
-    public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService)
+    public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
+        TrainingGoalService trainingGoalService)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
+        _trainingGoalService = trainingGoalService;
     }
 
     /// <summary>
@@ -85,5 +88,21 @@ public class ExtensionController : BaseApiController
         if (dto.Moves.Count > 600)
             return BadRequest(new { message = "Too many moves (max 600 plies)." });
         return Ok(await _analyzeService.AnalyzeAsync(GetUserId(), dto));
+    }
+
+    /// <summary>
+    /// Meldet ein Häppchen AKTIVER Chessable-Trainingszeit (von der RepCheck-Extension/dem Userscript auf
+    /// chessable.com gemessen). Append-only; fließt in die eigene Kategorie „Chessable" des Trainingsziele-
+    /// Trackers. Zeitstempel wird serverseitig gesetzt; <see cref="ChessableActivityInputDto.SecondsActive"/>
+    /// ist auf 1–3600 s je Aufruf begrenzt (die Extension flusht in kleinen Intervallen).
+    /// </summary>
+    [HttpPost("training-activity")]
+    public async Task<IActionResult> RecordTrainingActivity([FromBody] ChessableActivityInputDto dto)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null || dto.SecondsActive <= 0)
+            return BadRequest(new { message = "secondsActive required and > 0." });
+        await _trainingGoalService.RecordChessableActivityAsync(GetUserId(), dto);
+        return Ok(new { recorded = true });
     }
 }

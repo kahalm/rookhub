@@ -49,6 +49,7 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
+    public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -426,6 +427,17 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
 
             // Fenster-Aggregation je User (AttemptedAt >= windowStart).
+            e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<ChessableActivity>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
         });
 

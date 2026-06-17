@@ -16,6 +16,8 @@ public class UserTrainingGoal
     public int PuzzleMinutes { get; set; }
     /// <summary>Tagesziel Buchstudie/Kurse in Minuten.</summary>
     public int BookMinutes { get; set; }
+    /// <summary>Tagesziel Chessable-Training in Minuten (aktive Zeit, von der RepCheck-Extension gemeldet).</summary>
+    public int ChessableMinutes { get; set; }
     /// <summary>Wochenziel Spielen (Lichess/chess.com): Anzahl Rapid-/Classical-Partien pro ISO-Woche.</summary>
     public int PlayGames { get; set; }
     /// <summary>Wochenziel: Anzahl voll erfüllter Tage (0–7) pro ISO-Woche.</summary>

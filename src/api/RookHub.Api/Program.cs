@@ -217,8 +217,15 @@ try
         // wuerden CSRF-Risiko schaffen, sollten weitere Origins hinzukommen.
         options.AddPolicy("ExtensionPolicy", policy =>
         {
-            policy.WithOrigins("https://www.chess.com")
-                .WithMethods("GET")
+            // Origins, auf denen das RepCheck-Userscript läuft und per fetch direkt zur API spricht
+            // (die Extension-Variante geht CORS-frei über ihren Background-Worker). chessable.com kam
+            // mit der Chessable-Trainingszeit-Meldung dazu; POST für analyze-game + training-activity.
+            policy.WithOrigins(
+                    "https://www.chess.com",
+                    "https://lichess.org",
+                    "https://www.chessable.com",
+                    "https://chessable.com")
+                .WithMethods("GET", "POST")
                 .WithHeaders("Authorization", "Content-Type");
         });
         // Default policy for frontend

@@ -23,7 +23,7 @@ describe('TrainingGoalService', () => {
   });
 
   it('saves a personal override via PUT', () => {
-    svc.saveGoal({ puzzleMinutes: 30, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 })
+    svc.saveGoal({ puzzleMinutes: 30, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 })
       .subscribe(g => expect(g.source).toBe('personal'));
     const req = http.expectOne('/api/training-goals');
     expect(req.request.method).toBe('PUT');

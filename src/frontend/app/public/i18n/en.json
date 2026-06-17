@@ -1283,6 +1283,7 @@
     "cat": {
       "puzzles": "Puzzles",
       "book": "Book / Course",
+      "chessable": "Chessable",
       "play": "Playing"
     },
     "syncPlay": "Update playing time",

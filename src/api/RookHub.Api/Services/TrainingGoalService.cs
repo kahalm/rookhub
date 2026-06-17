@@ -32,6 +32,8 @@ public class TrainingGoalService
     private const int PerPuzzleCapSeconds = 1800;   // 30 min
     /// <summary>Sanity-Obergrenze je Endlos-Session.</summary>
     private const int PerSessionCapSeconds = 14400; // 4 h
+    /// <summary>Obergrenze je Chessable-Zeit-Häppchen (die Extension flusht in kleinen Intervallen).</summary>
+    private const int PerChessableFlushCapSeconds = 3600; // 1 h
     private const int MaxTrackerWeeks = 53;
 
     // ----- Ziel-Auflösung --------------------------------------------------
@@ -42,16 +44,16 @@ public class TrainingGoalService
         var personal = await _db.UserTrainingGoals.AsNoTracking()
             .FirstOrDefaultAsync(g => g.UserId == userId);
         if (personal != null)
-            return Map(personal.PuzzleMinutes, personal.BookMinutes, personal.PlayGames,
+            return Map(personal.PuzzleMinutes, personal.BookMinutes, personal.ChessableMinutes, personal.PlayGames,
                        personal.WeeklyDaysTarget, "personal", null);
 
         var tmpl = await _db.GroupTrainingGoals.AsNoTracking()
             .Where(g => _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == g.GroupId))
             .OrderByDescending(g => g.UpdatedAt)
-            .Select(g => new { g.PuzzleMinutes, g.BookMinutes, g.PlayGames, g.WeeklyDaysTarget, GroupName = g.Group!.Name })
+            .Select(g => new { g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, GroupName = g.Group!.Name })
             .FirstOrDefaultAsync();
         if (tmpl != null)
-            return Map(tmpl.PuzzleMinutes, tmpl.BookMinutes, tmpl.PlayGames,
+            return Map(tmpl.PuzzleMinutes, tmpl.BookMinutes, tmpl.ChessableMinutes, tmpl.PlayGames,
                        tmpl.WeeklyDaysTarget, "group", tmpl.GroupName);
 
         return new TrainingGoalDto { Source = "none" };
@@ -70,7 +72,7 @@ public class TrainingGoalService
         Apply(goal, dto);
         goal.UpdatedAt = now;
         await _db.SaveChangesAsync();
-        return Map(goal.PuzzleMinutes, goal.BookMinutes, goal.PlayGames, goal.WeeklyDaysTarget, "personal", null);
+        return Map(goal.PuzzleMinutes, goal.BookMinutes, goal.ChessableMinutes, goal.PlayGames, goal.WeeklyDaysTarget, "personal", null);
     }
 
     /// <summary>Entfernt den persönlichen Override → der User fällt auf die Gruppen-Vorlage (falls vorhanden) zurück.</summary>
@@ -92,7 +94,7 @@ public class TrainingGoalService
         var g = await _db.GroupTrainingGoals.AsNoTracking().FirstOrDefaultAsync(x => x.GroupId == groupId);
         return g == null
             ? new TrainingGoalDto { Source = "none" }
-            : Map(g.PuzzleMinutes, g.BookMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
+            : Map(g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
     }
 
     public async Task<TrainingGoalDto> SetGroupGoalAsync(int groupId, TrainingGoalInputDto dto)
@@ -107,7 +109,7 @@ public class TrainingGoalService
         Apply(g, dto);
         g.UpdatedAt = now;
         await _db.SaveChangesAsync();
-        return Map(g.PuzzleMinutes, g.BookMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
+        return Map(g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
     }
 
     public async Task DeleteGroupGoalAsync(int groupId)
@@ -118,6 +120,22 @@ public class TrainingGoalService
             _db.GroupTrainingGoals.Remove(g);
             await _db.SaveChangesAsync();
         }
+    }
+
+    // ----- Chessable-Aktivität (von der Extension) -------------------------
+
+    /// <summary>Hängt ein Häppchen aktiver Chessable-Trainingszeit an (Zeitstempel serverseitig).
+    /// Fließt über <see cref="AggregateAsync"/> in die Kategorie „Chessable" des Trackers.</summary>
+    public async Task RecordChessableActivityAsync(int userId, ChessableActivityInputDto dto)
+    {
+        _db.ChessableActivities.Add(new ChessableActivity
+        {
+            UserId = userId,
+            TimeSeconds = Math.Clamp(dto.SecondsActive, 0, PerChessableFlushCapSeconds),
+            MovesTrained = Math.Max(0, dto.MovesTrained),
+            AttemptedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
     }
 
     // ----- Tracker / Heute -------------------------------------------------
@@ -138,8 +156,9 @@ public class TrainingGoalService
                 Date = kv.Key.ToString("yyyy-MM-dd"),
                 PuzzleSeconds = kv.Value.PuzzleSeconds,
                 BookSeconds = kv.Value.BookSeconds,
+                ChessableSeconds = kv.Value.ChessableSeconds,
                 PlayGames = kv.Value.PlayGames,
-                Status = DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, goal),
+                Status = DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, kv.Value.ChessableSeconds, goal),
             })
             .ToList();
 
@@ -166,15 +185,16 @@ public class TrainingGoalService
 
         var weekDaysMet = agg
             .Where(kv => kv.Key >= weekStartKey && kv.Key <= todayKey)
-            .Count(kv => DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, goal) == "full");
+            .Count(kv => DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, kv.Value.ChessableSeconds, goal) == "full");
 
         return new TodayProgressDto
         {
             Goal = goal,
             Puzzles = Category(goal.PuzzleMinutes, t.PuzzleSeconds),
             Book = Category(goal.BookMinutes, t.BookSeconds),
+            Chessable = Category(goal.ChessableMinutes, t.ChessableSeconds),
             Play = PlayCategory(goal.PlayGames, weekPlayGames),
-            Status = DayStatus(t.PuzzleSeconds, t.BookSeconds, goal),
+            Status = DayStatus(t.PuzzleSeconds, t.BookSeconds, t.ChessableSeconds, goal),
             WeekDaysMet = weekDaysMet,
             WeeklyDaysTarget = goal.WeeklyDaysTarget,
         };
@@ -182,14 +202,15 @@ public class TrainingGoalService
 
     // ----- Aggregation -----------------------------------------------------
 
-    private readonly record struct DayActivity(int PuzzleSeconds, int BookSeconds, int PlayGames);
+    private readonly record struct DayActivity(int PuzzleSeconds, int BookSeconds, int ChessableSeconds, int PlayGames);
 
-    /// <summary>Summiert je UTC-Tag (ab <paramref name="windowStartUtc"/>) Sekunden für Puzzles/Buch
-    /// (Einzelversuche gegen Inflation gedeckelt) und die Anzahl Rapid-/Classical-Partien (Spielen).</summary>
+    /// <summary>Summiert je UTC-Tag (ab <paramref name="windowStartUtc"/>) Sekunden für Puzzles/Buch/Chessable
+    /// (Einzelversuche/Häppchen gegen Inflation gedeckelt) und die Anzahl Rapid-/Classical-Partien (Spielen).</summary>
     private async Task<Dictionary<DateOnly, DayActivity>> AggregateAsync(int userId, DateTime windowStartUtc)
     {
         var puzzle = new Dictionary<DateOnly, int>();
         var book = new Dictionary<DateOnly, int>();
+        var chessable = new Dictionary<DateOnly, int>();
         var play = new Dictionary<DateOnly, int>();
 
         static void Add(Dictionary<DateOnly, int> acc, DateTime when, int seconds, int cap)
@@ -228,6 +249,12 @@ public class TrainingGoalService
         foreach (var a in courseAttempts)
             Add(a.Kind == BookKind.Study ? book : puzzle, a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds);
 
+        // Chessable: aktiv trainierte Zeit-Häppchen von der RepCheck-Extension.
+        foreach (var a in await _db.ChessableActivities.AsNoTracking()
+                     .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
+                     .Select(a => new { a.AttemptedAt, a.TimeSeconds }).ToListAsync())
+            Add(chessable, a.AttemptedAt, a.TimeSeconds, PerChessableFlushCapSeconds);
+
         // Spielen: externe Rapid-/Classical-Partien je Tag (Lichess/chess.com) — befüllt PlayTimeDaily.
         foreach (var p in await _db.PlayTimeDailies.AsNoTracking()
                      .Where(p => p.UserId == userId && p.Date >= DateOnly.FromDateTime(windowStartUtc.Date))
@@ -236,22 +263,25 @@ public class TrainingGoalService
 
         var keys = new HashSet<DateOnly>(puzzle.Keys);
         keys.UnionWith(book.Keys);
+        keys.UnionWith(chessable.Keys);
         keys.UnionWith(play.Keys);
         return keys.ToDictionary(k => k, k => new DayActivity(
             puzzle.TryGetValue(k, out var pz) ? pz : 0,
             book.TryGetValue(k, out var bk) ? bk : 0,
+            chessable.TryGetValue(k, out var ch) ? ch : 0,
             play.TryGetValue(k, out var pl) ? pl : 0));
     }
 
     // ----- Helfer ----------------------------------------------------------
 
-    /// <summary>Tagesstatus aus den Tageszielen Puzzles + Buch (Spielen ist ein Wochenziel, zählt hier nicht):
+    /// <summary>Tagesstatus aus den Tageszielen Puzzles + Buch + Chessable (Spielen ist ein Wochenziel, zählt hier nicht):
     /// "none" wenn keins erreicht, "full" wenn alle gesetzten erreicht, sonst "partial".</summary>
-    internal static string DayStatus(int puzzleSec, int bookSec, TrainingGoalDto goal)
+    internal static string DayStatus(int puzzleSec, int bookSec, int chessableSec, TrainingGoalDto goal)
     {
         int targets = 0, met = 0;
         if (goal.PuzzleMinutes > 0) { targets++; if (puzzleSec >= goal.PuzzleMinutes * 60) met++; }
         if (goal.BookMinutes > 0) { targets++; if (bookSec >= goal.BookMinutes * 60) met++; }
+        if (goal.ChessableMinutes > 0) { targets++; if (chessableSec >= goal.ChessableMinutes * 60) met++; }
         if (targets == 0 || met == 0) return "none";
         return met == targets ? "full" : "partial";
     }
@@ -275,6 +305,7 @@ public class TrainingGoalService
     {
         g.PuzzleMinutes = dto.PuzzleMinutes;
         g.BookMinutes = dto.BookMinutes;
+        g.ChessableMinutes = dto.ChessableMinutes;
         g.PlayGames = dto.PlayGames;
         g.WeeklyDaysTarget = dto.WeeklyDaysTarget;
     }
@@ -283,14 +314,16 @@ public class TrainingGoalService
     {
         g.PuzzleMinutes = dto.PuzzleMinutes;
         g.BookMinutes = dto.BookMinutes;
+        g.ChessableMinutes = dto.ChessableMinutes;
         g.PlayGames = dto.PlayGames;
         g.WeeklyDaysTarget = dto.WeeklyDaysTarget;
     }
 
-    private static TrainingGoalDto Map(int puzzle, int book, int playGames, int weekly, string source, string? groupName) => new()
+    private static TrainingGoalDto Map(int puzzle, int book, int chessable, int playGames, int weekly, string source, string? groupName) => new()
     {
         PuzzleMinutes = puzzle,
         BookMinutes = book,
+        ChessableMinutes = chessable,
         PlayGames = playGames,
         WeeklyDaysTarget = weekly,
         Source = source,

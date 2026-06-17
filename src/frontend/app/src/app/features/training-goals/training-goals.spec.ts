@@ -20,7 +20,7 @@ describe('toMinutes', () => {
 });
 
 describe('orderHistory', () => {
-  const day = (date: string): TrackerDay => ({ date, puzzleSeconds: 0, bookSeconds: 0, playGames: 0, status: 'none' });
+  const day = (date: string): TrackerDay => ({ date, puzzleSeconds: 0, bookSeconds: 0, chessableSeconds: 0, playGames: 0, status: 'none' });
 
   it('returns days newest-first without mutating the input', () => {
     const input = [day('2026-06-01'), day('2026-06-02'), day('2026-06-03')];

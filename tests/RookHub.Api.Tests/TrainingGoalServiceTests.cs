@@ -51,8 +51,8 @@ public class TrainingGoalServiceTests : IDisposable
         await _db.SaveChangesAsync();
     }
 
-    private static TrainingGoalInputDto Input(int puzzle = 0, int book = 0, int play = 0, int weekly = 0)
-        => new() { PuzzleMinutes = puzzle, BookMinutes = book, PlayGames = play, WeeklyDaysTarget = weekly };
+    private static TrainingGoalInputDto Input(int puzzle = 0, int book = 0, int play = 0, int weekly = 0, int chessable = 0)
+        => new() { PuzzleMinutes = puzzle, BookMinutes = book, PlayGames = play, WeeklyDaysTarget = weekly, ChessableMinutes = chessable };
 
     // ---- Effektives Ziel --------------------------------------------------
 
@@ -232,6 +232,76 @@ public class TrainingGoalServiceTests : IDisposable
         var day = Assert.Single(res.Days);
         Assert.Equal(750, day.PuzzleSeconds);   // 200 + 250 + 300, kein Cap (je < 1800)
         Assert.Equal("full", day.Status);
+    }
+
+    // ---- Chessable-Aktivität ---------------------------------------------
+
+    [Fact]
+    public async Task RecordChessableActivity_PersistsChunk_AndClampsToFlushCap()
+    {
+        var u = await CreateUserAsync();
+
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto { SecondsActive = 90, MovesTrained = 4 });
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto { SecondsActive = 99999, MovesTrained = 1 });
+
+        var rows = await _db.ChessableActivities.Where(a => a.UserId == u.Id).OrderBy(a => a.Id).ToListAsync();
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(90, rows[0].TimeSeconds);
+        Assert.Equal(4, rows[0].MovesTrained);
+        Assert.Equal(3600, rows[1].TimeSeconds);   // auf PerChessableFlushCapSeconds gedeckelt
+    }
+
+    [Fact]
+    public async Task Tracker_ChessableActivity_CountsAsChessableCategory_AndAccumulates()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(chessable: 10)); // 600 s
+        var now = DateTime.UtcNow;
+
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 300, MovesTrained = 10, AttemptedAt = now });
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 400, MovesTrained = 12, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetTrackerAsync(u.Id, 1);
+        var day = Assert.Single(res.Days);
+        Assert.Equal(700, day.ChessableSeconds);   // 300 + 400 akkumuliert
+        Assert.Equal(0, day.PuzzleSeconds);
+        Assert.Equal(0, day.BookSeconds);
+        Assert.Equal("full", day.Status);          // Chessable ist ein Tagesziel
+    }
+
+    [Fact]
+    public async Task Today_ChessableCategory_ReflectsGoalAndDoneSeconds()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(chessable: 20)); // 1200 s
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 600, MovesTrained = 5, AttemptedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var today = await _service.GetTodayAsync(u.Id);
+        Assert.Equal(20, today.Goal.ChessableMinutes);
+        Assert.Equal(20, today.Chessable.TargetMinutes);
+        Assert.Equal(600, today.Chessable.DoneSeconds);
+        Assert.False(today.Chessable.Met);          // 600 < 1200
+        // Einzige gesetzte Kategorie nicht erreicht → "none" (partial erst, wenn ≥1 Kategorie voll erfüllt ist).
+        Assert.Equal("none", today.Status);
+    }
+
+    [Fact]
+    public async Task Today_ChessablePartialWithOtherCategory_IsPartial()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(puzzle: 10, chessable: 10)); // je 600 s
+        var now = DateTime.UtcNow;
+
+        _db.Puzzles.Add(new Puzzle { Id = 1, LichessId = "p1", Fen = "x", Moves = "x", Rating = 1500 });
+        await _db.SaveChangesAsync();
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 1, Solved = true, TimeSpentSeconds = 600, AttemptedAt = now });
+        // Chessable-Ziel gesetzt, aber keine Chessable-Zeit → nicht erfüllt.
+        await _db.SaveChangesAsync();
+
+        var today = await _service.GetTodayAsync(u.Id);
+        Assert.Equal("partial", today.Status);
     }
 
     [Fact]

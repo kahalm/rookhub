@@ -26,7 +26,8 @@ public class ExtensionControllerTests : IDisposable
         var cache = new MemoryCache(new MemoryCacheOptions());
         var analyzeService = new RepertoireAnalyzeService(_db, cache);
         _service = new RepertoireService(_db, analyzeService);
-        _controller = new ExtensionController(_service, analyzeService);
+        var trainingGoalService = new TrainingGoalService(_db);
+        _controller = new ExtensionController(_service, analyzeService, trainingGoalService);
     }
 
     public void Dispose() => _db.Dispose();
@@ -209,5 +210,43 @@ public class ExtensionControllerTests : IDisposable
         SetUser(user.Id, scope: "admin");
         var result = await _controller.GetPgn(rep.Id);
         Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task RecordTrainingActivity_PersistsRow()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var result = await _controller.RecordTrainingActivity(new ChessableActivityInputDto { SecondsActive = 120, MovesTrained = 8 });
+
+        Assert.IsType<OkObjectResult>(result);
+        var row = Assert.Single(_db.ChessableActivities.Where(a => a.UserId == user.Id));
+        Assert.Equal(120, row.TimeSeconds);
+        Assert.Equal(8, row.MovesTrained);
+    }
+
+    [Fact]
+    public async Task RecordTrainingActivity_RejectsNonPositiveSeconds()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var result = await _controller.RecordTrainingActivity(new ChessableActivityInputDto { SecondsActive = 0 });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(_db.ChessableActivities.Where(a => a.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task RecordTrainingActivity_WithForeignScope_Forbidden()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "admin");
+
+        var result = await _controller.RecordTrainingActivity(new ChessableActivityInputDto { SecondsActive = 60 });
+
+        Assert.IsType<ForbidResult>(result);
+        Assert.Empty(_db.ChessableActivities.Where(a => a.UserId == user.Id));
     }
 }

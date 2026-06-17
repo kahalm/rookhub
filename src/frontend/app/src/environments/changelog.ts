@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.152.7';
+export const APP_VERSION = '0.153.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.153.0", date: "2026-06-17", changes: [
+    { en: "Training goals: new \"Chessable\" category. The RepCheck browser extension now measures your active training time on chessable.com and reports it to RookHub, where it counts towards a daily Chessable minutes goal — shown in Today, the tracker heatmap and the daily history alongside Puzzles and Book/Course.", de: "Trainingsziele: neue Kategorie „Chessable\". Die RepCheck-Browser-Extension misst jetzt deine aktive Trainingszeit auf chessable.com und meldet sie an RookHub, wo sie auf ein tägliches Chessable-Minutenziel einzahlt — sichtbar in „Heute\", in der Tracker-Heatmap und in der Tageshistory neben Puzzles und Buch/Kurs." },
+  ]},
   { version: "0.152.7", date: "2026-06-17", changes: [
     { en: "Sending a puzzle to several friends at once is now faster and notifies all recipients in one atomic step (instead of one database round-trip per friend).", de: "Ein Puzzle an mehrere Freunde gleichzeitig zu schicken ist jetzt schneller und benachrichtigt alle Empfänger in einem atomaren Schritt (statt einer Datenbank-Abfrage pro Freund)." },
   ]},

@@ -62,7 +62,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   addMemberUserId: number | null = null;
 
   /** Trainingsziel-Vorlage der ausgewählten Gruppe (Tagesziele je Kategorie + Wochenziel). */
-  goalEdit = { puzzleMinutes: 0, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
+  goalEdit = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
   goalHasTemplate = false;
   goalLoading = false;
 
@@ -640,6 +640,7 @@ export class AdminComponent implements OnInit, OnDestroy {
         this.goalEdit = {
           puzzleMinutes: g.puzzleMinutes,
           bookMinutes: g.bookMinutes,
+          chessableMinutes: g.chessableMinutes,
           playGames: g.playGames,
           weeklyDaysTarget: g.weeklyDaysTarget,
         };
@@ -658,6 +659,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     const goal = {
       puzzleMinutes: clamp(this.goalEdit.puzzleMinutes, 600),
       bookMinutes: clamp(this.goalEdit.bookMinutes, 600),
+      chessableMinutes: clamp(this.goalEdit.chessableMinutes, 600),
       playGames: clamp(this.goalEdit.playGames, 200),
       weeklyDaysTarget: clamp(this.goalEdit.weeklyDaysTarget, 7),
     };
@@ -673,7 +675,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.adminService.deleteGroupTrainingGoal(groupId).subscribe({
       next: () => {
         this.goalHasTemplate = false;
-        this.goalEdit = { puzzleMinutes: 0, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
+        this.goalEdit = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
         this.snackbar.info(this.translate.instant('admin.groups.goal.cleared'));
       },
       error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),

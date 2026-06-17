@@ -149,6 +149,10 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                 <input matInput type="number" min="0" max="600" [(ngModel)]="edit.bookMinutes" />
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'trainingGoals.cat.chessable' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.chessableMinutes" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
                 <input matInput type="number" min="0" max="200" [(ngModel)]="edit.playGames" />
               </mat-form-field>
@@ -203,6 +207,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                       <th class="th-date">{{ 'trainingGoals.dateCol' | translate }}</th>
                       <th>{{ 'trainingGoals.cat.puzzles' | translate }}</th>
                       <th>{{ 'trainingGoals.cat.book' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.chessable' | translate }}</th>
                       <th>{{ 'trainingGoals.cat.play' | translate }}</th>
                     </tr>
                   </thead>
@@ -212,6 +217,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                         <td class="td-date">{{ d.date }}</td>
                         <td>{{ mins(d.puzzleSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
                         <td>{{ mins(d.bookSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ mins(d.chessableSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
                         <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
                       </tr>
                     }
@@ -279,7 +285,7 @@ export class TrainingGoalsComponent implements OnInit {
   tracker: GoalCell[][] = [];
   /** Tage mit Aktivität, neueste zuerst — für die Tageshistory-Tabelle. */
   historyDays: TrackerDay[] = [];
-  edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
+  edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
 
   constructor(
     private service: TrainingGoalService,
@@ -289,7 +295,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   get hasGoal(): boolean {
     const g = this.goal;
-    return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.playGames > 0);
+    return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.chessableMinutes > 0 || g.playGames > 0);
   }
 
   /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
@@ -322,6 +328,7 @@ export class TrainingGoalsComponent implements OnInit {
     this.edit = {
       puzzleMinutes: goal.puzzleMinutes,
       bookMinutes: goal.bookMinutes,
+      chessableMinutes: goal.chessableMinutes,
       playGames: goal.playGames,
       weeklyDaysTarget: goal.weeklyDaysTarget,
     };
@@ -332,6 +339,7 @@ export class TrainingGoalsComponent implements OnInit {
     const input: TrainingGoalInput = {
       puzzleMinutes: this.clamp(this.edit.puzzleMinutes, 600),
       bookMinutes: this.clamp(this.edit.bookMinutes, 600),
+      chessableMinutes: this.clamp(this.edit.chessableMinutes, 600),
       playGames: this.clamp(this.edit.playGames, 200),
       weeklyDaysTarget: this.clamp(this.edit.weeklyDaysTarget, 7),
     };
@@ -363,6 +371,7 @@ export class TrainingGoalsComponent implements OnInit {
     const out = [
       { key: 'puzzles', icon: 'extension', ...this.today.puzzles },
       { key: 'book', icon: 'menu_book', ...this.today.book },
+      { key: 'chessable', icon: 'school', ...this.today.chessable },
     ];
     return out.filter(c => c.targetMinutes > 0);
   }
