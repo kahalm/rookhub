@@ -319,7 +319,10 @@ public class ChessableController : BaseApiController
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserCoursesAdmin(int userId, [FromQuery] bool refresh, CancellationToken ct)
     {
-        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
+        // Unbekannter User → 404 (statt der irreführenden „kein Bearer"-400; analog StartImportForUserAdmin).
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == userId, ct))
+            return NotFound(new { message = "User not found" });
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
 
         if (!refresh && !string.IsNullOrEmpty(cred.CachedCoursesJson))
@@ -533,7 +536,9 @@ public class ChessableController : BaseApiController
 
     private static string Mask(string value)
     {
-        if (value.Length <= 8) return new string('*', value.Length);
-        return value[..4] + new string('*', Math.Min(20, value.Length - 8)) + value[^4..];
+        // Nur die letzten 4 Zeichen zur Wiedererkennung zeigen — der Anfang des Bearers wird NICHT
+        // mehr offengelegt (ein Bearer ist ein Geheimnis; minimale Preisgabe genügt fürs „ist gesetzt?").
+        if (value.Length <= 4) return new string('*', value.Length);
+        return new string('*', Math.Min(20, value.Length - 4)) + value[^4..];
     }
 }

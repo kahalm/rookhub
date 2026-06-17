@@ -92,8 +92,9 @@ public class ChessableControllerTests : IDisposable
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<ChessableCredentialResponse>(ok.Value);
         Assert.True(body.HasCredentials);
-        Assert.StartsWith("supe", body.MaskedBearer);
-        Assert.EndsWith("1234", body.MaskedBearer);
+        Assert.False(body.MaskedBearer!.StartsWith("supe"));   // Anfang wird NICHT mehr preisgegeben
+        Assert.EndsWith("1234", body.MaskedBearer);            // nur die letzten 4 zur Wiedererkennung
+        Assert.StartsWith("*", body.MaskedBearer);
         Assert.Contains("*", body.MaskedBearer);
 
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
@@ -344,6 +345,27 @@ public class ChessableControllerTests : IDisposable
         Assert.False(a.ImportedBook);
         Assert.False(b.ImportedBook);        // gehört User 7, nicht dem Admin → weiterhin Button
         Assert.False(b.ImportedRepertoire);
+    }
+
+    [Fact]
+    public async Task GetUserCoursesAdmin_UnknownUser_Returns404_NotMisleading400()
+    {
+        await SeedUserAsync(42);   // nur der Admin existiert, Ziel-User 999 nicht
+
+        var result = await _controller.GetUserCoursesAdmin(999, refresh: false, CancellationToken.None);
+
+        Assert.IsType<NotFoundObjectResult>(result);   // 404 „User not found", nicht 400 „no bearer"
+    }
+
+    [Fact]
+    public async Task GetUserCoursesAdmin_ExistingUserWithoutBearer_Returns400()
+    {
+        await SeedUserAsync(42);
+        await SeedUserAsync(7);    // existiert, hat aber keinen Bearer
+
+        var result = await _controller.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
