@@ -19,16 +19,21 @@ public class NotificationService
     public NotificationService(AppDbContext db) => _db = db;
 
     /// <summary>Legt eine Benachrichtigung für <paramref name="userId"/> an.</summary>
-    public async Task CreateAsync(int userId, string type,
+    public Task CreateAsync(int userId, string type,
+        IReadOnlyDictionary<string, string>? data = null, string? link = null)
+        => CreateManyAsync(new[] { userId }, type, data, link);
+
+    /// <summary>Legt dieselbe Benachrichtigung für mehrere Empfänger in EINEM SaveChanges an.
+    /// Atomar (alle oder keiner) — verhindert Teil-Benachrichtigungen, wenn z. B. der User→Admin-Strom
+    /// alle Admins informiert, und spart die N Einzel-Roundtrips eines Schleifen-CreateAsync.</summary>
+    public async Task CreateManyAsync(IEnumerable<int> userIds, string type,
         IReadOnlyDictionary<string, string>? data = null, string? link = null)
     {
-        _db.Notifications.Add(new Notification
-        {
-            UserId = userId,
-            Type = type,
-            DataJson = data is { Count: > 0 } ? JsonSerializer.Serialize(data, JsonOpts) : null,
-            Link = link,
-        });
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0) return;
+        var json = data is { Count: > 0 } ? JsonSerializer.Serialize(data, JsonOpts) : null;
+        foreach (var userId in ids)
+            _db.Notifications.Add(new Notification { UserId = userId, Type = type, DataJson = json, Link = link });
         await _db.SaveChangesAsync();
     }
 

@@ -197,9 +197,10 @@ public class AdminMessageService
         var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
         // Deep-Link: öffnet im Admin-Bereich direkt den Nachrichten-Tab + diese Konversation.
         var link = $"/admin?tab=messages&thread={userId}";
-        foreach (var adminId in adminIds)
-            await _notifications.CreateAsync(adminId, NotificationType.UserMessageReceived,
-                new Dictionary<string, string> { ["username"] = senderName }, link);
+        // Alle Admins in EINEM SaveChanges benachrichtigen (atomar, statt N Einzel-Saves mit
+        // Teil-Benachrichtigungs-Risiko, falls einer mittendrin fehlschlägt).
+        await _notifications.CreateManyAsync(adminIds, NotificationType.UserMessageReceived,
+            new Dictionary<string, string> { ["username"] = senderName }, link);
 
         return ToDto(msg);
     }

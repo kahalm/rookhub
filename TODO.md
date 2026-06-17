@@ -63,7 +63,7 @@ Read-only-Review über rookhub (API+Frontend), chessresults_crawler, schach-bot,
 - [ ] HIGH `AdminMessageService.EnsureThreadAsync`: PK-Race bei gleichzeitiger Erst-Nachricht (Admin+User parallel) → `DbUpdateException`/500. → Insert in try/catch(DbUpdateException)+Reload oder Upsert.
 - [ ] HIGH ChessableImport: kein atomarer Claim beim Job-Picking (`RunNextAsync`+`RunDetached`) — bei Skalierung/Resume-Sturm Doppelverarbeitung möglich. → RowVersion/`ExecuteUpdate`-Claim der Phase.
 - [ ] MED Challenge-`ResolveAsync`: `solved`/`timeSpentSeconds` clientseitig geglaubt (wie Revenge, aber auf eigene Challenge begrenzt). Serverseitig herleiten erwägen.
-- [ ] MED N+1 im Challenge-Batch (`AreFriendsAsync`+Duplicate-Check je Empfänger); `NotificationService.CreateAsync` macht `SaveChanges` je Admin in Schleife (Teil-Benachrichtigung bei Fehler) → Batch-`CreateMany`.
+- [ ] MED N+1 im Challenge-Batch (`AreFriendsAsync`+Duplicate-Check je Empfänger) → Batch laden. **Teilerledigt (0.152.3):** der `NotificationService.CreateAsync`-Schleifen-Teil (SaveChanges je Admin → Teil-Benachrichtigung bei Fehler) ist gefixt — neue `NotificationService.CreateManyAsync` (ein atomarer SaveChanges), `AdminMessageService.SendFromUserAsync` nutzt sie; `CreateAsync` delegiert jetzt darauf (eine Codepfad). OFFEN bleibt nur die N+1 im Challenge-Batch selbst.
 - [ ] MED `FriendService.SearchUsersAsync`: `LIKE %q%` über 6 Spalten ohne Index (Full-Scan, MariaDB-Profil); Auth-Rate-Limiter IP- statt account-basiert (Credential-Stuffing über viele IPs).
 - [ ] LOW `RunDetached` leerer `catch{}` ohne Log; `Mask` zeigt 8 Zeichen des Bearer; `GetUserCoursesAdmin` ohne User-Existenz-Check (irreführende 400).
 

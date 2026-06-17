@@ -89,6 +89,39 @@ public class NotificationTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateManyAsync_CreatesOnePerRecipient_WithSharedDataAndLink()
+    {
+        await UserAsync(1, "u1");
+        await UserAsync(2, "u2");
+        await UserAsync(3, "u3");
+
+        await _service.CreateManyAsync(new[] { 1, 2, 3 }, NotificationType.UserMessageReceived,
+            new Dictionary<string, string> { ["username"] = "alice" }, "/admin?tab=messages&thread=9");
+
+        Assert.Equal(1, await _service.CountUnseenAsync(1));
+        Assert.Equal(1, await _service.CountUnseenAsync(2));
+        Assert.Equal(1, await _service.CountUnseenAsync(3));
+        Assert.All(await _db.Notifications.ToListAsync(), n =>
+        {
+            Assert.Equal(NotificationType.UserMessageReceived, n.Type);
+            Assert.Equal("/admin?tab=messages&thread=9", n.Link);
+            Assert.Contains("alice", n.DataJson!);
+        });
+    }
+
+    [Fact]
+    public async Task CreateManyAsync_DedupesRecipients_AndNoOpOnEmpty()
+    {
+        await UserAsync(1, "u1");
+
+        await _service.CreateManyAsync(new[] { 1, 1, 1 }, NotificationType.UserMessageReceived);
+        Assert.Equal(1, await _service.CountUnseenAsync(1));   // trotz 3× dieselbe Id nur eine
+
+        await _service.CreateManyAsync(Array.Empty<int>(), NotificationType.UserMessageReceived);
+        Assert.Equal(1, await _db.Notifications.CountAsync());  // leere Liste → nichts angelegt
+    }
+
+    [Fact]
     public async Task CountUnseen_AndMarkAllSeen()
     {
         await UserAsync(1, "u1");
