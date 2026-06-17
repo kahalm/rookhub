@@ -68,7 +68,7 @@ Read-only-Review über rookhub (API+Frontend), chessresults_crawler, schach-bot,
 - [ ] LOW `RunDetached` leerer `catch{}` ohne Log; `Mask` zeigt 8 Zeichen des Bearer; `GetUserCoursesAdmin` ohne User-Existenz-Check (irreführende 400).
 
 ### rookhub Frontend
-- [ ] HIGH Test-Lücke: `InAppNotificationService`, `notification-text.ts`, `messages.component`, `notifications.component` ohne Spec (CLAUDE.md macht Tests zur Pflicht).
+- [x] HIGH Test-Lücke: `InAppNotificationService`, `notification-text.ts`, `messages.component`, `notifications.component` ohne Spec → behoben (0.152.4): 4 neue Specs, 22 Tests (Service: Count/markSeen-Clamp/markAllSeen/reset/Query-Params; notification-text: Key-Wahl inkl. _solved/_failed + Chessable-Suffix + Icon-Map; beide Components direkt instanziiert: loadMore-Pagination/open-markSeen+navigate bzw. load+markUserSeen/send-trim/Fehlerpfade).
 - [ ] MED `/messages` pollt nicht → neue Admin-Nachricht: Badge steigt, Thread bleibt alt (Read-State driftet). → leichtes Polling/Refresh-on-focus.
 - [ ] MED hartcodierter `messagesTabIndex=6` (bricht bei Tab-Umsortierung still); Deep-Link schreibt `tab` nicht in die URL zurück (Reload/Back verliert Tab).
 - [ ] MED Label-Methoden im Template (`translate.instant` je CD-Zyklus während Polling) in chessable/admin/dashboard → beim Update einmal berechnen/cachen.
