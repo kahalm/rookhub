@@ -131,6 +131,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   promotionFilePercent = 0;
   promotionFromBottom = false;
   promotionPieces: PromotionPiece[] = ['q', 'r', 'b', 'n'];
+  /** Zeitpunkt (ms), bis zu dem Klicks/Taps auf den Promotion-Dialog ignoriert werden.
+   *  Der Dialog erscheint genau unter dem Finger (auf dem Zielfeld) — auf Touch-Geräten
+   *  fällt der gerade ausgelöste Zug-Tap sonst direkt auf die oberste Auswahl (Dame)
+   *  durch und wandelt ungewollt in die Dame um. Ein kurzes Fenster schluckt diesen Ghost-Tap. */
+  private promotionGuardUntil = 0;
+  private static readonly PROMOTION_GUARD_MS = 400;
 
   private static readonly PIECE_NAMES: Record<string, Record<PromotionPiece, string>> = {
     'w': { q: 'wQ', r: 'wR', b: 'wB', n: 'wN' },
@@ -280,6 +286,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const destRank = dest[1];
     this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
                                 (this.orientation === 'black' && destRank === '8');
+    this.promotionGuardUntil = Date.now() + PuzzleBoardComponent.PROMOTION_GUARD_MS;
     this.showPromotionOverlay = true;
   }
 
@@ -466,11 +473,14 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.promotionFromBottom = (this.orientation === 'white' && destRank === '1') ||
                                 (this.orientation === 'black' && destRank === '8');
 
+    this.promotionGuardUntil = Date.now() + PuzzleBoardComponent.PROMOTION_GUARD_MS;
     this.showPromotionOverlay = true;
   }
 
   selectPromotion(piece: PromotionPiece): void {
     if (!this.pendingPromotion) return;
+    // Ghost-Tap des Zugs (fällt direkt auf den frisch gerenderten Dialog durch) verwerfen.
+    if (Date.now() < this.promotionGuardUntil) return;
     const { orig, dest } = this.pendingPromotion;
     this.showPromotionOverlay = false;
     this.pendingPromotion = null;
@@ -479,6 +489,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   cancelPromotion(): void {
     if (!this.pendingPromotion) return;
+    // Innerhalb des Guard-Fensters keine versehentliche Abwahl durch den durchfallenden Tap.
+    if (Date.now() < this.promotionGuardUntil) return;
     // Reset the board to undo the visual move chessground already made
     this.showPromotionOverlay = false;
     this.pendingPromotion = null;

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.151.5';
+export const APP_VERSION = '0.151.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.151.6", date: "2026-06-17", changes: [
+    { en: "Pawn promotion on touch devices no longer auto-queens by accident: the move tap could fall through to the freshly shown promotion picker (which appears right under your finger) and instantly pick the queen. The picker now ignores that ghost tap, so you can choose the piece you actually want.", de: "Bauernumwandlung auf Touch-Geräten wandelt nicht mehr versehentlich automatisch in die Dame um: Der Zug-Tap fiel bisher auf den gerade erschienenen Umwandlungs-Dialog (der genau unter dem Finger auftaucht) durch und wählte sofort die Dame. Der Dialog ignoriert diesen Ghost-Tap jetzt, sodass man die gewünschte Figur wirklich auswählen kann." },
+  ]},
   { version: "0.151.5", date: "2026-06-16", changes: [
     { en: "Tournament/player requests now return the accurate status when chess-results.com is the problem: timeout (504), unreachable (502) or crawler overloaded (503), instead of collapsing every case into one generic error.", de: "Turnier-/Spieler-Anfragen liefern jetzt den passenden Status, wenn chess-results.com das Problem ist: Timeout (504), nicht erreichbar (502) oder Crawler überlastet (503) — statt alle Fälle in einen generischen Fehler zu werfen." },
   ]},
