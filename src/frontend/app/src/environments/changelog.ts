@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.152.1';
+export const APP_VERSION = '0.152.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.152.2", date: "2026-06-17", changes: [
+    { en: "Endless mode: a finished run is no longer lost from your history if you leave the game-over screen before clicking \"Continue\" — the run is now saved as soon as it ends, with an extra safety net when you navigate away or close the tab.", de: "Endless-Modus: Ein beendeter Lauf verschwindet nicht mehr aus deiner History, wenn du den Game-Over-Screen verlässt, bevor du auf „Weiter\" klickst — der Lauf wird jetzt beim Verlassen der Seite bzw. beim Schließen des Tabs als Sicherheitsnetz nachträglich gespeichert." },
+  ]},
   { version: "0.152.1", date: "2026-06-17", changes: [
     { en: "Analysis board: fixed an engine crash (\"RuntimeError: unreachable\") that could occur when clicking quickly through moves — the engine now waits for the current search to finish before starting the next position, instead of crashing the analysis.", de: "Analysebrett: Ein Engine-Absturz („RuntimeError: unreachable\") behoben, der beim schnellen Durchklicken von Zügen auftreten konnte — die Engine wartet jetzt das Ende der laufenden Suche ab, bevor sie die nächste Stellung startet, statt die Analyse abstürzen zu lassen." },
   ]},

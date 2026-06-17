@@ -228,6 +228,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   historyView = false;
   archiving = false;
 
+  /** Der laufende/zuletzt beendete Run wurde bereits als Session aufgezeichnet. Verhindert
+   *  Doppel-Posts, wenn mehrere Pfade (Game-Over → „Weiter", Analyse-Absprung, Verlassen der
+   *  Seite) dieselbe Session aufzeichnen wollen. Wird beim Start/Resume eines Runs zurückgesetzt. */
+  private sessionRecorded = false;
+
   // Puzzle DB range
   puzzleRange: PuzzleRatingRange = { min: 100, max: 3000 };
 
@@ -379,6 +384,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.lastSessionId = parseInt(pendingSid, 10) || null;
         sessionStorage.removeItem('rookhub_endless_pending_sid');
       }
+      // Dieser Run wurde vor dem Absprung in die Analyse bereits via endGame() aufgezeichnet
+      // → nicht erneut posten (sonst Doppel-Eintrag durch das ngOnDestroy-Sicherheitsnetz).
+      this.sessionRecorded = true;
       this.state = 'GAME_OVER';
       return;
     }
@@ -396,6 +404,21 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.abortSolver();
     clearCrazyStyles();
     clearVisualizationHide();
+    this.rescueUnrecordedRun();
+  }
+
+  /** Tab/Fenster wird geschlossen oder in den Hintergrund verschoben. Best-effort-Variante des
+   *  Sicherheitsnetzes für den Fall, dass ngOnDestroy nicht (rechtzeitig) läuft. */
+  @HostListener('window:pagehide')
+  onPageHide(): void { this.rescueUnrecordedRun(); }
+
+  /** Sicherheitsnetz: Ein beendeter Lauf (0 Leben), den der User verlässt, BEVOR er im Game-Over
+   *  „Weiter" geklickt hat, würde sonst nirgends landen — bei 0 Leben ist der aktive Lauf bereits
+   *  vom Server gelöscht und endGame() lief nie. Hier wird er deshalb noch aufgezeichnet. Reine
+   *  History-Ansichten (?session=ID) sind ausgenommen; ensureSessionRecorded() ist idempotent. */
+  private rescueUnrecordedRun(): void {
+    if (this.historyView) return;
+    if (this.lives <= 0 && !this.sessionRecorded) this.ensureSessionRecorded();
   }
 
   // --- Config ---
@@ -550,6 +573,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.activeGameState = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
+    this.sessionRecorded = false;   // frischer Run → noch nicht aufgezeichnet
     this.computeFasttrackSteps();   // fasttrackAvgFirst/Second = T1/T2 für die Ketten-Kurve
     this.startSessionTimer();
 
@@ -692,6 +716,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.isNewHighscore = false;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
+    this.sessionRecorded = false;   // fortgesetzter Run läuft weiter → noch nicht aufgezeichnet
     this.computeFasttrackSteps();
     // Resume timer from where it left off
     this.sessionStart = Date.now() - this.sessionSeconds * 1000;
@@ -807,6 +832,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.isNewHighscore = false;
       this.lastSessionId = detail.id;
       this.lastSessionArchived = detail.isArchived;
+      this.sessionRecorded = true;   // reine History-Ansicht → nie (neu) aufzeichnen
       this.state = 'GAME_OVER';
     });
   }
@@ -839,7 +865,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private winRun(): void {
     this.stopSessionTimer();
     this.checkHighscore();
-    this.recordSession();
+    this.ensureSessionRecorded();
     this.storage.saveActiveGameLocal(null);
     this.storage.saveProgressImmediate(this.config, this.highscore, null);
     this.state = 'WON';
@@ -1145,7 +1171,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private endGame(): void {
     this.stopSessionTimer();
     this.checkHighscore();
-    this.recordSession();
+    this.ensureSessionRecorded();
     // Clear active game and sync final state to server
     this.storage.saveActiveGameLocal(null);
     this.storage.saveProgressImmediate(this.config, this.highscore, null);
@@ -1275,6 +1301,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     };
     this.storage.saveActiveGameLocal(gameState);
     this.storage.saveProgressToServer(this.config, this.highscore, gameState);
+  }
+
+  /** Zeichnet den beendeten Lauf genau EINMAL auf (idempotent). Egal über welchen Pfad der Run
+   *  endet — „Weiter" im Game-Over, Absprung in die Analyse oder Verlassen der Seite — die Session
+   *  landet so garantiert in der History (statt verloren zu gehen, wenn der aktive Lauf bei 0 Leben
+   *  schon vom Server gelöscht wurde und endGame() nie aufgerufen wird). */
+  private ensureSessionRecorded(): void {
+    if (this.sessionRecorded) return;
+    this.sessionRecorded = true;
+    this.recordSession();
   }
 
   private recordSession(): void {

@@ -279,3 +279,63 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     c.ngOnDestroy();
   });
 });
+
+describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
+  function trackSessions(c: any): any[] {
+    const sessions: any[] = [];
+    c['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
+    return sessions;
+  }
+
+  it('zeichnet einen beendeten Run auf, wenn der User die Seite verlässt BEVOR er „Weiter" klickt (Sicherheitsnetz)', () => {
+    const c = makeComponent();
+    const sessions = trackSessions(c);
+    c.startGame();
+    c.lives = 1;
+    c['loseLife']();                 // letztes Leben weg → lives 0, FAILED, kein „Weiter"
+    expect(c.state).toBe('FAILED');
+    expect(sessions.length).toBe(0);   // wartet normalerweise auf den Continue-Klick (endGame)
+    c.ngOnDestroy();                   // User wechselt z.B. zur History → Sicherheitsnetz greift
+    expect(sessions.length).toBe(1);
+  });
+
+  it('postet NICHT doppelt, wenn der Run schon via „Weiter" (endGame) aufgezeichnet wurde', () => {
+    const c = makeComponent();
+    const sessions = trackSessions(c);
+    c.startGame();
+    c.lives = 0;
+    c.continueAfterWrong();          // endGame → 1 Aufzeichnung
+    expect(sessions.length).toBe(1);
+    c.ngOnDestroy();                 // Verlassen darf KEINEN zweiten Post auslösen
+    expect(sessions.length).toBe(1);
+  });
+
+  it('zeichnet nichts auf, wenn nur ein Lauf aus der History angesehen wird', () => {
+    const c = makeComponent();
+    const sessions = trackSessions(c);
+    c.historyView = true;
+    c.lives = 0;                     // History-Detail zeigt einen abgeschlossenen (0-Leben-)Lauf
+    c.ngOnDestroy();
+    expect(sessions.length).toBe(0);
+  });
+
+  it('das pagehide-Handler rettet einen noch nicht aufgezeichneten beendeten Lauf ebenfalls (genau einmal)', () => {
+    const c = makeComponent();
+    const sessions = trackSessions(c);
+    c.startGame();
+    c.lives = 1;
+    c['loseLife']();
+    c.onPageHide();
+    expect(sessions.length).toBe(1);
+    c.ngOnDestroy();                 // kein zweiter Post nach pagehide
+    expect(sessions.length).toBe(1);
+  });
+
+  it('ein noch laufender Run (Leben übrig) wird beim Verlassen NICHT als beendet aufgezeichnet', () => {
+    const c = makeComponent();
+    const sessions = trackSessions(c);
+    c.startGame();                   // lives = 3
+    c.ngOnDestroy();
+    expect(sessions.length).toBe(0);
+  });
+});
