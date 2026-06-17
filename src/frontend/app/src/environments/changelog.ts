@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.151.6';
+export const APP_VERSION = '0.152.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.152.0", date: "2026-06-17", changes: [
+    { en: "Analysis board: pawn promotion now lets you pick the piece (queen, rook, bishop or knight) instead of always auto-queening — using the same picker as the puzzle board, including the mobile ghost-tap protection.", de: "Analysebrett: Bei der Bauernumwandlung kannst du jetzt die Figur wählen (Dame, Turm, Läufer oder Springer) statt automatisch immer die Dame zu bekommen — mit demselben Auswahl-Dialog wie im Puzzle-Brett, inkl. Schutz gegen den versehentlichen Touch-Ghost-Tap." },
+  ]},
   { version: "0.151.6", date: "2026-06-17", changes: [
     { en: "Pawn promotion on touch devices no longer auto-queens by accident: the move tap could fall through to the freshly shown promotion picker (which appears right under your finger) and instantly pick the queen. The picker now ignores that ghost tap, so you can choose the piece you actually want.", de: "Bauernumwandlung auf Touch-Geräten wandelt nicht mehr versehentlich automatisch in die Dame um: Der Zug-Tap fiel bisher auf den gerade erschienenen Umwandlungs-Dialog (der genau unter dem Finger auftaucht) durch und wählte sofort die Dame. Der Dialog ignoriert diesen Ghost-Tap jetzt, sodass man die gewünschte Figur wirklich auswählen kann." },
   ]},

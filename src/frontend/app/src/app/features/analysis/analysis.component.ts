@@ -298,14 +298,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   // ---- User move ----
-  onMove(ev: { orig: Key; dest: Key }): void {
+  onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     let c: Chess;
     try { c = new Chess(this.currentFen); } catch { return; }
     const piece = c.get(ev.orig as any);
     const isPromo = piece?.type === 'p' && (ev.dest[1] === '8' || ev.dest[1] === '1');
+    // Umwandlungsfigur kommt jetzt aus dem Picker; Dame nur als Fallback.
+    const promotion = isPromo ? (ev.promotion ?? 'q') : undefined;
     let mv;
     try {
-      mv = c.move({ from: ev.orig, to: ev.dest, promotion: isPromo ? 'q' : undefined });
+      mv = c.move({ from: ev.orig, to: ev.dest, promotion });
     } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
     if (!mv) { this.refresh(); return; }
 
