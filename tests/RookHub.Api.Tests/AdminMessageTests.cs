@@ -115,6 +115,23 @@ public class AdminMessageTests : IDisposable
     }
 
     [Fact]
+    public async Task EnsureThread_Idempotent_RepeatedMessages_KeepSingleThreadRow_AndClaim()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+
+        await _service.SendFromUserAsync(2, "erste");        // User startet → Thread wird angelegt
+        await _service.SendFromAdminAsync(1, 2, "antwort");  // findet Thread + übernimmt (Claim)
+        await _service.SendFromUserAsync(2, "nochmal");      // findet Thread erneut
+
+        // EnsureThreadAsync wurde 3× durchlaufen → trotzdem genau EINE Thread-Zeile (keine PK-Dubletten).
+        Assert.Equal(1, await _db.MessageThreads.CountAsync(t => t.UserId == 2));
+        Assert.Equal(3, await _db.AdminMessages.CountAsync(m => m.UserId == 2));
+        var thread = await _db.MessageThreads.SingleAsync(t => t.UserId == 2);
+        Assert.Equal(1, thread.ClaimedByAdminId);            // Claim der Admin-Antwort bleibt erhalten
+    }
+
+    [Fact]
     public async Task SendFromAdmin_AutoClaimsUnassignedThread()
     {
         await UserAsync(1, "admin1", admin: true);

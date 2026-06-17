@@ -32,16 +32,33 @@ public class AdminMessageService
         return body.Length > MaxBodyLength ? body[..MaxBodyLength] : body;
     }
 
-    /// <summary>Stellt sicher, dass die Thread-Metazeile existiert (für Zuweisung/Claim).</summary>
+    /// <summary>Stellt sicher, dass die Thread-Metazeile existiert (für Zuweisung/Claim) und gibt sie
+    /// zurück. Legt die Zeile sofort in EINEM eigenen SaveChanges an, damit der spätere Nachrichten-Insert
+    /// des Aufrufers nicht mit einer parallel angelegten Thread-Zeile kollidiert.
+    /// Schreiben Admin und User die ERSTE Nachricht gleichzeitig, würden sonst beide dieselbe PK
+    /// (<see cref="MessageThread.UserId"/>) einfügen → der zweite SaveChanges wirft. Hier wird der
+    /// PK-Konflikt abgefangen, die eigene (nicht persistierte) Add-Entry verworfen und die inzwischen
+    /// vom anderen Request angelegte Zeile nachgeladen.</summary>
     private async Task<MessageThread> EnsureThreadAsync(int userId)
     {
         var thread = await _db.MessageThreads.FindAsync(userId);
-        if (thread is null)
+        if (thread is not null) return thread;
+
+        thread = new MessageThread { UserId = userId };
+        _db.MessageThreads.Add(thread);
+        try
         {
-            thread = new MessageThread { UserId = userId };
-            _db.MessageThreads.Add(thread);
+            await _db.SaveChangesAsync();
+            return thread;
         }
-        return thread;
+        catch (DbUpdateException)
+        {
+            // Race: ein paralleler Request hat die Thread-Zeile gerade angelegt.
+            _db.Entry(thread).State = EntityState.Detached;
+            var existing = await _db.MessageThreads.FindAsync(userId);
+            if (existing is null) throw;   // anderer Fehler als der erwartete PK-Konflikt
+            return existing;
+        }
     }
 
     // ---- Admin-Seite ----
