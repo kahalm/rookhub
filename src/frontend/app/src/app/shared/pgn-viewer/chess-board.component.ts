@@ -23,19 +23,24 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
   private initAttempts = 0;
+  private rafId?: number;
+  private destroyed = false;
 
   ngAfterViewInit(): void {
     this.initBoard();
   }
 
   private initBoard(): void {
+    // Während der Breite-0-Retries zerstört? Dann kein Chessground/ResizeObserver mehr
+    // auf einem abgekoppelten Element aufbauen (würde sonst nie disconnected).
+    if (this.destroyed) return;
     const el = this.boardEl.nativeElement;
     const hostWidth = (this.boardEl.nativeElement.parentElement as HTMLElement)?.clientWidth
       || el.clientWidth;
 
     if (hostWidth === 0 && this.initAttempts < 10) {
       this.initAttempts++;
-      requestAnimationFrame(() => this.initBoard());
+      this.rafId = requestAnimationFrame(() => this.initBoard());
       return;
     }
 
@@ -75,6 +80,8 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
+    if (this.rafId !== undefined) cancelAnimationFrame(this.rafId);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }

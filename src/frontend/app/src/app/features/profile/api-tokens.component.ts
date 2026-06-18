@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -94,9 +94,10 @@ export class CreateTokenDialogComponent {
     .copied { color: #2e7d32; font-size: 0.85rem; }
   `]
 })
-export class ShowTokenDialogComponent {
+export class ShowTokenDialogComponent implements OnDestroy {
   token: string;
   copied = false;
+  private copyResetTimer?: ReturnType<typeof setTimeout>;
   constructor(public dialogRef: MatDialogRef<ShowTokenDialogComponent>) {
     // Token via dialog data — Workaround mit injection via static (in OpenDialog gesetzt)
     this.token = ShowTokenDialogComponent.pendingToken;
@@ -109,10 +110,15 @@ export class ShowTokenDialogComponent {
     if (!clip) return; // Clipboard-API fehlt (unsicherer Kontext) — Token bleibt manuell kopierbar
     clip.writeText(this.token).then(() => {
       this.copied = true;
-      setTimeout(() => (this.copied = false), 2000);
+      clearTimeout(this.copyResetTimer);
+      this.copyResetTimer = setTimeout(() => (this.copied = false), 2000);
     }).catch(() => {
       // Schreiben verweigert/nicht verfügbar — kein unbehandeltes Promise-Reject
     });
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.copyResetTimer);
   }
 }
 
