@@ -434,7 +434,7 @@
       "deleteConfirm": "Delete this repertoire?",
       "deleteFailed": "Failed to delete repertoire",
       "updateFailed": "Repertoire could not be updated",
-      "extHint": "Tip: with the matching browser extension (currently for Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
+      "extHint": "Tip: with the matching browser extension (for Chrome and Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
       "extHintLink": "Learn more in the help"
     },
     "detail": {
@@ -1479,9 +1479,9 @@
         "t": "Browser extension & userscript (RepCheck)",
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
-          "Two variants with identical functionality exist: a browser extension (currently available as a signed build for Firefox only) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
+          "Two variants with identical functionality exist: a browser extension (available from the Chrome Web Store and, as a signed build, for Firefox) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
           "Setup: create a token under »Extension tokens« in your profile (scope „extension\"), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
-          "Installation, auto-update and details: https://github.com/kahalm/repcheck — the signed Firefox extension is available at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "Installation, auto-update and details: https://github.com/kahalm/repcheck — the extension is on the Chrome Web Store at https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn and as a signed Firefox build at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {

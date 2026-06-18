@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.159.0';
+export const APP_VERSION = '0.159.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.159.1", date: "2026-06-18", changes: [
+    { en: "RepCheck extension links now point to both stores: the help page (»Browser extension & userscript«), the repertoire hint and the Chessable page now link the Chrome Web Store version alongside the signed Firefox build.", de: "RepCheck-Erweiterungs-Links verweisen jetzt auf beide Stores: Die Hilfeseite (»Browser-Erweiterung & Userscript«), der Repertoire-Hinweis und die Chessable-Seite verlinken jetzt die Chrome-Web-Store-Version zusätzlich zur signierten Firefox-Version." },
+  ]},
   { version: "0.159.0", date: "2026-06-18", changes: [
     { en: "New \"Games\" section: games you save from chess.com or lichess with the RepCheck browser extension now appear in RookHub. Replay them on a board, open them straight in the analysis engine, share a game via a unique public link, jump back to the original game, or delete it.", de: "Neuer Bereich „Partien\": Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen jetzt in RookHub. Du kannst sie auf einem Brett nachspielen, direkt in der Analyse-Engine öffnen, über einen eindeutigen öffentlichen Link teilen, zur Originalpartie zurückspringen oder sie löschen." },
   ]},

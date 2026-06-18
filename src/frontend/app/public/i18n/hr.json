@@ -434,7 +434,7 @@
       "deleteConfirm": "Izbrisati ovaj repertoar?",
       "deleteFailed": "Brisanje repertoara nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
-      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (trenutačno za Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
+      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (za Chrome i Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
       "extHintLink": "Saznaj više u pomoći"
     },
     "detail": {
@@ -1479,9 +1479,9 @@
         "t": "Ekstenzija preglednika i userscript (RepCheck)",
         "p": [
           "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
-          "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (trenutačno kao potpisana verzija dostupna samo za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
+          "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (dostupna u Chrome Web Storeu te kao potpisana verzija za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
           "Postavljanje: u profilu pod »Extension tokeni« stvori token (opseg „extension\"), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoju RookHub URL i token te klikni »Poveži«.",
-          "Instalacija, automatsko ažuriranje i pojedinosti: https://github.com/kahalm/repcheck — potpisana Firefox ekstenzija dostupna je na https://addons.mozilla.org/hr/firefox/addon/repcheck/, a Tampermonkey userscript može se uvesti izravno s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "Instalacija, automatsko ažuriranje i pojedinosti: https://github.com/kahalm/repcheck — ekstenzija je dostupna u Chrome Web Storeu na https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn i kao potpisana Firefox verzija na https://addons.mozilla.org/hr/firefox/addon/repcheck/, a Tampermonkey userscript može se uvesti izravno s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
         ]
       },
       "privacy": {

@@ -161,7 +161,8 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                 </ol>
                 <p class="help-repcheck">
                   {{ 'chessable.helpRepcheck' | translate }}
-                  <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener noreferrer">RepCheck</a>.
+                  RepCheck (<a href="https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn" target="_blank" rel="noopener noreferrer">Chrome</a> /
+                  <a href="https://addons.mozilla.org/de/firefox/addon/repcheck/" target="_blank" rel="noopener noreferrer">Firefox</a>).
                 </p>
 
                 @if (bookmarkletHref) {
