@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -79,6 +79,14 @@ export class MessagesComponent implements OnInit {
   constructor(private messageService: MessageService) {}
 
   ngOnInit(): void { this.load(true); }
+
+  /** Kommt der User zum Tab/Fenster zurück, den Thread frisch laden — sonst zeigt /messages eine neue
+   *  Admin-Antwort erst nach Reload, während das Navbar-Badge schon hochgezählt hätte (Read-State driftet).
+   *  Still im Hintergrund (kein Spinner) und nicht während eines laufenden Sendens. */
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (!this.loading && !this.sending) this.load(true);
+  }
 
   private load(markSeen: boolean): void {
     this.messageService.getThread().subscribe({

@@ -71,4 +71,21 @@ describe('MessagesComponent', () => {
 
     expect(c.sending).toBeFalse();
   });
+
+  it('onWindowFocus reloads the thread (so a new admin reply shows without a manual reload)', () => {
+    const svc = makeService();
+    const c = new MessagesComponent(svc);
+    c.ngOnInit();                       // 1. Laden
+    c.onWindowFocus();                  // Rückkehr zum Tab → erneut laden
+    expect(svc.getThread).toHaveBeenCalledTimes(2);
+  });
+
+  it('onWindowFocus does not reload while a send is in flight', () => {
+    const svc = makeService();
+    const c = new MessagesComponent(svc);
+    c.ngOnInit();
+    c.sending = true;
+    c.onWindowFocus();
+    expect(svc.getThread).toHaveBeenCalledTimes(1);   // kein zusätzliches Laden
+  });
 });

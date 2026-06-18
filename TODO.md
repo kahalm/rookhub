@@ -69,7 +69,7 @@ Read-only-Review über rookhub (API+Frontend), chessresults_crawler, schach-bot,
 
 ### rookhub Frontend
 - [x] HIGH Test-Lücke: `InAppNotificationService`, `notification-text.ts`, `messages.component`, `notifications.component` ohne Spec → behoben (0.152.4): 4 neue Specs, 22 Tests (Service: Count/markSeen-Clamp/markAllSeen/reset/Query-Params; notification-text: Key-Wahl inkl. _solved/_failed + Chessable-Suffix + Icon-Map; beide Components direkt instanziiert: loadMore-Pagination/open-markSeen+navigate bzw. load+markUserSeen/send-trim/Fehlerpfade).
-- [ ] MED `/messages` pollt nicht → neue Admin-Nachricht: Badge steigt, Thread bleibt alt (Read-State driftet). → leichtes Polling/Refresh-on-focus.
+- [x] MED `/messages` Refresh-on-focus (0.154.1): `MessagesComponent` lädt den Thread bei `window:focus` neu (still, kein Spinner, nicht während Senden) → neue Admin-Antwort + Read-State sofort aktuell. +2 Specs.
 - [ ] MED hartcodierter `messagesTabIndex=6` (bricht bei Tab-Umsortierung still); Deep-Link schreibt `tab` nicht in die URL zurück (Reload/Back verliert Tab).
 - [ ] MED Label-Methoden im Template (`translate.instant` je CD-Zyklus während Polling) in chessable/admin/dashboard → beim Update einmal berechnen/cachen.
 - [ ] MED Badge-Flackern: optimistisches `markSeen`-Dekrement vs. 60-s-`refreshCount` (server-getrieben vs. optimistisch).
