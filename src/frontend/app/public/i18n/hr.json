@@ -410,6 +410,12 @@
       "acceptRequest": "Prihvaćanje zahtjeva nije uspjelo",
       "declineRequest": "Odbijanje zahtjeva nije uspjelo",
       "removeFriend": "Uklanjanje prijatelja nije uspjelo"
+    },
+    "aria": {
+      "sendRequest": "Pošalji zahtjev za prijateljstvo",
+      "accept": "Prihvati zahtjev",
+      "decline": "Odbij zahtjev",
+      "removeFriend": "Ukloni prijatelja"
     }
   },
   "repertoire": {

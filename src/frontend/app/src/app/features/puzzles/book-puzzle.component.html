@@ -49,6 +49,7 @@
                   @if (inWeekly || inCourse) {
                     <button mat-icon-button class="ctx-back"
                             (click)="inWeekly ? backToWeekly() : backToCourses()"
+                            [attr.aria-label]="(inWeekly ? 'book.weekly.backToWeekly' : 'book.course.backToCourses') | translate"
                             [matTooltip]="(inWeekly ? 'book.weekly.backToWeekly' : 'book.course.backToCourses') | translate">
                       <mat-icon>arrow_back</mat-icon>
                     </button>

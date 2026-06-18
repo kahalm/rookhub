@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.11';
+export const APP_VERSION = '0.155.12';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.12", date: "2026-06-18", changes: [
+    { en: "Accessibility: icon-only buttons that lacked a label (add/accept/decline/remove friend, the puzzle settings gear, the course/weekly back button) now have screen-reader labels.", de: "Barrierefreiheit: Icon-Buttons ohne Beschriftung (Freund hinzufügen/annehmen/ablehnen/entfernen, das Puzzle-Einstellungs-Zahnrad, der Zurück-Button bei Kurs/Wochenpost) haben jetzt Screenreader-Labels." },
+  ]},
   { version: "0.155.11", date: "2026-06-18", changes: [
     { en: "Analysis board: changing the number of lines or the depth now restarts the engine exactly once instead of twice — slightly less churn and a steadier evaluation.", de: "Analysebrett: Das Ändern der Linienzahl oder der Tiefe startet die Engine jetzt genau einmal neu statt zweimal — etwas weniger Last und eine ruhigere Bewertung." },
   ]},

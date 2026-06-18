@@ -48,7 +48,8 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
                 @if (getChessIdentities(user)) {
                   <span matListItemLine class="chess-identities">{{ getChessIdentities(user) }}</span>
                 }
-                <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta>
+                <button mat-icon-button (click)="sendRequest(user.userId)" matListItemMeta
+                        [attr.aria-label]="'friends.aria.sendRequest' | translate" [matTooltip]="'friends.aria.sendRequest' | translate">
                   <mat-icon>person_add</mat-icon>
                 </button>
               </mat-list-item>
@@ -76,7 +77,8 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
                             [attr.aria-label]="'friends.revenge.menu' | translate" [matTooltip]="'friends.revenge.menu' | translate">
                       <mat-icon>sports_martial_arts</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)">
+                    <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)"
+                            [attr.aria-label]="'friends.aria.removeFriend' | translate" [matTooltip]="'friends.aria.removeFriend' | translate">
                       <mat-icon>person_remove</mat-icon>
                     </button>
                   </div>
@@ -94,10 +96,12 @@ import { RevengeService, RevengeNotification } from '../../core/revenge.service'
                 <span matListItemTitle>{{ req.requesterUsername }}</span>
                 <span matListItemLine>{{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
                 <div matListItemMeta>
-                  <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)">
+                  <button mat-icon-button color="primary" (click)="acceptRequest(req.friendshipId)"
+                          [attr.aria-label]="'friends.aria.accept' | translate" [matTooltip]="'friends.aria.accept' | translate">
                     <mat-icon>check</mat-icon>
                   </button>
-                  <button mat-icon-button color="warn" (click)="declineRequest(req.friendshipId)">
+                  <button mat-icon-button color="warn" (click)="declineRequest(req.friendshipId)"
+                          [attr.aria-label]="'friends.aria.decline' | translate" [matTooltip]="'friends.aria.decline' | translate">
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>

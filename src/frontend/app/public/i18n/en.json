@@ -410,6 +410,12 @@
       "acceptRequest": "Failed to accept request",
       "declineRequest": "Failed to decline request",
       "removeFriend": "Failed to remove friend"
+    },
+    "aria": {
+      "sendRequest": "Send friend request",
+      "accept": "Accept request",
+      "decline": "Decline request",
+      "removeFriend": "Remove friend"
     }
   },
   "repertoire": {

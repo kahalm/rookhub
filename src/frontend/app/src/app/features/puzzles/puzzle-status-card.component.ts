@@ -67,7 +67,8 @@ const CK = {
   template: `
     <mat-card class="psc-card">
       <mat-card-content>
-        <button mat-icon-button class="psc-gear" (click)="settingsClicked.emit()">
+        <button mat-icon-button class="psc-gear" (click)="settingsClicked.emit()"
+                [attr.aria-label]="'puzzles.settings.tooltip' | translate">
           <mat-icon>settings</mat-icon>
         </button>
 
