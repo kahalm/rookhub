@@ -104,6 +104,12 @@ public class BookPuzzleDto
     public string? Title { get; set; }
     public string? Chapter { get; set; }
     public string? Comment { get; set; }
+    /// <summary>
+    /// Pro-Zug-Kommentare der Hauptlinie: Schlüssel = 0-basierter Halbzug-Index in <see cref="Moves"/>,
+    /// NACH dessen Zug der Kommentar steht (<c>-1</c> = Einleitung vor dem ersten Zug). Null, wenn keine.
+    /// Das Frontend zeigt sie beim Durchspielen/Review passend zum aktuellen Zug an.
+    /// </summary>
+    public Dictionary<int, string>? MoveComments { get; set; }
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }
     public string? Tags { get; set; }
@@ -119,6 +125,8 @@ public class BookPuzzleImportDto
     public string? Title { get; set; }
     public string? Chapter { get; set; }
     public string? Comment { get; set; }
+    /// <summary>Optionale Pro-Zug-Kommentare (Schlüssel = Halbzug-Index, -1 = Einleitung).</summary>
+    public Dictionary<int, string>? MoveComments { get; set; }
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }
     public string? Tags { get; set; }

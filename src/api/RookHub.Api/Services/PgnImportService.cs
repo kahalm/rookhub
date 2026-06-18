@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Chess;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,8 @@ public partial class PgnImportService
     /// <summary>Ein aus der PGN extrahiertes Puzzle (DB-frei, daher gut testbar).</summary>
     public record ParsedPuzzle(
         string LineId, string Round, string Fen, string Moves, int StartPly,
-        string? Title, string? Chapter, string? Comment);
+        string? Title, string? Chapter, string? Comment,
+        Dictionary<int, string>? MoveComments = null);
 
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
@@ -74,6 +76,7 @@ public partial class PgnImportService
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
 
             var comment = ExtractFirstComment(moveText);
+            var moveComments = ExtractMoveComments(moveText);
             var uci = TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0) { invalid++; continue; }
 
@@ -107,7 +110,8 @@ public partial class PgnImportService
                 StartPly: startPly,
                 Title: string.IsNullOrEmpty(white) ? null : Truncate(white, 300),
                 Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
-                Comment: comment));
+                Comment: comment,
+                MoveComments: moveComments));
         }
         return new ParseResult(result, invalid);
     }
@@ -164,6 +168,61 @@ public partial class PgnImportService
             return string.IsNullOrEmpty(cleaned) ? null : Truncate(cleaned, 5000);
         }
         return null;
+    }
+
+    // ---- Pro-Zug-Kommentare der Hauptlinie --------------------------------
+    /// <summary>
+    /// Sammelt alle Hauptlinien-Kommentare je Halbzug. Schlüssel = 0-basierter Halbzug-Index, NACH
+    /// dessen Zug der Kommentar in der PGN steht; <c>-1</c> = Kommentar vor dem ersten Zug (Einleitung).
+    /// Die Zählung läuft identisch zu <see cref="FindTquMoveIndex"/> / <see cref="TryExtractUciMainline"/>
+    /// (nur Tiefe 0, Varianten <c>(…)</c> werden ignoriert), sodass die Schlüssel exakt zu den UCI-Zügen
+    /// passen. <c>[%…]</c>-Annotationen werden entfernt, Whitespace normalisiert, leere Kommentare
+    /// verworfen, mehrere Kommentare am selben Zug mit Leerzeichen verbunden. <c>null</c> = keine.
+    /// </summary>
+    private static Dictionary<int, string>? ExtractMoveComments(string moveText)
+    {
+        var map = new Dictionary<int, string>();
+        int depth = 0;       // Variantentiefe
+        int sanCount = 0;    // gezählte Hauptlinien-Züge
+        int i = 0, n = moveText.Length;
+        var cur = new StringBuilder();
+
+        void Flush()
+        {
+            if (cur.Length == 0) return;
+            if (IsSanMove(cur.ToString())) sanCount++;
+            cur.Clear();
+        }
+
+        while (i < n)
+        {
+            char c = moveText[i];
+            if (c == '{')
+            {
+                Flush();
+                int j = moveText.IndexOf('}', i + 1);
+                if (j < 0) j = n;
+                if (depth == 0)
+                {
+                    var inner = moveText.Substring(i + 1, Math.Min(j, n) - (i + 1));
+                    var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
+                    if (cleaned.Length > 0)
+                    {
+                        int key = sanCount - 1; // Kommentar gehört zum zuletzt gezählten Zug (-1 = Einleitung)
+                        map[key] = map.TryGetValue(key, out var prev)
+                            ? Truncate($"{prev} {cleaned}", 5000)
+                            : Truncate(cleaned, 5000);
+                    }
+                }
+                i = (j < n) ? j + 1 : n;
+            }
+            else if (c == '(') { Flush(); depth++; i++; }
+            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
+            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
+            else { if (depth == 0) cur.Append(c); i++; }
+        }
+        Flush();
+        return map.Count == 0 ? null : map;
     }
 
     // ---- Hauptvariante als UCI --------------------------------------------
@@ -339,6 +398,7 @@ public partial class PgnImportService
                 Title = p.Title,
                 Chapter = p.Chapter,
                 Comment = p.Comment,
+                MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments),
             });
         }
 

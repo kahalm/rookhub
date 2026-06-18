@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -558,6 +559,7 @@ public class BookPuzzleService
                 Title = dto.Title,
                 Chapter = dto.Chapter,
                 Comment = dto.Comment,
+                MoveComments = dto.MoveComments is { Count: > 0 } ? JsonSerializer.Serialize(dto.MoveComments) : null,
                 Difficulty = dto.Difficulty,
                 BookRating = dto.BookRating,
                 Tags = dto.Tags
@@ -762,9 +764,23 @@ public class BookPuzzleService
         Title = bp.Title,
         Chapter = bp.Chapter,
         Comment = bp.Comment,
+        MoveComments = ParseMoveComments(bp.MoveComments),
         // Metadaten bevorzugt vom Buch (admin-gepflegt), sonst vom Puzzle.
         Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
         BookRating = bp.Book?.Rating ?? bp.BookRating,
         Tags = bp.Book?.Tags ?? bp.Tags
     };
+
+    /// <summary>Deserialisiert die in <see cref="BookPuzzle.MoveComments"/> gespeicherte JSON-Map
+    /// (Halbzug-Index → Kommentar). Defekte/leere Werte → <c>null</c> (nie werfen).</summary>
+    private static Dictionary<int, string>? ParseMoveComments(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var map = JsonSerializer.Deserialize<Dictionary<int, string>>(json);
+            return map is { Count: > 0 } ? map : null;
+        }
+        catch { return null; }
+    }
 }

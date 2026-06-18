@@ -65,6 +65,10 @@ export interface BookPuzzleDto {
   title?: string;
   chapter?: string;
   comment?: string;
+  /** Pro-Zug-Kommentare: Schlüssel = 0-basierter Halbzug-Index in `moves`, NACH dessen Zug der
+   *  Kommentar steht ("-1" = Einleitung vor dem ersten Zug). Wird beim Durchspielen/Review
+   *  passend zum aktuellen Zug angezeigt. JSON-Objektschlüssel sind Strings. */
+  moveComments?: { [ply: string]: string };
   difficulty?: string;
   bookRating?: number;
   tags?: string;

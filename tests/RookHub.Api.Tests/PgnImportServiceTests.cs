@@ -45,6 +45,68 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal("Italian Idea", p.Title);
         Assert.Equal("Kapitel 5", p.Chapter);
         Assert.Equal("Die Pointe ist Entwicklung.", p.Comment); // [%tqu] entfernt
+        // Einleitungskommentar (vor dem ersten Zug) landet unter Schlüssel -1, [%tqu] entfernt.
+        Assert.NotNull(p.MoveComments);
+        Assert.Equal("Die Pointe ist Entwicklung.", p.MoveComments![-1]);
+    }
+
+    [Fact]
+    public void ParsePgn_CollectsPerMoveComments_KeyedByHalfMoveIndex_IgnoringVariations()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{Intro.} 2. Nf3 {Develops the knight.} Nc6 (2... d6 {Philidor — Nebenvariante.}) 3. Bb5 {The pin.} a6 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+        Assert.Equal("g1f3 b8c6 f1b5 a7a6", p.Moves);
+        Assert.NotNull(p.MoveComments);
+        var mc = p.MoveComments!;
+        Assert.Equal("Intro.", mc[-1]);              // vor dem ersten Zug
+        Assert.Equal("Develops the knight.", mc[0]);  // nach Nf3 (Halbzug 0)
+        Assert.Equal("The pin.", mc[2]);              // nach Bb5 (Halbzug 2)
+        Assert.False(mc.ContainsKey(1));              // Nc6 hat keinen Kommentar
+        Assert.False(mc.ContainsKey(3));              // a6 hat keinen Kommentar
+        // Varianten-Kommentar (Philidor) wird NICHT mitgezählt.
+        Assert.DoesNotContain(mc.Values, v => v.Contains("Philidor"));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_PersistsMoveComments_RoundtripsThroughMapToDto()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{Intro.} 2. Nf3 {Develops the knight.} Nc6 3. Bb5 {The pin.} a6 *
+";
+        await _service.ImportFileAsync("rt.pgn", pgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.NotNull(bp.MoveComments);                       // als JSON-String in der DB
+
+        var dto = BookPuzzleService.MapToDto(bp);              // deserialisiert wieder zur Map
+        Assert.NotNull(dto.MoveComments);
+        Assert.Equal("Intro.", dto.MoveComments![-1]);
+        Assert.Equal("Develops the knight.", dto.MoveComments![0]);
+        Assert.Equal("The pin.", dto.MoveComments![2]);
+    }
+
+    [Fact]
+    public void ParsePgn_NoComments_LeavesMoveCommentsNull()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("n.pgn", pgn).Puzzles);
+        Assert.Null(p.MoveComments);
     }
 
     [Fact]

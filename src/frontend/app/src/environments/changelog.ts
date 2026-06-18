@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.19';
+export const APP_VERSION = '0.156.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.156.0", date: "2026-06-18", changes: [
+    { en: "Courses: move comments from the book are now shown while you step through a line. When you review the solution or click through the full game (◀/▶), the comment attached to each move appears below the board — the same explanations you'd see in the original course. (Applies to all book-based modes; existing courses need to be re-imported to pick up their comments.)", de: "Kurse: Zug-Kommentare aus dem Buch werden jetzt beim Durchspielen einer Linie angezeigt. Wenn du die Lösung durchgehst oder die ganze Partie durchklickst (◀/▶), erscheint der Kommentar zum jeweiligen Zug unter dem Brett — dieselben Erklärungen wie im Originalkurs. (Gilt für alle buchbasierten Modi; bestehende Kurse müssen einmal neu importiert werden, damit ihre Kommentare erscheinen.)" },
+  ]},
   { version: "0.155.18", date: "2026-06-18", changes: [
     { en: "Accessibility: the changelog and quick-start pop-ups can now be closed with Escape, keep keyboard focus inside while open, and are announced as dialogs; the version number in the footer is now keyboard-operable.", de: "Barrierefreiheit: Die Changelog- und Schnellstart-Overlays lassen sich jetzt mit Escape schließen, halten den Tastaturfokus, solange sie offen sind, und werden als Dialog angekündigt; die Versionsnummer im Footer ist jetzt per Tastatur bedienbar." },
   ]},

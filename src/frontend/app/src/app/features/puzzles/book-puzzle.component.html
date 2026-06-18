@@ -254,6 +254,16 @@
             />
           }
 
+          <!-- Zug-Kommentar (Buch-Kommentar zum aktuell durchgespielten Zug) -->
+          @if (reviewMode && moveComment) {
+            <mat-card class="move-comment-card" appearance="outlined">
+              <mat-card-content>
+                <mat-icon>chat_bubble_outline</mat-icon>
+                <p>{{ moveComment }}</p>
+              </mat-card-content>
+            </mat-card>
+          }
+
           <!-- Untere Aktionen: Share (immer) + Ganze Partie (nach Lösen) -->
           @if (puzzle) {
             <div class="bottom-actions">

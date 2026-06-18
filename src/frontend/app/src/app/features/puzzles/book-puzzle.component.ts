@@ -107,6 +107,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   // reviewMode/reviewIndex in BasePuzzleSolver).
   solutionReview = false;
 
+  /** Kommentar des zuletzt durchgespielten Zugs (Bücher kommentieren oft jeden Zug). Wird im
+   *  Review/Durchspielen passend zur aktuellen Stellung gesetzt; null = kein Kommentar hier. */
+  moveComment: string | null = null;
+
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
   bookNavLoading = false;
@@ -640,6 +644,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.courseAttemptRecorded = false;
     this.reviewMode = false;
     this.solutionReview = false;
+    this.moveComment = null;
     this.showEval = false;
     this.initialEval = '';
     this.currentEval = '';
@@ -722,6 +727,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
     this.dests = new Map();
+    // Lösungs-Review: index = Anzahl Lösungszüge ab Trainingsstart; absoluter Halbzug = start + index.
+    this.moveComment = this.commentForPlyPlayed(start + index - 1);
+  }
+
+  /** Kommentar, der zum zuletzt gespielten Halbzug gehört. <paramref> ist der 0-basierte Index
+   *  dieses Zugs in `moves` (-1 = Einleitung, bevor ein Zug gespielt wurde). */
+  private commentForPlyPlayed(plyPlayed: number): string | null {
+    const mc = this.puzzle?.moveComments;
+    if (!mc) return null;
+    return mc[String(plyPlayed)] ?? null;
   }
 
   protected override enterSolutionReview(): void {
@@ -778,11 +793,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
     this.dests = new Map();
+    // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
+    this.moveComment = this.commentForPlyPlayed(index - 1);
   }
 
   exitReview(): void {
     this.reviewMode = false;
     this.solutionReview = false;
+    this.moveComment = null;
     if (this.puzzle) this.setupPuzzle(this.puzzle);
   }
 

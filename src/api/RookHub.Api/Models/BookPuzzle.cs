@@ -42,6 +42,15 @@ public class BookPuzzle
     [MaxLength(5000)]
     public string? Comment { get; set; }
 
+    /// <summary>
+    /// Pro-Zug-Kommentare der Hauptlinie als JSON-Objekt <c>{ "plyIndex": "text" }</c>. Der Schlüssel
+    /// ist der 0-basierte Halbzug-Index in <see cref="Moves"/>, NACH dessen Zug der Kommentar in der
+    /// PGN steht; <c>-1</c> = Einleitungskommentar vor dem ersten Zug. Null/leer, wenn das Buch keine
+    /// Zug-Kommentare hat. Wird beim Durchspielen/Review im Frontend Schritt für Schritt angezeigt.
+    /// (LONGTEXT — keine Längenbegrenzung, ganze Bücher können sehr ausführlich kommentiert sein.)
+    /// </summary>
+    public string? MoveComments { get; set; }
+
     [MaxLength(50)]
     public string? Difficulty { get; set; }
 

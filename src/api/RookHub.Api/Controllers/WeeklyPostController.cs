@@ -97,6 +97,7 @@ public class WeeklyPostController : BaseApiController
             Title = p.Title,
             Chapter = p.Chapter,
             Comment = p.Comment,
+            MoveComments = p.MoveComments,
         }).ToList();
 
         return Ok(new WeeklyPlayDto { Id = w.Id, Title = w.Title, Puzzles = puzzles });
