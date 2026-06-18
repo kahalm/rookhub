@@ -58,6 +58,7 @@
     "info": "Informacije",
     "account": "Račun",
     "analysis": "Analiza",
+    "games": "Partije",
     "stats": "Statistika",
     "trainingGoals": "Trening ciljevi",
     "installApp": "Instaliraj aplikaciju",
@@ -1214,6 +1215,23 @@
       "done": "U tvojim repertoarima",
       "failed": "Neuspjelo",
       "queued": "pozicija {{n}} u redu"
+    }
+  },
+  "games": {
+    "title": "Spremljene partije",
+    "hint": "Partije koje spremiš s chess.com ili lichess pomoću RepCheck proširenja preglednika pojavljuju se ovdje.",
+    "empty": "Još nema spremljenih partija. Na stranici analize na chess.com ili lichess klikni „Spremi partiju“ u RepCheck proširenju.",
+    "moves": "poteza",
+    "replay": "Ponovi",
+    "openInAnalysis": "Otvori u analizi",
+    "share": "Kopiraj poveznicu za dijeljenje",
+    "shareCopied": "Poveznica za dijeljenje kopirana u međuspremnik",
+    "openOriginal": "Otvori izvornu partiju",
+    "loadError": "Partiju nije moguće učitati.",
+    "deleteConfirm": "Izbrisati ovu spremljenu partiju?",
+    "deleteError": "Partiju nije moguće izbrisati.",
+    "shared": {
+      "notFound": "Ova dijeljena partija ne postoji ili je uklonjena."
     }
   },
   "analysis": {

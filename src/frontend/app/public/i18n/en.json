@@ -58,6 +58,7 @@
     "info": "Info",
     "account": "Account",
     "analysis": "Analysis",
+    "games": "Games",
     "stats": "Statistics",
     "trainingGoals": "Training Goals",
     "installApp": "Install app",
@@ -1214,6 +1215,23 @@
       "done": "In your repertoires",
       "failed": "Failed",
       "queued": "position {{n}} in queue"
+    }
+  },
+  "games": {
+    "title": "Saved games",
+    "hint": "Games you save from chess.com or lichess with the RepCheck browser extension show up here.",
+    "empty": "No saved games yet. On a chess.com or lichess analysis page, click “Save game” in the RepCheck extension.",
+    "moves": "moves",
+    "replay": "Replay",
+    "openInAnalysis": "Open in analysis",
+    "share": "Copy share link",
+    "shareCopied": "Share link copied to clipboard",
+    "openOriginal": "Open original game",
+    "loadError": "Could not load the game.",
+    "deleteConfirm": "Delete this saved game?",
+    "deleteError": "Could not delete the game.",
+    "shared": {
+      "notFound": "This shared game does not exist or was removed."
     }
   },
   "analysis": {

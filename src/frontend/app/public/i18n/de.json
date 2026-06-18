@@ -58,6 +58,7 @@
     "info": "Info",
     "account": "Konto",
     "analysis": "Analyse",
+    "games": "Partien",
     "stats": "Statistik",
     "trainingGoals": "Trainingsziele",
     "installApp": "App installieren",
@@ -1214,6 +1215,23 @@
       "done": "In deinen Repertoires",
       "failed": "Fehlgeschlagen",
       "queued": "Position {{n}} in der Warteschlange"
+    }
+  },
+  "games": {
+    "title": "Gespeicherte Partien",
+    "hint": "Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen hier.",
+    "empty": "Noch keine gespeicherten Partien. Klicke auf einer chess.com- oder lichess-Analyseseite in der RepCheck-Erweiterung auf „Partie speichern“.",
+    "moves": "Züge",
+    "replay": "Nachspielen",
+    "openInAnalysis": "In Analyse öffnen",
+    "share": "Teilen-Link kopieren",
+    "shareCopied": "Teilen-Link in die Zwischenablage kopiert",
+    "openOriginal": "Originalpartie öffnen",
+    "loadError": "Partie konnte nicht geladen werden.",
+    "deleteConfirm": "Diese gespeicherte Partie löschen?",
+    "deleteError": "Partie konnte nicht gelöscht werden.",
+    "shared": {
+      "notFound": "Diese geteilte Partie existiert nicht oder wurde entfernt."
     }
   },
   "analysis": {

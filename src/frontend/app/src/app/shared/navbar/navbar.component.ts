@@ -36,6 +36,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('games')) { <button mat-button routerLink="/games">{{ 'nav.games' | translate }}</button> }
           @if (can('weekly')) { <button mat-button routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
           @if (showCourses && can('courses')) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
@@ -56,6 +57,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
           @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
           @if (showCourses && can('courses')) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>

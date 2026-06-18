@@ -18,14 +18,17 @@ public class ExtensionController : BaseApiController
     private readonly RepertoireAnalyzeService _analyzeService;
     private readonly TrainingGoalService _trainingGoalService;
     private readonly RememberedPositionService _rememberedPositionService;
+    private readonly SavedGameService _savedGameService;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
-        TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService)
+        TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
+        SavedGameService savedGameService)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
         _trainingGoalService = trainingGoalService;
         _rememberedPositionService = rememberedPositionService;
+        _savedGameService = savedGameService;
     }
 
     /// <summary>
@@ -127,5 +130,25 @@ public class ExtensionController : BaseApiController
     {
         if (ScopeGuard() is { } forbid) return forbid;
         return Ok(await _rememberedPositionService.ListAsync(GetUserId(), take));
+    }
+
+    /// <summary>
+    /// Speichert die aktuell auf chess.com/lichess angeschaute Partie (Button „Partie speichern").
+    /// Der Client schickt die SAN-Zugliste + Best-Effort-Metadaten; der Server baut das PGN und
+    /// vergibt ein ShareToken. Dedup über (User, Source, ExternalId). Sichtbar im Bereich „Partien".
+    /// </summary>
+    [HttpPost("games")]
+    public async Task<ActionResult<SavedGameDetailDto>> SaveGame([FromBody] SaveGameInputDto dto)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        try
+        {
+            return Ok(await _savedGameService.SaveAsync(GetUserId(), dto));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

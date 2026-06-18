@@ -247,7 +247,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // und an die aktuelle (letzte) Stellung springen — genutzt vom „Analysieren"-Button der Puzzles.
     const movesParam = params.get('moves');
     const uci = movesParam ? movesParam.split(/[ ,]+/).filter(Boolean) : [];
-    if (uci.length) {
+    // Eine ganze Partie kann per Router-State übergeben werden (z.B. „In Analyse öffnen"
+    // im Bereich „Partien") — zu lang/unhandlich für einen Query-Param.
+    const statePgn = (window.history.state && window.history.state.pgn) as string | undefined;
+    if (typeof statePgn === 'string' && statePgn.trim()) {
+      this.pgnInput = statePgn;
+      this.loadPgn();
+    } else if (uci.length) {
       this.loadFromUci(this.startFen, uci);
     } else {
       this.resetToStart();

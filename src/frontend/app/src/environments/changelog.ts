@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.158.0';
+export const APP_VERSION = '0.159.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.159.0", date: "2026-06-18", changes: [
+    { en: "New \"Games\" section: games you save from chess.com or lichess with the RepCheck browser extension now appear in RookHub. Replay them on a board, open them straight in the analysis engine, share a game via a unique public link, jump back to the original game, or delete it.", de: "Neuer Bereich „Partien\": Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen jetzt in RookHub. Du kannst sie auf einem Brett nachspielen, direkt in der Analyse-Engine öffnen, über einen eindeutigen öffentlichen Link teilen, zur Originalpartie zurückspringen oder sie löschen." },
+  ]},
   { version: "0.158.0", date: "2026-06-18", changes: [
     { en: "Course PGN download now keeps variations and comments: the original imported PGN (e.g. from Chessable) is served verbatim instead of a stripped-down main line. Older courses without a stored source PGN are still reconstructed, now including the per-move comments.", de: "Kurs-PGN-Download enthält jetzt Varianten und Kommentare: Es wird das originale importierte PGN (z. B. von Chessable) unverändert ausgeliefert statt einer reduzierten Hauptlinie. Ältere Kurse ohne gespeichertes Quell-PGN werden weiterhin rekonstruiert, jetzt inklusive der Zug-Kommentare." },
   ]},

@@ -51,6 +51,7 @@ public class AppDbContext : DbContext
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
+    public DbSet<SavedGame> SavedGames => Set<SavedGame>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -452,6 +453,26 @@ public class AppDbContext : DbContext
             e.Property(p => p.CourseId).HasMaxLength(32);
             e.Property(p => p.SourceUrl).HasMaxLength(1000);
             e.HasIndex(p => new { p.UserId, p.CreatedAt });
+        });
+
+        modelBuilder.Entity<SavedGame>(e =>
+        {
+            e.HasOne(g => g.User)
+             .WithMany()
+             .HasForeignKey(g => g.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(g => g.Source).HasMaxLength(20);
+            e.Property(g => g.ExternalId).HasMaxLength(120);
+            e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+            e.Property(g => g.White).HasMaxLength(120);
+            e.Property(g => g.Black).HasMaxLength(120);
+            e.Property(g => g.Result).HasMaxLength(12);
+            e.Property(g => g.SourceUrl).HasMaxLength(1000);
+            e.Property(g => g.ShareToken).HasMaxLength(32);
+            e.HasIndex(g => g.ShareToken).IsUnique();
+            // Auflistung je User (neueste zuerst) + Dedup-Lookup (UserId, Source, ExternalId).
+            e.HasIndex(g => new { g.UserId, g.CreatedAt });
+            e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId });
         });
 
         modelBuilder.Entity<MenuItemSetting>(e =>

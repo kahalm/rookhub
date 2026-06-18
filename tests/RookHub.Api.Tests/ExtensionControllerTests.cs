@@ -28,7 +28,8 @@ public class ExtensionControllerTests : IDisposable
         _service = new RepertoireService(_db, analyzeService);
         var trainingGoalService = new TrainingGoalService(_db);
         var rememberedService = new RememberedPositionService(_db);
-        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService);
+        var savedGameService = new SavedGameService(_db);
+        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService, savedGameService);
     }
 
     public void Dispose() => _db.Dispose();
@@ -293,5 +294,61 @@ public class ExtensionControllerTests : IDisposable
 
         Assert.IsType<ForbidResult>(result.Result);
         Assert.Empty(_db.RememberedPositions.Where(p => p.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task SaveGame_PersistsPgnAndShareToken()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var save = await _controller.SaveGame(new SaveGameInputDto
+        {
+            Source = "chesscom",
+            Moves = new() { "e4", "e5", "Nf3" },
+            White = "alice",
+            Black = "bob",
+            Result = "1-0",
+            ExternalId = "12345",
+            SourceUrl = "https://www.chess.com/analysis/game/live/12345",
+        });
+        var dto = Assert.IsType<OkObjectResult>(save.Result).Value as SavedGameDetailDto;
+        Assert.NotNull(dto);
+        Assert.False(string.IsNullOrEmpty(dto!.ShareToken));
+        Assert.Equal(3, dto.MoveCount);
+        Assert.Contains("1. e4 e5 2. Nf3", dto.Pgn);
+        Assert.Contains("[White \"alice\"]", dto.Pgn);
+
+        var row = Assert.Single(_db.SavedGames.Where(g => g.UserId == user.Id));
+        Assert.Equal("chess.com", row.Source);
+        Assert.Equal("12345", row.ExternalId);
+    }
+
+    [Fact]
+    public async Task SaveGame_DedupsBySourceAndExternalId()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        SaveGameInputDto Input() => new() { Source = "lichess", Moves = new() { "d4", "d5" }, ExternalId = "abcd1234" };
+
+        var first = await _controller.SaveGame(Input());
+        var second = await _controller.SaveGame(Input());
+
+        var firstDto = Assert.IsType<OkObjectResult>(first.Result).Value as SavedGameDetailDto;
+        var secondDto = Assert.IsType<OkObjectResult>(second.Result).Value as SavedGameDetailDto;
+        Assert.Equal(firstDto!.Id, secondDto!.Id);
+        Assert.Single(_db.SavedGames.Where(g => g.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task SaveGame_RejectsEmptyMoves()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var result = await _controller.SaveGame(new SaveGameInputDto { Source = "lichess", Moves = new() });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(_db.SavedGames.Where(g => g.UserId == user.Id));
     }
 }
