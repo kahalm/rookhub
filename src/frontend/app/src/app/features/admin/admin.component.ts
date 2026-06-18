@@ -24,6 +24,7 @@ import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { adminTabIndex } from './admin-tabs';
 
 @Component({
   selector: 'app-admin',
@@ -115,10 +116,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   dlImports: Record<string, ChessableImport> = {};
   private dlPollSubs: Record<string, Subscription> = {};
 
-  /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Reihenfolge siehe admin.component.html. */
+  /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
   selectedTabIndex = 0;
-  /** Index des „Nachrichten"-Tabs (0-basiert in der mat-tab-group). */
-  private readonly messagesTabIndex = 6;
   /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
   private pendingThreadUserId: number | null = null;
   private destroyRef = inject(DestroyRef);
@@ -154,7 +153,8 @@ export class AdminComponent implements OnInit, OnDestroy {
     // nur snapshot), damit aufeinanderfolgende Glocken-Klicks auf verschiedene Threads — ohne Component-
     // Neuerstellung — jeweils greifen: Tab wechseln + die richtige Konversation öffnen.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
-      if (qp.get('tab') === 'messages') this.selectedTabIndex = this.messagesTabIndex;
+      const tabIdx = adminTabIndex(qp.get('tab'));   // beliebiger Tab-Key, Index aus admin-tabs.ts
+      if (tabIdx >= 0) this.selectedTabIndex = tabIdx;
       const thread = qp.get('thread');
       if (thread && !isNaN(+thread)) {
         const uid = +thread;

@@ -9,6 +9,7 @@
         }
       </div>
 
+      <!-- Tab-Reihenfolge MUSS mit ADMIN_TAB_KEYS in admin-tabs.ts übereinstimmen (Deep-Link-Indizes). -->
       <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedIndexChange)="selectedTabIndex = $event">
         <mat-tab [label]="'admin.tabs.users' | translate">
           <div class="tab-content">
