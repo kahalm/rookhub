@@ -3,7 +3,7 @@
 Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Periodisch
-- [ ] Code Review — letzter: 2026-06-13 → erstmals ALLE Repos auditiert (rookhub API+Frontend, crawler, schach-bot, piratechess, repcheck). Funde gesammelt unter „## Audit-Funde 2026-06-13". Codebases insgesamt sehr sauber. Keine Crash-Bugs; 0.115.0-Feature sauber. (vorher 2026-06-08, nur rookhub)
+- [ ] Code Review — letzter: 2026-06-18 → Frontend-Fan-out-Review (6 Dimensionen); alle [Hoch]-Funde + 2 [Mittel] gefixt (v0.155.4–0.155.12), Rest geparkt unter „## Audit-Funde 2026-06-18 (Frontend Code Review)". (vorher 2026-06-16 alle Repos; 2026-06-13 erstmals alle Repos)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: 2026-06-13 → alle 25 Sprachdateien JSON-valide. en+de vollständig (1028 Keys); **hr hatte 73 Lücken → in 0.115.1 ergänzt** (Impersonation/Menü/Chessable). `weekly.oClock` überall leer = Absicht. Die 22 Weltsprachen (ar,cs,el,…) sind je 174 Keys hinter en + 24 veraltet (i18n-worldwide-Drift) → fallen auf en zurück, Massen-Übersetzung offen (siehe Audit-Funde)
 - [ ] Security Review — letzter: 2026-06-13 → alle Repos (siehe „## Audit-Funde 2026-06-13"). Auth/Ownership/HMAC/Injection durchweg solide. Echte Funde v. a. im Crawler (SSRF via Auto-Redirect, Body-Logging→ES behoben) + piratechess (curl-Arg-Injektion via bid, gluetun auth=none). Keine sofort-kritische rookhub-Lücke
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: 2026-06-13 → ES lokal auf :9200 (nicht 9201/9202). **Prod 0 Errors über 7 Tage** ✓. 24h: 34382 Info / 91 Warn / 0 Error. Top-Warns: VPN-Rotation (27× „rotation failed/incomplete → forcing restart" — deckt sich mit Audit-Fund Crawler/piratechess), Chessable curl/Import-Retries (transient), 2× ASP.NET DataProtection-Key-Warnung (s. Audit). engine_analysis_crash NICHT wieder aufgetreten. log-watcher: 37 Alerts am 06-12 (nur Warn-Volumen-Spikes, keine Errors), 0 heute. Bot: 0 Warn/Error
@@ -54,6 +54,29 @@ _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06
 - BCrypt Work Factor ist bereits 12 (`AuthService.cs:21`, auch AdminSeeder)
 - Crawler `HtmlParserService` ist durch Tests abgedeckt (`HtmlParserServiceTests.cs`, ~448 Z.)
 - Crawler `RoundDetectionService` cacht bereits 60 s (`:50`)
+
+## Audit-Funde 2026-06-18 (Frontend Code Review)
+Fan-out-Review des Angular-Frontends (6 Dimensionen: Security, State/RxJS, Performance, Robustheit/TS, A11y/i18n, Wartbarkeit). **Alle [Hoch]-Funde + 2 [Mittel] direkt gefixt** (v0.155.4–0.155.12, committet+gepusht, 429 FE-Tests grün, Prod-Build sauber):
+- hr-Übersetzung vervollständigt (39 fehlende Keys, ganzer `messages`-Namespace) — 0.155.4
+- JWT nur noch an `/api` (kein Token-Leak an Dritt-URLs) — 0.155.5
+- Wochenpost-Upload Client-Validierung (.pgn ≤10 MB) — 0.155.6
+- ENDLESS_POOL_KEY geteilt (war 2× definiert) — 0.155.7
+- LOCALE_ID/Datums-Lokalisierung (war immer en-US; de-DE-Hardcode in endless-history weg) — 0.155.8
+- User-Suche entkoppelt (friends switchMap, admin debounce+switchMap) gegen Out-of-order — 0.155.9
+- Puzzle-Lade-Races (puzzle/book/endless: loadEpoch + runGeneration-Guard) — 0.155.10
+- Analyse: kein doppeltes analyze() bei Linien-/Tiefenwechsel — 0.155.11
+- A11y: aria-labels für Icon-Only-Buttons (friends/gear/back) — 0.155.12
+
+**Geparkt (bewusst NICHT angefasst — Aufwand/Regressionsrisiko, brauchen Laufzeit-Verifikation):**
+- [ ] **`OnPush` ausrollen** (0/59 Komponenten nutzen es) — mit den 1-s/2,5-s-Timern + Engine-Stream systemische CD-Last. Start: Puzzle-Solver/Analyse/Turnier-Tabellen; Timer via `NgZone.runOutsideAngular`. (Hoch Wert, mittel Risiko)
+- [ ] **God-Components entzerren**: `endless-puzzle.component` (1359 LOC), `admin.component` (732, 6 Domänen). Plus 14 Komponenten rufen `HttpClient` direkt statt über Service (friends/tournament-list/repertoire-list/profile/dashboard …) → `FriendsService`/`TournamentService`/`RepertoireService`/`ProfileService` einziehen.
+- [ ] **Cross-Solver-Duplikation in `BasePuzzleSolver` hochziehen**: timer/formatTime/eval/keyboard/theme-setter (2–3× kopiert in puzzle/book/endless).
+- [ ] **Test-Lücke**: `admin.component`/`admin.service`/`chessable.service`/`profile.component`/`menu.service`/`preferences.service` ohne Spec (größter Gap: Admin).
+- [ ] **Singleton-Engine-Lifecycle** (Mittel): `AnalysisEngineService` ist `providedIn:'root'`, aber `AnalysisComponent.ngOnDestroy` ruft `engine.destroy()` — component-scopen oder nur `stop()`.
+- [ ] **endless-history**: `JSON.parse` in template-gebundenen `formatConfig/formatMistakes` → beim Zuweisen von `sessions` in ein View-Model vorberechnen (Mittel, Perf).
+- [ ] **Custom-Overlays** (app.component Changelog/Quickstart, endless-Hilfe): kein Focus-Trap/Escape/role=dialog → auf `MatDialog` migrieren (Mittel, A11y).
+- [ ] **Klickbare `<div>`/`<span>`/`<mat-icon>`** ohne Tastatur (tournament-favoriten, version-link, theme-chips …) → `<button>` bzw. role/tabindex/keydown (Mittel, A11y).
+- [ ] Kleinkram: untypisierte DTOs in `endless-storage.service` (`any`), `Repertoire.kind:number` statt Enum, `AppNotification.type:string` als Union, nicht-gecancelte Einmal-Timer/RAF (chess-board, api-tokens), verschachtelte Subscribes (friends `getNotifications→markSeen`, api-tokens 3-fach).
 
 ## Audit-Funde 2026-06-16 (Code-Review aller Repos)
 Read-only-Review über rookhub (API+Frontend), chessresults_crawler, schach-bot, piratechess_docker. **5 Top-Funde direkt gefixt** (in v0.149.2 / piratechess): #1 Revenge-`solved` serverseitig hergeleitet+Dedupe, #3 Job-Feld-Data-Race (Gate/Complete/Snapshot), #4 Per-Bid-Lock gegen Doppel-Fetch, #5 Admin-Deep-Link via queryParamMap-Abo, #8 `GetThreadsAsync` auf GROUP-BY/bounded umgebaut. Rest hier geparkt (priorisiert; vieles intern/VPN-geschützt → Risiko realistisch einordnen):
