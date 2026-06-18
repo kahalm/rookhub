@@ -1,4 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, of } from 'rxjs';
+import { switchMap, catchError, tap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -194,6 +197,11 @@ export class FriendsComponent implements OnInit {
   searchQuery = '';
   loading = true;
 
+  private destroyRef = inject(DestroyRef);
+  // Such-Trigger über switchMap: ein neuer Suchlauf bricht den vorigen ab, damit eine
+  // langsamere ältere Antwort nicht ein neueres Ergebnis überschreibt (Out-of-order-Race).
+  private searchTrigger = new Subject<string>();
+
   constructor(
     private http: HttpClient,
     private snackbar: SnackbarService,
@@ -204,6 +212,13 @@ export class FriendsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.searchTrigger.pipe(
+      switchMap(q => this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(q)}`).pipe(
+        catchError(() => { this.snackbar.info(this.translate.instant('friends.errors.search')); return of(null); })
+      )),
+      tap(r => { if (r) this.searchResults = r; }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe();
     this.loadData();
   }
 
@@ -247,11 +262,7 @@ export class FriendsComponent implements OnInit {
 
   search(): void {
     if (this.searchQuery.length < 2) return;
-    this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(this.searchQuery)}`)
-      .subscribe({
-        next: r => this.searchResults = r,
-        error: () => this.snackbar.info(this.translate.instant('friends.errors.search'))
-      });
+    this.searchTrigger.next(this.searchQuery);
   }
 
   sendRequest(userId: number): void {

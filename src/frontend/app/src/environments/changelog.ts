@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.8';
+export const APP_VERSION = '0.155.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.9", date: "2026-06-18", changes: [
+    { en: "User search is more reliable: the friends search now cancels a previous in-flight request so a slower older response can't overwrite newer results, and the admin direct-message user search is debounced (no longer fires a request on every keystroke).", de: "Die Nutzersuche ist zuverlässiger: Die Freunde-Suche bricht eine vorherige laufende Anfrage ab, damit eine langsamere ältere Antwort kein neueres Ergebnis überschreibt, und die Admin-User-Suche der Direktnachrichten ist entprellt (feuert nicht mehr bei jedem Tastendruck eine Anfrage)." },
+  ]},
   { version: "0.155.8", date: "2026-06-18", changes: [
     { en: "Dates and numbers now follow your selected language: with German or Croatian the app no longer formats every date in US English. Picked up on load from your saved language; the Endless history list also stopped forcing German date format for everyone.", de: "Datums- und Zahlenformate richten sich jetzt nach deiner gewählten Sprache: Mit Deutsch oder Kroatisch wird nicht mehr alles in US-Englisch formatiert. Wird beim Laden aus der gespeicherten Sprache übernommen; auch die Endless-History erzwingt nicht mehr für alle das deutsche Datumsformat." },
   ]},

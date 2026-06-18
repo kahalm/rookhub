@@ -19,7 +19,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget } from '../chessable/chessable.service';
-import { timer, Subscription } from 'rxjs';
+import { timer, Subscription, Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -121,6 +122,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
   private pendingThreadUserId: number | null = null;
   private destroyRef = inject(DestroyRef);
+  // Such-Trigger für die User-Suche der Direktnachrichten: entkoppelt vom (keyup) im Template,
+  // gedrosselt + switchMap, damit nicht jeder Tastendruck einen Request feuert und eine ältere
+  // Antwort keine neuere überschreibt (Out-of-order-Race).
+  private msgUserSearchTrigger = new Subject<string>();
 
   constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService, private chessable: ChessableService) {}
 
@@ -149,6 +154,13 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadAllUsers();
     this.loadDailyPuzzle();
     this.loadMenuConfig();
+    this.msgUserSearchTrigger.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      tap(() => this.msgSearching = true),
+      switchMap(q => this.adminService.getUsers(q, 1, 10).pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(res => { this.msgUserResults = res ? res.items : this.msgUserResults; this.msgSearching = false; });
     // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>. Als laufendes Abo (nicht
     // nur snapshot), damit aufeinanderfolgende Glocken-Klicks auf verschiedene Threads — ohne Component-
     // Neuerstellung — jeweils greifen: Tab wechseln + die richtige Konversation öffnen.
@@ -237,12 +249,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   /** User für eine neue Konversation suchen (Username/E-Mail). */
   searchMsgUsers(): void {
     const q = this.msgUserSearch.trim();
-    if (q.length < 1) { this.msgUserResults = []; return; }
-    this.msgSearching = true;
-    this.adminService.getUsers(q, 1, 10).subscribe({
-      next: res => { this.msgUserResults = res.items; this.msgSearching = false; },
-      error: () => { this.msgSearching = false; },
-    });
+    if (q.length < 1) { this.msgUserResults = []; this.msgSearching = false; return; }
+    this.msgUserSearchTrigger.next(q);
   }
 
   /** Neue (oder bestehende) Konversation mit dem gewählten User beginnen. */
