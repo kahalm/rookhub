@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.17';
+export const APP_VERSION = '0.155.18';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.18", date: "2026-06-18", changes: [
+    { en: "Accessibility: the changelog and quick-start pop-ups can now be closed with Escape, keep keyboard focus inside while open, and are announced as dialogs; the version number in the footer is now keyboard-operable.", de: "Barrierefreiheit: Die Changelog- und Schnellstart-Overlays lassen sich jetzt mit Escape schließen, halten den Tastaturfokus, solange sie offen sind, und werden als Dialog angekündigt; die Versionsnummer im Footer ist jetzt per Tastatur bedienbar." },
+  ]},
   { version: "0.155.15", date: "2026-06-18", changes: [
     { en: "Stability: the chess board no longer risks initialising on an element you already navigated away from, and the API-token \"copied\" timer is now cleaned up properly — small memory/leak hardening.", de: "Stabilität: Das Schachbrett initialisiert sich nicht mehr versehentlich auf einem bereits verlassenen Element, und der „kopiert\"-Timer beim API-Token wird sauber aufgeräumt — kleine Speicher-/Leak-Härtung." },
   ]},

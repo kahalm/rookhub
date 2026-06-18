@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
@@ -21,7 +22,7 @@ import { environment } from '../environments/environment';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule, A11yModule],
   template: `
     @if (auth.isImpersonating) {
       <div class="imp-banner">
@@ -35,7 +36,10 @@ import { environment } from '../environments/environment';
     <app-navbar (changelogClick)="showChangelog = true" (quickstartClick)="showQuickstart = true" />
     <main><router-outlet /></main>
     <footer class="app-footer">
-      <span class="version-link" (click)="showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      <span class="version-link" role="button" tabindex="0"
+            [attr.aria-label]="'app.changelogTitle' | translate"
+            (click)="showChangelog = !showChangelog"
+            (keydown.enter)="showChangelog = !showChangelog" (keydown.space)="$event.preventDefault(); showChangelog = !showChangelog">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
       <span class="footer-sep">·</span>
       <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
       <span class="footer-sep">·</span>
@@ -43,10 +47,11 @@ import { environment } from '../environments/environment';
     </footer>
     @if (showChangelog) {
       <div class="changelog-overlay" (click)="showChangelog = false">
-        <div class="changelog-content" (click)="$event.stopPropagation()">
+        <div class="changelog-content" (click)="$event.stopPropagation()"
+             role="dialog" aria-modal="true" [attr.aria-label]="'app.changelogTitle' | translate" cdkTrapFocus>
           <div class="changelog-header">
             <h3>{{ 'app.changelogTitle' | translate }}</h3>
-            <button (click)="showChangelog = false">&times;</button>
+            <button (click)="showChangelog = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
           </div>
           @for (entry of changelog; track entry.version) {
             <div class="changelog-entry">
@@ -63,10 +68,11 @@ import { environment } from '../environments/environment';
     }
     @if (showQuickstart) {
       <div class="changelog-overlay" (click)="showQuickstart = false">
-        <div class="changelog-content quickstart-content" (click)="$event.stopPropagation()">
+        <div class="changelog-content quickstart-content" (click)="$event.stopPropagation()"
+             role="dialog" aria-modal="true" [attr.aria-label]="'app.quickstartTitle' | translate" cdkTrapFocus>
           <div class="changelog-header">
             <h3>{{ 'app.quickstartTitle' | translate }}</h3>
-            <button (click)="showQuickstart = false">&times;</button>
+            <button (click)="showQuickstart = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
           </div>
           <div class="qs-item">
             <span class="qs-icon">&#x2B50;</span>
@@ -138,6 +144,10 @@ export class AppComponent implements OnInit {
   changelog = environment.changelog;
   showChangelog = false;
   showQuickstart = false;
+
+  /** Escape schließt das offene Overlay (Changelog/Quickstart) — Tastatur-Bedienbarkeit. */
+  @HostListener('document:keydown.escape')
+  onEscape(): void { this.showChangelog = false; this.showQuickstart = false; }
 
   private dlHandled = false;
 
