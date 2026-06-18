@@ -213,14 +213,15 @@ export class AnalysisEngineService implements OnDestroy {
     if (s.running) this.state$.next({ ...s, running: false });
   }
 
+  // Reine Setter: das erneute analyze() stößt der Aufrufer an (analysis.component.onLinesChange/
+  // onDepthChange). Früher triggerten die Setter zusätzlich selbst analyze() → pro Änderung zwei
+  // gen++/running-Emissionen für dieselbe FEN. Jetzt genau ein analyze() pro Änderung.
   setMultiPv(n: number): void {
     this.multiPv = Math.max(1, Math.min(5, Math.round(n)));
-    if (this.currentFen && this.state$.value.running) this.analyze(this.currentFen);
   }
 
   setDepth(d: number): void {
     this.depthCap = Math.max(6, Math.min(40, Math.round(d)));
-    if (this.currentFen && this.state$.value.running) this.analyze(this.currentFen);
   }
 
   /** Worker-Nachricht parsen (info / bestmove). Generation-geschützt gegen Altzeilen. */

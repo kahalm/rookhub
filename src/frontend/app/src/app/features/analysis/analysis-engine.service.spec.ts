@@ -192,3 +192,20 @@ describe('AnalysisEngineService UCI sequencing', () => {
     expect(posted.filter(c => c.startsWith('go depth')).length).toBe(2);
   });
 });
+
+describe('AnalysisEngineService settings setters', () => {
+  it('setMultiPv/setDepth update settings WITHOUT auto-triggering a new search', async () => {
+    const eng = new TestEngine();
+    eng.analysis$.subscribe();
+    await eng.analyze(FEN);
+    await tick();
+    const gosBefore = eng.last.posted.filter(c => c.startsWith('go depth')).length;
+
+    eng.setMultiPv(3);
+    eng.setDepth(20);
+    await tick();
+
+    // Genau ein analyze() pro Änderung kommt vom Aufrufer (Component) — der Setter selbst feuert keins.
+    expect(eng.last.posted.filter(c => c.startsWith('go depth')).length).toBe(gosBefore);
+  });
+});
