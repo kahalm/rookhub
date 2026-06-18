@@ -142,13 +142,17 @@ export interface PgnViewerData {
       padding: 16px;
       gap: 16px;
     }
+    /* Board-Maße wie der Repertoire-Linien-Look (repertoire-detail): fixe
+       400px-Spalte, sonst kollabiert sie in der Flex-Zeile auf Nav-Breite. */
     .board-section {
+      width: 400px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
     }
+    .board-section app-chess-board { display: block; width: 400px; }
     .nav-buttons { display: flex; gap: 4px; }
     .moves-section {
       flex: 1;
@@ -162,10 +166,11 @@ export interface PgnViewerData {
       .viewer-body {
         flex-direction: column;
         overflow-y: auto;
+        align-items: center;
       }
-      .board-section { width: 100%; }
-      .board-section app-chess-board { max-width: 100%; }
-      .moves-section { min-height: 200px; flex-shrink: 0; }
+      .board-section { width: 100%; max-width: 400px; }
+      .board-section app-chess-board { width: 100%; }
+      .moves-section { min-height: 200px; flex-shrink: 0; width: 100%; }
     }
   `]
 })

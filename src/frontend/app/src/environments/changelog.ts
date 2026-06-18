@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.159.1';
+export const APP_VERSION = '0.159.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.159.2", date: "2026-06-18", changes: [
+    { en: "Saved games (\"Games\" section): the board in the replay dialog and on the public share page is now full-size (matching the repertoire line view) instead of tiny.", de: "Gespeicherte Partien (Bereich „Partien\"): Das Brett im Nachspiel-Dialog und auf der öffentlichen Teilen-Seite ist jetzt in voller Größe (wie die Repertoire-Linien-Ansicht) statt winzig." },
+  ]},
   { version: "0.159.1", date: "2026-06-18", changes: [
     { en: "RepCheck extension links now point to both stores: the help page (»Browser extension & userscript«), the repertoire hint and the Chessable page now link the Chrome Web Store version alongside the signed Firefox build.", de: "RepCheck-Erweiterungs-Links verweisen jetzt auf beide Stores: Die Hilfeseite (»Browser-Erweiterung & Userscript«), der Repertoire-Hinweis und die Chessable-Seite verlinken jetzt die Chrome-Web-Store-Version zusätzlich zur signierten Firefox-Version." },
   ]},

@@ -76,15 +76,18 @@ import { GamesService, SharedGame } from './games.service';
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
-    .body { display: flex; gap: 16px; }
-    .board-section { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .body { display: flex; gap: 16px; align-items: flex-start; }
+    /* Board-Maße wie der Repertoire-Linien-Look (fixe 400px-Spalte). */
+    .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
+    .board-section app-chess-board { display: block; width: 400px; }
     .nav { display: flex; gap: 4px; }
     .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
     .original { margin-top: 12px; }
     @media (max-width: 768px) {
-      .body { flex-direction: column; }
-      .board-section { width: 100%; }
-      .board-section app-chess-board { max-width: 100%; }
+      .body { flex-direction: column; align-items: center; }
+      .board-section { width: 100%; max-width: 400px; }
+      .board-section app-chess-board { width: 100%; }
+      .moves-section { width: 100%; }
     }
   `]
 })
