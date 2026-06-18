@@ -339,3 +339,39 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
     expect(sessions.length).toBe(0);
   });
 });
+
+describe('EndlessPuzzleComponent prefetch race (runGeneration)', () => {
+  /** Steuerbares Observable: merkt sich den Handler, damit der Test next() später feuert. */
+  function controllable() {
+    let fire: (v: any) => void = () => {};
+    const obs = { subscribe: (h: any) => { fire = (v: any) => (typeof h === 'function' ? h : h.next)(v); return { unsubscribe() {} }; } };
+    return { obs, emit: (v: any) => fire(v) };
+  }
+
+  it('does NOT overwrite the pool once a run has started', () => {
+    const c = makeComponent();
+    c.ensureWorstThemes = (cb: any) => cb();
+    const ctrl = controllable();
+    c.puzzleService.getRandomBatch = () => ctrl.obs;
+    c.offlinePool = [];
+
+    c.prefetchRun();        // merkt sich runGeneration
+    c.runGeneration++;      // inzwischen ist ein Run gestartet
+    ctrl.emit([{ id: 1 }]); // späte Prefetch-Antwort
+
+    expect(c.offlinePool).toEqual([]);   // Pool des Runs bleibt unangetastet
+  });
+
+  it('fills the pool when no run started in the meantime', () => {
+    const c = makeComponent();
+    c.ensureWorstThemes = (cb: any) => cb();
+    const ctrl = controllable();
+    c.puzzleService.getRandomBatch = () => ctrl.obs;
+    c.offlinePool = [];
+
+    c.prefetchRun();
+    ctrl.emit([{ id: 9 }]);
+
+    expect(c.offlinePool.length).toBe(1);
+  });
+});

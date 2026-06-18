@@ -71,6 +71,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
+  /** Monotone Epoche je Ladevorgang. Eine ältere, langsamer auflösende Puzzle-Anfrage
+   *  (schnelle Navigation: Auto-Advance + „Weiter" + Prefetch) darf ein neueres Puzzle
+   *  nicht überschreiben → veraltete Antworten werden anhand der Epoche verworfen. */
+  private loadEpoch = 0;
   lastEloChange: number | null = null;
 
   // Eval
@@ -298,6 +302,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   loadNext(): void {
+    const epoch = ++this.loadEpoch;
     this.state = 'LOADING';
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
@@ -346,6 +351,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
     source$.subscribe({
         next: puzzle => {
+          if (epoch !== this.loadEpoch) return;   // veraltete Antwort eines früheren Ladevorgangs
           // Bisher angezeigtes Puzzle als „vorheriges" merken (für Teilen-Dialog).
           if (this.puzzle && this.puzzle.id !== puzzle.id) this.previousPuzzleId = this.puzzle.id;
           this.puzzle = puzzle;
@@ -355,6 +361,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           this.prefetchOfflinePool();
         },
         error: () => {
+          if (epoch !== this.loadEpoch) return;
           this.state = 'ERROR';
           this.puzzle = null;
         }
@@ -364,6 +371,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   /** Spielt das zuletzt geladene Puzzle nochmal (Fallback wenn der Offline-Pool aufgebraucht ist). */
   replayLastPuzzle(): void {
     if (!this.lastShownPuzzle) return;
+    ++this.loadEpoch;   // evtl. noch laufenden loadNext entwerten
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
     this.attemptRecorded = false;
@@ -379,9 +387,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   private prefetchNext(): void {
+    const epoch = this.loadEpoch;
     const r = this.ratingRange();
     this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam)
-      .subscribe({ next: p => this.nextPuzzle = p, error: () => {} });
+      .subscribe({ next: p => { if (epoch === this.loadEpoch) this.nextPuzzle = p; }, error: () => {} });
   }
 
   /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */

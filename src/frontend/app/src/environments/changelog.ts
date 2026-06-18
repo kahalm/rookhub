@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.9';
+export const APP_VERSION = '0.155.10';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.10", date: "2026-06-18", changes: [
+    { en: "Fixed a rare glitch where fast navigation in the puzzle trainers (Standard, Book/Course/Daily/Weekly and Endless) could briefly show the wrong puzzle: a slower earlier load can no longer overwrite the puzzle you actually navigated to.", de: "Seltenen Fehler behoben, bei dem schnelles Blättern in den Puzzle-Trainern (Standard, Buch/Kurs/Tages/Wochenpost und Endless) kurz das falsche Puzzle zeigen konnte: Ein langsamerer früherer Ladevorgang kann das tatsächlich angesteuerte Puzzle nicht mehr überschreiben." },
+  ]},
   { version: "0.155.9", date: "2026-06-18", changes: [
     { en: "User search is more reliable: the friends search now cancels a previous in-flight request so a slower older response can't overwrite newer results, and the admin direct-message user search is debounced (no longer fires a request on every keystroke).", de: "Die Nutzersuche ist zuverlässiger: Die Freunde-Suche bricht eine vorherige laufende Anfrage ab, damit eine langsamere ältere Antwort kein neueres Ergebnis überschreibt, und die Admin-User-Suche der Direktnachrichten ist entprellt (feuert nicht mehr bei jedem Tastendruck eine Anfrage)." },
   ]},

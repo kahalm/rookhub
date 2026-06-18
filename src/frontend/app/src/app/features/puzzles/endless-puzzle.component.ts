@@ -253,6 +253,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private seed = '';
   /** Lokal gecachte Kette (Offline-Start / Resume); identisch zu {@link chain} während eines Runs. */
   private offlinePool: PuzzleDto[] = [];
+  /** Wird bei jedem Run-Start (startGame/resumeGame) erhöht. Ein im Hintergrund laufender
+   *  prefetchRun darf den Pool/Seed eines inzwischen gestarteten Runs NICHT überschreiben →
+   *  späte Prefetch-Antwort wird verworfen, wenn die Generation nicht mehr passt. */
+  private runGeneration = 0;
   reviewingWrongPuzzle = false;
   gaveUp = false;
   private puzzleLifeLost = false;
@@ -556,6 +560,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   startGame(): void {
+    ++this.runGeneration;   // laufenden Hintergrund-Prefetch für diesen Run entwerten
     this.clampConfig();
     this.saveConfig();
     this.lives = 3;
@@ -660,6 +665,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * gestartet werden kann. Invalidiert den Ketten-Token (dieser Cache gehört zu keinem Run).
    */
   private prefetchRun(): void {
+    const gen = this.runGeneration;
     this.computeFasttrackSteps();
     const windows = buildChainWindows(
       this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, ENDLESS_CHAIN_BLOCK, 0, this.isFirstRun
@@ -669,6 +675,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       const { themes, themesAny } = this.batchThemes();
       this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
         next: pool => {
+          // Inzwischen ein Run gestartet? Dann gehört dessen Pool/Seed ihm — Prefetch verwerfen.
+          if (gen !== this.runGeneration) return;
           this.offlinePool = pool || [];
           this.storage.saveOfflinePool(this.offlinePool);
           this.storage.saveChainSeed('');   // Prefetch gehört zu keinem laufenden Run
@@ -693,6 +701,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   resumeGame(): void {
     if (!this.activeGameState) return;
+    ++this.runGeneration;   // laufenden Hintergrund-Prefetch entwerten
     const g = this.activeGameState;
     this.lives = g.lives ?? 3;
     this.solved = g.solved ?? 0;

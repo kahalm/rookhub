@@ -111,6 +111,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
   bookNavLoading = false;
   loadError = false;
+  /** Monotone Epoche je Ladevorgang (Buch/Kurs/Daily/Wochenpost). Schnelle Navigation kann
+   *  mehrere Lade-Requests gleichzeitig in der Luft haben; eine ältere, langsamer auflösende
+   *  Antwort darf das inzwischen geladene Puzzle nicht überschreiben → wird per Epoche verworfen. */
+  private loadEpoch = 0;
   private retryFn: (() => void) | null = null;
   private bookAttemptRecorded = false;   // pro Puzzle nur ein Versuch melden (Tagespuzzle-Statistik)
   private courseAttemptRecorded = false; // pro Puzzle-Durchgang nur ein Kurs-Versuch melden (Zeit-Inflation vermeiden)
@@ -215,6 +219,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   private goToBookPuzzle(p: BookPuzzleDto): void {
+    ++this.loadEpoch;   // evtl. noch laufenden Ladevorgang entwerten
     this.bookNavLoading = false;
     this.clearSolutionPlay();
     this.router.navigate(['/puzzles/book', p.id]);   // URL aktualisieren (Komponente wird wiederverwendet)
@@ -399,6 +404,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
   private loadCourseNext(after?: number, exclude?: number): void {
     if (this.courseBookId == null) return;
+    const epoch = ++this.loadEpoch;
     const hadPuzzle = this.puzzle != null;
     this.loadError = false;
     this.retryFn = () => this.loadCourseNext(after, exclude);
@@ -406,6 +412,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
     this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined).subscribe({
       next: res => {
+        if (epoch !== this.loadEpoch) return;
         this.courseSolved = res.solvedCount;
         this.courseTotal = res.total;
         if (res.completed || !res.puzzle) {
@@ -419,7 +426,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.puzzle = res.puzzle;
         this.setupPuzzle(res.puzzle);
       },
-      error: () => { this.state = 'LOADING'; this.loadError = true; }
+      error: () => { if (epoch !== this.loadEpoch) return; this.state = 'LOADING'; this.loadError = true; }
     });
   }
 
@@ -458,9 +465,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private loadWeekly(): void {
     if (this.weeklyId == null) return;
+    const epoch = ++this.loadEpoch;
     this.state = 'LOADING';
     this.weeklyService.getPlay(this.weeklyId).subscribe({
       next: play => {
+        if (epoch !== this.loadEpoch) return;
         this.weeklyTitle = play.title;
         this.weeklyPuzzles = play.puzzles ?? [];
         this.weeklyIndex = 0;
@@ -474,18 +483,19 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         if (this.auth.isLoggedIn && this.weeklyId != null) {
           this.weeklyService.getProgress(this.weeklyId).subscribe({
             next: p => {
+              if (epoch !== this.loadEpoch) return;
               this.weeklyPlayed = p.playedCount;
               this.weeklySolved = p.solvedCount;
               this.weeklySeconds = p.totalSeconds;
               this.loadWeeklyAt(this.weeklyStartIndex(p));
             },
-            error: () => this.loadWeeklyAt(0),
+            error: () => { if (epoch === this.loadEpoch) this.loadWeeklyAt(0); },
           });
         } else {
           this.loadWeeklyAt(0);
         }
       },
-      error: () => { this.state = 'COURSE_DONE'; this.puzzle = null; }
+      error: () => { if (epoch !== this.loadEpoch) return; this.state = 'COURSE_DONE'; this.puzzle = null; }
     });
   }
 
@@ -577,12 +587,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.elapsedSeconds = 0;
     this.alternativeSolve = false;
     this.gaveUp = false;
+    const epoch = ++this.loadEpoch;
     this.puzzleService.getDailyPuzzle(date).subscribe({
       next: puzzle => {
+        if (epoch !== this.loadEpoch) return;
         this.puzzle = puzzle;
         this.setupPuzzle(puzzle);
       },
       error: () => {
+        if (epoch !== this.loadEpoch) return;
         this.state = 'LOADING';
         this.puzzle = null;
         this.loadError = true;
@@ -591,6 +604,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   private loadPuzzle(id: number): void {
+    const epoch = ++this.loadEpoch;
     this.loadError = false;
     this.retryFn = () => this.loadPuzzle(id);
     this.state = 'LOADING';
@@ -607,10 +621,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
     this.puzzleService.getBookPuzzleById(id).subscribe({
       next: puzzle => {
+        if (epoch !== this.loadEpoch) return;
         this.puzzle = puzzle;
         this.setupPuzzle(puzzle);
       },
       error: () => {
+        if (epoch !== this.loadEpoch) return;
         this.state = 'LOADING';
         this.puzzle = null;
         this.loadError = true;

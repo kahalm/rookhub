@@ -171,3 +171,30 @@ describe('PuzzleComponent offline pool exhaustion', () => {
     c.ngOnDestroy();
   });
 });
+
+describe('PuzzleComponent load race (loadEpoch)', () => {
+  it('a stale puzzle response does not overwrite a newer one', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    spyOn(c as any, 'prefetchNext');
+    spyOn(c as any, 'prefetchOfflinePool');
+    c.stats = { puzzleElo: 1500 };
+    (c as any).ratingRangeBounds = { min: 0, max: 4000 };
+
+    // getRandom gibt steuerbare Observables zurück; wir lösen sie bewusst out-of-order auf.
+    const emits: Array<(v: any) => void> = [];
+    (c as any).puzzleService.getRandom = () => ({
+      subscribe: (h: any) => { emits.push((v: any) => (typeof h === 'function' ? h : h.next)(v)); return { unsubscribe() {} }; }
+    });
+
+    c.loadNext();   // Epoch 1 → emits[0]
+    c.loadNext();   // Epoch 2 → emits[1]
+
+    emits[1]({ ...PUZZLE, id: 222 });   // neuere Anfrage löst zuerst auf
+    expect(c.puzzle.id).toBe(222);
+    emits[0]({ ...PUZZLE, id: 111 });   // ältere Anfrage löst danach auf → muss verworfen werden
+    expect(c.puzzle.id).toBe(222);
+
+    c.ngOnDestroy();
+  });
+});
