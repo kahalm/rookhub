@@ -11,14 +11,30 @@ namespace RookHub.Api.Controllers;
 public class RepertoireController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
+    private readonly ImportReprocessService _reprocess;
 
-    public RepertoireController(RepertoireService repertoireService) => _repertoireService = repertoireService;
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess)
+    {
+        _repertoireService = repertoireService;
+        _reprocess = reprocess;
+    }
 
     [HttpGet]
     public async Task<ActionResult<List<RepertoireDto>>> GetAll()
     {
         return Ok(await _repertoireService.GetAllAsync(GetUserId()));
     }
+
+    /// <summary>Status der Aufbereitungs-Versionierung der eigenen Repertoires (Basis für den
+    /// „Repertoires aktualisieren (N)"-Knopf). Heute meist 0, da Repertoires live ausgewertet werden.</summary>
+    [HttpGet("reprocess/status")]
+    public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
+        => Ok(await _reprocess.GetRepertoireStatusAsync(GetUserId(), ct));
+
+    /// <summary>Bereitet alle veralteten eigenen Repertoires auf die aktuelle Pipeline-Version auf.</summary>
+    [HttpPost("reprocess")]
+    public async Task<ActionResult<ReprocessResultDto>> Reprocess(CancellationToken ct)
+        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), ct));
 
     [HttpPost]
     public async Task<ActionResult<RepertoireDto>> Create([FromBody] CreateRepertoireDto dto)

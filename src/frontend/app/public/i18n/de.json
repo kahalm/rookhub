@@ -1592,5 +1592,17 @@
       "lines": "Linien",
       "daily": "Tagespuzzles"
     }
+  },
+  "reprocess": {
+    "available": {
+      "courses": "{{count}} Kurs(e) nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
+      "repertoires": "{{count}} Repertoire(s) nutzen eine ältere Aufbereitung und können aktualisiert werden."
+    },
+    "update": "Aktualisieren",
+    "working": "Wird aktualisiert…",
+    "doneLocal": "{{count}} aktualisiert.",
+    "doneQueued": "{{count}} werden im Hintergrund neu geladen.",
+    "doneEmpty": "Alles ist bereits aktuell.",
+    "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen."
   }
 }

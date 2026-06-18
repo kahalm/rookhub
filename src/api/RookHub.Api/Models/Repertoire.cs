@@ -27,6 +27,15 @@ public class Repertoire
     /// </summary>
     public bool UseForExtension { get; set; } = true;
 
+    /// <summary>
+    /// Version der Import-Pipeline (<see cref="Services.ImportPipeline"/>), mit der der Inhalt
+    /// dieses Repertoires zuletzt aufbereitet wurde. <c>&lt; CurrentVersion</c> ⇒ „veraltet".
+    /// Default 0 = Altbestand. (Repertoires speichern ihr Roh-PGN selbst in
+    /// <see cref="RepertoireFile.PgnContent"/> und werten live aus — heute hat das
+    /// Neu-Aufbereiten meist keine abgeleiteten Daten zu erneuern; Feld ist zukunftssicher.)
+    /// </summary>
+    public int ImportVersion { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

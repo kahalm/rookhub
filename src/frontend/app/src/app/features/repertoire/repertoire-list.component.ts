@@ -13,11 +13,12 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
 import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
+import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -34,6 +35,8 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
           <a routerLink="/help" fragment="extension">{{ 'repertoire.list.extHintLink' | translate }}</a>
         </span>
       </div>
+
+      <app-reprocess-banner section="repertoires" (done)="loadRepertoires()" />
 
       @if (loading) {
         <app-loading-spinner />

@@ -1592,5 +1592,17 @@
     "sendError": "Poruku nije moguće poslati.",
     "emptyUserCanWrite": "Još nema poruka. Napiši administratorskom timu ispod — odgovor ćeš dobiti ovdje.",
     "writeLabel": "Tvoja poruka"
+  },
+  "reprocess": {
+    "available": {
+      "courses": "{{count}} tečaj(eva) koristi stariju obradu i može se ažurirati — npr. za prikaz komentara poteza iz knjige.",
+      "repertoires": "{{count}} repertoar(a) koristi stariju obradu i može se ažurirati."
+    },
+    "update": "Ažuriraj",
+    "working": "Ažuriranje…",
+    "doneLocal": "{{count}} ažurirano.",
+    "doneQueued": "{{count}} se osvježava u pozadini.",
+    "doneEmpty": "Sve je već ažurno.",
+    "failed": "Ažuriranje nije uspjelo. Pokušajte ponovno."
   }
 }

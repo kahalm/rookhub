@@ -522,6 +522,10 @@ public class BookPuzzleService
                 {
                     FileName = fileName,
                     DisplayName = PgnImportService.CleanDisplayName(fileName),
+                    // JSON-Bulk-Import liefert die abgeleiteten Felder (inkl. MoveComments) direkt mit
+                    // → gilt als aktuelle Pipeline-Version. Kein SourcePgn (kein PGN), daher nicht
+                    // lokal neu aufbereitbar — bei künftigen Pipeline-Bumps ggf. erneuter JSON-Import.
+                    ImportVersion = ImportPipeline.CurrentVersion,
                     CreatedAt = now,
                     UpdatedAt = now,
                 };

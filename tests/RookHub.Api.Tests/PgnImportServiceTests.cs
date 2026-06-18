@@ -96,6 +96,79 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportFileAsync_StoresSourcePgnAndCurrentVersion()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 Nc6 3. Bb5 a6 *
+";
+        var res = await _service.ImportFileAsync("v.pgn", pgn, CancellationToken.None);
+        var book = await _db.Books.SingleAsync();
+        Assert.Equal(pgn, book.SourcePgn);
+        Assert.Equal(ImportPipeline.CurrentVersion, book.ImportVersion);
+        Assert.True(res.Imported > 0);
+        Assert.Equal(0, res.Updated);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_StaleBook_UpdatesExistingLinesInPlace_PreservingId()
+    {
+        const string lineId = "stale.pgn:1";
+        // Altbestand simulieren: Buch + Linie OHNE MoveComments, Version 0 (veraltet).
+        var book = new RookHub.Api.Models.Book { FileName = "stale.pgn", DisplayName = "Stale", ImportVersion = 0, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var old = new RookHub.Api.Models.BookPuzzle
+        {
+            LineId = lineId, BookFileName = "stale.pgn", BookId = book.Id, Round = "1",
+            Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+            Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1, MoveComments = null,
+        };
+        _db.BookPuzzles.Add(old);
+        await _db.SaveChangesAsync();
+        var originalId = old.Id;
+
+        // Re-Import derselben Datei MIT Pro-Zug-Kommentaren → muss die bestehende Linie aktualisieren.
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 {Develops.} Nc6 3. Bb5 {The pin.} a6 *
+";
+        var res = await _service.ImportFileAsync("stale.pgn", pgn, CancellationToken.None);
+
+        Assert.Equal(1, res.Updated);
+        Assert.Equal(0, res.Imported);
+        var refreshed = await _db.BookPuzzles.SingleAsync(bp => bp.LineId == lineId);
+        Assert.Equal(originalId, refreshed.Id);            // Id (und damit Fortschritt-FKs) erhalten
+        Assert.NotNull(refreshed.MoveComments);            // Kommentare nachgezogen
+        Assert.Contains("Develops.", refreshed.MoveComments!);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_CurrentVersionBook_SkipsExistingInsteadOfUpdating()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 Nc6 3. Bb5 a6 *
+";
+        await _service.ImportFileAsync("idem.pgn", pgn, CancellationToken.None);   // legt an, Version = current
+        var res2 = await _service.ImportFileAsync("idem.pgn", pgn, CancellationToken.None); // erneut → skip
+
+        Assert.Equal(0, res2.Imported);
+        Assert.Equal(0, res2.Updated);
+        Assert.True(res2.Skipped > 0);
+    }
+
+    [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {
         var pgn = @"

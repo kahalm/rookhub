@@ -197,6 +197,7 @@ public class RepertoireService
 
         _db.RepertoireFiles.Add(file);
         rep.UpdatedAt = DateTime.UtcNow;
+        rep.ImportVersion = ImportPipeline.CurrentVersion; // frisch aufbereiteter Inhalt = aktuelle Pipeline
         await _db.SaveChangesAsync();
         _analyzeCache.Invalidate(userId);
 

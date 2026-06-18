@@ -46,6 +46,24 @@ export interface CourseProgress {
   lastMode: string | null;
 }
 
+/** Status der Aufbereitungs-Versionierung (Kurse/Repertoires) — Basis für den „Aktualisieren (N)"-Knopf. */
+export interface ReprocessStatus {
+  currentVersion: number;
+  total: number;
+  stale: number;
+  reprocessableLocally: number;
+  refetchable: number;
+  needsReimport: number;
+}
+
+/** Ergebnis eines Reprocess-Laufs. */
+export interface ReprocessResult {
+  reprocessed: number;
+  updatedLines: number;
+  enqueued: number;
+  skipped: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CourseService {
   constructor(private http: HttpClient) {}
@@ -94,5 +112,15 @@ export class CourseService {
 
   reset(bookId: number): Observable<CourseProgress> {
     return this.http.post<CourseProgress>(`/api/courses/${bookId}/reset`, {});
+  }
+
+  /** Wie viele (verwaltbare) Kurse müssen wegen einer neueren Aufbereitungs-Pipeline neu aufbereitet werden? */
+  reprocessStatus(): Observable<ReprocessStatus> {
+    return this.http.get<ReprocessStatus>('/api/courses/reprocess/status');
+  }
+
+  /** Bereitet alle veralteten Kurse neu auf (lokal bzw. Chessable-Re-Fetch im Hintergrund). */
+  reprocess(): Observable<ReprocessResult> {
+    return this.http.post<ReprocessResult>('/api/courses/reprocess', {});
   }
 }

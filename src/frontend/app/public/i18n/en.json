@@ -1592,5 +1592,17 @@
       "lines": "lines",
       "daily": "daily puzzles"
     }
+  },
+  "reprocess": {
+    "available": {
+      "courses": "{{count}} course(s) use an older processing version and can be updated — e.g. to show the book's per-move comments.",
+      "repertoires": "{{count}} repertoire(s) use an older processing version and can be updated."
+    },
+    "update": "Update",
+    "working": "Updating…",
+    "doneLocal": "{{count}} updated.",
+    "doneQueued": "{{count}} being refreshed in the background.",
+    "doneEmpty": "Everything is already up to date.",
+    "failed": "Update failed. Please try again."
   }
 }

@@ -354,7 +354,17 @@ public partial class PgnImportService
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
 
     // ---- Persistenz -------------------------------------------------------
-    /// <summary>Parst eine Datei und legt Book + BookPuzzles an (Dedup per LineId).</summary>
+    /// <summary>
+    /// Parst eine Datei und legt Book + BookPuzzles an. Neue Linien (per LineId) werden hinzugefügt,
+    /// bereits vorhandene normalerweise übersprungen (idempotenter (Re-)Import / Resume).
+    /// <para>AUSNAHME — Neu-Aufbereitung: Ist das Buch <b>veraltet</b> (<c>Book.ImportVersion &lt;
+    /// <see cref="ImportPipeline.CurrentVersion"/></c>), werden bestehende Linien <b>in-place
+    /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
+    /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
+    /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
+    /// Immer wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
+    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist.
+    /// </summary>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
     {
         var (parsed, invalid) = ParsePgn(fileName, pgnText);
@@ -374,18 +384,45 @@ public partial class PgnImportService
             await _db.SaveChangesAsync(ct); // Id materialisieren
         }
 
-        // Dedup nur gegen Linien DIESES Buchs/dieser Datei laden, nicht ALLE BookPuzzles
-        // (LineIds sind dateiprefix-eindeutig -> Cross-Book-Kollisionen gibt es nicht).
-        var existingLineIds = await _db.BookPuzzles
-            .Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
-            .Select(bp => bp.LineId).ToHashSetAsync(ct);
+        // Veraltetes Buch ⇒ bestehende Linien aktualisieren statt überspringen (Neu-Aufbereitung).
+        var upgrade = book.ImportVersion < ImportPipeline.CurrentVersion;
+
+        // Bestehende Linien laden: beim Upgrade als TRACKED Entities (zum Aktualisieren),
+        // sonst nur die LineIds (leichtgewichtig, reines Dedup).
+        var existing = upgrade
+            ? await _db.BookPuzzles.Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
+                .ToDictionaryAsync(bp => bp.LineId, ct)
+            : new Dictionary<string, BookPuzzle>();
+        var existingLineIds = upgrade
+            ? existing.Keys.ToHashSet()
+            : await _db.BookPuzzles.Where(bp => bp.BookId == book.Id || bp.BookFileName == fileName)
+                .Select(bp => bp.LineId).ToHashSetAsync(ct);
+
         var toAdd = new List<BookPuzzle>();
         var skipped = 0;
+        var updated = 0;
         var seen = new HashSet<string>();
 
         foreach (var p in parsed)
         {
-            if (existingLineIds.Contains(p.LineId) || !seen.Add(p.LineId)) { skipped++; continue; }
+            if (!seen.Add(p.LineId)) { skipped++; continue; }      // Duplikat im selben Batch
+            if (existingLineIds.Contains(p.LineId))
+            {
+                if (upgrade && existing.TryGetValue(p.LineId, out var bp))
+                {
+                    bp.Round = p.Round;
+                    bp.Fen = p.Fen;
+                    bp.Moves = p.Moves;
+                    bp.StartPly = p.StartPly;
+                    bp.Title = p.Title;
+                    bp.Chapter = p.Chapter;
+                    bp.Comment = p.Comment;
+                    bp.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
+                    updated++;
+                }
+                else { skipped++; }
+                continue;
+            }
             toAdd.Add(new BookPuzzle
             {
                 LineId = p.LineId,
@@ -402,12 +439,13 @@ public partial class PgnImportService
             });
         }
 
-        if (toAdd.Count > 0)
-        {
-            _db.BookPuzzles.AddRange(toAdd);
-            book.UpdatedAt = now;
-            await _db.SaveChangesAsync(ct);
-        }
+        if (toAdd.Count > 0) _db.BookPuzzles.AddRange(toAdd);
+
+        // Roh-PGN als Reprocessing-Quelle merken + Pipeline-Version hochsetzen.
+        book.SourcePgn = pgnText;
+        book.ImportVersion = ImportPipeline.CurrentVersion;
+        book.UpdatedAt = now;
+        await _db.SaveChangesAsync(ct);
 
         return new BookImportItemDto
         {
@@ -415,6 +453,7 @@ public partial class PgnImportService
             FileName = fileName,
             Imported = toAdd.Count,
             Skipped = skipped,
+            Updated = updated,
             Invalid = invalid,
         };
     }

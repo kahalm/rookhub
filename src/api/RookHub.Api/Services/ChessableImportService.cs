@@ -16,7 +16,7 @@ namespace RookHub.Api.Services;
 /// geholtes PGN + ResultId). Ein nach einem Crash/Deploy resumter Job überspringt den teuren
 /// Chessable-Fetch (PGN ist persistiert) und legt nichts doppelt an (idempotente Schritte).
 /// </summary>
-public class ChessableImportService
+public class ChessableImportService : ICourseReimporter
 {
     public const int MaxAttempts = 3;
 
@@ -68,6 +68,33 @@ public class ChessableImportService
             var svc = sp.GetRequiredService<ChessableImportService>();
             await svc.RunNextAsync(ct);
         });
+    }
+
+    /// <summary>
+    /// Reiht einen Re-Import eines bereits importierten Chessable-Kurses ein (für die Neu-Aufbereitung
+    /// veralteter Bücher OHNE gespeichertes Roh-PGN). Holt den Kurs erneut (oder aus dem Rohdaten-Cache)
+    /// und lässt ihn durch die aktuelle Pipeline laufen — <see cref="ImportFileAsync"/> aktualisiert
+    /// veraltete Bücher dabei in-place. Liefert die Import-Id, oder <c>null</c>, wenn für
+    /// <paramref name="ownerUserId"/> kein Chessable-Bearer hinterlegt ist (kein Re-Fetch möglich).
+    /// </summary>
+    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, CancellationToken ct = default)
+    {
+        if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == ownerUserId, ct)) return null;
+        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == "running", ct);
+        var import = new ChessableImport
+        {
+            UserId = ownerUserId,
+            Bid = bid,
+            CourseName = courseName ?? string.Empty,
+            Target = target,
+            Status = "running",
+            QueueRound = queueRound,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _db.ChessableImports.Add(import);
+        await _db.SaveChangesAsync(ct);
+        await EnqueueNextAsync();
+        return import.Id;
     }
 
     /// <summary>

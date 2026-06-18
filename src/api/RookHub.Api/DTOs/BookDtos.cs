@@ -72,6 +72,8 @@ public class BookImportItemDto
     public int Imported { get; set; }
     /// <summary>Duplikate (LineId schon in DB oder im selben Batch doppelt).</summary>
     public int Skipped { get; set; }
+    /// <summary>Bestehende Linien, die beim Neu-Aufbereiten (veraltetes Buch) in-place aktualisiert wurden.</summary>
+    public int Updated { get; set; }
     /// <summary>Spiele, die der Parser verworfen hat (kein FEN/Round, keine Mainline, Grundstellung ohne [%tqu]).</summary>
     public int Invalid { get; set; }
 }

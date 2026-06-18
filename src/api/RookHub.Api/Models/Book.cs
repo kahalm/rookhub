@@ -54,6 +54,21 @@ public class Book
     /// <summary>Für /blindpuzzle nutzbar.</summary>
     public bool ForBlind { get; set; }
 
+    /// <summary>
+    /// Roh-PGN, aus dem dieses Buch importiert wurde (LONGTEXT, nullable). Quelle fürs
+    /// verlustfreie Neu-Aufbereiten (Reprocessing), wenn die Import-Pipeline weiterentwickelt
+    /// wurde — z. B. um nachträglich Pro-Zug-Kommentare zu extrahieren. <c>null</c> bei
+    /// Altbestand (vor Pipeline-Version 1) und bei reinen JSON-Bulk-Importen (kein PGN).
+    /// </summary>
+    public string? SourcePgn { get; set; }
+
+    /// <summary>
+    /// Version der Import-Pipeline (<see cref="Services.ImportPipeline"/>), mit der die Puzzles
+    /// dieses Buchs zuletzt aufbereitet wurden. <c>&lt; CurrentVersion</c> ⇒ „veraltet", über den
+    /// Reprocess-Knopf neu aufbereitbar. Default 0 = Altbestand.
+    /// </summary>
+    public int ImportVersion { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

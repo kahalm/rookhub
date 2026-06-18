@@ -19,10 +19,27 @@ namespace RookHub.Api.Controllers;
 public class CourseController : BaseApiController
 {
     private readonly CourseService _service;
+    private readonly ImportReprocessService _reprocess;
 
-    public CourseController(CourseService service) => _service = service;
+    public CourseController(CourseService service, ImportReprocessService reprocess)
+    {
+        _service = service;
+        _reprocess = reprocess;
+    }
 
     private bool IsAdmin => User.IsInRole("Admin");
+
+    /// <summary>Status der Aufbereitungs-Versionierung: wie viele (verwaltbare) Kurse sind veraltet
+    /// und wie aufbereitbar — Basis für den „Kurse aktualisieren (N)"-Knopf.</summary>
+    [HttpGet("reprocess/status")]
+    public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
+        => Ok(await _reprocess.GetCourseStatusAsync(GetUserId(), IsAdmin, ct));
+
+    /// <summary>Bereitet alle veralteten, verwaltbaren Kurse neu auf (lokal aus gespeichertem PGN;
+    /// Chessable-Altbestand ohne Quelle wird als Re-Fetch-Hintergrund-Job eingereiht).</summary>
+    [HttpPost("reprocess")]
+    public async Task<ActionResult<ReprocessResultDto>> Reprocess(CancellationToken ct)
+        => Ok(await _reprocess.ReprocessCoursesAsync(GetUserId(), IsAdmin, ct));
 
     /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
     [HttpGet("{bookId}/puzzles")]
