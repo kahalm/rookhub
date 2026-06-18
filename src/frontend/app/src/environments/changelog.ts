@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.4';
+export const APP_VERSION = '0.155.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.5", date: "2026-06-18", changes: [
+    { en: "Security hardening: your login token is now only attached to RookHub's own API requests, never to static assets or any third-party URL — defence in depth against token leakage.", de: "Sicherheits-Härtung: Dein Login-Token wird jetzt nur noch an RookHubs eigene API-Anfragen angehängt, nie an statische Assets oder fremde URLs — zusätzlicher Schutz gegen Token-Leaks." },
+  ]},
   { version: "0.155.4", date: "2026-06-18", changes: [
     { en: "Croatian translation: completed the missing strings (the entire Messages page, the admin Messages and Course-download tabs, and a few notification/menu labels) — Croatian users no longer see raw translation keys there.", de: "Kroatische Übersetzung: Die fehlenden Texte ergänzt (die komplette Nachrichten-Seite, die Admin-Tabs „Nachrichten\" und „Kurse holen\" sowie einige Benachrichtigungs-/Menü-Labels) — kroatische Nutzer sehen dort keine rohen Übersetzungs-Schlüssel mehr." },
   ]},
