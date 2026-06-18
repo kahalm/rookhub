@@ -14,6 +14,27 @@ export type AppLang = (typeof SUPPORTED_LANGS)[number];
 // Rechts-nach-links-Sprachen (Layout-Richtung via <html dir>).
 const RTL_LANGS: readonly AppLang[] = ['ar', 'fa'];
 
+// Sprachen, für die wir Angular-Locale-Daten registrieren (für DatePipe/DecimalPipe etc.).
+// Nur die tatsächlich übersetzten Sprachen; alle anderen formatieren über 'en'
+// (vermeidet „Missing locale data"-Fehler bei nicht registrierten Locales). 'en' ist
+// in Angular eingebaut und muss nicht registriert werden.
+export const FORMAT_LOCALES: readonly string[] = ['en', 'de', 'hr'];
+
+/**
+ * Ermittelt die Start-Locale für `LOCALE_ID` (Bootstrap) — gleiche Quelle wie
+ * {@link LocaleService.resolveInitial} (gespeichert → Browser → en), aber ohne
+ * TranslateService, damit es als reine LOCALE_ID-Factory beim Bootstrap läuft.
+ * Gibt nur eine in {@link FORMAT_LOCALES} registrierte Locale zurück.
+ */
+export function resolveStartupLocale(): string {
+  let lang: string | null = null;
+  try { lang = localStorage.getItem(LANG_KEY); } catch {}
+  if (!lang && typeof navigator !== 'undefined' && navigator.language) {
+    lang = navigator.language.split('-')[0];
+  }
+  return lang && FORMAT_LOCALES.includes(lang) ? lang : 'en';
+}
+
 export interface LangOption { code: AppLang; label: string; }
 
 /**

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { LocaleService } from './locale.service';
+import { LocaleService, resolveStartupLocale, FORMAT_LOCALES } from './locale.service';
 
 describe('LocaleService', () => {
   let svc: LocaleService;
@@ -38,5 +38,27 @@ describe('LocaleService', () => {
     localStorage.setItem('rookhub_lang', 'xx');
     svc.init();
     expect(['en', 'de', 'hr']).toContain(svc.current);
+  });
+});
+
+describe('resolveStartupLocale (LOCALE_ID factory)', () => {
+  afterEach(() => localStorage.clear());
+
+  it('returns a stored, format-supported language', () => {
+    localStorage.setItem('rookhub_lang', 'de');
+    expect(resolveStartupLocale()).toBe('de');
+  });
+
+  it('falls back to en for a stored language without registered locale data', () => {
+    // 'fr' is a supported UI language but not in FORMAT_LOCALES → must not be used as
+    // LOCALE_ID (would crash DatePipe with "Missing locale data").
+    localStorage.setItem('rookhub_lang', 'fr');
+    expect(FORMAT_LOCALES).not.toContain('fr');
+    expect(resolveStartupLocale()).toBe('en');
+  });
+
+  it('falls back to en when nothing is stored and the browser lang is unsupported', () => {
+    localStorage.clear();
+    expect(FORMAT_LOCALES.includes(resolveStartupLocale())).toBeTrue();
   });
 });

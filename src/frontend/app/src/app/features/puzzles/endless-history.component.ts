@@ -12,6 +12,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
+import { LocaleService } from '../../core/locale.service';
 
 interface EndlessSessionDto {
   id: number;
@@ -269,7 +270,7 @@ export class EndlessHistoryComponent implements OnInit {
   displayedColumns = ['select', 'date', 'maxRating', 'elo', 'solved', 'duration', 'config', 'mistakes'];
   selection = new SelectionModel<EndlessSessionDto>(true, []);
 
-  constructor(private http: HttpClient, public router: Router) {}
+  constructor(private http: HttpClient, public router: Router, private locale: LocaleService) {}
 
   get archiveFilterValue(): string {
     if (this.archiveFilter === null) return 'all';
@@ -353,8 +354,9 @@ export class EndlessHistoryComponent implements OnInit {
   formatDate(timestamp: number): string {
     const d = new Date(timestamp);
     if (isNaN(d.getTime())) return '-';
-    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const loc = this.locale.current;
+    return d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' })
+      + ' ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
   }
 
   formatDuration(seconds: number): string {

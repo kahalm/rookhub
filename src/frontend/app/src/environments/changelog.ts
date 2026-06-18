@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.7';
+export const APP_VERSION = '0.155.8';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.8", date: "2026-06-18", changes: [
+    { en: "Dates and numbers now follow your selected language: with German or Croatian the app no longer formats every date in US English. Picked up on load from your saved language; the Endless history list also stopped forcing German date format for everyone.", de: "Datums- und Zahlenformate richten sich jetzt nach deiner gewählten Sprache: Mit Deutsch oder Kroatisch wird nicht mehr alles in US-Englisch formatiert. Wird beim Laden aus der gespeicherten Sprache übernommen; auch die Endless-History erzwingt nicht mehr für alle das deutsche Datumsformat." },
+  ]},
   { version: "0.155.7", date: "2026-06-18", changes: [
     { en: "Internal: the offline Endless puzzle pool now uses a single shared storage-key constant instead of two independent string literals, removing a silent risk of the cache and its cleanup drifting apart.", de: "Intern: Der Offline-Pool für Endless nutzt jetzt eine einzige geteilte Speicher-Schlüssel-Konstante statt zweier unabhängiger String-Literale — beseitigt das stille Risiko, dass Cache und Aufräumlogik auseinanderlaufen." },
   ]},
