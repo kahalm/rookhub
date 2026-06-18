@@ -25,17 +25,26 @@ interface ReprocessResult { reprocessed: number; updatedLines: number; enqueued:
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
   template: `
-    @if (status && status.stale > 0) {
+    @if (status && (actionableCount > 0 || status.needsReimport > 0)) {
       <div class="reprocess-banner">
         <mat-icon class="rb-icon">auto_fix_high</mat-icon>
-        <span class="rb-text">{{ ('reprocess.available.' + section) | translate: { count: status.stale } }}</span>
-        <button mat-stroked-button (click)="run()" [disabled]="working">
-          @if (working) {
-            <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
-          } @else {
-            <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate }}
+        <span class="rb-text">
+          @if (actionableCount > 0) {
+            {{ ('reprocess.available.' + section) | translate: { count: actionableCount } }}
           }
-        </button>
+          @if (status.needsReimport > 0) {
+            <span class="rb-note">{{ ('reprocess.needsReimport.' + section) | translate: { count: status.needsReimport } }}</span>
+          }
+        </span>
+        @if (actionableCount > 0) {
+          <button mat-stroked-button (click)="run()" [disabled]="working">
+            @if (working) {
+              <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
+            } @else {
+              <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate }}
+            }
+          </button>
+        }
       </div>
     }
   `,
@@ -48,6 +57,7 @@ interface ReprocessResult { reprocessed: number; updatedLines: number; enqueued:
     }
     .rb-icon { flex: 0 0 auto; color: #ef6c00; }
     .rb-text { flex: 1 1 220px; }
+    .rb-note { display: block; margin-top: 4px; opacity: 0.85; font-size: 0.85em; }
     .rb-spin { display: inline-block; vertical-align: middle; margin-right: 6px; }
   `]
 })
@@ -59,6 +69,11 @@ export class ReprocessBannerComponent implements OnInit {
 
   status: ReprocessStatus | null = null;
   working = false;
+
+  /** Datensätze, die der Knopf tatsächlich aktualisieren kann (lokal aus SourcePgn oder per Chessable-Re-Fetch). */
+  get actionableCount(): number {
+    return this.status ? this.status.reprocessableLocally + this.status.refetchable : 0;
+  }
 
   constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
 

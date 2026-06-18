@@ -1598,6 +1598,10 @@
       "courses": "{{count}} tečaj(eva) koristi stariju obradu i može se ažurirati — npr. za prikaz komentara poteza iz knjige.",
       "repertoires": "{{count}} repertoar(a) koristi stariju obradu i može se ažurirati."
     },
+    "needsReimport": {
+      "courses": "{{count}} ručno učitan(ih) tečaj(eva) ne može se automatski ažurirati — ponovno uvezite PGN za najnoviju obradu.",
+      "repertoires": "{{count}} repertoar(a) treba ručni ponovni uvoz za ažuriranje."
+    },
     "update": "Ažuriraj",
     "working": "Ažuriranje…",
     "doneLocal": "{{count}} ažurirano.",

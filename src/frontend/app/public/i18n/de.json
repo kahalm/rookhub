@@ -1598,6 +1598,10 @@
       "courses": "{{count}} Kurs(e) nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
       "repertoires": "{{count}} Repertoire(s) nutzen eine ältere Aufbereitung und können aktualisiert werden."
     },
+    "needsReimport": {
+      "courses": "{{count}} manuell hochgeladene(r) Kurs(e) können nicht automatisch aktualisiert werden — PGN neu importieren, um die neueste Aufbereitung zu erhalten.",
+      "repertoires": "{{count}} Repertoire(s) brauchen einen manuellen Re-Import zur Aktualisierung."
+    },
     "update": "Aktualisieren",
     "working": "Wird aktualisiert…",
     "doneLocal": "{{count}} aktualisiert.",

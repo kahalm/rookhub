@@ -1598,6 +1598,10 @@
       "courses": "{{count}} course(s) use an older processing version and can be updated — e.g. to show the book's per-move comments.",
       "repertoires": "{{count}} repertoire(s) use an older processing version and can be updated."
     },
+    "needsReimport": {
+      "courses": "{{count}} manually uploaded course(s) can't be updated automatically — re-import the PGN to get the latest processing.",
+      "repertoires": "{{count}} repertoire(s) need a manual re-import to be updated."
+    },
     "update": "Update",
     "working": "Updating…",
     "doneLocal": "{{count}} updated.",
