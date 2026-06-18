@@ -25,6 +25,19 @@ interface EndlessSessionDto {
   isArchived: boolean;
 }
 
+/**
+ * View-Model: einmal beim Laden berechnet (statt pro Change-Detection-Zyklus). Die früheren
+ * template-gebundenen `formatConfig(s.configJson)`/`formatMistakes(...)`/`formatEloDelta(...)`
+ * haben pro sichtbarer Zeile JSON.parse + Locale-Formatierung in jedem CD-Tick ausgeführt.
+ */
+interface SessionRow extends EndlessSessionDto {
+  dateText: string;
+  configText: string;
+  mistakesText: string;
+  eloText: string;
+  eloClass: string;
+}
+
 interface EndlessHistoryResponse {
   items: EndlessSessionDto[];
   totalCount: number;
@@ -111,7 +124,7 @@ interface EndlessHistoryResponse {
                   </ng-container>
                   <ng-container matColumnDef="date">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colDate' | translate }}</th>
-                    <td mat-cell *matCellDef="let s">{{ formatDate(s.timestamp) }}</td>
+                    <td mat-cell *matCellDef="let s">{{ s.dateText }}</td>
                   </ng-container>
                   <ng-container matColumnDef="maxRating">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMaxRating' | translate }}</th>
@@ -119,7 +132,7 @@ interface EndlessHistoryResponse {
                   </ng-container>
                   <ng-container matColumnDef="elo">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colEloDelta' | translate }}</th>
-                    <td mat-cell *matCellDef="let s" [class]="eloDeltaClass(s)">{{ formatEloDelta(s) }}</td>
+                    <td mat-cell *matCellDef="let s" [class]="s.eloClass">{{ s.eloText }}</td>
                   </ng-container>
                   <ng-container matColumnDef="solved">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colSolved' | translate }}</th>
@@ -131,11 +144,11 @@ interface EndlessHistoryResponse {
                   </ng-container>
                   <ng-container matColumnDef="config">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colConfig' | translate }}</th>
-                    <td mat-cell *matCellDef="let s">{{ formatConfig(s.configJson) }}</td>
+                    <td mat-cell *matCellDef="let s">{{ s.configText }}</td>
                   </ng-container>
                   <ng-container matColumnDef="mistakes">
                     <th mat-header-cell *matHeaderCellDef>{{ 'endless.history.colMistakes' | translate }}</th>
-                    <td mat-cell *matCellDef="let s">{{ formatMistakes(s.mistakeAtRatings) }}</td>
+                    <td mat-cell *matCellDef="let s">{{ s.mistakesText }}</td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                   <tr mat-row *matRowDef="let row; columns: displayedColumns;"
@@ -155,7 +168,7 @@ interface EndlessHistoryResponse {
                         (change)="$event ? selection.toggle(s) : null"
                         [checked]="selection.isSelected(s)">
                       </mat-checkbox>
-                      <span class="session-date">{{ formatDate(s.timestamp) }}</span>
+                      <span class="session-date">{{ s.dateText }}</span>
                       @if (s.isArchived) {
                         <mat-icon class="archived-icon">archive</mat-icon>
                       }
@@ -166,7 +179,7 @@ interface EndlessHistoryResponse {
                         <span class="session-stat-label">{{ 'endless.history.colMaxRating' | translate }}</span>
                       </div>
                       <div class="session-stat">
-                        <span class="session-stat-value" [class]="eloDeltaClass(s)">{{ formatEloDelta(s) }}</span>
+                        <span class="session-stat-value" [class]="s.eloClass">{{ s.eloText }}</span>
                         <span class="session-stat-label">{{ 'endless.history.colEloDelta' | translate }}</span>
                       </div>
                       <div class="session-stat">
@@ -178,14 +191,14 @@ interface EndlessHistoryResponse {
                         <span class="session-stat-label">{{ 'endless.history.colDuration' | translate }}</span>
                       </div>
                       <div class="session-stat">
-                        <span class="session-stat-value">{{ formatConfig(s.configJson) }}</span>
+                        <span class="session-stat-value">{{ s.configText }}</span>
                         <span class="session-stat-label">{{ 'endless.history.colConfig' | translate }}</span>
                       </div>
                     </div>
-                    @if (formatMistakes(s.mistakeAtRatings) !== '-') {
+                    @if (s.mistakesText !== '-') {
                       <div class="session-mistakes">
                         <mat-icon>heart_broken</mat-icon>
-                        <span>{{ formatMistakes(s.mistakeAtRatings) }}</span>
+                        <span>{{ s.mistakesText }}</span>
                       </div>
                     }
                   </div>
@@ -261,14 +274,14 @@ interface EndlessHistoryResponse {
   `]
 })
 export class EndlessHistoryComponent implements OnInit {
-  sessions: EndlessSessionDto[] = [];
+  sessions: SessionRow[] = [];
   totalCount = 0;
   page = 1;
   pageSize = 20;
   loading = true;
   archiveFilter: boolean | null = null;
   displayedColumns = ['select', 'date', 'maxRating', 'elo', 'solved', 'duration', 'config', 'mistakes'];
-  selection = new SelectionModel<EndlessSessionDto>(true, []);
+  selection = new SelectionModel<SessionRow>(true, []);
 
   constructor(private http: HttpClient, public router: Router, private locale: LocaleService) {}
 
@@ -293,7 +306,7 @@ export class EndlessHistoryComponent implements OnInit {
     }
     this.http.get<EndlessHistoryResponse>('/api/endless/history', { params }).subscribe({
       next: (res) => {
-        this.sessions = res.items;
+        this.sessions = res.items.map(s => this.toRow(s));
         this.totalCount = res.totalCount;
         this.page = res.page;
         this.pageSize = res.pageSize;
@@ -364,6 +377,18 @@ export class EndlessHistoryComponent implements OnInit {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  /** Baut die einmal-berechnete Anzeigezeile (siehe {@link SessionRow}). */
+  private toRow(s: EndlessSessionDto): SessionRow {
+    return {
+      ...s,
+      dateText: this.formatDate(s.timestamp),
+      configText: this.formatConfig(s.configJson),
+      mistakesText: this.formatMistakes(s.mistakeAtRatings),
+      eloText: this.formatEloDelta(s),
+      eloClass: this.eloDeltaClass(s),
+    };
   }
 
   formatConfig(configJson: string): string {

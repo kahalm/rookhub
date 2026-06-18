@@ -53,3 +53,21 @@ describe('EndlessHistoryComponent formatDate uses the active locale', () => {
     expect(en.formatDate(NaN)).toBe('-');
   });
 });
+
+describe('EndlessHistoryComponent toRow precomputes display fields', () => {
+  it('computes config/mistakes/elo text once instead of parsing JSON per CD cycle', () => {
+    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any);
+    const dto = {
+      id: 1, timestamp: Date.UTC(2021, 2, 5, 12, 0), totalSolved: 5, maxRating: 1840,
+      durationSeconds: 90, configJson: JSON.stringify({ startElo: 1500, fasttrackThreshold1: 3 }),
+      mistakeAtRatings: '1600,1700', isArchived: false,
+    };
+    const row = (c as any).toRow(dto);
+    expect(row.configText).toContain('1500');
+    expect(row.configText).toContain('T1 3');
+    expect(row.mistakesText).toBe('1600, 1700');
+    expect(row.eloText).toBe('+340');   // 1840 - 1500
+    expect(row.eloClass).toBe('elo-pos');
+    expect(row.dateText).not.toBe('-');
+  });
+});
