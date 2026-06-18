@@ -16,7 +16,7 @@ interface CategoryDef {
 
 /**
  * Bestenlisten-Seite: drei Kategorien (einzigartige Standard-Puzzles, Endlos-Läufe,
- * gelöste Kurs-Linien) je Periode (heute/Woche/Monat/gesamt). Nur eingeloggt (Route-Guard).
+ * gelöste Kurs-Linien) je Periode (Woche/Monat/gesamt). Nur eingeloggt (Route-Guard).
  */
 @Component({
   selector: 'app-leaderboards',
@@ -27,7 +27,6 @@ interface CategoryDef {
       <h1 class="lb-title"><mat-icon>leaderboard</mat-icon> {{ 'leaderboards.title' | translate }}</h1>
 
       <mat-button-toggle-group class="lb-period" [value]="period" (change)="onPeriod($event.value)" aria-label="Period">
-        <mat-button-toggle value="daily">{{ 'leaderboards.period.daily' | translate }}</mat-button-toggle>
         <mat-button-toggle value="weekly">{{ 'leaderboards.period.weekly' | translate }}</mat-button-toggle>
         <mat-button-toggle value="monthly">{{ 'leaderboards.period.monthly' | translate }}</mat-button-toggle>
         <mat-button-toggle value="alltime">{{ 'leaderboards.period.alltime' | translate }}</mat-button-toggle>

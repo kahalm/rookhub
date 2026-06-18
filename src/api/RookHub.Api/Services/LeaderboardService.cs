@@ -8,7 +8,7 @@ namespace RookHub.Api.Services;
 /// <summary>
 /// Berechnet die Bestenlisten für drei Kategorien — einzigartige Standard-Puzzles,
 /// abgeschlossene Endlos-Läufe und gelöste Kurs-Linien — je Periode
-/// (daily/weekly/monthly/alltime, UTC-Grenzen). Nur eingeloggte Nutzer; anonyme
+/// (weekly/monthly/alltime, UTC-Grenzen). Nur eingeloggte Nutzer; anonyme
 /// Versuche (UserId == null) zählen nicht, weil sie keine Identität für die Liste haben.
 /// </summary>
 public class LeaderboardService
@@ -16,7 +16,7 @@ public class LeaderboardService
     private readonly AppDbContext _db;
     public LeaderboardService(AppDbContext db) => _db = db;
 
-    public static readonly string[] Periods = { "daily", "weekly", "monthly", "alltime" };
+    public static readonly string[] Periods = { "weekly", "monthly", "alltime" };
 
     /// <summary>Untere (inklusive) UTC-Zeitgrenze der Periode; alltime = MinValue (keine Grenze).</summary>
     public static DateTime WindowStart(string period, DateTime nowUtc)
@@ -24,7 +24,6 @@ public class LeaderboardService
         var today = nowUtc.Date;   // 00:00 UTC heute
         return period switch
         {
-            "daily" => today,
             // ISO-Woche: Montag als Wochenstart.
             "weekly" => today.AddDays(-(((int)today.DayOfWeek + 6) % 7)),
             "monthly" => new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc),

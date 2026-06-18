@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export type LeaderboardPeriod = 'daily' | 'weekly' | 'monthly' | 'alltime';
+export type LeaderboardPeriod = 'weekly' | 'monthly' | 'alltime';
 
 export interface LeaderboardEntry {
   name: string;

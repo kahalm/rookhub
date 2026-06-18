@@ -100,17 +100,17 @@ public class LeaderboardServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAsync_DailyWindow_ExcludesOlderSolves_AlltimeIncludesThem()
+    public async Task GetAsync_WeeklyWindow_ExcludesOlderSolves_AlltimeIncludesThem()
     {
         var anna = await CreateUserAsync("anna");
         var now = DateTime.UtcNow;
-        AddPuzzleSolve(anna.Id, 1, true, now);                  // heute
-        AddPuzzleSolve(anna.Id, 2, true, now.AddDays(-2));      // vor 2 Tagen
+        AddPuzzleSolve(anna.Id, 1, true, now);                  // diese Woche
+        AddPuzzleSolve(anna.Id, 2, true, now.AddDays(-10));     // vor 10 Tagen → garantiert vor Wochenstart (Montag)
         await _db.SaveChangesAsync();
 
-        var daily = await _service.GetAsync("daily", viewerId: 0);
-        Assert.Single(daily.Puzzles);
-        Assert.Equal(1, daily.Puzzles[0].Count);                // nur das heutige
+        var weekly = await _service.GetAsync("weekly", viewerId: 0);
+        Assert.Single(weekly.Puzzles);
+        Assert.Equal(1, weekly.Puzzles[0].Count);               // nur das aus dieser Woche
 
         var alltime = await _service.GetAsync("alltime", viewerId: 0);
         Assert.Equal(2, alltime.Puzzles[0].Count);              // beide
@@ -176,7 +176,6 @@ public class LeaderboardServiceTests : IDisposable
     {
         // Mittwoch, 2026-06-17 12:00 UTC
         var now = new DateTime(2026, 6, 17, 12, 0, 0, DateTimeKind.Utc);
-        Assert.Equal(new DateTime(2026, 6, 17), LeaderboardService.WindowStart("daily", now));
         Assert.Equal(new DateTime(2026, 6, 15), LeaderboardService.WindowStart("weekly", now));   // Montag dieser Woche
         Assert.Equal(new DateTime(2026, 6, 1), LeaderboardService.WindowStart("monthly", now));
         Assert.Equal(DateTime.MinValue, LeaderboardService.WindowStart("alltime", now));

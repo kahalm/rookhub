@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.2';
+export const APP_VERSION = '0.155.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.3", date: "2026-06-18", changes: [
+    { en: "Leaderboards: removed the \"Daily\" period — leaderboards now switch between This week, This month and All time.", de: "Bestenlisten: Der Zeitraum „Heute\" wurde entfernt — die Bestenlisten lassen sich jetzt zwischen Diese Woche, Dieser Monat und Gesamt umschalten." },
+  ]},
   { version: "0.155.1", date: "2026-06-18", changes: [
     { en: "Messages page now refreshes when you return to the tab, so a new reply from the admin team shows up immediately instead of after a manual reload.", de: "Die Nachrichten-Seite aktualisiert sich jetzt, wenn du zum Tab zurückkehrst — eine neue Antwort des Admin-Teams erscheint sofort, statt erst nach manuellem Neuladen." },
   ]},
