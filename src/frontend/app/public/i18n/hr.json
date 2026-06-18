@@ -27,7 +27,9 @@
       "revenge_performed_failed": "{{username}} je pokušao osvetiti tvoju zagonetku (neuspješno)",
       "challenge_received": "{{username}} ti je poslao izazov",
       "challenge_resolved_solved": "{{username}} je riješio tvoj izazov",
-      "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov"
+      "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov",
+      "admin_message_received": "Administratorski tim ti je poslao poruku",
+      "user_message_received": "{{username}} je poslao poruku administratorskom timu"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -64,7 +66,8 @@
     "themeDark": "Tamna tema",
     "help": "Pomoć",
     "chessable": "Chessable",
-    "leaderboards": "Ljestvice"
+    "leaderboards": "Ljestvice",
+    "messages": "Poruke"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -1011,7 +1014,9 @@
       "groups": "Grupe",
       "daily": "Dnevna zagonetka",
       "puzzles": "Zagonetke",
-      "menu": "Izbornik"
+      "menu": "Izbornik",
+      "messages": "Poruke",
+      "courseDl": "Preuzimanje tečajeva"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
@@ -1174,6 +1179,34 @@
         "help": "Pomoć",
         "leaderboards": "Ljestvice"
       }
+    },
+    "messages": {
+      "title": "Izravne poruke",
+      "intro": "Napiši korisniku; može ti odgovoriti ovdje. Razgovor se nastavlja kao nit.",
+      "searchUser": "Pronađi korisnika…",
+      "noThreads": "Još nema razgovora.",
+      "selectThread": "Odaberi razgovor ili započni novi.",
+      "emptyThread": "Još nema poruka — napiši prvu.",
+      "writeLabel": "Tvoja poruka",
+      "unclaimed": "otvoreno",
+      "claimedBy": "Preuzeo {{name}}",
+      "claim": "Preuzmi",
+      "takeOver": "Preuzmi",
+      "release": "Otpusti"
+    },
+    "courseDl": {
+      "title": "Preuzmi tečajeve od korisnika",
+      "intro": "Povuci Chessable tečaj koji korisnik posjeduje u vlastiti račun kao repertoar — koristeći njegov pohranjeni Chessable pristup. Navedeni su samo korisnici koji su spremili Chessable bearer.",
+      "selectUser": "Korisnik",
+      "refresh": "Osvježi popis",
+      "noUsers": "Nijedan korisnik još nije pohranio Chessable pristup.",
+      "noCourses": "Nema pronađenih tečajeva za ovog korisnika.",
+      "loadError": "Popis tečajeva nije se mogao učitati.",
+      "importError": "Preuzimanje nije moguće pokrenuti.",
+      "import": "Preuzmi u moj račun",
+      "done": "U tvojim repertoarima",
+      "failed": "Neuspjelo",
+      "queued": "pozicija {{n}} u redu"
     }
   },
   "analysis": {
@@ -1516,7 +1549,8 @@
     "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija",
     "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",
     "etaRemaining": "još ~{{min}} min",
-    "importDuration": "Čekanje {{queue}} · Dohvat {{fetch}}"
+    "importDuration": "Čekanje {{queue}} · Dohvat {{fetch}}",
+    "cachedHint": "Spremljeno u predmemoriju — dostupno gotovo odmah (nije potreban Chessable dohvat)"
   },
   "leaderboards": {
     "title": "Ljestvice",
@@ -1540,5 +1574,16 @@
       "lines": "linije",
       "daily": "dnevne zagonetke"
     }
+  },
+  "messages": {
+    "title": "Poruke",
+    "emptyUser": "Još nema poruka. Administratorski tim će te kontaktirati ovdje.",
+    "adminTeam": "Administratorski tim",
+    "you": "Ti",
+    "replyLabel": "Tvoj odgovor",
+    "send": "Pošalji",
+    "sendError": "Poruku nije moguće poslati.",
+    "emptyUserCanWrite": "Još nema poruka. Napiši administratorskom timu ispod — odgovor ćeš dobiti ovdje.",
+    "writeLabel": "Tvoja poruka"
   }
 }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.3';
+export const APP_VERSION = '0.155.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.4", date: "2026-06-18", changes: [
+    { en: "Croatian translation: completed the missing strings (the entire Messages page, the admin Messages and Course-download tabs, and a few notification/menu labels) — Croatian users no longer see raw translation keys there.", de: "Kroatische Übersetzung: Die fehlenden Texte ergänzt (die komplette Nachrichten-Seite, die Admin-Tabs „Nachrichten\" und „Kurse holen\" sowie einige Benachrichtigungs-/Menü-Labels) — kroatische Nutzer sehen dort keine rohen Übersetzungs-Schlüssel mehr." },
+  ]},
   { version: "0.155.3", date: "2026-06-18", changes: [
     { en: "Leaderboards: removed the \"Daily\" period — leaderboards now switch between This week, This month and All time.", de: "Bestenlisten: Der Zeitraum „Heute\" wurde entfernt — die Bestenlisten lassen sich jetzt zwischen Diese Woche, Dieser Monat und Gesamt umschalten." },
   ]},
