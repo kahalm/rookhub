@@ -244,13 +244,13 @@ export class FriendsComponent implements OnInit {
     this.challenge.getIncoming().subscribe({ next: c => this.incoming = c, error: () => {} });
     this.challenge.getOutgoing().subscribe({ next: c => this.outgoing = c, error: () => {} });
     // Revanche-Benachrichtigungen laden und (da der User sie jetzt sieht) als gelesen markieren → Badge leert sich.
-    this.revenge.getNotifications().subscribe({
-      next: n => {
-        this.revengeNotifications = n;
-        if (n.some(x => !x.seen)) this.revenge.markSeen().subscribe({ next: () => {}, error: () => {} });
-      },
-      error: () => {}
-    });
+    // Flach via switchMap statt verschachteltem subscribe (kein subscribe-in-subscribe).
+    this.revenge.getNotifications().pipe(
+      tap(n => this.revengeNotifications = n),
+      switchMap(n => n.some(x => !x.seen) ? this.revenge.markSeen().pipe(catchError(() => of(null))) : of(null)),
+      catchError(() => of(null)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe();
   }
 
   /** Eingehende Challenge lösen: zum passenden Solver navigieren (Standard- vs. Buch-Puzzle),

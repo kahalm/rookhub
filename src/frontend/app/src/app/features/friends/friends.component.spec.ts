@@ -59,3 +59,37 @@ describe('FriendsComponent search race', () => {
     expect(component.searchResults).toEqual([]);
   });
 });
+
+describe('FriendsComponent revenge notifications (flattened subscribe)', () => {
+  function setup(notifications: any[]) {
+    const markSeen = jasmine.createSpy('markSeen').and.returnValue(of(null));
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of(notifications), markSeen } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+      ],
+    });
+    TestBed.overrideComponent(FriendsComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/friends').flush([]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    return { component: fixture.componentInstance, markSeen };
+  }
+
+  it('marks notifications seen when at least one is unseen', () => {
+    const { component, markSeen } = setup([{ id: 1, seen: false }]);
+    expect(component.revengeNotifications.length).toBe(1);
+    expect(markSeen).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT mark seen when all notifications are already seen', () => {
+    const { markSeen } = setup([{ id: 1, seen: true }]);
+    expect(markSeen).not.toHaveBeenCalled();
+  });
+});
