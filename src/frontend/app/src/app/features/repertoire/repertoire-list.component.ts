@@ -44,7 +44,7 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
               <mat-card-header>
                 <mat-card-title>
                   {{ rep.name }}
-                  @if (rep.kind && rep.kind !== 0) {
+                  @if (rep.kind !== Kind.None) {
                     <mat-chip-set class="kind-chip-set">
                       <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
                     </mat-chip-set>
