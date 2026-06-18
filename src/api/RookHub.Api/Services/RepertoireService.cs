@@ -16,8 +16,8 @@ public class RepertoireService
     // Tag-Pair wie [Event "..."] bzw. echter erster Zug 1. e4 / 1. Nf3 / 1. O-O — nicht blosse Teilstrings.
     private static readonly Regex PgnTagPair = new(@"\[[A-Za-z][A-Za-z0-9_]*\s+""", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
     private static readonly Regex PgnFirstMove = new(@"\b1\.\s*(O-O|[NBRQKa-h])", RegexOptions.Compiled, TimeSpan.FromSeconds(2));
-    public const int MaxRepertoiresPerUser = 50;
-    public const int MaxFilesPerRepertoire = 100;
+    public const int MaxRepertoiresPerUser = 500;
+    public const int MaxFilesPerRepertoire = 1000;
 
     public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache)
     {

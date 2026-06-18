@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.154.0';
+export const APP_VERSION = '0.155.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.0", date: "2026-06-18", changes: [
+    { en: "Repertoires: the per-user limit was raised tenfold from 50 to 500 repertoires, and the per-repertoire file limit from 100 to 1000 PGN files.", de: "Repertoires: Das Limit pro Nutzer wurde verzehnfacht von 50 auf 500 Repertoires, und das Datei-Limit pro Repertoire von 100 auf 1000 PGN-Dateien." },
+  ]},
   { version: "0.154.0", date: "2026-06-17", changes: [
     { en: "RepCheck extension: you can now \"Remember line\" on chessable.com — the current position (FEN) is sent to RookHub and stored for later use.", de: "RepCheck-Extension: Auf chessable.com kannst du jetzt eine Stellung „merken\" (Remember line) — die aktuelle Stellung (FEN) wird an RookHub geschickt und dort für später gespeichert." },
   ]},
