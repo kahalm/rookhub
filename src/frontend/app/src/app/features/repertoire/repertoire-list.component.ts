@@ -46,7 +46,7 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
                   {{ rep.name }}
                   @if (rep.kind && rep.kind !== 0) {
                     <mat-chip-set class="kind-chip-set">
-                      <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === 1" [class.kind-middlegame]="rep.kind === 2" [class.kind-endgame]="rep.kind === 3">{{ kindLabel(rep.kind) | translate }}</mat-chip>
+                      <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
                     </mat-chip-set>
                   }
                 </mat-card-title>
@@ -89,11 +89,13 @@ import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.ty
 export class RepertoireListComponent implements OnInit {
   repertoires: Repertoire[] = [];
   loading = true;
+  /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
+  readonly Kind = RepertoireKind;
 
   constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
 
-  kindLabel(kind: number): string {
-    return REPERTOIRE_KIND_LABELS[kind as RepertoireKind] ?? 'repertoire.kind.none';
+  kindLabel(kind: RepertoireKind): string {
+    return REPERTOIRE_KIND_LABELS[kind] ?? 'repertoire.kind.none';
   }
 
   ngOnInit(): void {

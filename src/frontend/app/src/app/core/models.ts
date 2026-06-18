@@ -1,4 +1,5 @@
 // Shared API response interfaces for type safety
+import { RepertoireKind } from './repertoire.types';
 
 // ── Tournament (from Crawler via Proxy) ─────────────────────────────────
 
@@ -108,8 +109,7 @@ export interface Repertoire {
   name: string;
   description: string | null;
   isPublic: boolean;
-  /** 0=None, 1=Opening, 2=Middlegame, 3=Endgame (siehe `RepertoireKind`). */
-  kind: number;
+  kind: RepertoireKind;
   fileCount: number;
   /** Soll dieses Repertoire von der Browser-Extension/dem Userscript genutzt werden? */
   useForExtension: boolean;
@@ -122,7 +122,7 @@ export interface RepertoireDetail {
   name: string;
   description: string | null;
   isPublic: boolean;
-  kind: number;
+  kind: RepertoireKind;
   files: RepertoireFile[];
   useForExtension: boolean;
   createdAt: string;

@@ -313,7 +313,7 @@ export class EndlessStorageService {
     if (this.authService.isLoggedIn) {
       const url = `${this.apiUrl}/sessions`;
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return of(null); }
-      return this.http.post<any>(url, body).pipe(
+      return this.http.post<{ id: number }>(url, body).pipe(
         map(res => res?.id ?? null),
         catchError(() => { this.offlineQueue.enqueue('POST', url, body); return of(null); })
       );
@@ -323,7 +323,7 @@ export class EndlessStorageService {
         const url = `${this.apiUrl}/sessions/anonymous`;
         const anonBody = { ...body, sessionId };
         if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, anonBody); return of(null); }
-        return this.http.post<any>(url, anonBody).pipe(
+        return this.http.post<{ id: number }>(url, anonBody).pipe(
           map(res => res?.id ?? null),
           catchError(() => { this.offlineQueue.enqueue('POST', url, anonBody); return of(null); })
         );
