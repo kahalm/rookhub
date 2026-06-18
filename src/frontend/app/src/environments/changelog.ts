@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.157.0';
+export const APP_VERSION = '0.157.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.157.1", date: "2026-06-18", changes: [
+    { en: "Courses: redesigned course cards — compact title/meta, thinner progress bar, actions consolidated into a single row (primary buttons left, utility icons right), quieter chapters toggle.", de: "Kurse: Kurs-Karten neu gestaltet — kompakter Titel/Meta, dünnerer Fortschrittsbalken, Aktionen in einer Zeile zusammengefasst (Haupt-Buttons links, Hilfssymbole rechts), unauffälligere Kapitel-Schaltfläche." },
+  ]},
   { version: "0.157.0", date: "2026-06-18", changes: [
     { en: "Courses & Repertoires can now be kept up to date with improvements to the import: when a newer processing version is available (e.g. the new per-move comments), an \"Update (N)\" banner appears in the section. One click re-processes your affected courses in place — your progress and stats are preserved. Imported courses now also keep their original PGN so they can be re-processed offline; Chessable courses without a stored copy are refreshed in the background.", de: "Kurse & Repertoires lassen sich jetzt mit Verbesserungen des Imports aktuell halten: Sobald eine neuere Aufbereitung verfügbar ist (z. B. die neuen Zug-Kommentare), erscheint in der Sektion ein „Aktualisieren (N)\"-Banner. Ein Klick bereitet die betroffenen Kurse in-place neu auf — Fortschritt und Statistiken bleiben erhalten. Importierte Kurse behalten künftig ihr Original-PGN, damit sie offline neu aufbereitet werden können; Chessable-Kurse ohne gespeicherte Kopie werden im Hintergrund neu geladen." },
   ]},

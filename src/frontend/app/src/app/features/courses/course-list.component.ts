@@ -60,29 +60,60 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
 
     <ng-template #cardTpl let-c>
       <mat-card class="course-card">
-        <mat-card-header>
-          <mat-card-title>{{ c.displayName }}</mat-card-title>
-          <mat-card-subtitle>
-            {{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}
-            @if (c.difficulty) { · {{ c.difficulty }} }
-            @if (c.rating) { · {{ c.rating }}/10 }
-          </mat-card-subtitle>
-        </mat-card-header>
         <mat-card-content>
+          <div class="card-title">{{ c.displayName }}</div>
+          <div class="card-meta">
+            <span>{{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}</span>
+            @if (c.difficulty) { <span class="meta-sep">·</span><span>{{ c.difficulty }}</span> }
+            @if (c.rating) { <span class="meta-sep">·</span><span>{{ c.rating }}/10</span> }
+          </div>
+
           <div class="progress-row">
             <mat-progress-bar mode="determinate" [value]="c.progressPercent"></mat-progress-bar>
-            <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }} ({{ c.progressPercent }}%)</span>
+            <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }}</span>
           </div>
+
           @if (c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount) {
             <p class="done-hint"><mat-icon>emoji_events</mat-icon> {{ 'courses.completed' | translate }}</p>
           }
+        </mat-card-content>
+
+        <div class="card-footer">
+          <div class="action-row">
+            <div class="primary-actions">
+              <button mat-flat-button color="primary"
+                      [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
+                <mat-icon>format_list_numbered</mat-icon>{{ 'courses.sequential' | translate }}
+              </button>
+              <button mat-stroked-button
+                      [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
+                <mat-icon>shuffle</mat-icon>{{ 'courses.random' | translate }}
+              </button>
+            </div>
+            <div class="util-actions">
+              <button mat-icon-button
+                      [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
+                      [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
+                      (click)="toggleOffline(c)">
+                <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+              </button>
+              <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
+                      [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
+                <mat-icon>download</mat-icon>
+              </button>
+              <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
+                      [disabled]="c.solvedCount === 0" (click)="reset(c)">
+                <mat-icon>restart_alt</mat-icon>
+              </button>
+            </div>
+          </div>
 
           @if (c.puzzleCount > 0) {
             <div class="chapters-block">
-              <button mat-button class="chapters-toggle" (click)="toggleChapters(c)"
+              <button class="chapters-toggle" (click)="toggleChapters(c)"
                       [attr.aria-expanded]="expandedBook === c.bookId">
-                <mat-icon>{{ expandedBook === c.bookId ? 'expand_less' : 'expand_more' }}</mat-icon>
-                {{ 'courses.chapters' | translate }}@if (chaptersByBook[c.bookId]) { ({{ chaptersByBook[c.bookId].length }}) }
+                <mat-icon class="toggle-icon">{{ expandedBook === c.bookId ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <span>{{ 'courses.chapters' | translate }}@if (chaptersByBook[c.bookId]) { ({{ chaptersByBook[c.bookId].length }}) }</span>
               </button>
               @if (expandedBook === c.bookId) {
                 @if (loadingChapters === c.bookId) {
@@ -94,16 +125,20 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
                         <span class="chapter-name" [title]="ch.name || ('courses.noChapter' | translate)">
                           {{ ch.name || ('courses.noChapter' | translate) }}
                         </span>
-                        <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
-                        <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}</span>
-                        <button mat-icon-button color="primary" [matTooltip]="'courses.sequential' | translate"
-                                [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'sequential']">
-                          <mat-icon>format_list_numbered</mat-icon>
-                        </button>
-                        <button mat-icon-button [matTooltip]="'courses.random' | translate"
-                                [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'random']">
-                          <mat-icon>shuffle</mat-icon>
-                        </button>
+                        <div class="chapter-progress">
+                          <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                          <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}</span>
+                        </div>
+                        <div class="chapter-btns">
+                          <button mat-icon-button color="primary" [matTooltip]="'courses.sequential' | translate"
+                                  [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'sequential']">
+                            <mat-icon>format_list_numbered</mat-icon>
+                          </button>
+                          <button mat-icon-button [matTooltip]="'courses.random' | translate"
+                                  [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'random']">
+                            <mat-icon>shuffle</mat-icon>
+                          </button>
+                        </div>
                       </li>
                     }
                   </ul>
@@ -113,32 +148,7 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
               }
             </div>
           }
-        </mat-card-content>
-        <mat-card-actions class="course-actions">
-          <button mat-raised-button color="primary"
-                  [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
-            <mat-icon>format_list_numbered</mat-icon> {{ 'courses.sequential' | translate }}
-          </button>
-          <button mat-stroked-button
-                  [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
-            <mat-icon>shuffle</mat-icon> {{ 'courses.random' | translate }}
-          </button>
-          <button mat-icon-button
-                  [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
-                  [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
-                  (click)="toggleOffline(c)">
-            <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
-          </button>
-          <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
-                  [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
-            <mat-icon>download</mat-icon>
-          </button>
-          <span class="spacer"></span>
-          <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
-                  [disabled]="c.solvedCount === 0" (click)="reset(c)">
-            <mat-icon>restart_alt</mat-icon>
-          </button>
-        </mat-card-actions>
+        </div>
       </mat-card>
     </ng-template>
   `,
@@ -147,29 +157,58 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .course-section { margin-bottom: 28px; }
-    .course-section h2 { font-size: 1.15rem; font-weight: 600; margin: 0 0 2px; }
-    .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.9rem; margin: 0 0 12px; }
+    .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
+    .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
     .course-grid {
-      display: grid; gap: 16px;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
-    .course-card { display: flex; flex-direction: column; }
-    .progress-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
-    .progress-row mat-progress-bar { flex: 1; }
-    .progress-label { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: color-mix(in srgb, currentColor 70%, transparent); white-space: nowrap; }
-    .done-hint { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 500; margin: 4px 0 0; }
-    .done-hint mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .course-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .spacer { flex: 1 1 auto; }
-    .chapters-block { margin-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding-top: 4px; }
-    .chapters-toggle { padding: 0 8px; min-width: 0; font-weight: 500; }
+    .course-card {
+      display: flex; flex-direction: column;
+      padding: 0;
+      mat-card-content { padding: 14px 16px 8px; }
+    }
+    .card-title { font-size: 0.95rem; font-weight: 600; line-height: 1.35; margin-bottom: 2px; }
+    .card-meta {
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+      font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);
+      margin-bottom: 8px;
+    }
+    .meta-sep { opacity: 0.5; }
+    .progress-row { display: flex; align-items: center; gap: 8px; }
+    .progress-row mat-progress-bar { flex: 1; --mdc-linear-progress-track-height: 5px; --mdc-linear-progress-active-indicator-height: 5px; border-radius: 3px; }
+    .progress-label { font-variant-numeric: tabular-nums; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 46px; text-align: right; }
+    .done-hint { display: flex; align-items: center; gap: 4px; color: #4caf50; font-size: 0.82rem; font-weight: 500; margin: 6px 0 0; }
+    .done-hint mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .card-footer { padding: 0 16px 12px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); margin-top: 2px; }
+
+    .action-row { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
+    .primary-actions { display: flex; gap: 6px; }
+    .primary-actions button { font-size: 0.82rem; height: 32px; line-height: 32px; padding: 0 10px; }
+    .primary-actions mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
+    .util-actions { display: flex; align-items: center; }
+    .util-actions .mat-mdc-icon-button { width: 32px; height: 32px; padding: 4px; }
+    .util-actions mat-icon { font-size: 18px; }
+
+    .chapters-block { margin-top: 6px; }
+    .chapters-toggle {
+      display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer;
+      color: inherit; font-size: 0.8rem; opacity: 0.6; padding: 2px 0;
+      transition: opacity .15s;
+      &:hover { opacity: 1; }
+    }
+    .toggle-icon { font-size: 16px; width: 16px; height: 16px; }
     .chapter-list { list-style: none; margin: 4px 0 0; padding: 0; }
-    .chapter-row { display: grid; grid-template-columns: minmax(80px, 1fr) 90px auto auto auto; align-items: center; gap: 8px; padding: 2px 0; }
-    .chapter-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
-    .chapter-bar { width: 90px; }
-    .chapter-label { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 70%, transparent); white-space: nowrap; }
-    .chapter-row .mat-mdc-icon-button { width: 36px; height: 36px; padding: 6px; }
-    .chapter-empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; font-size: 0.85rem; margin: 4px 0 0; }
+    .chapter-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+    .chapter-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
+    .chapter-progress { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .chapter-bar { width: 70px; --mdc-linear-progress-track-height: 4px; --mdc-linear-progress-active-indicator-height: 4px; }
+    .chapter-label { font-variant-numeric: tabular-nums; font-size: 0.75rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; min-width: 36px; }
+    .chapter-btns { display: flex; flex-shrink: 0; }
+    .chapter-btns .mat-mdc-icon-button { width: 30px; height: 30px; padding: 4px; }
+    .chapter-btns mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .chapter-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; font-size: 0.82rem; margin: 4px 0 0; }
   `]
 })
 export class CourseListComponent implements OnInit {
