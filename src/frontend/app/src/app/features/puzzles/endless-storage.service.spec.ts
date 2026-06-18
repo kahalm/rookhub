@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { EndlessStorageService, EndlessConfig } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
+import { ENDLESS_POOL_KEY } from '../../core/offline.service';
 
 const CONFIG: EndlessConfig = {
   startElo: 1500, themes: '', stockfishDepth: 8,
@@ -75,5 +76,32 @@ describe('EndlessStorageService per-identity migration flag', () => {
     svc.migrateLocalToServer(CONFIG, 100, []);
     http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
     expect(localStorage.getItem('rookhub_endless_synced:u8')).toBe('1');
+  });
+});
+
+describe('EndlessStorageService offline pool shares ENDLESS_POOL_KEY with OfflineService', () => {
+  let svc: EndlessStorageService;
+
+  beforeEach(() => {
+    localStorage.removeItem(ENDLESS_POOL_KEY);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+  });
+
+  afterEach(() => localStorage.removeItem(ENDLESS_POOL_KEY));
+
+  it('writes the offline pool under exactly ENDLESS_POOL_KEY', () => {
+    svc.saveOfflinePool([{ id: 1 } as any]);
+    expect(localStorage.getItem(ENDLESS_POOL_KEY)).toContain('"id":1');
+  });
+
+  it('loads a pool written directly under ENDLESS_POOL_KEY (shared key, not a private copy)', () => {
+    localStorage.setItem(ENDLESS_POOL_KEY, JSON.stringify([{ id: 7 }]));
+    expect(svc.loadOfflinePool()).toEqual([{ id: 7 } as any]);
   });
 });

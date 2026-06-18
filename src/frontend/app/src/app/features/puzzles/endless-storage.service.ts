@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { Observable, of, catchError, map, tap } from 'rxjs';
 import { PuzzleDto } from './puzzle.service';
+import { ENDLESS_POOL_KEY } from '../../core/offline.service';
 
 export interface EndlessConfig {
   startElo: number;
@@ -85,7 +86,9 @@ const HIGHSCORE_KEY = 'rookhub_endless_highscore';
 const HISTORY_KEY = 'rookhub_endless_history';
 const ACTIVE_GAME_KEY = 'rookhub_endless_active_game';
 const SYNCED_KEY = 'rookhub_endless_synced';
-const OFFLINE_POOL_KEY = 'rookhub_endless_offline_pool';
+// Geteilt mit OfflineService (Single Source of Truth) — beide lesen/schreiben denselben
+// physischen localStorage-Key; nicht hier dupliziert, sonst desynchronisieren sie.
+const OFFLINE_POOL_KEY = ENDLESS_POOL_KEY;
 const CHAIN_SEED_KEY = 'rookhub_endless_chain_seed';
 const MAX_HISTORY_SESSIONS = 50;
 
