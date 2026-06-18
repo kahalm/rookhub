@@ -49,4 +49,36 @@ public class CoursePgnExporterTests
         var pgn = CoursePgnExporter.ToPgn("X", new[] { p });
         Assert.Contains("1. e4 *", pgn); // erster Zug drin, dann sauber abgebrochen
     }
+
+    [Fact]
+    public void ToPgn_EmbedsMoveComments_AfterEachMoveAndIntro()
+    {
+        var p = new BookPuzzle
+        {
+            Fen = StartFen,
+            Moves = "e2e4 e7e5 g1f3",
+            // -1 = Einleitung, 0 = nach 1. e4, 2 = nach 2. Nf3
+            MoveComments = "{\"-1\":\"Italienisch\",\"0\":\"Königsbauer\",\"2\":\"entwickelt\"}"
+        };
+
+        var pgn = CoursePgnExporter.ToPgn("Book", new[] { p });
+
+        Assert.Contains("{Italienisch} 1. e4 {Königsbauer} e5 2. Nf3 {entwickelt} *", pgn);
+    }
+
+    [Fact]
+    public void ToPgn_FallsBackToLineComment_WhenNoIntroPly()
+    {
+        var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4", Comment = "Allgemeiner Hinweis" };
+        var pgn = CoursePgnExporter.ToPgn("Book", new[] { p });
+        Assert.Contains("{Allgemeiner Hinweis} 1. e4 *", pgn);
+    }
+
+    [Fact]
+    public void ToPgn_ClosingBraceInComment_IsSanitized()
+    {
+        var p = new BookPuzzle { Fen = StartFen, Moves = "e2e4", MoveComments = "{\"0\":\"a } b\"}" };
+        var pgn = CoursePgnExporter.ToPgn("Book", new[] { p });
+        Assert.Contains("1. e4 {a ) b}", pgn); // '}' ersetzt, Kommentar bleibt valide
+    }
 }

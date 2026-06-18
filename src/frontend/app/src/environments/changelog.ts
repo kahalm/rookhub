@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.157.2';
+export const APP_VERSION = '0.158.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.158.0", date: "2026-06-18", changes: [
+    { en: "Course PGN download now keeps variations and comments: the original imported PGN (e.g. from Chessable) is served verbatim instead of a stripped-down main line. Older courses without a stored source PGN are still reconstructed, now including the per-move comments.", de: "Kurs-PGN-Download enthält jetzt Varianten und Kommentare: Es wird das originale importierte PGN (z. B. von Chessable) unverändert ausgeliefert statt einer reduzierten Hauptlinie. Ältere Kurse ohne gespeichertes Quell-PGN werden weiterhin rekonstruiert, jetzt inklusive der Zug-Kommentare." },
+  ]},
   { version: "0.157.2", date: "2026-06-18", changes: [
     { en: "Courses/Repertoires update banner: the \"Update (N)\" count now only includes items the button can actually update (re-processable locally or re-fetchable from Chessable). Manually uploaded courses that need a re-import are listed separately instead of being counted and silently skipped — so the number no longer stays stuck after clicking.", de: "Aktualisieren-Banner für Kurse/Repertoires: Die „Aktualisieren (N)\"-Zahl zählt jetzt nur noch, was der Knopf wirklich aktualisieren kann (lokal aufbereitbar oder von Chessable nachladbar). Manuell hochgeladene Kurse, die einen Re-Import brauchen, werden getrennt ausgewiesen statt mitgezählt und still übersprungen — so bleibt die Zahl nach dem Klick nicht mehr hängen." },
   ]},

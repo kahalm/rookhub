@@ -123,4 +123,40 @@ public class CourseServiceOwnerTests : IDisposable
         var courses = await _svc.GetCoursesAsync(userId: 99, isAdmin: true);
         Assert.False(courses.Single(c => c.BookId == book.Id).IsOwned);
     }
+
+    [Fact]
+    public async Task GetBookPgn_WithSourcePgn_ReturnsRawVerbatim_WithVariationsAndComments()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        // Roh-PGN mit Variante (Klammer) + Kommentar — muss unverändert durchgereicht werden.
+        var raw = "[Event \"X\"]\n\n1. e4 e5 (1... c5 {Sizilianisch}) 2. Nf3 {Hauptlinie} *\n";
+        book.SourcePgn = raw;
+        await _db.SaveChangesAsync();
+
+        var (pgn, fileName) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
+
+        Assert.Equal(raw, pgn);                       // verbatim, nicht rekonstruiert
+        Assert.Contains("(1... c5 {Sizilianisch})", pgn);
+        Assert.EndsWith(".pgn", fileName);
+    }
+
+    [Fact]
+    public async Task GetBookPgn_WithoutSourcePgn_ReconstructsFromPuzzles_WithMoveComments()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1); // kein SourcePgn (Altbestand)
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = "l1",
+            BookId = book.Id,
+            BookFileName = book.FileName,
+            Fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            Moves = "e2e4 e7e5",
+            MoveComments = "{\"0\":\"Bester Zug\"}"
+        });
+        await _db.SaveChangesAsync();
+
+        var (pgn, _) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
+
+        Assert.Contains("1. e4 {Bester Zug} e5", pgn); // rekonstruiert inkl. Zug-Kommentar
+    }
 }
