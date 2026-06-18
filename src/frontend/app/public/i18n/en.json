@@ -772,7 +772,8 @@
       "choosePgn": "Choose PGN",
       "titlePlaceholder": "from file name",
       "create": "Create",
-      "hint": "Default: last date + 7 days, same time (otherwise 19:00)."
+      "hint": "Default: last date + 7 days, same time (otherwise 19:00).",
+      "invalidFile": "Please choose a .pgn file no larger than 10 MB."
     },
     "leaderboard": {
       "toggle": "Leaderboard",

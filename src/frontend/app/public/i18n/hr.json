@@ -772,7 +772,8 @@
       "choosePgn": "Odaberi PGN",
       "titlePlaceholder": "iz naziva datoteke",
       "create": "Stvori",
-      "hint": "Zadano: zadnji termin + 7 dana, isto vrijeme (inače 19:00)."
+      "hint": "Zadano: zadnji termin + 7 dana, isto vrijeme (inače 19:00).",
+      "invalidFile": "Odaberi .pgn datoteku ne veću od 10 MB."
     },
     "leaderboard": {
       "toggle": "Ljestvica",

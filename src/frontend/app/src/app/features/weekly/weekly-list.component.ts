@@ -309,8 +309,20 @@ export class WeeklyListComponent implements OnInit {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.uploadFile = input.files && input.files.length ? input.files[0] : null;
-    this.uploadFileName = this.uploadFile?.name ?? '';
+    const file = input.files && input.files.length ? input.files[0] : null;
+    // Client-seitige Validierung wie beim Repertoire-Upload: accept=".pgn" am Input
+    // ist nur ein Hinweis (im Dateidialog auf „Alle Dateien" umstellbar). Nur .pgn
+    // bis 10 MB akzeptieren — sonst Auswahl verwerfen und Hinweis zeigen.
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file && (!file.name.toLowerCase().endsWith('.pgn') || file.size > MAX_BYTES)) {
+      this.snackbar.info(this.translate.instant('weekly.upload.invalidFile'), { action: 'common.ok', duration: 4000 });
+      this.uploadFile = null;
+      this.uploadFileName = '';
+      input.value = '';
+      return;
+    }
+    this.uploadFile = file;
+    this.uploadFileName = file?.name ?? '';
   }
 
   upload(): void {

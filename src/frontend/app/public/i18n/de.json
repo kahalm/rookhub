@@ -772,7 +772,8 @@
       "choosePgn": "PGN wählen",
       "titlePlaceholder": "aus Dateiname",
       "create": "Anlegen",
-      "hint": "Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00)."
+      "hint": "Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00).",
+      "invalidFile": "Bitte eine .pgn-Datei mit höchstens 10 MB auswählen."
     },
     "leaderboard": {
       "toggle": "Bestenliste",

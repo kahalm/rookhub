@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.155.5';
+export const APP_VERSION = '0.155.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.155.6", date: "2026-06-18", changes: [
+    { en: "Weekly post upload (admin) now validates the chosen file on the client: only .pgn files up to 10 MB are accepted, with a clear message otherwise — matching the repertoire upload.", de: "Wochenpost-Upload (Admin) prüft die gewählte Datei jetzt schon im Browser: nur .pgn bis 10 MB werden akzeptiert, sonst gibt es einen klaren Hinweis — analog zum Repertoire-Upload." },
+  ]},
   { version: "0.155.5", date: "2026-06-18", changes: [
     { en: "Security hardening: your login token is now only attached to RookHub's own API requests, never to static assets or any third-party URL — defence in depth against token leakage.", de: "Sicherheits-Härtung: Dein Login-Token wird jetzt nur noch an RookHubs eigene API-Anfragen angehängt, nie an statische Assets oder fremde URLs — zusätzlicher Schutz gegen Token-Leaks." },
   ]},
