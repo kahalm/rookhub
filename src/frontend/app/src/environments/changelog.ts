@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.160.1';
+export const APP_VERSION = '0.160.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.160.2", date: "2026-06-19", changes: [
+    { en: "Mobile usability pass across all views: wide tables (admin users/books, API tokens, recent puzzles) now scroll horizontally instead of overflowing the page; share/create dialogs are capped to the viewport width; long unbreakable text in notifications and messages wraps instead of widening the page.", de: "Mobile-Durchgang über alle Ansichten: Breite Tabellen (Admin Nutzer/Bücher, API-Tokens, letzte Puzzles) scrollen jetzt horizontal statt die Seite zu überlaufen; Teilen-/Anlegen-Dialoge sind auf die Viewport-Breite begrenzt; lange unumbrechbare Texte in Benachrichtigungen und Nachrichten brechen um, statt die Seite zu verbreitern." },
+  ]},
   { version: "0.160.1", date: "2026-06-19", changes: [
     { en: "Weekly post overview is now responsive: the list shows each post as a card that reflows on narrow screens (phone) instead of a fixed-width table that overflowed; the upload form and leaderboard adapt to small viewports too.", de: "Wochenpost-Übersicht ist jetzt responsiv: Die Liste zeigt jeden Beitrag als Karte, die auf schmalen Bildschirmen (Handy) umbricht, statt als feste Tabelle, die überlief; auch das Upload-Formular und die Bestenliste passen sich kleinen Viewports an." },
   ]},

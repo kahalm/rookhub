@@ -556,6 +556,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         canChallenge: this.isLoggedIn,
       },
       width: '400px',
+      maxWidth: '95vw',
     });
   }
 

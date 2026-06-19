@@ -59,7 +59,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
     .row.unseen { font-weight: 600; }
     .row.unseen .row-icon { color: var(--mat-sys-primary, #3f51b5); }
     .row-icon { color: color-mix(in srgb, currentColor 45%, transparent); flex: 0 0 auto; }
-    .row-text { flex: 1; line-height: 1.3; }
+    .row-text { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
     .row-date { flex: 0 0 auto; font-size: 0.78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
     .more { display: flex; justify-content: center; margin: 16px 0 4px; }
     .count { text-align: center; font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }

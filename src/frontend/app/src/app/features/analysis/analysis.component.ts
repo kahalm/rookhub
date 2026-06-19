@@ -179,7 +179,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .move.active { background: #1976d2; color: #fff; }
     .io-card .full { width: 100%; }
     .io-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-    @media (max-width: 768px) { .board-col { width: 100%; } }
+    @media (max-width: 768px) { .board-col { width: 100%; min-width: 0; } .board-wrap { min-width: 0; } }
   `]
 })
 export class AnalysisComponent implements OnInit, OnDestroy {

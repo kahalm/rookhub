@@ -227,6 +227,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         canChallenge: this.isLoggedIn,
       },
       width: '400px',
+      maxWidth: '95vw',
     });
   }
 

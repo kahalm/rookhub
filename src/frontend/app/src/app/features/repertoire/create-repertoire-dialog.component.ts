@@ -48,7 +48,7 @@ import { Repertoire } from '../../core/models';
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: 300px; } mat-form-field { width: 100%; }
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(300px, 78vw); } mat-form-field { width: 100%; }
     .ext-note { margin: 0 0 0 30px; font-size: 0.78rem; line-height: 1.3; color: color-mix(in srgb, currentColor 60%, transparent); }`]
 })
 export class CreateRepertoireDialogComponent {

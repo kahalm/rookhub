@@ -57,7 +57,7 @@ interface ApiTokenCreated extends ApiToken {
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: 320px; } mat-form-field { width: 100%; }`]
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(320px, 78vw); } mat-form-field { width: 100%; }`]
 })
 export class CreateTokenDialogComponent {
   name = '';
@@ -138,6 +138,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
         } @else if (tokens.length === 0) {
           <p class="empty-hint">{{ 'profile.tokens.empty' | translate }}</p>
         } @else {
+          <div class="tokens-scroll">
           <table class="tokens-table">
             <thead>
               <tr>
@@ -166,6 +167,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
               }
             </tbody>
           </table>
+          </div>
         }
       </mat-card-content>
       <mat-card-actions>
@@ -178,7 +180,8 @@ export class ShowTokenDialogComponent implements OnDestroy {
   styles: [`
     .tokens-card { margin-top: 1rem; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
-    .tokens-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .tokens-scroll { overflow-x: auto; }
+    .tokens-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.9rem; }
     .tokens-table th, .tokens-table td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); text-align: left; }
     .tokens-table code { font-family: monospace; background: color-mix(in srgb, currentColor 6%, transparent); padding: 2px 6px; border-radius: 3px; }
   `]
@@ -202,13 +205,13 @@ export class ApiTokensComponent implements OnInit {
   }
 
   openCreateDialog(): void {
-    const ref = this.dialog.open(CreateTokenDialogComponent, { width: '420px' });
+    const ref = this.dialog.open(CreateTokenDialogComponent, { width: '420px', maxWidth: '95vw' });
     ref.afterClosed().subscribe(result => {
       if (!result) return;
       this.http.post<ApiTokenCreated>('/api/profile/tokens', result).subscribe({
         next: t => {
           ShowTokenDialogComponent.pendingToken = t.rawToken;
-          this.dialog.open(ShowTokenDialogComponent, { width: '520px', disableClose: true })
+          this.dialog.open(ShowTokenDialogComponent, { width: '520px', maxWidth: '95vw', disableClose: true })
             .afterClosed().subscribe(() => this.load());
         },
         error: err => this.snackbar.info(err.error?.message || this.translate.instant('profile.tokens.createFailed'))

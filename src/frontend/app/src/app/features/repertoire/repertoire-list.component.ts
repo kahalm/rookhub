@@ -114,7 +114,7 @@ export class RepertoireListComponent implements OnInit {
   }
 
   openCreateDialog(): void {
-    const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px' });
+    const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', maxWidth: '95vw' });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.http.post('/api/repertoires', result).subscribe({
@@ -126,7 +126,7 @@ export class RepertoireListComponent implements OnInit {
   }
 
   openEditDialog(rep: Repertoire): void {
-    const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', data: rep });
+    const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', maxWidth: '95vw', data: rep });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.http.put(`/api/repertoires/${rep.id}`, result).subscribe({

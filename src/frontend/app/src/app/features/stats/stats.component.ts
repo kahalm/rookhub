@@ -308,7 +308,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
             @if (recent.length === 0) {
               <p class="muted">{{ 'stats.noData' | translate }}</p>
             } @else {
-              <table mat-table [dataSource]="recent" class="full-width">
+              <div class="recent-scroll">
+              <table mat-table [dataSource]="recent" class="full-width recent-table">
                 <ng-container matColumnDef="date">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.date' | translate }}</th>
                   <td mat-cell *matCellDef="let a">{{ a.attemptedAt | date:'dd.MM. HH:mm' }}</td>
@@ -340,6 +341,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                 <tr mat-header-row *matHeaderRowDef="cols"></tr>
                 <tr mat-row *matRowDef="let row; columns: cols;"></tr>
               </table>
+              </div>
             }
           </mat-card-content>
         </mat-card>
@@ -367,6 +369,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .pl-lvl { font-size: .75rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .pl-elo { font-size: 1.1rem; font-weight: 600; }
     .full-width { width: 100%; }
+    .recent-scroll { overflow-x: auto; }
+    .recent-table { min-width: 480px; }
     .res-ok { color: #2e7d32; } .res-fail { color: #c62828; }
     .pos { color: #2e7d32; } .neg { color: #c62828; }
     .small { font-size: .75rem; }

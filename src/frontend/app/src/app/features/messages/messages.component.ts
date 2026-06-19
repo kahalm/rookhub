@@ -63,7 +63,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
               background: color-mix(in srgb, currentColor 8%, transparent); }
     .bubble.admin { background: color-mix(in srgb, var(--mat-sys-primary, #3f51b5) 16%, transparent); }
     .sender { font-size: 0.72rem; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
-    .body { white-space: pre-wrap; line-height: 1.35; }
+    .body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; }
     .meta { font-size: 0.72rem; opacity: 0.55; margin-top: 4px; text-align: right; }
     .reply { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
     .reply-field { width: 100%; }

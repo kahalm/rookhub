@@ -9,6 +9,8 @@
     .group-chip { font-size: 0.72rem; min-height: 22px; }
     .no-groups { color: color-mix(in srgb, currentColor 40%, transparent); }
     .table-responsive { overflow-x: auto; }
+    .users-table { min-width: 640px; }
+    .books-table { min-width: 880px; }
 
     .book-upload {
       display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px;

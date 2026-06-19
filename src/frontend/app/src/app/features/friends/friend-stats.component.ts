@@ -151,7 +151,8 @@ export function buildThemeRows(mine: ThemeStat[], theirs: ThemeStat[], limit = 1
     .back-link { margin-bottom: 0.5rem; }
     h1 { font-size: 1.5rem; margin: 0.25rem 0 1rem; }
     mat-card { margin-bottom: 1rem; padding: 1rem; }
-    .compare-table { width: 100%; border-collapse: collapse; }
+    .compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .compare-table th, .compare-table td { overflow-wrap: anywhere; }
     .compare-table th, .compare-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .compare-table th { font-size: 0.8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); }
     .compare-table th:first-child, .compare-table td.metric { text-align: left; color: color-mix(in srgb, currentColor 70%, transparent); }

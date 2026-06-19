@@ -166,6 +166,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         canChallenge: this.isLoggedIn && !this.inWeekly,
       },
       width: '400px',
+      maxWidth: '95vw',
     });
   }
 

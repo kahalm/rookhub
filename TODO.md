@@ -31,6 +31,16 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
   - [ ] Datenschutz-URL in Play Console: `https://rookhub.oberschmid.homes/privacy`
   - [ ] Data-Safety-Formular ausfüllen (gemäß Datenschutzerklärung)
 
+- [ ] **RBAC-Ausbau: echtes Rollen-/Berechtigungssystem** (Feature, mittel–groß; Skizze 2026-06-19)
+  Status heute: nur binär `AppUser.IsAdmin` (→ JWT `ClaimTypes.Role="Admin"`, durchgesetzt via `[Authorize(Roles="Admin")]` + `User.IsInRole("Admin")`) plus Gruppen (`UserGroup`/`MenuVisibilityLevel`/`BookGroupAccess`) NUR fürs Content-Scoping (Menü/Kurse). Kein RBAC, keine granularen Permissions, keine Auth-Policies, keine Resource-Level-ACL, `UserApiToken.Scope` fest "extension".
+  **Zielmodell:** `User ─n:m─ Role ─n:m─ Permission`. Permissions = feste **Code-Konstanten** (`static class Permissions`, an Features gekoppelt, NICHT als DB-Tabelle frei editierbar). Rollen = DB-Daten, frei bestückbar (`Admin`=Superuser/alle Permissions, `Trainer`, `Moderator`, `Member`). Backend prüft **Permissions, nicht Rollen** → Endpoints bleiben stabil bei Rollen-Umdefinition. Gruppen bleiben separat (was sieht jemand) von Rollen (was darf jemand).
+  - Neue Entities + Migration: `Role` (Id, Key, Name, IsSystem), `UserRole` (n:m), `RolePermission` (RoleId, Permission-Key). `AppUser.IsAdmin` bleibt zunächst, wird als `Admin`-Rolle geseedet → später Spalte entfernen.
+  - Enforcement: `PermissionRequirement` + `AuthorizationHandler` (Admin-Rolle ODER `permission`-Claim erfüllt) + `[HasPermission("course.import")]`-Attribut über dynamischen `IAuthorizationPolicyProvider` (Policy-Name `perm:<key>`, kein Vorab-Registrieren).
+  - JWT (`AuthService.cs:~136`): statt nur `IsAdmin` alle Rollen-Keys + aufgelöste Permissions als Claims schreiben. Trade-off: stale bis Re-Login → bei Rollenänderung Token invalidieren (oder per-Request aus DB mit MemoryCache je UserId auflösen).
+  - Frontend: `AuthService.permissions: Set<string>` + `has(p)` (`isAdmin || permissions.has(p)`); generischer `permissionGuard(p)` ersetzt/ergänzt `adminGuard`; `@if (auth.isAdmin)` schrittweise → `@if (auth.has('...'))`.
+  - `MenuVisibilityLevel.Admin` später auf eine Permission mappen; Rest (All/Registered/Groups) unverändert. Optional `UserApiToken.Scope` auf mehrere Scopes erweitern.
+  - **Phasen:** 1) Entities+Migration+Seed (`Admin`/`Member`, `IsAdmin`→Rolle), Verhalten unverändert · 2) PermissionHandler+`HasPermission`, bestehende `[Authorize(Roles="Admin")]` 1:1 auf Permissions umstellen (Admin erfüllt weiter alles) · 3) JWT + Frontend `has()`/`permissionGuard` · 4) neue Rollen (Trainer/Moderator) + Admin-UI zum Zuweisen + `IsAdmin`-Spalte entfernen.
+
 ## Refactoring / Qualität
 _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06-13 (gegen Code geprüft)._
 
