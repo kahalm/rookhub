@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -24,7 +23,7 @@ interface WeeklyPostRow extends WeeklyPost {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatTableModule, MatFormFieldModule, MatInputModule,
+    MatFormFieldModule, MatInputModule,
     TranslateModule, LoadingSpinnerComponent
   ],
   template: `
@@ -68,104 +67,87 @@ interface WeeklyPostRow extends WeeklyPost {
       } @else if (rows.length === 0) {
         <p class="empty-hint">{{ 'weekly.empty' | translate }}</p>
       } @else {
-        <table mat-table [dataSource]="rows" multiTemplateDataRows class="full-width">
-          <ng-container matColumnDef="scheduled">
-            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.scheduled' | translate }}</th>
-            <td mat-cell *matCellDef="let r">
-              @if (auth.isAdmin) {
-                <input type="date" class="inline-date" [(ngModel)]="r.editDate" (change)="savePost(r)">
-                <input type="time" class="inline-time" [(ngModel)]="r.editTime" (change)="savePost(r)">
-              } @else {
-                {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
-              }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="title">
-            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.title' | translate }}</th>
-            <td mat-cell *matCellDef="let r">
-              @if (auth.isAdmin) {
-                <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)">
-              } @else {
-                {{ r.title }}
-              }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="progress">
-            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.progress' | translate }}</th>
-            <td mat-cell *matCellDef="let r">
-              @if (prog[r.id]; as p) {
-                <span class="wp-prog">
-                  <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
-                  <span class="wp-slash">/</span>
-                  <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
-                  <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
-                  @if (p.totalSeconds > 0) {
-                    <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
+        <div class="wp-list">
+          @for (r of rows; track r.id) {
+            <mat-card class="wp-card">
+              <div class="wp-row">
+                <div class="wp-meta">
+                  @if (auth.isAdmin) {
+                    <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)"
+                           [placeholder]="'weekly.columns.title' | translate">
+                    <div class="wp-edit-sched">
+                      <input type="date" class="inline-date" [(ngModel)]="r.editDate" (change)="savePost(r)">
+                      <input type="time" class="inline-time" [(ngModel)]="r.editTime" (change)="savePost(r)">
+                    </div>
+                  } @else {
+                    @if (r.title) { <span class="wp-title">{{ r.title }}</span> }
+                    <span class="wp-sched">
+                      {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
+                    </span>
                   }
-                </span>
-              } @else {
-                <span class="wp-none">—</span>
-              }
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>{{ 'weekly.columns.actions' | translate }}</th>
-            <td mat-cell *matCellDef="let r">
-              <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
-                <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
-              </button>
-              <button mat-icon-button (click)="toggleBoard(r)"
-                      [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
-                <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
-              </button>
-              @if (auth.isAdmin) {
-                <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              }
-            </td>
-          </ng-container>
+                  @if (prog[r.id]; as p) {
+                    <span class="wp-prog">
+                      <span class="wp-solved" [attr.title]="'weekly.progress.solvedLabel' | translate">✓ {{ p.solvedCount }}</span>
+                      <span class="wp-slash">/</span>
+                      <span class="wp-failed" [attr.title]="'weekly.progress.failedLabel' | translate">✗ {{ p.playedCount - p.solvedCount }}</span>
+                      <span class="wp-pct" [attr.title]="'weekly.progress.doneLabel' | translate">· {{ pct(p) }}%</span>
+                      @if (p.totalSeconds > 0) {
+                        <span class="wp-time" [attr.title]="'weekly.progress.timeLabel' | translate">· ⏱ {{ fmtTime(p.totalSeconds) }}</span>
+                      }
+                    </span>
+                  }
+                </div>
+                <div class="wp-actions">
+                  <button mat-stroked-button color="primary" [routerLink]="['/weekly', r.id]">
+                    <mat-icon>play_arrow</mat-icon> {{ 'weekly.play' | translate }}
+                  </button>
+                  <button mat-icon-button (click)="toggleBoard(r)"
+                          [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
+                    <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
+                  </button>
+                  @if (auth.isAdmin) {
+                    <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </div>
+              </div>
 
-          <!-- Aufklappbare Bestenliste (Detail-Zeile) -->
-          <ng-container matColumnDef="board">
-            <td mat-cell *matCellDef="let r" [attr.colspan]="columns.length">
               @if (expandedId === r.id) {
                 <div class="lb">
                   @if (boardLoading[r.id]) {
                     <app-loading-spinner />
                   } @else if ((board[r.id]?.length ?? 0) > 0) {
-                    <table class="lb-table">
-                      <thead>
-                        <tr>
-                          <th class="lb-rank">#</th>
-                          <th>{{ 'weekly.leaderboard.player' | translate }}</th>
-                          <th class="lb-acc">{{ 'weekly.leaderboard.accuracy' | translate }}</th>
-                          <th class="lb-time">{{ 'weekly.leaderboard.time' | translate }}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (p of board[r.id]; track $index; let i = $index) {
+                    <div class="lb-scroll">
+                      <table class="lb-table">
+                        <thead>
                           <tr>
-                            <td class="lb-rank">{{ i + 1 }}</td>
-                            <td>{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
-                            <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
-                            <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
+                            <th class="lb-rank">#</th>
+                            <th>{{ 'weekly.leaderboard.player' | translate }}</th>
+                            <th class="lb-acc">{{ 'weekly.leaderboard.accuracy' | translate }}</th>
+                            <th class="lb-time">{{ 'weekly.leaderboard.time' | translate }}</th>
                           </tr>
-                        }
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          @for (p of board[r.id]; track $index; let i = $index) {
+                            <tr>
+                              <td class="lb-rank">{{ i + 1 }}</td>
+                              <td>{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
+                              <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
+                              <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
                   } @else {
                     <span class="lb-empty">{{ 'weekly.leaderboard.empty' | translate }}</span>
                   }
                 </div>
               }
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-          <tr mat-row *matRowDef="let row; columns: ['board']" class="detail-row" [class.collapsed]="expandedId !== row.id"></tr>
-        </table>
+            </mat-card>
+          }
+        </div>
       }
     </div>
   `,
@@ -173,25 +155,33 @@ interface WeeklyPostRow extends WeeklyPost {
     .weekly-container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
-    .full-width { width: 100%; }
     .upload-card { margin-bottom: 20px; }
     .upload-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .f-date, .f-time { width: 150px; }
     .f-title { flex: 1; min-width: 180px; }
     .upload-hint { color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.8rem; margin: 4px 0 0; }
     .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
-    .inline-time { margin-left: 6px; }
     .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
-    .wp-prog { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    /* Karten-Liste (responsiv statt fester Tabelle) */
+    .wp-list { display: flex; flex-direction: column; gap: 8px; }
+    .wp-card { padding: 12px 16px; }
+    .wp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .wp-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .wp-edit-sched { display: flex; flex-wrap: wrap; gap: 6px; }
+    .wp-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+    .wp-sched { color: color-mix(in srgb, currentColor 70%, transparent); font-size: 0.9rem; }
+    .wp-actions { display: flex; align-items: center; flex-shrink: 0; }
+
+    .wp-prog { font-variant-numeric: tabular-nums; }
     .wp-solved { color: #2e7d32; font-weight: 600; }
     .wp-failed { color: #c62828; font-weight: 600; }
     .wp-slash { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 4px; }
     .wp-pct { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
     .wp-time { color: color-mix(in srgb, currentColor 65%, transparent); margin-left: 6px; }
-    .wp-none { color: color-mix(in srgb, currentColor 25%, transparent); }
-    .detail-row.collapsed { display: none; }
-    .detail-row td { padding: 0; border-bottom: none; }
-    .lb { padding: 8px 12px 16px; }
+
+    .lb { padding: 12px 0 4px; }
+    .lb-scroll { overflow-x: auto; }
     .lb-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
     .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
     .lb-table th { color: color-mix(in srgb, currentColor 47%, transparent); font-weight: 600; font-size: 0.8rem; }
@@ -200,13 +190,23 @@ interface WeeklyPostRow extends WeeklyPost {
     .lb-acc { text-align: right; }
     .lb-time { text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); }
     .lb-done { font-size: 16px; height: 16px; width: 16px; vertical-align: text-bottom; color: #f9a825; margin-left: 4px; }
-    .lb-empty { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; padding: 8px 12px; display: inline-block; }
+    .lb-empty { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; padding: 8px 0; display: inline-block; }
+
+    @media (max-width: 600px) {
+      .weekly-container { margin: 16px auto; }
+      .upload-row { flex-direction: column; align-items: stretch; }
+      .f-date, .f-title { width: 100%; }
+      .f-time { width: 100%; }
+      .inline-title { max-width: none; }
+      .wp-row { flex-direction: column; align-items: stretch; }
+      .wp-actions { justify-content: flex-end; }
+      .wp-prog { white-space: nowrap; }
+    }
   `]
 })
 export class WeeklyListComponent implements OnInit {
   rows: WeeklyPostRow[] = [];
   loading = false;
-  columns = ['scheduled', 'title', 'progress', 'actions'];
   /** Per-User-Fortschritt je WeeklyPost-Id (nur Posts mit Versuchen). */
   prog: Record<number, WeeklyProgress> = {};
 
