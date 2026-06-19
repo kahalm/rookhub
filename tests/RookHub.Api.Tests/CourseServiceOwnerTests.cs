@@ -125,6 +125,30 @@ public class CourseServiceOwnerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetCourses_SetsLastActivityAt_FromCourseProgress()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        var used = new DateTime(2026, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        _db.CourseProgresses.Add(new CourseProgress
+        {
+            UserId = 1, BookId = book.Id, LastMode = "sequential",
+            CreatedAt = used, UpdatedAt = used
+        });
+        await _db.SaveChangesAsync();
+
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.Equal(used, courses.Single(c => c.BookId == book.Id).LastActivityAt);
+    }
+
+    [Fact]
+    public async Task GetCourses_LastActivityAt_NullWhenNotStarted()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.Null(courses.Single(c => c.BookId == book.Id).LastActivityAt);
+    }
+
+    [Fact]
     public async Task GetBookPgn_WithSourcePgn_ReturnsRawVerbatim_WithVariationsAndComments()
     {
         var book = await SeedPersonalBookAsync(ownerUserId: 1);

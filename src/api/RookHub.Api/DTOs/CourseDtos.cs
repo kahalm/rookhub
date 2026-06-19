@@ -17,6 +17,13 @@ public class CourseListItemDto
     public string? LastMode { get; set; }
 
     /// <summary>
+    /// Zeitpunkt der letzten Verwendung dieses Kurses durch den User (= <see cref="Models.CourseProgress.UpdatedAt"/>,
+    /// upserted bei jedem Versuch/Reset). <c>null</c> = noch nie angefangen. Die Übersicht sortiert angefangene
+    /// Kurse nach diesem Wert absteigend nach vorn.
+    /// </summary>
+    public DateTime? LastActivityAt { get; set; }
+
+    /// <summary>
     /// <c>true</c> = persönlicher Kurs des Users (z. B. selbst importierter Chessable-Kurs,
     /// <c>Book.OwnerUserId == userId</c>). <c>false</c> = öffentlicher Kurs, über eine Gruppe
     /// freigegeben (bzw. globales Admin-Buch). Steuert die Aufteilung in der Übersicht.

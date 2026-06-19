@@ -287,11 +287,27 @@ export class CourseListComponent implements OnInit {
     this.loadCourses();
   }
 
+  /**
+   * Angefangene Kurse (lastActivityAt gesetzt) nach vorn — nach letzter Verwendung absteigend;
+   * noch nicht angefangene danach, alphabetisch. Wird je Sektion (öffentlich/Chessable) durch die
+   * order-erhaltenden Filter-Getter beibehalten.
+   */
+  private sortCourses(list: CourseListItem[]): CourseListItem[] {
+    return [...list].sort((a, b) => {
+      const aT = a.lastActivityAt ? Date.parse(a.lastActivityAt) : null;
+      const bT = b.lastActivityAt ? Date.parse(b.lastActivityAt) : null;
+      if (aT !== null && bT !== null) return bT - aT;   // beide angefangen → zuletzt verwendet zuerst
+      if (aT !== null) return -1;                        // nur a angefangen → vor b
+      if (bT !== null) return 1;                         // nur b angefangen → vor a
+      return a.displayName.localeCompare(b.displayName); // beide nicht → alphabetisch
+    });
+  }
+
   loadCourses(): void {
     this.loading = true;
     this.courseService.getCourses().subscribe({
       next: courses => {
-        this.courses = courses;
+        this.courses = this.sortCourses(courses);
         this.loading = false;
       },
       error: () => {

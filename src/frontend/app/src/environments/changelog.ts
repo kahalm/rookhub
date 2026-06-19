@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.159.2';
+export const APP_VERSION = '0.160.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.160.0", date: "2026-06-19", changes: [
+    { en: "Courses tab: courses you've already started now appear first, sorted by most recently used; courses you haven't started yet follow alphabetically.", de: "Kurse-Tab: Bereits angefangene Kurse stehen jetzt vorn, sortiert nach zuletzt verwendet; noch nicht angefangene Kurse folgen alphabetisch." },
+  ]},
   { version: "0.159.2", date: "2026-06-18", changes: [
     { en: "Saved games (\"Games\" section): the board in the replay dialog and on the public share page is now full-size (matching the repertoire line view) instead of tiny.", de: "Gespeicherte Partien (Bereich „Partien\"): Das Brett im Nachspiel-Dialog und auf der öffentlichen Teilen-Seite ist jetzt in voller Größe (wie die Repertoire-Linien-Ansicht) statt winzig." },
   ]},
