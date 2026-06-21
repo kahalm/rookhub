@@ -126,6 +126,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private challengeId: number | null = null;
   private challengeResolved = false;
 
+  // Zuletzt gelöstes Puzzle merken (überlebt den Auto-Advance) — analog Standard/Endless:
+  // ermöglicht „Letztes Puzzle analysieren" + „Letztes teilen" im Share-Dialog.
+  lastSolvedPuzzleId: number | null = null;
+  private lastSolvedFen: string | null = null;
+  private lastSolvedMoves = '';
+  private lastSolvedOrientation: 'white' | 'black' = 'white';
+
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
   get displayBookName(): string {
@@ -157,16 +164,36 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   sharePuzzle(): void {
     if (!this.puzzle) return;
     const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}`;
+    // Nach dem Auto-Advance kann zusätzlich das zuletzt gelöste Puzzle geteilt werden.
+    const hasPrevious = this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
+    const previousUrl = hasPrevious
+      ? `${window.location.origin}/puzzles/book/${this.lastSolvedPuzzleId}`
+      : undefined;
     this.dialog.open(SharePuzzleDialogComponent, {
       data: {
-        url,
+        url, previousUrl,
         puzzleId: this.puzzle.id,
+        previousPuzzleId: hasPrevious ? (this.lastSolvedPuzzleId ?? undefined) : undefined,
         source: 'book',
         // Wochenpost-Puzzles haben keine dauerhafte ID → dort keine Challenge.
         canChallenge: this.isLoggedIn && !this.inWeekly,
       },
       width: '400px',
       maxWidth: '95vw',
+    });
+  }
+
+  /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */
+  reviewLastPuzzle(): void {
+    this.stopCountdown();
+    if (!this.lastSolvedFen) return;
+    this.router.navigate(['/analysis'], {
+      queryParams: {
+        fen: this.lastSolvedFen,
+        moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
+        orientation: this.lastSolvedOrientation,
+        from: this.router.url.split('?')[0],   // zurück zum aktuellen Buch-/Kurs-/Wochenpost-Puzzle
+      },
     });
   }
 
@@ -270,6 +297,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.state = 'SOLVED';
     this.stopTimer();
     this.updateBoard();
+    // Für „Letztes Puzzle analysieren"/„Letztes teilen" merken (überlebt den Auto-Advance).
+    if (this.puzzle) {
+      this.lastSolvedPuzzleId = this.puzzle.id;
+      this.lastSolvedFen = this.puzzle.fen;
+      this.lastSolvedMoves = this.puzzle.moves ?? '';
+      this.lastSolvedOrientation = this.orientation;
+    }
     this.enterSolutionReview();
     this.recordCourseAttempt(true);
     this.recordWeeklyAttempt(true);

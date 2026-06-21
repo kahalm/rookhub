@@ -966,6 +966,7 @@
       "skip": "Skip",
       "viewFullGame": "View full game",
       "analyze": "Analyze",
+      "reviewLast": "Analyze last puzzle",
       "nextInBook": "Next in book",
       "randomInBook": "Random from book",
       "prevDaily": "Previous day",

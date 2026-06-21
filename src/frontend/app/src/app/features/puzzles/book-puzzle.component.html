@@ -264,12 +264,17 @@
             </mat-card>
           }
 
-          <!-- Untere Aktionen: Share (immer) + Ganze Partie (nach Lösen) -->
+          <!-- Untere Aktionen: Letztes analysieren + Share (immer) + Ganze Partie (nach Lösen) -->
           @if (puzzle) {
             <div class="bottom-actions">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">
                   <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}
+                </button>
+              }
+              @if (lastSolvedPuzzleId) {
+                <button mat-stroked-button class="review-last" (click)="reviewLastPuzzle()">
+                  <mat-icon>history</mat-icon> {{ 'book.actions.reviewLast' | translate }}
                 </button>
               }
               <button mat-stroked-button class="share-full" (click)="sharePuzzle()">

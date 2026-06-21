@@ -812,6 +812,7 @@
       "skip": "跳过",
       "viewFullGame": "查看完整对局",
       "analyze": "分析",
+      "reviewLast": "分析上一题",
       "nextInBook": "书中下一题",
       "randomInBook": "书中随机题",
       "prevDaily": "前一天",

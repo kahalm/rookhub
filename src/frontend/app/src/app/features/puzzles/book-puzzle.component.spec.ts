@@ -12,7 +12,7 @@ function makeComponent(): any {
   const dialog: any = {};
   const courseService: any = {};
   const weeklyService: any = {};
-  const router: any = { navigate: jasmine.createSpy('navigate') };
+  const router: any = { navigate: jasmine.createSpy('navigate'), url: '/puzzles/book/1' };
   const translate: any = { instant: (k: string) => k };
   const auth: any = { isLoggedIn: false };
   const snackbar: any = { info: () => {} };
@@ -43,5 +43,77 @@ describe('BookPuzzleComponent load race (loadEpoch)', () => {
     expect(c.puzzle.id).toBe(222);
     emits[0]({ id: 111, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' });   // ältere danach
     expect(c.puzzle.id).toBe(222);   // bleibt das neuere
+  });
+});
+
+describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
+  it('handleSolved merkt das gelöste Puzzle als lastSolved', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (c as any).orientation = 'black';
+
+    (c as any).handleSolved();
+
+    expect(c.lastSolvedPuzzleId).toBe(42);
+    expect((c as any).lastSolvedFen).toBe(FEN);
+    expect((c as any).lastSolvedMoves).toBe('e2e4 e7e5');
+    expect((c as any).lastSolvedOrientation).toBe('black');
+  });
+
+  it('reviewLastPuzzle öffnet die Analyse mit dem zuletzt gelösten Puzzle', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'stopCountdown');
+    (c as any).lastSolvedFen = FEN;
+    (c as any).lastSolvedMoves = 'e2e4 e7e5';
+    (c as any).lastSolvedOrientation = 'white';
+
+    c.reviewLastPuzzle();
+
+    const [path, extras] = c.router.navigate.calls.mostRecent().args;
+    expect(path).toEqual(['/analysis']);
+    expect(extras.queryParams.fen).toBe(FEN);
+    expect(extras.queryParams.moves).toBe('e2e4,e7e5');
+    expect(extras.queryParams.orientation).toBe('white');
+  });
+
+  it('reviewLastPuzzle ohne gelöstes Puzzle navigiert nicht', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'stopCountdown');
+    c.reviewLastPuzzle();
+    expect(c.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('sharePuzzle reicht das vorherige (zuletzt gelöste) Puzzle an den Dialog', () => {
+    const c = makeComponent();
+    (c as any).dialog = { open: jasmine.createSpy('open') };
+    c.puzzle = { id: 200, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+    c.lastSolvedPuzzleId = 100;
+
+    c.sharePuzzle();
+
+    const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
+    expect(data.url.endsWith('/puzzles/book/200')).toBeTrue();
+    expect(data.previousUrl.endsWith('/puzzles/book/100')).toBeTrue();
+    expect(data.previousPuzzleId).toBe(100);
+  });
+
+  it('sharePuzzle ohne abweichendes Vorgänger-Puzzle setzt kein previousUrl', () => {
+    const c = makeComponent();
+    (c as any).dialog = { open: jasmine.createSpy('open') };
+    c.puzzle = { id: 200, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+    c.lastSolvedPuzzleId = 200;   // = aktuelles Puzzle (z.B. Tagespuzzle, kein Auto-Advance)
+
+    c.sharePuzzle();
+
+    const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
+    expect(data.previousUrl).toBeUndefined();
+    expect(data.previousPuzzleId).toBeUndefined();
   });
 });

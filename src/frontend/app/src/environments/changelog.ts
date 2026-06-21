@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.160.2';
+export const APP_VERSION = '0.161.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.161.0", date: "2026-06-21", changes: [
+    { en: "Books/courses: after solving, you can now analyze and share the last puzzle just like in the standard and endless modes — an \"Analyze last puzzle\" button opens the puzzle you just solved in the analysis board, and the share dialog lets you switch between the current and the previous puzzle.", de: "Bücher/Kurse: Nach dem Lösen kannst du das letzte Puzzle jetzt analysieren und teilen — genau wie im Standard- und Endlos-Modus. Ein Knopf „Letztes Puzzle analysieren\" öffnet das gerade gelöste Puzzle im Analysebrett, und der Teilen-Dialog erlaubt das Umschalten zwischen aktuellem und vorherigem Puzzle." },
+  ]},
   { version: "0.160.2", date: "2026-06-19", changes: [
     { en: "Mobile usability pass across all views: wide tables (admin users/books, API tokens, recent puzzles) now scroll horizontally instead of overflowing the page; share/create dialogs are capped to the viewport width; long unbreakable text in notifications and messages wraps instead of widening the page.", de: "Mobile-Durchgang über alle Ansichten: Breite Tabellen (Admin Nutzer/Bücher, API-Tokens, letzte Puzzles) scrollen jetzt horizontal statt die Seite zu überlaufen; Teilen-/Anlegen-Dialoge sind auf die Viewport-Breite begrenzt; lange unumbrechbare Texte in Benachrichtigungen und Nachrichten brechen um, statt die Seite zu verbreitern." },
   ]},
