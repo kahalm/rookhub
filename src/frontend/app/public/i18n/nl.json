@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "Bezig",
+    "sectionInProgressHint": "Cursussen die je bent begonnen en nog niet hebt afgerond."
   },
   "weekly": {
     "title": "Wekelijks",

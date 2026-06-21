@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "У процесі",
+    "sectionInProgressHint": "Курси, які ви почали й ще не завершили."
   },
   "weekly": {
     "title": "Тижневик",

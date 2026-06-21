@@ -744,7 +744,9 @@
     "chapters": "Poglavlja",
     "noChapter": "(bez poglavlja)",
     "chaptersEmpty": "Nema poglavlja",
-    "chaptersLoadFailed": "Učitavanje poglavlja nije uspjelo"
+    "chaptersLoadFailed": "Učitavanje poglavlja nije uspjelo",
+    "sectionInProgress": "U tijeku",
+    "sectionInProgressHint": "Tečajevi koje si započeo i još nisi završio."
   },
   "weekly": {
     "title": "Tjedna objava",
@@ -1641,6 +1643,7 @@
     "doneLocal": "{{count}} ažurirano.",
     "doneQueued": "{{count}} se osvježava u pozadini.",
     "doneEmpty": "Sve je već ažurno.",
-    "failed": "Ažuriranje nije uspjelo. Pokušajte ponovno."
+    "failed": "Ažuriranje nije uspjelo. Pokušajte ponovno.",
+    "dismiss": "U redu"
   }
 }

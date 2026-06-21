@@ -744,7 +744,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "In progress",
+    "sectionInProgressHint": "Courses you've started and haven't finished yet."
   },
   "weekly": {
     "title": "Weekly",
@@ -1641,6 +1643,7 @@
     "doneLocal": "{{count}} updated.",
     "doneQueued": "{{count}} being refreshed in the background.",
     "doneEmpty": "Everything is already up to date.",
-    "failed": "Update failed. Please try again."
+    "failed": "Update failed. Please try again.",
+    "dismiss": "Got it"
   }
 }

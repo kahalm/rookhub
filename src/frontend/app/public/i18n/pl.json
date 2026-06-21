@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "W toku",
+    "sectionInProgressHint": "Kursy, które zacząłeś i jeszcze nie ukończyłeś."
   },
   "weekly": {
     "title": "Tygodniowy",

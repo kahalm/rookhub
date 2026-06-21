@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "En cours",
+    "sectionInProgressHint": "Cours que tu as commencés et pas encore terminés."
   },
   "weekly": {
     "title": "Hebdomadaire",

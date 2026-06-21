@@ -744,7 +744,9 @@
     "chapters": "Kapitel",
     "noChapter": "(ohne Kapitel)",
     "chaptersEmpty": "Keine Kapitel",
-    "chaptersLoadFailed": "Kapitel konnten nicht geladen werden"
+    "chaptersLoadFailed": "Kapitel konnten nicht geladen werden",
+    "sectionInProgress": "In Arbeit",
+    "sectionInProgressHint": "Kurse, die du angefangen und noch nicht abgeschlossen hast."
   },
   "weekly": {
     "title": "Wochenpost",
@@ -1641,6 +1643,7 @@
     "doneLocal": "{{count}} aktualisiert.",
     "doneQueued": "{{count}} werden im Hintergrund neu geladen.",
     "doneEmpty": "Alles ist bereits aktuell.",
-    "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen."
+    "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen.",
+    "dismiss": "Verstanden"
   }
 }

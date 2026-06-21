@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "قيد التقدم",
+    "sectionInProgressHint": "الدورات التي بدأتها ولم تُكملها بعد."
   },
   "weekly": {
     "title": "أسبوعي",

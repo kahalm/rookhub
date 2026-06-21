@@ -33,6 +33,17 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
       } @else if (courses.length === 0) {
         <p class="empty-hint">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
+        @if (inProgressCourses.length > 0) {
+          <section class="course-section">
+            <h2>{{ 'courses.sectionInProgress' | translate }}</h2>
+            <p class="section-hint">{{ 'courses.sectionInProgressHint' | translate }}</p>
+            <div class="course-grid">
+              @for (c of inProgressCourses; track c.bookId) {
+                <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: c }"></ng-container>
+              }
+            </div>
+          </section>
+        }
         @if (publicCourses.length > 0) {
           <section class="course-section">
             <h2>{{ 'courses.sectionPublic' | translate }}</h2>
@@ -226,6 +237,13 @@ export class CourseListComponent implements OnInit {
   loadingChapters: number | null = null;
 
   constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
+
+  /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
+   *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
+   *  verwendet zuerst (durch sortCourses bereits vorsortiert). */
+  get inProgressCourses(): CourseListItem[] {
+    return this.courses.filter(c => c.lastActivityAt && c.solvedCount < c.puzzleCount);
+  }
 
   /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
   get publicCourses(): CourseListItem[] {

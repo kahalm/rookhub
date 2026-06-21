@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "進行中",
+    "sectionInProgressHint": "開始したがまだ終えていないコース。"
   },
   "weekly": {
     "title": "週刊",

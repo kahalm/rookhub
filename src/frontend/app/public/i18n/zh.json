@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "进行中",
+    "sectionInProgressHint": "你已开始但尚未完成的课程。"
   },
   "weekly": {
     "title": "每周精选",

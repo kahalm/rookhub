@@ -44,6 +44,25 @@ describe('ReprocessBannerComponent', () => {
     expect(createComponent().actionableCount).toBe(0);
   });
 
+  it('Re-Import-Hinweis: wegklickbar + bleibt verborgen, bis die Zahl steigt', () => {
+    localStorage.removeItem('rookhub_reprocess_reimport_dismissed_courses');
+    const c = createComponent();
+    c.status = { currentVersion: 2, total: 50, stale: 12, reprocessableLocally: 0, refetchable: 0, needsReimport: 12 };
+    expect(c.showReimportNote).toBeTrue();          // anfangs sichtbar
+
+    c.dismissReimport();
+    expect(c.showReimportNote).toBeFalse();          // weggeklickt → weg
+    expect(localStorage.getItem('rookhub_reprocess_reimport_dismissed_courses')).toBe('12');
+
+    c.status = { ...c.status, needsReimport: 12 };    // unverändert → bleibt verborgen
+    expect(c.showReimportNote).toBeFalse();
+    c.status = { ...c.status, needsReimport: 8 };     // weniger → bleibt verborgen
+    expect(c.showReimportNote).toBeFalse();
+    c.status = { ...c.status, needsReimport: 15 };    // NEUE manuelle Kurse → wieder sichtbar
+    expect(c.showReimportNote).toBeTrue();
+    localStorage.removeItem('rookhub_reprocess_reimport_dismissed_courses');
+  });
+
   it('run() bereitet nur auf, wenn aktualisierbare Datensätze existieren', () => {
     const c = createComponent();
     const http = TestBed.inject(HttpTestingController);

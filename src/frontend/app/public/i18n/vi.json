@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "Đang học",
+    "sectionInProgressHint": "Các khóa bạn đã bắt đầu nhưng chưa hoàn thành."
   },
   "weekly": {
     "title": "Tuần này",

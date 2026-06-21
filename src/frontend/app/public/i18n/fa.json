@@ -594,7 +594,9 @@
     "chapters": "Chapters",
     "noChapter": "(no chapter)",
     "chaptersEmpty": "No chapters",
-    "chaptersLoadFailed": "Could not load chapters"
+    "chaptersLoadFailed": "Could not load chapters",
+    "sectionInProgress": "در حال انجام",
+    "sectionInProgressHint": "دوره‌هایی که شروع کرده‌ای و هنوز تمام نکرده‌ای."
   },
   "weekly": {
     "title": "هفتگی",
