@@ -61,16 +61,15 @@ export abstract class BasePuzzleSolver {
   protected vizStartNum = 1;
   /** Level 2-4: Figuren versteckt (nach Countdown). */
   vizPiecesHidden = false;
-  /** Show-Button aktiv (zeigt Figuren/Steine für 3s). */
+  /** Show-Button aktiv (deckt Figuren/Steine auf — Toggle, läuft NICHT automatisch ab). */
   vizShowPressed = false;
-  /** Wie oft der Show-Button in diesem Versuch gedrückt wurde. */
+  /** Wie oft der Show-Button in diesem Versuch zum Aufdecken gedrückt wurde. */
   vizShowCount = 0;
   /** Eval wurde in diesem Versuch mindestens einmal eingeblendet. */
   evalShown = false;
   /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
   vizCountdownSeconds = 0;
   protected vizCountdownInterval?: ReturnType<typeof setInterval>;
-  private vizShowTimer?: ReturnType<typeof setTimeout>;
   /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
   vizOpponentLastMove?: [Key, Key];
   /** Pfeil-Anzeige ein/aus (Nutzer-Einstellung, aus Prefs geladen). */
@@ -420,18 +419,14 @@ export abstract class BasePuzzleSolver {
     this.vizCountdownSeconds = 0;
   }
 
+  /** Toggle: deckt die Figuren auf bzw. blendet sie wieder aus. Läuft bewusst NICHT automatisch
+   *  ab — der Spieler entscheidet selbst, wann wieder verdeckt wird. */
   onVizShow(): void {
-    if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
-    this.vizShowPressed = true;
-    this.vizShowCount++;
-    // Level 1: Brett auf die tatsächliche aktuelle Stellung umstellen (Level 2–4 decken per CSS auf).
+    this.vizShowPressed = !this.vizShowPressed;
+    if (this.vizShowPressed) this.vizShowCount++;   // nur das Aufdecken zählen
+    // Level 1: Brett auf die tatsächliche Stellung umstellen bzw. wieder einfrieren
+    // (Level 2–4 decken über die CSS-Klasse `.viz-hidden` auf, kein Board-Wechsel nötig).
     if (this.visualizationMode === 1) this.updateBoard();
-    this.vizShowTimer = setTimeout(() => {
-      this.vizShowPressed = false;
-      this.vizShowTimer = undefined;
-      // Level 1: wieder auf die eingefrorene Startstellung zurück.
-      if (this.visualizationMode === 1) this.updateBoard();
-    }, 3000);
   }
 
   protected markEvalShown(): void {
@@ -440,7 +435,6 @@ export abstract class BasePuzzleSolver {
 
   protected endVisualizationHide(): void {
     this.clearVizCountdown();
-    if (this.vizShowTimer) { clearTimeout(this.vizShowTimer); this.vizShowTimer = undefined; }
     this.vizPiecesHidden = false;
     this.vizShowPressed = false;
     clearVisualizationHide();
@@ -530,8 +524,6 @@ export abstract class BasePuzzleSolver {
     this.stopCountdown();
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.clearVizOpponentArrow();
-    // endVisualizationHide raeumt auch den vizShowTimer auf — sonst feuert dessen
-    // setTimeout-Callback nach Teardown/Puzzlewechsel.
     this.endVisualizationHide();
   }
 }

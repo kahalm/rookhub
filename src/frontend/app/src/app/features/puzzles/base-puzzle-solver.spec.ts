@@ -38,8 +38,8 @@ describe('BasePuzzleSolver mouseslip after Stockfish error', () => {
   }));
 });
 
-describe('BasePuzzleSolver Level-1 „Anzeigen" (aktuelle Stellung 3s)', () => {
-  it('zeigt beim Drücken kurz die tatsächliche Stellung und kehrt nach 3s zur eingefrorenen zurück', fakeAsync(() => {
+describe('BasePuzzleSolver Level-1 „Anzeigen" (Toggle, läuft nicht ab)', () => {
+  it('deckt beim Drücken die tatsächliche Stellung auf und verbirgt sie erst beim erneuten Drücken', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
     const solver = new TestSolver(stockfish);
     solver.visualizationMode = 1;                 // Blindspiel: Brett bleibt eingefroren
@@ -54,15 +54,21 @@ describe('BasePuzzleSolver Level-1 „Anzeigen" (aktuelle Stellung 3s)', () => {
     expect(solver.boardFen).toBe(frozen);
     expect(solver.actualFen).not.toBe(frozen);
 
-    // „Anzeigen": aktuelle Stellung wird eingeblendet.
+    // „Anzeigen": aktuelle Stellung wird sofort eingeblendet.
     const current = solver.actualFen;
     solver.onVizShow();
     expect(solver.vizShowPressed).toBeTrue();
+    expect(solver.vizShowCount).toBe(1);
     expect(solver.boardFen).toBe(current);
 
-    // Nach 3s wieder eingefroren.
-    tick(3000);
+    // Kernverhalten: auch nach 3s (alter Auto-Ablauf-Zeitpunkt) bleibt es aufgedeckt.
+    tick(3500);
+    expect(solver.vizShowPressed).toBeTrue();
+
+    // Erneutes Drücken verbirgt wieder → Brett zurück auf eingefroren; Verbergen zählt NICHT mit.
+    solver.onVizShow();
     expect(solver.vizShowPressed).toBeFalse();
+    expect(solver.vizShowCount).toBe(1);
     expect(solver.boardFen).toBe(frozen);
 
     discardPeriodicTasks();

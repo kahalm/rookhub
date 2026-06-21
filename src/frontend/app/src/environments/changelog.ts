@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.163.0';
+export const APP_VERSION = '0.163.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.163.1", date: "2026-06-21", changes: [
+    { en: "Visualization mode \"Show\" button no longer auto-hides after 3 seconds — it's now a toggle: tap once to reveal the pieces and they stay revealed until you tap again to hide them. Works the same in standard, endless and book/course puzzles.", de: "Der „Anzeigen\"-Knopf im Visualisierungsmodus blendet die Figuren nicht mehr automatisch nach 3 Sekunden aus — er ist jetzt ein Umschalter: einmal tippen deckt auf und es bleibt aufgedeckt, bis du erneut tippst zum Verbergen. In Standard-, Endlos- und Buch-/Kurs-Puzzles gleich." },
+  ]},
   { version: "0.163.0", date: "2026-06-21", changes: [
     { en: "Statistics page now has a Standard/Courses toggle: switch to \"Courses\" to see your course-puzzle history just like the standard one — solved/attempts/accuracy/streak tiles, breakdown by theme and rating, an activity heatmap and a list of your recent course attempts (opening each one in the book). Course puzzles have no Elo, so the Elo curve is hidden in course mode.", de: "Die Statistik-Seite hat jetzt einen Umschalter Standard/Kurse: Mit „Kurse\" siehst du deine Kurs-Puzzle-History genauso wie die normale — Kacheln für Gelöst/Versuche/Genauigkeit/Serie, Aufschlüsselung nach Thema und Rating, eine Aktivitäts-Heatmap und eine Liste deiner letzten Kurs-Versuche (jeder im Buch zu öffnen). Kurs-Puzzles haben kein Elo, daher entfällt die Elo-Kurve im Kurs-Modus." },
   ]},
