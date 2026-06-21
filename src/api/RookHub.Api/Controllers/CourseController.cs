@@ -71,6 +71,24 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> HasAnyAccess()
         => Ok(new { hasAccess = await _service.HasAnyAccessAsync(GetUserId(), IsAdmin) });
 
+    // --- Kurs-Statistik (für die /stats-Seite, Umschalter „Kurse"). Literale Routen MÜSSEN vor
+    //     den `{bookId}`-Routen stehen, sonst matcht der Router „stats"/„history" als bookId. ---
+
+    /// <summary>Aggregierte Kurs-Puzzle-Statistik des Users (ohne Elo).</summary>
+    [HttpGet("stats")]
+    public async Task<ActionResult<CourseStatsDto>> GetStats()
+        => Ok(await _service.GetStatsAsync(GetUserId()));
+
+    /// <summary>Paginierte Kurs-Versuchs-History des Users (neueste zuerst).</summary>
+    [HttpGet("history")]
+    public async Task<ActionResult<List<CourseAttemptDto>>> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await _service.GetHistoryAsync(GetUserId(), page, pageSize));
+
+    /// <summary>Aufschlüsselung der Kurs-Versuche nach Thema/Rating-Band/Aktivität.</summary>
+    [HttpGet("stats/breakdown")]
+    public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
+        => Ok(await _service.GetBreakdownAsync(GetUserId()));
+
     /// <summary>Kapitel eines (zugänglichen) Buchs in Lesereihenfolge inkl. Fortschritt — Basis der Kapitelübersicht.</summary>
     [HttpGet("{bookId}/chapters")]
     public async Task<ActionResult<List<CourseChapterDto>>> GetChapters(int bookId)

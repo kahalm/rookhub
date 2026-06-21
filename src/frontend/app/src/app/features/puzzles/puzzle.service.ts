@@ -82,6 +82,28 @@ export interface BookInfoDto {
   puzzleCount: number;
 }
 
+/** Kurs-Puzzle-Statistik (wie PuzzleStatsDto, aber ohne Elo — Kurs-Puzzles haben kein User-Elo). */
+export interface CourseStatsDto {
+  totalAttempts: number;
+  solved: number;
+  accuracy: number;
+  currentStreak: number;
+  bestStreak: number;
+}
+
+/** Eine Zeile der Kurs-Versuchs-History (wie PuzzleAttemptDto, ohne Elo). */
+export interface CourseAttemptDto {
+  bookPuzzleId: number;
+  lineId: string;
+  title?: string;
+  bookFileName: string;
+  bookRating?: number;
+  difficulty?: string;
+  solved: boolean;
+  timeSeconds: number;
+  attemptedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PuzzleService {
   constructor(private http: HttpClient) {}
@@ -149,6 +171,22 @@ export class PuzzleService {
 
   getBreakdown(): Observable<PuzzleBreakdown> {
     return this.http.get<PuzzleBreakdown>('/api/puzzles/stats/breakdown');
+  }
+
+  // --- Kurs-Statistik (Quelle: CourseAttempt; ohne Elo). Pendant zu getStats/getHistory/getBreakdown. ---
+
+  getCourseStats(): Observable<CourseStatsDto> {
+    return this.http.get<CourseStatsDto>('/api/courses/stats');
+  }
+
+  getCourseHistory(page = 1, pageSize = 30): Observable<CourseAttemptDto[]> {
+    return this.http.get<CourseAttemptDto[]>('/api/courses/history', {
+      params: new HttpParams().set('page', page).set('pageSize', pageSize)
+    });
+  }
+
+  getCourseBreakdown(): Observable<PuzzleBreakdown> {
+    return this.http.get<PuzzleBreakdown>('/api/courses/stats/breakdown');
   }
 
   private getOrCreateSessionId(): string {

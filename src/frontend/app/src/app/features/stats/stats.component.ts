@@ -6,16 +6,19 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { PuzzleService, PuzzleStatsDto, PuzzleAttemptDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay } from '../puzzles/puzzle.service';
+import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay, PuzzleBreakdown, CourseStatsDto } from '../puzzles/puzzle.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
+/** Normalisierte Zeile der „letzte Puzzles"-Tabelle (Standard + Kurs vereinheitlicht). */
+export interface RecentRow { rating: number; solved: boolean; time: number; attemptedAt: string; eloChange: number | null; link: (string | number)[]; }
 
 /**
  * Baut aus Punkten einen geglätteten SVG-Pfad (Catmull-Rom → kubische Béziers, läuft durch
@@ -156,24 +159,36 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatTableModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent
+    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent
   ],
   template: `
     <div class="stats-container">
       <h1>{{ 'stats.title' | translate }}</h1>
 
+      <mat-button-toggle-group class="mode-toggle" [(ngModel)]="mode" (change)="onModeChange()" aria-label="Modus">
+        <mat-button-toggle value="standard">{{ 'stats.modeStandard' | translate }}</mat-button-toggle>
+        <mat-button-toggle value="course">{{ 'stats.modeCourse' | translate }}</mat-button-toggle>
+      </mat-button-toggle-group>
+
       @if (loading) {
         <app-loading-spinner />
       } @else {
         <div class="cards">
-          <mat-card class="stat"><div class="val">{{ stats?.puzzleElo ?? '–' }}</div><div class="lbl">{{ 'stats.currentElo' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ stats?.solved ?? 0 }}</div><div class="lbl">{{ 'stats.totalSolved' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ stats?.totalAttempts ?? 0 }}</div><div class="lbl">{{ 'stats.attempts' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ (stats?.accuracy ?? 0) }}%</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ stats?.currentStreak ?? 0 }}</div><div class="lbl">{{ 'stats.currentStreak' | translate }}</div></mat-card>
-          <mat-card class="stat"><div class="val">{{ stats?.bestStreak ?? 0 }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
+          @if (mode === 'standard') {
+            <mat-card class="stat"><div class="val">{{ stats?.puzzleElo ?? '–' }}</div><div class="lbl">{{ 'stats.currentElo' | translate }}</div></mat-card>
+          }
+          <mat-card class="stat"><div class="val">{{ vSolved }}</div><div class="lbl">{{ 'stats.totalSolved' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ vAttempts }}</div><div class="lbl">{{ 'stats.attempts' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ vAccuracy }}%</div><div class="lbl">{{ 'stats.accuracy' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ vCurrentStreak }}</div><div class="lbl">{{ 'stats.currentStreak' | translate }}</div></mat-card>
+          <mat-card class="stat"><div class="val">{{ vBestStreak }}</div><div class="lbl">{{ 'stats.bestStreak' | translate }}</div></mat-card>
         </div>
 
+        @if (mode === 'course' && vAttempts === 0) {
+          <mat-card><mat-card-content><p class="muted">{{ 'stats.courseEmpty' | translate }}</p></mat-card-content></mat-card>
+        }
+
+        @if (mode === 'standard') {
         <mat-card class="chart-card">
           <mat-card-header>
             <mat-card-title>{{ 'stats.eloProgress' | translate }}</mat-card-title>
@@ -230,6 +245,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               </div>
             </mat-card-content>
           </mat-card>
+        }
         }
 
         @if (themes.length) {
@@ -305,18 +321,18 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
         <mat-card class="recent-card">
           <mat-card-header><mat-card-title>{{ 'stats.recentPuzzles' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
-            @if (recent.length === 0) {
+            @if (recentRows.length === 0) {
               <p class="muted">{{ 'stats.noData' | translate }}</p>
             } @else {
               <div class="recent-scroll">
-              <table mat-table [dataSource]="recent" class="full-width recent-table">
+              <table mat-table [dataSource]="recentRows" class="full-width recent-table">
                 <ng-container matColumnDef="date">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.date' | translate }}</th>
                   <td mat-cell *matCellDef="let a">{{ a.attemptedAt | date:'dd.MM. HH:mm' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="rating">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.rating' | translate }}</th>
-                  <td mat-cell *matCellDef="let a">{{ a.puzzleRating }}</td>
+                  <td mat-cell *matCellDef="let a">{{ a.rating || '–' }}</td>
                 </ng-container>
                 <ng-container matColumnDef="result">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.result' | translate }}</th>
@@ -332,11 +348,11 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                 </ng-container>
                 <ng-container matColumnDef="time">
                   <th mat-header-cell *matHeaderCellDef>{{ 'stats.time' | translate }}</th>
-                  <td mat-cell *matCellDef="let a">{{ a.timeSpentSeconds }}s</td>
+                  <td mat-cell *matCellDef="let a">{{ a.time }}s</td>
                 </ng-container>
                 <ng-container matColumnDef="open">
                   <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let a"><a mat-icon-button [routerLink]="['/puzzles', a.puzzleId]"><mat-icon>open_in_new</mat-icon></a></td>
+                  <td mat-cell *matCellDef="let a"><a mat-icon-button [routerLink]="a.link"><mat-icon>open_in_new</mat-icon></a></td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="cols"></tr>
                 <tr mat-row *matRowDef="let row; columns: cols;"></tr>
@@ -397,14 +413,20 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .hm-cell.lvl3 { background: #239a3b; }
     .hm-cell.lvl4 { background: #196127; }
     mat-card { margin-bottom: 16px; }
+    .mode-toggle { margin-bottom: 16px; }
   `]
 })
 export class StatsComponent implements OnInit {
+  /** Umschalter: Standard-Puzzle-Statistik vs. Kurs-Puzzle-Statistik (kein Elo bei Kursen). */
+  mode: 'standard' | 'course' = 'standard';
+
   loading = true;
   stats: PuzzleStatsDto | null = null;
+  courseStats: CourseStatsDto | null = null;
   perLevel: { level: number; elo: number }[] = [];
-  recent: PuzzleAttemptDto[] = [];
-  cols = ['date', 'rating', 'result', 'elo', 'time', 'open'];
+  /** Normalisierte Zeilen der „letzte Puzzles"-Tabelle (für beide Modi). */
+  recentRows: RecentRow[] = [];
+  cols: string[] = ['date', 'rating', 'result', 'elo', 'time', 'open'];
 
   /** Default = aktuell bei den Puzzles eingestellte Visualisierungsstufe (im Konstruktor gesetzt). */
   level = 0;
@@ -422,7 +444,27 @@ export class StatsComponent implements OnInit {
     this.level = prefs.visualization;
   }
 
-  ngOnInit(): void {
+  // Vereinheitlichte Kachel-Werte je Modus.
+  get vSolved(): number { return this.mode === 'course' ? (this.courseStats?.solved ?? 0) : (this.stats?.solved ?? 0); }
+  get vAttempts(): number { return this.mode === 'course' ? (this.courseStats?.totalAttempts ?? 0) : (this.stats?.totalAttempts ?? 0); }
+  get vAccuracy(): number { return this.mode === 'course' ? (this.courseStats?.accuracy ?? 0) : (this.stats?.accuracy ?? 0); }
+  get vCurrentStreak(): number { return this.mode === 'course' ? (this.courseStats?.currentStreak ?? 0) : (this.stats?.currentStreak ?? 0); }
+  get vBestStreak(): number { return this.mode === 'course' ? (this.courseStats?.bestStreak ?? 0) : (this.stats?.bestStreak ?? 0); }
+
+  ngOnInit(): void { this.load(); }
+
+  onModeChange(): void { this.load(); }
+
+  private load(): void {
+    this.loading = true;
+    this.cols = this.mode === 'course'
+      ? ['date', 'rating', 'result', 'time', 'open']   // Kurs-Modus: kein Δ-Elo
+      : ['date', 'rating', 'result', 'elo', 'time', 'open'];
+    if (this.mode === 'course') this.loadCourse();
+    else this.loadStandard();
+  }
+
+  private loadStandard(): void {
     forkJoin({
       stats: this.puzzles.getStats(),
       history: this.puzzles.getHistory(1, 30),
@@ -431,27 +473,57 @@ export class StatsComponent implements OnInit {
     }).subscribe({
       next: ({ stats, history, elo, breakdown }) => {
         this.stats = stats;
-        this.recent = history;
         this.eloPoints = elo;
         this.perLevel = stats.puzzleEloPerLevel
           ? Object.entries(stats.puzzleEloPerLevel).map(([k, v]) => ({ level: +k, elo: v as number })).sort((a, b) => a.level - b.level)
           : [];
-        // Nach Lösungs-% absteigend sortieren (bei Gleichstand mehr Versuche zuerst).
-        this.themes = [...breakdown.themes].sort((a, b) =>
-          this.acc(b.solved, b.attempts) - this.acc(a.solved, a.attempts) || b.attempts - a.attempts);
-        // 5 schwächste: nur Themen mit genug Versuchen, nach Lösungs-% aufsteigend (bei Gleichstand mehr Versuche zuerst).
-        this.worstThemes = [...breakdown.themes]
-          .filter(t => t.attempts >= 3)
-          .sort((a, b) => this.acc(a.solved, a.attempts) - this.acc(b.solved, b.attempts) || b.attempts - a.attempts)
-          .slice(0, 5);
-        this.ratingBands = breakdown.ratingBands;
-        this.maxBandSolved = Math.max(1, ...this.ratingBands.map(b => b.solved));
-        this.heatmap = breakdown.activity.length ? buildHeatmap(breakdown.activity, new Date()) : [];
+        this.recentRows = history.map(a => ({
+          rating: a.puzzleRating, solved: a.solved, time: a.timeSpentSeconds,
+          attemptedAt: a.attemptedAt, eloChange: a.eloChange ?? null, link: ['/puzzles', a.puzzleId],
+        }));
+        this.applyBreakdown(breakdown);
         this.rebuildCurve();
         this.loading = false;
       },
       error: () => { this.loading = false; },
     });
+  }
+
+  private loadCourse(): void {
+    forkJoin({
+      stats: this.puzzles.getCourseStats(),
+      history: this.puzzles.getCourseHistory(1, 30),
+      breakdown: this.puzzles.getCourseBreakdown(),
+    }).subscribe({
+      next: ({ stats, history, breakdown }) => {
+        this.courseStats = stats;
+        this.perLevel = [];
+        this.curve = null;
+        this.overlay = null;
+        this.recentRows = history.map(a => ({
+          rating: a.bookRating ?? 0, solved: a.solved, time: a.timeSeconds,
+          attemptedAt: a.attemptedAt, eloChange: null, link: ['/puzzles/book', a.bookPuzzleId],
+        }));
+        this.applyBreakdown(breakdown);
+        this.loading = false;
+      },
+      error: () => { this.loading = false; },
+    });
+  }
+
+  /** Themen-/Worst-Themen-/Rating-Band-/Heatmap-Aufbereitung — für beide Modi identisch. */
+  private applyBreakdown(breakdown: PuzzleBreakdown): void {
+    // Nach Lösungs-% absteigend sortieren (bei Gleichstand mehr Versuche zuerst).
+    this.themes = [...breakdown.themes].sort((a, b) =>
+      this.acc(b.solved, b.attempts) - this.acc(a.solved, a.attempts) || b.attempts - a.attempts);
+    // 5 schwächste: nur Themen mit genug Versuchen, nach Lösungs-% aufsteigend (bei Gleichstand mehr Versuche zuerst).
+    this.worstThemes = [...breakdown.themes]
+      .filter(t => t.attempts >= 3)
+      .sort((a, b) => this.acc(a.solved, a.attempts) - this.acc(b.solved, b.attempts) || b.attempts - a.attempts)
+      .slice(0, 5);
+    this.ratingBands = breakdown.ratingBands;
+    this.maxBandSolved = Math.max(1, ...this.ratingBands.map(b => b.solved));
+    this.heatmap = breakdown.activity.length ? buildHeatmap(breakdown.activity, new Date()) : [];
   }
 
   acc(solved: number, attempts: number): number {

@@ -81,3 +81,33 @@ public class CourseProgressDto
     public bool Completed { get; set; }
     public string? LastMode { get; set; }
 }
+
+/// <summary>
+/// Aggregierte Kurs-Puzzle-Statistik des Users (Pendant zu <see cref="PuzzleStatsDto"/> für Standard-Puzzles,
+/// aber ohne Elo — Buch-/Kurs-Puzzles haben kein User-Elo). Quelle: <see cref="Models.CourseAttempt"/>.
+/// </summary>
+public class CourseStatsDto
+{
+    public int TotalAttempts { get; set; }
+    public int Solved { get; set; }
+    public double Accuracy { get; set; }
+    public int CurrentStreak { get; set; }
+    public int BestStreak { get; set; }
+}
+
+/// <summary>
+/// Ein einzelner Kurs-Lösungsversuch für die History-Tabelle (Pendant zu <see cref="PuzzleAttemptDto"/>,
+/// ohne Elo). <see cref="BookPuzzleId"/> dient dem „Öffnen"-Link (<c>/puzzles/book/:id</c>).
+/// </summary>
+public class CourseAttemptDto
+{
+    public int BookPuzzleId { get; set; }
+    public string LineId { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string BookFileName { get; set; } = string.Empty;
+    public int? BookRating { get; set; }
+    public string? Difficulty { get; set; }
+    public bool Solved { get; set; }
+    public int TimeSeconds { get; set; }
+    public DateTime AttemptedAt { get; set; }
+}

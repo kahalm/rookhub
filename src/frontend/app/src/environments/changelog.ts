@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.162.2';
+export const APP_VERSION = '0.163.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.163.0", date: "2026-06-21", changes: [
+    { en: "Statistics page now has a Standard/Courses toggle: switch to \"Courses\" to see your course-puzzle history just like the standard one — solved/attempts/accuracy/streak tiles, breakdown by theme and rating, an activity heatmap and a list of your recent course attempts (opening each one in the book). Course puzzles have no Elo, so the Elo curve is hidden in course mode.", de: "Die Statistik-Seite hat jetzt einen Umschalter Standard/Kurse: Mit „Kurse\" siehst du deine Kurs-Puzzle-History genauso wie die normale — Kacheln für Gelöst/Versuche/Genauigkeit/Serie, Aufschlüsselung nach Thema und Rating, eine Aktivitäts-Heatmap und eine Liste deiner letzten Kurs-Versuche (jeder im Buch zu öffnen). Kurs-Puzzles haben kein Elo, daher entfällt die Elo-Kurve im Kurs-Modus." },
+  ]},
   { version: "0.162.2", date: "2026-06-21", changes: [
     { en: "Standard puzzles: solving with an alternative (your own) winning line no longer auto-advances either — now consistent with endless and book/course modes. You continue manually and can review the originally intended solution first.", de: "Standard-Puzzles: Auch hier springt eine alternative (eigene) Gewinnvariante nicht mehr automatisch weiter — jetzt einheitlich mit Endlos- und Buch-/Kurs-Modus. Du gehst selbst weiter und kannst zuerst die ursprünglich vorgesehene Lösung ansehen." },
   ]},

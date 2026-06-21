@@ -1260,6 +1260,9 @@
   },
   "stats": {
     "title": "Statistik",
+    "modeStandard": "Standard",
+    "modeCourse": "Kurse",
+    "courseEmpty": "Noch keine Kurs-Versuche.",
     "currentElo": "Puzzle-Elo",
     "totalSolved": "Gelöst",
     "attempts": "Versuche",

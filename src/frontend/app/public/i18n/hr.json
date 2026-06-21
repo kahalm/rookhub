@@ -1260,6 +1260,9 @@
   },
   "stats": {
     "title": "Statistika",
+    "modeStandard": "Standard",
+    "modeCourse": "Tečajevi",
+    "courseEmpty": "Još nema pokušaja u tečajevima.",
     "currentElo": "Elo zagonetki",
     "totalSolved": "Riješeno",
     "attempts": "Pokušaji",

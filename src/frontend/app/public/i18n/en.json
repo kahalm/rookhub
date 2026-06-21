@@ -1260,6 +1260,9 @@
   },
   "stats": {
     "title": "Statistics",
+    "modeStandard": "Standard",
+    "modeCourse": "Courses",
+    "courseEmpty": "No course attempts yet.",
     "currentElo": "Puzzle Elo",
     "totalSolved": "Solved",
     "attempts": "Attempts",
