@@ -26,6 +26,32 @@ function makeComponent(): any {
 
 const PUZZLE = { id: 1, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };
 
+describe('PuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
+  function solvedComponent() {
+    const c = makeComponent();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'startSolvedCountdown');
+    c.puzzle = { ...PUZZLE };
+    c.attemptRecorded = true;   // HTTP-Aufzeichnung überspringen
+    return c;
+  }
+
+  it('startet bei normaler Lösung den Auto-Advance-Countdown', () => {
+    const c = solvedComponent();
+    (c as any).handleSolved(false);
+    expect((c as any).startSolvedCountdown).toHaveBeenCalled();
+  });
+
+  it('springt bei alternativer Lösung NICHT automatisch weiter', () => {
+    const c = solvedComponent();
+    (c as any).handleSolved(true);
+    expect((c as any).startSolvedCountdown).not.toHaveBeenCalled();
+    expect(c.state).toBe('SOLVED');
+  });
+});
+
 describe('PuzzleComponent give-up', () => {
   it('plays the solution from the start position move by move', fakeAsync(() => {
     const c = makeComponent();

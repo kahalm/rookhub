@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.162.1';
+export const APP_VERSION = '0.162.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.162.2", date: "2026-06-21", changes: [
+    { en: "Standard puzzles: solving with an alternative (your own) winning line no longer auto-advances either — now consistent with endless and book/course modes. You continue manually and can review the originally intended solution first.", de: "Standard-Puzzles: Auch hier springt eine alternative (eigene) Gewinnvariante nicht mehr automatisch weiter — jetzt einheitlich mit Endlos- und Buch-/Kurs-Modus. Du gehst selbst weiter und kannst zuerst die ursprünglich vorgesehene Lösung ansehen." },
+  ]},
   { version: "0.162.1", date: "2026-06-21", changes: [
     { en: "Books/courses: when you solve a puzzle with an alternative (your own) winning line, it no longer auto-advances to the next puzzle — same as endless mode. You decide when to continue, and can review the originally intended solution first.", de: "Bücher/Kurse: Wenn du ein Puzzle mit einer alternativen (eigenen) Gewinnvariante löst, springt es nicht mehr automatisch zum nächsten Puzzle — wie im Endlos-Modus. Du entscheidest selbst, wann es weitergeht, und kannst vorher die ursprünglich vorgesehene Lösung ansehen." },
   ]},

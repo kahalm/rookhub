@@ -179,7 +179,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.moveStartTime = Date.now();
   }
 
-  protected override handleSolved(): void {
+  protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';
     this.stopTimer();
     this.updateBoard();
@@ -189,6 +189,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
     this.enterSolutionReview();
+    // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
+    // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
+    if (alternative) return;
     this.startSolvedCountdown(() => this.loadNext());
   }
 
