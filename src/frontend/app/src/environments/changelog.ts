@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.166.0';
+export const APP_VERSION = '0.167.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.167.0", date: "2026-06-21", changes: [
+    { en: "The \"did it really take that long?\" prompt for solves over 5 minutes now works in all puzzle modes — standard and endless too, not just book/course. If you were away, the recorded time is capped at 5 minutes everywhere.", de: "Die Nachfrage „hat das wirklich so lange gedauert?" bei Lösungen über 5 Minuten greift jetzt in allen Puzzle-Modi — auch Standard und Endlos, nicht nur Buch/Kurs. Warst du weg, wird die gewertete Zeit überall auf 5 Minuten gekappt." },
+  ]},
   { version: "0.166.0", date: "2026-06-21", changes: [
     { en: "Book/course puzzles: if you solve a puzzle after more than 5 minutes (likely the tab was left open while you were away), you're now asked whether it really took that long. If you were away, the time is capped at 5 minutes so it doesn't distort your time spent, accuracy and the daily-puzzle leaderboard.", de: "Buch-/Kurs-Puzzles: Wenn du ein Puzzle nach mehr als 5 Minuten löst (vermutlich lag der Tab offen, während du weg warst), wirst du jetzt gefragt, ob das wirklich so lange gedauert hat. Warst du weg, wird die Zeit auf 5 Minuten gekappt — damit verfälscht sie weder deine Zeit/Trefferquote noch die Tagespuzzle-Bestenliste." },
   ]},

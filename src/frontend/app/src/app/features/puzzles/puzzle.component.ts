@@ -32,6 +32,7 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { LongSolveService } from './long-solve.service';
 import { of } from 'rxjs';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
@@ -124,7 +125,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private challengeService: ChallengeService,
     private revengeService: RevengeService,
     private translate: TranslateService,
-    private http: HttpClient
+    private http: HttpClient,
+    private longSolve: LongSolveService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -183,16 +185,20 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.state = 'SOLVED';
     this.stopTimer();
     this.updateBoard();
-    this.recordAttempt(true);
     this.lastSolvedPuzzleId = this.puzzle?.id ?? null;
     this.lastSolvedFen = this.puzzle?.fen ?? null;
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
     this.enterSolutionReview();
-    // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
-    // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
-    if (alternative) return;
-    this.startSolvedCountdown(() => this.loadNext());
+    // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
+    // Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
+    this.longSolve.resolve(this.elapsedSeconds).subscribe(seconds => {
+      this.recordAttempt(true, seconds);
+      // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
+      // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
+      if (alternative) return;
+      this.startSolvedCountdown(() => this.loadNext());
+    });
   }
 
   protected override handleFailed(): void {
@@ -520,14 +526,16 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     }
   }
 
-  private recordAttempt(solved: boolean): void {
+  /** `seconds` = zu wertende Lösezeit; default = gemessene Zeit (Fehlversuche), beim Lösen ggf. wegen
+   *  überlanger Zeit gekappt (siehe {@link LongSolveService}). */
+  private recordAttempt(solved: boolean, seconds: number = this.elapsedSeconds): void {
     if (!this.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     const id = this.puzzle.id;
     const url = this.isLoggedIn ? `/api/puzzles/${id}/attempt` : `/api/puzzles/${id}/attempt/anonymous`;
     const body: Record<string, unknown> = {
-      solved, timeSpentSeconds: this.elapsedSeconds, moveLog: log ?? null,
+      solved, timeSpentSeconds: seconds, moveLog: log ?? null,
       visualizationLevel: this.visualizationMode,
       evalShown: this.evalShown, vizShowCount: this.vizShowCount,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
@@ -539,17 +547,17 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       return;
     }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
+      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: res => {
           if (res.eloChange != null) this.lastEloChange = res.eloChange;
           this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
         },
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
-      this.resolveChallengeIfNeeded(solved);
+      this.resolveChallengeIfNeeded(solved, seconds);
       this.notifyRevengeIfNeeded(solved);
     } else {
-      this.puzzleService.recordAnonymousAttempt(id, solved, this.elapsedSeconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
+      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
@@ -557,10 +565,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   /** Meldet das Ergebnis genau einmal an eine offene Challenge zurück (fire-and-forget). */
-  private resolveChallengeIfNeeded(solved: boolean): void {
+  private resolveChallengeIfNeeded(solved: boolean, seconds: number = this.elapsedSeconds): void {
     if (this.challengeId == null || this.challengeResolved) return;
     this.challengeResolved = true;
-    this.challengeService.resolve(this.challengeId, solved, this.elapsedSeconds).subscribe({ next: () => {}, error: () => {} });
+    this.challengeService.resolve(this.challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
   }
 
   /** Informiert genau einmal den Freund, dessen gescheitertes Puzzle gerade gerächt wurde (fire-and-forget). */

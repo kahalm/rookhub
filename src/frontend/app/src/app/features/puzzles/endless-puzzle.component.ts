@@ -32,6 +32,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { LongSolveService } from './long-solve.service';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -282,7 +283,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private translate: TranslateService,
     private offline: OfflineService,
     private snackbar: SnackbarService,
-    private offlineQueue: OfflineQueueService
+    private offlineQueue: OfflineQueueService,
+    private longSolve: LongSolveService
   ) {
     super(stockfish);
     this.state = 'CONFIG';
@@ -913,6 +915,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.alternativeSolve = alternative;
     this.state = 'SOLVED';
     this.solved++;
+    // Pro-Puzzle-Lösezeit JETZT festhalten (vor einer evtl. Nachfrage, die Zeit kosten würde).
+    const perPuzzleSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
     if (this.puzzle) {
       this.pushSessionPuzzle(true);
       // Für „Letztes Puzzle analysieren" merken (überlebt den Auto-Advance).
@@ -921,25 +925,23 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.lastSolvedMoves = this.puzzle.moves;
       this.lastSolvedOrientation = this.orientation;
     }
-    this.recordAttempt(true);
     this.syncActiveGameToServer();
     this.updateBoard();
     this.enterSolutionReview();
 
-    if (alternative) {
-      // Don't auto-advance — let user choose Continue or Show Solution
-      return;
-    }
+    // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor die Zeit gewertet wird;
+    // der Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
+    this.longSolve.resolve(perPuzzleSeconds).subscribe(seconds => {
+      this.recordAttempt(true, seconds);
 
-    // Bei 0 Herzen (gelöstes Retry am tödlichen Puzzle) gibt es kein nächstes Puzzle mehr →
-    // keinen Auto-Advance-Countdown starten; „Weiter" führt über continueAfterSolve ins Game Over.
-    if (this.lives <= 0) {
-      return;
-    }
-
-    // Kurzer, sichtbarer Countdown bis zum nächsten Puzzle (wie Standard) — überspringbar
-    // per „Weiter"-Klick; Interaktion mit der Lösungs-Durchsicht bricht ihn ab.
-    this.startSolvedCountdown(() => this.continueAfterSolve());
+      // Bei alternativer Lösung NICHT auto-advancen — der Spieler wählt Weiter / Lösung zeigen.
+      if (alternative) return;
+      // Bei 0 Herzen (gelöstes Retry am tödlichen Puzzle) gibt es kein nächstes Puzzle mehr →
+      // kein Countdown; „Weiter" führt über continueAfterSolve ins Game Over.
+      if (this.lives <= 0) return;
+      // Kurzer, sichtbarer Countdown bis zum nächsten Puzzle — per „Weiter"-Klick überspringbar.
+      this.startSolvedCountdown(() => this.continueAfterSolve());
+    });
   }
 
   continueAfterSolve(): void {
@@ -1260,9 +1262,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (rating > this.maxRatingReached) this.maxRatingReached = rating;
   }
 
-  private recordAttempt(solved: boolean): void {
+  /** `seconds` = zu wertende Lösezeit; default = gemessene Zeit (Fehlversuche), beim Lösen ggf. wegen
+   *  überlanger Zeit gekappt (siehe {@link LongSolveService}). */
+  private recordAttempt(solved: boolean, seconds?: number): void {
     if (!this.puzzle) return;
-    const timeSpent = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
+    const timeSpent = seconds ?? (this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0);
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     const id = this.puzzle.id;
     const loggedIn = this.authService.isLoggedIn;

@@ -27,7 +27,7 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
-import { LongSolveDialogComponent } from './long-solve-dialog.component';
+import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -98,8 +98,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   elapsedSeconds = 0;
   private timerInterval?: ReturnType<typeof setInterval>;
 
-  /** Lösezeiten über diesem Schwellwert (s) sind verdächtig (Tab lag offen) → nachfragen. */
-  private static readonly LONG_SOLVE_SECONDS = 300;
   /** Die zu wertende Lösezeit — i.d.R. = elapsedSeconds, bei „war weg" auf den Schwellwert gekappt. */
   private solveSeconds = 0;
   /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
@@ -165,7 +163,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private auth: AuthService,
     private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService,
-    private challengeService: ChallengeService
+    private challengeService: ChallengeService,
+    private longSolve: LongSolveService
   ) {
     super(stockfish);
     this.loadConfig();
@@ -322,26 +321,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
     this.enterSolutionReview();
     this.solveAlternative = alternative;
-    this.solveSeconds = this.elapsedSeconds;
-
-    // Auffällig lange Lösezeit (vermutlich lag der Tab offen) → nachfragen, bevor die Zeit gewertet
-    // wird. Der Dialog ist modal (disableClose) und blockiert das „Weiter"-Klicken dahinter; erst
-    // nach der Antwort wird aufgezeichnet + ggf. der Auto-Advance gestartet.
-    if (this.elapsedSeconds > BookPuzzleComponent.LONG_SOLVE_SECONDS) {
-      this.dialog.open(LongSolveDialogComponent, {
-        data: { seconds: this.elapsedSeconds },
-        disableClose: true,
-        width: '420px',
-        maxWidth: '92vw',
-      }).afterClosed().subscribe((reallyTookThatLong: boolean | undefined) => {
-        // „war weg" (false) → Zeit auf den Schwellwert kappen (nicht 0 — sonst zählte ein
-        // Tagespuzzle fälschlich als blitzschnell gelöst). Default (undefined) = übernehmen.
-        if (reallyTookThatLong === false) this.solveSeconds = BookPuzzleComponent.LONG_SOLVE_SECONDS;
-        this.finalizeSolve();
-      });
-      return;
-    }
-    this.finalizeSolve();
+    // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
+    // Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
+    this.longSolve.resolve(this.elapsedSeconds).subscribe(seconds => {
+      this.solveSeconds = seconds;
+      this.finalizeSolve();
+    });
   }
 
   /** Aufzeichnung + Auto-Advance nach dem Lösen (ggf. nach der Lange-Lösezeit-Nachfrage). */

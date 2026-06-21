@@ -19,9 +19,11 @@ function makeComponent(): any {
   const snackbar: any = { info: () => {} };
   const offlineQueue: any = { enqueue: () => {} };
   const challengeService: any = { resolve: () => ({ subscribe: () => {} }) };
+  // Default: keine Kappung — gibt die gemessene Zeit unverändert zurück (Tests überschreiben bei Bedarf).
+  const longSolve: any = { resolve: (s: number) => of(s) };
   return new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
-    router, translate, auth, snackbar, offlineQueue, challengeService
+    router, translate, auth, snackbar, offlineQueue, challengeService, longSolve
   );
 }
 
@@ -120,7 +122,7 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
 });
 
 describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
-  function solvedComp(elapsed: number, dialogResult?: boolean) {
+  function solvedComp(elapsed: number, resolvedSeconds: number) {
     const c = makeComponent();
     spyOn(c as any, 'enterSolutionReview');
     spyOn(c as any, 'updateBoard');
@@ -131,33 +133,25 @@ describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
     spyOn(c as any, 'recordWeeklyAttempt');
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.elapsedSeconds = elapsed;
-    const open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(dialogResult) });
-    (c as any).dialog = { open };
-    return { c, open };
+    // LongSolveService kapselt Schwellwert/Nachfrage — hier nur das Ergebnis simulieren.
+    const resolve = jasmine.createSpy('resolve').and.returnValue(of(resolvedSeconds));
+    (c as any).longSolve = { resolve };
+    return { c, resolve };
   }
 
-  it('kurze Lösung (≤5 min): keine Nachfrage, volle Zeit gewertet', () => {
-    const { c, open } = solvedComp(120);
+  it('wertet die vom LongSolveService gelieferte (ggf. gekappte) Zeit + zeichnet auf', () => {
+    const { c, resolve } = solvedComp(900, 300);   // „war weg" → Service kappt auf 300
     (c as any).handleSolved(false);
-    expect(open).not.toHaveBeenCalled();
-    expect((c as any).solveSeconds).toBe(120);
+    expect(resolve).toHaveBeenCalledWith(900);
+    expect((c as any).solveSeconds).toBe(300);
     expect((c as any).recordCourseAttempt).toHaveBeenCalled();
     expect((c as any).startSolvedCountdown).toHaveBeenCalled();
   });
 
-  it('lange Lösung + „war weg" → Zeit auf 5 min (300 s) gekappt', () => {
-    const { c, open } = solvedComp(900, false);
+  it('übernimmt die volle Zeit, wenn der Service sie unverändert zurückgibt', () => {
+    const { c } = solvedComp(120, 120);
     (c as any).handleSolved(false);
-    expect(open).toHaveBeenCalled();
-    expect((c as any).solveSeconds).toBe(300);
-    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
-  });
-
-  it('lange Lösung + „ja so lange" → volle Zeit gewertet', () => {
-    const { c } = solvedComp(900, true);
-    (c as any).handleSolved(false);
-    expect((c as any).solveSeconds).toBe(900);
-    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
+    expect((c as any).solveSeconds).toBe(120);
   });
 });
 
