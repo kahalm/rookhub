@@ -851,7 +851,11 @@
       "sequential": "순차",
       "random": "랜덤",
       "completed": "코스 완료!",
-      "toOverview": "개요로"
+      "toOverview": "개요로",
+      "wholeBook": "책 전체",
+      "noChapter": "챕터 없음",
+      "accuracyHint": "첫 시도 성공률",
+      "timeHint": "총 소요 시간"
     },
     "weekly": {
       "backToWeekly": "주간 게시물 목록으로",

@@ -23,4 +23,12 @@ public class CourseProgress
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Zeitpunkt des letzten Kurs-Resets (oder <c>null</c>, nie zurückgesetzt). Nur Versuche
+    /// (<see cref="CourseAttempt"/>) ab diesem Zeitpunkt zählen für die im Kurs angezeigte
+    /// Zeit + Erst-Versuch-Trefferquote — nach einem Reset gilt jedes Puzzle wieder als
+    /// „erster Versuch". Die CourseAttempts selbst bleiben erhalten (Trainingsziel-Zeit-Tracker).
+    /// </summary>
+    public DateTime? ResetAt { get; set; }
 }

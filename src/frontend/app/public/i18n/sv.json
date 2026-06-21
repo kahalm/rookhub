@@ -851,7 +851,11 @@
       "sequential": "Sekventiell",
       "random": "Slumpmässig",
       "completed": "Kursen avslutad!",
-      "toOverview": "Till översikt"
+      "toOverview": "Till översikt",
+      "wholeBook": "Hela boken",
+      "noChapter": "Inget kapitel",
+      "accuracyHint": "Rätt på första försöket",
+      "timeHint": "Total spenderad tid"
     },
     "weekly": {
       "backToWeekly": "Till veckoinläggsöversikt",

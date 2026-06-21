@@ -851,7 +851,11 @@
       "sequential": "Послідовно",
       "random": "Випадково",
       "completed": "Курс завершено!",
-      "toOverview": "До огляду"
+      "toOverview": "До огляду",
+      "wholeBook": "Уся книга",
+      "noChapter": "Без розділу",
+      "accuracyHint": "Успіх з першої спроби",
+      "timeHint": "Загальний витрачений час"
     },
     "weekly": {
       "backToWeekly": "До огляду тижневих постів",

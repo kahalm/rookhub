@@ -851,7 +851,11 @@
       "sequential": "順番に",
       "random": "ランダム",
       "completed": "コース完了！",
-      "toOverview": "一覧へ"
+      "toOverview": "一覧へ",
+      "wholeBook": "本全体",
+      "noChapter": "章なし",
+      "accuracyHint": "初回成功率",
+      "timeHint": "合計所要時間"
     },
     "weekly": {
       "backToWeekly": "週刊投稿一覧へ",

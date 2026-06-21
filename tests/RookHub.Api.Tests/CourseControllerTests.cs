@@ -656,4 +656,80 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(2, next.Total); // ganzes Buch
         Assert.Equal(ids[0], next.Puzzle!.Id);
     }
+
+    [Fact]
+    public async Task CourseStats_AccumulateTimeAndFirstTryAccuracy_PerBookAndChapter()
+    {
+        await CreateUserAsync();
+        // Kapitel A = ids 0,1 ; Kapitel B = ids 2,3.
+        var (book, ids) = await SeedBookWithChaptersAsync("Stats", "A", "A", "B", "B");
+
+        // A/ids0: erst falsch (30s), dann richtig (20s) → Erst-Versuch falsch.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = false, TimeSeconds = 30, ChapterIndex = 0 });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 20, ChapterIndex = 0 });
+        // A/ids1: gleich richtig (10s) → Erst-Versuch korrekt.
+        var after = Unwrap<CourseProgressDto>(
+            await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[1], Solved = true, TimeSeconds = 10, ChapterIndex = 0 }));
+
+        // Kapitel A: 2 bearbeitet, 1 Erst-Versuch korrekt = 50 %; Zeit 30+20+10 = 60; beide gelöst.
+        Assert.Equal("A", after.ChapterName);
+        Assert.NotNull(after.Chapter);
+        Assert.Equal(60, after.Chapter!.TotalSeconds);
+        Assert.Equal(2, after.Chapter.AttemptedCount);
+        Assert.Equal(1, after.Chapter.FirstTryCorrect);
+        Assert.Equal(50, after.Chapter.AccuracyPercent);
+        Assert.Equal(2, after.Chapter.SolvedCount);
+        Assert.Equal(2, after.Chapter.Total);
+
+        // Buch gesamt (bisher nur A bearbeitet): gleiche Zeit/Trefferquote, aber Total = 4.
+        Assert.NotNull(after.Book);
+        Assert.Equal(60, after.Book!.TotalSeconds);
+        Assert.Equal(2, after.Book.AttemptedCount);
+        Assert.Equal(1, after.Book.FirstTryCorrect);
+        Assert.Equal(50, after.Book.AccuracyPercent);
+        Assert.Equal(2, after.Book.SolvedCount);
+        Assert.Equal(4, after.Book.Total);
+    }
+
+    [Fact]
+    public async Task SingleChapterBook_HasNoSeparateChapterBlock()
+    {
+        await CreateUserAsync();
+        var (book, _) = await SeedBookAsync("Flat", 3);   // alle ohne Kapitel → 1 Gruppe
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.NotNull(next.Book);
+        Assert.Null(next.Chapter);   // kein separater Kapitel-Block bei nur einem Kapitel
+    }
+
+    [Fact]
+    public async Task Reset_MakesEveryAttemptCountAsFirstAgain()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookWithChaptersAsync("Rst", "A", "A");
+
+        // ids0: erst falsch, dann richtig (Erst-Versuch falsch); ids1: gleich richtig.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = false, TimeSeconds = 5 });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 5 });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[1], Solved = true, TimeSeconds = 5 });
+        // Vor-Reset-Versuche eindeutig in die Vergangenheit datieren (deterministischer Zeitfilter).
+        foreach (var a in _db.CourseAttempts) a.AttemptedAt = DateTime.UtcNow.AddHours(-1);
+        await _db.SaveChangesAsync();
+
+        await _controller.Reset(book.Id);
+
+        // Nach Reset: nichts gelöst, keine Zeit, keine gezählten Versuche.
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.Equal(0, next.Book!.SolvedCount);
+        Assert.Equal(0, next.Book.TotalSeconds);
+        Assert.Equal(0, next.Book.AttemptedCount);
+        Assert.Equal(0, next.Book.AccuracyPercent);
+
+        // ids0 jetzt gleich richtig lösen → zählt wieder als Erst-Versuch korrekt (100 %).
+        var afterReset = Unwrap<CourseProgressDto>(
+            await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 7 }));
+        Assert.Equal(7, afterReset.Book!.TotalSeconds);
+        Assert.Equal(1, afterReset.Book.AttemptedCount);
+        Assert.Equal(1, afterReset.Book.FirstTryCorrect);
+        Assert.Equal(100, afterReset.Book.AccuracyPercent);
+    }
 }

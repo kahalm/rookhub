@@ -1006,7 +1006,11 @@
       "sequential": "Slijedno",
       "random": "Nasumično",
       "completed": "Tečaj završen!",
-      "toOverview": "Na pregled"
+      "toOverview": "Na pregled",
+      "wholeBook": "Cijela knjiga",
+      "noChapter": "Bez poglavlja",
+      "accuracyHint": "Stopa pogodaka (1. pokušaj)",
+      "timeHint": "Ukupno utrošeno vrijeme"
     },
     "weekly": {
       "backToWeekly": "Na pregled tjednih objava",

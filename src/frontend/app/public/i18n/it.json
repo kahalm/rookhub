@@ -851,7 +851,11 @@
       "sequential": "Sequenziale",
       "random": "Casuale",
       "completed": "Corso completato!",
-      "toOverview": "Al riepilogo"
+      "toOverview": "Al riepilogo",
+      "wholeBook": "Libro intero",
+      "noChapter": "Senza capitolo",
+      "accuracyHint": "Riusciti al primo tentativo",
+      "timeHint": "Tempo totale impiegato"
     },
     "weekly": {
       "backToWeekly": "Al riepilogo del post settimanale",

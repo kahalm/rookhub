@@ -851,7 +851,11 @@
       "sequential": "ترتیبی",
       "random": "تصادفی",
       "completed": "دوره تکمیل شد!",
-      "toOverview": "به نمای کلی"
+      "toOverview": "به نمای کلی",
+      "wholeBook": "کل کتاب",
+      "noChapter": "بدون فصل",
+      "accuracyHint": "نرخ موفقیت در تلاش اول",
+      "timeHint": "مجموع زمان صرف‌شده"
     },
     "weekly": {
       "backToWeekly": "به نمای کلی پست‌های هفتگی",

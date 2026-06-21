@@ -851,7 +851,11 @@
       "sequential": "Theo thứ tự",
       "random": "Ngẫu nhiên",
       "completed": "Đã hoàn thành khóa học!",
-      "toOverview": "Đến tổng quan"
+      "toOverview": "Đến tổng quan",
+      "wholeBook": "Toàn bộ sách",
+      "noChapter": "Không có chương",
+      "accuracyHint": "Tỉ lệ đúng lần đầu",
+      "timeHint": "Tổng thời gian đã dùng"
     },
     "weekly": {
       "backToWeekly": "Đến tổng quan bài đăng hàng tuần",

@@ -26,7 +26,7 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
-import { CourseService, CourseMode } from '../courses/course.service';
+import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -63,6 +63,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   courseSolved = 0;
   courseTotal = 0;
   courseCompleted = false;
+  /** Fortschritt/Zeit/Trefferquote fürs ganze Buch bzw. das aktuelle Kapitel (vom Backend). */
+  courseBookStats: CourseScopeStats | null = null;
+  courseChapterStats: CourseScopeStats | null = null;
+  courseChapterName: string | null = null;
 
   // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen.
   // Per-User-Fortschritt wird serverseitig gemerkt: jedes gespielte Puzzle (gelöst oder nicht)
@@ -457,6 +461,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         if (epoch !== this.loadEpoch) return;
         this.courseSolved = res.solvedCount;
         this.courseTotal = res.total;
+        this.applyCourseStats(res.book, res.chapter, res.chapterName);
         if (res.completed || !res.puzzle) {
           this.courseCompleted = true;
           // Letztes Puzzle gerade gelöst: gelöstes Brett stehen lassen; sonst leeres Done-Panel.
@@ -613,9 +618,24 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       return;
     }
     this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.elapsedSeconds, this.courseChapterIndex ?? undefined).subscribe({
-      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; },
+      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
+  }
+
+  /** Übernimmt die vom Backend gelieferte Buch-/Kapitel-Statistik (Fortschritt/Zeit/Trefferquote). */
+  private applyCourseStats(book?: CourseScopeStats | null, chapter?: CourseScopeStats | null, chapterName?: string | null): void {
+    this.courseBookStats = book ?? null;
+    this.courseChapterStats = chapter ?? null;
+    this.courseChapterName = chapterName ?? null;
+  }
+
+  /** mm:ss bzw. h:mm:ss aus Sekunden (für die Kurs-Zeitanzeige). */
+  courseTime(seconds: number): string {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
   }
 
   /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */

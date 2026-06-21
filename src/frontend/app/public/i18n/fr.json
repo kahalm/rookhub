@@ -851,7 +851,11 @@
       "sequential": "Séquentiel",
       "random": "Aléatoire",
       "completed": "Cours terminé !",
-      "toOverview": "Vue d'ensemble"
+      "toOverview": "Vue d'ensemble",
+      "wholeBook": "Livre entier",
+      "noChapter": "Sans chapitre",
+      "accuracyHint": "Réussite au 1er essai",
+      "timeHint": "Temps total passé"
     },
     "weekly": {
       "backToWeekly": "Vers la vue d'ensemble hebdomadaire",

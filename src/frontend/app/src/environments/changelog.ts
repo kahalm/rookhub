@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.163.1';
+export const APP_VERSION = '0.164.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.164.0", date: "2026-06-21", changes: [
+    { en: "Course solving now always shows your progress for the whole book AND the current chapter: solved/total with percentage, time spent, and first-try success rate for each. Resetting a course starts these over (every puzzle counts as a first try again).", de: "Beim Kurslösen siehst du jetzt immer deinen Fortschritt für das ganze Buch UND das aktuelle Kapitel: gelöst/gesamt mit Prozent, aufgewendete Zeit und Erst-Versuch-Trefferquote — je getrennt. Ein Kurs-Reset setzt diese zurück (jedes Puzzle zählt wieder als erster Versuch)." },
+  ]},
   { version: "0.163.1", date: "2026-06-21", changes: [
     { en: "Visualization mode \"Show\" button no longer auto-hides after 3 seconds — it's now a toggle: tap once to reveal the pieces and they stay revealed until you tap again to hide them. Works the same in standard, endless and book/course puzzles.", de: "Der „Anzeigen\"-Knopf im Visualisierungsmodus blendet die Figuren nicht mehr automatisch nach 3 Sekunden aus — er ist jetzt ein Umschalter: einmal tippen deckt auf und es bleibt aufgedeckt, bis du erneut tippst zum Verbergen. In Standard-, Endlos- und Buch-/Kurs-Puzzles gleich." },
   ]},

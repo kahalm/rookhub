@@ -851,7 +851,11 @@
       "sequential": "Secvențial",
       "random": "Aleatoriu",
       "completed": "Curs finalizat!",
-      "toOverview": "La prezentarea generală"
+      "toOverview": "La prezentarea generală",
+      "wholeBook": "Toată cartea",
+      "noChapter": "Fără capitol",
+      "accuracyHint": "Reușite din prima încercare",
+      "timeHint": "Timp total petrecut"
     },
     "weekly": {
       "backToWeekly": "La prezentarea generală a postărilor săptămânale",

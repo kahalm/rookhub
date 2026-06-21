@@ -1006,7 +1006,11 @@
       "sequential": "Sequential",
       "random": "Random",
       "completed": "Course completed!",
-      "toOverview": "To overview"
+      "toOverview": "To overview",
+      "wholeBook": "Whole book",
+      "noChapter": "No chapter",
+      "accuracyHint": "First-try success rate",
+      "timeHint": "Total time spent"
     },
     "weekly": {
       "backToWeekly": "To weekly post overview",

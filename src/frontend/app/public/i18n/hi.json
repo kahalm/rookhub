@@ -851,7 +851,11 @@
       "sequential": "क्रमिक",
       "random": "यादृच्छिक",
       "completed": "पाठ्यक्रम पूर्ण!",
-      "toOverview": "अवलोकन पर"
+      "toOverview": "अवलोकन पर",
+      "wholeBook": "पूरी पुस्तक",
+      "noChapter": "कोई अध्याय नहीं",
+      "accuracyHint": "पहले प्रयास में सफलता दर",
+      "timeHint": "कुल लगाया गया समय"
     },
     "weekly": {
       "backToWeekly": "साप्ताहिक पोस्ट अवलोकन पर",

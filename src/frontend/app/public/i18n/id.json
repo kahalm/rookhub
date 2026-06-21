@@ -851,7 +851,11 @@
       "sequential": "Berurutan",
       "random": "Acak",
       "completed": "Kursus selesai!",
-      "toOverview": "Ke ikhtisar"
+      "toOverview": "Ke ikhtisar",
+      "wholeBook": "Seluruh buku",
+      "noChapter": "Tanpa bab",
+      "accuracyHint": "Tingkat sukses percobaan pertama",
+      "timeHint": "Total waktu yang dihabiskan"
     },
     "weekly": {
       "backToWeekly": "Ke ikhtisar posting mingguan",

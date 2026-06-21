@@ -1006,7 +1006,11 @@
       "sequential": "Sequenziell",
       "random": "Zufällig",
       "completed": "Kurs abgeschlossen!",
-      "toOverview": "Zur Übersicht"
+      "toOverview": "Zur Übersicht",
+      "wholeBook": "Ganzes Buch",
+      "noChapter": "Ohne Kapitel",
+      "accuracyHint": "Trefferquote (1. Versuch)",
+      "timeHint": "Gesamte aufgewendete Zeit"
     },
     "weekly": {
       "backToWeekly": "Zur Wochenpost-Übersicht",

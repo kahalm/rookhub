@@ -851,7 +851,11 @@
       "sequential": "По порядку",
       "random": "Случайно",
       "completed": "Курс завершён!",
-      "toOverview": "К обзору"
+      "toOverview": "К обзору",
+      "wholeBook": "Вся книга",
+      "noChapter": "Без главы",
+      "accuracyHint": "Успех с первой попытки",
+      "timeHint": "Всего затрачено времени"
     },
     "weekly": {
       "backToWeekly": "К обзору еженедельных постов",

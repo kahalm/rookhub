@@ -87,9 +87,46 @@
                   </div>
                 }
                 @if (inCourse && courseTotal > 0) {
-                  <div class="ctx-progress">
-                    <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
-                    <p class="ctx-stats">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</p>
+                  <div class="ctx-progress course-stats">
+                    @if (courseBookStats; as bk) {
+                      <!-- Ganzes Buch -->
+                      <div class="cs-scope">
+                        <span class="cs-label">{{ 'book.course.wholeBook' | translate }}</span>
+                        <mat-progress-bar mode="determinate" [value]="bk.progressPercent"></mat-progress-bar>
+                        <div class="cs-stats">
+                          <span class="cs-prog">{{ bk.solvedCount }}/{{ bk.total }} ({{ bk.progressPercent }}%)</span>
+                          @if (bk.attemptedCount > 0) {
+                            <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
+                              <mat-icon>check_circle</mat-icon>{{ bk.accuracyPercent }}%
+                            </span>
+                          }
+                          <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
+                            <mat-icon>schedule</mat-icon>{{ courseTime(bk.totalSeconds) }}
+                          </span>
+                        </div>
+                      </div>
+                      <!-- Aktuelles Kapitel (nur wenn das Buch mehrere Kapitel hat) -->
+                      @if (courseChapterStats; as ch) {
+                        <div class="cs-scope cs-chapter">
+                          <span class="cs-label">{{ courseChapterName || ('book.course.noChapter' | translate) }}</span>
+                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                          <div class="cs-stats">
+                            <span class="cs-prog">{{ ch.solvedCount }}/{{ ch.total }} ({{ ch.progressPercent }}%)</span>
+                            @if (ch.attemptedCount > 0) {
+                              <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
+                                <mat-icon>check_circle</mat-icon>{{ ch.accuracyPercent }}%
+                              </span>
+                            }
+                            <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
+                              <mat-icon>schedule</mat-icon>{{ courseTime(ch.totalSeconds) }}
+                            </span>
+                          </div>
+                        </div>
+                      }
+                    } @else {
+                      <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
+                      <p class="ctx-stats">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</p>
+                    }
                   </div>
                 }
 

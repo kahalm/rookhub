@@ -50,6 +50,17 @@
     .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
     .context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }
+    .context-card .course-stats { display: flex; flex-direction: column; gap: 0.55rem; }
+    .context-card .course-stats .cs-scope.cs-chapter { padding-top: 0.5rem; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    .context-card .course-stats .cs-label { display: block; font-size: 0.8em; font-weight: 600; margin-bottom: 0.2rem; }
+    .context-card .course-stats .cs-chapter .cs-label { color: color-mix(in srgb, currentColor 70%, transparent); font-weight: 500; }
+    .context-card .course-stats .cs-stats {
+      display: flex; flex-wrap: wrap; gap: 0.25rem 0.85rem; margin-top: 0.25rem;
+      font-size: 0.82em; color: color-mix(in srgb, currentColor 60%, transparent); font-variant-numeric: tabular-nums;
+    }
+    .context-card .course-stats .cs-stats > span { display: inline-flex; align-items: center; gap: 0.2rem; }
+    .context-card .course-stats .cs-stats mat-icon { font-size: 1.05em; width: 1.05em; height: 1.05em; }
+    .context-card .course-stats .cs-acc mat-icon { color: #2e7d32; }
     .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
     .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }

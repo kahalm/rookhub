@@ -851,7 +851,11 @@
       "sequential": "تسلسلي",
       "random": "عشوائي",
       "completed": "اكتملت الدورة!",
-      "toOverview": "إلى النظرة العامة"
+      "toOverview": "إلى النظرة العامة",
+      "wholeBook": "الكتاب كامل",
+      "noChapter": "بدون فصل",
+      "accuracyHint": "نسبة النجاح من أول محاولة",
+      "timeHint": "إجمالي الوقت المستغرق"
     },
     "weekly": {
       "backToWeekly": "إلى نظرة عامة على المنشورات الأسبوعية",

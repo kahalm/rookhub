@@ -851,7 +851,11 @@
       "sequential": "Sorrendben",
       "random": "Véletlenszerűen",
       "completed": "Tanfolyam teljesítve!",
-      "toOverview": "Áttekintéshez"
+      "toOverview": "Áttekintéshez",
+      "wholeBook": "Teljes könyv",
+      "noChapter": "Nincs fejezet",
+      "accuracyHint": "Első próbálkozásra siker",
+      "timeHint": "Összes eltöltött idő"
     },
     "weekly": {
       "backToWeekly": "Heti bejegyzések áttekintéséhez",

@@ -47,6 +47,27 @@ public class CourseChapterDto
     public int ProgressPercent { get; set; }
 }
 
+/// <summary>
+/// Statistik eines Kurs-Bereichs (ganzes Buch ODER ein Kapitel) für den aktuellen User:
+/// Fortschritt (gelöst/gesamt), akkumulierte Zeit und Erst-Versuch-Trefferquote.
+/// Zeit + Trefferquote zählen nur Versuche seit dem letzten Reset (<see cref="Models.CourseProgress.ResetAt"/>).
+/// </summary>
+public class CourseScopeStatsDto
+{
+    public int SolvedCount { get; set; }
+    public int Total { get; set; }
+    /// <summary>0–100, gerundet (Anteil gelöster Puzzles).</summary>
+    public int ProgressPercent { get; set; }
+    /// <summary>Akkumulierte Zeit über alle Versuche (seit letztem Reset), in Sekunden.</summary>
+    public int TotalSeconds { get; set; }
+    /// <summary>Anzahl Puzzles, an denen seit dem Reset mindestens ein Versuch gemacht wurde.</summary>
+    public int AttemptedCount { get; set; }
+    /// <summary>Davon beim ERSTEN Versuch (nach Reset) korrekt gelöst.</summary>
+    public int FirstTryCorrect { get; set; }
+    /// <summary>0–100, gerundet: <see cref="FirstTryCorrect"/> / <see cref="AttemptedCount"/>.</summary>
+    public int AccuracyPercent { get; set; }
+}
+
 /// <summary>Nächstes zu lösendes Puzzle eines Kurses + aktueller Fortschritt.</summary>
 public class CourseNextPuzzleDto
 {
@@ -55,6 +76,14 @@ public class CourseNextPuzzleDto
     public int SolvedCount { get; set; }
     public int Total { get; set; }
     public bool Completed { get; set; }
+
+    /// <summary>Statistik für das ganze Buch (immer gesetzt).</summary>
+    public CourseScopeStatsDto? Book { get; set; }
+    /// <summary>Statistik für das Kapitel des aktuellen Puzzles; <c>null</c>, wenn das Buch nur
+    /// ein Kapitel hat (dann = Buch) oder kein aktuelles Puzzle existiert.</summary>
+    public CourseScopeStatsDto? Chapter { get; set; }
+    /// <summary>Name des aktuellen Kapitels (zu <see cref="Chapter"/>); <c>null</c> = „ohne Kapitel".</summary>
+    public string? ChapterName { get; set; }
 }
 
 /// <summary>Aufzeichnung eines Lösungsversuchs im Kurs.</summary>
@@ -80,6 +109,14 @@ public class CourseProgressDto
     public int ProgressPercent { get; set; }
     public bool Completed { get; set; }
     public string? LastMode { get; set; }
+
+    /// <summary>Statistik für das ganze Buch (immer gesetzt).</summary>
+    public CourseScopeStatsDto? Book { get; set; }
+    /// <summary>Statistik für das Kapitel des zuletzt bearbeiteten Puzzles; <c>null</c>, wenn das Buch
+    /// nur ein Kapitel hat oder der Kontext kein Kapitel kennt (z. B. nach Reset).</summary>
+    public CourseScopeStatsDto? Chapter { get; set; }
+    /// <summary>Name des aktuellen Kapitels (zu <see cref="Chapter"/>); <c>null</c> = „ohne Kapitel".</summary>
+    public string? ChapterName { get; set; }
 }
 
 /// <summary>

@@ -851,7 +851,11 @@
       "sequential": "Sıralı",
       "random": "Rastgele",
       "completed": "Kurs tamamlandı!",
-      "toOverview": "Genel bakışa git"
+      "toOverview": "Genel bakışa git",
+      "wholeBook": "Tüm kitap",
+      "noChapter": "Bölüm yok",
+      "accuracyHint": "İlk denemede başarı oranı",
+      "timeHint": "Toplam harcanan süre"
     },
     "weekly": {
       "backToWeekly": "Haftalık gönderi genel bakışına git",

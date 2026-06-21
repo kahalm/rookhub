@@ -851,7 +851,11 @@
       "sequential": "Kolejno",
       "random": "Losowo",
       "completed": "Kurs ukończony!",
-      "toOverview": "Do przeglądu"
+      "toOverview": "Do przeglądu",
+      "wholeBook": "Cała książka",
+      "noChapter": "Bez rozdziału",
+      "accuracyHint": "Skuteczność za 1. razem",
+      "timeHint": "Łączny spędzony czas"
     },
     "weekly": {
       "backToWeekly": "Do przeglądu tygodniowych postów",

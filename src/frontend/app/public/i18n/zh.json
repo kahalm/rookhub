@@ -851,7 +851,11 @@
       "sequential": "顺序",
       "random": "随机",
       "completed": "课程已完成！",
-      "toOverview": "返回概览"
+      "toOverview": "返回概览",
+      "wholeBook": "整本书",
+      "noChapter": "无章节",
+      "accuracyHint": "首次尝试正确率",
+      "timeHint": "总用时"
     },
     "weekly": {
       "backToWeekly": "返回每周内容概览",

@@ -851,7 +851,11 @@
       "sequential": "Postupně",
       "random": "Náhodně",
       "completed": "Kurz dokončen!",
-      "toOverview": "Na přehled"
+      "toOverview": "Na přehled",
+      "wholeBook": "Celá kniha",
+      "noChapter": "Bez kapitoly",
+      "accuracyHint": "Úspěšnost na první pokus",
+      "timeHint": "Celkový strávený čas"
     },
     "weekly": {
       "backToWeekly": "Na přehled týdenních příspěvků",

@@ -32,11 +32,32 @@ export interface CourseChapter {
   progressPercent: number;
 }
 
+/** Statistik eines Kurs-Bereichs (ganzes Buch ODER aktuelles Kapitel): Fortschritt + Zeit + Erst-Versuch-Trefferquote.
+ *  Zeit/Trefferquote zählen nur Versuche seit dem letzten Reset. */
+export interface CourseScopeStats {
+  solvedCount: number;
+  total: number;
+  progressPercent: number;
+  /** Akkumulierte Zeit über alle Versuche (seit letztem Reset), Sekunden. */
+  totalSeconds: number;
+  /** Puzzles mit mindestens einem Versuch (seit Reset). */
+  attemptedCount: number;
+  /** Davon beim ERSTEN Versuch korrekt. */
+  firstTryCorrect: number;
+  /** 0–100: firstTryCorrect / attemptedCount. */
+  accuracyPercent: number;
+}
+
 export interface CourseNextPuzzle {
   puzzle: BookPuzzleDto | null;
   solvedCount: number;
   total: number;
   completed: boolean;
+  /** Statistik fürs ganze Buch. */
+  book?: CourseScopeStats | null;
+  /** Statistik fürs Kapitel des aktuellen Puzzles; null = Buch hat nur ein Kapitel / kein aktuelles Puzzle. */
+  chapter?: CourseScopeStats | null;
+  chapterName?: string | null;
 }
 
 export interface CourseProgress {
@@ -46,6 +67,9 @@ export interface CourseProgress {
   progressPercent: number;
   completed: boolean;
   lastMode: string | null;
+  book?: CourseScopeStats | null;
+  chapter?: CourseScopeStats | null;
+  chapterName?: string | null;
 }
 
 /** Status der Aufbereitungs-Versionierung (Kurse/Repertoires) — Basis für den „Aktualisieren (N)"-Knopf. */

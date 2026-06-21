@@ -851,7 +851,11 @@
       "sequential": "Opeenvolgend",
       "random": "Willekeurig",
       "completed": "Cursus voltooid!",
-      "toOverview": "Naar overzicht"
+      "toOverview": "Naar overzicht",
+      "wholeBook": "Hele boek",
+      "noChapter": "Geen hoofdstuk",
+      "accuracyHint": "Succes bij 1e poging",
+      "timeHint": "Totale bestede tijd"
     },
     "weekly": {
       "backToWeekly": "Naar overzicht wekelijkse berichten",
