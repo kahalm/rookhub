@@ -631,6 +631,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.evalLoading = false;
   }
 
+  protected override refreshEvalIfShown(): void {
+    if (this.showEval) this.refreshEval();
+  }
+
   resetPuzzle(): void {
     if (!this.puzzle) return;
     this.aborted = true;

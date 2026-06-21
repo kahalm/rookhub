@@ -1125,6 +1125,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.evalLoading = false;
   }
 
+  protected override refreshEvalIfShown(): void {
+    if (this.showEval) this.refreshEval();
+  }
+
   onDepthChange(): void {
     if (this.config.stockfishDepth < 1) this.config.stockfishDepth = 1;
     if (this.config.stockfishDepth > 24) this.config.stockfishDepth = 24;

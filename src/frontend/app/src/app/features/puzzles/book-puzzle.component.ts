@@ -297,6 +297,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.evalLoading = false;
   }
 
+  protected override refreshEvalIfShown(): void {
+    if (this.showEval) this.refreshEval();
+  }
+
   protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';
     this.stopTimer();

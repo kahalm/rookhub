@@ -255,6 +255,7 @@ export abstract class BasePuzzleSolver {
       this.state = 'AWAITING_USER_MOVE';
       this.moveStartTime = Date.now();
       this.updateBoard();
+      this.refreshEvalIfShown();   // Eval auf die neue Stellung nachziehen (auch im Lösungspfad)
     }, 400);
   }
 
@@ -277,6 +278,7 @@ export abstract class BasePuzzleSolver {
         this.state = 'PLAYING';
         this.moveStartTime = Date.now();
         this.updateBoard();
+        this.refreshEvalIfShown();   // Eval auf die Stellung NACH dem Gegnerzug nachziehen
       }, 400);
     } catch {
       if (this.aborted || epoch !== this.solverEpoch) return;
@@ -284,6 +286,7 @@ export abstract class BasePuzzleSolver {
         this.state = 'PLAYING';
         this.moveStartTime = Date.now();
         this.updateBoard();
+        this.refreshEvalIfShown();
       } else {
         this.handleFailed();
       }
@@ -326,6 +329,7 @@ export abstract class BasePuzzleSolver {
       this.state = 'AWAITING_USER_MOVE';
       this.moveStartTime = Date.now();
       this.updateBoard();
+      this.refreshEvalIfShown();   // Eval auf die zurückgenommene Stellung nachziehen
       return;
     }
     this.mouseslipUsed = true;
@@ -349,6 +353,7 @@ export abstract class BasePuzzleSolver {
     this.state = 'AWAITING_USER_MOVE';
     this.moveStartTime = Date.now();
     this.updateBoard();
+    this.refreshEvalIfShown();   // Eval auf die zurückgenommene Stellung nachziehen
   }
 
   // ===== Brett / Züge =====
@@ -432,6 +437,11 @@ export abstract class BasePuzzleSolver {
   protected markEvalShown(): void {
     this.evalShown = true;
   }
+
+  /** Hook: nach jeder Stellungsänderung (Lösungspfad-Antwort, Gegnerzug, Mouseslip-Rücknahme)
+   *  aufgerufen, damit die Komponente die eingeblendete Eval auf die aktuelle Stellung nachzieht.
+   *  Default no-op; Komponenten überschreiben: `if (this.showEval) this.refreshEval();`. */
+  protected refreshEvalIfShown(): void { /* von der Komponente überschrieben */ }
 
   protected endVisualizationHide(): void {
     this.clearVizCountdown();

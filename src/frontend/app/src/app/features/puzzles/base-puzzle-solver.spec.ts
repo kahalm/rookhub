@@ -6,10 +6,12 @@ import { StockfishService } from './stockfish.service';
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 class TestSolver extends BasePuzzleSolver {
+  evalRefreshCount = 0;
   protected handleSolved(): void { this.state = 'SOLVED'; }
   protected handleFailed(): void { this.state = 'FAILED'; }
   override get reviewTotal(): number { return this.solutionMoves.length; }
   protected override reviewGoTo(index: number): void { this.reviewIndex = index; }
+  protected override refreshEvalIfShown(): void { this.evalRefreshCount++; }
   setup(fen: string, moves: string): void { this.setupSolver(fen, moves, 0); }
   get fen(): string { return (this as unknown as { chess: { fen(): string } }).chess.fen(); }
 }
@@ -70,6 +72,29 @@ describe('BasePuzzleSolver Level-1 „Anzeigen" (Toggle, läuft nicht ab)', () =
     expect(solver.vizShowPressed).toBeFalse();
     expect(solver.vizShowCount).toBe(1);
     expect(solver.boardFen).toBe(frozen);
+
+    discardPeriodicTasks();
+  }));
+});
+
+describe('BasePuzzleSolver Eval-Nachziehen (Lösungspfad + Mouseslip)', () => {
+  it('zieht die Eval im Lösungspfad nach der Solver-Antwort und nach Mouseslip nach', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // Setup e4; User=Schwarz löst e7e5, g1f3 ist Solver-Antwort
+    tick(600);
+
+    solver.evalRefreshCount = 0;
+
+    // Korrekter Lösungszug e7e5 → THINKING; Solver antwortet g1f3 nach 400ms → AWAITING.
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
+    expect(solver.evalRefreshCount).toBe(0);       // während THINKING noch nicht
+    tick(400);
+    expect(solver.evalRefreshCount).toBe(1);       // nach der Solver-Antwort: Eval auf neue Stellung nachgezogen
+
+    // Mouseslip (Lösungspfad) → Eval erneut nachziehen.
+    solver.mouseslip();
+    expect(solver.evalRefreshCount).toBe(2);
 
     discardPeriodicTasks();
   }));

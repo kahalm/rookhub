@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.164.0';
+export const APP_VERSION = '0.164.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.164.1", date: "2026-06-21", changes: [
+    { en: "Engine evaluation now stays correct while you stay on the puzzle's solution line — previously it only updated after off-path moves and went stale on the main line. It also updates correctly after using the mouse-slip undo. Fixed across standard, endless and book/course puzzles.", de: "Die Engine-Bewertung bleibt jetzt korrekt, während du auf der Lösungslinie des Puzzles bleibst — vorher wurde sie nur nach Abweichungen aktualisiert und blieb auf der Hauptlinie veraltet. Außerdem stimmt sie jetzt nach dem Mausrutsch-Rückgängig. Behoben in Standard-, Endlos- und Buch-/Kurs-Puzzles." },
+  ]},
   { version: "0.164.0", date: "2026-06-21", changes: [
     { en: "Course solving now always shows your progress for the whole book AND the current chapter: solved/total with percentage, time spent, and first-try success rate for each. Resetting a course starts these over (every puzzle counts as a first try again).", de: "Beim Kurslösen siehst du jetzt immer deinen Fortschritt für das ganze Buch UND das aktuelle Kapitel: gelöst/gesamt mit Prozent, aufgewendete Zeit und Erst-Versuch-Trefferquote — je getrennt. Ein Kurs-Reset setzt diese zurück (jedes Puzzle zählt wieder als erster Versuch)." },
   ]},
