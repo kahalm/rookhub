@@ -117,3 +117,31 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     expect(data.previousPuzzleId).toBeUndefined();
   });
 });
+
+describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
+  function solvedComponent() {
+    const c = makeComponent();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c as any, 'startSolvedCountdown');
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    return c;
+  }
+
+  it('startet bei normaler Lösung den Auto-Advance-Countdown', () => {
+    const c = solvedComponent();
+    (c as any).handleSolved(false);
+    expect((c as any).startSolvedCountdown).toHaveBeenCalled();
+  });
+
+  it('springt bei alternativer Lösung NICHT automatisch weiter', () => {
+    const c = solvedComponent();
+    (c as any).handleSolved(true);
+    expect((c as any).startSolvedCountdown).not.toHaveBeenCalled();
+    expect(c.state).toBe('SOLVED');
+  });
+});

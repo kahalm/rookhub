@@ -293,7 +293,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.evalLoading = false;
   }
 
-  protected override handleSolved(): void {
+  protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';
     this.stopTimer();
     this.updateBoard();
@@ -308,8 +308,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordCourseAttempt(true);
     this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
-    // Einheitlicher Auto-Advance wie Standard/Endless: nach kurzem Countdown zum nächsten
-    // (kontextabhängig Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
+    // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
+    // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
+    if (alternative) return;
+    // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
+    // Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
     this.startSolvedCountdown(() => this.solvedAutoNext());
   }
 
