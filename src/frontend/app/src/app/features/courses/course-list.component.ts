@@ -242,7 +242,9 @@ export class CourseListComponent implements OnInit {
    *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
    *  verwendet zuerst (durch sortCourses bereits vorsortiert). */
   get inProgressCourses(): CourseListItem[] {
-    return this.courses.filter(c => c.lastActivityAt && c.solvedCount < c.puzzleCount);
+    // „In Arbeit" = tatsächlich begonnen (≥1 gelöst) und noch nicht fertig. Nach einem Reset
+    // ist solvedCount=0 → der Kurs verschwindet hier wieder (auch wenn lastActivityAt gesetzt bleibt).
+    return this.courses.filter(c => c.solvedCount > 0 && c.solvedCount < c.puzzleCount);
   }
 
   /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */

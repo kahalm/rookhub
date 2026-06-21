@@ -53,4 +53,37 @@ describe('CourseListComponent sorting', () => {
     expect(comp.publicCourses.map(c => c.bookId)).toEqual([2, 1]);
     expect(comp.chessableCourses.map(c => c.bookId)).toEqual([4, 3]);
   });
+
+  describe('inProgressCourses', () => {
+    function item2(over: Partial<CourseListItem>): CourseListItem {
+      return {
+        bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
+        tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
+        lastMode: null, lastActivityAt: null, isOwned: false, ...over,
+      };
+    }
+
+    it('zeigt nur begonnene, unfertige Kurse (≥1 gelöst, < gesamt)', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),  // in Arbeit
+        item2({ bookId: 2, solvedCount: 0, lastActivityAt: null }),                    // nie begonnen
+        item2({ bookId: 3, solvedCount: 10, lastActivityAt: '2026-06-02T10:00:00Z' }), // fertig
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      comp.loadCourses();
+      expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
+    });
+
+    it('verschwindet nach Reset (solvedCount=0, lastActivityAt bleibt gesetzt)', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      comp.loadCourses();
+      expect(comp.inProgressCourses.length).toBe(1);
+
+      comp.courses[0].solvedCount = 0;   // Reset hat den Fortschritt geleert
+      expect(comp.inProgressCourses.length).toBe(0);
+    });
+  });
 });

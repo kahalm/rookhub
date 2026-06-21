@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.169.0';
+export const APP_VERSION = '0.169.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.169.1", date: "2026-06-21", changes: [
+    { en: "Courses page: after you reset a course it no longer stays in the \"In progress\" section — with no progress left, it returns to its normal section.", de: "Kurse-Seite: Nach dem Zurücksetzen eines Kurses bleibt er nicht mehr im Abschnitt „In Arbeit“ — ohne Fortschritt rutscht er zurück in seinen normalen Abschnitt." },
+  ]},
   { version: "0.169.0", date: "2026-06-21", changes: [
     { en: "Book and course puzzles now have graded hints: tap \"Hint\" for a gentle nudge (the idea), tap again for the piece/area, and once more for the first move — so you can get unstuck without revealing the whole solution. Hints are pre-generated per puzzle from the book's own annotations plus engine analysis, in German, English and Croatian. (Requires an admin to generate them; standard/endless puzzles don't have hints yet.)", de: "Buch- und Kurs-Puzzles haben jetzt gestufte Tipps: Tippe auf „Tipp“ für einen sanften Anstoß (die Idee), nochmal für Figur/Bereich und ein drittes Mal für den ersten Zug — so kommst du weiter, ohne gleich die ganze Lösung zu sehen. Die Tipps werden je Puzzle vorab aus den Buch-Kommentaren plus Engine-Analyse erzeugt, auf Deutsch, Englisch und Kroatisch. (Müssen vom Admin generiert werden; Standard-/Endlos-Puzzles haben noch keine Tipps.)" },
   ]},
