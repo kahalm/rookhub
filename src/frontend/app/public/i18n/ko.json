@@ -11,7 +11,9 @@
     "retry": "재시도",
     "loading": "로딩 중…",
     "ok": "확인",
-    "remove": "제거"
+    "remove": "제거",
+    "whiteToMove": "백 차례",
+    "blackToMove": "흑 차례"
   },
   "nav": {
     "dashboard": "대시보드",

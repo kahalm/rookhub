@@ -11,7 +11,9 @@
     "retry": "Повторить",
     "loading": "Загрузка…",
     "ok": "OK",
-    "remove": "Убрать"
+    "remove": "Убрать",
+    "whiteToMove": "Ход белых",
+    "blackToMove": "Ход чёрных"
   },
   "nav": {
     "dashboard": "Дашборд",

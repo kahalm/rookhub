@@ -13,7 +13,9 @@
     "retry": "Wiederholen",
     "loading": "Wird geladen…",
     "ok": "OK",
-    "remove": "Entfernen"
+    "remove": "Entfernen",
+    "whiteToMove": "Weiß am Zug",
+    "blackToMove": "Schwarz am Zug"
   },
   "notifications": {
     "title": "Benachrichtigungen",

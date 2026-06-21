@@ -11,7 +11,9 @@
     "retry": "重试",
     "loading": "加载中…",
     "ok": "确定",
-    "remove": "移除"
+    "remove": "移除",
+    "whiteToMove": "白方走棋",
+    "blackToMove": "黑方走棋"
   },
   "nav": {
     "dashboard": "仪表盘",

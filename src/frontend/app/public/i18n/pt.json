@@ -11,7 +11,9 @@
     "retry": "Tentar novamente",
     "loading": "A carregar…",
     "ok": "OK",
-    "remove": "Remover"
+    "remove": "Remover",
+    "whiteToMove": "Vez das brancas",
+    "blackToMove": "Vez das pretas"
   },
   "nav": {
     "dashboard": "Dashboard",

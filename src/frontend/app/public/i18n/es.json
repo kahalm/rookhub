@@ -11,7 +11,9 @@
     "retry": "Reintentar",
     "loading": "Cargando…",
     "ok": "Aceptar",
-    "remove": "Quitar"
+    "remove": "Quitar",
+    "whiteToMove": "Juegan las blancas",
+    "blackToMove": "Juegan las negras"
   },
   "nav": {
     "dashboard": "Panel",

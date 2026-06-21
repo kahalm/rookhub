@@ -11,7 +11,9 @@
     "retry": "Coba lagi",
     "loading": "Memuat…",
     "ok": "OK",
-    "remove": "Hapus"
+    "remove": "Hapus",
+    "whiteToMove": "Giliran putih",
+    "blackToMove": "Giliran hitam"
   },
   "nav": {
     "dashboard": "Dasbor",

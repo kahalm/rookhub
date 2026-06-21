@@ -11,7 +11,9 @@
     "retry": "تلاش مجدد",
     "loading": "در حال بارگذاری…",
     "ok": "تأیید",
-    "remove": "حذف"
+    "remove": "حذف",
+    "whiteToMove": "نوبت سفید",
+    "blackToMove": "نوبت سیاه"
   },
   "nav": {
     "dashboard": "داشبورد",

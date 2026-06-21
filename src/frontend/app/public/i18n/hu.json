@@ -11,7 +11,9 @@
     "retry": "Újra",
     "loading": "Betöltés…",
     "ok": "OK",
-    "remove": "Eltávolítás"
+    "remove": "Eltávolítás",
+    "whiteToMove": "Világos lép",
+    "blackToMove": "Sötét lép"
   },
   "nav": {
     "dashboard": "Dashboard",

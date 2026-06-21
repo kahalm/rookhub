@@ -11,7 +11,9 @@
     "retry": "Opnieuw proberen",
     "loading": "Laden…",
     "ok": "OK",
-    "remove": "Verwijderen"
+    "remove": "Verwijderen",
+    "whiteToMove": "Wit aan zet",
+    "blackToMove": "Zwart aan zet"
   },
   "nav": {
     "dashboard": "Dashboard",

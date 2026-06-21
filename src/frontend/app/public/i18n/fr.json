@@ -11,7 +11,9 @@
     "retry": "Réessayer",
     "loading": "Chargement…",
     "ok": "OK",
-    "remove": "Retirer"
+    "remove": "Retirer",
+    "whiteToMove": "Aux Blancs de jouer",
+    "blackToMove": "Aux Noirs de jouer"
   },
   "nav": {
     "dashboard": "Tableau de bord",

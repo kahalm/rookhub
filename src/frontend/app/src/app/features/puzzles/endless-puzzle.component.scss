@@ -116,6 +116,13 @@
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
     }
     .board-hint-countdown { color: #e65100; font-weight: 500; }
+    .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
+    .tomove-dot {
+      width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto;
+      background: #fff; border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+    }
+    .tomove-dot.black { background: #2b2b2b; border-color: color-mix(in srgb, currentColor 30%, transparent); }
     .board-hint-show {
       padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
       border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;

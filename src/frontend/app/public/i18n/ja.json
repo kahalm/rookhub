@@ -11,7 +11,9 @@
     "retry": "再試行",
     "loading": "読み込み中…",
     "ok": "OK",
-    "remove": "削除"
+    "remove": "削除",
+    "whiteToMove": "白の手番",
+    "blackToMove": "黒の手番"
   },
   "nav": {
     "dashboard": "ダッシュボード",

@@ -11,7 +11,9 @@
     "retry": "Ponów",
     "loading": "Ładowanie…",
     "ok": "OK",
-    "remove": "Usuń"
+    "remove": "Usuń",
+    "whiteToMove": "Ruch białych",
+    "blackToMove": "Ruch czarnych"
   },
   "nav": {
     "dashboard": "Dashboard",

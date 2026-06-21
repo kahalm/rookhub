@@ -11,7 +11,9 @@
     "retry": "Riprova",
     "loading": "Caricamento…",
     "ok": "OK",
-    "remove": "Rimuovi"
+    "remove": "Rimuovi",
+    "whiteToMove": "Muove il Bianco",
+    "blackToMove": "Muove il Nero"
   },
   "nav": {
     "dashboard": "Dashboard",

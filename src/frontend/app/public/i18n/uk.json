@@ -11,7 +11,9 @@
     "retry": "Повторити",
     "loading": "Завантаження…",
     "ok": "OK",
-    "remove": "Видалити"
+    "remove": "Видалити",
+    "whiteToMove": "Хід білих",
+    "blackToMove": "Хід чорних"
   },
   "nav": {
     "dashboard": "Головна",

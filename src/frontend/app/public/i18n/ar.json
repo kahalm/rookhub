@@ -11,7 +11,9 @@
     "retry": "إعادة المحاولة",
     "loading": "جارٍ التحميل…",
     "ok": "موافق",
-    "remove": "إزالة"
+    "remove": "إزالة",
+    "whiteToMove": "دور الأبيض",
+    "blackToMove": "دور الأسود"
   },
   "nav": {
     "dashboard": "لوحة التحكم",

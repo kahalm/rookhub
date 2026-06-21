@@ -11,7 +11,9 @@
     "retry": "Thử lại",
     "loading": "Đang tải…",
     "ok": "OK",
-    "remove": "Gỡ bỏ"
+    "remove": "Gỡ bỏ",
+    "whiteToMove": "Đến lượt Trắng",
+    "blackToMove": "Đến lượt Đen"
   },
   "nav": {
     "dashboard": "Tổng quan",

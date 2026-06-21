@@ -11,7 +11,9 @@
     "retry": "पुनः प्रयास करें",
     "loading": "लोड हो रहा है…",
     "ok": "ठीक है",
-    "remove": "हटाएं"
+    "remove": "हटाएं",
+    "whiteToMove": "सफेद की चाल",
+    "blackToMove": "काली की चाल"
   },
   "nav": {
     "dashboard": "डैशबोर्ड",

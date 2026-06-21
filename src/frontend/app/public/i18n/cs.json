@@ -11,7 +11,9 @@
     "retry": "Zkusit znovu",
     "loading": "Načítám…",
     "ok": "OK",
-    "remove": "Odebrat"
+    "remove": "Odebrat",
+    "whiteToMove": "Bílý na tahu",
+    "blackToMove": "Černý na tahu"
   },
   "nav": {
     "dashboard": "Přehled",

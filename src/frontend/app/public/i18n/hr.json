@@ -13,7 +13,9 @@
     "ok": "U redu",
     "remove": "Ukloni",
     "downloadPgn": "Preuzmi PGN",
-    "downloadFailed": "Preuzimanje nije uspjelo."
+    "downloadFailed": "Preuzimanje nije uspjelo.",
+    "whiteToMove": "Bijeli na potezu",
+    "blackToMove": "Crni na potezu"
   },
   "notifications": {
     "title": "Obavijesti",

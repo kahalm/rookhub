@@ -13,7 +13,9 @@
     "retry": "Retry",
     "loading": "Loading…",
     "ok": "OK",
-    "remove": "Remove"
+    "remove": "Remove",
+    "whiteToMove": "White to move",
+    "blackToMove": "Black to move"
   },
   "notifications": {
     "title": "Notifications",

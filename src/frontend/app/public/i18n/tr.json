@@ -11,7 +11,9 @@
     "retry": "Tekrar dene",
     "loading": "Yükleniyor…",
     "ok": "Tamam",
-    "remove": "Kaldır"
+    "remove": "Kaldır",
+    "whiteToMove": "Beyaz oynar",
+    "blackToMove": "Siyah oynar"
   },
   "nav": {
     "dashboard": "Panel",

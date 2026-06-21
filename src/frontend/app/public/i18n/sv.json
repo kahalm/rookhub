@@ -11,7 +11,9 @@
     "retry": "Försök igen",
     "loading": "Laddar…",
     "ok": "OK",
-    "remove": "Ta bort"
+    "remove": "Ta bort",
+    "whiteToMove": "Vit att dra",
+    "blackToMove": "Svart att dra"
   },
   "nav": {
     "dashboard": "Dashboard",

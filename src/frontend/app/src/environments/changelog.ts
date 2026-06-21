@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.161.0';
+export const APP_VERSION = '0.162.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.162.0", date: "2026-06-21", changes: [
+    { en: "Puzzles (standard/endless/book/course): the move line below the board now shows whose turn it is (a white/black dot + \"White to move\" / \"Black to move\") instead of the generic \"No move yet\" hint — so it's always clear which side is to move, also when the board is flipped.", de: "Puzzles (Standard/Endlos/Buch/Kurs): Die Zug-Zeile unter dem Brett zeigt jetzt, wer am Zug ist (weißer/schwarzer Punkt + „Weiß am Zug\" / „Schwarz am Zug\") statt des generischen „Noch kein Zug\"-Hinweises — so ist immer klar, welche Seite dran ist, auch bei gedrehtem Brett." },
+  ]},
   { version: "0.161.0", date: "2026-06-21", changes: [
     { en: "Books/courses: after solving, you can now analyze and share the last puzzle just like in the standard and endless modes — an \"Analyze last puzzle\" button opens the puzzle you just solved in the analysis board, and the share dialog lets you switch between the current and the previous puzzle.", de: "Bücher/Kurse: Nach dem Lösen kannst du das letzte Puzzle jetzt analysieren und teilen — genau wie im Standard- und Endlos-Modus. Ein Knopf „Letztes Puzzle analysieren\" öffnet das gerade gelöste Puzzle im Analysebrett, und der Teilen-Dialog erlaubt das Umschalten zwischen aktuellem und vorherigem Puzzle." },
   ]},

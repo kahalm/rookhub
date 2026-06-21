@@ -45,7 +45,10 @@
               @if (vizMoveHtml) {
                 <span [innerHTML]="vizMoveHtml"></span>
               } @else {
-                {{ 'puzzles.viz.noMoveYet' | translate }}
+                <span class="board-hint-tomove">
+                  <span class="tomove-dot" [class.black]="turnColor === 'black'"></span>
+                  {{ (turnColor === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
+                </span>
               }
               @if (vizPiecesHidden || visualizationMode === 1) {
                 <button class="board-hint-show" (click)="onVizShow()">

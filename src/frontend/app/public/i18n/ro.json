@@ -11,7 +11,9 @@
     "retry": "Reîncearcă",
     "loading": "Se încarcă…",
     "ok": "OK",
-    "remove": "Elimină"
+    "remove": "Elimină",
+    "whiteToMove": "Albul la mutare",
+    "blackToMove": "Negrul la mutare"
   },
   "nav": {
     "dashboard": "Panou principal",

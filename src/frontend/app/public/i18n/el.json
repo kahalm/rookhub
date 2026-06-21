@@ -11,7 +11,9 @@
     "retry": "Επανάληψη",
     "loading": "Φόρτωση…",
     "ok": "OK",
-    "remove": "Αφαίρεση"
+    "remove": "Αφαίρεση",
+    "whiteToMove": "Παίζει ο λευκός",
+    "blackToMove": "Παίζει ο μαύρος"
   },
   "nav": {
     "dashboard": "Dashboard",
