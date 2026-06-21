@@ -45,12 +45,16 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
           <div class="eval-bar" [matTooltip]="evalText">
             <div class="eval-white" [style.height.%]="whiteHeight"></div>
           </div>
+          <!-- Mobil: unsichtbare Tap-Zonen neben dem Brett — links = Zug zurück, rechts = Zug vor
+               (keine sichtbaren Buttons; goTo() clampt selbst, daher an den Grenzen No-op). -->
+          <div class="board-tap" (click)="prev()" aria-hidden="true"></div>
           <div class="board-wrap">
             <app-analysis-board
               [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
               [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
               (moveMade)="onMove($event)" />
           </div>
+          <div class="board-tap" (click)="next()" aria-hidden="true"></div>
         </div>
 
         <div class="side-col">
@@ -179,7 +183,15 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .move.active { background: #1976d2; color: #fff; }
     .io-card .full { width: 100%; }
     .io-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-    @media (max-width: 768px) { .board-col { width: 100%; min-width: 0; } .board-wrap { min-width: 0; } }
+    .board-tap { display: none; }
+    @media (max-width: 768px) {
+      .board-col { width: 100%; min-width: 0; }
+      .board-wrap { min-width: 0; }
+      /* Brett-hohe, unsichtbare Tap-Streifen links/rechts neben dem Brett (kein Button-Look). */
+      .board-tap { display: block; flex: 0 0 auto; width: 30px; align-self: stretch; border-radius: 6px;
+        cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      .board-tap:active { background: color-mix(in srgb, currentColor 12%, transparent); }
+    }
   `]
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
