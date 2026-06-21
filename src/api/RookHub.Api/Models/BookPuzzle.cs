@@ -60,6 +60,17 @@ public class BookPuzzle
     public string? Tags { get; set; }
 
     /// <summary>
+    /// Vorberechnete, gestufte Lösungstipps (1=Motiv, 2=Figur/Bereich, 3=erster Zug) als JSON-Objekt,
+    /// sprach-keyed: <c>{ "de": [h1,h2,h3], "en": [...], "hr": [...] }</c>. Per LLM beim Import/Reprocess
+    /// erzeugt (siehe <see cref="HintGenerationService"/>), null wenn noch nicht generiert. LONGTEXT.
+    /// </summary>
+    public string? HintsJson { get; set; }
+
+    /// <summary>Version des Tipp-Generators, mit dem <see cref="HintsJson"/> erzeugt wurde
+    /// (0 = noch keine Tipps). Erlaubt späteres Neu-Generieren unabhängig von <c>Book.ImportVersion</c>.</summary>
+    public int HintsVersion { get; set; }
+
+    /// <summary>
     /// „Ausgemustert": Wird nicht mehr in den Zufalls-Pools (Daily/Random/Blind) gezogen.
     /// Gesetzt z. B. wenn ein Admin das Tagespuzzle für ein Datum neu generiert — das bis dahin
     /// gezogene Puzzle soll danach nie wieder als Tages-/Zufallspuzzle erscheinen. Direkter Aufruf

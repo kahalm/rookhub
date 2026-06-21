@@ -22,4 +22,8 @@ public class BookPuzzleAttempt
     public bool Solved { get; set; }
     public int TimeSeconds { get; set; }
     public DateTime AttemptedAt { get; set; }
+
+    /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keiner, 1–3). Analog
+    /// <c>PuzzleAttempt.VizShowCount</c>; fließt später in Statistik/Trainingsziele.</summary>
+    public int HintsUsed { get; set; }
 }

@@ -4,6 +4,8 @@ public class RecordBookAttemptDto
 {
     public bool Solved { get; set; }
     public int TimeSeconds { get; set; }
+    /// <summary>Höchste in diesem Versuch angesehene Tipp-Stufe (0–3).</summary>
+    public int HintsUsed { get; set; }
 }
 
 public class RecordAnonymousBookAttemptDto : RecordBookAttemptDto
@@ -113,6 +115,12 @@ public class BookPuzzleDto
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }
     public string? Tags { get; set; }
+    /// <summary>
+    /// Vorberechnete, gestufte Lösungstipps, sprach-keyed (<c>{"de":[h1,h2,h3],"en":[…],"hr":[…]}</c>).
+    /// Null/leer, wenn noch keine Tipps generiert wurden. Das Frontend wählt die aktive UI-Sprache
+    /// (Fallback en→de) und deckt Stufe 1→3 progressiv auf.
+    /// </summary>
+    public Dictionary<string, List<string>>? Hints { get; set; }
 }
 
 public class BookPuzzleImportDto

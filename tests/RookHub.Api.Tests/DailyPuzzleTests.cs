@@ -23,7 +23,7 @@ public class DailyPuzzleTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _service = new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue());
-        _controller = new BookPuzzleController(_service);
+        _controller = new BookPuzzleController(_service, HintTestHelper.Build(_db), new NoOpTaskQueue(), _db);
     }
 
     public void Dispose() => _db.Dispose();

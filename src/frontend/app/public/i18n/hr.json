@@ -944,6 +944,10 @@
     }
   },
   "book": {
+    "hints": {
+      "show": "Savjet",
+      "next": "Sljedeći savjet"
+    },
     "difficulty": "Težina",
     "offlineUnavailable": "Ova knjiga nije dostupna offline.",
     "status": {

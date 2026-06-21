@@ -113,6 +113,9 @@ services:
       Chessable__ApiUrl: ${CHESSABLE_API_URL:-http://piratechess-api:8080}
       Chessable__ServiceKey: ${CHESSABLE_SERVICE_KEY:-}
       Encryption__Key: ${ENCRYPTION_KEY:-}
+      # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
+      # Ohne Key bleibt das Feature inaktiv; stockfish ist im API-Image enthalten.
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

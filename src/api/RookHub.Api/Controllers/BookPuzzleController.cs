@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -11,8 +14,18 @@ namespace RookHub.Api.Controllers;
 public class BookPuzzleController : BaseApiController
 {
     private readonly BookPuzzleService _service;
+    private readonly HintGenerationService _hints;
+    private readonly IBackgroundTaskQueue _bgQueue;
+    private readonly AppDbContext _db;
 
-    public BookPuzzleController(BookPuzzleService service) => _service = service;
+    public BookPuzzleController(BookPuzzleService service, HintGenerationService hints,
+        IBackgroundTaskQueue bgQueue, AppDbContext db)
+    {
+        _service = service;
+        _hints = hints;
+        _bgQueue = bgQueue;
+        _db = db;
+    }
 
     [AllowAnonymous]
     [HttpGet("{id}")]
@@ -196,5 +209,32 @@ public class BookPuzzleController : BaseApiController
         try { return Ok(await _service.RegenerateDailyAsync(parsed)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Admin: Tipps eines einzelnen Buch-Puzzles (neu) generieren — synchron, fürs Testen.
+    /// 400 wenn kein API-Key konfiguriert ist; 404 wenn das Puzzle fehlt; sonst die generierten Tipps.</summary>
+    [HttpPost("/api/admin/book-puzzles/{id}/regenerate-hints")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RegenerateHints(int id)
+    {
+        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });
+        var ok = await _hints.GenerateForPuzzleAsync(id, force: true, HttpContext.RequestAborted);
+        if (!ok) return NotFound(new { message = "Puzzle not found or no hints generated." });
+        var dto = await _service.GetByIdAsync(id);
+        return Ok(new { hints = dto?.Hints });
+    }
+
+    /// <summary>Admin: Tipps für ein ganzes Buch im Hintergrund (neu) generieren. <paramref name="force"/>
+    /// regeneriert auch bereits vorhandene; sonst nur fehlende/veraltete.</summary>
+    [HttpPost("/api/admin/books/{bookId}/generate-hints")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GenerateBookHints(int bookId, [FromQuery] bool force = false)
+    {
+        if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });
+        var ids = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).Select(bp => bp.Id).ToListAsync();
+        if (ids.Count == 0) return NotFound(new { message = "No puzzles for this book." });
+        await _bgQueue.EnqueueAsync(async (sp, ct) =>
+            await sp.GetRequiredService<HintGenerationService>().GenerateForPuzzlesAsync(ids, force, ct));
+        return Ok(new { queued = ids.Count });
     }
 }

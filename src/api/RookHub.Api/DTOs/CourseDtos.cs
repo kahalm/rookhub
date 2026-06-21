@@ -98,6 +98,8 @@ public class RecordCourseResultDto
     /// <summary>Optional: 0-basierter Kapitel-Index. Gesetzt → der zurückgegebene Fortschritt
     /// wird auf dieses Kapitel beschränkt (Kapitel-Modus); sonst buchweit.</summary>
     public int? ChapterIndex { get; set; }
+    /// <summary>Höchste in diesem Versuch angesehene Tipp-Stufe (0–3).</summary>
+    public int HintsUsed { get; set; }
 }
 
 /// <summary>Fortschritt eines Kurses (Buch) für den aktuellen User.</summary>

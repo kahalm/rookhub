@@ -155,6 +155,49 @@ describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
   });
 });
 
+describe('BookPuzzleComponent Tipps (gestuft 1→3)', () => {
+  const HINTS = { de: ['Motiv', 'Figur', 'Erster Zug'], en: ['Motif', 'Piece', 'First move'] };
+
+  it('hat keine Tipps, wenn das Puzzle keine trägt', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+    expect(c.hasHints).toBeFalse();
+    expect(c.availableHints.length).toBe(0);
+  });
+
+  it('wählt die aktive Sprache (Fallback en, da Mock kein currentLang hat)', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: HINTS };
+    expect(c.hasHints).toBeTrue();
+    expect(c.availableHints).toEqual(HINTS.en);
+  });
+
+  it('fällt auf de zurück, wenn nur de vorhanden ist', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: { de: HINTS.de } };
+    expect(c.availableHints).toEqual(HINTS.de);
+  });
+
+  it('deckt mit jedem Tipp eine Stufe mehr auf und stoppt bei 3', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: HINTS };
+    expect(c.hintLevel).toBe(0);
+    expect(c.shownHints).toEqual([]);
+
+    c.showNextHint();
+    expect(c.hintLevel).toBe(1);
+    expect(c.shownHints).toEqual(['Motif']);
+
+    c.showNextHint(); c.showNextHint();
+    expect(c.hintLevel).toBe(3);
+    expect(c.shownHints).toEqual(HINTS.en);
+    expect(c.canShowMoreHints).toBeFalse();
+
+    c.showNextHint();           // über das Maximum hinaus → bleibt 3
+    expect(c.hintLevel).toBe(3);
+  });
+});
+
 describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
   function solvedComponent() {
     const c = makeComponent();

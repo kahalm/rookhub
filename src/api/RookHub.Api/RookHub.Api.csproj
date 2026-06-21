@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.29.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Gera.Chess" Version="1.2.0" />
     <PackageReference Include="MailKit" Version="4.17.0" />

@@ -37,7 +37,20 @@
                   {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
                 </button>
               }
+              @if (hasHints && canShowMoreHints) {
+                <button class="board-hint-tip" (click)="showNextHint()"
+                        [attr.title]="'book.hints.show' | translate">
+                  <mat-icon>lightbulb</mat-icon>
+                  {{ (hintLevel === 0 ? 'book.hints.show' : 'book.hints.next') | translate }}
+                  ({{ hintLevel }}/{{ availableHints.length }})
+                </button>
+              }
             </div>
+            @if (shownHints.length) {
+              <ol class="hint-list">
+                @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+              </ol>
+            }
           }
         </div>
 

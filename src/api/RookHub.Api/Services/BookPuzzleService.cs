@@ -87,7 +87,8 @@ public class BookPuzzleService
             UserId = userId,
             Solved = dto.Solved,
             TimeSeconds = timeSeconds,
-            AttemptedAt = solvedAt
+            AttemptedAt = solvedAt,
+            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
         });
         await _db.SaveChangesAsync();
 
@@ -772,8 +773,22 @@ public class BookPuzzleService
         // Metadaten bevorzugt vom Buch (admin-gepflegt), sonst vom Puzzle.
         Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
         BookRating = bp.Book?.Rating ?? bp.BookRating,
-        Tags = bp.Book?.Tags ?? bp.Tags
+        Tags = bp.Book?.Tags ?? bp.Tags,
+        Hints = ParseHints(bp.HintsJson)
     };
+
+    /// <summary>Deserialisiert <see cref="BookPuzzle.HintsJson"/> (sprach-keyed Tipp-Listen).
+    /// Defekte/leere Werte → <c>null</c> (nie werfen).</summary>
+    public static Dictionary<string, List<string>>? ParseHints(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var map = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
+            return map is { Count: > 0 } ? map : null;
+        }
+        catch { return null; }
+    }
 
     /// <summary>Deserialisiert die in <see cref="BookPuzzle.MoveComments"/> gespeicherte JSON-Map
     /// (Halbzug-Index → Kommentar). Defekte/leere Werte → <c>null</c> (nie werfen).</summary>

@@ -110,6 +110,25 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   initialEval = '';
   private initialFen = '';
 
+  // Tipps (vorberechnet, gestuft 1→3). hintLevel = wie viele Stufen aktuell aufgedeckt sind.
+  hintLevel = 0;
+
+  /** Tipps in der aktiven UI-Sprache (Fallback en→de), oder leeres Array wenn keine generiert. */
+  get availableHints(): string[] {
+    const h = this.puzzle?.hints;
+    if (!h) return [];
+    const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
+    return h[lang] ?? h['en'] ?? h['de'] ?? [];
+  }
+  get hasHints(): boolean { return this.availableHints.length > 0; }
+  get shownHints(): string[] { return this.availableHints.slice(0, this.hintLevel); }
+  get canShowMoreHints(): boolean { return this.hintLevel < this.availableHints.length; }
+
+  /** Nächste Tipp-Stufe aufdecken (max. 3). */
+  showNextHint(): void {
+    if (this.canShowMoreHints) this.hintLevel++;
+  }
+
   /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
   gaveUp = false;
 
@@ -393,9 +412,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.resolveChallengeIfNeeded(solved);
     if (this.auth.isLoggedIn) {
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-      const body = { solved, timeSeconds: this.solveSeconds };
+      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.hintLevel };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds)
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.hintLevel)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     } else if (solved) {
       // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos).
@@ -633,14 +652,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined };
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.hintLevel };
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
       if (solved) this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.hintLevel).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -723,6 +742,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.clearSolutionPlay();
     this.bookAttemptRecorded = false;
     this.courseAttemptRecorded = false;
+    this.hintLevel = 0;
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;

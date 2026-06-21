@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Chess;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -17,7 +18,15 @@ namespace RookHub.Api.Services;
 public partial class PgnImportService
 {
     private readonly AppDbContext _db;
-    public PgnImportService(AppDbContext db) => _db = db;
+    private readonly IBackgroundTaskQueue? _bgQueue;
+
+    // bgQueue ist optional: per DI injiziert (reiht nach Import die Tipp-Generierung ein); bei direkter
+    // Instanziierung (Tests) null → kein Enqueue.
+    public PgnImportService(AppDbContext db, IBackgroundTaskQueue? bgQueue = null)
+    {
+        _db = db;
+        _bgQueue = bgQueue;
+    }
 
     // ---- regex helpers (vorkompiliert) -----------------------------------
     [GeneratedRegex(@"^\s*\[\s*([A-Za-z][A-Za-z0-9_]*)\s+""(.*)""\s*\]\s*$")]
@@ -446,6 +455,16 @@ public partial class PgnImportService
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
+
+        // Tipp-Generierung (LLM + Stockfish) asynchron anstoßen — blockiert den Import nicht.
+        // HintGenerationService ist idempotent (überspringt aktuelle Tipps) und no-op ohne API-Key.
+        if (_bgQueue != null && (toAdd.Count > 0 || updated > 0))
+        {
+            var puzzleIds = await _db.BookPuzzles.Where(bp => bp.BookId == book.Id)
+                .Select(bp => bp.Id).ToListAsync(ct);
+            await _bgQueue.EnqueueAsync(async (sp, token) =>
+                await sp.GetRequiredService<HintGenerationService>().GenerateForPuzzlesAsync(puzzleIds, false, token));
+        }
 
         return new BookImportItemDto
         {

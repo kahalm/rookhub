@@ -944,6 +944,10 @@
     }
   },
   "book": {
+    "hints": {
+      "show": "Tipp",
+      "next": "Nächster Tipp"
+    },
     "difficulty": "Schwierigkeit",
     "offlineUnavailable": "Dieses Buch ist nicht offline verfügbar.",
     "status": {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.168.0';
+export const APP_VERSION = '0.169.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.169.0", date: "2026-06-21", changes: [
+    { en: "Book and course puzzles now have graded hints: tap \"Hint\" for a gentle nudge (the idea), tap again for the piece/area, and once more for the first move — so you can get unstuck without revealing the whole solution. Hints are pre-generated per puzzle from the book's own annotations plus engine analysis, in German, English and Croatian. (Requires an admin to generate them; standard/endless puzzles don't have hints yet.)", de: "Buch- und Kurs-Puzzles haben jetzt gestufte Tipps: Tippe auf „Tipp“ für einen sanften Anstoß (die Idee), nochmal für Figur/Bereich und ein drittes Mal für den ersten Zug — so kommst du weiter, ohne gleich die ganze Lösung zu sehen. Die Tipps werden je Puzzle vorab aus den Buch-Kommentaren plus Engine-Analyse erzeugt, auf Deutsch, Englisch und Kroatisch. (Müssen vom Admin generiert werden; Standard-/Endlos-Puzzles haben noch keine Tipps.)" },
+  ]},
   { version: "0.168.0", date: "2026-06-21", changes: [
     { en: "Courses page: new section at the top showing courses you're currently working on (started but not finished). They still appear in their normal section (public / Chessable) as well.", de: "Kurse-Seite: neuer Abschnitt ganz oben mit den Kursen, an denen du gerade arbeitest (begonnen, aber noch nicht abgeschlossen). Sie erscheinen zusätzlich weiterhin in ihrem normalen Abschnitt (öffentlich / Chessable)." },
     { en: "The hint about manually uploaded courses that can't be auto-updated can now be dismissed; it stays hidden until new such courses appear.", de: "Der Hinweis zu manuell hochgeladenen Kursen, die sich nicht automatisch aktualisieren lassen, kann jetzt weggeklickt werden; er bleibt verborgen, bis neue solche Kurse hinzukommen." },

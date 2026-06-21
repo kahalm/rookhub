@@ -944,6 +944,10 @@
     }
   },
   "book": {
+    "hints": {
+      "show": "Hint",
+      "next": "Next hint"
+    },
     "difficulty": "Difficulty",
     "offlineUnavailable": "This book is not available offline.",
     "status": {

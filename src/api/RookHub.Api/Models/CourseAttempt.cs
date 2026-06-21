@@ -26,4 +26,7 @@ public class CourseAttempt
     public int TimeSeconds { get; set; }
 
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keiner, 1–3).</summary>
+    public int HintsUsed { get; set; }
 }

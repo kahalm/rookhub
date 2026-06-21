@@ -141,6 +141,10 @@ try
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
     builder.Services.AddScoped<BookAdminService>();
+    // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
+    builder.Services.AddSingleton<StockfishAnalyzer>();
+    builder.Services.AddSingleton<IClaudeJsonClient, ClaudeJsonClient>();
+    builder.Services.AddScoped<HintGenerationService>();
     builder.Services.AddScoped<MenuVisibilityService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
