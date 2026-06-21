@@ -863,6 +863,12 @@
       "noPuzzles": "Această postare săptămânală nu conține probleme de jucat.",
       "allSolved": "Toate problemele rezolvate!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "A durat ceva",
+      "question": "Ai petrecut {{time}} la această problemă. Chiar a durat atât, sau ai fost plecat între timp?",
+      "wasAway": "Am fost plecat",
+      "reallyTookThatLong": "Da, chiar a durat atât"
     }
   },
   "admin": {

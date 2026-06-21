@@ -863,6 +863,12 @@
       "noPuzzles": "Цей тижневий пост не містить задач для гри.",
       "allSolved": "Всі задачі розв'язано!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Доволі довго",
+      "question": "Ти витратив {{time}} на цю задачу. Це справді стільки тривало, чи ти відлучався?",
+      "wasAway": "Я відлучався",
+      "reallyTookThatLong": "Так, справді стільки"
     }
   },
   "admin": {

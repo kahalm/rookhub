@@ -863,6 +863,12 @@
       "noPuzzles": "Tento týdenní příspěvek neobsahuje žádné hratelné úlohy.",
       "allSolved": "Všechny úlohy vyřešeny!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Docela dlouho",
+      "question": "Strávil jsi {{time}} na této úloze. Trvalo to opravdu tak dlouho, nebo jsi byl mezitím pryč?",
+      "wasAway": "Byl jsem pryč",
+      "reallyTookThatLong": "Ano, opravdu tak dlouho"
     }
   },
   "admin": {

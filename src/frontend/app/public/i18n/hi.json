@@ -863,6 +863,12 @@
       "noPuzzles": "इस साप्ताहिक पोस्ट में कोई खेलने योग्य पहेली नहीं है।",
       "allSolved": "सभी पहेलियाँ हल!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "काफी समय लगा",
+      "question": "आपने इस पहेली पर {{time}} बिताया। क्या वाकई इतना समय लगा, या आप बीच में कहीं चले गए थे?",
+      "wasAway": "मैं दूर था",
+      "reallyTookThatLong": "हाँ, सच में इतना लगा"
     }
   },
   "admin": {

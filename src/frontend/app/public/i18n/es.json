@@ -863,6 +863,12 @@
       "noPuzzles": "Esta publicación semanal no contiene ejercicios jugables.",
       "allSolved": "¡Todos los ejercicios resueltos!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Tardaste bastante",
+      "question": "Pasaste {{time}} en este ejercicio. ¿De verdad tardaste tanto, o estuviste ausente mientras tanto?",
+      "wasAway": "Estuve ausente",
+      "reallyTookThatLong": "Sí, tardé tanto"
     }
   },
   "admin": {

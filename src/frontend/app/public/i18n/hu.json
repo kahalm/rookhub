@@ -863,6 +863,12 @@
       "noPuzzles": "Ez a heti bejegyzés nem tartalmaz lejátszható feladványt.",
       "allSolved": "Minden feladvány megoldva!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Elég sokáig tartott",
+      "question": "{{time}} időt töltöttél ezzel a feladvánnyal. Tényleg ennyi ideig tartott, vagy közben távol voltál?",
+      "wasAway": "Távol voltam",
+      "reallyTookThatLong": "Igen, tényleg ennyi volt"
     }
   },
   "admin": {

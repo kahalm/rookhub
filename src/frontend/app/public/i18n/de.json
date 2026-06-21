@@ -1018,6 +1018,12 @@
       "noPuzzles": "Dieser Wochenpost enthält keine spielbaren Puzzles.",
       "allSolved": "Alle Puzzles gelöst!",
       "progress": "{{played}}/{{total}} gespielt · {{solved}} gelöst"
+    },
+    "longSolve": {
+      "title": "Ganz schön lang",
+      "question": "Du warst {{time}} an diesem Puzzle. Hat das wirklich so lange gedauert — oder warst du zwischendurch weg?",
+      "wasAway": "War zwischendurch weg",
+      "reallyTookThatLong": "Ja, so lange gedauert"
     }
   },
   "admin": {

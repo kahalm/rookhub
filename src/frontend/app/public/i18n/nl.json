@@ -863,6 +863,12 @@
       "noPuzzles": "Dit wekelijkse bericht bevat geen speelbare puzzels.",
       "allSolved": "Alle puzzels opgelost!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Duurde een tijdje",
+      "question": "Je was {{time}} bezig met dit puzzel. Duurde het echt zo lang, of was je tussendoor weg?",
+      "wasAway": "Ik was weg",
+      "reallyTookThatLong": "Ja, het duurde echt zo lang"
     }
   },
   "admin": {

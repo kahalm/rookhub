@@ -863,6 +863,12 @@
       "noPuzzles": "この週刊投稿には再生可能なパズルが含まれていません。",
       "allSolved": "すべてのパズルを解きました！",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "時間がかかりました",
+      "question": "このパズルに {{time}} かかりました。本当にそれだけかかりましたか？それとも途中で離席していましたか？",
+      "wasAway": "離席していた",
+      "reallyTookThatLong": "はい、それだけかかった"
     }
   },
   "admin": {

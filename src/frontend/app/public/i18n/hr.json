@@ -1018,6 +1018,12 @@
       "noPuzzles": "Ova tjedna objava ne sadrži zagonetke za igranje.",
       "allSolved": "Sve zagonetke riješene!",
       "progress": "{{played}}/{{total}} odigrano · {{solved}} riješeno"
+    },
+    "longSolve": {
+      "title": "Poprilično dugo",
+      "question": "Proveo si {{time}} na ovoj zagonetki. Je li stvarno toliko trajalo — ili si bio odsutan u međuvremenu?",
+      "wasAway": "Bio sam odsutan",
+      "reallyTookThatLong": "Da, stvarno toliko"
     }
   },
   "admin": {

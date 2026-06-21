@@ -863,6 +863,12 @@
       "noPuzzles": "이 주간 게시물에는 플레이 가능한 퍼즐이 없습니다.",
       "allSolved": "모든 퍼즐 완료!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "꽤 오래 걸렸어요",
+      "question": "이 퍼즐에 {{time}} 를 썼어요. 정말 그만큼 걸렸나요, 아니면 중간에 자리를 비웠나요?",
+      "wasAway": "자리를 비웠어요",
+      "reallyTookThatLong": "네, 정말 그만큼 걸렸어요"
     }
   },
   "admin": {

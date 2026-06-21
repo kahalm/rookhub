@@ -863,6 +863,12 @@
       "noPuzzles": "Bài đăng hàng tuần này không có bài tập nào có thể chơi.",
       "allSolved": "Đã giải tất cả bài tập!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Mất khá lâu",
+      "question": "Bạn đã dành {{time}} cho câu đố này. Thực sự lâu vậy sao, hay bạn đã rời đi giữa chừng?",
+      "wasAway": "Tôi đã rời đi",
+      "reallyTookThatLong": "Vâng, đúng là lâu vậy"
     }
   },
   "admin": {

@@ -863,6 +863,12 @@
       "noPuzzles": "Αυτή η εβδομαδιαία ανάρτηση δεν περιέχει ασκήσεις.",
       "allSolved": "Όλες οι ασκήσεις λύθηκαν!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Πήρε ώρα",
+      "question": "Πέρασες {{time}} σε αυτό το πρόβλημα. Πήρε όντως τόσο, ή έλειπες στο μεταξύ;",
+      "wasAway": "Έλειπα",
+      "reallyTookThatLong": "Ναι, τόσο πήρε"
     }
   },
   "admin": {

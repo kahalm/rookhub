@@ -1018,6 +1018,12 @@
       "noPuzzles": "This weekly post contains no playable puzzles.",
       "allSolved": "All puzzles solved!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Took a while",
+      "question": "You spent {{time}} on this puzzle. Did it really take that long, or were you away in between?",
+      "wasAway": "I was away",
+      "reallyTookThatLong": "Yes, it really took that long"
     }
   },
   "admin": {

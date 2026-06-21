@@ -863,6 +863,12 @@
       "noPuzzles": "Bu haftalık gönderi oynanabilir problem içermiyor.",
       "allSolved": "Tüm problemler çözüldü!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Epey sürdü",
+      "question": "Bu bulmacada {{time}} geçirdin. Gerçekten bu kadar mı sürdü, yoksa arada uzaklaştın mı?",
+      "wasAway": "Uzaktaydım",
+      "reallyTookThatLong": "Evet, gerçekten o kadar sürdü"
     }
   },
   "admin": {

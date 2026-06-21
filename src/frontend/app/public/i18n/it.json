@@ -863,6 +863,12 @@
       "noPuzzles": "Questo post settimanale non contiene puzzle giocabili.",
       "allSolved": "Tutti i puzzle risolti!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Ci è voluto un po'",
+      "question": "Hai passato {{time}} su questo puzzle. Ci è voluto davvero così tanto, o eri assente nel frattempo?",
+      "wasAway": "Ero assente",
+      "reallyTookThatLong": "Sì, ci è voluto tanto"
     }
   },
   "admin": {

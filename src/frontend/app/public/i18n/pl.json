@@ -863,6 +863,12 @@
       "noPuzzles": "Ten tygodniowy post nie zawiera zadań do rozwiązania.",
       "allSolved": "Wszystkie zadania rozwiązane!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Trochę to trwało",
+      "question": "Spędziłeś {{time}} nad tym zadaniem. Czy naprawdę tyle to trwało, czy byłeś w międzyczasie nieobecny?",
+      "wasAway": "Byłem nieobecny",
+      "reallyTookThatLong": "Tak, naprawdę tyle"
     }
   },
   "admin": {

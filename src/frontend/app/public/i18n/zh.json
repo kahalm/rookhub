@@ -863,6 +863,12 @@
       "noPuzzles": "此每周内容中没有可播放的题目。",
       "allSolved": "所有题目已完成！",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "花了不少时间",
+      "question": "你在这道题上花了 {{time}}。真的花了这么久，还是中途离开了？",
+      "wasAway": "我离开了",
+      "reallyTookThatLong": "是的，确实这么久"
     }
   },
   "admin": {

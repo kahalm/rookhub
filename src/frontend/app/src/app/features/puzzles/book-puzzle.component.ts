@@ -27,6 +27,7 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
+import { LongSolveDialogComponent } from './long-solve-dialog.component';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -96,6 +97,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   elapsedSeconds = 0;
   private timerInterval?: ReturnType<typeof setInterval>;
+
+  /** Lösezeiten über diesem Schwellwert (s) sind verdächtig (Tab lag offen) → nachfragen. */
+  private static readonly LONG_SOLVE_SECONDS = 300;
+  /** Die zu wertende Lösezeit — i.d.R. = elapsedSeconds, bei „war weg" auf den Schwellwert gekappt. */
+  private solveSeconds = 0;
+  /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
+  private solveAlternative = false;
   private startTime = 0;
 
   // Eval (Stockfish-Bewertung) — wie Standard/Endless; currentEval kommt aus BasePuzzleSolver.
@@ -313,12 +321,37 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedOrientation = this.orientation;
     }
     this.enterSolutionReview();
+    this.solveAlternative = alternative;
+    this.solveSeconds = this.elapsedSeconds;
+
+    // Auffällig lange Lösezeit (vermutlich lag der Tab offen) → nachfragen, bevor die Zeit gewertet
+    // wird. Der Dialog ist modal (disableClose) und blockiert das „Weiter"-Klicken dahinter; erst
+    // nach der Antwort wird aufgezeichnet + ggf. der Auto-Advance gestartet.
+    if (this.elapsedSeconds > BookPuzzleComponent.LONG_SOLVE_SECONDS) {
+      this.dialog.open(LongSolveDialogComponent, {
+        data: { seconds: this.elapsedSeconds },
+        disableClose: true,
+        width: '420px',
+        maxWidth: '92vw',
+      }).afterClosed().subscribe((reallyTookThatLong: boolean | undefined) => {
+        // „war weg" (false) → Zeit auf den Schwellwert kappen (nicht 0 — sonst zählte ein
+        // Tagespuzzle fälschlich als blitzschnell gelöst). Default (undefined) = übernehmen.
+        if (reallyTookThatLong === false) this.solveSeconds = BookPuzzleComponent.LONG_SOLVE_SECONDS;
+        this.finalizeSolve();
+      });
+      return;
+    }
+    this.finalizeSolve();
+  }
+
+  /** Aufzeichnung + Auto-Advance nach dem Lösen (ggf. nach der Lange-Lösezeit-Nachfrage). */
+  private finalizeSolve(): void {
     this.recordCourseAttempt(true);
     this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
     // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
     // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
-    if (alternative) return;
+    if (this.solveAlternative) return;
     // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
     // Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
     this.startSolvedCountdown(() => this.solvedAutoNext());
@@ -358,6 +391,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     this.enterSolutionReview();
+    this.solveSeconds = this.elapsedSeconds;
     this.recordCourseAttempt(false);
     this.recordWeeklyAttempt(false);
     this.recordBookAttempt(false);
@@ -374,16 +408,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.resolveChallengeIfNeeded(solved);
     if (this.auth.isLoggedIn) {
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-      const body = { solved, timeSeconds: this.elapsedSeconds };
+      const body = { solved, timeSeconds: this.solveSeconds };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.elapsedSeconds)
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     } else if (solved) {
       // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos).
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt/anonymous`;
-      const body = { solved, timeSeconds: this.elapsedSeconds, sessionId: this.puzzleService.ensureSessionId() };
+      const body = { solved, timeSeconds: this.solveSeconds, sessionId: this.puzzleService.ensureSessionId() };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.elapsedSeconds)
+      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.solveSeconds)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     }
   }
@@ -432,7 +466,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private resolveChallengeIfNeeded(solved: boolean): void {
     if (this.challengeId == null || this.challengeResolved) return;
     this.challengeResolved = true;
-    this.challengeService.resolve(this.challengeId, solved, this.elapsedSeconds).subscribe({ next: () => {}, error: () => {} });
+    this.challengeService.resolve(this.challengeId, solved, this.solveSeconds).subscribe({ next: () => {}, error: () => {} });
   }
 
   ngOnDestroy(): void {
@@ -585,15 +619,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.weeklyAttemptRecorded = true;
     const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
     const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    const body = { puzzleIndex, solved, timeSeconds: this.elapsedSeconds };
+    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds };
     if (!navigator.onLine) {
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
       if (solved) this.weeklySolved += 1;
-      this.weeklySeconds += this.elapsedSeconds;
+      this.weeklySeconds += this.solveSeconds;
       return;
     }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.elapsedSeconds).subscribe({
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds).subscribe({
       next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -614,14 +648,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.elapsedSeconds, chapterIndex: this.courseChapterIndex ?? undefined };
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined };
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
       if (solved) this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.elapsedSeconds, this.courseChapterIndex ?? undefined).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -725,6 +759,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.gaveUp = true;
     this.state = 'FAILED';
+    this.solveSeconds = this.elapsedSeconds;
     this.recordCourseAttempt(false);   // Aufgeben = Versuch mit verbrachter Zeit (zählt fürs Trainingsziel)
     this.recordWeeklyAttempt(false);   // Aufgeben zählt im Wochenpost als ✗ (gespielt, nicht gelöst)
     this.recordBookAttempt(false);

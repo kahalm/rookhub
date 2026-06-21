@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
 
 /**
@@ -115,6 +116,48 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
     expect(data.previousUrl).toBeUndefined();
     expect(data.previousPuzzleId).toBeUndefined();
+  });
+});
+
+describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
+  function solvedComp(elapsed: number, dialogResult?: boolean) {
+    const c = makeComponent();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.elapsedSeconds = elapsed;
+    const open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(dialogResult) });
+    (c as any).dialog = { open };
+    return { c, open };
+  }
+
+  it('kurze Lösung (≤5 min): keine Nachfrage, volle Zeit gewertet', () => {
+    const { c, open } = solvedComp(120);
+    (c as any).handleSolved(false);
+    expect(open).not.toHaveBeenCalled();
+    expect((c as any).solveSeconds).toBe(120);
+    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
+    expect((c as any).startSolvedCountdown).toHaveBeenCalled();
+  });
+
+  it('lange Lösung + „war weg" → Zeit auf 5 min (300 s) gekappt', () => {
+    const { c, open } = solvedComp(900, false);
+    (c as any).handleSolved(false);
+    expect(open).toHaveBeenCalled();
+    expect((c as any).solveSeconds).toBe(300);
+    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
+  });
+
+  it('lange Lösung + „ja so lange" → volle Zeit gewertet', () => {
+    const { c } = solvedComp(900, true);
+    (c as any).handleSolved(false);
+    expect((c as any).solveSeconds).toBe(900);
+    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
   });
 });
 

@@ -863,6 +863,12 @@
       "noPuzzles": "Det här veckoinlägget innehåller inga spelbara uppgifter.",
       "allSolved": "Alla uppgifter lösta!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Tog en stund",
+      "question": "Du ägnade {{time}} åt detta pussel. Tog det verkligen så lång tid, eller var du borta emellanåt?",
+      "wasAway": "Jag var borta",
+      "reallyTookThatLong": "Ja, det tog så lång tid"
     }
   },
   "admin": {

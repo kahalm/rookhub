@@ -863,6 +863,12 @@
       "noPuzzles": "Posting mingguan ini tidak berisi puzzle yang bisa dimainkan.",
       "allSolved": "Semua puzzle diselesaikan!",
       "progress": "{{played}}/{{total}} played · {{solved}} solved"
+    },
+    "longSolve": {
+      "title": "Cukup lama",
+      "question": "Kamu menghabiskan {{time}} untuk puzzle ini. Apa benar selama itu, atau kamu sempat pergi?",
+      "wasAway": "Saya sempat pergi",
+      "reallyTookThatLong": "Ya, memang selama itu"
     }
   },
   "admin": {
