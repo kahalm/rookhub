@@ -56,6 +56,7 @@ public class ProfileServiceTests : IDisposable
         var other = await CreateUserWithPasswordAsync("frienduser", "x");
         _db.Friendships.Add(new Models.Friendship { RequesterId = id, AddresseeId = other, Status = Models.FriendshipStatus.Accepted });
         _db.EndlessSessions.Add(new Models.EndlessSession { UserId = id, Timestamp = 1, TotalSolved = 7 });
+        _db.UserApiTokens.Add(new Models.UserApiToken { UserId = id, Name = "ext", TokenHash = "h", Prefix = "rkh_abc", Scope = "extension" });
         await _db.SaveChangesAsync();
 
         await _profileService.DeleteAccountAsync(id, "secret123");
@@ -75,6 +76,8 @@ public class ProfileServiceTests : IDisposable
         Assert.False(await _db.Friendships.AnyAsync(f => f.RequesterId == id || f.AddresseeId == id));
         // Statistik bleibt (anonym, unter der UserId)
         Assert.True(await _db.EndlessSessions.AnyAsync(s => s.UserId == id && s.TotalSolved == 7));
+        // API-Tokens widerrufen (kein Zugang nach Löschung)
+        Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == id));
     }
 
     private async Task<int> CreateUserAsync(string username = "testuser")

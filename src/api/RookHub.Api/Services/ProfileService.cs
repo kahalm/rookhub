@@ -233,6 +233,8 @@ public class ProfileService
         _db.TournamentFavorites.RemoveRange(await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync());
         _db.TournamentUserSettings.RemoveRange(await _db.TournamentUserSettings.Where(s => s.UserId == userId).ToListAsync());
         _db.UserGroups.RemoveRange(await _db.UserGroups.Where(g => g.UserId == userId).ToListAsync());
+        // API-Tokens (chess.com-Extension u. a.) widerrufen — ein gelöschtes Konto behält keinen Zugang.
+        _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == userId).ToListAsync());
 
         // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
         user.Username = $"deleted_{userId}";

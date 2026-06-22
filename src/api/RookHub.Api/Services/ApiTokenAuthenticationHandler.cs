@@ -51,12 +51,15 @@ public class ApiTokenAuthenticationHandler : AuthenticationHandler<ApiTokenAuthe
         if (token == null)
             return AuthenticateResult.Fail("Invalid or expired API token.");
 
-        // Username fuer den Name-Claim nachladen (Cache wuerde sich lohnen, ist aber pro-Request
-        // ein einfacher PK-Lookup).
-        var username = await _db.AppUsers
+        // Username + Lösch-Status fuer den Name-Claim nachladen (pro-Request ein einfacher PK-Lookup).
+        // Ein gelöschtes/anonymisiertes Konto darf seine API-Tokens nicht weiterverwenden.
+        var owner = await _db.AppUsers
             .Where(u => u.Id == token.UserId)
-            .Select(u => u.Username)
-            .FirstOrDefaultAsync() ?? string.Empty;
+            .Select(u => new { u.Username, u.DeletedAt })
+            .FirstOrDefaultAsync();
+        if (owner == null || owner.DeletedAt != null)
+            return AuthenticateResult.Fail("API token owner is deleted.");
+        var username = owner.Username;
 
         var claims = new List<Claim>
         {

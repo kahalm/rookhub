@@ -105,6 +105,20 @@ try
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+        // Gelöschte/anonymisierte Konten dürfen ihr noch gültiges JWT nicht weiterverwenden:
+        // nach erfolgreicher Signatur-/Lifetime-Prüfung zusätzlich gegen DeletedAt verifizieren.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var idStr = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(idStr, out var uid)) return;
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var cache = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+                if (!await AuthUserValidation.IsActiveUserAsync(db, cache, uid, ctx.HttpContext.RequestAborted))
+                    ctx.Fail("User account is deleted.");
+            }
+        };
     })
     .AddScheme<ApiTokenAuthenticationOptions, ApiTokenAuthenticationHandler>(
         ApiTokenAuthenticationHandler.SchemeName, _ => { });
