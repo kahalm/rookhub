@@ -224,10 +224,11 @@ public class BookPuzzleController : BaseApiController
         return Ok(new { hints = dto?.Hints });
     }
 
-    /// <summary>Admin: markiert die Tipps eines Buch-Puzzles als „dumm/schlecht" (oder hebt das auf) —
-    /// Review-Flag fürs spätere gezielte Neu-Generieren. 404 wenn das Puzzle fehlt.</summary>
-    [HttpPost("/api/admin/book-puzzles/{id}/flag-hints")]
-    [Authorize(Roles = "Admin")]
+    /// <summary>Markiert die Tipps eines Buch-Puzzles als „dumm/schlecht" (oder hebt das auf) —
+    /// Review-Flag fürs spätere gezielte Neu-Generieren. Darf jeder eingeloggte User setzen.
+    /// 404 wenn das Puzzle fehlt.</summary>
+    [HttpPost("{id}/flag-hints")]
+    [Authorize]
     public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
     {
         var bp = await _db.BookPuzzles.FindAsync(id);

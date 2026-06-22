@@ -129,11 +129,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.canShowMoreHints) this.hintLevel++;
   }
 
-  /** Admin-Sicht (für den „dumme Tipps"-Markier-Button). */
-  get isAdmin(): boolean { return this.auth.isAdmin; }
   flagSaving = false;
 
-  /** Admin: Tipps dieses Puzzles als „dumm/schlecht" markieren bzw. die Markierung aufheben. */
+  /** Tipps dieses Puzzles als „dumm/schlecht" markieren bzw. die Markierung aufheben (jeder eingeloggte User). */
   toggleHintsFlag(): void {
     if (!this.puzzle || this.flagSaving) return;
     const next = !this.puzzle.hintsFlagged;

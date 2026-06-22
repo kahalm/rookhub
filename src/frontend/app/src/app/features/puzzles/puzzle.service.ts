@@ -259,9 +259,9 @@ export class PuzzleService {
     return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed });
   }
 
-  /** Admin: Tipps eines Buch-Puzzles als „dumm/schlecht" markieren (oder aufheben). */
+  /** Tipps eines Buch-Puzzles als „dumm/schlecht" markieren (oder aufheben) — jeder eingeloggte User. */
   flagBookPuzzleHints(id: number, flagged: boolean): Observable<{ id: number; hintsFlagged: boolean }> {
-    return this.http.post<{ id: number; hintsFlagged: boolean }>(`/api/admin/book-puzzles/${id}/flag-hints`, { flagged });
+    return this.http.post<{ id: number; hintsFlagged: boolean }>(`/api/book-puzzles/${id}/flag-hints`, { flagged });
   }
 
   /** Anonymer Buch-Puzzle-Solve (nicht eingeloggt) — zählt fürs Tagespuzzle namenlos mit. */

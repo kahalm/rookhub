@@ -672,7 +672,7 @@ public class BookPuzzleControllerTests : IDisposable
         };
         _db.BookPuzzles.Add(puzzle);
         await _db.SaveChangesAsync();
-        SetUser(1, "Admin");
+        SetUser(1, "User");   // jeder eingeloggte User darf markieren, nicht nur Admin
 
         var set = await _controller.FlagHints(puzzle.Id, new FlagHintsDto { Flagged = true }) as OkObjectResult;
         Assert.NotNull(set);

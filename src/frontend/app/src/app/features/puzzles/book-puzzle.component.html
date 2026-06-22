@@ -45,7 +45,7 @@
                   ({{ hintLevel }}/{{ availableHints.length }})
                 </button>
               }
-              @if (isAdmin && hasHints) {
+              @if (isLoggedIn && hasHints) {
                 <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                         [disabled]="flagSaving" (click)="toggleHintsFlag()"
                         [attr.title]="'book.hints.flagTitle' | translate">
