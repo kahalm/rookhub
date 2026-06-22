@@ -79,8 +79,9 @@ public class ChessableController : BaseApiController
         if (cred is null)
             return Ok(new ChessableCredentialResponse(false, null));
 
-        var plain = _encryption.Decrypt(cred.EncryptedBearer);
-        return Ok(new ChessableCredentialResponse(true, Mask(plain)));
+        // Robust gegen Key-Rotation/korrupte Daten: kein 500, nur keine Maske (Re-Eingabe nötig).
+        var plain = _encryption.TryDecrypt(cred.EncryptedBearer);
+        return Ok(new ChessableCredentialResponse(true, plain is null ? null : Mask(plain)));
     }
 
     [HttpPost("credentials")]
@@ -167,7 +168,9 @@ public class ChessableController : BaseApiController
 
         try
         {
-            var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+            var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+            if (bearer is null)
+                return BadRequest(new { message = "Stored Chessable bearer could not be read — please re-enter it." });
             var courses = await _chessable.GetCoursesAsync(bearer, ct);
             cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
             cred.CoursesCachedAt = DateTime.UtcNow;
@@ -332,7 +335,9 @@ public class ChessableController : BaseApiController
         }
         try
         {
-            var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+            var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+            if (bearer is null)
+                return BadRequest(new { message = "Stored Chessable bearer could not be read — please re-enter it." });
             var courses = await _chessable.GetCoursesAsync(bearer, ct);
             cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
             cred.CoursesCachedAt = DateTime.UtcNow;
@@ -531,7 +536,7 @@ public class ChessableController : BaseApiController
     {
         var userId = GetUserId();
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
-        return cred is null ? null : _encryption.Decrypt(cred.EncryptedBearer);
+        return cred is null ? null : _encryption.TryDecrypt(cred.EncryptedBearer);
     }
 
     private static string Mask(string value)

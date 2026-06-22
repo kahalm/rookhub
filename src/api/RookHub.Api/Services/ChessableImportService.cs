@@ -158,7 +158,12 @@ public class ChessableImportService : ICourseReimporter
                     await FailAsync(import, "Kein Chessable-Bearer gespeichert");
                     return;
                 }
-                var bearer = _encryption.Decrypt(cred.EncryptedBearer);
+                var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+                if (bearer is null)
+                {
+                    await FailAsync(import, "Chessable-Bearer konnte nicht entschlüsselt werden (bitte neu hinterlegen)");
+                    return;
+                }
                 var mode = import.Target == "book" ? "FirstKeyMove" : "None";
 
                 import.Phase = "fetching";

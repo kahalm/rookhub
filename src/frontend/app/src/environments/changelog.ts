@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.176.1';
+export const APP_VERSION = '0.176.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.176.2", date: "2026-06-22", changes: [
+    { en: "Security/robustness: stored Chessable credentials are now encrypted with authenticated AES-GCM and a properly derived key; existing data stays readable. An unreadable credential (e.g. after a key change) no longer causes an error page — you're simply asked to re-enter it.", de: "Sicherheit/Robustheit: Gespeicherte Chessable-Zugangsdaten werden jetzt mit authentifiziertem AES-GCM und korrekt abgeleitetem Schlüssel verschlüsselt; bestehende Daten bleiben lesbar. Ein nicht entschlüsselbarer Eintrag (z. B. nach Schlüsselwechsel) führt nicht mehr zu einer Fehlerseite — du wirst nur gebeten, ihn neu einzugeben." },
+  ]},
   { version: "0.176.1", date: "2026-06-22", changes: [
     { en: "Security: deleting your account now immediately blocks any still-valid login token and revokes your API tokens — a deleted account can no longer access the API with an old token.", de: "Sicherheit: Beim Löschen des Kontos werden jetzt sofort noch gültige Login-Token blockiert und API-Tokens widerrufen — ein gelöschtes Konto kann die API nicht mehr mit einem alten Token nutzen." },
   ]},
