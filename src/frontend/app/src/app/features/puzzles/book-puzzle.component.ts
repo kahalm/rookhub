@@ -110,23 +110,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   initialEval = '';
   private initialFen = '';
 
-  // Tipps (vorberechnet, gestuft 1→3). hintLevel = wie viele Stufen aktuell aufgedeckt sind.
-  hintLevel = 0;
-
-  /** Tipps in der aktiven UI-Sprache (Fallback en→de), oder leeres Array wenn keine generiert. */
-  get availableHints(): string[] {
+  /** Vorberechnete Tipps in der aktiven UI-Sprache (Fallback en→de), sonst leer.
+   *  Mechanik (hintLevel/shownHints/showNextHint) in BasePuzzleSolver. */
+  override get availableHints(): string[] {
     const h = this.puzzle?.hints;
     if (!h) return [];
     const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
     return h[lang] ?? h['en'] ?? h['de'] ?? [];
-  }
-  get hasHints(): boolean { return this.availableHints.length > 0; }
-  get shownHints(): string[] { return this.availableHints.slice(0, this.hintLevel); }
-  get canShowMoreHints(): boolean { return this.hintLevel < this.availableHints.length; }
-
-  /** Nächste Tipp-Stufe aufdecken (max. 3). */
-  showNextHint(): void {
-    if (this.canShowMoreHints) this.hintLevel++;
   }
 
   flagSaving = false;

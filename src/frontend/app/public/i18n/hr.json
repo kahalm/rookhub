@@ -693,6 +693,19 @@
       "boardTheme": "Tema ploče",
       "pieces": "Figure"
     },
+    "hints": {
+      "show": "Savjet",
+      "next": "Sljedeći savjet",
+      "t1Check": "Forsirajući potez — počni od šahova (lista: šah, uzimanje, prijetnja).",
+      "t1Capture": "Uzimanje je ključ — prođi listu: šah, uzimanje, prijetnja.",
+      "t1Quiet": "Nema šaha ni uzimanja — pronađi tihi potez s odlučujućom prijetnjom („P“ s liste šah–uzimanje–prijetnja).",
+      "t2Piece": "Na potezu je {{piece}}.",
+      "t3Move": "Igraj {{move}}.",
+      "pieces": {
+        "pawn": "pješak", "knight": "skakač", "bishop": "lovac",
+        "rook": "top", "queen": "dama", "king": "kralj", "piece": "figura"
+      }
+    },
     "viz": {
       "title": "Vizualizacija (razina {{level}})",
       "countdown": "Figure nestaju za {{seconds}}s…",

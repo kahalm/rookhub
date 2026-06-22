@@ -695,6 +695,19 @@
       "boardTheme": "Brett-Design",
       "pieces": "Figuren"
     },
+    "hints": {
+      "show": "Tipp",
+      "next": "Nächster Tipp",
+      "t1Check": "Forcierender Zug — fang bei den Schachgeboten an (Checkliste: Schach, Schlagen, Drohung).",
+      "t1Capture": "Ein Schlagzug ist der Schlüssel — geh die Checkliste durch: Schach, Schlagen, Drohung.",
+      "t1Quiet": "Kein Schach, kein Schlag — finde den ruhigen Zug mit einer entscheidenden Drohung (das „T“ der Checkliste Schach–Schlagen–Drohung).",
+      "t2Piece": "Es zieht {{piece}}.",
+      "t3Move": "Spiel {{move}}.",
+      "pieces": {
+        "pawn": "der Bauer", "knight": "der Springer", "bishop": "der Läufer",
+        "rook": "der Turm", "queen": "die Dame", "king": "der König", "piece": "die Figur"
+      }
+    },
     "viz": {
       "title": "Visualisierung (Level {{level}})",
       "countdown": "Figuren verschwinden in {{seconds}}s…",

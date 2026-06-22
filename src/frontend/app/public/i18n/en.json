@@ -695,6 +695,19 @@
       "boardTheme": "Board Theme",
       "pieces": "Pieces"
     },
+    "hints": {
+      "show": "Hint",
+      "next": "Next hint",
+      "t1Check": "Forcing move — start with the checks (checklist: Checks, Captures, Threats).",
+      "t1Capture": "A capture is the key — work the checklist: Checks, Captures, Threats.",
+      "t1Quiet": "No check or capture — find the quiet move that makes a decisive threat (the “T” in Checks–Captures–Threats).",
+      "t2Piece": "Move your {{piece}}.",
+      "t3Move": "Play {{move}}.",
+      "pieces": {
+        "pawn": "pawn", "knight": "knight", "bishop": "bishop",
+        "rook": "rook", "queen": "queen", "king": "king", "piece": "piece"
+      }
+    },
     "viz": {
       "title": "Visualization (Level {{level}})",
       "countdown": "Pieces disappear in {{seconds}}s…",

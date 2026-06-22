@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.172.1';
+export const APP_VERSION = '0.173.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.173.0", date: "2026-06-22", changes: [
+    { en: "Standard puzzles now have graded hints too (computed on the fly, no setup needed): tap “Hint” for a nudge based on the Check–Capture–Threat checklist — it tells you whether the key move is a check, a capture, or a quiet threat. Tap again to see which piece moves, and a third time for the move itself.", de: "Auch Standard-Puzzles haben jetzt gestufte Tipps (on-the-fly berechnet, ohne Vorbereitung): Tippe auf „Tipp“ für einen Anstoß nach der Checkliste Schach–Schlagen–Drohung — er sagt dir, ob der Schlüsselzug ein Schach, ein Schlag oder eine ruhige Drohung ist. Nochmal tippen zeigt, welche Figur zieht, ein drittes Mal den Zug selbst." },
+  ]},
   { version: "0.172.1", date: "2026-06-22", changes: [
     { en: "You can now flag a book/course puzzle's hints as bad straight from the solver (a small flag button next to the hint button) — any logged-in user can do this. Flagged puzzles are recorded so the hints can be regenerated later. It does not change how hints are shown.", de: "Du kannst die Tipps eines Buch-/Kurs-Puzzles jetzt direkt im Solver als „dumm“ markieren (kleiner Flaggen-Knopf neben dem Tipp-Knopf) — das darf jeder eingeloggte Nutzer. Markierte Puzzles werden vermerkt, damit die Tipps später neu erzeugt werden können. An der Tipp-Anzeige ändert sich nichts." },
   ]},

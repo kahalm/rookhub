@@ -76,6 +76,19 @@ export abstract class BasePuzzleSolver {
   vizArrowEnabled = true;
   private vizOpponentArrowTimer?: ReturnType<typeof setTimeout>;
 
+  // ---- Tipps (gestuft 1→3). Wie viele Stufen aktuell aufgedeckt sind. ----
+  hintLevel = 0;
+  /**
+   * Tipps in der aktiven Sprache (0–3). Default keine; die Modi überschreiben das:
+   * Buch/Kurs liefert vorberechnete Tipps aus dem DTO, Standard berechnet sie on-the-fly.
+   */
+  get availableHints(): string[] { return []; }
+  get hasHints(): boolean { return this.availableHints.length > 0; }
+  get shownHints(): string[] { return this.availableHints.slice(0, this.hintLevel); }
+  get canShowMoreHints(): boolean { return this.hintLevel < this.availableHints.length; }
+  /** Nächste Tipp-Stufe aufdecken. */
+  showNextHint(): void { if (this.canShowMoreHints) this.hintLevel++; }
+
   // ---- intern ----
   protected chess = new Chess();
   protected solutionMoves: string[] = [];

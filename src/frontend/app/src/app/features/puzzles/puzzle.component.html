@@ -55,7 +55,20 @@
                   {{ (vizShowPressed ? 'puzzles.viz.showing' : 'puzzles.viz.show') | translate }}
                 </button>
               }
+              @if (hasHints && canShowMoreHints) {
+                <button class="board-hint-tip" (click)="showNextHint()"
+                        [attr.title]="'puzzles.hints.show' | translate">
+                  <mat-icon>lightbulb</mat-icon>
+                  {{ (hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
+                  ({{ hintLevel }}/{{ availableHints.length }})
+                </button>
+              }
             </div>
+            @if (shownHints.length) {
+              <ol class="hint-list">
+                @for (h of shownHints; track $index) { <li>{{ h }}</li> }
+              </ol>
+            }
           }
         </div>
 

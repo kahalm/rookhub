@@ -20,6 +20,7 @@ import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './p
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { DIFFICULTY_OFFSET, puzzleWindow } from './puzzle-window.util';
+import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { takeFromPool, takeNearestFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -416,9 +417,30 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.saveConfig();
   }
 
+  /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps. */
+  private firstMoveHint: FirstMoveHint | null = null;
+
+  /**
+   * On-the-fly-Tipps für Standard-Puzzles (kein vorberechneter Speicher): Stufe 1 = Check-Capture-
+   * Threat-Hinweis je nach Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
+   */
+  override get availableHints(): string[] {
+    const h = this.firstMoveHint;
+    if (!h) return [];
+    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+    const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
+      : h.type === 'capture' ? t('puzzles.hints.t1Capture')
+      : t('puzzles.hints.t1Quiet');
+    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = t('puzzles.hints.pieces.' + (PIECE[h.pieceType] ?? 'piece'));
+    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: h.san })];
+  }
+
   private setupPuzzle(puzzle: PuzzleDto): void {
     this.reviewMode = false;
     this.reviewIndex = 0;
+    this.hintLevel = 0;
+    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
     // Lös-Automat (Setup, Zug-Handling, Stockfish, Viz) kommt aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, 0);
   }
