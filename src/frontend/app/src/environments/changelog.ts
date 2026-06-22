@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.175.0';
+export const APP_VERSION = '0.176.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.176.0", date: "2026-06-22", changes: [
+    { en: "Weekly post now offers graded on-the-fly hints too (its puzzles previously had none), and the weekly leaderboard (Discord) shows a 💡 next to players who used a hint on any of the week's puzzles.", de: "Der Wochenpost bietet jetzt ebenfalls gestufte on-the-fly Tipps (seine Puzzles hatten bisher keine), und die Wochenpost-Bestenliste (Discord) zeigt ein 💡 hinter Spielern, die bei mindestens einem Puzzle der Woche einen Tipp genutzt haben." },
+  ]},
   { version: "0.175.0", date: "2026-06-22", changes: [
     { en: "Daily puzzle solver list (Discord) now shows a 💡 next to players who solved with hints — the results API now reports the hints used in each solver's scored first attempt.", de: "Die Tagespuzzle-Löserliste (Discord) zeigt jetzt ein 💡 hinter Spielern, die mit Tipps gelöst haben — die Ergebnis-API liefert dazu die im wertungsrelevanten Erstversuch genutzten Tipps je Löser." },
   ]},

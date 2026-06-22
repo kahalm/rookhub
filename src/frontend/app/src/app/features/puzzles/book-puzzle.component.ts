@@ -25,6 +25,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
+import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
@@ -110,13 +111,32 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   initialEval = '';
   private initialFen = '';
 
-  /** Vorberechnete Tipps in der aktiven UI-Sprache (Fallback en→de), sonst leer.
+  /** On-the-fly klassifizierter erster Löserzug — Fallback-Basis, wenn keine vorberechneten Tipps da sind
+   *  (z. B. Wochenpost-Puzzles, die on-the-fly aus dem PGN geparst werden). */
+  private firstMoveHint: FirstMoveHint | null = null;
+
+  /** True, wenn dieses Puzzle vorberechnete (sprach-keyed) Tipps mitbringt (echtes Buch-Puzzle). Nur diese
+   *  sind als „dumm" flaggbar — der Flag-Endpoint adressiert eine echte BookPuzzle-Id. */
+  get hasPrecomputedHints(): boolean { return !!this.puzzle?.hints; }
+
+  /** Tipps in der aktiven UI-Sprache (Fallback en→de). Vorberechnete Tipps haben Vorrang; fehlen sie
+   *  (Wochenpost u. a.), werden on-the-fly gestufte Tipps erzeugt wie im Standard-/Endless-Solver.
    *  Mechanik (hintLevel/shownHints/showNextHint) in BasePuzzleSolver. */
   override get availableHints(): string[] {
     const h = this.puzzle?.hints;
-    if (!h) return [];
-    const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
-    return h[lang] ?? h['en'] ?? h['de'] ?? [];
+    if (h) {
+      const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
+      return h[lang] ?? h['en'] ?? h['de'] ?? [];
+    }
+    const f = this.firstMoveHint;
+    if (!f) return [];
+    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+    const tier1 = f.type === 'check' ? t('puzzles.hints.t1Check')
+      : f.type === 'capture' ? t('puzzles.hints.t1Capture')
+      : t('puzzles.hints.t1Quiet');
+    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = t('puzzles.hints.pieces.' + (PIECE[f.pieceType] ?? 'piece'));
+    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: f.san })];
   }
 
   flagSaving = false;
@@ -634,7 +654,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.weeklyAttemptRecorded = true;
     const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
     const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds };
+    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.hintLevel };
     if (!navigator.onLine) {
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
@@ -642,7 +662,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.weeklySeconds += this.solveSeconds;
       return;
     }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds).subscribe({
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.hintLevel).subscribe({
       next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -754,6 +774,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.bookAttemptRecorded = false;
     this.courseAttemptRecorded = false;
     this.hintLevel = 0;
+    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;

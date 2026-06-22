@@ -198,6 +198,33 @@ describe('BookPuzzleComponent Tipps (gestuft 1→3)', () => {
   });
 });
 
+describe('BookPuzzleComponent on-the-fly Tipps (Fallback ohne vorberechnete, z. B. Wochenpost)', () => {
+  it('setupPuzzle klassifiziert den ersten Löserzug, wenn keine vorberechneten Tipps da sind', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'setupSolver');   // echten Solver neutralisieren
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };  // moves[1]=e7e5 (ruhiger Bauernzug)
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+
+    expect(c.hasPrecomputedHints).toBeFalse();
+    expect(c.hasHints).toBeTrue();                    // on-the-fly Fallback greift
+    expect(c.availableHints.length).toBe(3);
+    expect(c.availableHints[0]).toBe('puzzles.hints.t1Quiet');   // translate-Mock gibt den Key zurück
+  });
+
+  it('vorberechnete Tipps haben Vorrang vor dem on-the-fly Fallback', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'setupSolver');
+    const HINTS = { en: ['Motif', 'Piece', 'Move'] };
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b', hints: HINTS };
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+
+    expect(c.hasPrecomputedHints).toBeTrue();
+    expect(c.availableHints).toEqual(HINTS.en);
+  });
+});
+
 describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
   function solvedComponent() {
     const c = makeComponent();

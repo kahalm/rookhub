@@ -131,6 +131,7 @@ public class SchachBotWebhookService
                     playedCount = p.PlayedCount,
                     solvedCount = p.SolvedCount,
                     totalSeconds = p.TotalSeconds,
+                    hintsUsed = p.HintsUsed,
                     completed = p.Completed,
                 }),
             },

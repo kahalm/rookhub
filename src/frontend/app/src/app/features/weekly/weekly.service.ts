@@ -133,8 +133,8 @@ export class WeeklyService {
   }
 
   /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */
-  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number): Observable<WeeklyProgress> {
-    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds });
+  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<WeeklyProgress> {
+    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds, hintsUsed });
   }
 
   /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */

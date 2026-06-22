@@ -54,6 +54,7 @@ public class WeeklyPostService
                 PuzzleIndex = dto.PuzzleIndex,
                 Solved = dto.Solved,
                 TimeSeconds = timeSeconds,
+                HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
                 AttemptedAt = DateTime.UtcNow,
             });
             try
@@ -91,6 +92,8 @@ public class WeeklyPostService
                 Played = g.Count(),
                 Solved = g.Count(a => a.Solved),
                 TotalSeconds = g.Sum(a => a.TimeSeconds),
+                // Über alle Puzzles des Posts: höchste genutzte Tipp-Stufe → > 0 ⇒ „mit Tipps gelöst" (💡).
+                HintsUsed = g.Max(a => a.HintsUsed),
             })
             .ToListAsync();
 
@@ -113,6 +116,7 @@ public class WeeklyPostService
                     PlayedCount = u.Played,
                     SolvedCount = u.Solved,
                     TotalSeconds = u.TotalSeconds,
+                    HintsUsed = u.HintsUsed,
                     Completed = total > 0 && u.Played >= total,
                 };
             })

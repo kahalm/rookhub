@@ -350,6 +350,30 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.IsType<NotFoundObjectResult>(res.Result);
     }
 
+    [Fact]
+    public async Task GetResults_HintsUsed_IsMaxOverAllPuzzlesOfTheUser()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var hinted = new AppUser { Username = "hinted", Email = "h@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Hinted" } };
+        var clean = new AppUser { Username = "clean", Email = "c@t.com", PasswordHash = "h",
+            Profile = new UserProfile { DisplayName = "Clean" } };
+        _db.AppUsers.AddRange(hinted, clean);
+        await _db.SaveChangesAsync();
+
+        SetUser(hinted.Id);
+        // Puzzle 0 ohne Tipps, Puzzle 1 mit Stufe 2 → Spieler-Aggregat = Max(0,2) = 2 (mit Tipps gelöst).
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 10, HintsUsed = 0 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 15, HintsUsed = 2 });
+
+        SetUser(clean.Id);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 8, HintsUsed = 0 });
+
+        var res = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        Assert.Equal(2, res.Players.Single(p => p.Name == "Hinted").HintsUsed);
+        Assert.Equal(0, res.Players.Single(p => p.Name == "Clean").HintsUsed);
+    }
+
     // --- Terminierte Sichtbarkeit (scheduledAt in der Zukunft) -------------------
 
     private async Task<int> CreateFuturePostAsync()

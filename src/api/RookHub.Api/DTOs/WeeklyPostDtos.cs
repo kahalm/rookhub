@@ -42,6 +42,7 @@ public class RecordWeeklyAttemptDto
     [Range(0, 100000)] public int PuzzleIndex { get; set; }
     public bool Solved { get; set; }
     [Range(0, 86400)] public int TimeSeconds { get; set; }
+    [Range(0, 3)] public int HintsUsed { get; set; }
 }
 
 /// <summary>Per-User-Fortschritt eines Wochenposts. „Erledigt" = alle Puzzles gespielt (Solved egal).</summary>
@@ -83,6 +84,8 @@ public class WeeklyPlayerResultDto
     public int SolvedCount { get; set; }
     /// <summary>Gesamtzeit über alle gespielten Puzzles in Sekunden.</summary>
     public int TotalSeconds { get; set; }
+    /// <summary>Höchste in irgendeinem Puzzle dieses Posts genutzte Tipp-Stufe (0–3). &gt; 0 ⇒ mit Tipps gelöst (💡).</summary>
+    public int HintsUsed { get; set; }
     /// <summary>True, wenn alle Puzzles gespielt wurden.</summary>
     public bool Completed { get; set; }
 }

@@ -25,5 +25,8 @@ public class WeeklyPostAttempt
     /// <summary>Am Puzzle verbrachte Zeit in Sekunden.</summary>
     public int TimeSeconds { get; set; }
 
+    /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keine, 1–3). &gt; 0 ⇒ mit Tipps gelöst.</summary>
+    public int HintsUsed { get; set; }
+
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }
