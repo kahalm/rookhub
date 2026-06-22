@@ -136,8 +136,8 @@ Read-only-Audit über rookhub (API+Frontend), chessresults_crawler, schach-bot, 
 - [ ] **HIGH `/api/health/ip` offen + triggert Outbound** (`HealthController.cs:21`, in `IsOpenPath` ohne Key/RateLimit) — exponiert VPN-Exit-IP unauth. + erlaubt beliebige externe Calls (ipify). Fix: hinter API-Key oder cachen/rate-limiten.
 - [ ] **HIGH VPN-Rotation läuft im Request-Lock** (`RotateVpnAsync` innerhalb `RateLimitAsync`-Semaphore, `:719-723`) → Rotation (+5×1s IP-Poll) blockiert alle Crawls bis 60s-Timeout → TimeoutException-Kaskade unter Last. Fix: Rotation außerhalb des Request-Locks.
 - [x] MED verwaiste `Queued`-Jobs ohne Recovery — **erledigt (0.176.3, Crawler 66722a4):** `CrawlJobRecovery.RecoverStaleJobsAsync` setzt beim Start alle Queued/Running-Jobs auf Failed (in `Program.cs` nach `Migrate()`) → kein dauerhaft blockierter ActiveKey mehr. Tests `CrawlJobRecoveryTests`.
-- [ ] MED finaler Status-Save mit bereits gecanceltem Token (`:42/114/134`) → bei Cancellation wirft auch der `Failed`-Save → Status nie persistiert. Fix: finalen Save mit `CancellationToken.None`.
-- [ ] MED Team-Upsert via `ToDictionaryAsync(t => t.Name)` (`:248`) wirft bei doppelten/leeren Teamnamen → ganzer Players-Crawl failt. Fix: `ToLookup`/per Snr matchen.
+- [x] MED finaler Status-Save mit bereits gecanceltem Token → **erledigt (0.176.4, Crawler fed3c65):** finaler `SaveChangesAsync(CancellationToken.None)` (Z. 134) → Status wird auch bei Cancellation persistiert. (Hinweis: der mittlere Save bei `:42/70/114` läuft weiter mit `ct` — gewollt, nur der FINALE Status-Save muss garantiert durchgehen.)
+- [x] MED Team-Upsert via `ToDictionaryAsync(t => t.Name)` → **erledigt (0.176.4, Crawler fed3c65):** `CrawlerService.BuildTeamNameMap` (tolerant, kleinste Snr gewinnt) statt ToDictionary; Tests `CrawlerServiceTeamMapTests`.
 - [ ] LOW Retry-Pfad in `FetchWithRedirect`/`FetchHtml` ist copy-paste ohne Schleife, der eine Retry hat kein try/catch (`:486-502`).
 
 ### piratechess_docker

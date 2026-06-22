@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.176.3';
+export const APP_VERSION = '0.176.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.176.4", date: "2026-06-22", changes: [
+    { en: "Tournaments (crawler) robustness: a tournament with duplicate or empty team names no longer aborts the whole player crawl, and a cancelled crawl now reliably records its final status instead of getting stuck.", de: "Turniere (Crawler), Robustheit: Ein Turnier mit doppelten oder leeren Teamnamen bricht nicht mehr den ganzen Spieler-Crawl ab, und ein abgebrochener Crawl speichert jetzt zuverlässig seinen Endstatus, statt hängen zu bleiben." },
+  ]},
   { version: "0.176.3", date: "2026-06-22", changes: [
     { en: "Tournaments (crawler): fixed a case where a crawl interrupted by a restart/deploy could permanently block all future crawls of that tournament — leftover jobs are now released on startup.", de: "Turniere (Crawler): behoben, dass ein durch Neustart/Deploy unterbrochener Crawl alle künftigen Crawls desselben Turniers dauerhaft blockieren konnte — verwaiste Jobs werden jetzt beim Start freigegeben." },
   ]},
