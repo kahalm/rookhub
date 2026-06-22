@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.174.1';
+export const APP_VERSION = '0.174.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.174.2", date: "2026-06-22", changes: [
+    { en: "Analysis board on mobile is now bigger: the tap zones for stepping moves are half as wide, and the “back” zone now sits over the evaluation bar instead of taking its own column — so the board gets the freed-up width.", de: "Analyse-Brett ist auf dem Handy jetzt größer: Die Tap-Zonen zum Durchblättern der Züge sind halb so breit, und die „Zurück“-Zone liegt nun über der Bewertungsleiste statt in einer eigenen Spalte — die gesparte Breite bekommt das Brett." },
+  ]},
   { version: "0.174.1", date: "2026-06-22", changes: [
     { en: "Endless mode now has the same on-the-fly hints as standard puzzles: tap “Hint” for a graded nudge (check/capture/quiet → which piece → the move), plus the “bad hints” flag once you've revealed a hint. Previously hints were missing in endless mode.", de: "Der Endlos-Modus hat jetzt dieselben on-the-fly Tipps wie Standard-Puzzles: Tippe auf „Tipp“ für einen gestuften Anstoß (Schach/Schlag/ruhig → welche Figur → der Zug), samt „dumme Tipps“-Knopf, sobald ein Tipp aufgedeckt ist. Bisher fehlten die Tipps im Endlos-Modus." },
   ]},

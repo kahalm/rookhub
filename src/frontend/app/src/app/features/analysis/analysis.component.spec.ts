@@ -61,6 +61,30 @@ describe('AnalysisComponent query-param preload', () => {
   });
 });
 
+// Verhalten hinter den mobilen Tap-Zonen (links = prev, rechts = next): goTo clampt
+// an beiden Grenzen, daher ist Tippen am Anfang/Ende ein No-op statt eines Fehlers.
+describe('AnalysisComponent prev/next navigation (Tap-Zonen)', () => {
+  it('prev/next bewegen sich durch die Linie und clampen an den Grenzen', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    expect(c.ply).toBe(3);
+
+    c.next();                 // bereits am Ende → bleibt
+    expect(c.ply).toBe(3);
+
+    c.prev();
+    expect(c.ply).toBe(2);
+    c.goTo(0);                // an den Anfang
+    expect(c.ply).toBe(0);
+
+    c.prev();                 // am Anfang → bleibt
+    expect(c.ply).toBe(0);
+    c.next();
+    expect(c.ply).toBe(1);
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent back-to-puzzle + depth', () => {
   it('reads the from param and navigates back to it', () => {
     const c = makeComponent({ fen: START, from: '/puzzles/123' });
