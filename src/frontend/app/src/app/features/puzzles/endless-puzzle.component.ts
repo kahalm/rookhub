@@ -33,6 +33,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { LongSolveService } from './long-solve.service';
+import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -903,10 +904,51 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // --- Puzzle setup ---
 
+  /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps (wie Standard-Modus). */
+  private firstMoveHint: FirstMoveHint | null = null;
+
+  /**
+   * On-the-fly-Tipps für die Standard-Puzzles des Endless-Modus (identisch zum Standard-Solver):
+   * Stufe 1 = Check-Capture-Threat-Hinweis je Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
+   */
+  override get availableHints(): string[] {
+    const h = this.firstMoveHint;
+    if (!h) return [];
+    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+    const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
+      : h.type === 'capture' ? t('puzzles.hints.t1Capture')
+      : t('puzzles.hints.t1Quiet');
+    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const piece = t('puzzles.hints.pieces.' + (PIECE[h.pieceType] ?? 'piece'));
+    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: h.san })];
+  }
+
+  flagSaving = false;
+
+  /** „Dumme Tipps" markieren/aufheben (jeder eingeloggte User; nur möglich, wenn schon ein Tipp aufgedeckt war). */
+  toggleHintsFlag(): void {
+    if (!this.puzzle || this.flagSaving) return;
+    const next = !this.puzzle.hintsFlagged;
+    this.flagSaving = true;
+    this.puzzleService.flagPuzzleHints(this.puzzle.id, next).subscribe({
+      next: () => {
+        if (this.puzzle) this.puzzle.hintsFlagged = next;
+        this.flagSaving = false;
+        this.snackbar.success(this.translate.instant(next ? 'puzzles.hints.flagSaved' : 'puzzles.hints.flagCleared'), { duration: 2000 });
+      },
+      error: () => {
+        this.flagSaving = false;
+        this.snackbar.warn(this.translate.instant('puzzles.hints.flagError'), { duration: 3000 });
+      }
+    });
+  }
+
   private setupPuzzle(puzzle: PuzzleDto): void {
     this.reviewingWrongPuzzle = false;
     this.gaveUp = false;
     this.reviewMode = false;
+    this.hintLevel = 0;
+    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
     // Lös-Automat (Setup, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, 0);
   }

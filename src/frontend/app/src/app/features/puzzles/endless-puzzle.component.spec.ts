@@ -123,6 +123,57 @@ describe('EndlessPuzzleComponent analyse', () => {
   });
 });
 
+describe('EndlessPuzzleComponent on-the-fly Tipps', () => {
+  it('setupPuzzle klassifiziert den ersten Löserzug und setzt hintLevel zurück', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'setupSolver');   // echten Solver (Stockfish/Brett) neutralisieren
+    c.hintLevel = 2;
+
+    // moves[0] = Setup-Zug (e2e4), moves[1] = erster Löserzug (e7e5 = ruhiger Bauernzug).
+    (c as any).setupPuzzle({ ...PUZZLE });
+
+    expect(c.hintLevel).toBe(0);
+    expect((c as any).firstMoveHint).toEqual({ type: 'quiet', pieceType: 'p', san: 'e5' });
+    expect(c.hasHints).toBeTrue();
+    expect(c.availableHints.length).toBe(3);
+  });
+
+  it('showNextHint deckt die Tipps gestuft auf', () => {
+    const c = makeComponent();
+    (c as any).firstMoveHint = { type: 'capture', pieceType: 'r', san: 'Rxe4' };
+
+    expect(c.shownHints.length).toBe(0);
+    c.showNextHint();
+    expect(c.shownHints.length).toBe(1);
+    c.showNextHint(); c.showNextHint();
+    expect(c.shownHints.length).toBe(3);
+    expect(c.canShowMoreHints).toBeFalse();
+    c.showNextHint();   // über Maximum hinaus bleibt bei 3
+    expect(c.shownHints.length).toBe(3);
+  });
+
+  it('ohne firstMoveHint gibt es keine Tipps', () => {
+    const c = makeComponent();
+    (c as any).firstMoveHint = null;
+    expect(c.hasHints).toBeFalse();
+    expect(c.availableHints).toEqual([]);
+  });
+
+  it('toggleHintsFlag setzt das Flag und ruft den Service', () => {
+    const c = makeComponent();
+    c.snackbar.success = jasmine.createSpy('success');
+    const spy = jasmine.createSpy('flag').and.returnValue(sub({ id: 9, hintsFlagged: true }));
+    c.puzzleService.flagPuzzleHints = spy;
+    c.puzzle = { id: 9, fen: 'x', moves: 'a', hintsFlagged: false };
+
+    c.toggleHintsFlag();
+
+    expect(spy).toHaveBeenCalledWith(9, true);
+    expect(c.puzzle.hintsFlagged).toBeTrue();
+    expect(c.flagSaving).toBeFalse();
+  });
+});
+
 describe('EndlessPuzzleComponent Themen-Multiselect', () => {
   it('selectedThemes liest die leerzeichengetrennten Themen aus der Config', () => {
     const c = makeComponent();

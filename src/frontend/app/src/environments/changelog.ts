@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.174.0';
+export const APP_VERSION = '0.174.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.174.1", date: "2026-06-22", changes: [
+    { en: "Endless mode now has the same on-the-fly hints as standard puzzles: tap “Hint” for a graded nudge (check/capture/quiet → which piece → the move), plus the “bad hints” flag once you've revealed a hint. Previously hints were missing in endless mode.", de: "Der Endlos-Modus hat jetzt dieselben on-the-fly Tipps wie Standard-Puzzles: Tippe auf „Tipp“ für einen gestuften Anstoß (Schach/Schlag/ruhig → welche Figur → der Zug), samt „dumme Tipps“-Knopf, sobald ein Tipp aufgedeckt ist. Bisher fehlten die Tipps im Endlos-Modus." },
+  ]},
   { version: "0.174.0", date: "2026-06-22", changes: [
     { en: "Hint usage is now recorded for standard puzzles too (how many hints you revealed), like book/course puzzles. And the “bad hints” flag is now available on standard puzzles as well — it only appears once you've revealed at least one hint.", de: "Auch bei Standard-Puzzles wird jetzt festgehalten, wie viele Tipps du aufgedeckt hast (wie bei Buch-/Kurs-Puzzles). Außerdem gibt es den „dumme Tipps“-Knopf jetzt auch bei Standard-Puzzles — er erscheint erst, sobald du mindestens einen Tipp aufgedeckt hast." },
   ]},
