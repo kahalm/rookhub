@@ -703,6 +703,12 @@
       "t1Quiet": "Kein Schach, kein Schlag — finde den ruhigen Zug mit einer entscheidenden Drohung (das „T“ der Checkliste Schach–Schlagen–Drohung).",
       "t2Piece": "Es zieht {{piece}}.",
       "t3Move": "Spiel {{move}}.",
+      "flag": "Dumme Tipps",
+      "flagged": "Dumme Tipps ✓",
+      "flagTitle": "Diese Tipps als schlecht markieren",
+      "flagSaved": "Tipps als schlecht markiert.",
+      "flagCleared": "Markierung entfernt.",
+      "flagError": "Markierung konnte nicht gespeichert werden.",
       "pieces": {
         "pawn": "der Bauer", "knight": "der Springer", "bishop": "der Läufer",
         "rook": "der Turm", "queen": "die Dame", "king": "der König", "piece": "die Figur"

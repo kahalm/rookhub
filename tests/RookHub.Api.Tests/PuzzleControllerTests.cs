@@ -183,6 +183,46 @@ public class PuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAttempt_PersistsHintsUsed()
+    {
+        var userId = await CreateUserAsync();
+        SetUser(userId);
+        var puzzle = await CreatePuzzleAsync();
+
+        await _controller.RecordAttempt(puzzle.Id, new RecordPuzzleAttemptDto
+        {
+            Solved = true, TimeSpentSeconds = 12, HintsUsed = 2
+        });
+
+        var attempt = await _db.PuzzleAttempts.SingleAsync(a => a.PuzzleId == puzzle.Id);
+        Assert.Equal(2, attempt.HintsUsed);
+    }
+
+    // ---- FlagHints (jeder eingeloggte User) ----
+
+    [Fact]
+    public async Task FlagHints_SetsAndClearsFlag_AndDtoReflects()
+    {
+        var puzzle = await CreatePuzzleAsync();
+
+        var set = await _controller.FlagHints(puzzle.Id, new FlagHintsDto { Flagged = true }) as OkObjectResult;
+        Assert.NotNull(set);
+        Assert.True((await _db.Puzzles.FindAsync(puzzle.Id))!.HintsFlagged);
+        var dto = ((await _controller.GetById(puzzle.Id)) as OkObjectResult)!.Value as PuzzleDto;
+        Assert.True(dto!.HintsFlagged);
+
+        await _controller.FlagHints(puzzle.Id, new FlagHintsDto { Flagged = false });
+        Assert.False((await _db.Puzzles.FindAsync(puzzle.Id))!.HintsFlagged);
+    }
+
+    [Fact]
+    public async Task FlagHints_UnknownPuzzle_NotFound()
+    {
+        var result = await _controller.FlagHints(99999, new FlagHintsDto { Flagged = true });
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
     public async Task RecordAttempt_ReturnsNotFound_WhenPuzzleMissing()
     {
         var userId = await CreateUserAsync();

@@ -95,6 +95,19 @@
     .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
     .hint-list { margin: 0.5rem 0 0; padding-left: 1.3rem; text-align: left; max-width: 32rem; }
     .hint-list li { margin: 0.15rem 0; }
+    .board-hint-flag {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.2rem 0.7rem; border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer;
+      font-size: 0.9em; user-select: none; touch-action: manipulation; color: inherit; opacity: 0.75;
+    }
+    .board-hint-flag:disabled { cursor: default; opacity: 0.5; }
+    .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .board-hint-flag.flagged {
+      border-style: solid; border-color: color-mix(in srgb, #d32f2f 55%, transparent);
+      background: color-mix(in srgb, #d32f2f 12%, transparent); opacity: 1;
+    }
+    .board-hint-flag.flagged mat-icon { color: #d32f2f; }
     .bottom-actions { display: flex; flex-direction: column; gap: 0.5rem; }
     .bottom-actions button, .share-full { width: 100%; }
 

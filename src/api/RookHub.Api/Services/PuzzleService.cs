@@ -553,7 +553,8 @@ public class PuzzleService
             EloChange = change,
             VisualizationLevel = vizLevel,
             EvalShown = dto.EvalShown,
-            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100)
+            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100),
+            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3)
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -629,7 +630,8 @@ public class PuzzleService
             MoveLog = dto.MoveLog,
             VisualizationLevel = vizLevel,
             EvalShown = dto.EvalShown,
-            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100)
+            VizShowCount = Math.Clamp(dto.VizShowCount, 0, 100),
+            HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3)
         };
 
         _db.PuzzleAttempts.Add(attempt);
@@ -1099,6 +1101,18 @@ public class PuzzleService
         Moves = p.Moves,
         Rating = p.Rating,
         Themes = p.Themes,
-        GameUrl = p.GameUrl
+        GameUrl = p.GameUrl,
+        HintsFlagged = p.HintsFlagged
     };
+
+    /// <summary>Markiert/entmarkiert die (on-the-fly-)Tipps eines Standard-Puzzles als „dumm/schlecht".
+    /// Liefert false, wenn das Puzzle nicht existiert.</summary>
+    public async Task<bool> FlagHintsAsync(int puzzleId, bool flagged)
+    {
+        var p = await _db.Puzzles.FindAsync(puzzleId);
+        if (p == null) return false;
+        p.HintsFlagged = flagged;
+        await _db.SaveChangesAsync();
+        return true;
+    }
 }

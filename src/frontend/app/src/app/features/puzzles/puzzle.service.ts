@@ -11,6 +11,8 @@ export interface PuzzleDto {
   rating: number;
   themes?: string;
   gameUrl?: string;
+  /** Von einem Nutzer als „dumme Tipps" markiert (Review-Flag). */
+  hintsFlagged?: boolean;
 }
 
 export interface PuzzleRatingRange {
@@ -149,11 +151,16 @@ export class PuzzleService {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }
 
-  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0): Observable<PuzzleAttemptDto> {
+  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0, hintsUsed = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, {
-      solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount,
+      solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount, hintsUsed,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
+  }
+
+  /** Standard-Puzzle: (on-the-fly-)Tipps als „dumm/schlecht" markieren (oder aufheben) — jeder eingeloggte User. */
+  flagPuzzleHints(id: number, flagged: boolean): Observable<{ id: number; hintsFlagged: boolean }> {
+    return this.http.post<{ id: number; hintsFlagged: boolean }>(`/api/puzzles/${id}/flag-hints`, { flagged });
   }
 
   getStats(vizLevel?: number): Observable<PuzzleStatsDto> {
@@ -209,9 +216,9 @@ export class PuzzleService {
     return this.getOrCreateSessionId();
   }
 
-  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0): Observable<PuzzleAttemptDto> {
+  recordAnonymousAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0, hintsUsed = 0): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt/anonymous`, {
-      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount,
+      sessionId: this.getOrCreateSessionId(), solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount, hintsUsed,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight
     });
   }

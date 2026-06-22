@@ -701,6 +701,12 @@
       "t1Quiet": "Nema šaha ni uzimanja — pronađi tihi potez s odlučujućom prijetnjom („P“ s liste šah–uzimanje–prijetnja).",
       "t2Piece": "Na potezu je {{piece}}.",
       "t3Move": "Igraj {{move}}.",
+      "flag": "Loši savjeti",
+      "flagged": "Loši savjeti ✓",
+      "flagTitle": "Označi ove savjete kao loše",
+      "flagSaved": "Savjeti označeni kao loši.",
+      "flagCleared": "Oznaka uklonjena.",
+      "flagError": "Oznaku nije moguće spremiti.",
       "pieces": {
         "pawn": "pješak", "knight": "skakač", "bishop": "lovac",
         "rook": "top", "queen": "dama", "king": "kralj", "piece": "figura"

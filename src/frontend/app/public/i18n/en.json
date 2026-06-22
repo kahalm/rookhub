@@ -703,6 +703,12 @@
       "t1Quiet": "No check or capture — find the quiet move that makes a decisive threat (the “T” in Checks–Captures–Threats).",
       "t2Piece": "Move your {{piece}}.",
       "t3Move": "Play {{move}}.",
+      "flag": "Bad hints",
+      "flagged": "Bad hints ✓",
+      "flagTitle": "Mark these hints as bad",
+      "flagSaved": "Hints marked as bad.",
+      "flagCleared": "Mark removed.",
+      "flagError": "Could not save the mark.",
       "pieces": {
         "pawn": "pawn", "knight": "knight", "bishop": "bishop",
         "rook": "rook", "queen": "queen", "king": "king", "piece": "piece"

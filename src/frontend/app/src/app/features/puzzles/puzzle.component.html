@@ -63,6 +63,14 @@
                   ({{ hintLevel }}/{{ availableHints.length }})
                 </button>
               }
+              @if (isLoggedIn && hasHints && hintLevel > 0) {
+                <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
+                        [disabled]="flagSaving" (click)="toggleHintsFlag()"
+                        [attr.title]="'puzzles.hints.flagTitle' | translate">
+                  <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
+                  {{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}
+                </button>
+              }
             </div>
             @if (shownHints.length) {
               <ol class="hint-list">

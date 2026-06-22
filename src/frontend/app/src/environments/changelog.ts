@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.173.0';
+export const APP_VERSION = '0.174.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.174.0", date: "2026-06-22", changes: [
+    { en: "Hint usage is now recorded for standard puzzles too (how many hints you revealed), like book/course puzzles. And the “bad hints” flag is now available on standard puzzles as well — it only appears once you've revealed at least one hint.", de: "Auch bei Standard-Puzzles wird jetzt festgehalten, wie viele Tipps du aufgedeckt hast (wie bei Buch-/Kurs-Puzzles). Außerdem gibt es den „dumme Tipps“-Knopf jetzt auch bei Standard-Puzzles — er erscheint erst, sobald du mindestens einen Tipp aufgedeckt hast." },
+  ]},
   { version: "0.173.0", date: "2026-06-22", changes: [
     { en: "Standard puzzles now have graded hints too (computed on the fly, no setup needed): tap “Hint” for a nudge based on the Check–Capture–Threat checklist — it tells you whether the key move is a check, a capture, or a quiet threat. Tap again to see which piece moves, and a third time for the move itself.", de: "Auch Standard-Puzzles haben jetzt gestufte Tipps (on-the-fly berechnet, ohne Vorbereitung): Tippe auf „Tipp“ für einen Anstoß nach der Checkliste Schach–Schlagen–Drohung — er sagt dir, ob der Schlüsselzug ein Schach, ein Schlag oder eine ruhige Drohung ist. Nochmal tippen zeigt, welche Figur zieht, ein drittes Mal den Zug selbst." },
   ]},

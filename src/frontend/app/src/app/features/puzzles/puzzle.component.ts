@@ -436,6 +436,26 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: h.san })];
   }
 
+  flagSaving = false;
+
+  /** „Dumme Tipps" markieren/aufheben (jeder eingeloggte User; nur möglich, wenn schon ein Tipp aufgedeckt war). */
+  toggleHintsFlag(): void {
+    if (!this.puzzle || this.flagSaving) return;
+    const next = !this.puzzle.hintsFlagged;
+    this.flagSaving = true;
+    this.puzzleService.flagPuzzleHints(this.puzzle.id, next).subscribe({
+      next: () => {
+        if (this.puzzle) this.puzzle.hintsFlagged = next;
+        this.flagSaving = false;
+        this.snackbar.success(this.translate.instant(next ? 'puzzles.hints.flagSaved' : 'puzzles.hints.flagCleared'), { duration: 2000 });
+      },
+      error: () => {
+        this.flagSaving = false;
+        this.snackbar.warn(this.translate.instant('puzzles.hints.flagError'), { duration: 3000 });
+      }
+    });
+  }
+
   private setupPuzzle(puzzle: PuzzleDto): void {
     this.reviewMode = false;
     this.reviewIndex = 0;
@@ -560,6 +580,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       solved, timeSpentSeconds: seconds, moveLog: log ?? null,
       visualizationLevel: this.visualizationMode,
       evalShown: this.evalShown, vizShowCount: this.vizShowCount,
+      hintsUsed: this.hintLevel,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
@@ -569,7 +590,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       return;
     }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
+      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.hintLevel).subscribe({
         next: res => {
           if (res.eloChange != null) this.lastEloChange = res.eloChange;
           this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
@@ -579,7 +600,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.resolveChallengeIfNeeded(solved, seconds);
       this.notifyRevengeIfNeeded(solved);
     } else {
-      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount).subscribe({
+      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.hintLevel).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });

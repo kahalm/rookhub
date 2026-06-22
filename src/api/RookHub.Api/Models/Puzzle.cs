@@ -28,4 +28,8 @@ public class Puzzle
 
     [MaxLength(500)]
     public string? OpeningTags { get; set; }
+
+    /// <summary>Von einem Nutzer als „dumme/schlechte Tipps" markiert. Standard-Puzzles haben on-the-fly
+    /// berechnete Tipps (Check–Capture–Threat); dieses Flag meldet, dass der Hinweis hier irreführt.</summary>
+    public bool HintsFlagged { get; set; }
 }

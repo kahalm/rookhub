@@ -11,6 +11,8 @@ public class PuzzleDto
     public int Rating { get; set; }
     public string? Themes { get; set; }
     public string? GameUrl { get; set; }
+    /// <summary>Von einem Nutzer als „dumme Tipps" markiert (Review-Flag; siehe <c>Puzzle.HintsFlagged</c>).</summary>
+    public bool HintsFlagged { get; set; }
 }
 
 public class RandomBatchRequestDto
@@ -51,6 +53,10 @@ public class RecordPuzzleAttemptDto
 
     [Range(0, 100)]
     public int VizShowCount { get; set; } = 0;
+
+    /// <summary>Höchste aufgedeckte Tipp-Stufe (0–3).</summary>
+    [Range(0, 3)]
+    public int HintsUsed { get; set; } = 0;
 }
 
 public class PuzzleStatsDto
@@ -90,6 +96,10 @@ public class AnonymousAttemptDto
 
     [Range(0, 100)]
     public int VizShowCount { get; set; } = 0;
+
+    /// <summary>Höchste aufgedeckte Tipp-Stufe (0–3).</summary>
+    [Range(0, 3)]
+    public int HintsUsed { get; set; } = 0;
 }
 
 public class ClaimSessionDto

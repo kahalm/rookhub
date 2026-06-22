@@ -226,3 +226,19 @@ describe('PuzzleComponent load race (loadEpoch)', () => {
     c.ngOnDestroy();
   });
 });
+
+describe('PuzzleComponent „dumme Tipps" markieren', () => {
+  it('toggleHintsFlag setzt das Flag und ruft den Service', () => {
+    const c = makeComponent();
+    c.snackbar.success = jasmine.createSpy('success');
+    const spy = jasmine.createSpy('flag').and.returnValue(of({ id: 9, hintsFlagged: true }));
+    c.puzzleService.flagPuzzleHints = spy;
+    c.puzzle = { id: 9, fen: 'x', moves: 'a', hintsFlagged: false };
+
+    c.toggleHintsFlag();
+
+    expect(spy).toHaveBeenCalledWith(9, true);
+    expect(c.puzzle.hintsFlagged).toBeTrue();
+    expect(c.flagSaving).toBeFalse();
+  });
+});

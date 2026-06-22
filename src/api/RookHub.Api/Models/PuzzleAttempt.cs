@@ -25,4 +25,7 @@ public class PuzzleAttempt
 
     public bool EvalShown { get; set; } = false;
     public int VizShowCount { get; set; } = 0;
+
+    /// <summary>Höchste aufgedeckte Tipp-Stufe in diesem Versuch (0 = keine, 1–3). Analog BookPuzzleAttempt.</summary>
+    public int HintsUsed { get; set; } = 0;
 }

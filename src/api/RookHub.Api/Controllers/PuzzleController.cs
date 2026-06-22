@@ -84,6 +84,15 @@ public class PuzzleController : BaseApiController
         }
     }
 
+    /// <summary>Markiert die (on-the-fly-)Tipps eines Standard-Puzzles als „dumm/schlecht" (oder hebt das
+    /// auf) — jeder eingeloggte User. 404 wenn das Puzzle fehlt.</summary>
+    [HttpPost("{id}/flag-hints")]
+    public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
+    {
+        var ok = await _puzzleService.FlagHintsAsync(id, body.Flagged);
+        return ok ? Ok(new { id, hintsFlagged = body.Flagged }) : NotFound(new { message = "Puzzle not found." });
+    }
+
     [HttpGet("stats")]
     public async Task<ActionResult<PuzzleStatsDto>> GetStats([FromQuery] int? vizLevel)
     {
@@ -138,7 +147,7 @@ public class PuzzleController : BaseApiController
         try
         {
             var result = await _puzzleService.RecordAnonymousAttemptAsync(dto.SessionId, id,
-                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog, ScreenWidth = dto.ScreenWidth, ScreenHeight = dto.ScreenHeight, VisualizationLevel = dto.VisualizationLevel });
+                new RecordPuzzleAttemptDto { Solved = dto.Solved, TimeSpentSeconds = dto.TimeSpentSeconds, MoveLog = dto.MoveLog, ScreenWidth = dto.ScreenWidth, ScreenHeight = dto.ScreenHeight, VisualizationLevel = dto.VisualizationLevel, HintsUsed = dto.HintsUsed });
             return Ok(result);
         }
         catch (KeyNotFoundException ex)
