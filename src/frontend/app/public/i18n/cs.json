@@ -1068,6 +1068,22 @@
     "activity": "Aktivita"
   },
   "trainingGoals": {
+    "manual": {
+      "title": "Log offline activity",
+      "intro": "Trained away from the screen? Log OTB games, board study, puzzle work or lessons — they count toward your goals just like online activity.",
+      "kind": "Type",
+      "note": "Note (optional)",
+      "add": "Add",
+      "saved": "Activity saved",
+      "deleted": "Activity deleted",
+      "marker": "manually logged",
+      "kinds": {
+        "OtbGame": "OTB game (rapid/classical)",
+        "OfflinePuzzle": "Offline puzzle training",
+        "OfflineStudy": "Offline study",
+        "Coaching": "Lesson / coaching"
+      }
+    },
     "title": "Tréninkové cíle",
     "intro": "Nastavte denní cíle podle kategorií a sledujte svůj pokrok.",
     "today": "Dnes",

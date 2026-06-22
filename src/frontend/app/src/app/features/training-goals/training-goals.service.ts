@@ -34,6 +34,28 @@ export interface TrackerDay {
   /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch/Chessable). */
   playGames: number;
   status: GoalStatus;
+  /** Enthält dieser Tag mindestens eine manuell (selbst) eingetragene Offline-Aktivität? */
+  hasManual: boolean;
+}
+
+/** Art einer manuell eingetragenen Offline-Aktivität (mappt je auf eine bestehende Kategorie). */
+export type ManualActivityKind = 'OtbGame' | 'OfflinePuzzle' | 'OfflineStudy' | 'Coaching';
+
+export interface ManualActivity {
+  id: number;
+  /** yyyy-MM-dd. */
+  date: string;
+  kind: ManualActivityKind;
+  /** Bei OtbGame = Anzahl Partien; sonst = Minuten. */
+  amount: number;
+  note: string | null;
+}
+
+export interface ManualActivityInput {
+  date: string;
+  kind: ManualActivityKind;
+  amount: number;
+  note?: string | null;
 }
 
 export interface TrackerResponse {
@@ -98,5 +120,25 @@ export class TrainingGoalService {
   /** Gespielte Rapid-/Classical-Partien (Lichess/chess.com) jetzt synchronisieren. */
   syncPlay(): Observable<{ synced: boolean }> {
     return this.http.post<{ synced: boolean }>('/api/training-goals/sync-play', {});
+  }
+
+  /** Eigene manuell eingetragene Offline-Aktivitäten (neueste zuerst). */
+  listManual(): Observable<ManualActivity[]> {
+    return this.http.get<ManualActivity[]>('/api/training-goals/manual');
+  }
+
+  /** Manuelle Offline-Aktivität anlegen. */
+  addManual(input: ManualActivityInput): Observable<ManualActivity> {
+    return this.http.post<ManualActivity>('/api/training-goals/manual', input);
+  }
+
+  /** Eigene manuelle Aktivität ändern. */
+  updateManual(id: number, input: ManualActivityInput): Observable<ManualActivity> {
+    return this.http.put<ManualActivity>(`/api/training-goals/manual/${id}`, input);
+  }
+
+  /** Eigene manuelle Aktivität löschen. */
+  deleteManual(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/training-goals/manual/${id}`);
   }
 }

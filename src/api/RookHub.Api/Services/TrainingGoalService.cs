@@ -138,6 +138,93 @@ public class TrainingGoalService
         await _db.SaveChangesAsync();
     }
 
+    // ----- Manuelle Offline-Aktivitäten (selbst gemeldet) ------------------
+
+    /// <summary>Eigene manuelle Einträge des Users (neueste zuerst), limitiert.</summary>
+    public async Task<List<ManualActivityDto>> ListManualAsync(int userId, int take = 200)
+    {
+        take = Math.Clamp(take, 1, 500);
+        return await _db.ManualActivities.AsNoTracking()
+            .Where(m => m.UserId == userId)
+            .OrderByDescending(m => m.Date).ThenByDescending(m => m.Id)
+            .Take(take)
+            .Select(m => new ManualActivityDto
+            {
+                Id = m.Id,
+                Date = m.Date.ToString("yyyy-MM-dd"),
+                Kind = m.Kind,
+                Amount = m.Amount,
+                Note = m.Note,
+            })
+            .ToListAsync();
+    }
+
+    /// <summary>Legt einen manuellen Eintrag an. Wirft <see cref="ArgumentException"/> bei ungültigem Datum/Zukunft.</summary>
+    public async Task<ManualActivityDto> AddManualAsync(int userId, ManualActivityInputDto dto)
+    {
+        var date = ParseManualDate(dto.Date);
+        var entity = new ManualActivity
+        {
+            UserId = userId,
+            Date = date,
+            Kind = dto.Kind,
+            Amount = ClampAmount(dto.Kind, dto.Amount),
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            CreatedAt = DateTime.UtcNow,
+        };
+        _db.ManualActivities.Add(entity);
+        await _db.SaveChangesAsync();
+        return ToDto(entity);
+    }
+
+    /// <summary>Ändert einen eigenen manuellen Eintrag. Gibt null zurück, wenn er nicht existiert/nicht dem User gehört.</summary>
+    public async Task<ManualActivityDto?> UpdateManualAsync(int userId, int id, ManualActivityInputDto dto)
+    {
+        var entity = await _db.ManualActivities.FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+        if (entity == null) return null;
+        entity.Date = ParseManualDate(dto.Date);
+        entity.Kind = dto.Kind;
+        entity.Amount = ClampAmount(dto.Kind, dto.Amount);
+        entity.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        await _db.SaveChangesAsync();
+        return ToDto(entity);
+    }
+
+    /// <summary>Löscht einen eigenen manuellen Eintrag. true, wenn etwas gelöscht wurde.</summary>
+    public async Task<bool> DeleteManualAsync(int userId, int id)
+    {
+        var entity = await _db.ManualActivities.FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+        if (entity == null) return false;
+        _db.ManualActivities.Remove(entity);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>Parst yyyy-MM-dd und lehnt Zukunftsdaten (UTC) ab.</summary>
+    private static DateOnly ParseManualDate(string raw)
+    {
+        if (!DateOnly.TryParseExact(raw, "yyyy-MM-dd", out var date))
+            throw new ArgumentException("Ungültiges Datum (erwartet yyyy-MM-dd).");
+        if (date > DateOnly.FromDateTime(DateTime.UtcNow.Date))
+            throw new ArgumentException("Datum darf nicht in der Zukunft liegen.");
+        return date;
+    }
+
+    /// <summary>OTB-Partien: 1–<see cref="ManualGamesCap"/>; Minuten-Arten: 1–600.</summary>
+    private static int ClampAmount(ManualActivityKind kind, int amount)
+        => kind == ManualActivityKind.OtbGame
+            ? Math.Clamp(amount, 1, ManualGamesCap)
+            : Math.Clamp(amount, 1, 600);
+
+    private static ManualActivityDto ToDto(ManualActivity m) => new()
+    {
+        Id = m.Id,
+        Date = m.Date.ToString("yyyy-MM-dd"),
+        Kind = m.Kind,
+        Amount = m.Amount,
+        Note = m.Note,
+    };
+
     // ----- Tracker / Heute -------------------------------------------------
 
     /// <summary>Tagesreihe (nur Tage mit Aktivität) der letzten <paramref name="weeks"/> Wochen + effektives Ziel.</summary>
@@ -159,6 +246,7 @@ public class TrainingGoalService
                 ChessableSeconds = kv.Value.ChessableSeconds,
                 PlayGames = kv.Value.PlayGames,
                 Status = DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, kv.Value.ChessableSeconds, goal),
+                HasManual = kv.Value.HasManual,
             })
             .ToList();
 
@@ -202,7 +290,10 @@ public class TrainingGoalService
 
     // ----- Aggregation -----------------------------------------------------
 
-    private readonly record struct DayActivity(int PuzzleSeconds, int BookSeconds, int ChessableSeconds, int PlayGames);
+    private readonly record struct DayActivity(int PuzzleSeconds, int BookSeconds, int ChessableSeconds, int PlayGames, bool HasManual);
+
+    /// <summary>Sanity-Obergrenze für manuell eingetragene OTB-Partien je Eintrag.</summary>
+    private const int ManualGamesCap = 50;
 
     /// <summary>Summiert je UTC-Tag (ab <paramref name="windowStartUtc"/>) Sekunden für Puzzles/Buch/Chessable
     /// (Einzelversuche/Häppchen gegen Inflation gedeckelt) und die Anzahl Rapid-/Classical-Partien (Spielen).</summary>
@@ -212,6 +303,7 @@ public class TrainingGoalService
         var book = new Dictionary<DateOnly, int>();
         var chessable = new Dictionary<DateOnly, int>();
         var play = new Dictionary<DateOnly, int>();
+        var manualDays = new HashSet<DateOnly>();
 
         static void Add(Dictionary<DateOnly, int> acc, DateTime when, int seconds, int cap)
         {
@@ -261,15 +353,39 @@ public class TrainingGoalService
                      .Select(p => new { p.Date, p.Games }).ToListAsync())
             play[p.Date] = (play.TryGetValue(p.Date, out var v) ? v : 0) + Math.Max(0, p.Games);
 
+        // Manuell eingetragene Offline-Aktivitäten: mappen je Art auf eine bestehende Kategorie.
+        var windowStartDate = DateOnly.FromDateTime(windowStartUtc.Date);
+        foreach (var m in await _db.ManualActivities.AsNoTracking()
+                     .Where(m => m.UserId == userId && m.Date >= windowStartDate)
+                     .Select(m => new { m.Date, m.Kind, m.Amount }).ToListAsync())
+        {
+            manualDays.Add(m.Date);
+            switch (m.Kind)
+            {
+                case ManualActivityKind.OtbGame:
+                    play[m.Date] = (play.TryGetValue(m.Date, out var g) ? g : 0) + Math.Clamp(m.Amount, 0, ManualGamesCap);
+                    break;
+                case ManualActivityKind.OfflinePuzzle:
+                    Add(puzzle, m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds);
+                    break;
+                case ManualActivityKind.OfflineStudy:
+                case ManualActivityKind.Coaching:
+                    Add(book, m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds);
+                    break;
+            }
+        }
+
         var keys = new HashSet<DateOnly>(puzzle.Keys);
         keys.UnionWith(book.Keys);
         keys.UnionWith(chessable.Keys);
         keys.UnionWith(play.Keys);
+        keys.UnionWith(manualDays);
         return keys.ToDictionary(k => k, k => new DayActivity(
             puzzle.TryGetValue(k, out var pz) ? pz : 0,
             book.TryGetValue(k, out var bk) ? bk : 0,
             chessable.TryGetValue(k, out var ch) ? ch : 0,
-            play.TryGetValue(k, out var pl) ? pl : 0));
+            play.TryGetValue(k, out var pl) ? pl : 0,
+            manualDays.Contains(k)));
     }
 
     // ----- Helfer ----------------------------------------------------------

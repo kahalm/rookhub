@@ -1068,6 +1068,22 @@
     "activity": "활동"
   },
   "trainingGoals": {
+    "manual": {
+      "title": "Log offline activity",
+      "intro": "Trained away from the screen? Log OTB games, board study, puzzle work or lessons — they count toward your goals just like online activity.",
+      "kind": "Type",
+      "note": "Note (optional)",
+      "add": "Add",
+      "saved": "Activity saved",
+      "deleted": "Activity deleted",
+      "marker": "manually logged",
+      "kinds": {
+        "OtbGame": "OTB game (rapid/classical)",
+        "OfflinePuzzle": "Offline puzzle training",
+        "OfflineStudy": "Offline study",
+        "Coaching": "Lesson / coaching"
+      }
+    },
     "title": "훈련 목표",
     "intro": "카테고리별 일일 목표를 설정하고 진행 상황을 추적하세요.",
     "today": "오늘",

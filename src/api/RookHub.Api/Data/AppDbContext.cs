@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
+    public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
 
@@ -441,6 +442,17 @@ public class AppDbContext : DbContext
 
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<ManualActivity>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(a => a.Note).HasMaxLength(200);
+            // Fenster-Aggregation je User (Date >= windowStart) für den Tracker.
+            e.HasIndex(a => new { a.UserId, a.Date });
         });
 
         modelBuilder.Entity<RememberedPosition>(e =>

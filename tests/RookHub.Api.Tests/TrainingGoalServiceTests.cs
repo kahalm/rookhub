@@ -410,4 +410,121 @@ public class TrainingGoalServiceTests : IDisposable
         var result = await controller.GetTrainingGoal(999);
         Assert.IsType<NotFoundObjectResult>(result);
     }
+
+    // ---- Manuelle Offline-Aktivitäten -------------------------------------
+
+    private static ManualActivityInputDto ManualInput(ManualActivityKind kind, int amount, string? date = null, string? note = null)
+        => new() { Kind = kind, Amount = amount, Date = date ?? DateTime.UtcNow.ToString("yyyy-MM-dd"), Note = note };
+
+    [Fact]
+    public async Task AddManual_PersistsAndReturnsDto()
+    {
+        var u = await CreateUserAsync();
+        var dto = await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OtbGame, 1, note: "  Vereinsabend  "));
+
+        Assert.True(dto.Id > 0);
+        Assert.Equal(ManualActivityKind.OtbGame, dto.Kind);
+        Assert.Equal("Vereinsabend", dto.Note); // getrimmt
+        Assert.Single(await _db.ManualActivities.Where(m => m.UserId == u.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task AddManual_ClampsGamesAndMinutes()
+    {
+        var u = await CreateUserAsync();
+        var game = await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OtbGame, 999));
+        var study = await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 999));
+
+        Assert.Equal(50, game.Amount);   // OTB-Cap
+        Assert.Equal(600, study.Amount); // Minuten-Cap
+    }
+
+    [Fact]
+    public async Task AddManual_FutureDate_Throws()
+    {
+        var u = await CreateUserAsync();
+        var future = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd");
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 30, date: future)));
+    }
+
+    [Fact]
+    public async Task AddManual_BadDate_Throws()
+    {
+        var u = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 30, date: "22.06.2026")));
+    }
+
+    [Fact]
+    public async Task UpdateManual_OwnEntry_Updates_OtherUser_ReturnsNull()
+    {
+        var u = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var created = await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 30));
+
+        var updated = await _service.UpdateManualAsync(u.Id, created.Id, ManualInput(ManualActivityKind.Coaching, 45));
+        Assert.NotNull(updated);
+        Assert.Equal(ManualActivityKind.Coaching, updated!.Kind);
+        Assert.Equal(45, updated.Amount);
+
+        Assert.Null(await _service.UpdateManualAsync(other.Id, created.Id, ManualInput(ManualActivityKind.Coaching, 10)));
+    }
+
+    [Fact]
+    public async Task DeleteManual_OnlyOwn()
+    {
+        var u = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var created = await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflinePuzzle, 20));
+
+        Assert.False(await _service.DeleteManualAsync(other.Id, created.Id));
+        Assert.True(await _service.DeleteManualAsync(u.Id, created.Id));
+        Assert.Empty(await _db.ManualActivities.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ListManual_ReturnsOwnNewestFirst()
+    {
+        var u = await CreateUserAsync();
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 30, date: "2026-06-01"));
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.Coaching, 60, date: "2026-06-10"));
+
+        var list = await _service.ListManualAsync(u.Id);
+        Assert.Equal(2, list.Count);
+        Assert.Equal("2026-06-10", list[0].Date); // neuestes zuerst
+    }
+
+    [Fact]
+    public async Task Today_ManualEntries_FeedExistingCategories()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(puzzle: 10, book: 10, play: 3));
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflinePuzzle, 15, date: today)); // → Puzzles
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 5, date: today));   // → Buch
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.Coaching, 5, date: today));       // → Buch
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OtbGame, 2, date: today));        // → Spielen
+
+        var t = await _service.GetTodayAsync(u.Id);
+        Assert.Equal(15 * 60, t.Puzzles.DoneSeconds);
+        Assert.Equal(10 * 60, t.Book.DoneSeconds); // 5 + 5 min
+        Assert.Equal(2, t.Play.DoneGames);
+        Assert.True(t.Puzzles.Met);
+        Assert.True(t.Book.Met);
+    }
+
+    [Fact]
+    public async Task Tracker_MarksDaysWithManualActivity()
+    {
+        var u = await CreateUserAsync();
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        await _service.AddManualAsync(u.Id, ManualInput(ManualActivityKind.OfflineStudy, 30, date: today));
+
+        var tracker = await _service.GetTrackerAsync(u.Id, 4);
+        var day = Assert.Single(tracker.Days);
+        Assert.True(day.HasManual);
+        Assert.Equal(30 * 60, day.BookSeconds);
+    }
 }

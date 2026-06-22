@@ -55,4 +55,36 @@ public class TrainingGoalController : BaseApiController
         await _playTime.SyncUserAsync(GetUserId(), ct);
         return Ok(new { synced = true });
     }
+
+    // ----- Manuelle Offline-Aktivitäten ------------------------------------
+
+    /// <summary>Eigene manuell eingetragene Offline-Aktivitäten (neueste zuerst).</summary>
+    [HttpGet("manual")]
+    public async Task<ActionResult<List<ManualActivityDto>>> ListManual([FromQuery] int take = 200)
+        => Ok(await _service.ListManualAsync(GetUserId(), take));
+
+    /// <summary>Manuelle Offline-Aktivität anlegen (OTB-Partie / Offline-Studium / -Puzzle / Trainerstunde).</summary>
+    [HttpPost("manual")]
+    public async Task<ActionResult<ManualActivityDto>> AddManual([FromBody] ManualActivityInputDto dto)
+    {
+        try { return Ok(await _service.AddManualAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Eigene manuelle Aktivität ändern (404, wenn nicht vorhanden/nicht eigene).</summary>
+    [HttpPut("manual/{id:int}")]
+    public async Task<ActionResult<ManualActivityDto>> UpdateManual(int id, [FromBody] ManualActivityInputDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdateManualAsync(GetUserId(), id, dto);
+            return updated == null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Eigene manuelle Aktivität löschen (404, wenn nicht vorhanden/nicht eigene).</summary>
+    [HttpDelete("manual/{id:int}")]
+    public async Task<IActionResult> DeleteManual(int id)
+        => await _service.DeleteManualAsync(GetUserId(), id) ? NoContent() : NotFound();
 }

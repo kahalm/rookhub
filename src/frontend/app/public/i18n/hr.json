@@ -1303,6 +1303,22 @@
     "activity": "Aktivnost"
   },
   "trainingGoals": {
+    "manual": {
+      "title": "Unesi offline aktivnost",
+      "intro": "Trenirao si izvan ekrana? Unesi OTB partije, proučavanje na ploči, rješavanje zadataka ili sate s trenerom — broje se prema tvojim ciljevima kao i online aktivnost.",
+      "kind": "Vrsta",
+      "note": "Bilješka (neobavezno)",
+      "add": "Dodaj",
+      "saved": "Aktivnost spremljena",
+      "deleted": "Aktivnost izbrisana",
+      "marker": "ručno uneseno",
+      "kinds": {
+        "OtbGame": "OTB partija (rapid/classical)",
+        "OfflinePuzzle": "Offline trening zadataka",
+        "OfflineStudy": "Offline proučavanje",
+        "Coaching": "Sat s trenerom / lekcija"
+      }
+    },
     "title": "Trening ciljevi",
     "intro": "Postavi dnevne ciljeve po kategoriji i prati svoj napredak.",
     "today": "Danas",

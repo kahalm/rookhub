@@ -44,4 +44,33 @@ describe('TrainingGoalService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ goal: {}, days: [] });
   });
+
+  it('lists manual activities', () => {
+    svc.listManual().subscribe(list => expect(list.length).toBe(1));
+    const req = http.expectOne('/api/training-goals/manual');
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 1, date: '2026-06-22', kind: 'OtbGame', amount: 1, note: null }]);
+  });
+
+  it('adds a manual activity via POST', () => {
+    svc.addManual({ date: '2026-06-22', kind: 'OfflineStudy', amount: 30, note: 'opening prep' }).subscribe();
+    const req = http.expectOne('/api/training-goals/manual');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.kind).toBe('OfflineStudy');
+    req.flush({ id: 2, date: '2026-06-22', kind: 'OfflineStudy', amount: 30, note: 'opening prep' });
+  });
+
+  it('updates a manual activity via PUT', () => {
+    svc.updateManual(5, { date: '2026-06-22', kind: 'Coaching', amount: 45, note: null }).subscribe();
+    const req = http.expectOne('/api/training-goals/manual/5');
+    expect(req.request.method).toBe('PUT');
+    req.flush({ id: 5, date: '2026-06-22', kind: 'Coaching', amount: 45, note: null });
+  });
+
+  it('deletes a manual activity via DELETE', () => {
+    svc.deleteManual(7).subscribe();
+    const req = http.expectOne('/api/training-goals/manual/7');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

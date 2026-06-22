@@ -8,15 +8,31 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
   TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
+  ManualActivity, ManualActivityInput, ManualActivityKind,
 } from './training-goals.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
-export interface GoalCell { date: string; status: GoalStatus; level: number; } // level -1 = Zukunft (leer)
+// level -1 = Zukunft (leer); manual = enthält selbst gemeldete Aktivität
+export interface GoalCell { date: string; status: GoalStatus; level: number; manual: boolean; }
+
+/** Alle manuellen Aktivitätsarten + ob sie in Minuten (sonst Partienzahl) gemessen werden. */
+export const MANUAL_KINDS: { kind: ManualActivityKind; minutes: boolean }[] = [
+  { kind: 'OtbGame', minutes: false },
+  { kind: 'OfflinePuzzle', minutes: true },
+  { kind: 'OfflineStudy', minutes: true },
+  { kind: 'Coaching', minutes: true },
+];
+
+/** Wird die Art in Minuten gemessen (sonst Anzahl Partien)? */
+export function isMinutesKind(kind: ManualActivityKind): boolean {
+  return kind !== 'OtbGame';
+}
 
 /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
 export function toMinutes(seconds: number): number {
@@ -36,8 +52,9 @@ export function statusLevel(status: GoalStatus): number {
 }
 
 /** Baut ein Wochen-Raster (Spalten = Wochen Mo–So) für die Ziele-Heatmap (rein, testbar). */
-export function buildGoalTracker(days: { date: string; status: GoalStatus }[], today: Date, weeks = 27): GoalCell[][] {
+export function buildGoalTracker(days: { date: string; status: GoalStatus; hasManual?: boolean }[], today: Date, weeks = 27): GoalCell[][] {
   const byDate = new Map(days.map(d => [d.date, d.status]));
+  const manualDates = new Set(days.filter(d => d.hasManual).map(d => d.date));
   const p = (n: number) => String(n).padStart(2, '0');
   const key = (d: Date) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -51,8 +68,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
       const day = new Date(firstMonday);
       day.setDate(firstMonday.getDate() + w * 7 + d);
       const future = day > end;
-      const status: GoalStatus = future ? 'none' : (byDate.get(key(day)) ?? 'none');
-      col.push({ date: key(day), status, level: future ? -1 : statusLevel(status) });
+      const k = key(day);
+      const status: GoalStatus = future ? 'none' : (byDate.get(k) ?? 'none');
+      col.push({ date: k, status, level: future ? -1 : statusLevel(status), manual: !future && manualDates.has(k) });
     }
     cols.push(col);
   }
@@ -65,7 +83,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
-    TranslateModule, LoadingSpinnerComponent,
+    MatSelectModule, TranslateModule, LoadingSpinnerComponent,
   ],
   template: `
     <div class="tg-container">
@@ -171,6 +189,63 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
           </mat-card-content>
         </mat-card>
 
+        <!-- Manuelle Offline-Aktivität eintragen -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ 'trainingGoals.manual.title' | translate }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="muted small">{{ 'trainingGoals.manual.intro' | translate }}</p>
+            <div class="manual-fields">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'trainingGoals.manual.kind' | translate }}</mat-label>
+                <mat-select [(ngModel)]="manualEdit.kind">
+                  @for (k of manualKinds; track k.kind) {
+                    <mat-option [value]="k.kind">{{ ('trainingGoals.manual.kinds.' + k.kind) | translate }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'trainingGoals.dateCol' | translate }}</mat-label>
+                <input matInput type="date" [max]="todayDate" [(ngModel)]="manualEdit.date" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ (manualMinutes ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</mat-label>
+                <input matInput type="number" min="1" [max]="manualMinutes ? 600 : 50" [(ngModel)]="manualEdit.amount" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note-field">
+                <mat-label>{{ 'trainingGoals.manual.note' | translate }}</mat-label>
+                <input matInput maxlength="200" [(ngModel)]="manualEdit.note" />
+              </mat-form-field>
+            </div>
+            <div class="actions">
+              <button mat-raised-button color="primary" (click)="saveManual()" [disabled]="savingManual">
+                {{ (editingManualId ? 'common.save' : 'trainingGoals.manual.add') | translate }}
+              </button>
+              @if (editingManualId) {
+                <button mat-button (click)="cancelManualEdit()" [disabled]="savingManual">{{ 'common.cancel' | translate }}</button>
+              }
+            </div>
+
+            @if (manualList.length) {
+              <ul class="manual-list">
+                @for (m of manualList; track m.id) {
+                  <li>
+                    <span class="m-date">{{ m.date }}</span>
+                    <span class="m-kind">{{ ('trainingGoals.manual.kinds.' + m.kind) | translate }}</span>
+                    <span class="m-amount">{{ m.amount }} <span class="unit">{{ (isMinutes(m.kind) ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</span></span>
+                    <span class="m-note">{{ m.note }}</span>
+                    <span class="m-actions">
+                      <button mat-icon-button (click)="editManual(m)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button (click)="deleteManual(m)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </mat-card-content>
+        </mat-card>
+
         <!-- Tracker -->
         @if (tracker.length) {
           <mat-card>
@@ -180,8 +255,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                 @for (week of tracker; track $index) {
                   <div class="hm-col">
                     @for (cell of week; track cell.date) {
-                      <div class="hm-cell" [class]="'gl' + cell.level"
-                           [matTooltip]="cell.level >= 0 ? (cell.date + ' · ' + (('trainingGoals.status.' + cell.status) | translate)) : ''"></div>
+                      <div class="hm-cell" [class]="'gl' + cell.level" [class.manual]="cell.manual"
+                           [matTooltip]="cell.level >= 0 ? (cell.date + ' · ' + (('trainingGoals.status.' + cell.status) | translate) + (cell.manual ? ' · ' + ('trainingGoals.manual.marker' | translate) : '')) : ''"></div>
                     }
                   </div>
                 }
@@ -190,6 +265,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
                 <span class="legend-item"><span class="sw gl4"></span>{{ 'trainingGoals.status.full' | translate }}</span>
                 <span class="legend-item"><span class="sw gl2"></span>{{ 'trainingGoals.status.partial' | translate }}</span>
                 <span class="legend-item"><span class="sw gl0"></span>{{ 'trainingGoals.status.none' | translate }}</span>
+                <span class="legend-item"><span class="sw gl0 manual"></span>{{ 'trainingGoals.manual.marker' | translate }}</span>
               </div>
             </mat-card-content>
           </mat-card>
@@ -262,6 +338,19 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus }[], t
     .hm-cell.gl0 { background: color-mix(in srgb, currentColor 10%, transparent); }
     .hm-cell.gl2 { background: #fdd835; }
     .hm-cell.gl4 { background: #f5b301; }
+    /* Manuell (selbst) gemeldete Tage: dezenter Punkt/Rahmen, unabhängig vom Status */
+    .hm-cell.manual { box-shadow: inset 0 0 0 1.5px #1976d2; }
+    .sw.manual { box-shadow: inset 0 0 0 1.5px #1976d2; }
+    .manual-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 8px 0; }
+    .manual-fields .note-field { grid-column: 1 / -1; }
+    .manual-list { list-style: none; padding: 0; margin: 12px 0 0; }
+    .manual-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); font-size: .9rem; }
+    .manual-list .m-date { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .manual-list .m-kind { font-weight: 600; }
+    .manual-list .m-amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .manual-list .m-amount .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
+    .manual-list .m-note { flex: 1; color: color-mix(in srgb, currentColor 60%, transparent); overflow-wrap: anywhere; }
+    .manual-list .m-actions { display: flex; gap: 2px; margin-left: auto; }
     .legend { display: flex; gap: 16px; margin-top: 8px; }
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
@@ -287,6 +376,13 @@ export class TrainingGoalsComponent implements OnInit {
   historyDays: TrackerDay[] = [];
   edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
 
+  // ----- Manuelle Offline-Aktivitäten -----
+  readonly manualKinds = MANUAL_KINDS;
+  manualList: ManualActivity[] = [];
+  savingManual = false;
+  editingManualId: number | null = null;
+  manualEdit: ManualActivityInput = this.emptyManual();
+
   constructor(
     private service: TrainingGoalService,
     private snackbar: SnackbarService,
@@ -311,15 +407,77 @@ export class TrainingGoalsComponent implements OnInit {
       goal: this.service.getGoal(),
       today: this.service.getToday(),
       tracker: this.service.getTracker(),
+      manual: this.service.listManual(),
     }).subscribe({
-      next: ({ goal, today, tracker }) => {
+      next: ({ goal, today, tracker, manual }) => {
         this.applyGoal(goal);
         this.today = today;
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
+        this.manualList = manual;
         this.loading = false;
       },
       error: () => { this.loading = false; },
+    });
+  }
+
+  // ----- Manuelle Offline-Aktivitäten -----
+
+  /** Lokales Datum als yyyy-MM-dd (für date-Input + Default). */
+  get todayDate(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  /** Wird die aktuell gewählte Art in Minuten gemessen (sonst Partienzahl)? */
+  get manualMinutes(): boolean { return isMinutesKind(this.manualEdit.kind); }
+  isMinutes(kind: ManualActivityKind): boolean { return isMinutesKind(kind); }
+
+  private emptyManual(): ManualActivityInput {
+    return { kind: 'OtbGame', date: this.todayDate, amount: 1, note: '' };
+  }
+
+  saveManual(): void {
+    const input: ManualActivityInput = {
+      kind: this.manualEdit.kind,
+      date: this.manualEdit.date || this.todayDate,
+      amount: this.clamp(this.manualEdit.amount, this.manualMinutes ? 600 : 50) || 1,
+      note: this.manualEdit.note?.trim() || null,
+    };
+    this.savingManual = true;
+    const req = this.editingManualId
+      ? this.service.updateManual(this.editingManualId, input)
+      : this.service.addManual(input);
+    req.subscribe({
+      next: () => {
+        this.savingManual = false;
+        this.snackbar.success(this.translate.instant('trainingGoals.manual.saved'));
+        this.cancelManualEdit();
+        this.reload();
+      },
+      error: () => { this.savingManual = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
+    });
+  }
+
+  editManual(m: ManualActivity): void {
+    this.editingManualId = m.id;
+    this.manualEdit = { kind: m.kind, date: m.date, amount: m.amount, note: m.note ?? '' };
+  }
+
+  cancelManualEdit(): void {
+    this.editingManualId = null;
+    this.manualEdit = this.emptyManual();
+  }
+
+  deleteManual(m: ManualActivity): void {
+    this.service.deleteManual(m.id).subscribe({
+      next: () => {
+        if (this.editingManualId === m.id) this.cancelManualEdit();
+        this.snackbar.success(this.translate.instant('trainingGoals.manual.deleted'));
+        this.reload();
+      },
+      error: () => this.snackbar.warn(this.translate.instant('trainingGoals.error')),
     });
   }
 

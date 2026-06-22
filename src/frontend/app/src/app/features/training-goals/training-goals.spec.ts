@@ -1,4 +1,4 @@
-import { buildGoalTracker, statusLevel, toMinutes, orderHistory } from './training-goals.component';
+import { buildGoalTracker, statusLevel, toMinutes, orderHistory, isMinutesKind } from './training-goals.component';
 import { TrackerDay } from './training-goals.service';
 
 describe('statusLevel', () => {
@@ -20,7 +20,7 @@ describe('toMinutes', () => {
 });
 
 describe('orderHistory', () => {
-  const day = (date: string): TrackerDay => ({ date, puzzleSeconds: 0, bookSeconds: 0, chessableSeconds: 0, playGames: 0, status: 'none' });
+  const day = (date: string): TrackerDay => ({ date, puzzleSeconds: 0, bookSeconds: 0, chessableSeconds: 0, playGames: 0, status: 'none', hasManual: false });
 
   it('returns days newest-first without mutating the input', () => {
     const input = [day('2026-06-01'), day('2026-06-02'), day('2026-06-03')];
@@ -63,5 +63,22 @@ describe('buildGoalTracker', () => {
       if (c.date > tk) expect(c.level).toBe(-1);
       else expect(c.level).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('flags days with manual activity', () => {
+    const grid = buildGoalTracker([{ date: tk, status: 'none', hasManual: true }], today, 4);
+    const cell = grid.flat().find(c => c.date === tk)!;
+    expect(cell.manual).toBeTrue();
+    // a day without manual activity is not flagged
+    expect(grid.flat().filter(c => c.manual).length).toBe(1);
+  });
+});
+
+describe('isMinutesKind', () => {
+  it('treats OTB games as a count, everything else as minutes', () => {
+    expect(isMinutesKind('OtbGame')).toBeFalse();
+    expect(isMinutesKind('OfflinePuzzle')).toBeTrue();
+    expect(isMinutesKind('OfflineStudy')).toBeTrue();
+    expect(isMinutesKind('Coaching')).toBeTrue();
   });
 });

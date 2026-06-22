@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.DTOs;
 
@@ -44,6 +45,30 @@ public class TrainingGoalInputDto
     [Range(0, 7)] public int WeeklyDaysTarget { get; set; }
 }
 
+/// <summary>Eine manuell eingetragene Offline-Aktivität (selbst gemeldet, korrigierbar).</summary>
+public class ManualActivityDto
+{
+    public int Id { get; set; }
+    /// <summary>UTC-Datum als yyyy-MM-dd.</summary>
+    public string Date { get; set; } = string.Empty;
+    /// <summary>"OtbGame" | "OfflinePuzzle" | "OfflineStudy" | "Coaching".</summary>
+    public ManualActivityKind Kind { get; set; }
+    /// <summary>Bei OtbGame = Anzahl Partien; sonst = Minuten.</summary>
+    public int Amount { get; set; }
+    public string? Note { get; set; }
+}
+
+/// <summary>Eingabe zum Anlegen/Ändern einer manuellen Offline-Aktivität.
+/// Amount = Partienzahl (OtbGame) bzw. Minuten (sonst); serverseitig je Art geklemmt.</summary>
+public class ManualActivityInputDto
+{
+    /// <summary>UTC-Datum als yyyy-MM-dd (Standard: heute; nicht in der Zukunft).</summary>
+    [Required] public string Date { get; set; } = string.Empty;
+    public ManualActivityKind Kind { get; set; }
+    [Range(1, 600)] public int Amount { get; set; }
+    [MaxLength(200)] public string? Note { get; set; }
+}
+
 /// <summary>Ein Tag im Ziele-Tracker: verbrachte Sekunden (Puzzles/Buch) + gespielte Partien an dem Tag
 /// (informativ — das Spielen-Ziel ist wöchentlich) + Tagesstatus (nur Puzzles/Buch).</summary>
 public class TrackerDayDto
@@ -58,6 +83,8 @@ public class TrackerDayDto
     public int PlayGames { get; set; }
     /// <summary>"none" | "partial" | "full" gegenüber dem effektiven Tagesziel (Puzzles/Buch/Chessable).</summary>
     public string Status { get; set; } = "none";
+    /// <summary>Enthält dieser Tag mindestens eine manuell (selbst) eingetragene Offline-Aktivität?</summary>
+    public bool HasManual { get; set; }
 }
 
 /// <summary>Effektives Ziel + Tagesreihe für den Tracker (nur Tage mit Aktivität).</summary>

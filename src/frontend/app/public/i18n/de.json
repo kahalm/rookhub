@@ -1303,6 +1303,22 @@
     "activity": "Aktivität"
   },
   "trainingGoals": {
+    "manual": {
+      "title": "Offline-Aktivität eintragen",
+      "intro": "Abseits des Bildschirms trainiert? Trage OTB-Partien, Studium am Brett, Puzzlearbeit oder Trainerstunden ein — sie zählen wie Online-Aktivität auf deine Ziele.",
+      "kind": "Art",
+      "note": "Notiz (optional)",
+      "add": "Hinzufügen",
+      "saved": "Aktivität gespeichert",
+      "deleted": "Aktivität gelöscht",
+      "marker": "manuell eingetragen",
+      "kinds": {
+        "OtbGame": "OTB-Partie (Rapid/Classical)",
+        "OfflinePuzzle": "Offline-Puzzletraining",
+        "OfflineStudy": "Offline-Studium",
+        "Coaching": "Trainerstunde / Lektion"
+      }
+    },
     "title": "Trainingsziele",
     "intro": "Lege Tagesziele je Kategorie fest und verfolge deinen Fortschritt.",
     "today": "Heute",

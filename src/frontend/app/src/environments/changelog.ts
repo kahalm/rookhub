@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.170.0';
+export const APP_VERSION = '0.171.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.171.0", date: "2026-06-22", changes: [
+    { en: "Training goals: you can now log offline training yourself. On the Training Goals page, add over-the-board games (rapid/classical), study at a real board, puzzle work or coaching lessons — they count toward your existing goals just like online activity (OTB games toward the weekly games goal, study/puzzle/coaching minutes toward the matching daily goals). Entries can be edited or deleted, and days with self-logged activity are marked in the tracker.", de: "Trainingsziele: Du kannst Offline-Training jetzt selbst eintragen. Auf der Trainingsziele-Seite OTB-Partien (Rapid/Classical), Studium am echten Brett, Puzzlearbeit oder Trainerstunden hinzufügen — sie zählen wie Online-Aktivität auf deine bestehenden Ziele (OTB-Partien aufs Wochen-Spielziel, Studium-/Puzzle-/Trainer-Minuten auf die passenden Tagesziele). Einträge lassen sich bearbeiten oder löschen, und Tage mit selbst gemeldeter Aktivität sind im Tracker markiert." },
+  ]},
   { version: "0.170.0", date: "2026-06-22", changes: [
     { en: "Subscribed tournaments now refresh automatically: pairings and results are fetched again around and after the tournament. Previously a tournament subscribed before it started (when chess-results.com had no rounds yet) kept showing empty pairings forever.", de: "Abonnierte Turniere werden jetzt automatisch nachgeladen: Paarungen und Ergebnisse werden rund um und nach dem Turnier erneut geholt. Bisher blieb ein Turnier, das vor Spielbeginn abonniert wurde (als chess-results.com noch keine Runden hatte), für immer mit leeren Paarungen stehen." },
     { en: "The Discord motivation bot now knows your tournaments: it cheers you on before an upcoming event and picks up your result afterwards (points scored).", de: "Der Discord-Motivations-Bot kennt jetzt deine Turniere: Er drückt dir vor einem anstehenden Turnier die Daumen und greift danach dein Ergebnis auf (erreichte Punkte)." },
