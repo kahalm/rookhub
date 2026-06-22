@@ -129,6 +129,29 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.canShowMoreHints) this.hintLevel++;
   }
 
+  /** Admin-Sicht (für den „dumme Tipps"-Markier-Button). */
+  get isAdmin(): boolean { return this.auth.isAdmin; }
+  flagSaving = false;
+
+  /** Admin: Tipps dieses Puzzles als „dumm/schlecht" markieren bzw. die Markierung aufheben. */
+  toggleHintsFlag(): void {
+    if (!this.puzzle || this.flagSaving) return;
+    const next = !this.puzzle.hintsFlagged;
+    this.flagSaving = true;
+    this.puzzleService.flagBookPuzzleHints(this.puzzle.id, next).subscribe({
+      next: () => {
+        if (this.puzzle) this.puzzle.hintsFlagged = next;
+        this.flagSaving = false;
+        this.snackbar.success(this.translate.instant(next ? 'book.hints.flagSaved' : 'book.hints.flagCleared'),
+          { duration: 2000 });
+      },
+      error: () => {
+        this.flagSaving = false;
+        this.snackbar.warn(this.translate.instant('book.hints.flagError'), { duration: 3000 });
+      }
+    });
+  }
+
   /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
   gaveUp = false;
 

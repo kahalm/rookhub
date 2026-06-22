@@ -75,6 +75,8 @@ export interface BookPuzzleDto {
   /** Vorberechnete, gestufte Tipps, sprach-keyed (`{ de: [h1,h2,h3], en: […], hr: […] }`).
    *  Fehlt/leer, wenn noch keine Tipps generiert wurden. Frontend wählt aktive Sprache (Fallback en→de). */
   hints?: { [lang: string]: string[] };
+  /** Admin-Review-Flag: Tipps wurden als „dumm/schlecht" markiert (nur Admin sichtbar/änderbar). */
+  hintsFlagged?: boolean;
 }
 
 export interface BookInfoDto {
@@ -255,6 +257,11 @@ export class PuzzleService {
   /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige). */
   recordBookAttempt(id: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<unknown> {
     return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed });
+  }
+
+  /** Admin: Tipps eines Buch-Puzzles als „dumm/schlecht" markieren (oder aufheben). */
+  flagBookPuzzleHints(id: number, flagged: boolean): Observable<{ id: number; hintsFlagged: boolean }> {
+    return this.http.post<{ id: number; hintsFlagged: boolean }>(`/api/admin/book-puzzles/${id}/flag-hints`, { flagged });
   }
 
   /** Anonymer Buch-Puzzle-Solve (nicht eingeloggt) — zählt fürs Tagespuzzle namenlos mit. */

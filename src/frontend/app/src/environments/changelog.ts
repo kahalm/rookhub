@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.171.0';
+export const APP_VERSION = '0.172.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.172.0", date: "2026-06-22", changes: [
+    { en: "Admins can now flag a book/course puzzle's hints as bad straight from the solver (a small flag button next to the hint button). Flagged puzzles are stored in the database for later targeted regeneration. Visible to admins only; it does not change how hints are shown to players.", de: "Admins können die Tipps eines Buch-/Kurs-Puzzles jetzt direkt im Solver als „dumm“ markieren (kleiner Flaggen-Knopf neben dem Tipp-Knopf). Markierte Puzzles werden in der Datenbank vermerkt — fürs spätere gezielte Neu-Generieren. Nur für Admins sichtbar; an der Tipp-Anzeige für Spieler ändert sich nichts." },
+  ]},
   { version: "0.171.0", date: "2026-06-22", changes: [
     { en: "Training goals: you can now log offline training yourself. On the Training Goals page, add over-the-board games (rapid/classical), study at a real board, puzzle work or coaching lessons — they count toward your existing goals just like online activity (OTB games toward the weekly games goal, study/puzzle/coaching minutes toward the matching daily goals). Entries can be edited or deleted, and days with self-logged activity are marked in the tracker.", de: "Trainingsziele: Du kannst Offline-Training jetzt selbst eintragen. Auf der Trainingsziele-Seite OTB-Partien (Rapid/Classical), Studium am echten Brett, Puzzlearbeit oder Trainerstunden hinzufügen — sie zählen wie Online-Aktivität auf deine bestehenden Ziele (OTB-Partien aufs Wochen-Spielziel, Studium-/Puzzle-/Trainer-Minuten auf die passenden Tagesziele). Einträge lassen sich bearbeiten oder löschen, und Tage mit selbst gemeldeter Aktivität sind im Tracker markiert." },
   ]},

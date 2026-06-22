@@ -225,3 +225,34 @@ describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
     expect(c.state).toBe('SOLVED');
   });
 });
+
+describe('BookPuzzleComponent „dumme Tipps" markieren (Admin)', () => {
+  it('toggleHintsFlag setzt das Flag und ruft den Service mit true', () => {
+    const c = makeComponent();
+    c.auth.isAdmin = true;
+    c.snackbar.success = jasmine.createSpy('success');
+    const spy = jasmine.createSpy('flag').and.returnValue(of({ id: 5, hintsFlagged: true }));
+    c.puzzleService.flagBookPuzzleHints = spy;
+    c.puzzle = { id: 5, fen: FEN, moves: 'e2e4', bookFileName: 'b', hintsFlagged: false };
+
+    c.toggleHintsFlag();
+
+    expect(spy).toHaveBeenCalledWith(5, true);
+    expect(c.puzzle.hintsFlagged).toBeTrue();
+    expect(c.flagSaving).toBeFalse();
+  });
+
+  it('toggleHintsFlag hebt eine bestehende Markierung wieder auf', () => {
+    const c = makeComponent();
+    c.auth.isAdmin = true;
+    c.snackbar.success = jasmine.createSpy('success');
+    const spy = jasmine.createSpy('flag').and.returnValue(of({ id: 5, hintsFlagged: false }));
+    c.puzzleService.flagBookPuzzleHints = spy;
+    c.puzzle = { id: 5, fen: FEN, moves: 'e2e4', bookFileName: 'b', hintsFlagged: true };
+
+    c.toggleHintsFlag();
+
+    expect(spy).toHaveBeenCalledWith(5, false);
+    expect(c.puzzle.hintsFlagged).toBeFalse();
+  });
+});

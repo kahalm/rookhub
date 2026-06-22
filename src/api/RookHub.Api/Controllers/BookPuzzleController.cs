@@ -224,6 +224,19 @@ public class BookPuzzleController : BaseApiController
         return Ok(new { hints = dto?.Hints });
     }
 
+    /// <summary>Admin: markiert die Tipps eines Buch-Puzzles als „dumm/schlecht" (oder hebt das auf) —
+    /// Review-Flag fürs spätere gezielte Neu-Generieren. 404 wenn das Puzzle fehlt.</summary>
+    [HttpPost("/api/admin/book-puzzles/{id}/flag-hints")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
+    {
+        var bp = await _db.BookPuzzles.FindAsync(id);
+        if (bp == null) return NotFound(new { message = "Puzzle not found." });
+        bp.HintsFlagged = body.Flagged;
+        await _db.SaveChangesAsync();
+        return Ok(new { id = bp.Id, hintsFlagged = bp.HintsFlagged });
+    }
+
     /// <summary>Admin: Tipps für ein ganzes Buch im Hintergrund (neu) generieren. <paramref name="force"/>
     /// regeneriert auch bereits vorhandene; sonst nur fehlende/veraltete.</summary>
     [HttpPost("/api/admin/books/{bookId}/generate-hints")]

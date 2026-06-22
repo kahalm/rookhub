@@ -70,6 +70,10 @@ public class BookPuzzle
     /// (0 = noch keine Tipps). Erlaubt späteres Neu-Generieren unabhängig von <c>Book.ImportVersion</c>.</summary>
     public int HintsVersion { get; set; }
 
+    /// <summary>Vom Admin als „dumme/schlechte Tipps" markiert (Review-Flag fürs gezielte Neu-Generieren).
+    /// Per Button im Solver gesetzt; rein redaktionell, beeinflusst die Anzeige der Tipps nicht.</summary>
+    public bool HintsFlagged { get; set; }
+
     /// <summary>
     /// „Ausgemustert": Wird nicht mehr in den Zufalls-Pools (Daily/Random/Blind) gezogen.
     /// Gesetzt z. B. wenn ein Admin das Tagespuzzle für ein Datum neu generiert — das bis dahin

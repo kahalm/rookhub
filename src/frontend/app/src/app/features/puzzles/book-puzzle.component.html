@@ -45,6 +45,14 @@
                   ({{ hintLevel }}/{{ availableHints.length }})
                 </button>
               }
+              @if (isAdmin && hasHints) {
+                <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
+                        [disabled]="flagSaving" (click)="toggleHintsFlag()"
+                        [attr.title]="'book.hints.flagTitle' | translate">
+                  <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
+                  {{ (puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate }}
+                </button>
+              }
             </div>
             @if (shownHints.length) {
               <ol class="hint-list">

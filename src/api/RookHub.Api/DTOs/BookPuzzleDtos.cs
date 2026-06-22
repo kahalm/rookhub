@@ -121,6 +121,15 @@ public class BookPuzzleDto
     /// (Fallback en→de) und deckt Stufe 1→3 progressiv auf.
     /// </summary>
     public Dictionary<string, List<string>>? Hints { get; set; }
+
+    /// <summary>Admin-Review-Flag: Tipps wurden als „dumm/schlecht" markiert (siehe <c>BookPuzzle.HintsFlagged</c>).</summary>
+    public bool HintsFlagged { get; set; }
+}
+
+/// <summary>Body für das Admin-Tipp-Flag (POST /api/admin/book-puzzles/{id}/flag-hints).</summary>
+public class FlagHintsDto
+{
+    public bool Flagged { get; set; }
 }
 
 public class BookPuzzleImportDto

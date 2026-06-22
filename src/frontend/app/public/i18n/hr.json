@@ -946,7 +946,13 @@
   "book": {
     "hints": {
       "show": "Savjet",
-      "next": "Sljedeći savjet"
+      "next": "Sljedeći savjet",
+      "flag": "Loši savjeti",
+      "flagged": "Loši savjeti ✓",
+      "flagTitle": "Označi ove savjete kao loše (admin)",
+      "flagSaved": "Savjeti označeni kao loši.",
+      "flagCleared": "Oznaka uklonjena.",
+      "flagError": "Oznaku nije moguće spremiti."
     },
     "difficulty": "Težina",
     "offlineUnavailable": "Ova knjiga nije dostupna offline.",

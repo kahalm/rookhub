@@ -774,7 +774,8 @@ public class BookPuzzleService
         Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
         BookRating = bp.Book?.Rating ?? bp.BookRating,
         Tags = bp.Book?.Tags ?? bp.Tags,
-        Hints = ParseHints(bp.HintsJson)
+        Hints = ParseHints(bp.HintsJson),
+        HintsFlagged = bp.HintsFlagged
     };
 
     /// <summary>Deserialisiert <see cref="BookPuzzle.HintsJson"/> (sprach-keyed Tipp-Listen).

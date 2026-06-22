@@ -948,7 +948,13 @@
   "book": {
     "hints": {
       "show": "Hint",
-      "next": "Next hint"
+      "next": "Next hint",
+      "flag": "Bad hints",
+      "flagged": "Bad hints ✓",
+      "flagTitle": "Mark these hints as bad (admin)",
+      "flagSaved": "Hints marked as bad.",
+      "flagCleared": "Mark removed.",
+      "flagError": "Could not save the mark."
     },
     "difficulty": "Difficulty",
     "offlineUnavailable": "This book is not available offline.",

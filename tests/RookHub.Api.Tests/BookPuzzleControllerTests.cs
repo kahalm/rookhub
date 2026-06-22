@@ -662,6 +662,39 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task FlagHints_SetsAndClearsFlag()
+    {
+        var puzzle = new BookPuzzle
+        {
+            LineId = "flag.pgn:001", BookFileName = "flag.pgn", Round = "001",
+            Fen = "8/8/8/8/8/8/8/4K3 w - - 0 1", Moves = "e1e2",
+            HintsJson = "{\"en\":[\"a\",\"b\",\"c\"]}", HintsVersion = 1
+        };
+        _db.BookPuzzles.Add(puzzle);
+        await _db.SaveChangesAsync();
+        SetUser(1, "Admin");
+
+        var set = await _controller.FlagHints(puzzle.Id, new FlagHintsDto { Flagged = true }) as OkObjectResult;
+        Assert.NotNull(set);
+        Assert.True((await _db.BookPuzzles.FindAsync(puzzle.Id))!.HintsFlagged);
+        // DTO trägt das Flag mit
+        var dto = Assert.IsType<BookPuzzleDto>(((await _controller.GetById(puzzle.Id)) as OkObjectResult)!.Value);
+        Assert.True(dto.HintsFlagged);
+
+        var clear = await _controller.FlagHints(puzzle.Id, new FlagHintsDto { Flagged = false }) as OkObjectResult;
+        Assert.NotNull(clear);
+        Assert.False((await _db.BookPuzzles.FindAsync(puzzle.Id))!.HintsFlagged);
+    }
+
+    [Fact]
+    public async Task FlagHints_UnknownPuzzle_NotFound()
+    {
+        SetUser(1, "Admin");
+        var result = await _controller.FlagHints(999999, new FlagHintsDto { Flagged = true });
+        Assert.IsType<NotFoundObjectResult>(result);
+    }
+
+    [Fact]
     public async Task ClaimSession_TransfersAnonymousAttemptsToUser()
     {
         var p = await CreateBookPuzzleAsync(lineId: "claim.pgn:1", bookFileName: "claim.pgn");
