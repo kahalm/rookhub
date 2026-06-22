@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -165,6 +166,99 @@ public class AutoSubscriptionServiceTests : IDisposable
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
         Assert.Empty(subs);
+    }
+
+    [Fact]
+    public async Task CheckUserAsync_SetsEventDateFromEndDate()
+    {
+        var userId = await CreateUserAsync(lastName: "Oberschmid", firstName: "Patrik", chessResultsId: "144749");
+
+        var tournaments = JsonSerializer.Serialize(new[]
+        {
+            new { tournamentId = "1202326", tournamentName = "Open", endDate = "25.12.2099" }
+        });
+        var proxy = CreateMockProxy(tournaments);
+
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
+
+        var sub = await _db.TournamentSubscriptions.SingleAsync(s => s.UserId == userId);
+        Assert.Equal(new DateOnly(2099, 12, 25), sub.EventDate);
+    }
+
+    // --- Refresh aktiver Abos (Paarungen/Ergebnisse nachladen) ---
+
+    private static CrawlerProxyService CreateProxy(RoutingHttpMessageHandler handler)
+        => new(new HttpClient(handler) { BaseAddress = new Uri("http://localhost:8080") });
+
+    [Fact]
+    public async Task Refresh_InWindowTournament_TriggersCrawl()
+    {
+        var userId = await CreateUserAsync(chessResultsId: "1");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        { UserId = userId, CrawlerTournamentId = "T1", TournamentName = "X", EventDate = today });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
+
+        Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
+    }
+
+    [Fact]
+    public async Task Refresh_OutOfWindowTournament_NoCrawl()
+    {
+        var userId = await CreateUserAsync(chessResultsId: "1");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        { UserId = userId, CrawlerTournamentId = "T1", TournamentName = "X", EventDate = today.AddDays(-30) });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
+
+        Assert.False(handler.Hits.ContainsKey("/api/crawl"));
+    }
+
+    [Fact]
+    public async Task Refresh_NullEventDate_BackfillsFromCrawlerAndCrawls()
+    {
+        var userId = await CreateUserAsync(chessResultsId: "1");
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        { UserId = userId, CrawlerTournamentId = "T1", TournamentName = "X", EventDate = null });
+        await _db.SaveChangesAsync();
+
+        var todayStr = DateTime.UtcNow.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/crawl", "{}")
+            .Map("/api/tournaments/T1", $$"""{"date":"{{todayStr}}","location":"Y"}""");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
+
+        var sub = await _db.TournamentSubscriptions.SingleAsync();
+        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.Date), sub.EventDate);
+        Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
+    }
+
+    [Fact]
+    public async Task Refresh_SameTournamentMultipleUsers_CrawlsOnce()
+    {
+        var u1 = await CreateUserAsync(username: "a", chessResultsId: "1");
+        var u2 = await CreateUserAsync(username: "b", chessResultsId: "2");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = u1, CrawlerTournamentId = "T1", TournamentName = "X", EventDate = today },
+            new TournamentSubscription { UserId = u2, CrawlerTournamentId = "T1", TournamentName = "X", EventDate = today });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
+
+        Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
     }
 
     // --- AutoFavorite Tests ---

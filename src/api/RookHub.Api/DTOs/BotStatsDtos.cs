@@ -21,6 +21,37 @@ public class BotPlayerProgressDto
 
     /// <summary>Aktueller (jüngster fälliger) Wochenpost + Fortschritt des Users — null, wenn keiner existiert.</summary>
     public BotWeeklyPostDto? WeeklyPost { get; set; }
+
+    /// <summary>
+    /// Anstehende / laufende / frisch beendete abonnierte Turniere des Spielers (chess-results.com).
+    /// Der Bot motiviert daraus vor dem Turnier und greift nach dem Turnier das Ergebnis auf. Leer,
+    /// wenn nichts im relevanten Zeitfenster liegt.
+    /// </summary>
+    public List<BotTournamentDto> Tournaments { get; set; } = new();
+}
+
+/// <summary>Ein für den Motivations-DM relevantes Turnier (anstehend/laufend/beendet) + ggf. das Ergebnis des Spielers.</summary>
+public class BotTournamentDto
+{
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>"upcoming" (Termin in der Zukunft), "ongoing" (heute), "finished" (gerade vorbei).</summary>
+    public string Status { get; set; } = "upcoming";
+
+    /// <summary>Turniertermin.</summary>
+    public DateOnly Date { get; set; }
+
+    /// <summary>Tage bis zum Termin: &gt;0 anstehend, 0 heute, &lt;0 bereits vorbei.</summary>
+    public int DaysUntil { get; set; }
+
+    /// <summary>Austragungsort, falls der Crawler ihn kennt.</summary>
+    public string? Location { get; set; }
+
+    /// <summary>Erreichte Punkte (nur laufend/beendet und nur, wenn der Spieler als Favorit im Turnier gematcht ist).</summary>
+    public double? ResultPoints { get; set; }
+
+    /// <summary>Anzahl gewerteter Partien zum Ergebnis (0, wenn (noch) keins vorliegt).</summary>
+    public int ResultGames { get; set; }
 }
 
 /// <summary>Wochenpost-Stand für den Motivations-Bot: der aktuelle Post + wie weit der User ist.</summary>

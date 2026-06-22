@@ -26,8 +26,12 @@ public class BotStatsControllerTests : IDisposable
         _db = new AppDbContext(options);
         var puzzles = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
         var weekly = new WeeklyPostService(_db, NullLogger<WeeklyPostService>.Instance);
-        _service = new BotStatsService(_db, new TrainingGoalService(_db), puzzles, weekly);
+        _crawlerHandler = new RoutingHttpMessageHandler(defaultBody: "{}");
+        var crawler = new CrawlerProxyService(new HttpClient(_crawlerHandler) { BaseAddress = new Uri("http://localhost:8080") });
+        _service = new BotStatsService(_db, new TrainingGoalService(_db), puzzles, weekly, crawler);
     }
+
+    private readonly RoutingHttpMessageHandler _crawlerHandler;
 
     public void Dispose() => _db.Dispose();
 
@@ -113,6 +117,94 @@ public class BotStatsControllerTests : IDisposable
         Assert.Equal(1, dto.WeeklyPost.PlayedCount);
         Assert.Equal(1, dto.WeeklyPost.SolvedCount);
         Assert.True(dto.WeeklyPost.Completed);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_FinishedTournament_IncludesPlayerResult()
+    {
+        var user = await CreateLinkedUserAsync("12345");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = user.Id, CrawlerTournamentId = "T100", TournamentName = "Stadtmeisterschaft",
+            EventDate = today.AddDays(-1),
+        });
+        _db.TournamentFavorites.Add(new TournamentFavorite
+        {
+            UserId = user.Id, CrawlerTournamentId = "T100", PlayerSnr = 3,
+        });
+        await _db.SaveChangesAsync();
+
+        // Punkte = kumulativer Stand → finaler Wert ist der der höchsten Runde (2,5 / 3 Partien).
+        const string results = """
+        [
+          {"roundNumber":1,"result":"1","points":"1"},
+          {"roundNumber":2,"result":"½","points":"1.5"},
+          {"roundNumber":3,"result":"1","points":"2,5"}
+        ]
+        """;
+        _crawlerHandler
+            .Map("/players/3/results", results)
+            .Map("tournaments/T100", """{"location":"Innsbruck"}""");
+
+        var controller = BuildController(Secret, ValidHeader("12345"));
+        var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
+        var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
+
+        var t = Assert.Single(dto.Tournaments);
+        Assert.Equal("Stadtmeisterschaft", t.Name);
+        Assert.Equal("finished", t.Status);
+        Assert.Equal(-1, t.DaysUntil);
+        Assert.Equal("Innsbruck", t.Location);
+        Assert.Equal(3, t.ResultGames);
+        Assert.Equal(2.5, t.ResultPoints!.Value);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_UpcomingTournament_NoResultLookup()
+    {
+        var user = await CreateLinkedUserAsync("12345");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = user.Id, CrawlerTournamentId = "T200", TournamentName = "Frühjahrs-Open",
+            EventDate = today.AddDays(3),
+        });
+        await _db.SaveChangesAsync();
+        _crawlerHandler
+            .Map("/players/", "[]")
+            .Map("tournaments/T200", """{"location":"Wien"}""");
+
+        var controller = BuildController(Secret, ValidHeader("12345"));
+        var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
+        var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
+
+        var t = Assert.Single(dto.Tournaments);
+        Assert.Equal("upcoming", t.Status);
+        Assert.Equal(3, t.DaysUntil);
+        Assert.Equal("Wien", t.Location);
+        Assert.Equal(0, t.ResultGames);
+        Assert.Null(t.ResultPoints);
+        Assert.False(_crawlerHandler.Hits.ContainsKey("/players/")); // kein Ergebnis-Call für anstehend
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_OutsideWindowTournament_NotIncluded()
+    {
+        var user = await CreateLinkedUserAsync("12345");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = user.Id, CrawlerTournamentId = "T300", TournamentName = "Längst vorbei",
+            EventDate = today.AddDays(-30),
+        });
+        await _db.SaveChangesAsync();
+
+        var controller = BuildController(Secret, ValidHeader("12345"));
+        var ok = Assert.IsType<OkObjectResult>((await controller.GetPlayerProgress("12345")).Result);
+        var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
+
+        Assert.Empty(dto.Tournaments);
     }
 
     [Fact]
