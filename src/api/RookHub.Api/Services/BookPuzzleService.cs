@@ -230,7 +230,8 @@ public class BookPuzzleService
             {
                 UserId = g.Key!.Value,
                 FirstSolved = g.OrderBy(a => a.AttemptedAt).Select(a => a.Solved).FirstOrDefault(),
-                TimeSeconds = g.OrderBy(a => a.AttemptedAt).Select(a => a.TimeSeconds).FirstOrDefault()
+                TimeSeconds = g.OrderBy(a => a.AttemptedAt).Select(a => a.TimeSeconds).FirstOrDefault(),
+                HintsUsed = g.OrderBy(a => a.AttemptedAt).Select(a => a.HintsUsed).FirstOrDefault()
             })
             .ToListAsync();
 
@@ -257,7 +258,8 @@ public class BookPuzzleService
                     Name = prof?.DisplayName ?? uname ?? $"#{u.UserId}",
                     DiscordId = prof?.DiscordId,
                     DiscordUsername = prof?.DiscordUsername,
-                    TimeSeconds = u.TimeSeconds
+                    TimeSeconds = u.TimeSeconds,
+                    HintsUsed = u.HintsUsed
                 };
             })
             .OrderBy(s => s.Name)

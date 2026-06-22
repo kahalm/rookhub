@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.174.2';
+export const APP_VERSION = '0.175.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.175.0", date: "2026-06-22", changes: [
+    { en: "Daily puzzle solver list (Discord) now shows a 💡 next to players who solved with hints — the results API now reports the hints used in each solver's scored first attempt.", de: "Die Tagespuzzle-Löserliste (Discord) zeigt jetzt ein 💡 hinter Spielern, die mit Tipps gelöst haben — die Ergebnis-API liefert dazu die im wertungsrelevanten Erstversuch genutzten Tipps je Löser." },
+  ]},
   { version: "0.174.2", date: "2026-06-22", changes: [
     { en: "Analysis board on mobile is now bigger: the tap zones for stepping moves are half as wide, and the “back” zone now sits over the evaluation bar instead of taking its own column — so the board gets the freed-up width.", de: "Analyse-Brett ist auf dem Handy jetzt größer: Die Tap-Zonen zum Durchblättern der Züge sind halb so breit, und die „Zurück“-Zone liegt nun über der Bewertungsleiste statt in einer eigenen Spalte — die gesparte Breite bekommt das Brett." },
   ]},

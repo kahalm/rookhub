@@ -261,6 +261,26 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetResults_IncludesHintsUsedOfFirstAttempt()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "hints.pgn:1", bookFileName: "hints.pgn");
+        var hinted = await CreateUserAsync("hinted", discordId: "111");
+        SetUser(hinted.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 10, HintsUsed = 2 });
+        // späterer Versuch ohne Tipps darf den Erstversuch-Wert NICHT überschreiben
+        await Task.Delay(10);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 5, HintsUsed = 0 });
+
+        var clean = await CreateUserAsync("clean", discordId: "222");
+        SetUser(clean.Id);
+        await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 8, HintsUsed = 0 });
+
+        var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
+        Assert.Equal(2, res.Solvers.Single(s => s.Name == "hinted").HintsUsed);
+        Assert.Equal(0, res.Solvers.Single(s => s.Name == "clean").HintsUsed);
+    }
+
+    [Fact]
     public async Task GetById_ReturnsPuzzle()
     {
         var puzzle = await CreateBookPuzzleAsync();

@@ -25,6 +25,8 @@ public class BookSolverDto
     public string? DiscordId { get; set; }
     public string? DiscordUsername { get; set; }
     public int TimeSeconds { get; set; }
+    /// <summary>Höchste angesehene Tipp-Stufe (0–3) im wertungsrelevanten Erstversuch; > 0 = mit Tipps gelöst.</summary>
+    public int HintsUsed { get; set; }
 }
 
 public class BookPuzzleResultsDto
