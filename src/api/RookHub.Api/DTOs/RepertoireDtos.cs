@@ -14,6 +14,7 @@ public class RepertoireDto
     public DateTime UpdatedAt { get; set; }
     public int FileCount { get; set; }
     public bool UseForExtension { get; set; }
+    public string? ChessableCourseId { get; set; }
 }
 
 public class RepertoireDetailDto
@@ -27,6 +28,7 @@ public class RepertoireDetailDto
     public DateTime UpdatedAt { get; set; }
     public List<RepertoireFileDto> Files { get; set; } = new();
     public bool UseForExtension { get; set; }
+    public string? ChessableCourseId { get; set; }
 }
 
 public class RepertoireFileDto
@@ -48,6 +50,8 @@ public class CreateRepertoireDto
     public RepertoireKind Kind { get; set; } = RepertoireKind.None;
     /// <summary>Von der Extension nutzbar? Default true (bestehendes Verhalten).</summary>
     public bool UseForExtension { get; set; } = true;
+    [MaxLength(32)]
+    public string? ChessableCourseId { get; set; }
 }
 
 public class UpdateRepertoireDto
@@ -60,6 +64,10 @@ public class UpdateRepertoireDto
     public bool? IsPublic { get; set; }
     public RepertoireKind? Kind { get; set; }
     public bool? UseForExtension { get; set; }
+    /// <summary>Setzt die Chessable-Kurs-ID. Leerer String wird als null gespeichert (Verknüpfung löschen).</summary>
+    [MaxLength(32)]
+    public string? ChessableCourseId { get; set; }
+    public bool UpdateChessableCourseId { get; set; }
 }
 
 public class ExtensionRepertoireDto
@@ -70,6 +78,7 @@ public class ExtensionRepertoireDto
     public RepertoireKind Kind { get; set; }
     /// <summary>Summe aller File-Groessen — Hinweis fuer den Client (Soft-Limit-Warning).</summary>
     public long TotalSizeBytes { get; set; }
+    public string? ChessableCourseId { get; set; }
 }
 
 /// <summary>

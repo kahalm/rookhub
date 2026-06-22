@@ -47,7 +47,8 @@ public class RepertoireService
                 CreatedAt = r.CreatedAt,
                 UpdatedAt = r.UpdatedAt,
                 FileCount = r.Files.Count,
-                UseForExtension = r.UseForExtension
+                UseForExtension = r.UseForExtension,
+                ChessableCourseId = r.ChessableCourseId
             })
             .ToListAsync();
     }
@@ -75,7 +76,8 @@ public class RepertoireService
                 FileSize = f.FileSize,
                 UploadedAt = f.UploadedAt
             }).ToList(),
-            UseForExtension = rep.UseForExtension
+            UseForExtension = rep.UseForExtension,
+            ChessableCourseId = rep.ChessableCourseId
         };
     }
 
@@ -92,7 +94,8 @@ public class RepertoireService
             Description = dto.Description,
             IsPublic = dto.IsPublic,
             Kind = dto.Kind,
-            UseForExtension = dto.UseForExtension
+            UseForExtension = dto.UseForExtension,
+            ChessableCourseId = string.IsNullOrWhiteSpace(dto.ChessableCourseId) ? null : dto.ChessableCourseId
         };
 
         _db.Repertoires.Add(rep);
@@ -108,7 +111,8 @@ public class RepertoireService
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
             FileCount = 0,
-            UseForExtension = rep.UseForExtension
+            UseForExtension = rep.UseForExtension,
+            ChessableCourseId = rep.ChessableCourseId
         };
     }
 
@@ -126,6 +130,8 @@ public class RepertoireService
         // Aenderung am Extension-Flag aendert das analysierte Positions-Set → Cache verwerfen.
         var extChanged = dto.UseForExtension.HasValue && dto.UseForExtension.Value != rep.UseForExtension;
         if (dto.UseForExtension.HasValue) rep.UseForExtension = dto.UseForExtension.Value;
+        if (dto.UpdateChessableCourseId)
+            rep.ChessableCourseId = string.IsNullOrWhiteSpace(dto.ChessableCourseId) ? null : dto.ChessableCourseId;
         rep.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -143,7 +149,8 @@ public class RepertoireService
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
             FileCount = fileCount,
-            UseForExtension = rep.UseForExtension
+            UseForExtension = rep.UseForExtension,
+            ChessableCourseId = rep.ChessableCourseId
         };
     }
 
@@ -186,6 +193,15 @@ public class RepertoireService
         // nicht nur die Teilstrings "[Event" / "1." irgendwo (die auch beliebigen Text durchlassen).
         if (!LooksLikePgn(content))
             throw new InvalidOperationException("File does not appear to be valid PGN content.");
+
+        // Chessable-Kurs-ID aus [Site]-Tag (piratechess-Export) automatisch übernehmen,
+        // wenn noch keine ID am Repertoire gesetzt ist.
+        if (rep.ChessableCourseId == null)
+        {
+            var siteMatch = Regex.Match(content, @"\[Site\s+""https://www\.chessable\.com/course/(\d+)/?""", RegexOptions.None, TimeSpan.FromSeconds(2));
+            if (siteMatch.Success)
+                rep.ChessableCourseId = siteMatch.Groups[1].Value;
+        }
 
         var file = new RepertoireFile
         {
@@ -259,7 +275,8 @@ public class RepertoireService
                 Name = r.Name,
                 FileCount = r.Files.Count,
                 Kind = r.Kind,
-                TotalSizeBytes = r.Files.Sum(f => f.FileSize)
+                TotalSizeBytes = r.Files.Sum(f => f.FileSize),
+                ChessableCourseId = r.ChessableCourseId
             })
             .ToListAsync();
     }

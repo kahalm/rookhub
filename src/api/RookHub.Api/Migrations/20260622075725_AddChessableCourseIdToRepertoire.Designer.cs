@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260622075725_AddChessableCourseIdToRepertoire")]
+    partial class AddChessableCourseIdToRepertoire
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -244,12 +247,6 @@ namespace RookHub.Api.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("HintsJson")
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("HintsVersion")
-                        .HasColumnType("int");
-
                     b.Property<string>("LineId")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -313,9 +310,6 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("BookPuzzleId")
                         .HasColumnType("int");
 
-                    b.Property<int>("HintsUsed")
-                        .HasColumnType("int");
-
                     b.Property<bool>("Solved")
                         .HasColumnType("tinyint(1)");
 
@@ -348,9 +342,6 @@ namespace RookHub.Api.Migrations
 
                     b.Property<DateTime>("AttemptedAt")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("CourseKind")
-                        .HasColumnType("int");
 
                     b.Property<int>("MovesTrained")
                         .HasColumnType("int");
@@ -511,9 +502,6 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("BookPuzzleId")
                         .HasColumnType("int");
 
-                    b.Property<int>("HintsUsed")
-                        .HasColumnType("int");
-
                     b.Property<bool>("Solved")
                         .HasColumnType("tinyint(1)");
 
@@ -551,9 +539,6 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("LastMode")
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
-
-                    b.Property<DateTime?>("ResetAt")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
@@ -851,40 +836,6 @@ namespace RookHub.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("GroupTrainingGoals");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.ManualActivity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Amount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<int>("Kind")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "Date");
-
-                    b.ToTable("ManualActivities");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.MenuItemGroupAccess", b =>
@@ -1401,69 +1352,6 @@ namespace RookHub.Api.Migrations
                     b.ToTable("RevengeNotifications");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.SavedGame", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Black")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ExternalId")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<string>("Pgn")
-                        .IsRequired()
-                        .HasColumnType("LONGTEXT");
-
-                    b.Property<DateTime?>("PlayedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Result")
-                        .HasMaxLength(12)
-                        .HasColumnType("varchar(12)");
-
-                    b.Property<string>("ShareToken")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("varchar(32)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
-
-                    b.Property<string>("SourceUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("White")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ShareToken")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.HasIndex("UserId", "Source", "ExternalId");
-
-                    b.ToTable("SavedGames");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.Tag", b =>
                 {
                     b.Property<int>("Id")
@@ -1572,9 +1460,6 @@ namespace RookHub.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
-
-                    b.Property<DateOnly?>("EventDate")
-                        .HasColumnType("date");
 
                     b.Property<DateTime>("SubscribedAt")
                         .HasColumnType("datetime(6)");
@@ -2112,17 +1997,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Group");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.ManualActivity", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.MenuItemGroupAccess", b =>
                 {
                     b.HasOne("RookHub.Api.Models.Group", "Group")
@@ -2311,17 +2185,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Puzzle");
 
                     b.Navigation("TargetUser");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.SavedGame", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.TournamentFavorite", b =>

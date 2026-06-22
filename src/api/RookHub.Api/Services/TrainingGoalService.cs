@@ -133,6 +133,7 @@ public class TrainingGoalService
             UserId = userId,
             TimeSeconds = Math.Clamp(dto.SecondsActive, 0, PerChessableFlushCapSeconds),
             MovesTrained = Math.Max(0, dto.MovesTrained),
+            CourseKind = dto.CourseKind,
             AttemptedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();

@@ -455,7 +455,9 @@
       "editTitle": "Repertoire bearbeiten",
       "save": "Speichern",
       "useForExtension": "Für die Extension verwenden",
-      "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung/das Userscript dieses Repertoire zur Abweichungserkennung im Analysemodus."
+      "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung/das Userscript dieses Repertoire zur Abweichungserkennung im Analysemodus.",
+      "chessableCourseId": "Chessable-Kurs-ID",
+      "chessableCourseIdHint": "Numerische Kurs-ID aus der Chessable-URL (z. B. 12345). Verknüpft dieses Repertoire mit einem Chessable-Kurs."
     },
     "kind": {
       "none": "—",

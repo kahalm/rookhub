@@ -36,6 +36,11 @@ import { Repertoire } from '../../core/models';
             <mat-option [value]="3">{{ 'repertoire.kind.endgame' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'repertoire.dialog.chessableCourseId' | translate }}</mat-label>
+          <input matInput [(ngModel)]="chessableCourseId" name="chessableCourseId" maxlength="32" placeholder="z. B. 12345">
+          <mat-hint>{{ 'repertoire.dialog.chessableCourseIdHint' | translate }}</mat-hint>
+        </mat-form-field>
         <mat-checkbox [(ngModel)]="isPublic" name="isPublic">{{ 'repertoire.dialog.public' | translate }}</mat-checkbox>
         <mat-checkbox [(ngModel)]="useForExtension" name="useForExtension">{{ 'repertoire.dialog.useForExtension' | translate }}</mat-checkbox>
         <p class="ext-note">{{ 'repertoire.dialog.useForExtensionHint' | translate }}</p>
@@ -43,7 +48,7 @@ import { Repertoire } from '../../core/models';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, description, isPublic, kind, useForExtension })">
+      <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, description, isPublic, kind, useForExtension, chessableCourseId: chessableCourseId || null, updateChessableCourseId: true })">
         {{ (editMode ? 'repertoire.dialog.save' : 'repertoire.dialog.create') | translate }}
       </button>
     </mat-dialog-actions>
@@ -58,6 +63,7 @@ export class CreateRepertoireDialogComponent {
   kind: RepertoireKind = 0;
   /** Default true: neue Repertoires werden standardmaessig von der Extension genutzt (abwaehlbar). */
   useForExtension = true;
+  chessableCourseId = '';
   editMode = false;
 
   constructor(
@@ -71,6 +77,7 @@ export class CreateRepertoireDialogComponent {
       this.isPublic = data.isPublic;
       this.kind = data.kind as RepertoireKind;
       this.useForExtension = data.useForExtension;
+      this.chessableCourseId = data.chessableCourseId ?? '';
     }
   }
 }

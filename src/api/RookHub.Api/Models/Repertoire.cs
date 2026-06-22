@@ -36,6 +36,14 @@ public class Repertoire
     /// </summary>
     public int ImportVersion { get; set; }
 
+    /// <summary>
+    /// Optionale Chessable-Kurs-ID (numerisch als String, z. B. "12345"), die dieses Repertoire
+    /// mit einem Chessable-Kurs verknüpft. Ermöglicht der Browser-Extension, beim Training auf
+    /// chessable.com automatisch den richtigen <see cref="Kind"/> (Opening/Endgame/…) zu ermitteln.
+    /// </summary>
+    [MaxLength(32)]
+    public string? ChessableCourseId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

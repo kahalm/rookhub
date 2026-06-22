@@ -32,6 +32,8 @@ public class ChessableActivityInputDto
     [Range(1, 3600)] public int SecondsActive { get; set; }
     /// <summary>Anzahl in diesem Häppchen abgeschlossener (gewerteter) Züge — informativ.</summary>
     [Range(0, 10000)] public int MovesTrained { get; set; }
+    /// <summary>Art des Chessable-Kurses (Opening/Middlegame/Endgame), ermittelt aus Repertoire-Zuordnung. Null = unbekannt.</summary>
+    public RepertoireKind? CourseKind { get; set; }
 }
 
 /// <summary>Eingabe zum Setzen eines Ziels (persönlich oder als Gruppen-Vorlage).

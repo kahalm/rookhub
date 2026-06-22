@@ -455,7 +455,9 @@
       "editTitle": "Edit Repertoire",
       "save": "Save",
       "useForExtension": "Use for the extension",
-      "useForExtensionHint": "When enabled, the browser extension/userscript uses this repertoire for deviation detection while you analyze a game."
+      "useForExtensionHint": "When enabled, the browser extension/userscript uses this repertoire for deviation detection while you analyze a game.",
+      "chessableCourseId": "Chessable Course ID",
+      "chessableCourseIdHint": "Numeric course ID from the Chessable URL (e.g. 12345). Links this repertoire to a Chessable course."
     },
     "kind": {
       "none": "—",

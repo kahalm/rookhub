@@ -115,6 +115,7 @@ export interface Repertoire {
   useForExtension: boolean;
   createdAt: string;
   updatedAt: string;
+  chessableCourseId: string | null;
 }
 
 export interface RepertoireDetail {
@@ -127,6 +128,7 @@ export interface RepertoireDetail {
   useForExtension: boolean;
   createdAt: string;
   updatedAt: string;
+  chessableCourseId: string | null;
 }
 
 export interface RepertoireFile {

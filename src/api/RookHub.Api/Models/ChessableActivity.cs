@@ -21,5 +21,8 @@ public class ChessableActivity
     /// <summary>Anzahl in diesem Häppchen abgeschlossener (gewerteter) Züge — informativ.</summary>
     public int MovesTrained { get; set; }
 
+    /// <summary>Art des Chessable-Kurses, aus Repertoire-Zuordnung (ChessableCourseId). Null = unbekannt.</summary>
+    public RepertoireKind? CourseKind { get; set; }
+
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }
