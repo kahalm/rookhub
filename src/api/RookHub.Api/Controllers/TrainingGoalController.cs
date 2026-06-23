@@ -87,4 +87,20 @@ public class TrainingGoalController : BaseApiController
     [HttpDelete("manual/{id:int}")]
     public async Task<IActionResult> DeleteManual(int id)
         => await _service.DeleteManualAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    /// <summary>Chessable-Kurs-History (nach Kurs gruppiert) inkl. ermitteltem Thema; mit
+    /// <paramref name="unassignedOnly"/> nur Kurse ohne feststehendes Thema.</summary>
+    [HttpGet("chessable-courses")]
+    public async Task<ActionResult<List<ChessableCourseSummaryDto>>> ChessableCourses([FromQuery] bool unassignedOnly = false)
+        => Ok(await _service.GetChessableCoursesAsync(GetUserId(), unassignedOnly));
+
+    /// <summary>Einem Chessable-Kurs manuell ein Thema zuordnen (Upsert). 400 bei leerer Kurs-ID.</summary>
+    [HttpPut("chessable-courses/{courseId}")]
+    public async Task<IActionResult> SetChessableCourseTheme(string courseId, [FromBody] ChessableCourseThemeInputDto dto)
+        => await _service.SetChessableCourseThemeAsync(GetUserId(), courseId, dto.Theme) ? NoContent() : BadRequest();
+
+    /// <summary>Manuelle Themen-Zuordnung eines Kurses entfernen (404, wenn keine vorhanden war).</summary>
+    [HttpDelete("chessable-courses/{courseId}")]
+    public async Task<IActionResult> ClearChessableCourseTheme(string courseId)
+        => await _service.ClearChessableCourseThemeAsync(GetUserId(), courseId) ? NoContent() : NotFound();
 }

@@ -15,6 +15,7 @@ import {
   TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
   ManualActivity, ManualActivityInput, ManualActivityKind,
   SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS,
+  ChessableCourseSummary, ChessableTheme,
 } from './training-goals.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -364,6 +365,56 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
             </mat-card-content>
           </mat-card>
         }
+
+        <!-- Chessable-Kurse: History + manuelle Themen-Zuordnung -->
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ 'trainingGoals.chessable.title' | translate }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p class="intro small">{{ 'trainingGoals.chessable.intro' | translate }}</p>
+            <label class="filter-toggle">
+              <input type="checkbox" [ngModel]="chessableUnassignedOnly"
+                     (ngModelChange)="toggleUnassignedFilter($event)" />
+              {{ 'trainingGoals.chessable.unassignedOnly' | translate }}
+            </label>
+
+            @if (loadingCourses) {
+              <app-loading-spinner />
+            } @else if (!chessableCourses.length) {
+              <p class="muted">{{ (chessableUnassignedOnly ? 'trainingGoals.chessable.noneUnassigned' : 'trainingGoals.chessable.none') | translate }}</p>
+            } @else {
+              <ul class="course-list">
+                @for (c of chessableCourses; track c.courseId) {
+                  <li>
+                    <div class="c-main">
+                      <span class="c-name">{{ c.courseName || ('trainingGoals.chessable.course' | translate) }}</span>
+                      <span class="c-id">#{{ c.courseId }}</span>
+                    </div>
+                    <span class="c-time">{{ mins(c.totalSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></span>
+                    @if (!c.assignedTheme && c.autoTheme) {
+                      <span class="c-auto" [matTooltip]="'trainingGoals.chessable.autoHint' | translate">
+                        {{ 'trainingGoals.chessable.auto' | translate }}: {{ ('trainingGoals.theme.' + c.autoTheme) | translate }}
+                      </span>
+                    } @else if (!c.isAssigned) {
+                      <span class="c-unassigned">{{ 'trainingGoals.chessable.unassigned' | translate }}</span>
+                    }
+                    <mat-form-field appearance="outline" class="c-theme" subscriptSizing="dynamic">
+                      <mat-label>{{ 'trainingGoals.chessable.themeLabel' | translate }}</mat-label>
+                      <mat-select [ngModel]="selectedTheme(c)" [disabled]="savingCourseId === c.courseId"
+                                  (ngModelChange)="assignTheme(c, $event)">
+                        <mat-option [value]="null">{{ 'trainingGoals.chessable.clear' | translate }}</mat-option>
+                        @for (t of chessableThemes; track t) {
+                          <mat-option [value]="t">{{ ('trainingGoals.theme.' + t.toLowerCase()) | translate }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </li>
+                }
+              </ul>
+            }
+          </mat-card-content>
+        </mat-card>
       }
     </div>
   `,
@@ -435,6 +486,17 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     table.history td { font-variant-numeric: tabular-nums; }
     table.history td.strong { font-weight: 600; }
     table.history .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
+    .filter-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; margin: 4px 0 10px; cursor: pointer; color: color-mix(in srgb, currentColor 75%, transparent); }
+    .course-list { list-style: none; padding: 0; margin: 0; }
+    .course-list li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); flex-wrap: wrap; }
+    .course-list .c-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
+    .course-list .c-name { font-weight: 600; overflow-wrap: anywhere; }
+    .course-list .c-id { font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); font-variant-numeric: tabular-nums; }
+    .course-list .c-time { font-variant-numeric: tabular-nums; white-space: nowrap; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .course-list .c-time .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
+    .course-list .c-auto { font-size: .78rem; font-style: italic; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; }
+    .course-list .c-unassigned { font-size: .78rem; color: #c2772e; white-space: nowrap; }
+    .course-list .c-theme { width: 170px; flex: 0 0 auto; }
   `]
 })
 export class TrainingGoalsComponent implements OnInit {
@@ -460,6 +522,13 @@ export class TrainingGoalsComponent implements OnInit {
   savingManual = false;
   editingManualId: number | null = null;
   manualEdit: ManualActivityInput = this.emptyManual();
+
+  // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
+  readonly chessableThemes: ChessableTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics'];
+  chessableCourses: ChessableCourseSummary[] = [];
+  chessableUnassignedOnly = false;
+  loadingCourses = false;
+  savingCourseId: string | null = null;
 
   constructor(
     private service: TrainingGoalService,
@@ -498,8 +567,47 @@ export class TrainingGoalsComponent implements OnInit {
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
         this.loading = false;
+        this.loadChessableCourses();
       },
       error: () => { this.loading = false; },
+    });
+  }
+
+  // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
+
+  /** Lädt die Chessable-Kurs-History (respektiert den „nur unzugeordnet"-Filter). */
+  loadChessableCourses(): void {
+    this.loadingCourses = true;
+    this.service.listChessableCourses(this.chessableUnassignedOnly).subscribe({
+      next: list => { this.chessableCourses = list; this.loadingCourses = false; },
+      error: () => { this.loadingCourses = false; },
+    });
+  }
+
+  toggleUnassignedFilter(on: boolean): void {
+    this.chessableUnassignedOnly = on;
+    this.loadChessableCourses();
+  }
+
+  /** mat-select-Wert je Kurs: das manuell zugeordnete Thema (Großschreibung) oder null. */
+  selectedTheme(c: ChessableCourseSummary): ChessableTheme | null {
+    if (!c.assignedTheme) return null;
+    return (c.assignedTheme.charAt(0).toUpperCase() + c.assignedTheme.slice(1)) as ChessableTheme;
+  }
+
+  /** Thema eines Kurses setzen (null = manuelle Zuordnung entfernen). Aktualisiert danach alles. */
+  assignTheme(c: ChessableCourseSummary, theme: ChessableTheme | null): void {
+    this.savingCourseId = c.courseId;
+    const req = theme
+      ? this.service.setChessableCourseTheme(c.courseId, theme)
+      : this.service.clearChessableCourseTheme(c.courseId);
+    req.subscribe({
+      next: () => {
+        this.savingCourseId = null;
+        this.snackbar.success(this.translate.instant('trainingGoals.chessable.saved'));
+        this.reload(); // Themen-Aufschlüsselung + History neu laden
+      },
+      error: () => { this.savingCourseId = null; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
     });
   }
 

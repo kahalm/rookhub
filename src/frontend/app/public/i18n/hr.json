@@ -1404,6 +1404,20 @@
       "endgame": "Završnica",
       "tactics": "Taktika",
       "other": "Ostalo"
+    },
+    "chessable": {
+      "title": "Chessable tečajevi",
+      "intro": "Tvoje Chessable vrijeme treniranja po tečaju. Dodijeli tečaju temu kako bi se njegovo vrijeme ispravno brojilo — korisno kada se tečaj ne može povezati s RookHub repertoarom.",
+      "unassignedOnly": "Samo tečajevi bez teme",
+      "none": "Još nema zabilježenih Chessable tečajeva.",
+      "noneUnassigned": "Svi tečajevi imaju temu.",
+      "course": "Chessable tečaj",
+      "themeLabel": "Tema",
+      "clear": "— (ništa)",
+      "auto": "auto",
+      "autoHint": "Tema automatski izvedena iz odgovarajućeg RookHub repertoara.",
+      "unassigned": "nije dodijeljeno",
+      "saved": "Tema spremljena"
     }
   },
   "install": {

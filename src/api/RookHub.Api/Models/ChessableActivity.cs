@@ -24,5 +24,13 @@ public class ChessableActivity
     /// <summary>Art des Chessable-Kurses, aus Repertoire-Zuordnung (ChessableCourseId). Null = unbekannt.</summary>
     public RepertoireKind? CourseKind { get; set; }
 
+    /// <summary>Chessable-Kurs-ID (numerisch als String), von der Extension aus der Seite aufgelöst.
+    /// Grundlage für die Kurs-History + manuelle Themen-Zuordnung (<see cref="ChessableCourseTheme"/>).
+    /// Null bei Altbestand / nicht ermittelbarer Kurs-ID.</summary>
+    public string? CourseId { get; set; }
+
+    /// <summary>Lesbarer Kursname (von der Extension aus der Seite gelesen), nur zur Anzeige. Null = unbekannt.</summary>
+    public string? CourseName { get; set; }
+
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

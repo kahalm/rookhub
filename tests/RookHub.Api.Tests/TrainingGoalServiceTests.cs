@@ -369,6 +369,106 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal(3600, rows[1].TimeSeconds);   // auf PerChessableFlushCapSeconds gedeckelt
     }
 
+    [Fact]
+    public async Task RecordChessableActivity_PersistsCourseIdAndName_Trimmed()
+    {
+        var u = await CreateUserAsync();
+        await _service.RecordChessableActivityAsync(u.Id, new ChessableActivityInputDto
+        { SecondsActive = 60, CourseId = "  12345 ", CourseName = "  Caro-Kann  " });
+
+        var row = await _db.ChessableActivities.SingleAsync(a => a.UserId == u.Id);
+        Assert.Equal("12345", row.CourseId);
+        Assert.Equal("Caro-Kann", row.CourseName);
+    }
+
+    // ---- Chessable-Kurs-History + manuelle Themen-Zuordnung --------------
+
+    [Fact]
+    public async Task GetChessableCourses_GroupsByCourse_ResolvesAutoAndManualTheme()
+    {
+        var u = await CreateUserAsync();
+        var now = DateTime.UtcNow;
+        // Kurs A: nur Auto-Thema aus CourseKind (Opening).
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 100, MovesTrained = 2, CourseId = "111", CourseName = "Course A", CourseKind = RepertoireKind.Opening, AttemptedAt = now.AddMinutes(-10) });
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 50, MovesTrained = 1, CourseId = "111", CourseName = "Course A", AttemptedAt = now });
+        // Kurs B: kein Thema → unzugeordnet.
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 70, CourseId = "222", CourseName = "Course B", AttemptedAt = now });
+        // Aktivität ohne Kurs-ID → taucht NICHT in der History auf.
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 999, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var all = await _service.GetChessableCoursesAsync(u.Id);
+        Assert.Equal(2, all.Count);
+        var a = all.Single(c => c.CourseId == "111");
+        Assert.Equal("Course A", a.CourseName);
+        Assert.Equal(150, a.TotalSeconds);
+        Assert.Equal(2, a.ActivityCount);
+        Assert.Equal("opening", a.AutoTheme);
+        Assert.Null(a.AssignedTheme);
+        Assert.True(a.IsAssigned);          // Auto-Thema zählt als zugeordnet
+        var b = all.Single(c => c.CourseId == "222");
+        Assert.False(b.IsAssigned);
+
+        // Filter „nur unzugeordnet" liefert nur Kurs B.
+        var unassigned = await _service.GetChessableCoursesAsync(u.Id, unassignedOnly: true);
+        Assert.Equal("222", Assert.Single(unassigned).CourseId);
+    }
+
+    [Fact]
+    public async Task SetChessableCourseTheme_Upserts_TakesNameFromActivity_AndDrivesTracker()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(daily: 10));
+        var now = DateTime.UtcNow;
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 120, CourseId = "333", CourseName = "Endgame Course", AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        // Vor Zuordnung: kein CourseKind → other.
+        var before = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
+        Assert.Equal(120, before.ByTheme.OtherSeconds);
+
+        Assert.True(await _service.SetChessableCourseThemeAsync(u.Id, "333", ChessableTheme.Endgame));
+        var assignment = await _db.ChessableCourseThemes.SingleAsync(t => t.UserId == u.Id && t.CourseId == "333");
+        Assert.Equal("Endgame Course", assignment.CourseName);  // Name aus Aktivität übernommen
+
+        // Nach Zuordnung: Zeit zählt rückwirkend als Endspiel.
+        var after = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
+        Assert.Equal(120, after.ByTheme.EndgameSeconds);
+        Assert.Equal(0, after.ByTheme.OtherSeconds);
+
+        // Manuelle Zuordnung hat Vorrang vor CourseKind: Upsert auf Tactics.
+        Assert.True(await _service.SetChessableCourseThemeAsync(u.Id, "333", ChessableTheme.Tactics));
+        Assert.Equal(1, await _db.ChessableCourseThemes.CountAsync(t => t.UserId == u.Id)); // kein Duplikat
+        var summary = (await _service.GetChessableCoursesAsync(u.Id)).Single();
+        Assert.Equal("tactics", summary.AssignedTheme);
+    }
+
+    [Fact]
+    public async Task ManualTheme_OverridesAutoCourseKind_InTracker()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(daily: 10));
+        var now = DateTime.UtcNow;
+        // Auto-Thema wäre Opening, manuelle Zuordnung sagt Tactics → Tactics gewinnt.
+        _db.ChessableActivities.Add(new ChessableActivity { UserId = u.Id, TimeSeconds = 90, CourseId = "444", CourseKind = RepertoireKind.Opening, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+        await _service.SetChessableCourseThemeAsync(u.Id, "444", ChessableTheme.Tactics);
+
+        var day = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
+        Assert.Equal(90, day.ByTheme.TacticsSeconds);
+        Assert.Equal(0, day.ByTheme.OpeningSeconds);
+    }
+
+    [Fact]
+    public async Task ClearChessableCourseTheme_RemovesAssignment()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetChessableCourseThemeAsync(u.Id, "555", ChessableTheme.Middlegame);
+        Assert.True(await _service.ClearChessableCourseThemeAsync(u.Id, "555"));
+        Assert.False(await _service.ClearChessableCourseThemeAsync(u.Id, "555")); // schon weg → 404-Pfad
+        Assert.Empty(await _db.ChessableCourseThemes.Where(t => t.UserId == u.Id).ToListAsync());
+    }
+
     // ---- Heute / Wochenstand ----------------------------------------------
 
     [Fact]

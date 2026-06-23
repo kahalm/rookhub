@@ -1406,6 +1406,20 @@
       "endgame": "Endspiel",
       "tactics": "Taktik",
       "other": "Sonstiges"
+    },
+    "chessable": {
+      "title": "Chessable-Kurse",
+      "intro": "Deine Chessable-Trainingszeit pro Kurs. Ordne einem Kurs ein Thema zu, damit seine Zeit richtig gezählt wird — praktisch, wenn ein Kurs keinem RookHub-Repertoire zugeordnet werden kann.",
+      "unassignedOnly": "Nur Kurse ohne Thema",
+      "none": "Noch keine Chessable-Kurse erfasst.",
+      "noneUnassigned": "Alle Kurse haben ein Thema.",
+      "course": "Chessable-Kurs",
+      "themeLabel": "Thema",
+      "clear": "— (keins)",
+      "auto": "auto",
+      "autoHint": "Thema automatisch aus einem passenden RookHub-Repertoire abgeleitet.",
+      "unassigned": "nicht zugeordnet",
+      "saved": "Thema gespeichert"
     }
   },
   "install": {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.178.6';
+export const APP_VERSION = '0.179.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.179.0", date: "2026-06-23", changes: [
+    { en: "Training goals now show a Chessable courses section: your training time grouped per course, with a filter for courses that don't have a theme yet. For any course you can manually assign a theme (opening / middlegame / endgame / tactics) — handy when a course isn't linked to a RookHub repertoire. The assignment retroactively re-classifies that course's time in the by-theme breakdown. (Requires RepCheck v1.16.0+, which reports the course id and name.)", de: "Trainingsziele zeigen jetzt eine Chessable-Kurse-Sektion: deine Trainingszeit gruppiert pro Kurs, mit Filter auf Kurse, die noch kein Thema haben. Für jeden Kurs kannst du manuell ein Thema hinterlegen (Eröffnung / Mittelspiel / Endspiel / Taktik) — praktisch, wenn ein Kurs keinem RookHub-Repertoire zugeordnet ist. Die Zuordnung sortiert die Zeit des Kurses rückwirkend in der Themen-Aufschlüsselung ein. (Benötigt RepCheck ab v1.16.0, das Kurs-ID und -Name meldet.)" },
+  ]},
   { version: "0.178.6", date: "2026-06-23", changes: [
     { en: "Games viewer mobile: tap zones now extend to the screen edges (dialog is full-width on mobile, board fills the full viewport width).", de: "Partien-Viewer mobil: Tipp-Zonen reichen jetzt bis an den Bildschirmrand (Dialog ist auf Mobile ganzseitig, Brett füllt die volle Bildschirmbreite)." },
   ]},

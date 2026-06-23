@@ -86,6 +86,25 @@ export interface ManualActivityInput {
   note?: string | null;
 }
 
+/** Manuell zuweisbares Thema eines Chessable-Kurses (entspricht der Themen-Aufschlüsselung ohne „other"). */
+export type ChessableTheme = 'Opening' | 'Middlegame' | 'Endgame' | 'Tactics';
+
+/** Ein in der Chessable-History gruppierter Kurs inkl. ermitteltem Thema. */
+export interface ChessableCourseSummary {
+  courseId: string;
+  courseName: string | null;
+  totalSeconds: number;
+  totalMoves: number;
+  activityCount: number;
+  lastActivityAt: string;
+  /** Manuell zugeordnetes Thema (lowercase) oder null. */
+  assignedTheme: string | null;
+  /** Automatisch aus Repertoire abgeleitetes Thema (lowercase) oder null. */
+  autoTheme: string | null;
+  /** true, wenn ein Thema feststeht (manuell ODER automatisch). */
+  isAssigned: boolean;
+}
+
 export interface TrackerResponse {
   goal: TrainingGoal;
   days: TrackerDay[];
@@ -173,5 +192,21 @@ export class TrainingGoalService {
   /** Eigene manuelle Aktivität löschen. */
   deleteManual(id: number): Observable<void> {
     return this.http.delete<void>(`/api/training-goals/manual/${id}`);
+  }
+
+  /** Chessable-Kurs-History (nach Kurs gruppiert); `unassignedOnly` filtert auf Kurse ohne Thema. */
+  listChessableCourses(unassignedOnly = false): Observable<ChessableCourseSummary[]> {
+    return this.http.get<ChessableCourseSummary[]>('/api/training-goals/chessable-courses',
+      { params: new HttpParams().set('unassignedOnly', unassignedOnly) });
+  }
+
+  /** Einem Chessable-Kurs manuell ein Thema zuordnen. */
+  setChessableCourseTheme(courseId: string, theme: ChessableTheme): Observable<void> {
+    return this.http.put<void>(`/api/training-goals/chessable-courses/${encodeURIComponent(courseId)}`, { theme });
+  }
+
+  /** Manuelle Themen-Zuordnung eines Chessable-Kurses entfernen. */
+  clearChessableCourseTheme(courseId: string): Observable<void> {
+    return this.http.delete<void>(`/api/training-goals/chessable-courses/${encodeURIComponent(courseId)}`);
   }
 }

@@ -50,6 +50,7 @@ public class AppDbContext : DbContext
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
+    public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
@@ -440,8 +441,22 @@ public class AppDbContext : DbContext
              .HasForeignKey(a => a.UserId)
              .OnDelete(DeleteBehavior.Cascade);
 
+            e.Property(a => a.CourseId).HasMaxLength(32);
+            e.Property(a => a.CourseName).HasMaxLength(200);
             // Fenster-Aggregation je User (AttemptedAt >= windowStart), analog CourseAttempt.
             e.HasIndex(a => new { a.UserId, a.AttemptedAt });
+        });
+
+        modelBuilder.Entity<ChessableCourseTheme>(e =>
+        {
+            e.HasOne(a => a.User)
+             .WithMany()
+             .HasForeignKey(a => a.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(a => a.CourseId).HasMaxLength(32);
+            e.Property(a => a.CourseName).HasMaxLength(200);
+            // Eine Themen-Zuordnung je (User, Kurs) — Upsert-Schlüssel.
+            e.HasIndex(a => new { a.UserId, a.CourseId }).IsUnique();
         });
 
         modelBuilder.Entity<ManualActivity>(e =>

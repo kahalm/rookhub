@@ -32,6 +32,41 @@ public class ChessableActivityInputDto
     [Range(0, 10000)] public int MovesTrained { get; set; }
     /// <summary>Art des Chessable-Kurses (Opening/Middlegame/Endgame), ermittelt aus Repertoire-Zuordnung. Null = unbekannt.</summary>
     public RepertoireKind? CourseKind { get; set; }
+    /// <summary>Chessable-Kurs-ID (numerisch als String), von der Extension aus der Seite aufgelöst. Null = unbekannt.</summary>
+    [MaxLength(32)] public string? CourseId { get; set; }
+    /// <summary>Lesbarer Kursname (nur Anzeige). Null = unbekannt.</summary>
+    [MaxLength(200)] public string? CourseName { get; set; }
+}
+
+/// <summary>Ein in der Chessable-History gruppierter Kurs: aggregierte Trainingszeit + ermitteltes Thema
+/// (manuelle Zuordnung &gt; Repertoire-Auto-Zuordnung &gt; unzugeordnet).</summary>
+public class ChessableCourseSummaryDto
+{
+    /// <summary>Chessable-Kurs-ID (numerisch als String).</summary>
+    public string CourseId { get; set; } = string.Empty;
+    /// <summary>Lesbarer Kursname (jüngster bekannter), falls vorhanden.</summary>
+    public string? CourseName { get; set; }
+    /// <summary>Summe der aktiven Trainingssekunden über alle Häppchen dieses Kurses.</summary>
+    public int TotalSeconds { get; set; }
+    /// <summary>Summe der gewerteten Züge über alle Häppchen — informativ.</summary>
+    public int TotalMoves { get; set; }
+    /// <summary>Anzahl gemeldeter Häppchen.</summary>
+    public int ActivityCount { get; set; }
+    /// <summary>Zeitpunkt der jüngsten Aktivität (UTC, ISO-8601).</summary>
+    public DateTime LastActivityAt { get; set; }
+    /// <summary>Manuell zugeordnetes Thema ("opening"/"middlegame"/"endgame"/"tactics") oder null.</summary>
+    public string? AssignedTheme { get; set; }
+    /// <summary>Automatisch aus einem Repertoire abgeleitetes Thema (RepertoireKind als String) oder null.</summary>
+    public string? AutoTheme { get; set; }
+    /// <summary>true, wenn ein Thema feststeht (manuell ODER automatisch) — sonst „nicht zugeordnet".</summary>
+    public bool IsAssigned { get; set; }
+}
+
+/// <summary>Eingabe zum manuellen Zuordnen eines Chessable-Kurses zu einem Thema.</summary>
+public class ChessableCourseThemeInputDto
+{
+    /// <summary>Thema: Opening/Middlegame/Endgame/Tactics.</summary>
+    [Required] public ChessableTheme Theme { get; set; }
 }
 
 /// <summary>Eingabe zum Setzen eines Ziels (persönlich oder als Gruppen-Vorlage).

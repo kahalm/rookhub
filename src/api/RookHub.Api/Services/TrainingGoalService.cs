@@ -131,16 +131,118 @@ public class TrainingGoalService
     /// Fließt über <see cref="AggregateAsync"/> in die Quelle „chessable" des Trackers.</summary>
     public async Task RecordChessableActivityAsync(int userId, ChessableActivityInputDto dto)
     {
+        var courseId = string.IsNullOrWhiteSpace(dto.CourseId) ? null : dto.CourseId.Trim();
+        var courseName = string.IsNullOrWhiteSpace(dto.CourseName) ? null : dto.CourseName.Trim();
         _db.ChessableActivities.Add(new ChessableActivity
         {
             UserId = userId,
             TimeSeconds = Math.Clamp(dto.SecondsActive, 0, PerChessableFlushCapSeconds),
             MovesTrained = Math.Max(0, dto.MovesTrained),
             CourseKind = dto.CourseKind,
+            CourseId = courseId?.Length > 32 ? courseId[..32] : courseId,
+            CourseName = courseName?.Length > 200 ? courseName[..200] : courseName,
             AttemptedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
     }
+
+    // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung --------------
+
+    /// <summary>Gruppiert die Chessable-Aktivitäten des Users nach Kurs-ID (nur Aktivitäten MIT Kurs-ID)
+    /// und liefert pro Kurs Zeit/Züge + ermitteltes Thema (manuelle Zuordnung &gt; Repertoire-Auto &gt; keins).
+    /// <paramref name="unassignedOnly"/> = nur Kurse ohne feststehendes Thema.</summary>
+    public async Task<List<ChessableCourseSummaryDto>> GetChessableCoursesAsync(int userId, bool unassignedOnly = false)
+    {
+        var acts = await _db.ChessableActivities.AsNoTracking()
+            .Where(a => a.UserId == userId && a.CourseId != null && a.CourseId != "")
+            .Select(a => new { a.CourseId, a.CourseName, a.CourseKind, a.TimeSeconds, a.MovesTrained, a.AttemptedAt })
+            .ToListAsync();
+
+        var assignments = await _db.ChessableCourseThemes.AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .ToDictionaryAsync(t => t.CourseId, t => t.Theme);
+
+        var summaries = acts
+            .GroupBy(a => a.CourseId!)
+            .Select(g =>
+            {
+                var latest = g.OrderByDescending(a => a.AttemptedAt).First();
+                var autoKind = g.Select(a => a.CourseKind).FirstOrDefault(k => k != null);
+                var hasManual = assignments.TryGetValue(g.Key, out var manual);
+                return new ChessableCourseSummaryDto
+                {
+                    CourseId = g.Key,
+                    CourseName = latest.CourseName,
+                    TotalSeconds = g.Sum(a => Math.Min(a.TimeSeconds, PerChessableFlushCapSeconds)),
+                    TotalMoves = g.Sum(a => a.MovesTrained),
+                    ActivityCount = g.Count(),
+                    LastActivityAt = latest.AttemptedAt,
+                    AssignedTheme = hasManual ? ThemeName(manual) : null,
+                    AutoTheme = autoKind?.ToString().ToLowerInvariant(),
+                    IsAssigned = hasManual || autoKind != null,
+                };
+            })
+            .OrderByDescending(s => s.LastActivityAt)
+            .ToList();
+
+        return unassignedOnly ? summaries.Where(s => !s.IsAssigned).ToList() : summaries;
+    }
+
+    /// <summary>Setzt/aktualisiert die manuelle Themen-Zuordnung eines Chessable-Kurses (Upsert je User+Kurs).
+    /// Übernimmt einen Kursnamen, wenn (noch) keiner gespeichert ist. Liefert false, wenn die Kurs-ID leer ist.</summary>
+    public async Task<bool> SetChessableCourseThemeAsync(int userId, string courseId, ChessableTheme theme)
+    {
+        courseId = (courseId ?? string.Empty).Trim();
+        if (courseId.Length == 0) return false;
+        if (courseId.Length > 32) courseId = courseId[..32];
+
+        var existing = await _db.ChessableCourseThemes
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.CourseId == courseId);
+        var now = DateTime.UtcNow;
+        if (existing == null)
+        {
+            // Kursnamen aus der jüngsten Aktivität dieses Kurses übernehmen (best-effort).
+            var name = await _db.ChessableActivities.AsNoTracking()
+                .Where(a => a.UserId == userId && a.CourseId == courseId && a.CourseName != null)
+                .OrderByDescending(a => a.AttemptedAt)
+                .Select(a => a.CourseName)
+                .FirstOrDefaultAsync();
+            _db.ChessableCourseThemes.Add(new ChessableCourseTheme
+            {
+                UserId = userId, CourseId = courseId, CourseName = name,
+                Theme = theme, CreatedAt = now, UpdatedAt = now,
+            });
+        }
+        else
+        {
+            existing.Theme = theme;
+            existing.UpdatedAt = now;
+        }
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    /// <summary>Entfernt die manuelle Themen-Zuordnung eines Kurses (Rückfall auf Auto/unzugeordnet).
+    /// Liefert false, wenn keine Zuordnung existierte.</summary>
+    public async Task<bool> ClearChessableCourseThemeAsync(int userId, string courseId)
+    {
+        courseId = (courseId ?? string.Empty).Trim();
+        var existing = await _db.ChessableCourseThemes
+            .FirstOrDefaultAsync(t => t.UserId == userId && t.CourseId == courseId);
+        if (existing == null) return false;
+        _db.ChessableCourseThemes.Remove(existing);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    private static string ThemeName(ChessableTheme t) => t switch
+    {
+        ChessableTheme.Opening => "opening",
+        ChessableTheme.Middlegame => "middlegame",
+        ChessableTheme.Endgame => "endgame",
+        ChessableTheme.Tactics => "tactics",
+        _ => "opening",
+    };
 
     // ----- Manuelle Offline-Aktivitäten (selbst gemeldet) ------------------
 
@@ -382,12 +484,20 @@ public class TrainingGoalService
             AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.CourseBook,
                     PhaseFromText(a.Tags, a.Chapter) ?? (a.Kind == BookKind.Study ? Thm.Other : Thm.Tactics));
 
-        // Quelle „chessable": aktiv trainierte Zeit-Häppchen — Thema aus CourseKind (sonst other).
+        // Quelle „chessable": aktiv trainierte Zeit-Häppchen — Thema aus manueller Kurs-Zuordnung
+        // (Vorrang), sonst aus CourseKind (Repertoire-Auto), sonst other.
+        var chessableThemes = await _db.ChessableCourseThemes.AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .ToDictionaryAsync(t => t.CourseId, t => t.Theme);
         foreach (var a in await _db.ChessableActivities.AsNoTracking()
                      .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
-                     .Select(a => new { a.AttemptedAt, a.TimeSeconds, a.CourseKind }).ToListAsync())
-            AddTime(a.AttemptedAt, a.TimeSeconds, PerChessableFlushCapSeconds, Src.Chessable,
-                    ThemeFromCourseKind(a.CourseKind));
+                     .Select(a => new { a.AttemptedAt, a.TimeSeconds, a.CourseKind, a.CourseId }).ToListAsync())
+        {
+            Thm thm = a.CourseId != null && chessableThemes.TryGetValue(a.CourseId, out var manual)
+                ? ThemeFromChessable(manual)
+                : ThemeFromCourseKind(a.CourseKind);
+            AddTime(a.AttemptedAt, a.TimeSeconds, PerChessableFlushCapSeconds, Src.Chessable, thm);
+        }
 
         // Spielen: externe Rapid-/Classical-Partien je Tag (Lichess/chess.com) — separat, kein Zeit-Topf.
         foreach (var p in await _db.PlayTimeDailies.AsNoTracking()
@@ -443,6 +553,15 @@ public class TrainingGoalService
         RepertoireKind.Opening => Thm.Opening,
         RepertoireKind.Middlegame => Thm.Middlegame,
         RepertoireKind.Endgame => Thm.Endgame,
+        _ => Thm.Other,
+    };
+
+    private static Thm ThemeFromChessable(ChessableTheme t) => t switch
+    {
+        ChessableTheme.Opening => Thm.Opening,
+        ChessableTheme.Middlegame => Thm.Middlegame,
+        ChessableTheme.Endgame => Thm.Endgame,
+        ChessableTheme.Tactics => Thm.Tactics,
         _ => Thm.Other,
     };
 

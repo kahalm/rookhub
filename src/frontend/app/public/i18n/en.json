@@ -1406,6 +1406,20 @@
       "endgame": "Endgame",
       "tactics": "Tactics",
       "other": "Other"
+    },
+    "chessable": {
+      "title": "Chessable courses",
+      "intro": "Your Chessable training time per course. Assign a theme to a course so its time is counted correctly — useful when a course can't be matched to a RookHub repertoire.",
+      "unassignedOnly": "Only courses without a theme",
+      "none": "No Chessable courses recorded yet.",
+      "noneUnassigned": "All courses have a theme.",
+      "course": "Chessable course",
+      "themeLabel": "Theme",
+      "clear": "— (none)",
+      "auto": "auto",
+      "autoHint": "Theme derived automatically from a matching RookHub repertoire.",
+      "unassigned": "not assigned",
+      "saved": "Theme saved"
     }
   },
   "install": {
