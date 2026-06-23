@@ -17,6 +17,7 @@ import { Key } from 'chessground/types';
 export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   @Input() lastMove?: [string, string];
+  @Input() flipped = false;
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
 
@@ -51,6 +52,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.ground = Chessground(el, {
       fen: this.fen,
       viewOnly: true,
+      orientation: this.flipped ? 'black' : 'white',
       lastMove: this.lastMove as Key[] | undefined,
       animation: { enabled: true, duration: 200 },
       highlight: { lastMove: true, check: true },
@@ -71,9 +73,10 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
-    if (changes['fen'] || changes['lastMove']) {
+    if (changes['fen'] || changes['lastMove'] || changes['flipped']) {
       this.ground.set({
         fen: this.fen,
+        orientation: this.flipped ? 'black' : 'white',
         lastMove: this.lastMove as Key[] | undefined,
       });
     }

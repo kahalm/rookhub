@@ -185,7 +185,8 @@
       "first": "Prvi potez",
       "previous": "Prethodni potez",
       "next": "Sljedeći potez",
-      "last": "Posljednji potez"
+      "last": "Posljednji potez",
+      "flip": "Okreni ploču"
     }
   },
   "profile": {

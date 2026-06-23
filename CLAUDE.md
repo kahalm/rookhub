@@ -541,7 +541,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.178.4` — 0.178.4 (TODO/Doku: Preset-Chips-Feature für Puzzle-Themen-Schnellauswahl in `TODO.md` geparkt; bestätigt, dass Endless den Themen-Filter bereits ODER (`themesAny`) macht — seit v0.99.1 `14b80a8`, keine Codeänderung nötig. Reine Doku, bewusst NICHT im CHANGELOG); 0.178.3 (HOTFIX Prod: ein früherer Merge (Migration-Restore) hatte meine v0.178.x-Trainingsziele-CODE-Änderung verworfen, aber Migration+Snapshot behalten → ausgeliefertes Image fragte gedroppte Spalten `BookMinutes`/`ChessableMinutes` ab → 500er auf `/api/training-goals` + PlayTimeSyncService. Code (UserTrainingGoal/GroupTrainingGoal/TrainingGoalDtos/TrainingGoalService + FE + 25 i18n) aus 1f56ca2 wiederhergestellt, passend zum bereits angewandten Schema; 930 BE + FE-Build grün); 0.178.2 (Build-Fix: die vier neuesten Changelog-Einträge nutzten typografische Anführungszeichen als JS-String-Delimiter → v0.178.1-Build (master+Tag) rot; korrigiert auf gerade `"`-Delimiter, Smart-Quotes nur noch im Text); vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
+- **Aktuelle Version**: `0.178.5` — vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)

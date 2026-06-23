@@ -2,6 +2,7 @@ import { Component, OnInit, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -100,6 +101,7 @@ export class GamesListComponent implements OnInit {
   games: SavedGame[] = [];
   loading = true;
   private destroyRef = inject(DestroyRef);
+  private usernames: { chess?: string; lichess?: string } = {};
 
   constructor(
     private service: GamesService,
@@ -107,6 +109,7 @@ export class GamesListComponent implements OnInit {
     private router: Router,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private http: HttpClient,
   ) {}
 
   ngOnInit(): void {
@@ -114,6 +117,14 @@ export class GamesListComponent implements OnInit {
       next: list => { this.games = list; this.loading = false; },
       error: () => { this.loading = false; },
     });
+    this.http.get<{ chessComUsername?: string; lichessUsername?: string }>('/api/profile')
+      .subscribe({ next: p => this.usernames = { chess: p.chessComUsername?.toLowerCase(), lichess: p.lichessUsername?.toLowerCase() } });
+  }
+
+  private isFlipped(g: SavedGame): boolean {
+    const myName = g.source === 'lichess' ? this.usernames.lichess : this.usernames.chess;
+    if (!myName || !g.black) return false;
+    return g.black.toLowerCase() === myName;
   }
 
   sourceIcon(source: string): string {
@@ -125,7 +136,7 @@ export class GamesListComponent implements OnInit {
     this.service.get(g.id).subscribe({
       next: detail => {
         this.dialog.open(PgnViewerComponent, {
-          data: { pgn: detail.pgn },
+          data: { pgn: detail.pgn, flipped: this.isFlipped(g) },
           width: '90vw',
           maxWidth: '900px',
         });

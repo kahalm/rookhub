@@ -185,7 +185,8 @@
       "first": "Erster Zug",
       "previous": "Vorheriger Zug",
       "next": "Nächster Zug",
-      "last": "Letzter Zug"
+      "last": "Letzter Zug",
+      "flip": "Brett drehen"
     }
   },
   "profile": {

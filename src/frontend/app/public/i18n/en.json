@@ -185,7 +185,8 @@
       "first": "First move",
       "previous": "Previous move",
       "next": "Next move",
-      "last": "Last move"
+      "last": "Last move",
+      "flip": "Flip board"
     }
   },
   "profile": {

@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,12 +44,17 @@ import { GamesService, SharedGame } from './games.service';
           </div>
           <div class="body">
             <div class="board-section">
-              <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" />
+              <div class="board-wrap">
+                <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped" />
+                <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
+                <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
+              </div>
               <div class="nav">
                 <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"><mat-icon>skip_previous</mat-icon></button>
                 <button mat-icon-button (click)="service.goBack()" [disabled]="service.currentMoveIndex < 0"><mat-icon>navigate_before</mat-icon></button>
                 <button mat-icon-button (click)="service.goForward()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>navigate_next</mat-icon></button>
                 <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
+                <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
               </div>
             </div>
             <div class="moves-section">
@@ -79,15 +84,28 @@ import { GamesService, SharedGame } from './games.service';
     .body { display: flex; gap: 16px; align-items: flex-start; }
     /* Board-Maße wie der Repertoire-Linien-Look (fixe 400px-Spalte). */
     .board-section { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
-    .board-section app-chess-board { display: block; width: 400px; }
+    .board-wrap { position: relative; width: 400px; }
+    .board-wrap app-chess-board { display: block; width: 400px; }
+    .board-tap {
+      display: none;
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 40%;
+      z-index: 10;
+      cursor: pointer;
+    }
+    .board-tap-prev { left: 0; }
+    .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
     .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
     .original { margin-top: 12px; }
     @media (max-width: 768px) {
       .body { flex-direction: column; align-items: center; }
       .board-section { width: 100%; max-width: 400px; }
-      .board-section app-chess-board { width: 100%; }
-      .moves-section { width: 100%; }
+      .board-wrap { width: 100%; }
+      .board-wrap app-chess-board { width: 100%; }
+      .board-tap { display: block; }
+      .moves-section { width: 100%; max-height: 40vh; }
     }
   `]
 })
@@ -95,6 +113,7 @@ export class SharedGameComponent implements OnInit {
   game: SharedGame | null = null;
   loading = true;
   notFound = false;
+  flipped = false;
 
   constructor(public service: PgnViewerService, private route: ActivatedRoute, private games: GamesService) {}
 

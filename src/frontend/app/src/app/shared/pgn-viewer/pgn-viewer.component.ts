@@ -13,6 +13,7 @@ import { PgnViewerService } from './pgn-viewer.service';
 export interface PgnViewerData {
   pgn: string;
   fileName?: string;
+  flipped?: boolean;
 }
 
 @Component({
@@ -68,7 +69,11 @@ export interface PgnViewerData {
 
       <div class="viewer-body">
         <div class="board-section">
-          <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" />
+          <div class="board-wrap">
+            <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped" />
+            <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
+            <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
+          </div>
           <div class="nav-buttons">
             <button mat-icon-button (click)="service.goToStart()" [disabled]="service.currentMoveIndex < 0"
                     [attr.aria-label]="'pgnViewer.nav.first' | translate"
@@ -91,6 +96,11 @@ export interface PgnViewerData {
                     [attr.aria-label]="'pgnViewer.nav.last' | translate"
                     [attr.title]="'pgnViewer.nav.last' | translate">
               <mat-icon>skip_next</mat-icon>
+            </button>
+            <button mat-icon-button (click)="flipped = !flipped"
+                    [attr.aria-label]="'pgnViewer.nav.flip' | translate"
+                    [attr.title]="'pgnViewer.nav.flip' | translate">
+              <mat-icon>swap_vert</mat-icon>
             </button>
           </div>
         </div>
@@ -152,7 +162,18 @@ export interface PgnViewerData {
       gap: 8px;
       flex-shrink: 0;
     }
-    .board-section app-chess-board { display: block; width: 400px; }
+    .board-wrap { position: relative; width: 400px; }
+    .board-wrap app-chess-board { display: block; width: 400px; }
+    .board-tap {
+      display: none;
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 40%;
+      z-index: 10;
+      cursor: pointer;
+    }
+    .board-tap-prev { left: 0; }
+    .board-tap-next { right: 0; }
     .nav-buttons { display: flex; gap: 4px; }
     .moves-section {
       flex: 1;
@@ -169,12 +190,16 @@ export interface PgnViewerData {
         align-items: center;
       }
       .board-section { width: 100%; max-width: 400px; }
-      .board-section app-chess-board { width: 100%; }
+      .board-wrap { width: 100%; }
+      .board-wrap app-chess-board { width: 100%; }
+      .board-tap { display: block; }
       .moves-section { min-height: 200px; flex-shrink: 0; width: 100%; }
     }
   `]
 })
 export class PgnViewerComponent implements OnInit {
+  flipped = false;
+
   constructor(
     public service: PgnViewerService,
     public dialogRef: MatDialogRef<PgnViewerComponent>,
@@ -182,6 +207,7 @@ export class PgnViewerComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.flipped = this.data.flipped ?? false;
     this.service.loadPgn(this.data.pgn);
   }
 

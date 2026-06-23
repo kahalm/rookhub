@@ -12,20 +12,26 @@ import { Move } from 'chess.js';
   template: `
     <div class="move-list" #moveListEl>
       @for (pair of movePairs; track $index) {
-        <span class="move-number">{{ pair.number }}.{{ pair.white === undefined ? '..' : '' }}</span>
-        @if (pair.white !== undefined) {
-          <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
-                (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
-          @if (comments[pair.whiteIndex]) {
-            <span class="comment">{{ comments[pair.whiteIndex] }}</span>
+        <div class="move-row" [class.row-active]="isRowActive(pair)">
+          <span class="move-number">{{ pair.number }}.</span>
+          @if (pair.white !== undefined) {
+            <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
+                  (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
+          } @else {
+            <span class="move-empty"></span>
           }
-        }
-        @if (pair.black) {
-          <span class="move" [class.active]="pair.blackIndex === currentMoveIndex"
-                (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</span>
-        }
-        @if (pair.blackIndex !== undefined && comments[pair.blackIndex!]) {
-          <span class="comment">{{ comments[pair.blackIndex!] }}</span>
+          @if (pair.black) {
+            <span class="move" [class.active]="pair.blackIndex === currentMoveIndex"
+                  (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</span>
+          } @else {
+            <span class="move-empty"></span>
+          }
+        </div>
+        @if ((pair.whiteIndex >= 0 && comments[pair.whiteIndex]) ||
+             (pair.blackIndex !== undefined && comments[pair.blackIndex!])) {
+          <div class="comment-row">
+            {{ comments[pair.whiteIndex] || comments[pair.blackIndex!] }}
+          </div>
         }
       }
     </div>
@@ -33,32 +39,42 @@ import { Move } from 'chess.js';
   styles: [`
     .move-list {
       font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
-      line-height: 1.8;
-      padding: 8px;
+      font-size: 13px;
       overflow-y: auto;
       height: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      align-content: flex-start;
-      gap: 2px 4px;
+      padding: 4px 0;
     }
-    .move-number { color: color-mix(in srgb, currentColor 47%, transparent); min-width: 28px; }
-    .move {
-      cursor: pointer;
-      padding: 1px 4px;
+    .move-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 1fr;
+      align-items: center;
+      padding: 1px 6px;
       border-radius: 3px;
     }
-    .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+    .move-row.row-active {
+      background: color-mix(in srgb, currentColor 6%, transparent);
+    }
+    .move-number {
+      color: color-mix(in srgb, currentColor 45%, transparent);
+      font-size: 11px;
+      user-select: none;
+    }
+    .move {
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 3px;
+      line-height: 1.6;
+    }
+    .move:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
     .move.active { background: #1976d2; color: white; }
-    .comment {
-      width: 100%;
+    .move-empty { display: block; }
+    .comment-row {
+      padding: 2px 6px 6px 38px;
       color: color-mix(in srgb, currentColor 60%, transparent);
       font-style: italic;
       font-size: 12px;
       font-family: 'Roboto', sans-serif;
       line-height: 1.5;
-      padding: 2px 4px 6px;
     }
   `]
 })
@@ -81,6 +97,11 @@ export class MoveListComponent implements OnChanges {
     }
   }
 
+  isRowActive(pair: { whiteIndex: number; blackIndex?: number }): boolean {
+    return pair.whiteIndex === this.currentMoveIndex ||
+      (pair.blackIndex !== undefined && pair.blackIndex === this.currentMoveIndex);
+  }
+
   private buildPairs(): void {
     this.movePairs = [];
     let i = 0;
@@ -88,7 +109,6 @@ export class MoveListComponent implements OnChanges {
       const m = this.moves[i];
       const num = this.fullMoveNumber(m, i);
       if (m.color === 'b') {
-        // Segment beginnt mit Schwarz am Zug (FEN mit "b ...") -> "N... <schwarz>"
         this.movePairs.push({ number: num, white: undefined, whiteIndex: -1, black: m.san, blackIndex: i });
         i += 1;
       } else {
@@ -106,7 +126,6 @@ export class MoveListComponent implements OnChanges {
     }
   }
 
-  /** Vollzugnummer aus der FEN vor dem Zug (chess.js verbose Move hat `before`). */
   private fullMoveNumber(m: Move, fallbackIndex: number): number {
     const before = (m as unknown as { before?: string }).before;
     const n = before ? parseInt(before.split(' ')[5], 10) : NaN;
