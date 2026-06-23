@@ -25,7 +25,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
-import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
+import { classifyFirstSolverMove, FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
@@ -774,7 +774,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.bookAttemptRecorded = false;
     this.courseAttemptRecorded = false;
     this.hintLevel = 0;
-    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
+    // startPly-bewusst: Buch/Daily/Course haben oft startPly=-1 (FEN = Trainingsstellung, Löserzug =
+    // moves[0]); Weekly nutzt die Lichess-Konvention (startPly=0). Muss zum Solver-Setup passen.
+    this.firstMoveHint = classifyFirstSolverMove(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.177.0';
+export const APP_VERSION = '0.177.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.177.1", date: "2026-06-23", changes: [
+    { en: "Fixed the on-the-fly hint for book/daily/course puzzles: hint 3 now names the move you actually have to play. Previously it described the opponent's reply (e.g. “Kxc3”), which isn't a legal move for the side to move.", de: "On-the-fly-Tipp für Buch-/Tages-/Kurs-Puzzles korrigiert: Tipp 3 nennt jetzt den Zug, den du wirklich spielen musst. Vorher beschrieb er den Gegnerzug (z. B. „Kxc3“), der für die am Zug befindliche Seite gar nicht möglich ist." },
+  ]},
   { version: "0.177.0", date: "2026-06-23", changes: [
     { en: "Leaderboard: solved weekly-post puzzles now count toward the general “Puzzles” category, just like standard puzzles.", de: "Bestenliste: Gelöste Wochenpost-Puzzles zählen jetzt zur allgemeinen Kategorie „Puzzles“, genau wie Standard-Puzzles." },
   ]},

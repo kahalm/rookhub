@@ -1,4 +1,4 @@
-import { classifyStandardFirstMove } from './puzzle-hints.util';
+import { classifyStandardFirstMove, classifyFirstSolverMove } from './puzzle-hints.util';
 
 describe('classifyStandardFirstMove', () => {
   it('erkennt einen ruhigen Zug', () => {
@@ -27,5 +27,31 @@ describe('classifyStandardFirstMove', () => {
 
   it('liefert null bei zu kurzer Zugliste', () => {
     expect(classifyStandardFirstMove('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'e2e4')).toBeNull();
+  });
+});
+
+describe('classifyFirstSolverMove (startPly-bewusst, Buch/Daily)', () => {
+  it('startPly=-1: FEN ist Trainingsstellung, Löserzug = moves[0] (Dame-Schach, NICHT moves[1])', () => {
+    // Tagespuzzle 2026-06-23 (BookPuzzle 29343): Weiß am Zug, Lösung Qc2+ (g6c2), dann Kxc2 (b2c2).
+    const h = classifyFirstSolverMove('8/8/6Q1/7p/2p4P/5q2/1k6/4K3 w - - 0 1', 'g6c2 b2c2', -1);
+    expect(h?.type).toBe('check');
+    expect(h?.pieceType).toBe('q');
+    expect(h?.san).toBe('Qc2+');     // früher fälschlich „Kxc2" (moves[1], der Gegnerzug)
+  });
+
+  it('startPly=-1: ruhiger Bauernzug als Löserzug (moves[0])', () => {
+    // BookPuzzle 23721: Schwarz am Zug, Lösung ...c3 (c4c3), dann Kxc3 (d4c3).
+    const h = classifyFirstSolverMove('8/p7/4k3/B7/2pKP2p/Pp6/1P3P2/5b2 b - - 0 1', 'c4c3 d4c3 e6d7', -1);
+    expect(h).toEqual({ type: 'quiet', pieceType: 'p', san: 'c3' });
+  });
+
+  it('startPly=0 verhält sich wie die Lichess-Konvention (moves[1])', () => {
+    const h = classifyFirstSolverMove(
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 'e2e4 e7e5', 0);
+    expect(h).toEqual({ type: 'quiet', pieceType: 'p', san: 'e5' });
+  });
+
+  it('startPly=-1: liefert null bei leerer Zugliste', () => {
+    expect(classifyFirstSolverMove('8/8/6Q1/7p/2p4P/5q2/1k6/4K3 w - - 0 1', '', -1)).toBeNull();
   });
 });

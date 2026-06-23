@@ -87,7 +87,7 @@ describe('WeeklyService', () => {
     svc.recordAttempt(7, 2, false, 15).subscribe(p => (played = p.playedCount));
     const req = http.expectOne('/api/weekly-posts/7/attempt');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15 });
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15, hintsUsed: 0 });
     req.flush({ weeklyPostId: 7, total: 5, playedCount: 3, solvedCount: 1, completed: false });
     expect(played).toBe(3);
   });
