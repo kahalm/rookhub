@@ -1418,7 +1418,17 @@
       "autoHint": "Tema automatski izvedena iz odgovarajućeg RookHub repertoara.",
       "unassigned": "nije dodijeljeno",
       "saved": "Tema spremljena"
-    }
+    },
+    "period": {
+      "day": "Dan",
+      "week": "Tjedan",
+      "month": "Mjesec",
+      "year": "Godina",
+      "all": "Ukupno"
+    },
+    "prevPeriod": "Prethodno razdoblje",
+    "nextPeriod": "Sljedeće razdoblje",
+    "noActivityPeriod": "U ovom razdoblju nije zabilježeno vrijeme treninga."
   },
   "install": {
     "pageTitle": "Instaliraj RookHub",

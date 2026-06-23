@@ -1,4 +1,7 @@
-import { buildGoalTracker, statusLevel, toMinutes, orderHistory, isMinutesKind, breakdownRows } from './training-goals.component';
+import {
+  buildGoalTracker, statusLevel, toMinutes, orderHistory, isMinutesKind, breakdownRows,
+  ymd, parseYmd, periodBounds, shiftAnchor, sumBreakdown,
+} from './training-goals.component';
 import { TrackerDay, SOURCE_KEYS, THEME_KEYS } from './training-goals.service';
 
 describe('statusLevel', () => {
@@ -95,6 +98,85 @@ describe('breakdownRows', () => {
       { openingSeconds: 0, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
       THEME_KEYS);
     expect(rows).toEqual([]);
+  });
+});
+
+describe('ymd / parseYmd', () => {
+  it('round-trips a local date to yyyy-MM-dd and back', () => {
+    expect(ymd(new Date(2026, 0, 5))).toBe('2026-01-05'); // zero-padded month/day
+    expect(ymd(parseYmd('2026-12-31'))).toBe('2026-12-31');
+  });
+});
+
+describe('periodBounds', () => {
+  it('day → start === end === anchor', () => {
+    expect(periodBounds('day', '2026-06-23', '2026-01-01', '2026-06-30'))
+      .toEqual({ start: '2026-06-23', end: '2026-06-23' });
+  });
+
+  it('week → Monday..Sunday containing the anchor', () => {
+    // 2026-06-23 is a Tuesday → week is Mon 22nd .. Sun 28th
+    expect(periodBounds('week', '2026-06-23', '2026-01-01', '2026-06-30'))
+      .toEqual({ start: '2026-06-22', end: '2026-06-28' });
+  });
+
+  it('month → first..last day of the anchor month', () => {
+    expect(periodBounds('month', '2026-02-15', '2026-01-01', '2026-06-30'))
+      .toEqual({ start: '2026-02-01', end: '2026-02-28' }); // 2026 not a leap year
+  });
+
+  it('year → Jan 1..Dec 31 of the anchor year', () => {
+    expect(periodBounds('year', '2026-06-23', '2026-01-01', '2026-06-30'))
+      .toEqual({ start: '2026-01-01', end: '2026-12-31' });
+  });
+
+  it('all → firstDate..today', () => {
+    expect(periodBounds('all', '2026-06-23', '2025-03-04', '2026-06-30'))
+      .toEqual({ start: '2025-03-04', end: '2026-06-30' });
+  });
+
+  it('all → today..today when there is no history', () => {
+    expect(periodBounds('all', '2026-06-23', '', '2026-06-30'))
+      .toEqual({ start: '2026-06-30', end: '2026-06-30' });
+  });
+});
+
+describe('shiftAnchor', () => {
+  it('steps a day', () => {
+    expect(shiftAnchor('day', '2026-06-23', -1)).toBe('2026-06-22');
+    expect(shiftAnchor('day', '2026-06-23', 1)).toBe('2026-06-24');
+  });
+  it('steps a week by 7 days', () => {
+    expect(shiftAnchor('week', '2026-06-23', -1)).toBe('2026-06-16');
+  });
+  it('steps a month to the 1st, no day overflow across short months', () => {
+    expect(shiftAnchor('month', '2026-03-31', -1)).toBe('2026-02-01'); // not back into March
+    expect(shiftAnchor('month', '2026-01-15', 1)).toBe('2026-02-01');
+    expect(shiftAnchor('month', '2026-01-10', -1)).toBe('2025-12-01'); // year boundary
+  });
+  it('steps a year to Jan 1', () => {
+    expect(shiftAnchor('year', '2026-06-23', -1)).toBe('2025-01-01');
+  });
+});
+
+describe('sumBreakdown', () => {
+  const day = (date: string, rp: number, op: number): TrackerDay => ({
+    date, totalSeconds: rp,
+    bySource: { randomPuzzleSeconds: rp, courseBookSeconds: 0, chessableSeconds: 0 },
+    byTheme: { openingSeconds: op, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 },
+    playGames: 0, status: 'none', hasManual: false,
+  });
+
+  it('sums only days within [start,end] inclusive', () => {
+    const days = [day('2026-06-01', 100, 10), day('2026-06-15', 200, 20), day('2026-07-01', 400, 40)];
+    const { bySource, byTheme } = sumBreakdown(days, '2026-06-01', '2026-06-30');
+    expect(bySource.randomPuzzleSeconds).toBe(300); // 100 + 200, July excluded
+    expect(byTheme.openingSeconds).toBe(30);
+  });
+
+  it('returns zeros when no day matches', () => {
+    const { bySource } = sumBreakdown([day('2026-06-01', 100, 10)], '2026-07-01', '2026-07-31');
+    expect(bySource.randomPuzzleSeconds).toBe(0);
   });
 });
 

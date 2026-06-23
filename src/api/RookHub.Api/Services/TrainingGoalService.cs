@@ -374,6 +374,32 @@ public class TrainingGoalService
         };
     }
 
+    /// <summary>Vollständige Tagesreihe (nur Tage mit Aktivität) über die gesamte Historie — ohne das
+    /// 53-Wochen-Tracker-Fenster. Liefert je Tag die Aufschlüsselung nach Quelle und Thema, damit das
+    /// Frontend die Perioden-Auswahl (Tag/Woche/Monat/Jahr/Gesamt) inklusive Durchschalten rein
+    /// client-seitig berechnen kann.</summary>
+    public async Task<DailySeriesDto> GetDailySeriesAsync(int userId)
+    {
+        var goal = await GetEffectiveGoalAsync(userId);
+        var agg = await AggregateAsync(userId, DateTime.UnixEpoch);
+
+        var days = agg
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new TrackerDayDto
+            {
+                Date = kv.Key.ToString("yyyy-MM-dd"),
+                TotalSeconds = kv.Value.Total,
+                BySource = SourceDto(kv.Value.Source),
+                ByTheme = ThemeDto(kv.Value.Theme),
+                PlayGames = kv.Value.PlayGames,
+                Status = DayStatus(kv.Value.Total, goal.DailyMinutes),
+                HasManual = kv.Value.HasManual,
+            })
+            .ToList();
+
+        return new DailySeriesDto { Days = days };
+    }
+
     /// <summary>Heutiger Fortschritt (Tageszeit-Ziel + Aufschlüsselung) + Wochenstand
     /// (Spielen-Partien + voll erfüllte Tage) der laufenden ISO-Woche.</summary>
     public async Task<TodayProgressDto> GetTodayAsync(int userId)

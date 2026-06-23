@@ -180,6 +180,30 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DailySeries_IncludesDaysBeyondTrackerWindow_WithSourceBuckets()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(daily: 5)); // 300 s
+        await CreatePuzzleAsync(1);
+        var now = DateTime.UtcNow;
+        var old = now.AddDays(-600); // weit jenseits des 53-Wochen-Tracker-Fensters
+
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 1, Solved = true, TimeSpentSeconds = 120, AttemptedAt = old });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 1, Solved = true, TimeSpentSeconds = 240, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        // Tracker (gedeckelt) sieht nur den jüngsten Tag …
+        Assert.Single((await _service.GetTrackerAsync(u.Id, 53)).Days);
+
+        // … die Tagesreihe liefert die ganze Historie, aufsteigend, je Tag aufgeschlüsselt.
+        var series = await _service.GetDailySeriesAsync(u.Id);
+        Assert.Equal(2, series.Days.Count);
+        Assert.Equal(old.Date.ToString("yyyy-MM-dd"), series.Days[0].Date); // älteste zuerst
+        Assert.Equal(120, series.Days[0].BySource.RandomPuzzleSeconds);
+        Assert.Equal(240, series.Days[1].BySource.RandomPuzzleSeconds);
+    }
+
+    [Fact]
     public async Task Tracker_PartialAndNoneStatus_AgainstSingleDailyGoal()
     {
         var u = await CreateUserAsync();

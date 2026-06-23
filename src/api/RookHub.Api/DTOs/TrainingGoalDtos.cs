@@ -155,6 +155,15 @@ public class TrackerResponseDto
     public ThemeBreakdownDto BreakdownByTheme { get; set; } = new();
 }
 
+/// <summary>Vollständige Tagesreihe (nur Tage mit Aktivität, gesamte Historie, ungedeckelt durch das
+/// Tracker-Fenster) — Basis für die client-seitig umschaltbare Perioden-Aufschlüsselung
+/// (Tag/Woche/Monat/Jahr/Gesamt mit Durchschalten).</summary>
+public class DailySeriesDto
+{
+    /// <summary>Tage mit Aktivität, aufsteigend nach Datum.</summary>
+    public List<TrackerDayDto> Days { get; set; } = new();
+}
+
 /// <summary>Fortschritt der zeitbasierten Tages-Trainingszeit (gemeinsamer Topf).</summary>
 public class CategoryProgressDto
 {

@@ -1420,7 +1420,17 @@
       "autoHint": "Thema automatisch aus einem passenden RookHub-Repertoire abgeleitet.",
       "unassigned": "nicht zugeordnet",
       "saved": "Thema gespeichert"
-    }
+    },
+    "period": {
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "year": "Jahr",
+      "all": "Gesamt"
+    },
+    "prevPeriod": "Vorherige Periode",
+    "nextPeriod": "Nächste Periode",
+    "noActivityPeriod": "In diesem Zeitraum keine Trainingszeit aufgezeichnet."
   },
   "install": {
     "pageTitle": "RookHub installieren",

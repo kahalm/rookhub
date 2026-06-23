@@ -48,6 +48,12 @@ public class TrainingGoalController : BaseApiController
     public async Task<ActionResult<TrackerResponseDto>> Tracker([FromQuery] int weeks = 27)
         => Ok(await _service.GetTrackerAsync(GetUserId(), weeks));
 
+    /// <summary>Vollständige Tagesreihe (ganze Historie) für die umschaltbare Perioden-Aufschlüsselung
+    /// (Tag/Woche/Monat/Jahr/Gesamt) — die Periodenwahl + das Durchschalten passieren client-seitig.</summary>
+    [HttpGet("daily-series")]
+    public async Task<ActionResult<DailySeriesDto>> DailySeries()
+        => Ok(await _service.GetDailySeriesAsync(GetUserId()));
+
     /// <summary>Externe Spielzeit (Lichess/chess.com) des eigenen Users jetzt synchronisieren.</summary>
     [HttpPost("sync-play")]
     public async Task<IActionResult> SyncPlay(CancellationToken ct)

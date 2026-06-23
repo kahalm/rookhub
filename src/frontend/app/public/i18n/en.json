@@ -1420,7 +1420,17 @@
       "autoHint": "Theme derived automatically from a matching RookHub repertoire.",
       "unassigned": "not assigned",
       "saved": "Theme saved"
-    }
+    },
+    "period": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "all": "All time"
+    },
+    "prevPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "noActivityPeriod": "No training recorded in this period."
   },
   "install": {
     "pageTitle": "Install RookHub",

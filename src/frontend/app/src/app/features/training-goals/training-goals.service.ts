@@ -105,6 +105,11 @@ export interface ChessableCourseSummary {
   isAssigned: boolean;
 }
 
+/** Vollständige Tagesreihe (ganze Historie) für die umschaltbare Perioden-Aufschlüsselung. */
+export interface DailySeriesResponse {
+  days: TrackerDay[];
+}
+
 export interface TrackerResponse {
   goal: TrainingGoal;
   days: TrackerDay[];
@@ -167,6 +172,11 @@ export class TrainingGoalService {
   /** Tagesreihe der letzten `weeks` Wochen für die Tracker-Heatmap. */
   getTracker(weeks = 27): Observable<TrackerResponse> {
     return this.http.get<TrackerResponse>('/api/training-goals/tracker', { params: new HttpParams().set('weeks', weeks) });
+  }
+
+  /** Vollständige Tagesreihe (ganze Historie) für die umschaltbare Perioden-Aufschlüsselung. */
+  getDailySeries(): Observable<DailySeriesResponse> {
+    return this.http.get<DailySeriesResponse>('/api/training-goals/daily-series');
   }
 
   /** Gespielte Rapid-/Classical-Partien (Lichess/chess.com) jetzt synchronisieren. */
