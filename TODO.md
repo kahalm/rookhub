@@ -21,6 +21,22 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
 
 ## Geparkt
+- [ ] **Themen-Schnellauswahl / Preset-Chips für Puzzle-Themen** (Feature, klein–mittel; Idee 2026-06-23)
+  Statt Themen einzeln zusammenzusuchen: ein Klick auf einen kuratierten Preset-Chip setzt `config.themes` auf ein passendes Bündel. **Endless filtert Themen bereits ODER** (`themesAny`, seit v0.99.1 `14b80a8`) → die Bündel greifen out-of-the-box („fork pin" = fork ODER pin). Für den **Standard-Solver** (`puzzle.component`) ggf. ebenfalls anbieten — dort prüfen, ob die Themenauswahl auch ODER nutzt, sonst analog umstellen.
+  - Umsetzung: Chip-Leiste über/neben der Themenliste (Endless-Config + evtl. `puzzle-settings-dialog`); Klick = `setSelectedThemes(bundle)`. i18n-Labels de/en/hr (`endless.themePreset.*`).
+  - Vorgeschlagene Presets (Theme-Keys + Pool-Größen, dev-DB Stand 2026-06-23, PuzzleTags voll backfilled):
+    - **Blitz-Matt** = `mateIn1` (698k) — reines Matt in 1, schnellster Speedrun *(Ein-Theme)*
+    - **Ein-Zug-Mix** = `oneMove` (700k) — alle Ein-Zug-Lösungen (Matt + Materialgewinn) *(Ein-Theme)*
+    - **Mattjagd 1–2** = `mateIn1`,`mateIn2` (≈1,37M)
+    - **Grundtaktik** = `fork`,`pin`,`skewer` (≈1,17M)
+    - **Material schnappen** = `hangingPiece`,`trappedPiece`,`capturingDefender` (≈290k)
+    - **Kombination & Opfer** = `sacrifice`,`deflection`,`attraction`,`clearance`,`interference` (≈950k)
+    - **Abzug & Doppelschach** = `discoveredAttack`,`discoveredCheck`,`doubleCheck` (≈414k)
+    - **Mustermatts** = `backRankMate`,`smotheredMate`,`arabianMate`,`anastasiaMate`,`bodenMate`,`operaMate`,`hookMate`,`epauletteMate`,`dovetailMate` (≈300k)
+    - **Königsangriff** = `kingsideAttack`,`exposedKing`,`attackingF2F7` (≈655k)
+    - **Endspiel** = `rookEndgame`,`pawnEndgame`,`queenEndgame`,`knightEndgame`,`bishopEndgame` (≈667k; gezielter als das breite `endgame`=2,67M)
+  - Empfohlene Default-Chips: Blitz-Matt, Mattjagd 1–2, Grundtaktik, Kombination & Opfer, Mustermatts, Endspiel.
+
 - [ ] Google Play / TWA fertigstellen (Branches 0.78.1–0.78.5 bereits in master 0.83.0):
   - [ ] Impressum/Betreiberdaten in `src/frontend/app/src/environments/operator.ts` eintragen (Name, Anschrift, UID, Kontakt-E-Mail)
   - [ ] Google-Play-Developer-Account prüfen/anlegen (25 $; neue Accounts: 12 Tester / 14 Tage Closed-Test vor Production)
