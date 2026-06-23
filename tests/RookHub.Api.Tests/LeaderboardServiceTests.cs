@@ -56,6 +56,9 @@ public class LeaderboardServiceTests : IDisposable
     private void AddBookSolve(int userId, int bookPuzzleId, bool solved, DateTime at)
         => _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt { UserId = userId, BookPuzzleId = bookPuzzleId, Solved = solved, AttemptedAt = at });
 
+    private void AddWeeklySolve(int userId, int weeklyPostId, int puzzleIndex, bool solved, DateTime at)
+        => _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt { UserId = userId, WeeklyPostId = weeklyPostId, PuzzleIndex = puzzleIndex, Solved = solved, AttemptedAt = at });
+
     [Fact]
     public async Task GetAsync_CountsUniquePuzzles_OrdersByCountDesc_WithDiscord()
     {
@@ -80,6 +83,30 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal("anna", res.Puzzles[0].Name);
         Assert.Equal(3, res.Puzzles[0].Count);          // einzigartig, nicht 4
         Assert.Equal("111", res.Puzzles[0].DiscordId);
+        Assert.Equal("ben", res.Puzzles[1].Name);
+        Assert.Equal(1, res.Puzzles[1].Count);
+    }
+
+    [Fact]
+    public async Task GetAsync_WeeklyPostSolves_CountIntoPuzzlesCategory()
+    {
+        var anna = await CreateUserAsync("anna");
+        var ben = await CreateUserAsync("ben");
+        var now = DateTime.UtcNow;
+        // anna: 1 Standard-Puzzle + 2 gelöste Wochenpost-Puzzles = 3 in der Kategorie „Puzzles".
+        AddPuzzleSolve(anna.Id, 10, true, now);
+        AddWeeklySolve(anna.Id, weeklyPostId: 1, puzzleIndex: 0, solved: true, now);
+        AddWeeklySolve(anna.Id, weeklyPostId: 1, puzzleIndex: 1, solved: true, now);
+        AddWeeklySolve(anna.Id, weeklyPostId: 1, puzzleIndex: 2, solved: false, now); // nicht gelöst → zählt nicht
+        // ben: nur ein gelöstes Wochenpost-Puzzle → kommt ohne Standard-Versuch in die Kategorie.
+        AddWeeklySolve(ben.Id, weeklyPostId: 1, puzzleIndex: 0, solved: true, now);
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime", viewerId: 0);
+
+        Assert.Equal(2, res.Puzzles.Count);
+        Assert.Equal("anna", res.Puzzles[0].Name);
+        Assert.Equal(3, res.Puzzles[0].Count);
         Assert.Equal("ben", res.Puzzles[1].Name);
         Assert.Equal(1, res.Puzzles[1].Count);
     }

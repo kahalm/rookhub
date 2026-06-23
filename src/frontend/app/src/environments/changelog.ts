@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.176.4';
+export const APP_VERSION = '0.177.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.177.0", date: "2026-06-23", changes: [
+    { en: "Leaderboard: solved weekly-post puzzles now count toward the general “Puzzles” category, just like standard puzzles.", de: "Bestenliste: Gelöste Wochenpost-Puzzles zählen jetzt zur allgemeinen Kategorie „Puzzles“, genau wie Standard-Puzzles." },
+  ]},
   { version: "0.176.4", date: "2026-06-22", changes: [
     { en: "Tournaments (crawler) robustness: a tournament with duplicate or empty team names no longer aborts the whole player crawl, and a cancelled crawl now reliably records its final status instead of getting stuck.", de: "Turniere (Crawler), Robustheit: Ein Turnier mit doppelten oder leeren Teamnamen bricht nicht mehr den ganzen Spieler-Crawl ab, und ein abgebrochener Crawl speichert jetzt zuverlässig seinen Endstatus, statt hängen zu bleiben." },
   ]},

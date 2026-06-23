@@ -6,8 +6,9 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Berechnet die Bestenlisten für drei Kategorien — einzigartige Standard-Puzzles,
-/// abgeschlossene Endlos-Läufe und gelöste Kurs-Linien — je Periode
+/// Berechnet die Bestenlisten für vier Kategorien — einzigartige Standard-Puzzles
+/// (inkl. gelöster Wochenpost-Puzzles), abgeschlossene Endlos-Läufe, gelöste Kurs-Linien
+/// und einzigartige Tagespuzzles — je Periode
 /// (weekly/monthly/alltime, UTC-Grenzen). Nur eingeloggte Nutzer; anonyme
 /// Versuche (UserId == null) zählen nicht, weil sie keine Identität für die Liste haben.
 /// </summary>
@@ -47,6 +48,19 @@ public class LeaderboardService
         var puzzlePerUser = puzzlePairs
             .GroupBy(p => p.UserId)
             .ToDictionary(g => g.Key, g => g.Count());
+
+        // Wochenpost-Puzzles fließen in den allgemeinen Puzzle-Pool ein. WeeklyPostAttempt ist
+        // idempotent je (WeeklyPostId, UserId, PuzzleIndex) → eine gelöste Zeile = ein einzigartig
+        // gelöstes Wochenpost-Puzzle. Keine Überschneidung mit den Standard-Puzzles (andere Tabelle/
+        // Identität), daher einfach je Nutzer auf die Standard-Zählung addieren.
+        var weeklyPerUser = (await _db.WeeklyPostAttempts
+            .Where(a => a.Solved && a.AttemptedAt >= from)
+            .GroupBy(a => a.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToListAsync())
+            .ToDictionary(x => x.UserId, x => x.Count);
+        foreach (var kv in weeklyPerUser)
+            puzzlePerUser[kv.Key] = puzzlePerUser.GetValueOrDefault(kv.Key) + kv.Value;
 
         // #endlessruns: abgeschlossene Endlos-Läufe je Nutzer (jede Session = ein Lauf).
         var endlessPerUser = (await _db.EndlessSessions
