@@ -824,16 +824,22 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("BookMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChessableMinutes")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<int>("DailyMinutes")
-                        .HasColumnType("int");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("int");
 
                     b.Property<int>("PlayGames")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PuzzleMinutes")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -1779,13 +1785,19 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("BookMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChessableMinutes")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("DailyMinutes")
+                    b.Property<int>("PlayGames")
                         .HasColumnType("int");
 
-                    b.Property<int>("PlayGames")
+                    b.Property<int>("PuzzleMinutes")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")

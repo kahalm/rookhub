@@ -350,8 +350,16 @@
                       } @else {
                         <div class="goal-fields">
                           <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                            <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
-                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.dailyMinutes" />
+                            <mat-label>{{ 'trainingGoals.cat.puzzles' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.puzzleMinutes" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.cat.book' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.bookMinutes" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                            <mat-label>{{ 'trainingGoals.cat.chessable' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                            <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.chessableMinutes" />
                           </mat-form-field>
                           <mat-form-field appearance="outline" subscriptSizing="dynamic">
                             <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>

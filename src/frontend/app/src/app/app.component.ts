@@ -18,12 +18,20 @@ import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { ThemeService } from './core/theme.service';
 import { environment } from '../environments/environment';
+import { APK_VERSION } from '../environments/changelog';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule, A11yModule],
   template: `
+    @if (showApkUpdate) {
+      <div class="apk-banner">
+        <span>{{ 'app.apkUpdate.banner' | translate }}</span>
+        <a routerLink="/install" (click)="dismissApkUpdate()">{{ 'app.apkUpdate.install' | translate }}</a>
+        <button class="apk-dismiss" (click)="dismissApkUpdate()" [attr.aria-label]="'common.close' | translate">&times;</button>
+      </div>
+    }
     @if (auth.isImpersonating) {
       <div class="imp-banner">
         <span class="imp-text">
@@ -107,6 +115,18 @@ import { environment } from '../environments/environment';
       border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
     }
     .imp-exit:hover { background: rgba(255,255,255,0.3); }
+    .apk-banner {
+      display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+      background: #e65100; color: #fff; padding: 6px 14px; font-size: 0.85rem; font-weight: 500;
+      position: sticky; top: 0; z-index: 1100;
+    }
+    .apk-banner a { color: #fff; font-weight: 700; text-decoration: underline; }
+    .apk-banner a:hover { opacity: 0.85; }
+    .apk-dismiss {
+      background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; font-weight: 600;
+    }
+    .apk-dismiss:hover { background: rgba(255,255,255,0.3); }
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
     @media (max-width: 768px) { .app-footer { display: none; } }
     .version-link { cursor: pointer; }
@@ -144,6 +164,8 @@ export class AppComponent implements OnInit {
   changelog = environment.changelog;
   showChangelog = false;
   showQuickstart = false;
+  showApkUpdate = false;
+  private readonly APK_UPDATE_LS_KEY = 'rookhub_apk_seen_version';
 
   /** Escape schließt das offene Overlay (Changelog/Quickstart) — Tastatur-Bedienbarkeit. */
   @HostListener('document:keydown.escape')
@@ -173,7 +195,7 @@ export class AppComponent implements OnInit {
     analysisEngine: AnalysisEngineService,
     _theme: ThemeService,
     // App-weit instanziieren, damit beforeinstallprompt zuverlässig gefangen wird.
-    _pwaInstall: PwaInstallService
+    readonly pwa: PwaInstallService
   ) {
     locale.init();
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).
@@ -182,6 +204,12 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // APK-Update-Banner: nur auf Android im Standalone-Modus (= TWA-App).
+    if (this.pwa.isAndroid && this.pwa.isInstalled()) {
+      const seen = parseInt(localStorage.getItem(this.APK_UPDATE_LS_KEY) ?? '0', 10);
+      this.showApkUpdate = APK_VERSION > seen;
+    }
+
     // Offline-Pools (Standard + Endless) gleich beim Start vorab laden, sobald online —
     // nicht erst beim ersten Öffnen der Modi. Leicht verzögert, damit der Initial-Load Vorrang hat.
     setTimeout(() => this.offlinePrefetch.prefetchAll(), 3000);
@@ -238,6 +266,11 @@ export class AppComponent implements OnInit {
       this.discordLink.stash(token);
       this.snackbar.warn(this.translate.instant('profile.discord.stashed'));
     }
+  }
+
+  dismissApkUpdate(): void {
+    localStorage.setItem(this.APK_UPDATE_LS_KEY, String(APK_VERSION));
+    this.showApkUpdate = false;
   }
 
   /** Impersonation beenden, Menü neu laden und zurück ins Admin-Panel. */

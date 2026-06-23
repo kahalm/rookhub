@@ -91,8 +91,10 @@ export interface DailyPuzzleInfo {
 
 /** Trainingsziel-Vorlage einer Gruppe (Puzzles/Buch = Min/Tag, Spielen = Partien/Woche + Wochenziel Tage). */
 export interface GroupTrainingGoal {
-  /** Tagesziel Trainingszeit in Minuten — gemeinsamer Topf aller Quellen. */
-  dailyMinutes: number;
+  puzzleMinutes: number;
+  bookMinutes: number;
+  /** Tagesziel Chessable-Training in Minuten. */
+  chessableMinutes: number;
   /** Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche. */
   playGames: number;
   weeklyDaysTarget: number;
@@ -215,7 +217,7 @@ export class AdminService {
     return this.http.get<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`);
   }
 
-  setGroupTrainingGoal(groupId: number, goal: { dailyMinutes: number; playGames: number; weeklyDaysTarget: number }): Observable<GroupTrainingGoal> {
+  setGroupTrainingGoal(groupId: number, goal: { puzzleMinutes: number; bookMinutes: number; chessableMinutes: number; playGames: number; weeklyDaysTarget: number }): Observable<GroupTrainingGoal> {
     return this.http.put<GroupTrainingGoal>(`/api/admin/groups/${groupId}/training-goal`, goal);
   }
 

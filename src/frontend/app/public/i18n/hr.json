@@ -88,6 +88,10 @@
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",
     "reload": "Ponovno učitaj",
+    "apkUpdate": {
+      "banner": "Dostupna je nova verzija aplikacije – molimo reinstalirajte.",
+      "install": "Instaliraj sada"
+    },
     "impersonation": {
       "banner": "Pregledavate kao {{user}} (administrator: {{admin}})",
       "exit": "Natrag na administratora"
@@ -708,13 +712,8 @@
       "flagCleared": "Oznaka uklonjena.",
       "flagError": "Oznaku nije moguće spremiti.",
       "pieces": {
-        "pawn": "pješak",
-        "knight": "skakač",
-        "bishop": "lovac",
-        "rook": "top",
-        "queen": "dama",
-        "king": "kralj",
-        "piece": "figura"
+        "pawn": "pješak", "knight": "skakač", "bishop": "lovac",
+        "rook": "top", "queen": "dama", "king": "kralj", "piece": "figura"
       }
     },
     "viz": {
@@ -1382,24 +1381,7 @@
     "syncPlay": "Ažuriraj vrijeme igranja",
     "syncDone": "Vrijeme igranja ažurirano.",
     "history": "Dnevna povijest",
-    "dateCol": "Datum",
-    "dailyGoal": "Vrijeme treninga",
-    "dailyHint": "Jedan dnevni cilj vremena treninga — zagonetke, tečajevi i Chessable zajedno se zbrajaju.",
-    "total": "Ukupno",
-    "breakdownBySource": "Po izvoru",
-    "breakdownByTheme": "Po temi",
-    "source": {
-      "randomPuzzle": "Zagonetke",
-      "courseBook": "Tečajevi / knjige",
-      "chessable": "Chessable"
-    },
-    "theme": {
-      "opening": "Otvaranje",
-      "middlegame": "Sredina igre",
-      "endgame": "Završnica",
-      "tactics": "Taktika",
-      "other": "Ostalo"
-    }
+    "dateCol": "Datum"
   },
   "install": {
     "pageTitle": "Instaliraj RookHub",

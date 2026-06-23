@@ -22,7 +22,7 @@
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://rookhub-dev.oberschmid.homes/manifest.webmanifest",
-  "fallbackType": "customtabs",
+  "fallbackType": "webview",
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,

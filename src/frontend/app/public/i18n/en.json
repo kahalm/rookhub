@@ -88,6 +88,10 @@
     "feedback": "Feedback / Report a bug",
     "updateAvailable": "A new version is available.",
     "reload": "Reload",
+    "apkUpdate": {
+      "banner": "New app version available – please reinstall.",
+      "install": "Install now"
+    },
     "impersonation": {
       "banner": "You are viewing as {{user}} (admin: {{admin}})",
       "exit": "Back to admin"
@@ -710,13 +714,8 @@
       "flagCleared": "Mark removed.",
       "flagError": "Could not save the mark.",
       "pieces": {
-        "pawn": "pawn",
-        "knight": "knight",
-        "bishop": "bishop",
-        "rook": "rook",
-        "queen": "queen",
-        "king": "king",
-        "piece": "piece"
+        "pawn": "pawn", "knight": "knight", "bishop": "bishop",
+        "rook": "rook", "queen": "queen", "king": "king", "piece": "piece"
       }
     },
     "viz": {
@@ -1384,24 +1383,7 @@
     "syncPlay": "Update playing time",
     "syncDone": "Playing time updated.",
     "history": "Daily history",
-    "dateCol": "Date",
-    "dailyGoal": "Training time",
-    "dailyHint": "Set one daily training-time goal — puzzles, courses and Chessable all count toward it together.",
-    "total": "Total",
-    "breakdownBySource": "By source",
-    "breakdownByTheme": "By theme",
-    "source": {
-      "randomPuzzle": "Puzzles",
-      "courseBook": "Courses / books",
-      "chessable": "Chessable"
-    },
-    "theme": {
-      "opening": "Opening",
-      "middlegame": "Middlegame",
-      "endgame": "Endgame",
-      "tactics": "Tactics",
-      "other": "Other"
-    }
+    "dateCol": "Date"
   },
   "install": {
     "pageTitle": "Install RookHub",

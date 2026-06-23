@@ -6,8 +6,10 @@ export type GoalSource = 'none' | 'group' | 'personal';
 export type GoalStatus = 'none' | 'partial' | 'full';
 
 export interface TrainingGoal {
-  /** Tagesziel Trainingszeit in Minuten — gemeinsamer Topf aller Quellen. */
-  dailyMinutes: number;
+  puzzleMinutes: number;
+  bookMinutes: number;
+  /** Tagesziel Chessable-Training in Minuten (aktive Zeit von der RepCheck-Extension). */
+  chessableMinutes: number;
   /** Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche. */
   playGames: number;
   weeklyDaysTarget: number;
@@ -16,50 +18,20 @@ export interface TrainingGoal {
 }
 
 export interface TrainingGoalInput {
-  dailyMinutes: number;
+  puzzleMinutes: number;
+  bookMinutes: number;
+  chessableMinutes: number;
   playGames: number;
   weeklyDaysTarget: number;
 }
 
-/** Aufschlüsselung von Trainingssekunden nach Quelle. */
-export interface SourceBreakdown {
-  randomPuzzleSeconds: number;
-  courseBookSeconds: number;
-  chessableSeconds: number;
-}
-
-/** Aufschlüsselung von Trainingssekunden nach Thema (Rest → otherSeconds). */
-export interface ThemeBreakdown {
-  openingSeconds: number;
-  middlegameSeconds: number;
-  endgameSeconds: number;
-  tacticsSeconds: number;
-  otherSeconds: number;
-}
-
-/** Schlüssel der Quellen-Aufschlüsselung (für Template-Iteration mit i18n). */
-export const SOURCE_KEYS: { key: keyof SourceBreakdown; label: string }[] = [
-  { key: 'randomPuzzleSeconds', label: 'randomPuzzle' },
-  { key: 'courseBookSeconds', label: 'courseBook' },
-  { key: 'chessableSeconds', label: 'chessable' },
-];
-
-/** Schlüssel der Themen-Aufschlüsselung (für Template-Iteration mit i18n). */
-export const THEME_KEYS: { key: keyof ThemeBreakdown; label: string }[] = [
-  { key: 'openingSeconds', label: 'opening' },
-  { key: 'middlegameSeconds', label: 'middlegame' },
-  { key: 'endgameSeconds', label: 'endgame' },
-  { key: 'tacticsSeconds', label: 'tactics' },
-  { key: 'otherSeconds', label: 'other' },
-];
-
 export interface TrackerDay {
   date: string;
-  /** Gesamte (gemeinsam getopfte) Trainingssekunden des Tages. */
-  totalSeconds: number;
-  bySource: SourceBreakdown;
-  byTheme: ThemeBreakdown;
-  /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur die Trainingszeit). */
+  puzzleSeconds: number;
+  bookSeconds: number;
+  /** Aktiv trainierte Chessable-Sekunden an diesem Tag. */
+  chessableSeconds: number;
+  /** Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch/Chessable). */
   playGames: number;
   status: GoalStatus;
   /** Enthält dieser Tag mindestens eine manuell (selbst) eingetragene Offline-Aktivität? */
@@ -89,13 +61,9 @@ export interface ManualActivityInput {
 export interface TrackerResponse {
   goal: TrainingGoal;
   days: TrackerDay[];
-  /** Summe über das Fenster, nach Quelle. */
-  breakdownBySource: SourceBreakdown;
-  /** Summe über das Fenster, nach Thema. */
-  breakdownByTheme: ThemeBreakdown;
 }
 
-/** Fortschritt der zeitbasierten Tages-Trainingszeit (gemeinsamer Topf). */
+/** Zeitbasierte Tages-Kategorie (Puzzles/Buch). */
 export interface CategoryProgress {
   targetMinutes: number;
   doneSeconds: number;
@@ -111,10 +79,9 @@ export interface PlayProgress {
 
 export interface TodayProgress {
   goal: TrainingGoal;
-  /** Tageszeit-Ziel: heute trainierte Zeit (alle Quellen) vs. Zielminuten. */
-  daily: CategoryProgress;
-  bySource: SourceBreakdown;
-  byTheme: ThemeBreakdown;
+  puzzles: CategoryProgress;
+  book: CategoryProgress;
+  chessable: CategoryProgress;
   play: PlayProgress;
   status: GoalStatus;
   weekDaysMet: number;

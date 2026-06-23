@@ -14,16 +14,12 @@ import { forkJoin } from 'rxjs';
 import {
   TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
   ManualActivity, ManualActivityInput, ManualActivityKind,
-  SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS,
 } from './training-goals.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 // level -1 = Zukunft (leer); manual = enthält selbst gemeldete Aktivität
 export interface GoalCell { date: string; status: GoalStatus; level: number; manual: boolean; }
-
-/** Eine Zeile einer Aufschlüsselung (Quelle/Thema): i18n-Label + Sekunden + Balkenanteil. */
-export interface BreakRow { label: string; seconds: number; pct: number; }
 
 /** Alle manuellen Aktivitätsarten + ob sie in Minuten (sonst Partienzahl) gemessen werden. */
 export const MANUAL_KINDS: { kind: ManualActivityKind; minutes: boolean }[] = [
@@ -53,14 +49,6 @@ export function statusLevel(status: GoalStatus): number {
   if (status === 'full') return 4;
   if (status === 'partial') return 2;
   return 0;
-}
-
-/** Wandelt eine Aufschlüsselung in Anzeige-Zeilen (nur Töpfe mit Zeit, Anteil am Topf-Total). */
-export function breakdownRows(buckets: Record<string, number>, keys: { key: string; label: string }[]): BreakRow[] {
-  const total = keys.reduce((sum, k) => sum + (buckets[k.key] ?? 0), 0);
-  return keys
-    .map(k => ({ label: k.label, seconds: buckets[k.key] ?? 0, pct: total > 0 ? Math.round((100 * (buckets[k.key] ?? 0)) / total) : 0 }))
-    .filter(r => r.seconds > 0);
 }
 
 /** Baut ein Wochen-Raster (Spalten = Wochen Mo–So) für die Ziele-Heatmap (rein, testbar). */
@@ -122,15 +110,14 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 </div>
               </div>
               <div class="cats">
-                <!-- Ein gemeinsames Tageszeit-Ziel (alle Quellen füttern es). -->
-                @if ((today?.daily?.targetMinutes ?? 0) > 0) {
+                @for (c of categories(); track c.key) {
                   <div class="cat">
                     <div class="cat-row">
-                      <mat-icon [class.met]="today?.daily?.met">{{ today?.daily?.met ? 'check_circle' : 'schedule' }}</mat-icon>
-                      <span class="cat-name">{{ 'trainingGoals.dailyGoal' | translate }}</span>
-                      <span class="cat-val">{{ minutes(today?.daily?.doneSeconds ?? 0) }} / {{ today?.daily?.targetMinutes ?? 0 }} {{ 'trainingGoals.min' | translate }}</span>
+                      <mat-icon [class.met]="c.met">{{ c.met ? 'check_circle' : c.icon }}</mat-icon>
+                      <span class="cat-name">{{ ('trainingGoals.cat.' + c.key) | translate }}</span>
+                      <span class="cat-val">{{ minutes(c.doneSeconds) }} / {{ c.targetMinutes }} {{ 'trainingGoals.min' | translate }}</span>
                     </div>
-                    <mat-progress-bar mode="determinate" [value]="pct(today?.daily?.doneSeconds ?? 0, today?.daily?.targetMinutes ?? 0)"></mat-progress-bar>
+                    <mat-progress-bar mode="determinate" [value]="pct(c.doneSeconds, c.targetMinutes)"></mat-progress-bar>
                   </div>
                 }
                 <!-- Spielen ist ein Wochenziel (Anzahl Rapid-/Classical-Partien dieser Woche). -->
@@ -145,33 +132,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                   </div>
                 }
               </div>
-
-              <!-- Aufzeichnung von heute: nach Quelle + nach Thema -->
-              @if (todaySourceRows.length) {
-                <div class="breakdowns">
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
-                    @for (r of todaySourceRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
-                    @for (r of todayThemeRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-
               @if ((today?.play?.targetGames ?? 0) > 0) {
                 <button mat-stroked-button class="sync-btn" (click)="syncPlayTime()" [disabled]="syncingPlay">
                   <mat-icon>sync</mat-icon> {{ 'trainingGoals.syncPlay' | translate }}
@@ -199,8 +159,16 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
             }
             <div class="goal-fields">
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
-                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.dailyMinutes" />
+                <mat-label>{{ 'trainingGoals.cat.puzzles' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.puzzleMinutes" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'trainingGoals.cat.book' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.bookMinutes" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ 'trainingGoals.cat.chessable' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                <input matInput type="number" min="0" max="600" [(ngModel)]="edit.chessableMinutes" />
               </mat-form-field>
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
@@ -211,7 +179,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 <input matInput type="number" min="0" max="7" [(ngModel)]="edit.weeklyDaysTarget" />
               </mat-form-field>
             </div>
-            <p class="muted small">{{ 'trainingGoals.dailyHint' | translate }}</p>
             <p class="muted small">{{ 'trainingGoals.playHint' | translate }}</p>
             <div class="actions">
               <button mat-raised-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
@@ -300,37 +267,11 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 <span class="legend-item"><span class="sw gl0"></span>{{ 'trainingGoals.status.none' | translate }}</span>
                 <span class="legend-item"><span class="sw gl0 manual"></span>{{ 'trainingGoals.manual.marker' | translate }}</span>
               </div>
-
-              <!-- Perioden-Aufschlüsselung über das ganze Tracker-Fenster -->
-              @if (totalSourceRows.length) {
-                <div class="breakdowns period">
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
-                    @for (r of totalSourceRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="bd">
-                    <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
-                    @for (r of totalThemeRows; track r.label) {
-                      <div class="bd-row">
-                        <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
-                        <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
             </mat-card-content>
           </mat-card>
         }
 
-        <!-- Tageshistory: pro Tag Gesamtzeit + je Quelle + Partien -->
+        <!-- Tageshistory: pro Tag je Kategorie die Zahl -->
         @if (historyDays.length) {
           <mat-card>
             <mat-card-header><mat-card-title>{{ 'trainingGoals.history' | translate }}</mat-card-title></mat-card-header>
@@ -340,10 +281,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                   <thead>
                     <tr>
                       <th class="th-date">{{ 'trainingGoals.dateCol' | translate }}</th>
-                      <th>{{ 'trainingGoals.total' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.randomPuzzle' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.courseBook' | translate }}</th>
-                      <th>{{ 'trainingGoals.source.chessable' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.puzzles' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.book' | translate }}</th>
+                      <th>{{ 'trainingGoals.cat.chessable' | translate }}</th>
                       <th>{{ 'trainingGoals.cat.play' | translate }}</th>
                     </tr>
                   </thead>
@@ -351,10 +291,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                     @for (d of historyDays; track d.date) {
                       <tr>
                         <td class="td-date">{{ d.date }}</td>
-                        <td class="strong">{{ mins(d.totalSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.courseBookSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.chessableSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ mins(d.puzzleSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ mins(d.bookSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td>{{ mins(d.chessableSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
                         <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
                       </tr>
                     }
@@ -388,16 +327,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .weekly-tag { color: color-mix(in srgb, currentColor 47%, transparent); font-size: .75rem; font-style: italic; }
     .cat-val { color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; }
     .sync-btn { margin-top: 12px; }
-    .breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; margin-top: 16px; }
-    .breakdowns.period { margin-top: 16px; border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); padding-top: 14px; }
-    .bd-title { font-size: .8rem; font-weight: 600; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
-    .bd-row { display: flex; align-items: center; gap: 8px; font-size: .85rem; margin-bottom: 5px; }
-    .bd-label { flex: 0 0 32%; }
-    .bd-bar { flex: 1; height: 8px; border-radius: 4px; background: color-mix(in srgb, currentColor 10%, transparent); overflow: hidden; }
-    .bd-fill { display: block; height: 100%; border-radius: 4px; }
-    .bd-fill.src { background: #1976d2; }
-    .bd-fill.thm { background: #6a1b9a; }
-    .bd-val { flex: 0 0 auto; color: color-mix(in srgb, currentColor 65%, transparent); font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
     .source-hint { display: flex; align-items: center; gap: 6px; color: color-mix(in srgb, currentColor 65%, transparent); }
     .inline { font-size: 18px; width: 18px; height: 18px; }
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 8px 0; }
@@ -422,7 +351,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .manual-list .m-amount .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
     .manual-list .m-note { flex: 1; color: color-mix(in srgb, currentColor 60%, transparent); overflow-wrap: anywhere; }
     .manual-list .m-actions { display: flex; gap: 2px; margin-left: auto; }
-    .legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+    .legend { display: flex; gap: 16px; margin-top: 8px; }
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
     .sw.gl0 { background: color-mix(in srgb, currentColor 10%, transparent); } .sw.gl2 { background: #fdd835; } .sw.gl4 { background: #f5b301; }
@@ -433,7 +362,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     table.history thead th { font-weight: 600; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
     table.history tbody tr { border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     table.history td { font-variant-numeric: tabular-nums; }
-    table.history td.strong { font-weight: 600; }
     table.history .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
   `]
 })
@@ -446,13 +374,7 @@ export class TrainingGoalsComponent implements OnInit {
   tracker: GoalCell[][] = [];
   /** Tage mit Aktivität, neueste zuerst — für die Tageshistory-Tabelle. */
   historyDays: TrackerDay[] = [];
-  edit: TrainingGoalInput = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
-
-  // Aufschlüsselungen (heute + Periode), vorgerechnet für die Templates.
-  todaySourceRows: BreakRow[] = [];
-  todayThemeRows: BreakRow[] = [];
-  totalSourceRows: BreakRow[] = [];
-  totalThemeRows: BreakRow[] = [];
+  edit: TrainingGoalInput = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
 
   // ----- Manuelle Offline-Aktivitäten -----
   readonly manualKinds = MANUAL_KINDS;
@@ -469,7 +391,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   get hasGoal(): boolean {
     const g = this.goal;
-    return !!g && (g.dailyMinutes > 0 || g.playGames > 0);
+    return !!g && (g.puzzleMinutes > 0 || g.bookMinutes > 0 || g.chessableMinutes > 0 || g.playGames > 0);
   }
 
   /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
@@ -490,10 +412,6 @@ export class TrainingGoalsComponent implements OnInit {
       next: ({ goal, today, tracker, manual }) => {
         this.applyGoal(goal);
         this.today = today;
-        this.todaySourceRows = this.sourceRows(today.bySource);
-        this.todayThemeRows = this.themeRows(today.byTheme);
-        this.totalSourceRows = this.sourceRows(tracker.breakdownBySource);
-        this.totalThemeRows = this.themeRows(tracker.breakdownByTheme);
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
@@ -501,13 +419,6 @@ export class TrainingGoalsComponent implements OnInit {
       },
       error: () => { this.loading = false; },
     });
-  }
-
-  private sourceRows(b: SourceBreakdown): BreakRow[] {
-    return breakdownRows(b as unknown as Record<string, number>, SOURCE_KEYS);
-  }
-  private themeRows(b: ThemeBreakdown): BreakRow[] {
-    return breakdownRows(b as unknown as Record<string, number>, THEME_KEYS);
   }
 
   // ----- Manuelle Offline-Aktivitäten -----
@@ -573,7 +484,9 @@ export class TrainingGoalsComponent implements OnInit {
   private applyGoal(goal: TrainingGoal): void {
     this.goal = goal;
     this.edit = {
-      dailyMinutes: goal.dailyMinutes,
+      puzzleMinutes: goal.puzzleMinutes,
+      bookMinutes: goal.bookMinutes,
+      chessableMinutes: goal.chessableMinutes,
       playGames: goal.playGames,
       weeklyDaysTarget: goal.weeklyDaysTarget,
     };
@@ -582,7 +495,9 @@ export class TrainingGoalsComponent implements OnInit {
   save(): void {
     this.saving = true;
     const input: TrainingGoalInput = {
-      dailyMinutes: this.clamp(this.edit.dailyMinutes, 600),
+      puzzleMinutes: this.clamp(this.edit.puzzleMinutes, 600),
+      bookMinutes: this.clamp(this.edit.bookMinutes, 600),
+      chessableMinutes: this.clamp(this.edit.chessableMinutes, 600),
       playGames: this.clamp(this.edit.playGames, 200),
       weeklyDaysTarget: this.clamp(this.edit.weeklyDaysTarget, 7),
     };
@@ -606,6 +521,17 @@ export class TrainingGoalsComponent implements OnInit {
       next: () => { this.syncingPlay = false; this.snackbar.success(this.translate.instant('trainingGoals.syncDone')); this.reload(); },
       error: () => { this.syncingPlay = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
     });
+  }
+
+  /** Tägliche, zeitbasierte Kategorien (Puzzles/Buch). Spielen ist ein Wochenziel und wird separat dargestellt. */
+  categories(): { key: string; icon: string; targetMinutes: number; doneSeconds: number; met: boolean }[] {
+    if (!this.today) return [];
+    const out = [
+      { key: 'puzzles', icon: 'extension', ...this.today.puzzles },
+      { key: 'book', icon: 'menu_book', ...this.today.book },
+      { key: 'chessable', icon: 'school', ...this.today.chessable },
+    ];
+    return out.filter(c => c.targetMinutes > 0);
   }
 
   dayIcon(status: GoalStatus | undefined): string {

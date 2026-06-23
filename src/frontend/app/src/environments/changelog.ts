@@ -2,7 +2,9 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.178.0';
+export const APP_VERSION = '0.178.1';
+/** Bump this integer whenever a new APK must be installed by existing users. */
+export const APK_VERSION = 2;
 
 export interface ChangelogEntry {
   version: string;
@@ -12,14 +14,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: "0.178.0", date: "2026-06-23", changes: [
-    { en: "Training goals: you now set a single daily training-time goal — puzzles, courses and Chessable all count toward the same pot. Your time is still recorded by source (puzzles / courses & books / Chessable) and by theme (opening, middlegame, endgame, tactics; anything unclassifiable goes to “Other”), shown both for today and across the whole tracker window. The weekly playing goal (rapid/classical games) and the weekly full-day streak stay as before.", de: "Trainingsziele: Du setzt jetzt nur noch ein Tageszeit-Ziel — Puzzles, Kurse und Chessable zählen gemeinsam auf denselben Topf ein. Deine Zeit wird weiterhin nach Quelle (Puzzles / Kurse & Bücher / Chessable) und nach Thema (Eröffnung, Mittelspiel, Endspiel, Taktik; nicht Zuordenbares geht in „Sonstiges“) aufgezeichnet — sowohl für heute als auch über das ganze Tracker-Fenster. Das wöchentliche Spielen-Ziel (Rapid/Classical-Partien) und der Wochen-Streak (voll erfüllte Tage) bleiben wie gehabt." },
+  { version: “0.178.1”, date: “2026-06-23”, changes: [
+    { en: “Android app: fixed 'Chrome required' dialog on devices without Chrome — the app now falls back to the system WebView instead.”, de: “Android-App: Behebt den ‚Chrome erforderlich'-Dialog auf Geräten ohne Chrome — die App fällt jetzt auf die System-WebView zurück.” },
   ]},
-  { version: "0.177.1", date: "2026-06-23", changes: [
-    { en: "Fixed the on-the-fly hint for book/daily/course puzzles: hint 3 now names the move you actually have to play. Previously it described the opponent's reply (e.g. “Kxc3”), which isn't a legal move for the side to move.", de: "On-the-fly-Tipp für Buch-/Tages-/Kurs-Puzzles korrigiert: Tipp 3 nennt jetzt den Zug, den du wirklich spielen musst. Vorher beschrieb er den Gegnerzug (z. B. „Kxc3“), der für die am Zug befindliche Seite gar nicht möglich ist." },
+  { version: “0.178.0”, date: “2026-06-23”, changes: [
+    { en: “Training goals: you now set a single daily training-time goal — puzzles, courses and Chessable all count toward the same pot. Your time is still recorded by source (puzzles / courses & books / Chessable) and by theme (opening, middlegame, endgame, tactics; anything unclassifiable goes to \”Other\”), shown both for today and across the whole tracker window. The weekly playing goal (rapid/classical games) and the weekly full-day streak stay as before.”, de: “Trainingsziele: Du setzt jetzt nur noch ein Tageszeit-Ziel — Puzzles, Kurse und Chessable zählen gemeinsam auf denselben Topf ein. Deine Zeit wird weiterhin nach Quelle (Puzzles / Kurse & Bücher / Chessable) und nach Thema (Eröffnung, Mittelspiel, Endspiel, Taktik; nicht Zuordenbares geht in „Sonstiges”) aufgezeichnet — sowohl für heute als auch über das ganze Tracker-Fenster. Das wöchentliche Spielen-Ziel (Rapid/Classical-Partien) und der Wochen-Streak (voll erfüllte Tage) bleiben wie gehabt.” },
   ]},
-  { version: "0.177.0", date: "2026-06-23", changes: [
-    { en: "Leaderboard: solved weekly-post puzzles now count toward the general “Puzzles” category, just like standard puzzles.", de: "Bestenliste: Gelöste Wochenpost-Puzzles zählen jetzt zur allgemeinen Kategorie „Puzzles“, genau wie Standard-Puzzles." },
+  { version: “0.177.1”, date: “2026-06-23”, changes: [
+    { en: “Fixed the on-the-fly hint for book/daily/course puzzles: hint 3 now names the move you actually have to play. Previously it described the opponent's reply (e.g. \”Kxc3\”), which isn't a legal move for the side to move.”, de: “On-the-fly-Tipp für Buch-/Tages-/Kurs-Puzzles korrigiert: Tipp 3 nennt jetzt den Zug, den du wirklich spielen musst. Vorher beschrieb er den Gegnerzug (z. B. „Kxc3”), der für die am Zug befindliche Seite gar nicht möglich ist.” },
+  ]},
+  { version: “0.177.0”, date: “2026-06-23”, changes: [
+    { en: “Leaderboard: solved weekly-post puzzles now count toward the general \”Puzzles\” category, just like standard puzzles.”, de: “Bestenliste: Gelöste Wochenpost-Puzzles zählen jetzt zur allgemeinen Kategorie „Puzzles”, genau wie Standard-Puzzles.” },
   ]},
   { version: "0.176.4", date: "2026-06-22", changes: [
     { en: "Tournaments (crawler) robustness: a tournament with duplicate or empty team names no longer aborts the whole player crawl, and a cancelled crawl now reliably records its final status instead of getting stuck.", de: "Turniere (Crawler), Robustheit: Ein Turnier mit doppelten oder leeren Teamnamen bricht nicht mehr den ganzen Spieler-Crawl ab, und ein abgebrochener Crawl speichert jetzt zuverlässig seinen Endstatus, statt hängen zu bleiben." },
