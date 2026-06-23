@@ -197,7 +197,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
-    return this.puzzle.bookFileName.replace(/_firstkey\.pgn$/, '').replace(/_/g, ' ');
+    if (this.puzzle.bookTitle) return this.puzzle.bookTitle;
+    return this.puzzle.bookFileName
+      .replace(/_firstkey\.pgn$/i, '')
+      .replace(/\.pgn$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim();
   }
 
   constructor(

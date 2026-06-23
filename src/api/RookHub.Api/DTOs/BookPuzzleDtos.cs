@@ -100,6 +100,7 @@ public class BookPuzzleDto
     public int Id { get; set; }
     public string LineId { get; set; } = string.Empty;
     public string BookFileName { get; set; } = string.Empty;
+    public string? BookTitle { get; set; }
     public string Round { get; set; } = string.Empty;
     public string Fen { get; set; } = string.Empty;
     public string Moves { get; set; } = string.Empty;

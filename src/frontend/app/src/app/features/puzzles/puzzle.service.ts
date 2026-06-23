@@ -59,6 +59,7 @@ export interface BookPuzzleDto {
   id: number;
   lineId: string;
   bookFileName: string;
+  bookTitle?: string;
   round: string;
   fen: string;
   moves: string;

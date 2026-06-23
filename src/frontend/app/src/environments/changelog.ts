@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.181.2';
+export const APP_VERSION = '0.181.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.181.3", date: "2026-06-23", changes: [
+    { en: "Daily/course puzzles now show the proper book title instead of the internal filename (e.g. 'chessable-u5-…pgn').", de: "Tages-/Kurs-Puzzles zeigen jetzt den echten Buchtitel statt des internen Dateinamens (z. B. 'chessable-u5-…pgn')." },
+  ]},
   { version: "0.181.2", date: "2026-06-23", changes: [
     { en: "Internal cleanup: the Endless mode's fast-track threshold logic moved into its own unit-tested state class, trimming the large Endless component. No user-facing change.", de: "Interne Aufräumarbeit: Die Fasttrack-Schwellen-Logik des Endless-Modus liegt jetzt in einer eigenen, unit-getesteten State-Klasse, was die große Endless-Komponente verschlankt. Keine sichtbare Änderung." },
   ]},

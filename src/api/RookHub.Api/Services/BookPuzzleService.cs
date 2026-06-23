@@ -764,6 +764,7 @@ public class BookPuzzleService
         Id = bp.Id,
         LineId = bp.LineId,
         BookFileName = bp.BookFileName,
+        BookTitle = bp.Book?.Title,
         Round = bp.Round,
         Fen = bp.Fen,
         Moves = bp.Moves,
