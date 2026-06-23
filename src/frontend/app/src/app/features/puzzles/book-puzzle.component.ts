@@ -27,6 +27,7 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { classifyFirstSolverMove, FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { VisibilityStopwatch } from './visibility-stopwatch';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
@@ -103,7 +104,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private solveSeconds = 0;
   /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
   private solveAlternative = false;
-  private startTime = 0;
+  /** Zählt nur sichtbare Tab-Zeit (Hintergrund pausiert). */
+  private readonly stopwatch = new VisibilityStopwatch();
 
   // Eval (Stockfish-Bewertung) — wie Standard/Endless; currentEval kommt aus BasePuzzleSolver.
   showEval = false;
@@ -999,10 +1001,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   private startTimer(): void {
-    this.startTime = Date.now();
+    this.stopwatch.start();
     this.elapsedSeconds = 0;
     this.timerInterval = setInterval(() => {
-      this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
     }, 1000);
   }
 
@@ -1011,6 +1013,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       clearInterval(this.timerInterval);
       this.timerInterval = undefined;
     }
+    // Finalen Stand (aktive Zeit) festhalten, bevor die Stoppuhr abgehängt wird.
+    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
+    this.stopwatch.stop();
   }
 
   private loadConfig(): void {

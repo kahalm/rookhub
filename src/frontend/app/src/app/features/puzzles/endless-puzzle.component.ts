@@ -33,6 +33,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { VisibilityStopwatch } from './visibility-stopwatch';
 import { LongSolveService } from './long-solve.service';
 import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { Chess } from 'chess.js';
@@ -197,10 +198,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   evalLoading = false;
   initialEval = '';
 
-  // Session timer
+  // Session timer — beide Stoppuhren zählen nur sichtbare Tab-Zeit (Hintergrund pausiert).
   sessionSeconds = 0;
   private sessionInterval?: ReturnType<typeof setInterval>;
-  private sessionStart = 0;
+  private readonly sessionStopwatch = new VisibilityStopwatch();
+  private readonly puzzleStopwatch = new VisibilityStopwatch();
 
   // Session history
   sessionHistory: EndlessSession[] = [];
@@ -541,7 +543,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
-    this.puzzleStartTime = Date.now();
+    this.puzzleStartTime = Date.now();   // Wanduhr-Timestamp (für startedAt der Session-Aufzeichnung)
+    this.puzzleStopwatch.start();        // gewertete Dauer = nur aktive Tab-Zeit
     this.elapsedSeconds = 0;
   }
 
@@ -737,12 +740,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.lastSessionArchived = false;
     this.sessionRecorded = false;   // fortgesetzter Run läuft weiter → noch nicht aufgezeichnet
     this.computeFasttrackSteps();
-    // Resume timer from where it left off
-    this.sessionStart = Date.now() - this.sessionSeconds * 1000;
-    this.sessionInterval = setInterval(() => {
-      this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
-      this.elapsedSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
-    }, 1000);
+    // Timer dort fortsetzen, wo er aufgehört hat (gewertet wird ab jetzt nur aktive Tab-Zeit).
+    this.startSessionTimer(this.sessionSeconds);
 
     // Kette wiederherstellen: lokal nur, wenn der Token zu DIESEM Run passt (Refresh auf demselben
     // Gerät → exakt dasselbe Puzzle). Sonst (anderes Gerät / Cache überschrieben) die Kette von vorne
@@ -964,7 +963,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.state = 'SOLVED';
     this.solved++;
     // Pro-Puzzle-Lösezeit JETZT festhalten (vor einer evtl. Nachfrage, die Zeit kosten würde).
-    const perPuzzleSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
+    const perPuzzleSeconds = this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0;
     if (this.puzzle) {
       this.pushSessionPuzzle(true);
       // Für „Letztes Puzzle analysieren" merken (überlebt den Auto-Advance).
@@ -1258,12 +1257,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // --- Timer ---
 
-  private startSessionTimer(): void {
-    this.sessionStart = Date.now();
-    this.sessionSeconds = 0;
+  /** `initialSeconds` > 0 setzt einen fortgesetzten Lauf (Resume) zeitlich korrekt fort. */
+  private startSessionTimer(initialSeconds = 0): void {
+    this.sessionStopwatch.start(initialSeconds);
+    this.sessionSeconds = initialSeconds;
     this.sessionInterval = setInterval(() => {
-      this.sessionSeconds = Math.floor((Date.now() - this.sessionStart) / 1000);
-      this.elapsedSeconds = this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0;
+      this.sessionSeconds = this.sessionStopwatch.elapsedSeconds;
+      this.elapsedSeconds = this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0;
     }, 1000);
   }
 
@@ -1272,6 +1272,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       clearInterval(this.sessionInterval);
       this.sessionInterval = undefined;
     }
+    this.sessionStopwatch.stop();
+    this.puzzleStopwatch.stop();
   }
 
   formatTime(seconds: number): string {
@@ -1290,7 +1292,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    *  überlanger Zeit gekappt (siehe {@link LongSolveService}). */
   private recordAttempt(solved: boolean, seconds?: number): void {
     if (!this.puzzle) return;
-    const timeSpent = seconds ?? (this.puzzleStartTime > 0 ? Math.floor((Date.now() - this.puzzleStartTime) / 1000) : 0);
+    const timeSpent = seconds ?? (this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0);
     const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
     const id = this.puzzle.id;
     const loggedIn = this.authService.isLoggedIn;

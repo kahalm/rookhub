@@ -33,6 +33,7 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { VisibilityStopwatch } from './visibility-stopwatch';
 import { LongSolveService } from './long-solve.service';
 import { of } from 'rxjs';
 
@@ -69,7 +70,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   elapsedSeconds = 0;
   private timerInterval?: ReturnType<typeof setInterval>;
-  private startTime = 0;
+  /** Zählt nur sichtbare Tab-Zeit (Hintergrund pausiert). */
+  private readonly stopwatch = new VisibilityStopwatch();
 
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
@@ -554,10 +556,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   private startTimer(): void {
-    this.startTime = Date.now();
+    this.stopwatch.start();
     this.elapsedSeconds = 0;
     this.timerInterval = setInterval(() => {
-      this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
     }, 1000);
   }
 
@@ -566,6 +568,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       clearInterval(this.timerInterval);
       this.timerInterval = undefined;
     }
+    // Finalen Stand (aktive Zeit) festhalten, bevor die Stoppuhr abgehängt wird.
+    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
+    this.stopwatch.stop();
   }
 
   /** `seconds` = zu wertende Lösezeit; default = gemessene Zeit (Fehlversuche), beim Lösen ggf. wegen

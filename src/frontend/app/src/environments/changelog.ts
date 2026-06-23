@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.181.5';
+export const APP_VERSION = '0.182.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.182.0", date: "2026-06-23", changes: [
+    { en: "Puzzle solve time now only counts while the browser tab is active. If you switch to another tab (or minimise), the timer pauses and resumes when you come back — so background time no longer inflates your solve times. Applies to Standard, Course/Book and Endless puzzles, plus the Endless run timer. (The existing 'that took a while' prompt above 5 minutes stays as a safety net.)", de: "Die Puzzle-Lösezeit zählt jetzt nur noch, solange der Browser-Tab aktiv ist. Wechselst du in einen anderen Tab (oder minimierst), pausiert die Uhr und läuft beim Zurückkommen weiter — Hintergrundzeit bläht deine Lösezeiten also nicht mehr auf. Gilt für Standard-, Kurs-/Buch- und Endlos-Puzzle sowie den Endlos-Laufzeit-Timer. (Die bestehende Nachfrage „so lange gebraucht?\" ab 5 Minuten bleibt als Sicherheitsnetz.)" },
+  ]},
   { version: "0.181.5", date: "2026-06-23", changes: [
     { en: "Build fix: the daily/course book-title change (0.181.3) referenced a non-existent field and broke the server build (CI red). No user-facing change beyond the title display now actually working.", de: "Build-Fix: Die Buchtitel-Anzeige für Tages-/Kurs-Puzzles (0.181.3) verwies auf ein nicht existierendes Feld und brach den Server-Build (CI rot). Keine sichtbare Änderung, außer dass die Titel-Anzeige jetzt tatsächlich funktioniert." },
   ]},
