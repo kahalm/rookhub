@@ -714,8 +714,13 @@
       "flagCleared": "Markierung entfernt.",
       "flagError": "Markierung konnte nicht gespeichert werden.",
       "pieces": {
-        "pawn": "der Bauer", "knight": "der Springer", "bishop": "der Läufer",
-        "rook": "der Turm", "queen": "die Dame", "king": "der König", "piece": "die Figur"
+        "pawn": "der Bauer",
+        "knight": "der Springer",
+        "bishop": "der Läufer",
+        "rook": "der Turm",
+        "queen": "die Dame",
+        "king": "der König",
+        "piece": "die Figur"
       }
     },
     "viz": {
@@ -1383,7 +1388,24 @@
     "syncPlay": "Spielzeit aktualisieren",
     "syncDone": "Spielzeit aktualisiert.",
     "history": "Tageshistory",
-    "dateCol": "Datum"
+    "dateCol": "Datum",
+    "dailyGoal": "Trainingszeit",
+    "dailyHint": "Ein einziges Tageszeit-Ziel — Puzzles, Kurse und Chessable zählen gemeinsam darauf ein.",
+    "total": "Gesamt",
+    "breakdownBySource": "Nach Quelle",
+    "breakdownByTheme": "Nach Thema",
+    "source": {
+      "randomPuzzle": "Puzzles",
+      "courseBook": "Kurse / Bücher",
+      "chessable": "Chessable"
+    },
+    "theme": {
+      "opening": "Eröffnung",
+      "middlegame": "Mittelspiel",
+      "endgame": "Endspiel",
+      "tactics": "Taktik",
+      "other": "Sonstiges"
+    }
   },
   "install": {
     "pageTitle": "RookHub installieren",

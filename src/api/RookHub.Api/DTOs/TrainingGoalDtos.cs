@@ -5,15 +5,13 @@ namespace RookHub.Api.DTOs;
 
 /// <summary>
 /// Effektives Trainingsziel eines Users — persönlicher Override, sonst Gruppen-Vorlage, sonst keins.
-/// Puzzles/Buch = Minuten/Tag (Tagesziel), Spielen = Anzahl Rapid-/Classical-Partien pro ISO-Woche
-/// (jeweils 0 = Kategorie nicht Teil des Ziels).
+/// <see cref="DailyMinutes"/> = ein gemeinsames Tageszeit-Ziel (alle Quellen füttern denselben Topf),
+/// <see cref="PlayGames"/> = Anzahl Rapid-/Classical-Partien pro ISO-Woche (jeweils 0 = nicht Teil des Ziels).
 /// </summary>
 public class TrainingGoalDto
 {
-    public int PuzzleMinutes { get; set; }
-    public int BookMinutes { get; set; }
-    /// <summary>Tagesziel Chessable-Training in Minuten (aktive Zeit von der RepCheck-Extension).</summary>
-    public int ChessableMinutes { get; set; }
+    /// <summary>Tagesziel Trainingszeit in Minuten (gemeinsamer Topf aller Quellen).</summary>
+    public int DailyMinutes { get; set; }
     /// <summary>Wochenziel: Anzahl Rapid-/Classical-Partien pro ISO-Woche.</summary>
     public int PlayGames { get; set; }
     public int WeeklyDaysTarget { get; set; }
@@ -37,12 +35,10 @@ public class ChessableActivityInputDto
 }
 
 /// <summary>Eingabe zum Setzen eines Ziels (persönlich oder als Gruppen-Vorlage).
-/// Puzzles/Buch/Chessable = Minuten/Tag, Spielen = Partien/Woche.</summary>
+/// <see cref="DailyMinutes"/> = Trainingsminuten/Tag, <see cref="PlayGames"/> = Partien/Woche.</summary>
 public class TrainingGoalInputDto
 {
-    [Range(0, 600)] public int PuzzleMinutes { get; set; }
-    [Range(0, 600)] public int BookMinutes { get; set; }
-    [Range(0, 600)] public int ChessableMinutes { get; set; }
+    [Range(0, 600)] public int DailyMinutes { get; set; }
     [Range(0, 200)] public int PlayGames { get; set; }
     [Range(0, 7)] public int WeeklyDaysTarget { get; set; }
 }
@@ -71,32 +67,60 @@ public class ManualActivityInputDto
     [MaxLength(200)] public string? Note { get; set; }
 }
 
-/// <summary>Ein Tag im Ziele-Tracker: verbrachte Sekunden (Puzzles/Buch) + gespielte Partien an dem Tag
-/// (informativ — das Spielen-Ziel ist wöchentlich) + Tagesstatus (nur Puzzles/Buch).</summary>
+/// <summary>Aufschlüsselung von Trainingssekunden nach <b>Quelle</b> (woher die Zeit stammt).</summary>
+public class SourceBreakdownDto
+{
+    /// <summary>Standard-/Endlos-/Tages-/Einzel-Puzzle + manuelles Offline-Puzzle.</summary>
+    public int RandomPuzzleSeconds { get; set; }
+    /// <summary>Kurse/Bücher (alle Kurs-Versuche) + manuelles Offline-Studium/Coaching.</summary>
+    public int CourseBookSeconds { get; set; }
+    /// <summary>Chessable-Training (von der RepCheck-Extension gemeldet).</summary>
+    public int ChessableSeconds { get; set; }
+}
+
+/// <summary>Aufschlüsselung von Trainingssekunden nach <b>Thema</b> (Phase/Taktik, best-effort;
+/// nicht klassifizierbare Zeit landet in <see cref="OtherSeconds"/>).</summary>
+public class ThemeBreakdownDto
+{
+    public int OpeningSeconds { get; set; }
+    public int MiddlegameSeconds { get; set; }
+    public int EndgameSeconds { get; set; }
+    public int TacticsSeconds { get; set; }
+    /// <summary>Sonstiges/unzugeordnet (kein verlässliches Thema-Signal).</summary>
+    public int OtherSeconds { get; set; }
+}
+
+/// <summary>Ein Tag im Ziele-Tracker: gesamte Trainingssekunden + Aufschlüsselung nach Quelle/Thema
+/// + gespielte Partien an dem Tag (informativ — Spielen ist ein Wochenziel) + Tagesstatus.</summary>
 public class TrackerDayDto
 {
     /// <summary>UTC-Datum als yyyy-MM-dd.</summary>
     public string Date { get; set; } = string.Empty;
-    public int PuzzleSeconds { get; set; }
-    public int BookSeconds { get; set; }
-    /// <summary>Aktiv trainierte Chessable-Sekunden an diesem Tag.</summary>
-    public int ChessableSeconds { get; set; }
-    /// <summary>Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur Puzzles/Buch/Chessable).</summary>
+    /// <summary>Gesamte (gemeinsam getopfte) Trainingssekunden des Tages.</summary>
+    public int TotalSeconds { get; set; }
+    public SourceBreakdownDto BySource { get; set; } = new();
+    public ThemeBreakdownDto ByTheme { get; set; } = new();
+    /// <summary>Rapid-/Classical-Partien an diesem Tag (informativ; Tagesstatus nutzt nur die Trainingszeit).</summary>
     public int PlayGames { get; set; }
-    /// <summary>"none" | "partial" | "full" gegenüber dem effektiven Tagesziel (Puzzles/Buch/Chessable).</summary>
+    /// <summary>"none" | "partial" | "full" gegenüber dem effektiven Tageszeit-Ziel.</summary>
     public string Status { get; set; } = "none";
     /// <summary>Enthält dieser Tag mindestens eine manuell (selbst) eingetragene Offline-Aktivität?</summary>
     public bool HasManual { get; set; }
 }
 
-/// <summary>Effektives Ziel + Tagesreihe für den Tracker (nur Tage mit Aktivität).</summary>
+/// <summary>Effektives Ziel + Tagesreihe (nur Tage mit Aktivität) + Perioden-Aufschlüsselung
+/// (Summen über das gesamte Tracker-Fenster, nach Quelle und Thema).</summary>
 public class TrackerResponseDto
 {
     public TrainingGoalDto Goal { get; set; } = new();
     public List<TrackerDayDto> Days { get; set; } = new();
+    /// <summary>Summe der Trainingssekunden über das Fenster, aufgeschlüsselt nach Quelle.</summary>
+    public SourceBreakdownDto BreakdownBySource { get; set; } = new();
+    /// <summary>Summe der Trainingssekunden über das Fenster, aufgeschlüsselt nach Thema.</summary>
+    public ThemeBreakdownDto BreakdownByTheme { get; set; } = new();
 }
 
-/// <summary>Fortschritt einer zeitbasierten Tages-Kategorie (Puzzles/Buch).</summary>
+/// <summary>Fortschritt der zeitbasierten Tages-Trainingszeit (gemeinsamer Topf).</summary>
 public class CategoryProgressDto
 {
     public int TargetMinutes { get; set; }
@@ -112,17 +136,20 @@ public class PlayProgressDto
     public bool Met { get; set; }
 }
 
-/// <summary>Heutiger Fortschritt (Puzzles/Buch je Tag) + Wochenstand (Spielen-Partien + voll erfüllte Tage).</summary>
+/// <summary>Heutiger Fortschritt: gemeinsames Tageszeit-Ziel + Aufschlüsselung von heute (Quelle/Thema)
+/// + Wochenstand (Spielen-Partien + voll erfüllte Tage).</summary>
 public class TodayProgressDto
 {
     public TrainingGoalDto Goal { get; set; } = new();
-    public CategoryProgressDto Puzzles { get; set; } = new();
-    public CategoryProgressDto Book { get; set; } = new();
-    /// <summary>Tagesziel Chessable: aktiv trainierte Zeit heute vs. Zielminuten.</summary>
-    public CategoryProgressDto Chessable { get; set; } = new();
+    /// <summary>Tageszeit-Ziel: heute trainierte Zeit (alle Quellen) vs. Zielminuten.</summary>
+    public CategoryProgressDto Daily { get; set; } = new();
+    /// <summary>Heutige Trainingssekunden aufgeschlüsselt nach Quelle.</summary>
+    public SourceBreakdownDto BySource { get; set; } = new();
+    /// <summary>Heutige Trainingssekunden aufgeschlüsselt nach Thema.</summary>
+    public ThemeBreakdownDto ByTheme { get; set; } = new();
     /// <summary>Wöchentliches Spielen-Ziel: Partien in der laufenden ISO-Woche (Mo–So) vs. Zielanzahl.</summary>
     public PlayProgressDto Play { get; set; } = new();
-    /// <summary>"none" | "partial" | "full" für heute (nur Tagesziele Puzzles/Buch/Chessable).</summary>
+    /// <summary>"none" | "partial" | "full" für heute (nur das Tageszeit-Ziel).</summary>
     public string Status { get; set; } = "none";
     /// <summary>Voll erfüllte Tage in der laufenden ISO-Woche (Mo–So, inkl. heute).</summary>
     public int WeekDaysMet { get; set; }

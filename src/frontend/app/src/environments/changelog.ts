@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.178.2';
+export const APP_VERSION = '0.178.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.178.3", date: "2026-06-23", changes: [
+    { en: "Fixed training goals being broken in production: an earlier merge had shipped the new database migration (single daily training-time goal) without the matching application code, so the API still queried the removed columns and returned errors. Restored the training-goal code (model, DTOs, service, UI, translations) to match the migrated schema.", de: "Trainingsziele in Produktion repariert: Ein früherer Merge hatte die neue Datenbank-Migration (ein gemeinsames Tageszeit-Ziel) ohne den passenden Anwendungscode ausgeliefert, sodass die API noch die entfernten Spalten abfragte und Fehler lieferte. Trainingsziel-Code (Modell, DTOs, Service, UI, Übersetzungen) wieder passend zum migrierten Schema hergestellt." },
+  ]},
   { version: "0.178.2", date: "2026-06-23", changes: [
     { en: "Fixed a build error: the four newest changelog entries used typographic quotes as string delimiters, which broke the v0.178.1 production build.", de: "Build-Fehler behoben: Die vier neuesten Changelog-Einträge nutzten typografische Anführungszeichen als String-Delimiter und brachen damit den v0.178.1-Prod-Build." },
   ]},

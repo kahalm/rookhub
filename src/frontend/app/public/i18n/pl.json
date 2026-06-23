@@ -1116,7 +1116,24 @@
     "syncPlay": "Aktualizuj czas gry",
     "syncDone": "Czas gry zaktualizowany.",
     "history": "Daily history",
-    "dateCol": "Date"
+    "dateCol": "Date",
+    "dailyGoal": "Training time",
+    "dailyHint": "Set one daily training-time goal — puzzles, courses and Chessable all count toward it together.",
+    "total": "Total",
+    "breakdownBySource": "By source",
+    "breakdownByTheme": "By theme",
+    "source": {
+      "randomPuzzle": "Puzzles",
+      "courseBook": "Courses / books",
+      "chessable": "Chessable"
+    },
+    "theme": {
+      "opening": "Opening",
+      "middlegame": "Middlegame",
+      "endgame": "Endgame",
+      "tactics": "Tactics",
+      "other": "Other"
+    }
   },
   "install": {
     "title": "Install RookHub on Android",
