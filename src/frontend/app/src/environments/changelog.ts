@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.181.1';
+export const APP_VERSION = '0.181.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.181.2", date: "2026-06-23", changes: [
+    { en: "Internal cleanup: the Endless mode's fast-track threshold logic moved into its own unit-tested state class, trimming the large Endless component. No user-facing change.", de: "Interne Aufräumarbeit: Die Fasttrack-Schwellen-Logik des Endless-Modus liegt jetzt in einer eigenen, unit-getesteten State-Klasse, was die große Endless-Komponente verschlankt. Keine sichtbare Änderung." },
+  ]},
   { version: "0.181.1", date: "2026-06-23", changes: [
     { en: "Internal cleanup: the app's root-level router and service-worker subscriptions are now tied to the component lifecycle (takeUntilDestroyed). No user-facing change.", de: "Interne Aufräumarbeit: Die Router- und Service-Worker-Subscriptions auf App-Root-Ebene sind jetzt an den Komponenten-Lebenszyklus gebunden (takeUntilDestroyed). Keine sichtbare Änderung." },
   ]},

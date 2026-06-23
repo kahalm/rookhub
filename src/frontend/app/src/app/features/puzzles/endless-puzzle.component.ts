@@ -24,7 +24,8 @@ import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { buildChainWindows, autoFasttrackThresholds, fasttrackSteps, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
+import { buildChainWindows, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
+import { EndlessFasttrackState } from './endless-fasttrack-state';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { AuthService } from '../../core/auth.service';
@@ -208,13 +209,18 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** ID des zuvor gespielten Puzzles (für „vorheriges Puzzle teilen"). */
   private previousPuzzleId: number | null = null;
 
-  // Fasttrack
-  fasttrackPhase1Step = 0;
-  fasttrackPhase2Step = 0;
-  fasttrackAvgFirst = 0;
-  fasttrackAvgSecond = 0;
-  fasttrackAutoFirst = 0;
-  fasttrackAutoSecond = 0;
+  // Fasttrack-State (in eigene Klasse ausgelagert); Template/interne Reads gehen über die Getter/Setter.
+  private readonly fasttrack = new EndlessFasttrackState();
+  /** T1-Mittelwert (ngModel, zwei-Wege). */
+  get fasttrackAvgFirst(): number { return this.fasttrack.avgFirst; }
+  set fasttrackAvgFirst(v: number) { this.fasttrack.avgFirst = v; }
+  /** T2-Mittelwert (ngModel, zwei-Wege). */
+  get fasttrackAvgSecond(): number { return this.fasttrack.avgSecond; }
+  set fasttrackAvgSecond(v: number) { this.fasttrack.avgSecond = v; }
+  get fasttrackAutoFirst(): number { return this.fasttrack.autoFirst; }
+  get fasttrackAutoSecond(): number { return this.fasttrack.autoSecond; }
+  get fasttrackPhase1Step(): number { return this.fasttrack.phase1Step; }
+  get fasttrackPhase2Step(): number { return this.fasttrack.phase2Step; }
 
   // Dynamic rating
   _currentMinRating = 0;
@@ -1239,39 +1245,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // --- Step calculation ---
 
   private computeFasttrackSteps(): void {
-    const auto = autoFasttrackThresholds(this.config, this.sessionHistory);
-    this.fasttrackAutoFirst = auto.first;
-    this.fasttrackAutoSecond = auto.second;
-    // Manuelle Overrides aus der Config, sonst Auto-Werte
-    this.fasttrackAvgFirst = this.config.fasttrackThreshold1 ?? this.fasttrackAutoFirst;
-    this.fasttrackAvgSecond = this.config.fasttrackThreshold2 ?? this.fasttrackAutoSecond;
-    this.recalcStepsFromThresholds();
+    this.fasttrack.compute(this.config, this.sessionHistory);
   }
 
   onThresholdChange(): void {
-    // Persist manual overrides
-    this.config.fasttrackThreshold1 = this.fasttrackAvgFirst !== this.fasttrackAutoFirst
-      ? this.fasttrackAvgFirst : undefined;
-    this.config.fasttrackThreshold2 = this.fasttrackAvgSecond !== this.fasttrackAutoSecond
-      ? this.fasttrackAvgSecond : undefined;
-    this.recalcStepsFromThresholds();
+    this.fasttrack.applyOverrides(this.config);
   }
 
   resetThreshold(which: number): void {
-    if (which === 1) {
-      this.fasttrackAvgFirst = this.fasttrackAutoFirst;
-      this.config.fasttrackThreshold1 = undefined;
-    } else {
-      this.fasttrackAvgSecond = this.fasttrackAutoSecond;
-      this.config.fasttrackThreshold2 = undefined;
-    }
-    this.recalcStepsFromThresholds();
-  }
-
-  private recalcStepsFromThresholds(): void {
-    const steps = fasttrackSteps(this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond);
-    this.fasttrackPhase1Step = steps.phase1Step;
-    this.fasttrackPhase2Step = steps.phase2Step;
+    this.fasttrack.reset(which === 1 ? 1 : 2, this.config);
   }
 
   // --- Timer ---
