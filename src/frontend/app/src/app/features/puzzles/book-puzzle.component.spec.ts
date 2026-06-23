@@ -253,6 +253,59 @@ describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
   });
 });
 
+describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
+  it('flaggbar im Buchmodus bei on-the-fly Tipps (echte BookPuzzle-Id, kein vorberechneter Tipp)', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = true;
+    spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+    c.hintLevel = 1;                       // ein Tipp aufgedeckt
+
+    expect(c.hasPrecomputedHints).toBeFalse();
+    expect(c.canFlagHints).toBeTrue();
+  });
+
+  it('nicht flaggbar, solange kein Tipp aufgedeckt wurde', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = true;
+    spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+    c.hintLevel = 0;
+
+    expect(c.canFlagHints).toBeFalse();
+  });
+
+  it('NICHT flaggbar im Wochenpost-Modus (puzzle.id = Index, keine echte BookPuzzle-Id)', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = true;
+    c.inWeekly = true;
+    spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 0, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+    c.hintLevel = 1;
+
+    expect(c.hasHints).toBeTrue();
+    expect(c.canFlagHints).toBeFalse();
+  });
+
+  it('nicht flaggbar, wenn nicht eingeloggt', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = false;
+    spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    (c as any).setupPuzzle(puzzle);
+    c.puzzle = puzzle;
+    c.hintLevel = 1;
+
+    expect(c.canFlagHints).toBeFalse();
+  });
+});
+
 describe('BookPuzzleComponent „dumme Tipps" markieren (Admin)', () => {
   it('toggleHintsFlag setzt das Flag und ruft den Service mit true', () => {
     const c = makeComponent();

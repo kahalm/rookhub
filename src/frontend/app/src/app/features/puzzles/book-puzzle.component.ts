@@ -115,9 +115,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  (z. B. Wochenpost-Puzzles, die on-the-fly aus dem PGN geparst werden). */
   private firstMoveHint: FirstMoveHint | null = null;
 
-  /** True, wenn dieses Puzzle vorberechnete (sprach-keyed) Tipps mitbringt (echtes Buch-Puzzle). Nur diese
-   *  sind als „dumm" flaggbar — der Flag-Endpoint adressiert eine echte BookPuzzle-Id. */
+  /** True, wenn dieses Puzzle vorberechnete (sprach-keyed) Tipps mitbringt (echtes Buch-Puzzle). */
   get hasPrecomputedHints(): boolean { return !!this.puzzle?.hints; }
+
+  /** Tipps sind als „dumm/schlecht" flaggbar, sobald mindestens einer aufgedeckt wurde — egal ob
+   *  vorberechnet oder on-the-fly (wie im Standard-/Endless-Solver). Voraussetzung: das Puzzle hat eine
+   *  echte BookPuzzle-Id (Buch/Kurs/Tagespuzzle), die der Flag-Endpoint adressieren kann. Wochenpost-
+   *  Puzzles werden on-the-fly aus dem PGN geparst (puzzle.id = Index, KEINE echte BookPuzzle-Id) →
+   *  nicht flaggbar. */
+  get canFlagHints(): boolean {
+    return this.isLoggedIn && this.hasHints && this.hintLevel > 0 && !this.inWeekly;
+  }
 
   /** Tipps in der aktiven UI-Sprache (Fallback en→de). Vorberechnete Tipps haben Vorrang; fehlen sie
    *  (Wochenpost u. a.), werden on-the-fly gestufte Tipps erzeugt wie im Standard-/Endless-Solver.
