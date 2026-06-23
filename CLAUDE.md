@@ -541,7 +541,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.178.1` — vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
+- **Aktuelle Version**: `0.178.2` — 0.178.2 (Build-Fix: die vier neuesten Changelog-Einträge nutzten typografische Anführungszeichen als JS-String-Delimiter → v0.178.1-Build (master+Tag) rot; korrigiert auf gerade `"`-Delimiter, Smart-Quotes nur noch im Text); vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)
