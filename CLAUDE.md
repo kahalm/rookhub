@@ -542,7 +542,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 
 ## Versionierung
 
-- **Aktuelle Version**: `0.180.0` — 0.180.0 (Trainingsziele: Quellen-/Themen-Aufschlüsselung umschaltbar Tag/Woche/Monat/Jahr/Gesamt + Durchschalten via Pfeile; neue Tagesreihe `GET /api/training-goals/daily-series` über die ganze Historie, Perioden-Logik client-seitig); 0.179.0 (Trainingsziele: Chessable-Kurse-Sektion mit manueller Themen-Zuordnung); vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
+- **Aktuelle Version**: `0.181.1` — 0.181.1 (interne Aufräumarbeit: app-root Router-/Service-Worker-Subscriptions an Lebenszyklus gebunden via `takeUntilDestroyed`; TODO-Sweep ergab sonst keinen echten Leak); 0.181.0 (Kurs-Zufallsmodus: jedes Puzzle nur einmal pro Durchgang); 0.180.0 (Trainingsziele: Quellen-/Themen-Aufschlüsselung umschaltbar Tag/Woche/Monat/Jahr/Gesamt + Durchschalten via Pfeile); vollständiger Verlauf ausschließlich in `src/frontend/app/src/environments/changelog.ts` (Single Source)
 - `environment.ts` (dev) UND `environment.prod.ts` (prod-Build via fileReplacements) importieren beide aus `changelog.ts` — Footer zeigt in jedem Build dieselbe Version. **Nur `changelog.ts` editieren**, nie die Environment-Dateien
 - Angezeigt im Footer der Desktop-Version (Klick öffnet Changelog-Overlay)
 - **Jeder Fix/jedes Feature MUSS die Version erhöhen**: Patch für Fixes (0.0.x), Minor für Features (0.x.0)

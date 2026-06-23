@@ -1,4 +1,5 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -178,6 +179,8 @@ export class AppComponent implements OnInit {
     return this.translate.currentLang === 'de' ? change.de : change.en;
   }
 
+  private destroyRef = inject(DestroyRef);
+
   constructor(
     private router: Router,
     locale: LocaleService,
@@ -218,17 +221,17 @@ export class AppComponent implements OnInit {
     // Service Worker: neue Version verfügbar → Hinweis mit „Neu laden".
     if (this.swUpdate.isEnabled) {
       this.swUpdate.versionUpdates
-        .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
+        .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'), takeUntilDestroyed(this.destroyRef))
         .subscribe(() => {
           const ref = this.snackbar.show(this.translate.instant('app.updateAvailable'), { action: 'app.reload', duration: 0 });
           ref.onAction().subscribe(() => document.location.reload());
         });
       // Kaputter SW-Zustand (z.B. Hash-Mismatch nach Teil-Deploy) → einmal hart neu laden,
       // sonst lädt die App veraltete/fehlende Chunks bis zu einem manuellen Reload.
-      this.swUpdate.unrecoverable.subscribe(() => document.location.reload());
+      this.swUpdate.unrecoverable.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => document.location.reload());
     }
 
-    this.router.events.subscribe(() => {
+    this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('quickstart') === '1') {
         this.showQuickstart = true;

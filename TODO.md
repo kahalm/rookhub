@@ -10,7 +10,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [ ] Dependency-Updates prüfen (NuGet + npm) — letzter: 2026-06-13 → npm Angular auf 19.2.25/cli 19.2.27 aktualisiert (0.115.1, Build+289 Tests grün). NuGet: alle Updates sind 9→10-Major (.NET-10) → bewusst ausgelassen; Swashbuckle 6.9.0 bleibt gepinnt. Bot (pip `>=`-Floors) aktuell. npm-audit-Vulns (12) nur in Dev-Deps (webpack-dev-server/sockjs) — nicht im Prod-Bundle
 
 ## Bugs
-- [ ] Bauernumwandlung (Pawn Promotion) auf Mobile — Auswahl-Dialog/Interaktion auf dem Handy prüfen & fixen (Promotion-Picker schwer/nicht bedienbar auf Touch/kleinen Screens). Betrifft alle Puzzle-Modi (gemeinsamer `PuzzleBoardComponent`/chessground).
+- [x] Bauernumwandlung (Pawn Promotion) auf Mobile — behoben (vom User bestätigt 2026-06-23).
 - [x] Engine-Hang bei Puzzle→Analyse-Wechsel → behoben in 0.97.5 (engine.destroy() statt stop())
 - [x] BookPuzzle: Ladefehler → endloser Spinner → behoben in 0.97.6 (loadError-Flag + Retry-Button)
 - [x] FriendController: return Forbid(ex.Message) → 500 → war bereits behoben in 0.40.9
@@ -68,7 +68,7 @@ _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06
 - [ ] JWT `ClockSkew` explizit auf ≤1 min setzen (`Program.cs:~92`, aktuell Default 5 min) — 1-Zeilen-Härtung, niedriger Nutzen
 - [ ] Retry-Interceptor erweitern — existiert (`retry.interceptor.ts`: 502/503/0, GET/HEAD, X-Retry-Guard), aber nur **1 Retry ohne Backoff**; ggf. auf Exponential-Backoff + mehr Versuche. Marginal
 - [ ] Endless-Puzzle-Komponente: State-Management in dedizierten Service auslagern (`endless-puzzle.component.ts` ~1211 Zeilen). Großer Umbau, mittleres Regressionsrisiko, nur Wartbarkeit
-- [ ] `takeUntilDestroyed` durchgängig einsetzen — ~228 `.subscribe(`-Stellen, nur 6 Komponenten nutzen es heute; viele mit manuellem `ngOnDestroy`/`clearInterval`. Flächiger Sweep, eher opportunistisch beim Anfassen erledigen als als eigenes Projekt
+- [x] `takeUntilDestroyed` durchgängig einsetzen — **2026-06-23 geprüft (v0.181.1): kein echter Leak im Code.** Sweep über alle `.subscribe(`-Stellen ergab: die ~228 Aufrufe sind ganz überwiegend self-completing HTTP-Calls (kein Schutz nötig). JEDER langlebige Stream (interval/timer, route.paramMap, Service-Subjects) ist bereits abgesichert — `dashboard`/`navbar`/`admin`(queryParam) via `takeUntilDestroyed`, `chessable`/`admin`(Download-Polling)/`book-puzzle`(dailySub) via manuelles `unsubscribe()` (dort funktional nötig, nicht nur Destroy → bewusst NICHT auf takeUntilDestroyed umgestellt). `fromEvent` gibt es nicht (alle Tastatur-Listener via `@HostListener`, auto-cleaned). Einzige nackte langlebige Subs saßen in `app.component` (Root) auf `router.events` + `swUpdate.versionUpdates`/`unrecoverable` → auf `takeUntilDestroyed` umgestellt (v0.181.1; Root leakt zwar praktisch nie, aber damit ist die letzte ungeschützte Stelle weg). Restliche manuelle `ngOnDestroy`-Cleanups sind korrekt und bleiben.
 - [ ] Puzzle-Board auf den gemeinsamen `PromotionPickerComponent` (`shared/promotion-picker/`, seit 0.152.0 vom Analysebrett genutzt) migrieren — `puzzle-board.component.ts` hat noch seine eigene Inline-Umwandlungs-Overlay (Normal- + Viz-Pfad) mit identischer Guard-/Positionslogik. Zusammenführen vermeidet Doppelpflege; Risiko = Viz-Pfad (eigene Farb-/FEN-Erkennung) + frisch gefixter Ghost-Tap-Guard, daher bewusst getrennt belassen bis zum nächsten Anfassen
 
 ### Bewusste Entscheidung — kein Bug (nur falls gewünscht umbauen)
