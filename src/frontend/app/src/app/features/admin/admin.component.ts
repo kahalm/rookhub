@@ -63,8 +63,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   allUsers: AdminUser[] = [];
   addMemberUserId: number | null = null;
 
-  /** Trainingsziel-Vorlage der ausgewählten Gruppe (Tagesziele je Kategorie + Wochenziel). */
-  goalEdit = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
+  /** Trainingsziel-Vorlage der ausgewählten Gruppe (ein Tageszeit-Ziel + Wochenziele). */
+  goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
   goalHasTemplate = false;
   goalLoading = false;
 
@@ -646,9 +646,7 @@ export class AdminComponent implements OnInit, OnDestroy {
       next: g => {
         this.goalHasTemplate = g.source === 'group';
         this.goalEdit = {
-          puzzleMinutes: g.puzzleMinutes,
-          bookMinutes: g.bookMinutes,
-          chessableMinutes: g.chessableMinutes,
+          dailyMinutes: g.dailyMinutes,
           playGames: g.playGames,
           weeklyDaysTarget: g.weeklyDaysTarget,
         };
@@ -665,9 +663,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (!this.selectedGroup) return;
     const clamp = (v: number, max: number) => Math.max(0, Math.min(max, Math.round(v || 0)));
     const goal = {
-      puzzleMinutes: clamp(this.goalEdit.puzzleMinutes, 600),
-      bookMinutes: clamp(this.goalEdit.bookMinutes, 600),
-      chessableMinutes: clamp(this.goalEdit.chessableMinutes, 600),
+      dailyMinutes: clamp(this.goalEdit.dailyMinutes, 600),
       playGames: clamp(this.goalEdit.playGames, 200),
       weeklyDaysTarget: clamp(this.goalEdit.weeklyDaysTarget, 7),
     };
@@ -683,7 +679,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.adminService.deleteGroupTrainingGoal(groupId).subscribe({
       next: () => {
         this.goalHasTemplate = false;
-        this.goalEdit = { puzzleMinutes: 0, bookMinutes: 0, chessableMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
+        this.goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
         this.snackbar.info(this.translate.instant('admin.groups.goal.cleared'));
       },
       error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),

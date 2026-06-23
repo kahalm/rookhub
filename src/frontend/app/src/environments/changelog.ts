@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.177.1';
+export const APP_VERSION = '0.178.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -12,6 +12,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.178.0", date: "2026-06-23", changes: [
+    { en: "Training goals: you now set a single daily training-time goal — puzzles, courses and Chessable all count toward the same pot. Your time is still recorded by source (puzzles / courses & books / Chessable) and by theme (opening, middlegame, endgame, tactics; anything unclassifiable goes to “Other”), shown both for today and across the whole tracker window. The weekly playing goal (rapid/classical games) and the weekly full-day streak stay as before.", de: "Trainingsziele: Du setzt jetzt nur noch ein Tageszeit-Ziel — Puzzles, Kurse und Chessable zählen gemeinsam auf denselben Topf ein. Deine Zeit wird weiterhin nach Quelle (Puzzles / Kurse & Bücher / Chessable) und nach Thema (Eröffnung, Mittelspiel, Endspiel, Taktik; nicht Zuordenbares geht in „Sonstiges“) aufgezeichnet — sowohl für heute als auch über das ganze Tracker-Fenster. Das wöchentliche Spielen-Ziel (Rapid/Classical-Partien) und der Wochen-Streak (voll erfüllte Tage) bleiben wie gehabt." },
+  ]},
   { version: "0.177.1", date: "2026-06-23", changes: [
     { en: "Fixed the on-the-fly hint for book/daily/course puzzles: hint 3 now names the move you actually have to play. Previously it described the opponent's reply (e.g. “Kxc3”), which isn't a legal move for the side to move.", de: "On-the-fly-Tipp für Buch-/Tages-/Kurs-Puzzles korrigiert: Tipp 3 nennt jetzt den Zug, den du wirklich spielen musst. Vorher beschrieb er den Gegnerzug (z. B. „Kxc3“), der für die am Zug befindliche Seite gar nicht möglich ist." },
   ]},

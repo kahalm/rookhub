@@ -6,21 +6,24 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Trainingsziele („Trainingsunterstützung"): pro User ein effektives Tagesziel für Puzzles und
-/// Buch/Kurs (Minuten), ein wöchentliches Spielen-Ziel (Anzahl Rapid-/Classical-Partien pro ISO-Woche)
-/// sowie ein Wochenziel an voll erfüllten Tagen. Ein Tracker aggregiert die je Tag verbrachte Zeit
-/// und markiert Tage als none/partial/full (Tagesstatus nur aus Puzzles + Buch).
+/// Trainingsziele („Trainingsunterstützung"): pro User <b>ein</b> effektives Tageszeit-Ziel
+/// (<see cref="UserTrainingGoal.DailyMinutes"/>), das von allen Quellen gemeinsam gefüllt wird, plus
+/// ein wöchentliches Spielen-Ziel (Anzahl Rapid-/Classical-Partien pro ISO-Woche) und ein Wochenziel
+/// an voll erfüllten Tagen. Ein Tracker aggregiert die je Tag verbrachte Trainingszeit und markiert
+/// Tage als none/partial/full (gegenüber dem Tageszeit-Ziel).
 ///
 /// Effektives Ziel = persönlicher <see cref="UserTrainingGoal"/>-Override, sonst die
 /// <see cref="GroupTrainingGoal"/>-Vorlage einer Gruppe des Users. Bei Mitgliedschaft in mehreren
 /// Gruppen mit Vorlage gewinnt die zuletzt aktualisierte (deterministische Regel).
 ///
-/// Kategorien-Quellen:
-///  • Puzzles = PuzzleAttempt (Standard) + EndlessSession (Endlos) + BookPuzzleAttempt (Tages-/Buch-Puzzle)
-///             + CourseAttempt aus Büchern der Art Puzzle (alle Versuche, akkumuliert)
-///  • Buch/Kurs = CourseAttempt aus Büchern der Art Study (Theorie-/Studienbücher; alle Versuche)
-///  • Spielen = PlayTimeDaily (extern, Lichess/chess.com): gespielte Rapid-/Classical-Partien je Tag,
-///    fürs Ziel über die laufende ISO-Woche summiert.
+/// Die verbrachte Zeit wird zusätzlich nach <b>Quelle</b> und <b>Thema</b> aufgezeichnet:
+///  • Quelle: randomPuzzle (Standard-/Endlos-/Tages-/Einzel-Puzzle + manuelles Offline-Puzzle),
+///    courseBook (alle Kurs-Versuche + manuelles Offline-Studium/Coaching), chessable (RepCheck-Zeit).
+///  • Thema: Eröffnung/Mittelspiel/Endspiel/Taktik aus dem jeweils verfügbaren Signal (Lichess-Themes,
+///    BookPuzzle-Tags/Chapter, Chessable-CourseKind); nicht klassifizierbare Zeit → „other".
+///
+/// Spielen (PlayTimeDaily + manuelle OTB-Partien) bleibt eine reine Partienzahl und füttert den
+/// Zeit-Topf nicht.
 /// </summary>
 public class TrainingGoalService
 {
@@ -30,10 +33,12 @@ public class TrainingGoalService
 
     /// <summary>Obergrenze je Einzel-Puzzle gegen aufgeblähte Zeiten (z.B. Tab stundenlang offen).</summary>
     private const int PerPuzzleCapSeconds = 1800;   // 30 min
-    /// <summary>Sanity-Obergrenze je Endlos-Session.</summary>
+    /// <summary>Sanity-Obergrenze je Endlos-Session / manuellem Minuten-Eintrag.</summary>
     private const int PerSessionCapSeconds = 14400; // 4 h
     /// <summary>Obergrenze je Chessable-Zeit-Häppchen (die Extension flusht in kleinen Intervallen).</summary>
     private const int PerChessableFlushCapSeconds = 3600; // 1 h
+    /// <summary>Sanity-Obergrenze für manuell eingetragene OTB-Partien je Eintrag.</summary>
+    private const int ManualGamesCap = 50;
     private const int MaxTrackerWeeks = 53;
 
     // ----- Ziel-Auflösung --------------------------------------------------
@@ -44,17 +49,15 @@ public class TrainingGoalService
         var personal = await _db.UserTrainingGoals.AsNoTracking()
             .FirstOrDefaultAsync(g => g.UserId == userId);
         if (personal != null)
-            return Map(personal.PuzzleMinutes, personal.BookMinutes, personal.ChessableMinutes, personal.PlayGames,
-                       personal.WeeklyDaysTarget, "personal", null);
+            return Map(personal.DailyMinutes, personal.PlayGames, personal.WeeklyDaysTarget, "personal", null);
 
         var tmpl = await _db.GroupTrainingGoals.AsNoTracking()
             .Where(g => _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == g.GroupId))
             .OrderByDescending(g => g.UpdatedAt)
-            .Select(g => new { g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, GroupName = g.Group!.Name })
+            .Select(g => new { g.DailyMinutes, g.PlayGames, g.WeeklyDaysTarget, GroupName = g.Group!.Name })
             .FirstOrDefaultAsync();
         if (tmpl != null)
-            return Map(tmpl.PuzzleMinutes, tmpl.BookMinutes, tmpl.ChessableMinutes, tmpl.PlayGames,
-                       tmpl.WeeklyDaysTarget, "group", tmpl.GroupName);
+            return Map(tmpl.DailyMinutes, tmpl.PlayGames, tmpl.WeeklyDaysTarget, "group", tmpl.GroupName);
 
         return new TrainingGoalDto { Source = "none" };
     }
@@ -72,7 +75,7 @@ public class TrainingGoalService
         Apply(goal, dto);
         goal.UpdatedAt = now;
         await _db.SaveChangesAsync();
-        return Map(goal.PuzzleMinutes, goal.BookMinutes, goal.ChessableMinutes, goal.PlayGames, goal.WeeklyDaysTarget, "personal", null);
+        return Map(goal.DailyMinutes, goal.PlayGames, goal.WeeklyDaysTarget, "personal", null);
     }
 
     /// <summary>Entfernt den persönlichen Override → der User fällt auf die Gruppen-Vorlage (falls vorhanden) zurück.</summary>
@@ -94,7 +97,7 @@ public class TrainingGoalService
         var g = await _db.GroupTrainingGoals.AsNoTracking().FirstOrDefaultAsync(x => x.GroupId == groupId);
         return g == null
             ? new TrainingGoalDto { Source = "none" }
-            : Map(g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
+            : Map(g.DailyMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
     }
 
     public async Task<TrainingGoalDto> SetGroupGoalAsync(int groupId, TrainingGoalInputDto dto)
@@ -109,7 +112,7 @@ public class TrainingGoalService
         Apply(g, dto);
         g.UpdatedAt = now;
         await _db.SaveChangesAsync();
-        return Map(g.PuzzleMinutes, g.BookMinutes, g.ChessableMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
+        return Map(g.DailyMinutes, g.PlayGames, g.WeeklyDaysTarget, "group", null);
     }
 
     public async Task DeleteGroupGoalAsync(int groupId)
@@ -125,7 +128,7 @@ public class TrainingGoalService
     // ----- Chessable-Aktivität (von der Extension) -------------------------
 
     /// <summary>Hängt ein Häppchen aktiver Chessable-Trainingszeit an (Zeitstempel serverseitig).
-    /// Fließt über <see cref="AggregateAsync"/> in die Kategorie „Chessable" des Trackers.</summary>
+    /// Fließt über <see cref="AggregateAsync"/> in die Quelle „chessable" des Trackers.</summary>
     public async Task RecordChessableActivityAsync(int userId, ChessableActivityInputDto dto)
     {
         _db.ChessableActivities.Add(new ChessableActivity
@@ -228,7 +231,8 @@ public class TrainingGoalService
 
     // ----- Tracker / Heute -------------------------------------------------
 
-    /// <summary>Tagesreihe (nur Tage mit Aktivität) der letzten <paramref name="weeks"/> Wochen + effektives Ziel.</summary>
+    /// <summary>Tagesreihe (nur Tage mit Aktivität) der letzten <paramref name="weeks"/> Wochen + effektives Ziel
+    /// + Perioden-Aufschlüsselung nach Quelle und Thema.</summary>
     public async Task<TrackerResponseDto> GetTrackerAsync(int userId, int weeks)
     {
         weeks = Math.Clamp(weeks, 1, MaxTrackerWeeks);
@@ -237,24 +241,39 @@ public class TrainingGoalService
         var windowStart = today.AddDays(-(weeks * 7 - 1));
 
         var agg = await AggregateAsync(userId, windowStart);
+
+        var bySource = new int[3];
+        var byTheme = new int[5];
         var days = agg
             .OrderBy(kv => kv.Key)
-            .Select(kv => new TrackerDayDto
+            .Select(kv =>
             {
-                Date = kv.Key.ToString("yyyy-MM-dd"),
-                PuzzleSeconds = kv.Value.PuzzleSeconds,
-                BookSeconds = kv.Value.BookSeconds,
-                ChessableSeconds = kv.Value.ChessableSeconds,
-                PlayGames = kv.Value.PlayGames,
-                Status = DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, kv.Value.ChessableSeconds, goal),
-                HasManual = kv.Value.HasManual,
+                Accumulate(bySource, kv.Value.Source);
+                Accumulate(byTheme, kv.Value.Theme);
+                return new TrackerDayDto
+                {
+                    Date = kv.Key.ToString("yyyy-MM-dd"),
+                    TotalSeconds = kv.Value.Total,
+                    BySource = SourceDto(kv.Value.Source),
+                    ByTheme = ThemeDto(kv.Value.Theme),
+                    PlayGames = kv.Value.PlayGames,
+                    Status = DayStatus(kv.Value.Total, goal.DailyMinutes),
+                    HasManual = kv.Value.HasManual,
+                };
             })
             .ToList();
 
-        return new TrackerResponseDto { Goal = goal, Days = days };
+        return new TrackerResponseDto
+        {
+            Goal = goal,
+            Days = days,
+            BreakdownBySource = SourceDto(bySource),
+            BreakdownByTheme = ThemeDto(byTheme),
+        };
     }
 
-    /// <summary>Heutiger Fortschritt (Puzzles/Buch) + Wochenstand (Spielen-Partien + voll erfüllte Tage) der laufenden ISO-Woche.</summary>
+    /// <summary>Heutiger Fortschritt (Tageszeit-Ziel + Aufschlüsselung) + Wochenstand
+    /// (Spielen-Partien + voll erfüllte Tage) der laufenden ISO-Woche.</summary>
     public async Task<TodayProgressDto> GetTodayAsync(int userId)
     {
         var goal = await GetEffectiveGoalAsync(userId);
@@ -265,7 +284,7 @@ public class TrainingGoalService
         var agg = await AggregateAsync(userId, weekStart);
         var todayKey = DateOnly.FromDateTime(today);
         var weekStartKey = DateOnly.FromDateTime(weekStart);
-        var t = agg.TryGetValue(todayKey, out var tv) ? tv : default;
+        var t = agg.TryGetValue(todayKey, out var tv) ? tv : new DayBuckets();
 
         // Spielen-Ziel ist wöchentlich: Partien der laufenden ISO-Woche (Mo–heute) summieren.
         var weekPlayGames = agg
@@ -274,16 +293,16 @@ public class TrainingGoalService
 
         var weekDaysMet = agg
             .Where(kv => kv.Key >= weekStartKey && kv.Key <= todayKey)
-            .Count(kv => DayStatus(kv.Value.PuzzleSeconds, kv.Value.BookSeconds, kv.Value.ChessableSeconds, goal) == "full");
+            .Count(kv => DayStatus(kv.Value.Total, goal.DailyMinutes) == "full");
 
         return new TodayProgressDto
         {
             Goal = goal,
-            Puzzles = Category(goal.PuzzleMinutes, t.PuzzleSeconds),
-            Book = Category(goal.BookMinutes, t.BookSeconds),
-            Chessable = Category(goal.ChessableMinutes, t.ChessableSeconds),
+            Daily = Category(goal.DailyMinutes, t.Total),
+            BySource = SourceDto(t.Source),
+            ByTheme = ThemeDto(t.Theme),
             Play = PlayCategory(goal.PlayGames, weekPlayGames),
-            Status = DayStatus(t.PuzzleSeconds, t.BookSeconds, t.ChessableSeconds, goal),
+            Status = DayStatus(t.Total, goal.DailyMinutes),
             WeekDaysMet = weekDaysMet,
             WeeklyDaysTarget = goal.WeeklyDaysTarget,
         };
@@ -291,116 +310,171 @@ public class TrainingGoalService
 
     // ----- Aggregation -----------------------------------------------------
 
-    private readonly record struct DayActivity(int PuzzleSeconds, int BookSeconds, int ChessableSeconds, int PlayGames, bool HasManual);
+    /// <summary>Aufzeichnungs-Quelle einer Zeit-Scheibe (Index in <see cref="DayBuckets.Source"/>).</summary>
+    private enum Src { RandomPuzzle = 0, CourseBook = 1, Chessable = 2 }
+    /// <summary>Thema einer Zeit-Scheibe (Index in <see cref="DayBuckets.Theme"/>).</summary>
+    private enum Thm { Opening = 0, Middlegame = 1, Endgame = 2, Tactics = 3, Other = 4 }
 
-    /// <summary>Sanity-Obergrenze für manuell eingetragene OTB-Partien je Eintrag.</summary>
-    private const int ManualGamesCap = 50;
-
-    /// <summary>Summiert je UTC-Tag (ab <paramref name="windowStartUtc"/>) Sekunden für Puzzles/Buch/Chessable
-    /// (Einzelversuche/Häppchen gegen Inflation gedeckelt) und die Anzahl Rapid-/Classical-Partien (Spielen).</summary>
-    private async Task<Dictionary<DateOnly, DayActivity>> AggregateAsync(int userId, DateTime windowStartUtc)
+    /// <summary>Tages-Eimer: Gesamtsekunden + Sekunden je Quelle/Thema + Partien + Manuell-Marker.</summary>
+    private sealed class DayBuckets
     {
-        var puzzle = new Dictionary<DateOnly, int>();
-        var book = new Dictionary<DateOnly, int>();
-        var chessable = new Dictionary<DateOnly, int>();
-        var play = new Dictionary<DateOnly, int>();
-        var manualDays = new HashSet<DateOnly>();
+        public int Total;
+        public readonly int[] Source = new int[3];
+        public readonly int[] Theme = new int[5];
+        public int PlayGames;
+        public bool HasManual;
+    }
 
-        static void Add(Dictionary<DateOnly, int> acc, DateTime when, int seconds, int cap)
+    /// <summary>Summiert je UTC-Tag (ab <paramref name="windowStartUtc"/>) die Trainingssekunden
+    /// (gegen Inflation gedeckelt), aufgeschlüsselt nach Quelle und Thema, plus die Anzahl
+    /// Rapid-/Classical-Partien (Spielen, separat) und den Manuell-Marker.</summary>
+    private async Task<Dictionary<DateOnly, DayBuckets>> AggregateAsync(int userId, DateTime windowStartUtc)
+    {
+        var acc = new Dictionary<DateOnly, DayBuckets>();
+
+        DayBuckets Day(DateOnly key)
+        {
+            if (!acc.TryGetValue(key, out var d)) { d = new DayBuckets(); acc[key] = d; }
+            return d;
+        }
+
+        void AddTime(DateTime when, int seconds, int cap, Src src, Thm thm)
         {
             var s = Math.Clamp(seconds, 0, cap);
             if (s <= 0) return;
-            var key = DateOnly.FromDateTime(when.Date);
-            acc[key] = (acc.TryGetValue(key, out var v) ? v : 0) + s;
+            var d = Day(DateOnly.FromDateTime(when.Date));
+            d.Total += s;
+            d.Source[(int)src] += s;
+            d.Theme[(int)thm] += s;
         }
 
-        // Puzzles: Standard-Puzzle-Versuche.
-        foreach (var a in await _db.PuzzleAttempts.AsNoTracking()
-                     .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
-                     .Select(a => new { a.AttemptedAt, a.TimeSpentSeconds }).ToListAsync())
-            Add(puzzle, a.AttemptedAt, a.TimeSpentSeconds, PerPuzzleCapSeconds);
+        // Quelle „randomPuzzle": Standard-Puzzle-Versuche — Thema aus Lichess-Themes (Phase, sonst Taktik).
+        foreach (var a in await (
+                     from a in _db.PuzzleAttempts.AsNoTracking()
+                     where a.UserId == userId && a.AttemptedAt >= windowStartUtc
+                     join p in _db.Puzzles.AsNoTracking() on a.PuzzleId equals p.Id
+                     select new { a.AttemptedAt, a.TimeSpentSeconds, p.Themes }).ToListAsync())
+            AddTime(a.AttemptedAt, a.TimeSpentSeconds, PerPuzzleCapSeconds, Src.RandomPuzzle,
+                    PhaseFromText(a.Themes) ?? Thm.Tactics);
 
-        // Puzzles: Tages-/Buch-Puzzle-Versuche.
-        foreach (var a in await _db.BookPuzzleAttempts.AsNoTracking()
-                     .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
-                     .Select(a => new { a.AttemptedAt, a.TimeSeconds }).ToListAsync())
-            Add(puzzle, a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds);
+        // Quelle „randomPuzzle": Tages-/Einzel-Buch-Puzzle — Thema aus BookPuzzle-Tags/Chapter, sonst Taktik.
+        foreach (var a in await (
+                     from a in _db.BookPuzzleAttempts.AsNoTracking()
+                     where a.UserId == userId && a.AttemptedAt >= windowStartUtc
+                     join bp in _db.BookPuzzles.AsNoTracking() on a.BookPuzzleId equals bp.Id
+                     select new { a.AttemptedAt, a.TimeSeconds, bp.Tags, bp.Chapter }).ToListAsync())
+            AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.RandomPuzzle,
+                    PhaseFromText(a.Tags, a.Chapter) ?? Thm.Tactics);
 
-        // Puzzles: Endlos-Sessions.
+        // Quelle „randomPuzzle": Endlos-Sessions — inhaltlich Taktik.
         foreach (var s in await _db.EndlessSessions.AsNoTracking()
                      .Where(s => s.UserId == userId && s.CreatedAt >= windowStartUtc)
                      .Select(s => new { s.CreatedAt, s.DurationSeconds }).ToListAsync())
-            Add(puzzle, s.CreatedAt, s.DurationSeconds, PerSessionCapSeconds);
+            AddTime(s.CreatedAt, s.DurationSeconds, PerSessionCapSeconds, Src.RandomPuzzle, Thm.Tactics);
 
-        // Kurs-Versuche (gelöst + fehlgeschlagen, akkumuliert): Routing nach Buch-Art —
-        // Puzzle-Buch → Kategorie Puzzles, Studienbuch → Kategorie Buch/Kurs.
-        var courseAttempts = await (
-            from a in _db.CourseAttempts.AsNoTracking()
-            where a.UserId == userId && a.AttemptedAt >= windowStartUtc
-            join b in _db.Books.AsNoTracking() on a.BookId equals b.Id
-            select new { a.AttemptedAt, a.TimeSeconds, b.Kind }).ToListAsync();
-        foreach (var a in courseAttempts)
-            Add(a.Kind == BookKind.Study ? book : puzzle, a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds);
+        // Quelle „courseBook": alle Kurs-Versuche — Thema aus Tags/Chapter; sonst Puzzle-Buch→Taktik, Studienbuch→other.
+        foreach (var a in await (
+                     from a in _db.CourseAttempts.AsNoTracking()
+                     where a.UserId == userId && a.AttemptedAt >= windowStartUtc
+                     join b in _db.Books.AsNoTracking() on a.BookId equals b.Id
+                     join bp in _db.BookPuzzles.AsNoTracking() on a.BookPuzzleId equals bp.Id
+                     select new { a.AttemptedAt, a.TimeSeconds, b.Kind, bp.Tags, bp.Chapter }).ToListAsync())
+            AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.CourseBook,
+                    PhaseFromText(a.Tags, a.Chapter) ?? (a.Kind == BookKind.Study ? Thm.Other : Thm.Tactics));
 
-        // Chessable: aktiv trainierte Zeit-Häppchen von der RepCheck-Extension.
+        // Quelle „chessable": aktiv trainierte Zeit-Häppchen — Thema aus CourseKind (sonst other).
         foreach (var a in await _db.ChessableActivities.AsNoTracking()
                      .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
-                     .Select(a => new { a.AttemptedAt, a.TimeSeconds }).ToListAsync())
-            Add(chessable, a.AttemptedAt, a.TimeSeconds, PerChessableFlushCapSeconds);
+                     .Select(a => new { a.AttemptedAt, a.TimeSeconds, a.CourseKind }).ToListAsync())
+            AddTime(a.AttemptedAt, a.TimeSeconds, PerChessableFlushCapSeconds, Src.Chessable,
+                    ThemeFromCourseKind(a.CourseKind));
 
-        // Spielen: externe Rapid-/Classical-Partien je Tag (Lichess/chess.com) — befüllt PlayTimeDaily.
+        // Spielen: externe Rapid-/Classical-Partien je Tag (Lichess/chess.com) — separat, kein Zeit-Topf.
         foreach (var p in await _db.PlayTimeDailies.AsNoTracking()
                      .Where(p => p.UserId == userId && p.Date >= DateOnly.FromDateTime(windowStartUtc.Date))
                      .Select(p => new { p.Date, p.Games }).ToListAsync())
-            play[p.Date] = (play.TryGetValue(p.Date, out var v) ? v : 0) + Math.Max(0, p.Games);
+            Day(p.Date).PlayGames += Math.Max(0, p.Games);
 
-        // Manuell eingetragene Offline-Aktivitäten: mappen je Art auf eine bestehende Kategorie.
+        // Manuell eingetragene Offline-Aktivitäten: mappen je Art auf Quelle/Thema (Minuten) bzw. Spielen.
         var windowStartDate = DateOnly.FromDateTime(windowStartUtc.Date);
         foreach (var m in await _db.ManualActivities.AsNoTracking()
                      .Where(m => m.UserId == userId && m.Date >= windowStartDate)
                      .Select(m => new { m.Date, m.Kind, m.Amount }).ToListAsync())
         {
-            manualDays.Add(m.Date);
+            Day(m.Date).HasManual = true;
             switch (m.Kind)
             {
                 case ManualActivityKind.OtbGame:
-                    play[m.Date] = (play.TryGetValue(m.Date, out var g) ? g : 0) + Math.Clamp(m.Amount, 0, ManualGamesCap);
+                    Day(m.Date).PlayGames += Math.Clamp(m.Amount, 0, ManualGamesCap);
                     break;
                 case ManualActivityKind.OfflinePuzzle:
-                    Add(puzzle, m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds);
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.RandomPuzzle, Thm.Tactics);
                     break;
                 case ManualActivityKind.OfflineStudy:
                 case ManualActivityKind.Coaching:
-                    Add(book, m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds);
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.CourseBook, Thm.Other);
                     break;
             }
         }
 
-        var keys = new HashSet<DateOnly>(puzzle.Keys);
-        keys.UnionWith(book.Keys);
-        keys.UnionWith(chessable.Keys);
-        keys.UnionWith(play.Keys);
-        keys.UnionWith(manualDays);
-        return keys.ToDictionary(k => k, k => new DayActivity(
-            puzzle.TryGetValue(k, out var pz) ? pz : 0,
-            book.TryGetValue(k, out var bk) ? bk : 0,
-            chessable.TryGetValue(k, out var ch) ? ch : 0,
-            play.TryGetValue(k, out var pl) ? pl : 0,
-            manualDays.Contains(k)));
+        return acc;
     }
+
+    // ----- Theme-Klassifikation (best-effort) ------------------------------
+
+    /// <summary>Erkennt eine Partiephase aus freiem Text (Lichess-Themes, BookPuzzle-Tags/Chapter).
+    /// Reihenfolge Endspiel → Mittelspiel → Eröffnung (Lichess <c>rookEndgame</c> etc. matchen „endgame").
+    /// Gibt null zurück, wenn kein Phasen-Signal gefunden wurde.</summary>
+    private static Thm? PhaseFromText(params string?[] texts)
+    {
+        foreach (var raw in texts)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            var t = raw.ToLowerInvariant();
+            if (t.Contains("endgame") || t.Contains("endspiel")) return Thm.Endgame;
+            if (t.Contains("middlegame") || t.Contains("middle game") || t.Contains("mittelspiel")) return Thm.Middlegame;
+            if (t.Contains("opening") || t.Contains("eröffnung") || t.Contains("eroeffnung")) return Thm.Opening;
+        }
+        return null;
+    }
+
+    private static Thm ThemeFromCourseKind(RepertoireKind? k) => k switch
+    {
+        RepertoireKind.Opening => Thm.Opening,
+        RepertoireKind.Middlegame => Thm.Middlegame,
+        RepertoireKind.Endgame => Thm.Endgame,
+        _ => Thm.Other,
+    };
 
     // ----- Helfer ----------------------------------------------------------
 
-    /// <summary>Tagesstatus aus den Tageszielen Puzzles + Buch + Chessable (Spielen ist ein Wochenziel, zählt hier nicht):
-    /// "none" wenn keins erreicht, "full" wenn alle gesetzten erreicht, sonst "partial".</summary>
-    internal static string DayStatus(int puzzleSec, int bookSec, int chessableSec, TrainingGoalDto goal)
+    private static void Accumulate(int[] target, int[] add)
     {
-        int targets = 0, met = 0;
-        if (goal.PuzzleMinutes > 0) { targets++; if (puzzleSec >= goal.PuzzleMinutes * 60) met++; }
-        if (goal.BookMinutes > 0) { targets++; if (bookSec >= goal.BookMinutes * 60) met++; }
-        if (goal.ChessableMinutes > 0) { targets++; if (chessableSec >= goal.ChessableMinutes * 60) met++; }
-        if (targets == 0 || met == 0) return "none";
-        return met == targets ? "full" : "partial";
+        for (var i = 0; i < target.Length; i++) target[i] += add[i];
+    }
+
+    private static SourceBreakdownDto SourceDto(int[] s) => new()
+    {
+        RandomPuzzleSeconds = s[(int)Src.RandomPuzzle],
+        CourseBookSeconds = s[(int)Src.CourseBook],
+        ChessableSeconds = s[(int)Src.Chessable],
+    };
+
+    private static ThemeBreakdownDto ThemeDto(int[] t) => new()
+    {
+        OpeningSeconds = t[(int)Thm.Opening],
+        MiddlegameSeconds = t[(int)Thm.Middlegame],
+        EndgameSeconds = t[(int)Thm.Endgame],
+        TacticsSeconds = t[(int)Thm.Tactics],
+        OtherSeconds = t[(int)Thm.Other],
+    };
+
+    /// <summary>Tagesstatus gegenüber dem einen Tageszeit-Ziel: "none" wenn kein Ziel/keine Zeit,
+    /// "full" wenn Ziel erreicht, sonst "partial".</summary>
+    internal static string DayStatus(int totalSeconds, int dailyMinutes)
+    {
+        if (dailyMinutes <= 0 || totalSeconds <= 0) return "none";
+        return totalSeconds >= dailyMinutes * 60 ? "full" : "partial";
     }
 
     private static CategoryProgressDto Category(int targetMinutes, int doneSeconds) => new()
@@ -420,27 +494,21 @@ public class TrainingGoalService
 
     private static void Apply(GroupTrainingGoal g, TrainingGoalInputDto dto)
     {
-        g.PuzzleMinutes = dto.PuzzleMinutes;
-        g.BookMinutes = dto.BookMinutes;
-        g.ChessableMinutes = dto.ChessableMinutes;
+        g.DailyMinutes = dto.DailyMinutes;
         g.PlayGames = dto.PlayGames;
         g.WeeklyDaysTarget = dto.WeeklyDaysTarget;
     }
 
     private static void Apply(UserTrainingGoal g, TrainingGoalInputDto dto)
     {
-        g.PuzzleMinutes = dto.PuzzleMinutes;
-        g.BookMinutes = dto.BookMinutes;
-        g.ChessableMinutes = dto.ChessableMinutes;
+        g.DailyMinutes = dto.DailyMinutes;
         g.PlayGames = dto.PlayGames;
         g.WeeklyDaysTarget = dto.WeeklyDaysTarget;
     }
 
-    private static TrainingGoalDto Map(int puzzle, int book, int chessable, int playGames, int weekly, string source, string? groupName) => new()
+    private static TrainingGoalDto Map(int dailyMinutes, int playGames, int weekly, string source, string? groupName) => new()
     {
-        PuzzleMinutes = puzzle,
-        BookMinutes = book,
-        ChessableMinutes = chessable,
+        DailyMinutes = dailyMinutes,
         PlayGames = playGames,
         WeeklyDaysTarget = weekly,
         Source = source,
