@@ -159,7 +159,12 @@
                 } @else if (courseCompleted) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   <div class="ctx-nav">
-                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                    @if (courseModeKind === 'random') {
+                      <button mat-raised-button color="primary" (click)="restartCourse()">
+                        <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
+                      </button>
+                    }
+                    <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
                   </div>
                 } @else if (state === 'SOLVED') {
                   <div class="ctx-nav">
@@ -266,7 +271,12 @@
                 @if (inCourse && courseCompleted) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   <div class="ctx-nav">
-                    <button mat-raised-button color="primary" (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                    @if (courseModeKind === 'random') {
+                      <button mat-raised-button color="primary" (click)="restartCourse()">
+                        <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
+                      </button>
+                    }
+                    <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
                   </div>
                 }
               </mat-card-content>

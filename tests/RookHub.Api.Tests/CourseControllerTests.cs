@@ -214,6 +214,33 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetNext_Random_ExcludesFailedUntilReset()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedBookAsync("RandFail", 3);
+        // ids[0] gelöst, ids[1] FALSCH gelöst → beide bis zum Reset aus dem Random-Pool.
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[1], Solved = false });
+
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "random"));
+        Assert.False(next.Completed);
+        Assert.Equal(ids[2], next.Puzzle!.Id);   // nur das unangetastete Puzzle bleibt im Pool
+
+        // Auch ids[2] scheitern → alle einmal versucht → Pool leer → Completed (trotz nur 1 gelöst).
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[2], Solved = false });
+        var done = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "random"));
+        Assert.True(done.Completed);
+        Assert.Null(done.Puzzle);
+        Assert.Equal(1, done.SolvedCount);
+
+        // Reset bringt die falsch gelösten Puzzles wieder in den Pool.
+        await _controller.Reset(book.Id);
+        var afterReset = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "random"));
+        Assert.False(afterReset.Completed);
+        Assert.NotNull(afterReset.Puzzle);
+    }
+
+    [Fact]
     public async Task GetNext_AllSolved_ReturnsCompleted()
     {
         await CreateUserAsync();

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.180.0';
+export const APP_VERSION = '0.181.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.181.0", date: "2026-06-23", changes: [
+    { en: "Course random mode: a puzzle you got wrong no longer comes back into the pool — every puzzle is shown only once per run (whether solved or failed). Once you've been through all of them, a 'Restart from scratch' button (and reset) brings them all back. Sequential mode is unchanged.", de: "Kurs-Zufallsmodus: Ein falsch gelöstes Puzzle kommt nicht mehr in den Pool zurück — jedes Puzzle wird pro Durchgang nur einmal gezeigt (egal ob gelöst oder gescheitert). Wenn du alle durch hast, holt ein „Von vorn beginnen\"-Knopf (bzw. Reset) sie wieder zurück. Der sequenzielle Modus bleibt unverändert." },
+  ]},
   { version: "0.180.0", date: "2026-06-23", changes: [
     { en: "Training goals: the source/theme breakdown is now switchable between Day / Week / Month / Year / All time, and for day/week/month/year you can page back and forth through the periods with the arrows. The numbers cover your full history (no longer limited to the tracker window).", de: "Trainingsziele: Die Aufschlüsselung nach Quelle/Thema ist jetzt zwischen Tag / Woche / Monat / Jahr / Gesamt umschaltbar, und für Tag/Woche/Monat/Jahr kannst du mit den Pfeilen vor- und zurückblättern. Die Zahlen umfassen deine gesamte Historie (nicht mehr nur das Tracker-Fenster)." },
   ]},

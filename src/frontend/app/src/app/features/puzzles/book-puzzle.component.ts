@@ -566,6 +566,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.router.navigate(['/courses']);
   }
 
+  /** Kurs zurücksetzen und von vorn beginnen — bringt im Random-Modus auch die falsch gelösten
+   * Puzzles wieder in den Pool. Direkt vom „abgeschlossen"-Panel aus erreichbar. */
+  restartCourse(): void {
+    if (this.courseBookId == null) return;
+    this.courseService.reset(this.courseBookId).subscribe({
+      next: () => {
+        this.courseCompleted = false;
+        this.snackbar.success(this.translate.instant('book.course.restarted'), { duration: 2500 });
+        this.loadCourseNext();
+      },
+      error: () => this.snackbar.warn(this.translate.instant('book.course.restartFailed'), { duration: 3000 }),
+    });
+  }
+
   // ===== Wochenpost-Modus =====
   get weeklyTotal(): number { return this.weeklyPuzzles.length; }
   get weeklyDisplayIndex(): number {
