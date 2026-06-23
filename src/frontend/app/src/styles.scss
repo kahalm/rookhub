@@ -151,3 +151,14 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 .pgn-viewer-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
   padding: 0;
 }
+
+/* PGN Viewer dialog: full-screen on mobile so board-wrap reaches screen edges */
+@media (max-width: 768px) {
+  .pgn-viewer-dialog.mat-mdc-dialog-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  .pgn-viewer-dialog .mat-mdc-dialog-container {
+    border-radius: 0 !important;
+  }
+}

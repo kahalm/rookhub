@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.178.5';
+export const APP_VERSION = '0.178.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.178.6", date: "2026-06-23", changes: [
+    { en: "Games viewer mobile: tap zones now extend to the screen edges (dialog is full-width on mobile, board fills the full viewport width).", de: "Partien-Viewer mobil: Tipp-Zonen reichen jetzt bis an den Bildschirmrand (Dialog ist auf Mobile ganzseitig, Brett füllt die volle Bildschirmbreite)." },
+  ]},
   { version: "0.178.5", date: "2026-06-23", changes: [
     { en: "Games (PGN viewer): mobile tap zones left/right to step through moves (like analysis mode), move list now shows one pair per row with auto-scroll, and a flip button rotates the board. When you open a saved game, the board is automatically oriented from your perspective (based on your chess.com/Lichess username in your profile).", de: "Partien (PGN-Viewer): Mobile Tippzonen links/rechts zum Vor-/Zurückspulen (wie im Analysemodus), Zugliste zeigt ein Zugpaar pro Zeile mit Auto-Scroll, und ein Drehen-Button kippt das Brett. Beim Öffnen einer gespeicherten Partie wird das Brett automatisch aus deiner Sicht ausgerichtet (anhand deines chess.com/Lichess-Benutzernamens im Profil)." },
   ]},

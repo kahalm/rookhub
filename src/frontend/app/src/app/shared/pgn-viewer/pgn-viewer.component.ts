@@ -187,13 +187,18 @@ export interface PgnViewerData {
       .viewer-body {
         flex-direction: column;
         overflow-y: auto;
-        align-items: center;
+        align-items: stretch;
+        padding: 0;
       }
-      .board-section { width: 100%; max-width: 400px; }
+      .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
       .board-tap { display: block; }
-      .moves-section { min-height: 200px; flex-shrink: 0; width: 100%; }
+      .nav-buttons { justify-content: center; padding: 4px 0; }
+      .moves-section {
+        min-height: 200px; flex-shrink: 0; width: 100%;
+        border-left: none; border-right: none; border-radius: 0;
+      }
     }
   `]
 })

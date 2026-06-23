@@ -139,6 +139,7 @@ export class GamesListComponent implements OnInit {
           data: { pgn: detail.pgn, flipped: this.isFlipped(g) },
           width: '90vw',
           maxWidth: '900px',
+          panelClass: 'pgn-viewer-dialog',
         });
       },
       error: () => this.snackbar.warn(this.translate.instant('games.loadError')),

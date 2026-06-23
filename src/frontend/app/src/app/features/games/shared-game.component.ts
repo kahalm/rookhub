@@ -100,12 +100,20 @@ import { GamesService, SharedGame } from './games.service';
     .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
     .original { margin-top: 12px; }
     @media (max-width: 768px) {
-      .body { flex-direction: column; align-items: center; }
-      .board-section { width: 100%; max-width: 400px; }
+      .shared-page { padding: 0; }
+      .viewer { padding: 0; border-radius: 0; }
+      .header { padding: 12px 16px; }
+      .body { flex-direction: column; align-items: stretch; }
+      .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
       .board-tap { display: block; }
-      .moves-section { width: 100%; max-height: 40vh; }
+      .nav { justify-content: center; padding: 4px 0; }
+      .moves-section {
+        width: 100%; max-height: 40vh;
+        border-left: none; border-right: none; border-radius: 0; border-bottom: none;
+      }
+      a.original { display: block; padding: 8px 16px 16px; }
     }
   `]
 })
