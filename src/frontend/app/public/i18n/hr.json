@@ -825,6 +825,15 @@
     }
   },
   "endless": {
+    "themePreset": {
+      "label": "Brzi odabir",
+      "blitzMate": "Mat u 1",
+      "mateHunt": "Lov na mat 1–2",
+      "basicTactics": "Osnovna taktika",
+      "combinations": "Kombinacije i žrtve",
+      "patternMates": "Matni obrasci",
+      "endgame": "Završnice"
+    },
     "offlineNoCache": "Izvan mreže ste i nema spremljenog niza. Otvorite Endless jednom dok ste na mreži da biste spremili zagonetke za izvanmrežno igranje.",
     "help": {
       "title": "Endless Puzzle Mode",

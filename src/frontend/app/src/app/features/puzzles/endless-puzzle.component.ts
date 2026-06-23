@@ -34,6 +34,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
+import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
 import { LongSolveService } from './long-solve.service';
 import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { Chess } from 'chess.js';
@@ -130,6 +131,22 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Duplikate raus, Reihenfolge erhalten.
     this.config.themes = [...new Set(themes)].join(' ');
     this.saveConfig();
+  }
+
+  // ── Themen-Schnellauswahl (kuratierte Preset-Chips) ───────────────────────────────
+  /** Kuratierte Themen-Bündel; ein Klick setzt `config.themes` (Endless filtert mit ODER). */
+  readonly themePresets = PUZZLE_THEME_PRESETS;
+
+  /** Preset anwenden: überschreibt die Themen. „Schwächste Themen" wird dabei deaktiviert
+   *  (es überschriebe sonst die Themen-Auswahl). */
+  applyThemePreset(preset: ThemePreset): void {
+    if (this.config.worstTags) this.config.worstTags = false;
+    this.setSelectedThemes(preset.themes);
+  }
+
+  /** True, wenn der Preset gerade exakt aktiv ist (für die Chip-Hervorhebung). */
+  isThemePresetActive(preset: ThemePreset): boolean {
+    return !this.config.worstTags && isThemePresetActive(preset, this.selectedThemes);
   }
 
   /** Optionen fürs Dropdown: noch nicht gewählte Themen, nach dem Suchtext gefiltert. */

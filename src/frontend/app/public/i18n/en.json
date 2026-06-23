@@ -827,6 +827,15 @@
     }
   },
   "endless": {
+    "themePreset": {
+      "label": "Quick presets",
+      "blitzMate": "Mate in 1",
+      "mateHunt": "Mate hunt 1–2",
+      "basicTactics": "Basic tactics",
+      "combinations": "Combinations & sacrifices",
+      "patternMates": "Pattern mates",
+      "endgame": "Endgames"
+    },
     "offlineNoCache": "You're offline and no run is cached. Open Endless once while online to save puzzles for offline play.",
     "help": {
       "title": "Endless Puzzle Mode",

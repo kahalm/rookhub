@@ -1,4 +1,5 @@
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
+import { ThemePreset } from './puzzle-theme-presets';
 
 /**
  * Fokussierter Test der Analyse-Navigation im Endless-Modus (ohne TestBed/Template):
@@ -213,6 +214,25 @@ describe('EndlessPuzzleComponent Themen-Multiselect', () => {
     expect(c.config.themes).toBe('zwischenzug');
     expect(clear).toHaveBeenCalled();
     expect(c.themeInput).toBe('');
+  });
+
+  it('applyThemePreset setzt das Bündel und deaktiviert „schwächste Themen"', () => {
+    const c = makeComponent();
+    c.config.worstTags = true;
+    const preset = c.themePresets.find((p: ThemePreset) => p.labelKey === 'endless.themePreset.basicTactics')!;
+    c.applyThemePreset(preset);
+    expect(c.config.worstTags).toBe(false);
+    expect(c.selectedThemes).toEqual(preset.themes);
+    expect(c.isThemePresetActive(preset)).toBe(true);
+  });
+
+  it('isThemePresetActive ist false, sobald die Themen abweichen oder worstTags aktiv ist', () => {
+    const c = makeComponent();
+    const preset = c.themePresets[0];
+    c.applyThemePreset(preset);
+    expect(c.isThemePresetActive(preset)).toBe(true);
+    (c as any).addThemeValue('fork');               // Auswahl weicht ab
+    expect(c.isThemePresetActive(preset)).toBe(false);
   });
 });
 

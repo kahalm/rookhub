@@ -21,7 +21,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 - [x] RoundMonitorService: ein SaveChanges nach ganzer Schleife → behoben in 0.97.9 (pro Iteration)
 
 ## Geparkt
-- [ ] **Themen-Schnellauswahl / Preset-Chips für Puzzle-Themen** (Feature, klein–mittel; Idee 2026-06-23)
+- [x] **Themen-Schnellauswahl / Preset-Chips für Puzzle-Themen** — **erledigt für Endless 2026-06-23 (v0.183.0):** kuratierte Preset-Chips über dem Themenfeld (`puzzle-theme-presets.ts` + `applyThemePreset`/`isThemePresetActive`), Klick setzt `config.themes`-Bündel (greift dank ODER out-of-the-box), aktiver Preset hervorgehoben, „schwächste Themen" wird beim Anwenden deaktiviert; i18n en/de/hr `endless.themePreset.*`. 6 Chips: Matt in 1 / Mattjagd 1–2 / Grundtaktik / Kombination & Opfer / Mustermatts / Endspiele. Specs: `puzzle-theme-presets.spec.ts` + 2 Component-Tests. **OFFEN:** Standard-Solver (`puzzle.component`) bietet die Chips noch nicht an (dort separat prüfen, ob die Themenauswahl ODER nutzt). Ursprüngliche Idee:
   Statt Themen einzeln zusammenzusuchen: ein Klick auf einen kuratierten Preset-Chip setzt `config.themes` auf ein passendes Bündel. **Endless filtert Themen bereits ODER** (`themesAny`, seit v0.99.1 `14b80a8`) → die Bündel greifen out-of-the-box („fork pin" = fork ODER pin). Für den **Standard-Solver** (`puzzle.component`) ggf. ebenfalls anbieten — dort prüfen, ob die Themenauswahl auch ODER nutzt, sonst analog umstellen.
   - Umsetzung: Chip-Leiste über/neben der Themenliste (Endless-Config + evtl. `puzzle-settings-dialog`); Klick = `setSelectedThemes(bundle)`. i18n-Labels de/en/hr (`endless.themePreset.*`).
   - Vorgeschlagene Presets (Theme-Keys + Pool-Größen, dev-DB Stand 2026-06-23, PuzzleTags voll backfilled):

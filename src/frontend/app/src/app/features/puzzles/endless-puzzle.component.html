@@ -95,6 +95,19 @@
                     <input matInput type="number" [(ngModel)]="config.stockfishDepth" min="1" max="24" step="1">
                     <mat-hint>{{ 'endless.config.stockfishDepthHint' | translate }}</mat-hint>
                   </mat-form-field>
+                  <div class="theme-presets">
+                    <span class="theme-presets-label">{{ 'endless.themePreset.label' | translate }}</span>
+                    <div class="theme-presets-chips">
+                      @for (preset of themePresets; track preset.labelKey) {
+                        <button type="button" class="theme-preset-chip"
+                                [class.active]="isThemePresetActive(preset)"
+                                [attr.aria-pressed]="isThemePresetActive(preset)"
+                                (click)="applyThemePreset(preset)">
+                          {{ preset.labelKey | translate }}
+                        </button>
+                      }
+                    </div>
+                  </div>
                   <mat-form-field appearance="outline" class="themes-field">
                     <mat-label>{{ 'endless.config.themes' | translate }}</mat-label>
                     <mat-chip-grid #themeChips [disabled]="!!config.worstTags" aria-label="Themen">

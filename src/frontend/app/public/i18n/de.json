@@ -827,6 +827,15 @@
     }
   },
   "endless": {
+    "themePreset": {
+      "label": "Schnellauswahl",
+      "blitzMate": "Matt in 1",
+      "mateHunt": "Mattjagd 1–2",
+      "basicTactics": "Grundtaktik",
+      "combinations": "Kombination & Opfer",
+      "patternMates": "Mustermatts",
+      "endgame": "Endspiele"
+    },
     "offlineNoCache": "Du bist offline und es ist kein Run gespeichert. Öffne Endless einmal online, um Puzzles für den Offline-Modus zu speichern.",
     "help": {
       "title": "Endless Puzzle Mode",

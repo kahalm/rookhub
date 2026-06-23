@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.182.0';
+export const APP_VERSION = '0.183.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.183.0", date: "2026-06-23", changes: [
+    { en: "Endless mode: quick-select theme presets. One tap on a chip (Mate in 1, Mate hunt 1–2, Basic tactics, Combinations & sacrifices, Pattern mates, Endgames) fills the theme filter with a curated bundle — a puzzle just needs one of the themes. You can still fine-tune the themes by hand afterwards.", de: "Endlos-Modus: Themen-Schnellauswahl. Ein Tipp auf einen Chip (Matt in 1, Mattjagd 1–2, Grundtaktik, Kombination & Opfer, Mustermatts, Endspiele) füllt den Themenfilter mit einem kuratierten Bündel — ein Puzzle muss nur eines der Themen tragen. Du kannst die Themen danach weiterhin von Hand anpassen." },
+  ]},
   { version: "0.182.0", date: "2026-06-23", changes: [
     { en: "Puzzle solve time now only counts while the browser tab is active. If you switch to another tab (or minimise), the timer pauses and resumes when you come back — so background time no longer inflates your solve times. Applies to Standard, Course/Book and Endless puzzles, plus the Endless run timer. (The existing 'that took a while' prompt above 5 minutes stays as a safety net.)", de: "Die Puzzle-Lösezeit zählt jetzt nur noch, solange der Browser-Tab aktiv ist. Wechselst du in einen anderen Tab (oder minimierst), pausiert die Uhr und läuft beim Zurückkommen weiter — Hintergrundzeit bläht deine Lösezeiten also nicht mehr auf. Gilt für Standard-, Kurs-/Buch- und Endlos-Puzzle sowie den Endlos-Laufzeit-Timer. (Die bestehende Nachfrage „so lange gebraucht?\" ab 5 Minuten bleibt als Sicherheitsnetz.)" },
   ]},

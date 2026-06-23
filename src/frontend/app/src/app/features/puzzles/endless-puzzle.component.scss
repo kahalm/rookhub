@@ -77,6 +77,22 @@
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .settings-bar { display: flex; justify-content: flex-end; }
     .settings-gear.active { color: #1976d2; }
+    .theme-presets { margin-bottom: 0.6rem; }
+    .theme-presets-label {
+      display: block; font-size: 0.8em; margin-bottom: 0.35rem;
+      color: color-mix(in srgb, currentColor 65%, transparent);
+    }
+    .theme-presets-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .theme-preset-chip {
+      padding: 5px 11px; border-radius: 16px; cursor: pointer;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      background: var(--mat-sys-surface-container, #fff); color: inherit;
+      font-size: 0.85em; line-height: 1.2; transition: background 0.15s, border-color 0.15s;
+    }
+    .theme-preset-chip:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+    .theme-preset-chip.active {
+      border-color: #1976d2; background: #1976d2; color: #fff; font-weight: 600;
+    }
     .config-lives { justify-content: center; margin: 1rem 0; }
     .highscore-badge {
       display: flex; align-items: center; gap: 0.5rem; justify-content: center;
