@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.181.4';
+export const APP_VERSION = '0.181.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.181.5", date: "2026-06-23", changes: [
+    { en: "Build fix: the daily/course book-title change (0.181.3) referenced a non-existent field and broke the server build (CI red). No user-facing change beyond the title display now actually working.", de: "Build-Fix: Die Buchtitel-Anzeige für Tages-/Kurs-Puzzles (0.181.3) verwies auf ein nicht existierendes Feld und brach den Server-Build (CI rot). Keine sichtbare Änderung, außer dass die Titel-Anzeige jetzt tatsächlich funktioniert." },
+  ]},
   { version: "0.181.4", date: "2026-06-23", changes: [
     { en: "Book/course/daily puzzles: the “bad hints” flag now also appears when the puzzle uses on-the-fly hints (not just pre-generated ones), just like standard puzzles — it shows once you've revealed at least one hint. Weekly-post puzzles stay excluded (they have no real book-puzzle to flag).", de: "Buch-/Kurs-/Tagespuzzles: Der „dumme Tipps“-Knopf erscheint jetzt auch bei on-the-fly Tipps (nicht nur bei vorberechneten) — genau wie bei Standard-Puzzles, sobald du mindestens einen Tipp aufgedeckt hast. Wochenpost-Puzzles bleiben ausgenommen (kein echtes Buch-Puzzle zum Melden)." },
   ]},

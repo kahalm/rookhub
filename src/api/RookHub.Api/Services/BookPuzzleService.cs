@@ -764,7 +764,7 @@ public class BookPuzzleService
         Id = bp.Id,
         LineId = bp.LineId,
         BookFileName = bp.BookFileName,
-        BookTitle = bp.Book?.Title,
+        BookTitle = string.IsNullOrWhiteSpace(bp.Book?.DisplayName) ? null : bp.Book!.DisplayName,
         Round = bp.Round,
         Fen = bp.Fen,
         Moves = bp.Moves,
