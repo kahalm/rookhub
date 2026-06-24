@@ -25,7 +25,7 @@ import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { adminTabIndex } from './admin-tabs';
+import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 
 @Component({
   selector: 'app-admin',
@@ -181,6 +181,21 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
+    });
+  }
+
+  /** Tab-Wechsel: Index übernehmen UND als ?tab=<key> in die URL schreiben, damit Reload/Back
+   *  den Tab behält (queryParamsHandling 'merge' lässt ?thread=… o. Ä. unberührt; replaceUrl
+   *  vermeidet eine zusätzliche History-Position je Klick). */
+  onTabChange(index: number): void {
+    this.selectedTabIndex = index;
+    const tab = ADMIN_TAB_KEYS[index];
+    if (!tab) return;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 
@@ -599,7 +614,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   loadAllUsers(): void {
     // User-Liste fuer das Mitglieder-Dropdown (kleiner Nutzerkreis).
     this.adminService.getUsers('', 1, 500).subscribe({
-      next: res => this.allUsers = res.items,
+      next: res => { this.allUsers = res.items; this.recomputeAvailableUsers(); },
       error: () => this.snackbar.info(this.translate.instant('admin.users.errors.load'))
     });
   }
@@ -628,6 +643,7 @@ export class AdminComponent implements OnInit, OnDestroy {
         if (this.selectedGroup?.id === group.id) {
           this.selectedGroup = null;
           this.groupMembers = [];
+          this.recomputeAvailableUsers();
         }
         this.loadGroups();
       },
@@ -695,6 +711,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.adminService.getGroupMembers(groupId).subscribe({
       next: members => {
         this.groupMembers = members;
+        this.recomputeAvailableUsers();
         this.membersLoading = false;
       },
       error: () => {
@@ -704,9 +721,13 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  availableUsers(): AdminUser[] {
+  /** Nicht-Mitglieder des gewählten Gruppe (Auswahl im „Mitglied hinzufügen"-Dropdown).
+   *  Wird bei Datenänderung neu berechnet statt je CD-Zyklus (Set + filter). */
+  availableUsers: AdminUser[] = [];
+
+  private recomputeAvailableUsers(): void {
     const memberIds = new Set(this.groupMembers.map(m => m.userId));
-    return this.allUsers.filter(u => !memberIds.has(u.id));
+    this.availableUsers = this.allUsers.filter(u => !memberIds.has(u.id));
   }
 
   addMember(): void {

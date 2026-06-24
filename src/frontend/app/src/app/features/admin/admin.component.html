@@ -10,7 +10,7 @@
       </div>
 
       <!-- Tab-Reihenfolge MUSS mit ADMIN_TAB_KEYS in admin-tabs.ts übereinstimmen (Deep-Link-Indizes). -->
-      <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedIndexChange)="selectedTabIndex = $event">
+      <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
         <mat-tab [label]="'admin.tabs.users' | translate">
           <div class="tab-content">
             <mat-form-field appearance="outline" class="search-field">
@@ -312,7 +312,7 @@
                         <mat-form-field appearance="outline" class="member-select">
                           <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
                           <mat-select [(ngModel)]="addMemberUserId">
-                            @for (u of availableUsers(); track u.id) {
+                            @for (u of availableUsers; track u.id) {
                               <mat-option [value]="u.id">{{ u.username }}</mat-option>
                             }
                           </mat-select>

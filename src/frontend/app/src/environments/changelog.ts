@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.18';
+export const APP_VERSION = '0.184.19';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.19", date: "2026-06-24", changes: [
+    { en: "Admin: the active tab is now reflected in the URL (?tab=…), so reloading or going back keeps you on the same admin tab. Plus internal tidy-ups (cached member dropdown, new admin-page tests).", de: "Admin: Der aktive Tab steht jetzt in der URL (?tab=…), sodass Neuladen oder Zurück denselben Admin-Tab beibehält. Dazu interne Aufräumarbeiten (gecachtes Mitglieder-Dropdown, neue Admin-Seiten-Tests)." },
+  ]},
   { version: "0.184.18", date: "2026-06-24", changes: [
     { en: "Internal: the dashboard now loads its summary data through a dedicated DashboardService, with tests. No user-facing change.", de: "Intern: Das Dashboard lädt seine Übersichtsdaten jetzt über einen eigenen DashboardService, mit Tests. Keine sichtbare Änderung." },
   ]},
