@@ -27,7 +27,6 @@ import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { classifyFirstSolverMove, FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
-import { VisibilityStopwatch } from './visibility-stopwatch';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
@@ -97,15 +96,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
-  elapsedSeconds = 0;
-  private timerInterval?: ReturnType<typeof setInterval>;
+  // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
 
   /** Die zu wertende Lösezeit — i.d.R. = elapsedSeconds, bei „war weg" auf den Schwellwert gekappt. */
   private solveSeconds = 0;
   /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
   private solveAlternative = false;
-  /** Zählt nur sichtbare Tab-Zeit (Hintergrund pausiert). */
-  private readonly stopwatch = new VisibilityStopwatch();
 
   // Eval (Stockfish-Bewertung) — wie Standard/Endless; currentEval kommt aus BasePuzzleSolver.
   showEval = false;
@@ -976,12 +972,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (e.key === 'ArrowRight') this.reviewNext();
   }
 
-  formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
-  }
-
   resetPuzzle(): void {
     if (!this.puzzle) return;
     // Daily-Fairness: ein Reset nach mindestens einem gespielten Zug verbraucht den Tag.
@@ -1000,23 +990,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     super.mouseslip();
   }
 
-  private startTimer(): void {
-    this.stopwatch.start();
-    this.elapsedSeconds = 0;
-    this.timerInterval = setInterval(() => {
-      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-    }, 1000);
-  }
-
-  private stopTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = undefined;
-    }
-    // Finalen Stand (aktive Zeit) festhalten, bevor die Stoppuhr abgehängt wird.
-    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-    this.stopwatch.stop();
-  }
 
   private loadConfig(): void {
     this.boardTheme = this.prefs.boardTheme;

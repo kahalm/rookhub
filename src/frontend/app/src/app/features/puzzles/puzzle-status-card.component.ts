@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { formatPuzzleTime } from './puzzle-format.util';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -271,9 +272,5 @@ export class PuzzleStatusCardComponent {
 
   get ck() { return CK[this.mode]; }
 
-  formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
-  }
+  formatTime = formatPuzzleTime;
 }

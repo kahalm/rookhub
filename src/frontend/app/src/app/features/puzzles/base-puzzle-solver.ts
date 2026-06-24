@@ -3,6 +3,8 @@ import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearVisualizationHide } from './board-theme.util';
+import { VisibilityStopwatch } from './visibility-stopwatch';
+import { formatPuzzleTime } from './puzzle-format.util';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
@@ -110,7 +112,40 @@ export abstract class BasePuzzleSolver {
   /** Ob seit dem letzten Fehlzug wirklich ein Gegnerzug gespielt wurde (fuer Mouseslip-Undo). */
   protected lastOpponentReplied = false;
 
+  // ===== Lösezeit-Timer (Einzel-Stoppuhr, von Standard- + Buch-Modus genutzt) =====
+  // Endless verwendet eigene Doppel-Stoppuhren (Session + Puzzle) und ruft start/stopTimer NICHT auf,
+  // teilt sich aber das `elapsedSeconds`-Feld (für die Anzeige) mit der Basis.
+  /** Aktuelle (aktive) Lösezeit in Sekunden — Anzeige im Status-/Du-bist-dran-Card. */
+  elapsedSeconds = 0;
+  private timerInterval?: ReturnType<typeof setInterval>;
+  /** Pausiert bei verstecktem Tab (zählt nur aktive Zeit). */
+  protected readonly stopwatch = new VisibilityStopwatch();
+
   constructor(protected stockfish: StockfishService) {}
+
+  /** Lösezeit kompakt formatieren („1:05" / „45s"). Geteilt über alle Modi + Karten. */
+  formatTime(seconds: number): string {
+    return formatPuzzleTime(seconds);
+  }
+
+  /** Lösezeit-Timer starten (Standard-/Buch-Modus): Stoppuhr nullen + 1-s-Anzeige-Tick. */
+  protected startTimer(): void {
+    this.stopwatch.start();
+    this.elapsedSeconds = 0;
+    this.timerInterval = setInterval(() => {
+      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
+    }, 1000);
+  }
+
+  /** Lösezeit-Timer stoppen + finalen aktiven Stand festhalten. */
+  protected stopTimer(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = undefined;
+    }
+    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
+    this.stopwatch.stop();
+  }
 
   // ===== Hooks (von den Komponenten überschrieben) =====
   /** Puzzle gelöst — Komponente setzt Endzustand + Mode-Logik (Elo/Leben/Review/…). */

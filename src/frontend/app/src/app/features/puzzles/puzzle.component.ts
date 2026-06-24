@@ -33,7 +33,6 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
-import { VisibilityStopwatch } from './visibility-stopwatch';
 import { LongSolveService } from './long-solve.service';
 import { of } from 'rxjs';
 
@@ -68,10 +67,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private worstThemes: string[] = [];
   stockfishDepth = 16;
 
-  elapsedSeconds = 0;
-  private timerInterval?: ReturnType<typeof setInterval>;
-  /** Zählt nur sichtbare Tab-Zeit (Hintergrund pausiert). */
-  private readonly stopwatch = new VisibilityStopwatch();
+  // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
 
   private attemptRecorded = false;
   private nextPuzzle: PuzzleDto | null = null;
@@ -549,29 +545,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     }
   }
 
-  formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
-  }
-
-  private startTimer(): void {
-    this.stopwatch.start();
-    this.elapsedSeconds = 0;
-    this.timerInterval = setInterval(() => {
-      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-    }, 1000);
-  }
-
-  private stopTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = undefined;
-    }
-    // Finalen Stand (aktive Zeit) festhalten, bevor die Stoppuhr abgehängt wird.
-    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-    this.stopwatch.stop();
-  }
 
   /** `seconds` = zu wertende Lösezeit; default = gemessene Zeit (Fehlversuche), beim Lösen ggf. wegen
    *  überlanger Zeit gekappt (siehe {@link LongSolveService}). */

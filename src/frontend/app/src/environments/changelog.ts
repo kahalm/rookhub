@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.30';
+export const APP_VERSION = '0.184.31';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.31", date: "2026-06-24", changes: [
+    { en: "Internal cleanup: deduplicated the puzzle solvers — the solve timer and the time-formatting helper, previously copied across the standard/book/endless modes and the status cards, now live in one shared place. Behavior unchanged.", de: "Interne Aufräumarbeit: Die Puzzle-Solver wurden entdoppelt — der Lösezeit-Timer und der Zeit-Formatierungs-Helfer, zuvor über Standard-/Buch-/Endlos-Modus und die Status-Karten kopiert, liegen jetzt an einer gemeinsamen Stelle. Verhalten unverändert." },
+  ]},
   { version: "0.184.30", date: "2026-06-24", changes: [
     { en: "Internal/performance: four more presentational puzzle cards (your-turn, status, rating, visualization) now use OnPush change detection for less rendering work during solving. No user-facing change.", de: "Intern/Performance: Vier weitere präsentationale Puzzle-Karten (Du-bist-dran, Status, Bewertung, Visualisierung) nutzen jetzt OnPush-Change-Detection für weniger Rendering-Aufwand während des Lösens. Keine sichtbare Änderung." },
   ]},

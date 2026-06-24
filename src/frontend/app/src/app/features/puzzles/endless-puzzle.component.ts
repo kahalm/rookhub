@@ -288,7 +288,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   gaveUp = false;
   private puzzleLifeLost = false;
   private puzzleStartTime = 0;
-  elapsedSeconds = 0;
+  // elapsedSeconds + formatTime: aus BasePuzzleSolver geerbt (Endless setzt elapsedSeconds aus der
+  // eigenen Puzzle-Stoppuhr und nutzt start/stopTimer der Basis NICHT).
 
   // Zuletzt gelöstes Puzzle — für „Letztes Puzzle analysieren" (bleibt auch nach dem
   // Auto-Advance auf das nächste Puzzle erhalten, da der SOLVED-Status nur kurz sichtbar ist).
@@ -1291,12 +1292,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
     this.sessionStopwatch.stop();
     this.puzzleStopwatch.stop();
-  }
-
-  formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
   }
 
   // --- Tracking ---

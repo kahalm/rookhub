@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { formatPuzzleTime } from './puzzle-format.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -143,9 +144,5 @@ export class PuzzleYourTurnComponent {
   get ek() { return EVAL_KEYS[this.mode]; }
   get ak() { return ACTION_KEYS[this.mode]; }
 
-  formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return m > 0 ? `${m}:${s.toString().padStart(2, '0')}` : `${s}s`;
-  }
+  formatTime = formatPuzzleTime;
 }
