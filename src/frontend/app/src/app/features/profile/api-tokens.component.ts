@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { EMPTY, catchError, filter, switchMap } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 
 interface ApiToken {
@@ -205,18 +206,23 @@ export class ApiTokensComponent implements OnInit {
   }
 
   openCreateDialog(): void {
-    const ref = this.dialog.open(CreateTokenDialogComponent, { width: '420px', maxWidth: '95vw' });
-    ref.afterClosed().subscribe(result => {
-      if (!result) return;
-      this.http.post<ApiTokenCreated>('/api/profile/tokens', result).subscribe({
-        next: t => {
+    // Statt 3-fach verschachtelter subscribes: ein flacher Strom
+    // Create-Dialog → POST → Show-Dialog → Liste neu laden.
+    this.dialog.open(CreateTokenDialogComponent, { width: '420px', maxWidth: '95vw' })
+      .afterClosed().pipe(
+        filter(result => !!result),
+        switchMap(result => this.http.post<ApiTokenCreated>('/api/profile/tokens', result).pipe(
+          catchError(err => {
+            this.snackbar.info(err.error?.message || this.translate.instant('profile.tokens.createFailed'));
+            return EMPTY;   // Fehler → Kette beenden, kein Show-Dialog
+          })
+        )),
+        switchMap(t => {
           ShowTokenDialogComponent.pendingToken = t.rawToken;
-          this.dialog.open(ShowTokenDialogComponent, { width: '520px', maxWidth: '95vw', disableClose: true })
-            .afterClosed().subscribe(() => this.load());
-        },
-        error: err => this.snackbar.info(err.error?.message || this.translate.instant('profile.tokens.createFailed'))
-      });
-    });
+          return this.dialog.open(ShowTokenDialogComponent, { width: '520px', maxWidth: '95vw', disableClose: true })
+            .afterClosed();
+        }),
+      ).subscribe(() => this.load());
   }
 
   revoke(t: ApiToken): void {
