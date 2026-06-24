@@ -31,12 +31,26 @@ export class InAppNotificationService {
   /** Ungelesen-Zähler fürs Glocken-Badge. */
   unseenCount$ = this.unseen.asObservable();
 
+  /** Zeitpunkt der letzten optimistischen Verkleinerung (markSeen/markAllSeen). */
+  private lastOptimisticAt = 0;
+  /** Schutzfenster: kurz nach einer optimistischen Verkleinerung darf ein (evtl. noch
+   *  in-flight gestarteter, veralteter) Server-Refresh den Zähler nicht wieder anheben. */
+  private static readonly OPTIMISTIC_GRACE_MS = 5000;
+
   constructor(private http: HttpClient) {}
 
   /** Ungelesen-Zähler neu laden (Polling + bei Login). */
   refreshCount(): void {
     this.http.get<{ count: number }>(`${this.apiUrl}/count`).subscribe({
-      next: r => this.unseen.next(r.count),
+      next: r => {
+        // Race-Schutz gegen Badge-Flackern: Ein gleichzeitig gestarteter Refresh liefert evtl.
+        // noch den ALTEN (höheren) Wert, nachdem markSeen den Zähler optimistisch gesenkt hat.
+        // Innerhalb des Schutzfensters einen HÖHEREN Serverwert ignorieren (Verkleinerungen +
+        // echte neue Benachrichtigungen nach Ablauf des Fensters greifen normal).
+        const withinGrace = Date.now() - this.lastOptimisticAt < InAppNotificationService.OPTIMISTIC_GRACE_MS;
+        if (withinGrace && r.count > this.unseen.value) return;
+        this.unseen.next(r.count);
+      },
       error: () => { /* nicht kritisch */ }
     });
   }
@@ -54,12 +68,18 @@ export class InAppNotificationService {
 
   /** Alle als gelesen markieren (beim Öffnen der Glocke) — leert das Badge sofort. */
   markAllSeen(): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/seen`, {}).pipe(tap(() => this.unseen.next(0)));
+    return this.http.post(`${this.apiUrl}/seen`, {}).pipe(tap(() => {
+      this.lastOptimisticAt = Date.now();
+      this.unseen.next(0);
+    }));
   }
 
   /** Eine einzelne Benachrichtigung als gelesen markieren (Klick darauf) — Badge -1. */
   markSeen(id: number): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/${id}/seen`, {}).pipe(tap(() => this.unseen.next(Math.max(0, this.unseen.value - 1))));
+    return this.http.post(`${this.apiUrl}/${id}/seen`, {}).pipe(tap(() => {
+      this.lastOptimisticAt = Date.now();
+      this.unseen.next(Math.max(0, this.unseen.value - 1));
+    }));
   }
 
   /** Beim Logout den Zähler lokal zurücksetzen. */

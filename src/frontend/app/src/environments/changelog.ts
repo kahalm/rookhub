@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.6';
+export const APP_VERSION = '0.184.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.7", date: "2026-06-24", changes: [
+    { en: "Notification bell: the unread badge no longer briefly flickers back up after you read a notification (a slower background count refresh that started before could overwrite the lower number). The badge now stays put.", de: "Benachrichtigungs-Glocke: Das Ungelesen-Badge springt nach dem Lesen einer Benachrichtigung nicht mehr kurz wieder hoch (ein langsamerer, vorher gestarteter Hintergrund-Abgleich konnte die kleinere Zahl überschreiben). Das Badge bleibt jetzt stabil." },
+  ]},
   { version: "0.184.6", date: "2026-06-24", changes: [
     { en: "Robustness: transient network/server hiccups (502/503/offline) on read requests are now retried up to 3 times with increasing back-off (0.5s, 1s, 2s) instead of just once — fewer spurious errors on flaky connections. Write requests are still never retried automatically.", de: "Robustheit: Vorübergehende Netz-/Server-Aussetzer (502/503/offline) bei Lese-Anfragen werden jetzt bis zu 3-mal mit wachsender Wartezeit (0,5 s, 1 s, 2 s) wiederholt statt nur einmal — weniger Fehlermeldungen bei wackeliger Verbindung. Schreib-Anfragen werden weiterhin nie automatisch wiederholt." },
   ]},

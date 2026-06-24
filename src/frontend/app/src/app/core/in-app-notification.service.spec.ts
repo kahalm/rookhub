@@ -78,6 +78,27 @@ describe('InAppNotificationService', () => {
     httpMock.verify();   // reset darf KEINEN HTTP-Call ausgelöst haben
   });
 
+  it('ignores a stale higher refresh right after an optimistic markSeen (no badge flicker)', () => {
+    let count = -1;
+    service.unseenCount$.subscribe(c => count = c);
+    setCount(3);
+
+    // Optimistische Verkleinerung → 2.
+    service.markSeen(7).subscribe();
+    httpMock.expectOne('/api/notifications/7/seen').flush({});
+    expect(count).toBe(2);
+
+    // Ein gleichzeitig gestarteter Refresh liefert noch den alten Wert 3 → darf NICHT zurückspringen.
+    service.refreshCount();
+    httpMock.expectOne('/api/notifications/count').flush({ count: 3 });
+    expect(count).toBe(2);
+
+    // Eine Verkleinerung durch den Server greift dagegen sofort.
+    service.refreshCount();
+    httpMock.expectOne('/api/notifications/count').flush({ count: 1 });
+    expect(count).toBe(1);
+  });
+
   it('list requests take + unseenOnly as query params', () => {
     service.list(10, true).subscribe();
     const req = httpMock.expectOne('/api/notifications?take=10&unseenOnly=true');
