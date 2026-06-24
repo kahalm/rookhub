@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.5';
+export const APP_VERSION = '0.184.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.6", date: "2026-06-24", changes: [
+    { en: "Robustness: transient network/server hiccups (502/503/offline) on read requests are now retried up to 3 times with increasing back-off (0.5s, 1s, 2s) instead of just once — fewer spurious errors on flaky connections. Write requests are still never retried automatically.", de: "Robustheit: Vorübergehende Netz-/Server-Aussetzer (502/503/offline) bei Lese-Anfragen werden jetzt bis zu 3-mal mit wachsender Wartezeit (0,5 s, 1 s, 2 s) wiederholt statt nur einmal — weniger Fehlermeldungen bei wackeliger Verbindung. Schreib-Anfragen werden weiterhin nie automatisch wiederholt." },
+  ]},
   { version: "0.184.5", date: "2026-06-24", changes: [
     { en: "Fairness: when you report a puzzle challenge as solved, the server now confirms it against your actual solved attempt before crediting the win (like the revenge feature). A 'not solved' is still taken at face value — so nobody can mark challenges solved without really solving them.", de: "Fairness: Wenn du eine Puzzle-Challenge als gelöst meldest, bestätigt der Server das jetzt gegen deinen tatsächlichen gelösten Versuch, bevor der Erfolg gezählt wird (wie bei der Revanche-Funktion). Ein „nicht gelöst\" wird weiterhin geglaubt — so kann niemand Challenges als gelöst markieren, ohne sie wirklich zu lösen." },
   ]},
