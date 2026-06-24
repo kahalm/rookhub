@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.23';
+export const APP_VERSION = '0.184.24';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.24", date: "2026-06-24", changes: [
+    { en: "The quickstart popup (shown after registering) now briefly explains the puzzle modes instead of the tournament tips: Random puzzles, Endless, Daily puzzle and the Weekly post.", de: "Das Schnellstart-Popup (nach der Registrierung) erklärt jetzt kurz die Puzzle-Modi statt der Turnier-Tipps: Zufalls-Puzzle, Endlos, Tagespuzzle und die Wochenpost." },
+  ]},
   { version: "0.184.23", date: "2026-06-24", changes: [
     { en: "Crawler resilience (backend): after a redeploy the tournament crawler now waits for the VPN tunnel to be back up before its first crawl, and crawls that fail purely on the connection level (e.g. tunnel briefly gone after a VPN rotation) are now retried with a staged backoff instead of being marked failed straight away. Fixes the burst of „Resource temporarily unavailable“ crawl failures seen right after deploys. No user-facing change.", de: "Crawler-Robustheit (Backend): Nach einem Redeploy wartet der Turnier-Crawler jetzt auf den wiederhergestellten VPN-Tunnel, bevor der erste Crawl startet, und Crawls, die rein auf Verbindungsebene scheitern (z. B. Tunnel nach einer VPN-Rotation kurz weg), werden jetzt mit gestuftem Backoff erneut versucht statt sofort als fehlgeschlagen markiert. Behebt die Häufung von „Resource temporarily unavailable“-Crawl-Fehlern direkt nach Deploys. Keine sichtbare Änderung." },
   ]},

@@ -77,14 +77,14 @@
     "changelogTitle": "Changelog",
     "quickstartTitle": "Quickstart",
     "qs": {
-      "subscribeTitle": "Subscribe",
-      "subscribeDesc": "Subscribe to tournaments for quick access to players, pairings and results.",
-      "monitorTitle": "Monitor",
-      "monitorDesc": "Enable the monitor on a tournament — new rounds are detected and crawled automatically.",
-      "favoritesTitle": "Favorites",
-      "favoritesDesc": "Mark players or teams as favorites for quick access in the tournament view.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Add your ChessResults ID in your profile — upcoming tournaments are subscribed automatically."
+      "randomTitle": "Random puzzles",
+      "randomDesc": "Random tactics puzzles with your personal rating — every solve adjusts your puzzle Elo.",
+      "endlessTitle": "Endless",
+      "endlessDesc": "A run with steadily rising difficulty — solve as many as you can and beat your high score.",
+      "dailyTitle": "Daily puzzle",
+      "dailyDesc": "One shared puzzle for everyone each day — with a daily leaderboard (also on Discord).",
+      "weeklyTitle": "Weekly post",
+      "weeklyDesc": "A weekly series of puzzles from a game, with a date — play it through, with a leaderboard."
     },
     "feedback": "Feedback / Report a bug",
     "updateAvailable": "A new version is available.",

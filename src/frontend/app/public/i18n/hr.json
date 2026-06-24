@@ -77,14 +77,14 @@
     "changelogTitle": "Dnevnik promjena",
     "quickstartTitle": "Brzi početak",
     "qs": {
-      "subscribeTitle": "Pretplata",
-      "subscribeDesc": "Pretplatite se na turnire za brz pristup igračima, parovima i rezultatima.",
-      "monitorTitle": "Praćenje",
-      "monitorDesc": "Uključite praćenje turnira — nova kola automatski se prepoznaju i dohvaćaju.",
-      "favoritesTitle": "Favoriti",
-      "favoritesDesc": "Označite igrače ili timove kao favorite za brz pristup u prikazu turnira.",
-      "chessResultsTitle": "ChessResults ID",
-      "chessResultsDesc": "Unesite svoj ChessResults ID u profil — nadolazeći turniri pretplaćuju se automatski."
+      "randomTitle": "Nasumične zagonetke",
+      "randomDesc": "Nasumične taktičke zagonetke s tvojim osobnim rejtingom — svako rješenje prilagođava tvoj puzzle Elo.",
+      "endlessTitle": "Beskonačno",
+      "endlessDesc": "Niz sa sve težim zagonetkama — riješi ih što više i obori svoj rekord.",
+      "dailyTitle": "Dnevna zagonetka",
+      "dailyDesc": "Svaki dan jedna zajednička zagonetka za sve — s dnevnom ljestvicom (i na Discordu).",
+      "weeklyTitle": "Tjedna objava",
+      "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — za odigrati, s ljestvicom."
     },
     "feedback": "Povratne informacije / Prijavi grešku",
     "updateAvailable": "Dostupna je nova verzija.",

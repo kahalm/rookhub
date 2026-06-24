@@ -84,20 +84,20 @@ import { APK_VERSION } from '../environments/changelog';
             <button (click)="showQuickstart = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x2B50;</span>
-            <div><strong>{{ 'app.qs.subscribeTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.subscribeDesc' | translate }}</span></div>
+            <span class="qs-icon">&#x1F3B2;</span>
+            <div><strong>{{ 'app.qs.randomTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.randomDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x23F0;</span>
-            <div><strong>{{ 'app.qs.monitorTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.monitorDesc' | translate }}</span></div>
+            <span class="qs-icon">&#x267E;</span>
+            <div><strong>{{ 'app.qs.endlessTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.endlessDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x2764;</span>
-            <div><strong>{{ 'app.qs.favoritesTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.favoritesDesc' | translate }}</span></div>
+            <span class="qs-icon">&#x1F4C5;</span>
+            <div><strong>{{ 'app.qs.dailyTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.dailyDesc' | translate }}</span></div>
           </div>
           <div class="qs-item">
-            <span class="qs-icon">&#x265E;</span>
-            <div><strong>{{ 'app.qs.chessResultsTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.chessResultsDesc' | translate }}</span></div>
+            <span class="qs-icon">&#x1F4F0;</span>
+            <div><strong>{{ 'app.qs.weeklyTitle' | translate }}</strong><br><span class="qs-desc">{{ 'app.qs.weeklyDesc' | translate }}</span></div>
           </div>
         </div>
       </div>
