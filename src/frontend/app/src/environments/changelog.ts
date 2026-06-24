@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.24';
+export const APP_VERSION = '0.184.25';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.25", date: "2026-06-24", changes: [
+    { en: "Internal/reliability: Chessable course imports are now claimed atomically when a worker picks them up, so a resume burst or scaling out can no longer process the same import twice. No user-facing change.", de: "Intern/Zuverlässigkeit: Chessable-Kurs-Importe werden jetzt atomar übernommen, wenn ein Worker sie greift — ein Resume-Sturm oder Skalieren kann denselben Import damit nicht mehr doppelt verarbeiten. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.24", date: "2026-06-24", changes: [
     { en: "The quickstart popup (shown after registering) now briefly explains the puzzle modes instead of the tournament tips: Random puzzles, Endless, Daily puzzle and the Weekly post.", de: "Das Schnellstart-Popup (nach der Registrierung) erklärt jetzt kurz die Puzzle-Modi statt der Turnier-Tipps: Zufalls-Puzzle, Endlos, Tagespuzzle und die Wochenpost." },
   ]},

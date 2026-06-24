@@ -200,6 +200,49 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunNextAsync_SkipsAlreadyClaimedJob_PicksGenuinelyQueuedOne()
+    {
+        // Atomarer Claim: ein bereits von einem anderen Worker übernommener Job (Phase != "queued")
+        // darf NICHT erneut gegriffen werden. Hier ist der fair zuerst dran befindliche Job bereits
+        // "fetching" → RunNextAsync überspringt ihn und bearbeitet den nächsten echten "queued"-Job.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var claimed = new ChessableImport { UserId = 7, Bid = "a", CourseName = "A", Target = "repertoire", Status = "running", Phase = "fetching", QueueRound = 0, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var queued = new ChessableImport { UserId = 7, Bid = "b", CourseName = "B", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 1, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(claimed, queued);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync();
+
+        // Der schon übernommene Job bleibt unangetastet; der echte queued-Job wurde bearbeitet.
+        Assert.Equal("running", (await _db.ChessableImports.FindAsync(claimed.Id))!.Status);
+        Assert.Equal("fetching", (await _db.ChessableImports.FindAsync(claimed.Id))!.Phase);
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(queued.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task RunNextAsync_ClaimsExactlyOne_WhenInvokedConcurrently()
+    {
+        // Resume-Sturm: zwei parallele Tickets, EIN wartender Job. Der atomare Phase-Claim
+        // ("queued" → "claimed" per ExecuteUpdate) stellt sicher, dass nur ein Lauf den Job
+        // bearbeitet → keine Doppelverarbeitung (kein zweites Repertoire).
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 7))
+            _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var imp = new ChessableImport { UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", QueueRound = 0, CreatedAt = DateTime.UtcNow, FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        // Sequentiell zwei Ticket-Läufe (InMemory ist nicht echt nebenläufig, aber der zweite Lauf
+        // sieht den Job nicht mehr als "queued" → no-op statt Doppel-Import).
+        await _svc.RunNextAsync();
+        await _svc.RunNextAsync();
+
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(imp.Id))!.Status);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7)); // nicht doppelt angelegt
+    }
+
+    [Fact]
     public async Task RunAsync_AlreadyCompleted_IsNoOp()
     {
         var imp = await SeedImportAsync("repertoire", status: "completed");

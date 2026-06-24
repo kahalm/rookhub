@@ -112,15 +112,55 @@ public class ChessableImportService : ICourseReimporter
             .ToList();
 
     /// <summary>Verarbeitet den fair als Nächstes dran befindlichen wartenden Import (Phase "queued").
-    /// No-op, wenn keiner wartet (z. B. Ticket-Überschuss nach einem Abbruch).</summary>
+    /// No-op, wenn keiner wartet (z. B. Ticket-Überschuss nach einem Abbruch).
+    ///
+    /// Der gewählte Job wird ATOMAR übernommen (Claim): per <c>ExecuteUpdateAsync</c> wird die Phase
+    /// "queued" → "claimed" gesetzt, GEFILTERT auf die noch unveränderte Phase. Nur der Worker, dessen
+    /// Update tatsächlich eine Zeile trifft (Rückgabe 1), bearbeitet den Job — bei einem Resume-Sturm /
+    /// mehreren parallelen Tickets kann so kein zweiter Worker denselben wartenden Job greifen
+    /// (verhindert Doppelverarbeitung). Verliert der Claim (0 Zeilen), wird der nächste Kandidat
+    /// versucht.</summary>
     public async Task RunNextAsync(CancellationToken ct = default)
     {
         var queued = await _db.ChessableImports
             .Where(i => i.Status == "running" && i.Phase == "queued")
             .ToListAsync(ct);
-        var next = FairOrder(queued).FirstOrDefault();
-        if (next is null) return;
-        await RunAsync(next.Id, ct);
+
+        foreach (var next in FairOrder(queued))
+        {
+            if (!await TryClaimAsync(next.Id, ct))
+                continue; // jemand anderes war schneller → nächsten wartenden Job probieren
+
+            // Der lokal getrackte Entity-Stand ist nach dem Claim veraltet → frisch laden lassen.
+            _db.ChangeTracker.Clear();
+            await RunAsync(next.Id, ct);
+            return;
+        }
+    }
+
+    /// <summary>Übernimmt den Job atomar, indem die Phase "queued" → "claimed" gesetzt wird —
+    /// GEFILTERT auf die noch unveränderte Phase. Auf relationalen Providern via einzelnem
+    /// <c>UPDATE … WHERE Phase='queued'</c> (echte Atomarität: nur ein Worker trifft die Zeile).
+    /// Liefert <c>true</c>, wenn DIESER Aufruf den Job übernommen hat. Der InMemory-Test-Provider
+    /// kann <c>ExecuteUpdate</c> nicht übersetzen → dort getrackter Re-Check-Fallback (gleiche Logik,
+    /// nur ohne echte DB-Nebenläufigkeitsgarantie).</summary>
+    private async Task<bool> TryClaimAsync(int importId, CancellationToken ct)
+    {
+        if (_db.Database.IsRelational())
+        {
+            var rows = await _db.ChessableImports
+                .Where(i => i.Id == importId && i.Status == "running" && i.Phase == "queued")
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Phase, "claimed"), ct);
+            return rows == 1;
+        }
+
+        // InMemory-Fallback: nur claimen, wenn die Phase noch "queued" ist.
+        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
+        if (import is null || import.Status != "running" || import.Phase != "queued")
+            return false;
+        import.Phase = "claimed";
+        await _db.SaveChangesAsync(ct);
+        return true;
     }
 
     /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
