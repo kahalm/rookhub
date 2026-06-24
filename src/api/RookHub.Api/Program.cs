@@ -233,8 +233,21 @@ try
 
     // Data Protection — Keys auf gemountetes Volume persistieren, damit sie Neustarts
     // ueberleben (sonst ephemere In-Memory-Keys + "No XML encryptor"-Warnings bei jedem Boot).
-    builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo("/keys"));
+    // Pfad konfigurierbar (DataProtection:KeyPath, Default /keys = Prod-Volume). SetApplicationName
+    // haelt die Purpose-Strings stabil, auch wenn sich der Containername aendert.
+    var dataProtection = builder.Services.AddDataProtection().SetApplicationName("RookHub");
+    var keyPath = builder.Configuration["DataProtection:KeyPath"] ?? "/keys";
+    try
+    {
+        Directory.CreateDirectory(keyPath);
+        dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+    }
+    catch (Exception ex)
+    {
+        // Pfad nicht beschreibbar (z. B. lokale Dev ohne gemountetes /keys) → In-Memory-Keys
+        // (ephemer; ueberleben den Prozess nicht). Kein Startup-Crash deswegen.
+        Log.Warning(ex, "DataProtection: key path {KeyPath} not writable — falling back to in-memory keys", keyPath);
+    }
 
     // CORS policies
     builder.Services.AddCors(options =>
