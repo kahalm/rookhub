@@ -103,7 +103,10 @@ try
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            // Standard-Toleranz ist 5 min — auf 1 min straffen, damit abgelaufene Tokens
+            // (insb. nach Logout/Passwortwechsel) nicht unnötig lange akzeptiert werden.
+            ClockSkew = TimeSpan.FromMinutes(1)
         };
         // Gelöschte/anonymisierte Konten dürfen ihr noch gültiges JWT nicht weiterverwenden:
         // nach erfolgreicher Signatur-/Lifetime-Prüfung zusätzlich gegen DeletedAt verifizieren.

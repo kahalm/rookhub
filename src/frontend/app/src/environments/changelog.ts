@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.0';
+export const APP_VERSION = '0.184.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.1", date: "2026-06-24", changes: [
+    { en: "Security hardening: expired login sessions are now rejected more promptly (the token expiry tolerance was tightened from 5 minutes to 1). No visible change in normal use.", de: "Sicherheits-Härtung: Abgelaufene Login-Sitzungen werden jetzt zügiger abgewiesen (die Toleranz beim Token-Ablauf wurde von 5 Minuten auf 1 Minute verkürzt). Im normalen Betrieb keine sichtbare Änderung." },
+  ]},
   { version: "0.184.0", date: "2026-06-24", changes: [
     { en: "Logging/observability: client-side diagnostic events and Chessable course imports now carry domain tags for the central log dashboard (Kibana). Client logs are tagged 'clientlog' (engine crashes/hangs additionally 'engine'), and the Chessable import lifecycle (start/success/failure) is tagged 'import,chessable' — so engine crash logs and import problems can be filtered out directly. No user-facing change.", de: "Logging/Observability: Client-seitige Diagnose-Events und Chessable-Kurs-Importe tragen jetzt Domänen-Tags für das zentrale Log-Dashboard (Kibana). Client-Logs werden mit 'clientlog' getaggt (Engine-Crashes/Hänger zusätzlich mit 'engine'), und der Chessable-Import-Lebenszyklus (Start/Erfolg/Fehler) mit 'import,chessable' — so lassen sich Engine-Crash-Logs und Import-Probleme direkt herausfiltern. Keine sichtbare Änderung." },
   ]},
