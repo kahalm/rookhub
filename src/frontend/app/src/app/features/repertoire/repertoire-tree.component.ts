@@ -12,10 +12,12 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
   template: `
     <div class="tree-container">
       <div class="breadcrumbs">
-        <span class="crumb" (click)="goToRoot.emit()">{{ 'repertoire.tree.start' | translate }}</span>
+        <span class="crumb" role="button" tabindex="0" (click)="goToRoot.emit()"
+              (keydown.enter)="goToRoot.emit()" (keydown.space)="$event.preventDefault(); goToRoot.emit()">{{ 'repertoire.tree.start' | translate }}</span>
         @for (crumb of breadcrumbs; track crumb.depth) {
           <mat-icon class="crumb-sep">chevron_right</mat-icon>
-          <span class="crumb" (click)="goToDepth.emit(crumb.depth)">{{ crumb.san }}</span>
+          <span class="crumb" role="button" tabindex="0" (click)="goToDepth.emit(crumb.depth)"
+                (keydown.enter)="goToDepth.emit(crumb.depth)" (keydown.space)="$event.preventDefault(); goToDepth.emit(crumb.depth)">{{ crumb.san }}</span>
         }
       </div>
 
@@ -27,7 +29,8 @@ import { TreeChild, Breadcrumb } from './move-tree.service';
 
       <div class="children-list">
         @for (child of children; track child.san) {
-          <div class="child-item" (click)="nodeSelected.emit(child.san)">
+          <div class="child-item" role="button" tabindex="0" (click)="nodeSelected.emit(child.san)"
+               (keydown.enter)="nodeSelected.emit(child.san)" (keydown.space)="$event.preventDefault(); nodeSelected.emit(child.san)">
             <span class="child-san">{{ child.san }}</span>
             <span class="child-count">{{ (child.count === 1 ? 'repertoire.tree.lineCount' : 'repertoire.tree.lineCountPlural') | translate: { count: child.count } }}</span>
           </div>

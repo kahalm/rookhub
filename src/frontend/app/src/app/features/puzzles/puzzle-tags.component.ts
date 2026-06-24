@@ -1,14 +1,17 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-puzzle-tags',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslateModule],
   template: `
     @if (tagList.length) {
-      <span class="puzzle-tags-toggle" (click)="expanded = !expanded">
+      <span class="puzzle-tags-toggle" role="button" tabindex="0" [attr.aria-expanded]="expanded"
+            (click)="expanded = !expanded"
+            (keydown.enter)="expanded = !expanded" (keydown.space)="$event.preventDefault(); expanded = !expanded">
         {{ (expanded ? 'endless.game.hideTags' : 'endless.game.showTags') | translate }}
       </span>
       @if (expanded) {

@@ -33,7 +33,8 @@ import { RepertoireLine } from './repertoire-viewer.service';
     } @else {
       <div class="lines-list">
         @for (line of lines; track line.gameIndex; let i = $index) {
-          <div class="line-item" (click)="lineSelected.emit(i)">
+          <div class="line-item" role="button" tabindex="0" (click)="lineSelected.emit(i)"
+               (keydown.enter)="lineSelected.emit(i)" (keydown.space)="$event.preventDefault(); lineSelected.emit(i)">
             <div class="line-players">
               <span>{{ line.white }} vs {{ line.black }}</span>
               <span class="line-result">{{ line.result }}</span>

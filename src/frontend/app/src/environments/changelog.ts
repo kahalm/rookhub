@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.19';
+export const APP_VERSION = '0.184.20';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.20", date: "2026-06-24", changes: [
+    { en: "Accessibility & performance: more clickable elements are now keyboard-operable (puzzle tag toggle, repertoire breadcrumb/move/line items — focusable, Enter/Space activates), and a few presentational components switched to OnPush change detection for less rendering work.", de: "Barrierefreiheit & Performance: Weitere klickbare Elemente sind jetzt per Tastatur bedienbar (Puzzle-Tag-Umschalter, Repertoire-Brotkrumen/-Zug-/-Linieneinträge — fokussierbar, Enter/Leertaste aktiviert), und einige präsentationale Komponenten nutzen jetzt OnPush-Change-Detection für weniger Rendering-Aufwand." },
+  ]},
   { version: "0.184.19", date: "2026-06-24", changes: [
     { en: "Admin: the active tab is now reflected in the URL (?tab=…), so reloading or going back keeps you on the same admin tab. Plus internal tidy-ups (cached member dropdown, new admin-page tests).", de: "Admin: Der aktive Tab steht jetzt in der URL (?tab=…), sodass Neuladen oder Zurück denselben Admin-Tab beibehält. Dazu interne Aufräumarbeiten (gecachtes Mitglieder-Dropdown, neue Admin-Seiten-Tests)." },
   ]},

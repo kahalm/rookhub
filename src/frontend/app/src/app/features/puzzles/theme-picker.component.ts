@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslateModule } from '@ngx-translate/core';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
@@ -13,6 +13,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
 @Component({
   selector: 'app-theme-picker',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, TranslateModule],
   template: `
     <div class="theme-label">{{ namespace + '.mode' | translate }}</div>
