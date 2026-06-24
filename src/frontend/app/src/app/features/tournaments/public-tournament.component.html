@@ -33,7 +33,10 @@
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let p">
-                      <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite(p)">
+                      <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite(p)"
+                                role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
+                                [attr.aria-pressed]="isFavorite(p)"
+                                (keydown.enter)="toggleFavorite(p)" (keydown.space)="$event.preventDefault(); toggleFavorite(p)">
                         {{ isFavorite(p) ? 'star' : 'star_border' }}
                       </mat-icon>
                     </td>
@@ -84,7 +87,10 @@
               <!-- Mobile -->
               <div class="mobile-only player-cards">
                 @for (p of displayedPlayers; track p.snr) {
-                  <div class="player-card" (click)="toggleFavorite(p)">
+                  <div class="player-card" (click)="toggleFavorite(p)"
+                       role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
+                       [attr.aria-pressed]="isFavorite(p)"
+                       (keydown.enter)="toggleFavorite(p)" (keydown.space)="$event.preventDefault(); toggleFavorite(p)">
                     <div class="player-main">
                       <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
                         {{ isFavorite(p) ? 'star' : 'star_border' }}
@@ -119,7 +125,10 @@
                   <ng-container matColumnDef="fav">
                     <th mat-header-cell *matHeaderCellDef></th>
                     <td mat-cell *matCellDef="let t">
-                      <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)" (click)="toggleTeamFavorite(t)">
+                      <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)" (click)="toggleTeamFavorite(t)"
+                                role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
+                                [attr.aria-pressed]="isTeamFavorite(t)"
+                                (keydown.enter)="toggleTeamFavorite(t)" (keydown.space)="$event.preventDefault(); toggleTeamFavorite(t)">
                         {{ isTeamFavorite(t) ? 'star' : 'star_border' }}
                       </mat-icon>
                     </td>

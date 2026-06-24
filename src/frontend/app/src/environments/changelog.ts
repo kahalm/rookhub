@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.31';
+export const APP_VERSION = '0.184.32';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.32", date: "2026-06-25", changes: [
+    { en: "Accessibility: the tournament favorite stars (player and team, in both the table and the mobile cards) are now keyboard-operable — focusable, Enter/Space toggles, with a visible focus outline and an aria-label/pressed state for screen readers.", de: "Barrierefreiheit: Die Turnier-Favoriten-Sterne (Spieler und Team, in Tabelle und Mobil-Karten) sind jetzt per Tastatur bedienbar — fokussierbar, Enter/Leertaste schaltet um, mit sichtbarem Fokusrahmen und aria-label/-Zustand für Screenreader." },
+  ]},
   { version: "0.184.31", date: "2026-06-24", changes: [
     { en: "Internal cleanup: deduplicated the puzzle solvers — the solve timer and the time-formatting helper, previously copied across the standard/book/endless modes and the status cards, now live in one shared place. Behavior unchanged.", de: "Interne Aufräumarbeit: Die Puzzle-Solver wurden entdoppelt — der Lösezeit-Timer und der Zeit-Formatierungs-Helfer, zuvor über Standard-/Buch-/Endlos-Modus und die Status-Karten kopiert, liegen jetzt an einer gemeinsamen Stelle. Verhalten unverändert." },
   ]},

@@ -516,7 +516,8 @@
       "added": "{{name}} added to favorites",
       "removed": "{{name}} removed from favorites",
       "addedShort": "{{name}} favorited",
-      "removedShort": "{{name}} removed"
+      "removedShort": "{{name}} removed",
+      "toggleAria": "Toggle favorite"
     },
     "players": {
       "snr": "No.",

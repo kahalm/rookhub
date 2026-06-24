@@ -514,7 +514,8 @@
       "added": "{{name}} dodan u favorite",
       "removed": "{{name}} uklonjen iz favorita",
       "addedShort": "{{name}} označen kao favorit",
-      "removedShort": "{{name}} uklonjen"
+      "removedShort": "{{name}} uklonjen",
+      "toggleAria": "Uključi/isključi favorit"
     },
     "players": {
       "snr": "Br.",

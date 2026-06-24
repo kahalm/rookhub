@@ -9,6 +9,8 @@
     .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }
     .fav-icon.fav-active, .fav-icon-sm.fav-active { color: #ffc107; }
     .fav-icon:hover { color: #ffc107; }
+    /* Sichtbarer Fokus für die jetzt tastaturbedienbaren Favoriten-Sterne. */
+    .fav-icon:focus-visible { outline: 2px solid #1565c0; outline-offset: 2px; border-radius: 4px; }
 
     .team-link { cursor: pointer; color: #1565c0; text-decoration: underline; }
     .team-link:hover { color: #0d47a1; }
@@ -21,6 +23,7 @@
       cursor: pointer;
     }
     .player-card:hover { background: color-mix(in srgb, currentColor 2%, transparent); }
+    .player-card:focus-visible { outline: 2px solid #1565c0; outline-offset: -2px; }
     .player-main {
       display: flex; align-items: baseline; gap: 0.4rem; font-size: 0.95rem;
     }
