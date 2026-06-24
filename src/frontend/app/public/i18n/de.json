@@ -31,7 +31,8 @@
       "challenge_resolved_solved": "{{username}} hat deine Challenge gelöst",
       "challenge_resolved_failed": "{{username}} hat deine Challenge nicht gelöst",
       "admin_message_received": "Das Admin-Team hat dir eine Nachricht geschickt",
-      "user_message_received": "{{username}} hat dem Admin-Team eine Nachricht geschickt"
+      "user_message_received": "{{username}} hat dem Admin-Team eine Nachricht geschickt",
+      "tournament_new_round": "Neue Runde in {{tournamentName}} (Runde {{round}})"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",

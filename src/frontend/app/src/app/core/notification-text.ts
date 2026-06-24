@@ -31,6 +31,7 @@ export function notificationIcon(n: AppNotification): string {
     case 'challenge_resolved': return 'emoji_events';
     case 'admin_message_received': return 'mail';
     case 'user_message_received': return 'mark_email_unread';
+    case 'tournament_new_round': return 'emoji_events';
     default: return 'notifications';
   }
 }

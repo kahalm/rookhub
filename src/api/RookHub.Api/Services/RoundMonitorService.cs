@@ -124,6 +124,20 @@ public class RoundMonitorService : BackgroundService
                     // Update known rounds
                     if (checkResult.TryGetProperty("availableRounds", out var ar))
                         monitor.LastKnownRounds = ar.GetInt32();
+
+                    // Abonnenten des Turniers per In-App-Glocke über die neue Runde informieren.
+                    try
+                    {
+                        var notifications = scope.ServiceProvider.GetRequiredService<NotificationService>();
+                        await NotifyNewRoundAsync(db, notifications, monitor.CrawlerTournamentId,
+                            monitor.CrawlerTournamentDbId, monitor.LastKnownRounds, ct);
+                    }
+                    catch (Exception notifyEx) when (notifyEx is not OperationCanceledException)
+                    {
+                        _logger.LogWarning(notifyEx,
+                            "Error notifying subscribers of new round for tournament {TournamentId}",
+                            monitor.CrawlerTournamentId);
+                    }
                 }
 
                 monitor.LastCheckedAt = DateTime.UtcNow;
@@ -136,5 +150,28 @@ public class RoundMonitorService : BackgroundService
                     monitor.CrawlerTournamentId);
             }
         }
+    }
+
+    /// <summary>
+    /// Legt für alle Abonnenten eines Turniers eine „neue Runde"-Benachrichtigung an (In-App-Glocke,
+    /// Link zur Turnier-Detailseite). No-op, wenn es keine Abonnenten gibt. Statisch + ohne Proxy →
+    /// direkt testbar.
+    /// </summary>
+    internal static async Task NotifyNewRoundAsync(
+        AppDbContext db, NotificationService notifications,
+        string crawlerTournamentId, int tournamentDbId, int round, CancellationToken ct)
+    {
+        var subs = await db.TournamentSubscriptions
+            .Where(s => s.CrawlerTournamentId == crawlerTournamentId)
+            .Select(s => new { s.UserId, s.TournamentName })
+            .ToListAsync(ct);
+        if (subs.Count == 0) return;
+
+        var name = subs.Select(s => s.TournamentName).FirstOrDefault(n => !string.IsNullOrEmpty(n)) ?? "";
+        await notifications.CreateManyAsync(
+            subs.Select(s => s.UserId),
+            Models.NotificationType.TournamentNewRound,
+            new Dictionary<string, string> { ["tournamentName"] = name, ["round"] = round.ToString() },
+            $"/tournaments/{tournamentDbId}");
     }
 }

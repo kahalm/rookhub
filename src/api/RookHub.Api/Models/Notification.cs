@@ -43,4 +43,7 @@ public static class NotificationType
     public const string AdminMessageReceived = "admin_message_received";
     /// <summary>User hat im Thread geantwortet (→ Glocke aller Admins, Link „/admin").</summary>
     public const string UserMessageReceived = "user_message_received";
+    /// <summary>Neue Runde/Paarungen in einem abonnierten Turnier (→ Glocke der Abonnenten,
+    /// Link auf die Turnier-Detailseite). Daten: tournamentName, round.</summary>
+    public const string TournamentNewRound = "tournament_new_round";
 }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -170,5 +171,37 @@ public class RoundMonitorServiceTests : IDisposable
         // First monitor was saved before second one failed → its LastCheckedAt is set
         Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "A1").LastCheckedAt);
         Assert.NotNull(saved.First(m => m.CrawlerTournamentId == "B2").LastCheckedAt);
+    }
+
+    [Fact]
+    public async Task NotifyNewRound_CreatesNotificationForEachSubscriber()
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "a", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "b", PasswordHash = "h" });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "T1", TournamentName = "Open 2026" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "T1", TournamentName = "Open 2026" },
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "OTHER", TournamentName = "Andere" });
+        await _db.SaveChangesAsync();
+
+        await RoundMonitorService.NotifyNewRoundAsync(
+            _db, new NotificationService(_db), "T1", tournamentDbId: 42, round: 5, default);
+
+        var notes = await _db.Notifications.ToListAsync();
+        Assert.Equal(2, notes.Count);   // nur die beiden T1-Abonnenten
+        Assert.All(notes, n => Assert.Equal(NotificationType.TournamentNewRound, n.Type));
+        Assert.All(notes, n => Assert.Equal("/tournaments/42", n.Link));
+        Assert.All(notes, n => Assert.Contains("Open 2026", n.DataJson ?? ""));
+        Assert.Contains(notes, n => n.UserId == 1);
+        Assert.Contains(notes, n => n.UserId == 2);
+    }
+
+    [Fact]
+    public async Task NotifyNewRound_NoSubscribers_NoOp()
+    {
+        await RoundMonitorService.NotifyNewRoundAsync(
+            _db, new NotificationService(_db), "NONE", tournamentDbId: 1, round: 1, default);
+        Assert.Empty(await _db.Notifications.ToListAsync());
     }
 }
