@@ -32,6 +32,8 @@ public class ProfileController : BaseApiController
     [HttpPost("tokens")]
     public async Task<ActionResult<ApiTokenCreatedDto>> CreateToken([FromBody] CreateApiTokenDto dto)
     {
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             return Ok(await _apiTokens.CreateAsync(GetUserId(), dto.Name, dto.Scope, dto.ExpiresInDays));
@@ -145,6 +147,8 @@ public class ProfileController : BaseApiController
     [HttpDelete("account")]
     public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto)
     {
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             await _profileService.DeleteAccountAsync(GetUserId(), dto?.Password ?? string.Empty);

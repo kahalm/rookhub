@@ -93,9 +93,11 @@ public class ProfileControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(await _controller.RevokeToken(dto.Id));
     }
 
-    private void SetUser(int userId)
+    private void SetUser(int userId, int? impersonatorAdminId = null)
     {
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (impersonatorAdminId is int adminId)
+            claims.Add(new Claim("imp", adminId.ToString()));
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -103,6 +105,30 @@ public class ProfileControllerTests : IDisposable
                 User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
             }
         };
+    }
+
+    [Fact]
+    public async Task CreateToken_WhileImpersonating_Returns403()
+    {
+        var u = await CreateUserAsync("imp-target");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.CreateToken(new CreateApiTokenDto { Name = "ext" });
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+        // Es darf KEIN Token angelegt worden sein.
+        Assert.Empty(_db.UserApiTokens);
+    }
+
+    [Fact]
+    public async Task DeleteAccount_WhileImpersonating_Returns403()
+    {
+        var u = await CreateUserAsync("imp-target2");
+        SetUser(u.Id, impersonatorAdminId: 999);
+
+        var result = await _controller.DeleteAccount(new DeleteAccountDto { Password = "x" });
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
     }
 
     private async Task<AppUser> CreateUserAsync(string username = "testuser")

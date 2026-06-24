@@ -12,4 +12,12 @@ public abstract class BaseApiController : ControllerBase
             throw new UnauthorizedAccessException("User ID claim is missing or invalid.");
         return userId;
     }
+
+    /// <summary>
+    /// True, wenn das aktuelle Token aus einer Admin-Impersonation stammt (trägt den <c>imp</c>-Claim).
+    /// Destruktive/irreversible Aktionen (Konto löschen, Passwort ändern, API-Token erstellen) dürfen
+    /// im Impersonations-Kontext NICHT ausgeführt werden — ein Admin soll fremde Konten nicht
+    /// dauerhaft verändern oder dauerhafte Zugangstoken in fremdem Namen erzeugen können.
+    /// </summary>
+    protected bool IsImpersonating() => User.FindFirst("imp") is not null;
 }

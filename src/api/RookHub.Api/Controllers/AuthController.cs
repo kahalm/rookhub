@@ -80,6 +80,8 @@ public class AuthController : BaseApiController
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             await _authService.ChangePasswordAsync(GetUserId(), dto);
