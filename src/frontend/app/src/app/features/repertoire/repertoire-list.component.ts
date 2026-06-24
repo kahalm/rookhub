@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +11,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
+import { RepertoireService } from '../../core/repertoire.service';
 import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 
@@ -95,7 +95,7 @@ export class RepertoireListComponent implements OnInit {
   /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
   readonly Kind = RepertoireKind;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private repertoireService: RepertoireService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   kindLabel(kind: RepertoireKind): string {
     return REPERTOIRE_KIND_LABELS[kind] ?? 'repertoire.kind.none';
@@ -107,7 +107,7 @@ export class RepertoireListComponent implements OnInit {
 
   loadRepertoires(): void {
     this.loading = true;
-    this.http.get<Repertoire[]>('/api/repertoires').subscribe({
+    this.repertoireService.list().subscribe({
       next: (r) => { this.repertoires = r; this.loading = false; },
       error: () => { this.loading = false; this.snackbar.info(this.translate.instant('repertoire.list.loadFailed')); }
     });
@@ -117,7 +117,7 @@ export class RepertoireListComponent implements OnInit {
     const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', maxWidth: '95vw' });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.http.post('/api/repertoires', result).subscribe({
+        this.repertoireService.create(result).subscribe({
           next: () => this.loadRepertoires(),
           error: () => this.snackbar.info(this.translate.instant('repertoire.list.createFailed'))
         });
@@ -129,7 +129,7 @@ export class RepertoireListComponent implements OnInit {
     const dialogRef = this.dialog.open(CreateRepertoireDialogComponent, { width: '400px', maxWidth: '95vw', data: rep });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.http.put(`/api/repertoires/${rep.id}`, result).subscribe({
+        this.repertoireService.update(rep.id, result).subscribe({
           next: () => this.loadRepertoires(),
           error: () => this.snackbar.info(this.translate.instant('repertoire.list.updateFailed'))
         });
@@ -139,7 +139,7 @@ export class RepertoireListComponent implements OnInit {
 
   deleteRepertoire(id: number): void {
     if (confirm(this.translate.instant('repertoire.list.deleteConfirm'))) {
-      this.http.delete(`/api/repertoires/${id}`).subscribe({
+      this.repertoireService.remove(id).subscribe({
         next: () => this.loadRepertoires(),
         error: () => this.snackbar.info(this.translate.instant('repertoire.list.deleteFailed'))
       });
@@ -147,7 +147,7 @@ export class RepertoireListComponent implements OnInit {
   }
 
   downloadPgn(rep: Repertoire): void {
-    this.http.get(`/api/repertoires/${rep.id}/pgn`, { responseType: 'blob' }).subscribe({
+    this.repertoireService.downloadPgn(rep.id).subscribe({
       next: blob => {
         const safe = (rep.name || 'repertoire').replace(/[^A-Za-z0-9]+/g, '_');
         const a = document.createElement('a');
