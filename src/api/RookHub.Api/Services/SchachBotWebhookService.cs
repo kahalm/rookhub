@@ -77,7 +77,8 @@ public class SchachBotWebhookService
             return;
         }
 
-        var signature = ComputeHmacHex(secret, body);
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var signature = ComputeHmacHex(secret, ts + "." + body);
 
         try
         {
@@ -85,6 +86,7 @@ public class SchachBotWebhookService
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
+            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
             {
@@ -145,13 +147,15 @@ public class SchachBotWebhookService
             return;
         }
 
-        var signature = ComputeHmacHex(secret, body);
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var signature = ComputeHmacHex(secret, ts + "." + body);
         try
         {
             using var content = new StringContent(body, Encoding.UTF8);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
+            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
                 _logger.LogWarning("SchachBot-Weekly-Webhook: HTTP {Status} (weeklyPostId={Id})", (int)resp.StatusCode, weeklyPostId);
@@ -184,13 +188,15 @@ public class SchachBotWebhookService
             return;
         }
 
-        var signature = ComputeHmacHex(secret, body);
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var signature = ComputeHmacHex(secret, ts + "." + body);
         try
         {
             using var content = new StringContent(body, Encoding.UTF8);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
             req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
+            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
                 _logger.LogWarning("SchachBot-DailyRegenerate-Webhook: HTTP {Status} (date={Date})", (int)resp.StatusCode, date);

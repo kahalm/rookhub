@@ -86,8 +86,13 @@ public class SchachBotWebhookServiceTests
         var sigHeader = handler.LastRequest.Headers.GetValues("X-Webhook-Signature").Single();
         Assert.StartsWith("sha256=", sigHeader);
 
-        // Signature == HMAC-SHA256(secret, body)
-        var expected = "sha256=" + SchachBotWebhookService.ComputeHmacHex(secret, handler.LastBody!);
+        // Replay-Schutz: Timestamp-Header vorhanden + frisch (±300 s), Signatur über "<ts>.<body>"
+        var tsHeader = handler.LastRequest.Headers.GetValues("X-Webhook-Timestamp").Single();
+        var ts = long.Parse(tsHeader, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts) <= 300);
+
+        // Signature == HMAC-SHA256(secret, "<ts>.<body>")
+        var expected = "sha256=" + SchachBotWebhookService.ComputeHmacHex(secret, tsHeader + "." + handler.LastBody!);
         Assert.Equal(expected, sigHeader);
 
         // Body enthält puzzleId, solvedCount, anonymousSolvedCount, attemptCount, solvers

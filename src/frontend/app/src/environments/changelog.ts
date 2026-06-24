@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.32';
+export const APP_VERSION = '0.184.34';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.34", date: "2026-06-25", changes: [
+    { en: "Security hardening: the webhook updates sent to the Discord bot (daily-puzzle live results, weekly-post progress and daily regeneration) now carry a signed timestamp, so an intercepted request can no longer be replayed once a 5-minute window has passed. Counterpart to bot v2.70.0; fully backward-compatible.", de: "Sicherheits-Härtung: Die Webhook-Updates an den Discord-Bot (Tagespuzzle-Live-Ergebnisse, Wochenpost-Fortschritt und Tages-Neugenerierung) tragen jetzt einen signierten Zeitstempel, sodass ein abgefangener Request nach Ablauf eines 5-Minuten-Fensters nicht mehr erneut eingespielt werden kann. Gegenstück zu Bot v2.70.0; voll rückwärtskompatibel." },
+  ]},
+  { version: "0.184.33", date: "2026-06-25", changes: [
+    { en: "Crawler robustness (crawler repo): bye / free-round pairings are no longer logged as warnings, so they no longer trigger false log-watcher alerts; a defensive response-size limit guards against out-of-memory from oversized chess-results.com responses; hidden-field parsing moved from regex to a real HTML parser (more robust against markup changes); and the player/team upsert now runs inside a database transaction.", de: "Crawler-Robustheit (Crawler-Repo): Freilos-Paarungen (spielfrei) werden nicht mehr als Warnung geloggt und lösen damit keine falschen log-watcher-Alerts mehr aus; ein defensives Antwort-Größenlimit schützt vor Out-of-Memory durch überlange chess-results.com-Antworten; das Hidden-Field-Parsing wurde von Regex auf einen echten HTML-Parser umgestellt (robuster gegen Markup-Änderungen); und der Spieler-/Team-Upsert läuft jetzt in einer Datenbank-Transaktion." },
+  ]},
   { version: "0.184.32", date: "2026-06-25", changes: [
     { en: "Accessibility: the tournament favorite stars (player and team, in both the table and the mobile cards) are now keyboard-operable — focusable, Enter/Space toggles, with a visible focus outline and an aria-label/pressed state for screen readers.", de: "Barrierefreiheit: Die Turnier-Favoriten-Sterne (Spieler und Team, in Tabelle und Mobil-Karten) sind jetzt per Tastatur bedienbar — fokussierbar, Enter/Leertaste schaltet um, mit sichtbarem Fokusrahmen und aria-label/-Zustand für Screenreader." },
   ]},
