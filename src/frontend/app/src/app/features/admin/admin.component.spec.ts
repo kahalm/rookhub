@@ -64,6 +64,20 @@ describe('AdminComponent', () => {
     expect(c.availableUsers.length).toBe(2);   // keine Gruppe gewählt → alle verfügbar
   });
 
+  it('loadAllUsers warns (does not silently truncate) when the user count exceeds the dropdown cap', () => {
+    const warn = spyOn(console, 'warn');
+    const { c } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [{ id: 1, username: 'a' }], totalCount: 9999 })) });
+    c.loadAllUsers();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('loadAllUsers does not warn when within the cap', () => {
+    const warn = spyOn(console, 'warn');
+    const { c } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [{ id: 1, username: 'a' }], totalCount: 1 })) });
+    c.loadAllUsers();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('loadAllUsers shows an error hint on failure', () => {
     const { c, snackbar } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(throwError(() => ({ status: 500 }))) });
     c.loadAllUsers();

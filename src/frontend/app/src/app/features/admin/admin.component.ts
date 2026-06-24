@@ -611,10 +611,23 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Obere Schranke der ins Mitglieder-Dropdown geladenen User. Bewusst hart: das Dropdown ist
+   *  für einen kleinen Nutzerkreis gedacht; die paginierte User-TABELLE (loadUsers) ist davon
+   *  unberührt. Sollte der Bestand die Schranke je überschreiten, wird das geloggt, damit der Cap
+   *  sichtbar wird (statt still abzuschneiden) — dann ist ein Such-/Lazy-Picker fällig. */
+  private static readonly MEMBER_PICKER_CAP = 500;
+
   loadAllUsers(): void {
-    // User-Liste fuer das Mitglieder-Dropdown (kleiner Nutzerkreis).
-    this.adminService.getUsers('', 1, 500).subscribe({
-      next: res => { this.allUsers = res.items; this.recomputeAvailableUsers(); },
+    const cap = AdminComponent.MEMBER_PICKER_CAP;
+    this.adminService.getUsers('', 1, cap).subscribe({
+      next: res => {
+        this.allUsers = res.items;
+        if (res.totalCount > cap) {
+          // Cap erreicht → das Dropdown zeigt nicht alle User. Nicht still schlucken.
+          console.warn(`[admin] Mitglieder-Dropdown auf ${cap} von ${res.totalCount} Usern begrenzt — Such-Picker erwägen.`);
+        }
+        this.recomputeAvailableUsers();
+      },
       error: () => this.snackbar.info(this.translate.instant('admin.users.errors.load'))
     });
   }

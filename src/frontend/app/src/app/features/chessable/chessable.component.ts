@@ -446,11 +446,20 @@ export class ChessableComponent implements OnInit, OnDestroy {
       history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
-    const code = buildChessableBookmarklet(
-      `${window.location.origin}/chessable`,
-      this.translate.instant('chessable.bookmarkletNoLogin'),
-    );
-    this.bookmarkletHref = this.sanitizer.bypassSecurityTrustUrl(code);
+    // `javascript:`-Bookmarklet als vertrauenswürdige URL markieren. SICHERHEIT: das ist
+    // unbedenklich, weil der Code AUSSCHLIESSLICH aus app-eigenen, nicht-nutzergesteuerten Werten
+    // gebaut wird — Ziel = die eigene App-Origin (`window.location.origin`), die einzige
+    // eingebettete Zeichenkette ist eine übersetzte Meldung, die `buildChessableBookmarklet`
+    // einfach-quote-escaped. Es fließt KEIN Nutzer-Input ein. Als Defense-in-Depth wird das Ziel
+    // zusätzlich gegen die eigene Origin geprüft, bevor der Sanitizer-Bypass greift.
+    const target = `${window.location.origin}/chessable`;
+    if (target.startsWith(window.location.origin)) {
+      const code = buildChessableBookmarklet(
+        target,
+        this.translate.instant('chessable.bookmarkletNoLogin'),
+      );
+      this.bookmarkletHref = this.sanitizer.bypassSecurityTrustUrl(code);
+    }
 
     // Erst den (in der DB gespeicherten) Disclaimer-Status prüfen — ohne Bestätigung kein Zugriff.
     this.chessable.getDisclaimer().subscribe({

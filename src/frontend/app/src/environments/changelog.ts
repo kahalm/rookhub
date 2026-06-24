@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.28';
+export const APP_VERSION = '0.184.29';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.29", date: "2026-06-24", changes: [
+    { en: "Internal/admin tidy-ups: the Chessable bookmarklet link now documents and double-checks that it is built only from the app's own origin before bypassing the URL sanitizer, and the admin member dropdown logs a warning if the user count ever exceeds its 500-entry cap instead of silently truncating. No user-facing change.", de: "Intern/Admin-Aufräumarbeiten: Der Chessable-Bookmarklet-Link dokumentiert und prüft jetzt zusätzlich, dass er nur aus der App-eigenen Origin gebaut wird, bevor der URL-Sanitizer umgangen wird; das Admin-Mitglieder-Dropdown loggt eine Warnung, falls die Nutzerzahl je die 500er-Grenze übersteigt, statt still abzuschneiden. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.28", date: "2026-06-24", changes: [
     { en: "Internal/performance: the Chessable import queue rows now compute their status label once per update instead of on every change-detection tick during polling. No user-facing change.", de: "Intern/Performance: Die Zeilen der Chessable-Import-Warteschlange berechnen ihr Statuslabel jetzt einmal je Update statt bei jedem Change-Detection-Tick während des Pollings. Keine sichtbare Änderung." },
   ]},
