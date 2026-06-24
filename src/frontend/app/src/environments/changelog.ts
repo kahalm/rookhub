@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.1';
+export const APP_VERSION = '0.184.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.2", date: "2026-06-24", changes: [
+    { en: "Security/privacy: when e-mail sending is not configured, password-reset links are no longer written to the server logs outside local development. The raw reset token therefore never lands in the central log store in production. No visible change.", de: "Sicherheit/Datenschutz: Wenn kein Mailversand konfiguriert ist, werden Passwort-Reset-Links außerhalb der lokalen Entwicklung nicht mehr in die Server-Logs geschrieben. Der Roh-Token landet dadurch in Produktion nie im zentralen Log-Speicher. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.1", date: "2026-06-24", changes: [
     { en: "Security hardening: expired login sessions are now rejected more promptly (the token expiry tolerance was tightened from 5 minutes to 1). No visible change in normal use.", de: "Sicherheits-Härtung: Abgelaufene Login-Sitzungen werden jetzt zügiger abgewiesen (die Toleranz beim Token-Ablauf wurde von 5 Minuten auf 1 Minute verkürzt). Im normalen Betrieb keine sichtbare Änderung." },
   ]},

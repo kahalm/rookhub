@@ -24,11 +24,13 @@ public class SmtpEmailSender : IEmailSender
 {
     private readonly IConfiguration _config;
     private readonly ILogger<SmtpEmailSender> _logger;
+    private readonly IHostEnvironment _env;
 
-    public SmtpEmailSender(IConfiguration config, ILogger<SmtpEmailSender> logger)
+    public SmtpEmailSender(IConfiguration config, ILogger<SmtpEmailSender> logger, IHostEnvironment env)
     {
         _config = config;
         _logger = logger;
+        _env = env;
     }
 
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_config["Email:SmtpHost"]);
@@ -37,11 +39,24 @@ public class SmtpEmailSender : IEmailSender
     {
         if (!IsEnabled)
         {
-            // Dev-Fallback: kein Mailserver konfiguriert → Mail nur loggen, damit der Flow
-            // (inkl. Reset-Link im Text) lokal nachvollziehbar ist.
-            _logger.LogWarning(
-                "Email disabled (no Email:SmtpHost) — would send to {To}: {Subject}\n{Body}",
-                toEmail, subject, textBody);
+            if (_env.IsDevelopment())
+            {
+                // Dev-Fallback: kein Mailserver konfiguriert → Mail inkl. Reset-Link loggen,
+                // damit der Flow lokal ohne Mailserver nachvollziehbar ist.
+                _logger.LogWarning(
+                    "Email disabled (no Email:SmtpHost) — would send to {To}: {Subject}\n{Body}",
+                    toEmail, subject, textBody);
+            }
+            else
+            {
+                // Ausserhalb Development NIE den Klartext-Body (enthält den Roh-Token-Reset-Link)
+                // nach ES schreiben. Nur die Tatsache loggen — ein fehlender SmtpHost in Prod ist
+                // ein Konfigurationsfehler, kein erwarteter Zustand.
+                _logger.LogError(
+                    "Email disabled (no Email:SmtpHost) but a mail to {To} ({Subject}) was requested — " +
+                    "message dropped. This is a misconfiguration in a non-Development environment.",
+                    toEmail, subject);
+            }
             return;
         }
 
