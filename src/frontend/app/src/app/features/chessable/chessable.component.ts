@@ -85,7 +85,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
             <h2 class="disclaimer-title"><mat-icon>warning</mat-icon> {{ 'chessable.disclaimerTitle' | translate }}</h2>
             <p class="disclaimer-text">{{ 'chessable.disclaimerText' | translate }}</p>
             <div class="actions">
-              <button mat-raised-button color="primary" (click)="acceptDisclaimer()">
+              <button mat-raised-button color="primary" (click)="acceptDisclaimer()" [disabled]="disclaimerSubmitting">
                 {{ 'chessable.disclaimerAccept' | translate }}
               </button>
               <button mat-stroked-button (click)="declineDisclaimer()">
@@ -297,8 +297,8 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                     <span class="admin-user"><mat-icon>person</mat-icon> {{ imp.username }}</span>
                     <span class="admin-name">{{ imp.courseName || imp.bid }}</span>
                     <span class="admin-target">{{ ('chessable.target_' + imp.target) | translate }}</span>
-                    <span class="admin-status" [attr.data-status]="imp.status">{{ adminStatusLabel(imp) }}</span>
-                    @if (importDurationLabel(imp); as dur) { <span class="admin-duration">{{ dur }}</span> }
+                    <span class="admin-status" [attr.data-status]="imp.status">{{ imp.statusLabel }}</span>
+                    @if (imp.durationLabel; as dur) { <span class="admin-duration">{{ dur }}</span> }
                     <span class="admin-date">{{ imp.createdAt | date:'short' }}</span>
                   </div>
                 }
@@ -396,6 +396,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   /** null = noch nicht geprüft, false = Disclaimer offen, true = bestätigt. */
   disclaimerAccepted: boolean | null = null;
+  disclaimerSubmitting = false;
   showHelp = false;
 
   /** Per Bookmarklet via URL-Fragment (#chessbearer=…) übergebener Bearer, der nach
@@ -415,7 +416,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
   private pollSub?: Subscription;
 
   /** Admin-Sicht: alle Importe aller User (Verlauf + aktive). null = (noch) nicht geladen / kein Admin. */
-  adminImports: ChessableAdminImport[] | null = null;
+  adminImports: (ChessableAdminImport & { statusLabel: string; durationLabel: string })[] | null = null;
   private adminPollSub?: Subscription;
 
   constructor(
@@ -472,9 +473,11 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
 
   acceptDisclaimer(): void {
+    if (this.disclaimerSubmitting) return;   // Doppelsubmit verhindern
+    this.disclaimerSubmitting = true;
     this.chessable.acceptDisclaimer().subscribe({
-      next: () => { this.disclaimerAccepted = true; this.proceed(); },
-      error: e => this.showError(e)
+      next: () => { this.disclaimerAccepted = true; this.disclaimerSubmitting = false; this.proceed(); },
+      error: e => { this.disclaimerSubmitting = false; this.showError(e); }
     });
   }
 
@@ -495,7 +498,12 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   private loadAdminImports(): void {
     this.chessable.getAllImportsAdmin().subscribe({
-      next: list => this.adminImports = list,
+      // Labels EINMAL je Poll berechnen + cachen (statt je CD-Zyklus translate.instant pro Zeile).
+      next: list => this.adminImports = list.map(imp => ({
+        ...imp,
+        statusLabel: this.adminStatusLabel(imp),
+        durationLabel: this.importDurationLabel(imp),
+      })),
       error: () => { /* nicht kritisch */ }
     });
   }

@@ -346,7 +346,10 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.chessable.getImport(id).subscribe({
         next: imp => {
           this.dlImports[bid] = imp;
-          if (imp.status !== 'running') { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; }
+          // Nur bei ENDzuständen stoppen — 'paused' weiterpollen, sonst friert der Fortschritt ein,
+          // wenn der Import (anderswo) fortgesetzt wird. Angeglichen an die Haupt-Chessable-Komponente.
+          const terminal = imp.status === 'completed' || imp.status === 'failed' || imp.status === 'cancelled';
+          if (terminal) { this.dlPollSubs[bid]?.unsubscribe(); delete this.dlPollSubs[bid]; }
           // Erfolgreich → das passende „erledigt"-Flag am Kurs setzen (Button verschwindet, Badge
           // erscheint — wie beim normalen Chessable-Feature) und den Live-Status entfernen.
           if (imp.status === 'completed') {
@@ -596,7 +599,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   loadAllUsers(): void {
     // User-Liste fuer das Mitglieder-Dropdown (kleiner Nutzerkreis).
     this.adminService.getUsers('', 1, 500).subscribe({
-      next: res => this.allUsers = res.items
+      next: res => this.allUsers = res.items,
+      error: () => this.snackbar.info(this.translate.instant('admin.users.errors.load'))
     });
   }
 

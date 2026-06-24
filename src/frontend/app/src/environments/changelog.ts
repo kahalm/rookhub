@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.7';
+export const APP_VERSION = '0.184.8';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.8", date: "2026-06-24", changes: [
+    { en: "Performance (admin/dashboard): the Chessable import status labels are now computed once per refresh instead of on every change-detection cycle, reducing UI work while imports are running.", de: "Performance (Admin/Dashboard): Die Chessable-Import-Statustexte werden jetzt einmal pro Aktualisierung berechnet statt bei jedem Change-Detection-Zyklus — weniger UI-Last während laufender Importe." },
+    { en: "Admin: the 'download course for a user' progress no longer freezes when an import is paused — it keeps polling and resumes updating when the import continues.", de: "Admin: Der Fortschritt beim „Kurs für einen User holen\" friert nicht mehr ein, wenn ein Import pausiert ist — er pollt weiter und aktualisiert wieder, sobald der Import fortgesetzt wird." },
+    { en: "Minor admin/Chessable polish: the user list shows an error hint if it fails to load, and the Chessable disclaimer accept button can no longer be double-submitted.", de: "Kleinere Admin-/Chessable-Politur: Die Nutzerliste zeigt einen Fehlerhinweis, wenn sie nicht laden kann, und der Chessable-Disclaimer-Bestätigungsknopf lässt sich nicht mehr doppelt auslösen." },
+  ]},
   { version: "0.184.7", date: "2026-06-24", changes: [
     { en: "Notification bell: the unread badge no longer briefly flickers back up after you read a notification (a slower background count refresh that started before could overwrite the lower number). The badge now stays put.", de: "Benachrichtigungs-Glocke: Das Ungelesen-Badge springt nach dem Lesen einer Benachrichtigung nicht mehr kurz wieder hoch (ein langsamerer, vorher gestarteter Hintergrund-Abgleich konnte die kleinere Zahl überschreiben). Das Badge bleibt jetzt stabil." },
   ]},

@@ -90,7 +90,7 @@ import { ChessableService, ChessableAdminImport } from '../chessable/chessable.s
             <mat-list-item>
               <mat-icon matListItemIcon>cloud_download</mat-icon>
               <span matListItemTitle>{{ imp.courseName || imp.bid }} — {{ imp.username }}</span>
-              <span matListItemLine>{{ chessableStatus(imp) }}</span>
+              <span matListItemLine>{{ imp.statusLabel }}</span>
             </mat-list-item>
           }
         </mat-list>
@@ -134,7 +134,9 @@ export class DashboardComponent implements OnInit {
   subscriptions: Subscription[] = [];
 
   /** Admin: aktive Chessable-Importe aller User (laufend/pausiert), live gepollt. */
-  chessableActive: ChessableAdminImport[] = [];
+  // Status-Label wird beim Polling-Update EINMAL berechnet und gecacht (statt je CD-Zyklus
+  // ein translate.instant pro Eintrag auszuführen).
+  chessableActive: (ChessableAdminImport & { statusLabel: string })[] = [];
 
   constructor(
     public auth: AuthService,
@@ -149,7 +151,7 @@ export class DashboardComponent implements OnInit {
       timer(0, 10000).pipe(
         switchMap(() => this.chessable.getActiveImportsAdmin().pipe(catchError(() => of([] as ChessableAdminImport[])))),
         takeUntilDestroyed(this.destroyRef),
-      ).subscribe(list => this.chessableActive = list);
+      ).subscribe(list => this.chessableActive = list.map(imp => ({ ...imp, statusLabel: this.chessableStatus(imp) })));
     }
 
     forkJoin({
