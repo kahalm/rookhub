@@ -161,7 +161,9 @@ interface EndlessHistoryResponse {
               <!-- Mobile cards -->
               <div class="mobile-only">
                 @for (s of sessions; track s.id) {
-                  <div class="session-card clickable-row" [class.archived-row]="s.isArchived" (click)="openSession(s)">
+                  <div class="session-card clickable-row" [class.archived-row]="s.isArchived" (click)="openSession(s)"
+                       role="button" tabindex="0"
+                       (keydown.enter)="openSession(s)" (keydown.space)="$event.preventDefault(); openSession(s)">
                     <div class="session-card-header">
                       <mat-checkbox
                         (click)="$event.stopPropagation()"
@@ -242,6 +244,7 @@ interface EndlessHistoryResponse {
     .selection-count { font-size: 0.875rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .archived-row { opacity: 0.5; }
     .clickable-row { cursor: pointer; }
+    .session-card.clickable-row:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
     tr.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .session-card.clickable-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
 

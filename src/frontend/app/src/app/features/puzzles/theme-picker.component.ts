@@ -17,21 +17,21 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
   template: `
     <div class="theme-label">{{ namespace + '.mode' | translate }}</div>
     <div class="theme-chips">
-      <div class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="themeModeChanged.emit('fixed')">
+      <button type="button" class="theme-chip" [class.active]="themeMode === 'fixed'" (click)="themeModeChanged.emit('fixed')">
         <mat-icon>palette</mat-icon><span class="theme-name">{{ namespace + '.modeNormal' | translate }}</span>
-      </div>
-      <div class="theme-chip" [class.active]="themeMode === 'random'" (click)="themeModeChanged.emit('random')">
+      </button>
+      <button type="button" class="theme-chip" [class.active]="themeMode === 'random'" (click)="themeModeChanged.emit('random')">
         <mat-icon>shuffle</mat-icon><span class="theme-name">{{ namespace + '.modeRandom' | translate }}</span>
-      </div>
-      <div class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="themeModeChanged.emit('crazy')">
+      </button>
+      <button type="button" class="theme-chip" [class.active]="themeMode === 'crazy'" (click)="themeModeChanged.emit('crazy')">
         <mat-icon>auto_awesome</mat-icon><span class="theme-name">{{ namespace + '.modeCrazy' | translate }}</span>
-      </div>
+      </button>
     </div>
     @if (themeMode === 'fixed') {
       <div class="theme-label" style="margin-top: 0.75rem;">{{ namespace + '.boardTheme' | translate }}</div>
       <div class="theme-chips">
         @for (t of boardThemes; track t.key) {
-          <div class="theme-chip" [class.active]="boardTheme === t.key" (click)="boardThemeChanged.emit(t.key)">
+          <button type="button" class="theme-chip" [class.active]="boardTheme === t.key" (click)="boardThemeChanged.emit(t.key)">
             @if (t.img) {
               <div class="theme-img" [style.backgroundImage]="'url(' + t.img + ')'"></div>
             } @else {
@@ -41,16 +41,16 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
               </div>
             }
             <span class="theme-name">{{ t.name }}</span>
-          </div>
+          </button>
         }
       </div>
       <div class="theme-label" style="margin-top: 0.75rem;">{{ namespace + '.pieces' | translate }}</div>
       <div class="theme-chips">
         @for (p of pieceSets; track p.key) {
-          <div class="theme-chip" [class.active]="pieceSet === p.key" (click)="pieceSetChanged.emit(p.key)">
+          <button type="button" class="theme-chip" [class.active]="pieceSet === p.key" (click)="pieceSetChanged.emit(p.key)">
             <div class="piece-preview" [style.backgroundImage]="'url(' + p.preview + ')'"></div>
             <span class="theme-name">{{ p.name }}</span>
-          </div>
+          </button>
         }
       </div>
     }
@@ -62,7 +62,10 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
       transition: border-color 0.15s;
+      /* <button>-Reset, damit der Chip wie zuvor aussieht (nativ tastaturbedienbar). */
+      background: none; font: inherit; color: inherit; -webkit-appearance: none; appearance: none;
     }
+    .theme-chip:focus-visible { outline: 2px solid #1976d2; outline-offset: 2px; }
     .theme-chip.active { border-color: #1976d2; }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     .piece-preview { width: 28px; height: 28px; background-size: contain; background-repeat: no-repeat; background-position: center; }

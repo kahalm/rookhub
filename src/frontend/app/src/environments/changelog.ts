@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.12';
+export const APP_VERSION = '0.184.13';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.13", date: "2026-06-24", changes: [
+    { en: "Accessibility: the board/piece theme chips and the Endless history session cards are now keyboard-operable (focusable, Enter/Space activates) with a visible focus outline.", de: "Barrierefreiheit: Die Brett-/Figuren-Themen-Chips und die Endlos-Verlaufskarten sind jetzt per Tastatur bedienbar (fokussierbar, Enter/Leertaste aktiviert) mit sichtbarem Fokusrahmen." },
+  ]},
   { version: "0.184.12", date: "2026-06-24", changes: [
     { en: "Internal: simplified the API-token create flow (flattened nested subscriptions into a single stream). No user-facing change.", de: "Intern: Der API-Token-Erstellungsfluss wurde vereinfacht (verschachtelte Subscriptions zu einem Strom abgeflacht). Keine sichtbare Änderung." },
   ]},
