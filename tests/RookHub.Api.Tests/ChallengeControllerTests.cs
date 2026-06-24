@@ -319,13 +319,16 @@ public class ChallengeControllerTests : IDisposable
     // ---- Resolve ----
 
     [Fact]
-    public async Task Resolve_SetsSolved_WhenRecipient()
+    public async Task Resolve_SetsSolved_WhenRecipientAndSolveConfirmed()
     {
         var me = await CreateUserAsync("me");
         var friend = await CreateUserAsync("friend");
         var puzzle = await CreatePuzzleAsync();
         var challenge = new PuzzleChallenge { FromUserId = friend.Id, ToUserId = me.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending };
         _db.PuzzleChallenges.Add(challenge);
+        await _db.SaveChangesAsync();
+        // Belegter gelöster Versuch des Empfängers nach Erstellen der Challenge.
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = me.Id, PuzzleId = puzzle.Id, Solved = true, AttemptedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
         SetUser(me.Id);
@@ -335,6 +338,26 @@ public class ChallengeControllerTests : IDisposable
         var updated = await _db.PuzzleChallenges.FindAsync(challenge.Id);
         Assert.Equal(ChallengeStatus.Solved, updated!.Status);
         Assert.Equal(14, updated.TimeSpentSeconds);
+        Assert.NotNull(updated.ResolvedAt);
+    }
+
+    [Fact]
+    public async Task Resolve_DowngradesToFailed_WhenSolveClaimedButNotConfirmed()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        var puzzle = await CreatePuzzleAsync();
+        var challenge = new PuzzleChallenge { FromUserId = friend.Id, ToUserId = me.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending };
+        _db.PuzzleChallenges.Add(challenge);
+        await _db.SaveChangesAsync();
+        // KEIN gelöster Versuch des Empfängers → „gelöst" darf nicht geglaubt werden.
+
+        SetUser(me.Id);
+        var result = await _controller.Resolve(challenge.Id, new ResolveChallengeDto { Solved = true, TimeSpentSeconds = 14 });
+
+        Assert.IsType<OkObjectResult>(result);
+        var updated = await _db.PuzzleChallenges.FindAsync(challenge.Id);
+        Assert.Equal(ChallengeStatus.Failed, updated!.Status);
         Assert.NotNull(updated.ResolvedAt);
     }
 

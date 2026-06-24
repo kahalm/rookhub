@@ -160,8 +160,15 @@ public class ChallengeService
     public async Task<int> GetIncomingCountAsync(int userId)
         => await _db.PuzzleChallenges.CountAsync(c => c.ToUserId == userId && c.Status == ChallengeStatus.Pending);
 
-    /// <summary>Ergebnis einer Challenge melden (nur der Empfänger, nur solange offen).</summary>
-    public async Task ResolveAsync(int challengeId, int userId, bool solved, int timeSpentSeconds)
+    /// <summary>Ergebnis einer Challenge melden (nur der Empfänger, nur solange offen).
+    /// <para>
+    /// <paramref name="clientSolved"/> wird NICHT blind geglaubt: ein gemeldetes „gelöst" wird serverseitig
+    /// gegen die echten Versuche des Empfängers geprüft (analog Revenge) — sonst könnte der Empfänger jede
+    /// Challenge als „gelöst" markieren, ohne sie wirklich zu lösen. Asymmetrisch: ein „nicht gelöst" ist
+    /// harmlos und wird übernommen; ein „gelöst" zählt nur, wenn es einen bestätigten gelösten Versuch
+    /// (in der zur Quelle passenden Tabelle) seit dem Erstellen der Challenge gibt.
+    /// </para></summary>
+    public async Task ResolveAsync(int challengeId, int userId, bool clientSolved, int timeSpentSeconds)
     {
         var challenge = await _db.PuzzleChallenges.FindAsync(challengeId)
             ?? throw new KeyNotFoundException("Challenge not found.");
@@ -171,6 +178,9 @@ public class ChallengeService
 
         if (challenge.Status != ChallengeStatus.Pending)
             throw new InvalidOperationException("Challenge is already resolved.");
+
+        // „Gelöst" serverseitig bestätigen; „nicht gelöst" unverändert übernehmen.
+        var solved = clientSolved && await HasConfirmedSolveAsync(challenge, userId);
 
         challenge.Status = solved ? ChallengeStatus.Solved : ChallengeStatus.Failed;
         challenge.ResolvedAt = DateTime.UtcNow;
@@ -182,6 +192,18 @@ public class ChallengeService
         await _notifications.CreateAsync(challenge.FromUserId, NotificationType.ChallengeResolved,
             new Dictionary<string, string> { ["username"] = byName, ["solved"] = solved ? "true" : "false" }, "/friends");
     }
+
+    /// <summary>Hat der Empfänger das Puzzle der Challenge seit deren Erstellung nachweislich gelöst?
+    /// Quelle = passende Versuchstabelle (Standard → <see cref="PuzzleAttempt"/>, Book → <see cref="BookPuzzleAttempt"/>).</summary>
+    private Task<bool> HasConfirmedSolveAsync(PuzzleChallenge challenge, int userId) => challenge.Source switch
+    {
+        PuzzleSource.Book => _db.BookPuzzleAttempts.AnyAsync(a =>
+            a.UserId == userId && a.BookPuzzleId == challenge.PuzzleId && a.Solved &&
+            a.AttemptedAt >= challenge.CreatedAt),
+        _ => _db.PuzzleAttempts.AnyAsync(a =>
+            a.UserId == userId && a.PuzzleId == challenge.PuzzleId && a.Solved &&
+            a.AttemptedAt >= challenge.CreatedAt)
+    };
 
     /// <summary>Existiert das Puzzle in der zur Quelle passenden Tabelle?</summary>
     private Task<bool> PuzzleExistsAsync(PuzzleSource source, int puzzleId) => source switch

@@ -256,7 +256,10 @@ public class NotificationTests : IDisposable
         var ch = await challenges.CreateAsync(1, 2, 100); // alice fordert bob
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 2 && n.Type == NotificationType.ChallengeReceived));
 
-        await challenges.ResolveAsync(ch.Id, 2, solved: true, timeSpentSeconds: 12); // bob löst → alice erfährt es
+        // Bob löst es wirklich (belegter Versuch) → „gelöst" wird serverseitig bestätigt.
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = 2, PuzzleId = 100, Solved = true, AttemptedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        await challenges.ResolveAsync(ch.Id, 2, clientSolved: true, timeSpentSeconds: 12); // bob löst → alice erfährt es
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 1 && n.Type == NotificationType.ChallengeResolved));
     }
 

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.4';
+export const APP_VERSION = '0.184.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.5", date: "2026-06-24", changes: [
+    { en: "Fairness: when you report a puzzle challenge as solved, the server now confirms it against your actual solved attempt before crediting the win (like the revenge feature). A 'not solved' is still taken at face value — so nobody can mark challenges solved without really solving them.", de: "Fairness: Wenn du eine Puzzle-Challenge als gelöst meldest, bestätigt der Server das jetzt gegen deinen tatsächlichen gelösten Versuch, bevor der Erfolg gezählt wird (wie bei der Revanche-Funktion). Ein „nicht gelöst\" wird weiterhin geglaubt — so kann niemand Challenges als gelöst markieren, ohne sie wirklich zu lösen." },
+  ]},
   { version: "0.184.4", date: "2026-06-24", changes: [
     { en: "Security: while an admin is impersonating another user, irreversible account actions are now blocked — deleting the account, changing the password and creating API tokens are rejected. Impersonation stays read-only-ish for those sensitive operations.", de: "Sicherheit: Während ein Admin einen anderen Nutzer impersoniert, sind unumkehrbare Konto-Aktionen jetzt gesperrt — Konto löschen, Passwort ändern und API-Token erstellen werden abgewiesen. Impersonation bleibt für diese sensiblen Operationen wirkungslos." },
   ]},
