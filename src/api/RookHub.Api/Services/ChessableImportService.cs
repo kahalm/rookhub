@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using Serilog.Context;
 
 namespace RookHub.Api.Services;
 
@@ -144,6 +145,12 @@ public class ChessableImportService : ICourseReimporter
         }
         await _db.SaveChangesAsync(ct);
 
+        // Lifecycle-Start: mit Domänen-Tags (ECS `tags`-Filter in Kibana) markieren.
+        using (LogContext.PushProperty("LogTags", "import,chessable"))
+            _logger.LogInformation(
+                "Chessable-Import {Id} gestartet: {Target} (bid {Bid}, Versuch {Attempt}/{Max})",
+                import.Id, import.Target, import.Bid, import.Attempts, MaxAttempts);
+
         try
         {
             // --- Phase 1: Kurs holen (Checkpoint: PGN wird persistiert) ---
@@ -278,9 +285,10 @@ public class ChessableImportService : ICourseReimporter
             import.FetchedPgn = null; // Checkpoint nicht mehr nötig → Platz freigeben
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
-            _logger.LogInformation(
-                "Chessable-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
-                import.Id, import.Target, courseName, import.Bid, import.Imported);
+            using (LogContext.PushProperty("LogTags", "import,chessable"))
+                _logger.LogInformation(
+                    "Chessable-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
+                    import.Id, import.Target, courseName, import.Bid, import.Imported);
 
             // User benachrichtigen: Kurs ist fertig importiert → direkt zur passenden Ansicht.
             // Inkl. Dauer-Aufschlüsselung: Wartezeit (in der Queue) + reine Holzeit.
@@ -311,7 +319,8 @@ public class ChessableImportService : ICourseReimporter
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen (Versuch {Attempt})", import.Id, import.Attempts);
+            using (LogContext.PushProperty("LogTags", "import,chessable"))
+                _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen (Versuch {Attempt})", import.Id, import.Attempts);
             await FailAsync(import, ex.Message);
         }
     }

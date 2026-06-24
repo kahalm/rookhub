@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
+using Serilog.Context;
 
 namespace RookHub.Api.Controllers;
 
@@ -39,11 +40,36 @@ public class ClientLogController : BaseApiController
         var level = kind.StartsWith("heartbeat", StringComparison.OrdinalIgnoreCase)
             ? LogLevel.Information
             : LogLevel.Warning;
-        _logger.Log(level,
-            "ClientLog {ClientLogKind}: {ClientLogDetail} (url={ClientLogUrl} user={ClientLogUserId} ua={ClientLogUserAgent})",
-            kind, detail, url, userId, userAgent);
+
+        // Domänen-Tags für den zentralen ECS-`tags`-Filter in Kibana: jedes ClientLog trägt `clientlog`;
+        // Engine-Crashes/Hänger (Stockfish-WASM) zusätzlich `engine`, damit man sie isoliert filtern kann.
+        var logTags = IsEngineEvent(kind, detail) ? "clientlog,engine" : "clientlog";
+        using (LogContext.PushProperty("LogTags", logTags))
+        {
+            _logger.Log(level,
+                "ClientLog {ClientLogKind}: {ClientLogDetail} (url={ClientLogUrl} user={ClientLogUserId} ua={ClientLogUserAgent})",
+                kind, detail, url, userId, userAgent);
+        }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Engine-Crash/Hänger-Heuristik fürs `engine`-Tag: kind beginnt mit "engine" ODER kind/detail
+    /// enthält "stockfish"/"unreachable"/"hang"/"crash" (case-insensitive).
+    /// </summary>
+    internal static bool IsEngineEvent(string kind, string detail)
+    {
+        if (kind.StartsWith("engine", StringComparison.OrdinalIgnoreCase))
+            return true;
+        string[] markers = { "stockfish", "unreachable", "hang", "crash" };
+        foreach (var m in markers)
+        {
+            if (kind.Contains(m, StringComparison.OrdinalIgnoreCase)
+                || detail.Contains(m, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     private static string Truncate(string? s, int max)

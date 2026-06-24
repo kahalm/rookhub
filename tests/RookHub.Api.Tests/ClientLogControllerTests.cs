@@ -81,4 +81,27 @@ public class ClientLogControllerTests
         Assert.IsType<NoContentResult>(result);
         Assert.DoesNotContain(logger.Messages, m => m.Contains(longDetail));   // 500er-Cap greift
     }
+
+    // --- Engine-Tag-Heuristik (steuert das ECS `engine`-Tag via LogTags) ---
+
+    [Theory]
+    [InlineData("engine_analysis_crash", "")]          // kind beginnt mit "engine"
+    [InlineData("ENGINE", "")]                          // case-insensitive Prefix
+    [InlineData("diagnostic", "stockfish wasm hang")]   // detail enthält Marker
+    [InlineData("wasm_unreachable", "")]                // kind enthält Marker
+    [InlineData("freeze", "RuntimeError: unreachable")] // detail-Marker
+    [InlineData("analysis", "the engine seems to HANG")]
+    public void IsEngineEvent_DetectsEngineCrashOrHang(string kind, string detail)
+    {
+        Assert.True(ClientLogController.IsEngineEvent(kind, detail));
+    }
+
+    [Theory]
+    [InlineData("heartbeat_bot", "alive")]
+    [InlineData("network_error", "fetch failed")]
+    [InlineData("ui_glitch", "")]
+    public void IsEngineEvent_IgnoresUnrelatedEvents(string kind, string detail)
+    {
+        Assert.False(ClientLogController.IsEngineEvent(kind, detail));
+    }
 }
