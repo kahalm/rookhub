@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.26';
+export const APP_VERSION = '0.184.27';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.27", date: "2026-06-24", changes: [
+    { en: "Security hardening: anonymous puzzle/Endless session ids must now be high-entropy (UUID form, ≥32 chars), so a guessed short id can no longer claim or overwrite someone else's anonymous puzzle stats. The app already issues proper random ids, so there is no visible change.", de: "Sicherheits-Härtung: Anonyme Puzzle-/Endlos-Session-Ids müssen jetzt hoch-entropisch sein (UUID-Form, ≥32 Zeichen), sodass eine erratene kurze Id keine fremden anonymen Puzzle-Statistiken mehr claimen oder überschreiben kann. Die App vergibt ohnehin echte Zufalls-Ids → keine sichtbare Änderung." },
+  ]},
   { version: "0.184.26", date: "2026-06-24", changes: [
     { en: "User search (friends) is faster and tidier: account/identity fields (username, chess.com/Lichess/FIDE/ChessResults) now match by prefix so they can use the username index, only the display name still matches anywhere; the query is hard-capped in length and result count. You may notice a username now matches from its start rather than the middle.", de: "Die Nutzersuche (Freunde) ist schneller und sauberer: Konto-/Identitätsfelder (Benutzername, chess.com/Lichess/FIDE/ChessResults) treffen jetzt per Präfix, sodass der Benutzername-Index greifen kann; nur der Anzeigename trifft weiterhin überall. Suchbegriff-Länge und Trefferzahl sind hart begrenzt. Ein Benutzername trifft jetzt ab dem Anfang statt aus der Mitte." },
   ]},

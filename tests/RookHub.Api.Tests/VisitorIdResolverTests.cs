@@ -14,15 +14,18 @@ public class VisitorIdResolverTests
 
     [Fact]
     public void Anonymous_ValidHeader_UsesSessionWithPrefix()
-        => Assert.Equal("a:abcdef12-3456-7890", VisitorIdResolver.Resolve(false, null, "abcdef12-3456-7890"));
+        => Assert.Equal("a:abcdef12-3456-7890-abcd-ef0123456789",
+            VisitorIdResolver.Resolve(false, null, "abcdef12-3456-7890-abcd-ef0123456789"));
 
     [Fact]
     public void Authenticated_ButNoUsername_FallsBackToHeader()
-        => Assert.Equal("a:deadbeef", VisitorIdResolver.Resolve(true, "", "deadbeef"));
+        => Assert.Equal("a:00112233445566778899aabbccddeeff",
+            VisitorIdResolver.Resolve(true, "", "00112233445566778899aabbccddeeff"));
 
     [Theory]
     [InlineData("not a guid!")]   // ungueltige Zeichen
     [InlineData("../etc/passwd")] // Injection-Versuch
+    [InlineData("deadbeef")]      // zu kurz (< 32 Zeichen → IDOR-Härtung)
     [InlineData("0123456789012345678901234567890123456789")] // > 36 Zeichen
     public void Anonymous_InvalidHeader_ReturnsNull(string header)
         => Assert.Null(VisitorIdResolver.Resolve(false, null, header));

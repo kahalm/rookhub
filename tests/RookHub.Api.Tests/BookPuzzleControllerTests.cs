@@ -181,15 +181,15 @@ public class BookPuzzleControllerTests : IDisposable
     public async Task RecordAnonymousAttempt_CountsInResults_DedupedPerSession()
     {
         var p = await CreateBookPuzzleAsync(lineId: "anon.pgn:1", bookFileName: "anon.pgn");
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaa" });
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 5, SessionId = "aaaa" });  // gleiche Session → dedupe
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 7, SessionId = "bbbb" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 5, SessionId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" });  // gleiche Session → dedupe
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 7, SessionId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" });
 
         var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
         Assert.Equal(2, res.AnonymousSolvedCount);   // aaaa + bbbb (aaaa nur 1×)
         Assert.Equal(0, res.SolvedCount);            // keine eingeloggten
         Assert.Empty(res.Solvers);
-        Assert.Equal(1, await _db.BookPuzzleAttempts.CountAsync(a => a.AnonymousSessionId == "aaaa"));
+        Assert.Equal(1, await _db.BookPuzzleAttempts.CountAsync(a => a.AnonymousSessionId == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
     }
 
     [Fact]
@@ -201,13 +201,26 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAnonymousAttempt_ShortGuessableSession_BadRequest()
+    {
+        // IDOR-Härtung: ein zu kurzer (erratbarer) Session-Wert wird abgelehnt — anonyme Stats
+        // sind nur über die Session-Id partitioniert, daher muss sie hoch-entropisch (≥32 Zeichen,
+        // UUID-Form) sein. Echte Clients nutzen crypto.randomUUID() → unbetroffen.
+        var p = await CreateBookPuzzleAsync(lineId: "anon3.pgn:1", bookFileName: "anon3.pgn");
+        Assert.IsType<BadRequestObjectResult>(
+            await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, SessionId = "1" }));
+        Assert.IsType<BadRequestObjectResult>(
+            await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, SessionId = "deadbeef" }));
+    }
+
+    [Fact]
     public async Task Results_CombineNamedAndAnonymous()
     {
         var p = await CreateBookPuzzleAsync(lineId: "mix.pgn:1", bookFileName: "mix.pgn");
         var anna = await CreateUserAsync("anna2");
         SetUser(anna.Id);
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 12 });
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "ffff" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "ffffffffffffffffffffffffffffffff" });
 
         var res = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
         Assert.Equal(1, res.SolvedCount);            // anna2 (eingeloggt)
@@ -721,7 +734,7 @@ public class BookPuzzleControllerTests : IDisposable
         var user = await CreateUserAsync("claimer");
 
         // Anonymer Attempt mit einer Session-ID
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaa" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 10, SessionId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" });
 
         // Vorher: 0 eingeloggte Löser, 1 anonym
         var before = Assert.IsType<BookPuzzleResultsDto>(((OkObjectResult)(await _controller.GetResults(p.Id, null)).Result!).Value);
@@ -730,7 +743,7 @@ public class BookPuzzleControllerTests : IDisposable
 
         // Claim
         SetUser(user.Id);
-        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "aaaa" });
+        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" });
         var ok = Assert.IsType<OkObjectResult>(claimResult);
         var transferred = (int)ok.Value!.GetType().GetProperty("transferred")!.GetValue(ok.Value)!;
         Assert.Equal(1, transferred);
@@ -753,10 +766,10 @@ public class BookPuzzleControllerTests : IDisposable
         await _controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 5 });
 
         // Anonymer Attempt derselben Person (andere Session)
-        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "bbbb" });
+        await _controller.RecordAnonymousAttempt(p.Id, new RecordAnonymousBookAttemptDto { Solved = true, TimeSeconds = 8, SessionId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" });
 
         // Claim → soll 0 übertragen, da Puzzle schon beim User
-        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "bbbb" });
+        var claimResult = await _controller.ClaimSession(new ClaimBookSessionDto { SessionId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" });
         var ok = Assert.IsType<OkObjectResult>(claimResult);
         var transferred = (int)ok.Value!.GetType().GetProperty("transferred")!.GetValue(ok.Value)!;
         Assert.Equal(0, transferred);
