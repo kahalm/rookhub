@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.22';
+export const APP_VERSION = '0.184.23';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.23", date: "2026-06-24", changes: [
+    { en: "Crawler resilience (backend): after a redeploy the tournament crawler now waits for the VPN tunnel to be back up before its first crawl, and crawls that fail purely on the connection level (e.g. tunnel briefly gone after a VPN rotation) are now retried with a staged backoff instead of being marked failed straight away. Fixes the burst of „Resource temporarily unavailable“ crawl failures seen right after deploys. No user-facing change.", de: "Crawler-Robustheit (Backend): Nach einem Redeploy wartet der Turnier-Crawler jetzt auf den wiederhergestellten VPN-Tunnel, bevor der erste Crawl startet, und Crawls, die rein auf Verbindungsebene scheitern (z. B. Tunnel nach einer VPN-Rotation kurz weg), werden jetzt mit gestuftem Backoff erneut versucht statt sofort als fehlgeschlagen markiert. Behebt die Häufung von „Resource temporarily unavailable“-Crawl-Fehlern direkt nach Deploys. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.22", date: "2026-06-24", changes: [
     { en: "Internal cleanup: the friends, profile, public tournament, repertoire and games screens now talk to the backend through dedicated services instead of calling HTTP directly, with tests; password change moved into the auth service; two more presentational components switched to OnPush. No user-facing change.", de: "Interne Aufräumarbeit: Die Freunde-, Profil-, öffentliche-Turnier-, Repertoire- und Partien-Ansichten sprechen das Backend jetzt über eigene Services an statt direkt per HTTP, mit Tests; die Passwortänderung liegt jetzt im Auth-Service; zwei weitere Präsentations-Komponenten nutzen OnPush. Keine sichtbare Änderung." },
   ]},

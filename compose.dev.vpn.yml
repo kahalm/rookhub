@@ -123,6 +123,9 @@ services:
       API_KEY: ${CRAWLER_API_KEY}
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       Elasticsearch__Url: http://elasticsearch:9200
+      # Vor dem ersten Crawl auf den gluetun-VPN-Tunnel warten (verhindert Connection-Fehler
+      # direkt nach einem Re-Deploy, solange der Tunnel noch nicht wieder verbunden ist).
+      Gluetun__WaitForReady: "true"
 
   # ── RookHub API ────────────────────────────────────────────────────────────
   api:
