@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -415,5 +416,61 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal(1, item.Imported);
         Assert.Equal(1, item.Skipped);  // Duplikat innerhalb des Batches
         Assert.Equal(2, item.Invalid);  // NoRound + StartFenNoMarker
+    }
+
+    [Theory]
+    [InlineData("Chapter 2: Back-Rank Mates", "Chapter 2")]
+    [InlineData("Kapitel 3: Abzugsschach", "Kapitel 3")]
+    [InlineData("  chapter 10:   Smothered Mate  ", "chapter 10")]
+    [InlineData("Chapter 5", "Chapter 5")]                 // kein Spoiler-Doppelpunkt → unverändert
+    [InlineData("Tactics: Pins", "Tactics: Pins")]         // kein Chapter/Kapitel-Präfix → unverändert
+    [InlineData("Introduction", "Introduction")]
+    [InlineData("", "")]
+    public void StripChapterSpoiler_StripsOnlyChapterTitlePattern(string input, string expected)
+    {
+        Assert.Equal(expected, PgnImportService.StripChapterSpoiler(input));
+    }
+
+    [Fact]
+    public void StripChapterSpoiler_Null_ReturnsNull()
+    {
+        Assert.Null(PgnImportService.StripChapterSpoiler(null));
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_PuzzleBook_StripsChapterSpoiler()
+    {
+        // [Black] wird zum Chapter; Default-Buchart ist Puzzle → Spoiler raus.
+        var pgn = @"
+[Event ""S""]
+[Round ""1""]
+[Black ""Chapter 2: Back-Rank Mates""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        await _service.ImportFileAsync("puzzles.pgn", pgn, default);
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("Chapter 2", bp.Chapter);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_StudyBook_KeepsChapterName()
+    {
+        // Buch vorab als Study anlegen → Kapitelname bleibt erhalten.
+        _db.Books.Add(new Book { FileName = "study.pgn", DisplayName = "Study", Kind = BookKind.Study });
+        await _db.SaveChangesAsync();
+
+        var pgn = @"
+[Event ""S""]
+[Round ""1""]
+[Black ""Chapter 2: Back-Rank Mates""]
+[FEN ""8/P7/8/8/8/8/8/k6K w - - 0 1""]
+
+1. a8=Q+ Kb2 *
+";
+        await _service.ImportFileAsync("study.pgn", pgn, default);
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("Chapter 2: Back-Rank Mates", bp.Chapter);
     }
 }

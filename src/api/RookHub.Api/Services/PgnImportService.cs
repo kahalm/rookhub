@@ -374,6 +374,28 @@ public partial class PgnImportService
     /// Immer wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
     /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist.
     /// </summary>
+    /// <summary>
+    /// Erkennt eine Kapitel-Überschrift mit motivverratendem Titel („Chapter 2: Back-Rank Mates",
+    /// „Kapitel 3: Abzugsschach") und behält nur das Label („Chapter 2"). Greift bewusst nur bei
+    /// diesem Muster — freie Kapitelnamen ohne „Chapter/Kapitel N:"-Präfix bleiben unangetastet.
+    /// </summary>
+    private static readonly Regex ChapterSpoilerRx =
+        new(@"^(\s*(?:chapter|kapitel|poglavlje)\s+\d+)\s*:\s*\S.*$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Strippt den Spoiler-Teil eines Kapitelnamens (siehe <see cref="ChapterSpoilerRx"/>).</summary>
+    public static string? StripChapterSpoiler(string? chapter)
+    {
+        if (string.IsNullOrEmpty(chapter)) return chapter;
+        var m = ChapterSpoilerRx.Match(chapter);
+        return m.Success ? m.Groups[1].Value.Trim() : chapter;
+    }
+
+    /// <summary>Kapitelname je Buchart: Puzzle-Bücher werden entschärft (Spoiler raus),
+    /// Study-Bücher behalten ihre Kapitelnamen.</summary>
+    private static string? ChapterForBook(BookKind kind, string? chapter)
+        => kind == BookKind.Puzzle ? StripChapterSpoiler(chapter) : chapter;
+
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
     {
         var (parsed, invalid) = ParsePgn(fileName, pgnText);
@@ -424,7 +446,7 @@ public partial class PgnImportService
                     bp.Moves = p.Moves;
                     bp.StartPly = p.StartPly;
                     bp.Title = p.Title;
-                    bp.Chapter = p.Chapter;
+                    bp.Chapter = ChapterForBook(book.Kind, p.Chapter);
                     bp.Comment = p.Comment;
                     bp.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
                     updated++;
@@ -442,7 +464,7 @@ public partial class PgnImportService
                 Moves = p.Moves,
                 StartPly = p.StartPly,
                 Title = p.Title,
-                Chapter = p.Chapter,
+                Chapter = ChapterForBook(book.Kind, p.Chapter),
                 Comment = p.Comment,
                 MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments),
             });
