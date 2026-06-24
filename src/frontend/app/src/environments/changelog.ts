@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.10';
+export const APP_VERSION = '0.184.11';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.11", date: "2026-06-24", changes: [
+    { en: "Internal: added automated tests for the menu, preferences, Chessable and admin services plus the profile page, closing a test-coverage gap. No user-facing change.", de: "Intern: Automatisierte Tests für die Menü-, Einstellungs-, Chessable- und Admin-Dienste sowie die Profilseite ergänzt und damit eine Test-Lücke geschlossen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.10", date: "2026-06-24", changes: [
     { en: "Puzzle books no longer spoil the motif via chapter titles: on import, a chapter like “Chapter 2: Back-Rank Mates” is shortened to “Chapter 2”. Study courses keep their full chapter names. Existing puzzle books can be refreshed via the “Update” button to apply this.", de: "Puzzle-Bücher verraten das Motiv nicht mehr über den Kapiteltitel: Beim Import wird ein Kapitel wie „Chapter 2: Back-Rank Mates“ auf „Chapter 2“ gekürzt. Studienkurse behalten ihre vollen Kapitelnamen. Bestehende Puzzle-Bücher lassen sich über den „Aktualisieren“-Knopf entsprechend neu aufbereiten." },
   ]},
