@@ -1,4 +1,5 @@
 import {
+  ChessableComponent,
   buildChessableBookmarklet, parseChessbearerFragment,
   estimateTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN, formatDuration,
 } from './chessable.component';
@@ -78,5 +79,48 @@ describe('buildChessableBookmarklet', () => {
   it('embeds the localized no-login message, escaping single quotes', () => {
     const c = buildChessableBookmarklet('https://x/y', "it's missing");
     expect(c).toContain("alert('it\\'s missing')");
+  });
+});
+
+describe('ChessableComponent active-import label caching', () => {
+  function make(): { c: any; instantCalls: () => number } {
+    let calls = 0;
+    const translate = { instant: (k: string, _p?: unknown) => { calls++; return k; } };
+    // Nur translate wird hier ausgeübt; restliche Deps als leere Stubs.
+    const c: any = new ChessableComponent(
+      {} as any, {} as any, translate as any, {} as any, {} as any, {} as any, {} as any);
+    return { c, instantCalls: () => calls };
+  }
+
+  const imp = {
+    id: 1, bid: 'b1', courseName: 'Course', target: 'book', status: 'running', phase: 'queued',
+    error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
+    chaptersDone: 0, chaptersTotal: 0, linesDone: 0, queuedAhead: 2,
+    createdAt: '2026-06-24T00:00:00Z', startedAt: null, completedAt: null,
+  } as any;
+
+  it('precomputes queueLabelText once on update (not per change-detection read)', () => {
+    const { c, instantCalls } = make();
+    c.applyUpdate(imp);
+
+    const entry = c.activeImports['b1'];
+    expect(typeof entry.queueLabelText).toBe('string');
+    expect(entry.queueLabelText.length).toBeGreaterThan(0);
+
+    const afterUpdate = instantCalls();
+    // Wiederholtes Lesen des Templates greift nur auf das Feld zu → KEINE weiteren translate.instant-Aufrufe.
+    void entry.queueLabelText;
+    void entry.queueLabelText;
+    expect(instantCalls()).toBe(afterUpdate);
+  });
+
+  it('refreshes the cached label when the import is updated again', () => {
+    const { c } = make();
+    c.applyUpdate(imp);
+    const first = c.activeImports['b1'].queueLabelText;
+    c.applyUpdate({ ...imp, status: 'paused' });
+    const second = c.activeImports['b1'].queueLabelText;
+    // Anderer Status → anderer Label-Key (paused vs. queued).
+    expect(second).not.toBe(first);
   });
 });

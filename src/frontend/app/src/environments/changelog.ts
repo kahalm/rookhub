@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.27';
+export const APP_VERSION = '0.184.28';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.28", date: "2026-06-24", changes: [
+    { en: "Internal/performance: the Chessable import queue rows now compute their status label once per update instead of on every change-detection tick during polling. No user-facing change.", de: "Intern/Performance: Die Zeilen der Chessable-Import-Warteschlange berechnen ihr Statuslabel jetzt einmal je Update statt bei jedem Change-Detection-Tick während des Pollings. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.27", date: "2026-06-24", changes: [
     { en: "Security hardening: anonymous puzzle/Endless session ids must now be high-entropy (UUID form, ≥32 chars), so a guessed short id can no longer claim or overwrite someone else's anonymous puzzle stats. The app already issues proper random ids, so there is no visible change.", de: "Sicherheits-Härtung: Anonyme Puzzle-/Endlos-Session-Ids müssen jetzt hoch-entropisch sein (UUID-Form, ≥32 Zeichen), sodass eine erratene kurze Id keine fremden anonymen Puzzle-Statistiken mehr claimen oder überschreiben kann. Die App vergibt ohnehin echte Zufalls-Ids → keine sichtbare Änderung." },
   ]},

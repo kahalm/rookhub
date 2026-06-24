@@ -57,6 +57,10 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
   return Math.ceil(remaining / CHESSABLE_LINES_PER_MIN);
 }
 
+/** Aktiver Import + EINMAL je Update vorberechnetes Statuslabel (statt `translate.instant`
+ *  je CD-Zyklus pro Zeile während des 2,5-s-Pollings — analog Dashboard/Admin-Importliste). */
+type ActiveImport = ChessableImport & { queueLabelText: string };
+
 @Component({
   selector: 'app-chessable',
   standalone: true,
@@ -107,7 +111,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                   <mat-icon class="paused-icon">pause_circle</mat-icon>
                 }
                 <span class="queue-name">{{ imp.courseName || imp.bid }}</span>
-                <span class="queue-status">{{ queueLabel(imp) }}</span>
+                <span class="queue-status">{{ imp.queueLabelText }}</span>
                 <span class="queue-actions">
                   @if (imp.status === 'paused') {
                     <button mat-icon-button [matTooltip]="'chessable.resume' | translate" (click)="resumeImport(imp)">
@@ -252,7 +256,7 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
                         @if (imp.status === 'running') {
                           <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
                         }
-                        <span class="phase">{{ queueLabel(imp) }}</span>
+                        <span class="phase">{{ imp.queueLabelText }}</span>
                       } @else {
                         <ng-container>
                           @if (c.importedRepertoire) {
@@ -411,8 +415,9 @@ export class ChessableComponent implements OnInit, OnDestroy {
   loadingCourses = false;
 
   /** Laufende/wartende Importe, je Kurs-bid. Mehrere gleichzeitig möglich — der Server
-   *  arbeitet sie sequenziell ab; wartende stehen auf Phase "queued". */
-  activeImports: Record<string, ChessableImport> = {};
+   *  arbeitet sie sequenziell ab; wartende stehen auf Phase "queued". `queueLabelText` ist das
+   *  EINMAL je Update (statt je CD-Zyklus) vorberechnete Statuslabel (analog Dashboard/Admin-Liste). */
+  activeImports: Record<string, ActiveImport> = {};
   private pollSub?: Subscription;
 
   /** Admin-Sicht: alle Importe aller User (Verlauf + aktive). null = (noch) nicht geladen / kein Admin. */
@@ -519,7 +524,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
     this.chessable.getImports().subscribe({
       next: list => {
         for (const imp of list.filter(i => i.status === 'running' || i.status === 'paused')) {
-          this.activeImports[imp.bid] = imp;
+          this.setActiveImport(imp);
         }
         if (this.hasRunning()) this.ensurePolling();
       },
@@ -595,15 +600,15 @@ export class ChessableComponent implements OnInit, OnDestroy {
   importCourse(c: ChessableCourse, target: ChessableImportTarget): void {
     if (this.activeImports[c.bid]) return; // dieser Kurs ist schon in Arbeit/Warteschlange
     // Optimistischer Platzhalter (id 0) → Zeile zeigt sofort „in Warteschlange".
-    this.activeImports[c.bid] = {
+    this.setActiveImport({
       id: 0, bid: c.bid, courseName: c.name, target, status: 'running', phase: 'queued',
       error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
       chaptersDone: 0, chaptersTotal: 0, linesDone: 0, queuedAhead: 0,
       createdAt: new Date().toISOString(), startedAt: null, completedAt: null,
-    };
+    });
     this.chessable.startImport(c.bid, target, c.name).subscribe({
       next: imp => {
-        this.activeImports[c.bid] = imp;
+        this.setActiveImport(imp);
         this.ensurePolling();
         const key = imp.queuedAhead > 0 ? 'chessable.queuePopup' : 'chessable.queueStarted';
         this.snackbar.info(this.translate.instant(key, { ahead: imp.queuedAhead, name: c.name }));
@@ -634,7 +639,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
   }
 
   /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben). */
-  activeList(): ChessableImport[] {
+  activeList(): ActiveImport[] {
     return Object.values(this.activeImports);
   }
 
@@ -664,7 +669,13 @@ export class ChessableComponent implements OnInit, OnDestroy {
   }
 
   private applyUpdate(u: ChessableImport): void {
-    this.activeImports[u.bid] = u;
+    this.setActiveImport(u);
+  }
+
+  /** Übernimmt einen Import in `activeImports` und berechnet sein Statuslabel EINMAL (hier, beim
+   *  Update) statt je Change-Detection-Zyklus im Template. */
+  private setActiveImport(u: ChessableImport): void {
+    this.activeImports[u.bid] = { ...u, queueLabelText: this.queueLabel(u) };
   }
 
   private hasRunning(): boolean {
@@ -691,7 +702,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
           const upd = byId.get(cur.id);
           if (!upd) continue;
           if (upd.status === 'running' || upd.status === 'paused') {
-            this.activeImports[bid] = upd;
+            this.setActiveImport(upd);
           } else {
             delete this.activeImports[bid]; // completed/failed/cancelled
             this.notifyDone(upd);
