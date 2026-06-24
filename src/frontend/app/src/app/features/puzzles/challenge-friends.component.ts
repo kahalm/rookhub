@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { FriendsService } from '../../core/friends.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
@@ -70,7 +70,7 @@ export class ChallengeFriendsComponent implements OnChanges {
   private loaded = false;
 
   constructor(
-    private http: HttpClient,
+    private friendsService: FriendsService,
     private challengeService: ChallengeService,
     private snackbar: SnackbarService,
     private translate: TranslateService
@@ -92,7 +92,7 @@ export class ChallengeFriendsComponent implements OnChanges {
   loadFriends(): void {
     if (this.loaded) return;
     this.loaded = true;
-    this.http.get<Friend[]>('/api/friends').subscribe({
+    this.friendsService.getFriends().subscribe({
       next: f => this.friends = f,
       error: () => { this.loaded = false; }
     });

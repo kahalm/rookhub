@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
@@ -57,7 +57,7 @@ export class PublicTournamentComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private http: HttpClient,
+    private tournaments: PublicTournamentService,
     private snackbar: SnackbarService,
     private dialog: MatDialog,
     private translate: TranslateService
@@ -66,7 +66,7 @@ export class PublicTournamentComponent implements OnInit {
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
     this.loadLocalFavorites();
-    this.http.get<Tournament>(`/api/tournaments/${this.id}`).subscribe({
+    this.tournaments.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
         this.loading = false;
@@ -102,7 +102,7 @@ export class PublicTournamentComponent implements OnInit {
 
   loadPlayers(): void {
     this.playersLoading = true;
-    this.http.get<TournamentPlayer[]>(`/api/tournaments/${this.id}/players`).subscribe({
+    this.tournaments.getPlayers(this.id).subscribe({
       next: (p) => { this.players = p; this.playersLoading = false; },
       error: () => { this.playersLoading = false; }
     });
@@ -110,7 +110,7 @@ export class PublicTournamentComponent implements OnInit {
 
   loadTeams(): void {
     this.teamsLoading = true;
-    this.http.get<TournamentTeam[]>(`/api/tournaments/${this.id}/teams`).subscribe({
+    this.tournaments.getTeams(this.id).subscribe({
       next: (t) => { this.teams = t; this.teamsLoading = false; },
       error: () => { this.teamsLoading = false; }
     });
@@ -119,7 +119,7 @@ export class PublicTournamentComponent implements OnInit {
   loadPairings(): void {
     this.pairingsLoading = true;
     // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
-    this.http.get<any[]>(`/api/tournaments/${this.id}/pairings?round=${this.selectedRound}`).subscribe({
+    this.tournaments.getPairings<any[]>(this.id, this.selectedRound).subscribe({
       next: (p) => {
         const { pairings, hasTeamPairings } = toDisplayPairings(p);
         this.pairings = pairings;
@@ -256,7 +256,7 @@ export class PublicTournamentComponent implements OnInit {
   showTeamPlayers(teamName: string): void {
     const team = this.teams.find(t => t.name === teamName);
     if (!team) return;
-    this.http.get<TournamentTeam>(`/api/tournaments/${this.id}/teams/${team.snr}`).subscribe({
+    this.tournaments.getTeam(this.id, team.snr).subscribe({
       next: (result) => {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },

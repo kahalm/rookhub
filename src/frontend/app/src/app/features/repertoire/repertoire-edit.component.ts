@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { RepertoireService } from '../../core/repertoire.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
@@ -65,7 +65,7 @@ export class RepertoireEditComponent {
   @Output() fileUploaded = new EventEmitter<void>();
   @Output() fileDeleted = new EventEmitter<void>();
 
-  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private repertoireService: RepertoireService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -107,7 +107,7 @@ export class RepertoireEditComponent {
     const uploads = valid.map(file => {
       const formData = new FormData();
       formData.append('file', file);
-      return this.http.post(`/api/repertoires/${this.repertoireId}/files`, formData).pipe(
+      return this.repertoireService.uploadFile(this.repertoireId, formData).pipe(
         map(() => ({ name: file.name, ok: true })),
         catchError((err) => of({ name: file.name, ok: false, error: err?.error?.message || 'Upload failed' }))
       );
@@ -125,7 +125,7 @@ export class RepertoireEditComponent {
   }
 
   downloadFile(fileId: number, fileName: string): void {
-    this.http.get(`/api/repertoires/${this.repertoireId}/files/${fileId}`, { responseType: 'blob' }).subscribe({
+    this.repertoireService.downloadFile(this.repertoireId, fileId).subscribe({
       next: blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -140,7 +140,7 @@ export class RepertoireEditComponent {
 
   deleteFile(fileId: number): void {
     if (confirm(this.translate.instant('repertoire.edit.deleteConfirm'))) {
-      this.http.delete(`/api/repertoires/${this.repertoireId}/files/${fileId}`).subscribe(() => {
+      this.repertoireService.deleteFile(this.repertoireId, fileId).subscribe(() => {
         this.fileDeleted.emit();
       });
     }

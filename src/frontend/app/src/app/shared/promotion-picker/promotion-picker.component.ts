@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Color, Key } from 'chessground/types';
 
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n';
@@ -17,6 +17,7 @@ export type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 @Component({
   selector: 'app-promotion-picker',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="promotion-backdrop" (click)="onDismiss()"></div>
     <div class="promotion-choices" [style.left.%]="filePercent" [class.from-bottom]="fromBottom">

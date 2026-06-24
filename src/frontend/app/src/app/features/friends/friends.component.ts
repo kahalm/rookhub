@@ -4,7 +4,7 @@ import { Subject, of } from 'rxjs';
 import { switchMap, catchError, tap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { FriendsService } from '../../core/friends.service';
 import { RouterModule, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -207,7 +207,7 @@ export class FriendsComponent implements OnInit {
   private searchTrigger = new Subject<string>();
 
   constructor(
-    private http: HttpClient,
+    private friendsService: FriendsService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private router: Router,
@@ -217,7 +217,7 @@ export class FriendsComponent implements OnInit {
 
   ngOnInit(): void {
     this.searchTrigger.pipe(
-      switchMap(q => this.http.get<UserSearchResult[]>(`/api/friends/search?q=${encodeURIComponent(q)}`).pipe(
+      switchMap(q => this.friendsService.search(q).pipe(
         catchError(() => { this.snackbar.info(this.translate.instant('friends.errors.search')); return of(null); })
       )),
       tap(r => { if (r) this.searchResults = r; }),
@@ -228,11 +228,11 @@ export class FriendsComponent implements OnInit {
 
   loadData(): void {
     this.loading = true;
-    this.http.get<Friend[]>('/api/friends').subscribe({
+    this.friendsService.getFriends().subscribe({
       next: f => { this.friends = f; this.loading = false; },
       error: () => { this.loading = false; this.snackbar.info(this.translate.instant('friends.errors.loadFriends')); }
     });
-    this.http.get<FriendRequest[]>('/api/friends/requests').subscribe({
+    this.friendsService.getRequests().subscribe({
       next: r => this.requests = r,
       error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
     });
@@ -270,28 +270,28 @@ export class FriendsComponent implements OnInit {
   }
 
   sendRequest(userId: number): void {
-    this.http.post(`/api/friends/request/${userId}`, {}).subscribe({
+    this.friendsService.sendRequest(userId).subscribe({
       next: () => this.snackbar.success(this.translate.instant('friends.requestSent')),
       error: (err) => this.snackbar.info(err.error?.message || this.translate.instant('friends.errors.sendRequest'))
     });
   }
 
   acceptRequest(id: number): void {
-    this.http.post(`/api/friends/accept/${id}`, {}).subscribe({
+    this.friendsService.accept(id).subscribe({
       next: () => this.loadData(),
       error: () => this.snackbar.info(this.translate.instant('friends.errors.acceptRequest'))
     });
   }
 
   declineRequest(id: number): void {
-    this.http.post(`/api/friends/decline/${id}`, {}).subscribe({
+    this.friendsService.decline(id).subscribe({
       next: () => this.loadData(),
       error: () => this.snackbar.info(this.translate.instant('friends.errors.declineRequest'))
     });
   }
 
   removeFriend(id: number): void {
-    this.http.delete(`/api/friends/${id}`).subscribe({
+    this.friendsService.remove(id).subscribe({
       next: () => this.loadData(),
       error: () => this.snackbar.info(this.translate.instant('friends.errors.removeFriend'))
     });

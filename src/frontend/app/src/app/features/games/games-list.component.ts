@@ -2,7 +2,7 @@ import { Component, OnInit, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { ProfileService } from '../../core/profile.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -109,7 +109,7 @@ export class GamesListComponent implements OnInit {
     private router: Router,
     private snackbar: SnackbarService,
     private translate: TranslateService,
-    private http: HttpClient,
+    private profileService: ProfileService,
   ) {}
 
   ngOnInit(): void {
@@ -117,7 +117,7 @@ export class GamesListComponent implements OnInit {
       next: list => { this.games = list; this.loading = false; },
       error: () => { this.loading = false; },
     });
-    this.http.get<{ chessComUsername?: string; lichessUsername?: string }>('/api/profile')
+    this.profileService.getProfile<{ chessComUsername?: string; lichessUsername?: string }>()
       .subscribe({ next: p => this.usernames = { chess: p.chessComUsername?.toLowerCase(), lichess: p.lichessUsername?.toLowerCase() } });
   }
 

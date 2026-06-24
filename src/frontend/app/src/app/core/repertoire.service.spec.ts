@@ -53,4 +53,38 @@ describe('RepertoireService', () => {
     expect(req.request.responseType).toBe('blob');
     req.flush(new Blob(['1. e4 *']));
   });
+
+  it('getDetail GETs the repertoire route', () => {
+    service.getDetail<unknown>(5).subscribe();
+    expect(httpMock.expectOne('/api/repertoires/5').request.method).toBe('GET');
+  });
+
+  it('getPgnText requests the pgn route as text', () => {
+    service.getPgnText(5).subscribe();
+    const req = httpMock.expectOne('/api/repertoires/5/pgn');
+    expect(req.request.responseType).toBe('text');
+    req.flush('1. e4 *');
+  });
+
+  it('uploadFile POSTs FormData to the files route', () => {
+    const form = new FormData();
+    form.append('file', new Blob(['x']), 'a.pgn');
+    service.uploadFile(5, form).subscribe();
+    const req = httpMock.expectOne('/api/repertoires/5/files');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBeTrue();
+    req.flush({});
+  });
+
+  it('downloadFile requests a blob; deleteFile DELETEs the file route', () => {
+    service.downloadFile(5, 9).subscribe();
+    const dl = httpMock.expectOne('/api/repertoires/5/files/9');
+    expect(dl.request.responseType).toBe('blob');
+    dl.flush(new Blob(['x']));
+
+    service.deleteFile(5, 9).subscribe();
+    const del = httpMock.expectOne('/api/repertoires/5/files/9');
+    expect(del.request.method).toBe('DELETE');
+    del.flush({});
+  });
 });

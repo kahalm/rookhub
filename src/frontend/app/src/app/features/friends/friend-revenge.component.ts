@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { FriendsService } from '../../core/friends.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -117,7 +117,7 @@ export class FriendRevengeComponent implements OnInit {
   done: RevengePuzzle[] = [];
 
   constructor(
-    private http: HttpClient,
+    private friendsService: FriendsService,
     private route: ActivatedRoute,
     private snackbar: SnackbarService,
     private translate: TranslateService
@@ -127,7 +127,7 @@ export class FriendRevengeComponent implements OnInit {
     const userId = Number(this.route.snapshot.paramMap.get('userId'));
     if (!userId) { this.loading = false; return; }
 
-    this.http.get<RevengeList>(`/api/friends/${userId}/revenge`).subscribe({
+    this.friendsService.getRevenge<RevengeList>(userId).subscribe({
       next: d => {
         this.data = d;
         this.open = d.puzzles.filter(p => !p.solvedByViewer);

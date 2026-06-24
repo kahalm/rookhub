@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { FriendsService } from '../../core/friends.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -174,7 +174,7 @@ export class FriendStatsComponent implements OnInit {
   themeRows: ThemeRow[] = [];
 
   constructor(
-    private http: HttpClient,
+    private friendsService: FriendsService,
     private route: ActivatedRoute,
     private puzzleService: PuzzleService,
     private snackbar: SnackbarService,
@@ -188,7 +188,7 @@ export class FriendStatsComponent implements OnInit {
     forkJoin({
       mine: this.puzzleService.getStats(),
       mineBreakdown: this.puzzleService.getBreakdown(),
-      friend: this.http.get<FriendStats>(`/api/friends/${userId}/stats`)
+      friend: this.friendsService.getStats<FriendStats>(userId)
     }).subscribe({
       next: ({ mine, mineBreakdown, friend }) => {
         this.friend = friend;

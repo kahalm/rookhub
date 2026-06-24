@@ -140,6 +140,11 @@ export class AuthService {
     return this.http.post<void>(`${this.apiUrl}/reset-password`, { token, newPassword });
   }
 
+  /** Passwort des eingeloggten Users ändern (aktuelles + neues Passwort). */
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/change-password`, { currentPassword, newPassword });
+  }
+
   logout(): void {
     localStorage.removeItem('rookhub_user');
     localStorage.removeItem('rookhub_admin_user');

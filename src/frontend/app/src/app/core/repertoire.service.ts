@@ -33,4 +33,29 @@ export class RepertoireService {
   downloadPgn(id: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${id}/pgn`, { responseType: 'blob' });
   }
+
+  /** Repertoire-Detail (inkl. Dateien); Form feature-lokal → generisch. */
+  getDetail<T>(id: number): Observable<T> {
+    return this.http.get<T>(`${this.apiUrl}/${id}`);
+  }
+
+  /** Kombinierter PGN-Text (zum Anzeigen, nicht als Blob-Download). */
+  getPgnText(id: number): Observable<string> {
+    return this.http.get(`${this.apiUrl}/${id}/pgn`, { responseType: 'text' });
+  }
+
+  /** PGN-Datei hochladen (multipart). */
+  uploadFile(id: number, form: FormData): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${id}/files`, form);
+  }
+
+  /** Einzelne PGN-Datei herunterladen (Blob). */
+  downloadFile(id: number, fileId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/files/${fileId}`, { responseType: 'blob' });
+  }
+
+  /** Einzelne PGN-Datei löschen. */
+  deleteFile(id: number, fileId: number): Observable<unknown> {
+    return this.http.delete(`${this.apiUrl}/${id}/files/${fileId}`);
+  }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { ProfileService } from '../../core/profile.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -384,7 +384,7 @@ export class ProfileComponent implements OnInit {
   deleting = false;
 
   constructor(
-    private http: HttpClient,
+    private profileService: ProfileService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
@@ -398,7 +398,7 @@ export class ProfileComponent implements OnInit {
     this.offlinePuzzleCount = this.offline.puzzleCount;
     this.offlineEndlessRuns = this.offline.endlessRuns;
     this.refreshOfflineSize();
-    this.http.get<Profile>('/api/profile').subscribe({
+    this.profileService.getProfile<Profile>().subscribe({
       next: (p) => { this.profile = p; this.loading = false; },
       error: () => { this.loading = false; }
     });
@@ -428,12 +428,8 @@ export class ProfileComponent implements OnInit {
     this.searching = true;
     this.searchResults = null;
 
-    let params = new HttpParams().set('lastName', this.profile.lastName.trim());
-    if (this.profile.firstName?.trim()) {
-      params = params.set('firstName', this.profile.firstName.trim());
-    }
-
-    this.http.get<PlayerSearchResult>('/api/profile/player-search', { params }).subscribe({
+    this.profileService.searchPlayer<PlayerSearchResult>(
+      this.profile.lastName.trim(), this.profile.firstName?.trim() || undefined).subscribe({
       next: (results) => {
         this.searching = false;
         this.searchResults = results;
@@ -474,7 +470,7 @@ export class ProfileComponent implements OnInit {
   save(): void {
     if (!this.profile) return;
     this.saving = true;
-    this.http.put<Profile>('/api/profile', {
+    this.profileService.updateProfile<Profile>({
       email: this.profile.email ?? '',
       firstName: this.profile.firstName,
       lastName: this.profile.lastName,
@@ -529,10 +525,7 @@ export class ProfileComponent implements OnInit {
       return;
     }
     this.changingPwd = true;
-    this.http.put('/api/auth/change-password', {
-      currentPassword: this.changePwdCurrent,
-      newPassword: this.changePwdNew,
-    }).subscribe({
+    this.auth.changePassword(this.changePwdCurrent, this.changePwdNew).subscribe({
       next: () => {
         this.changingPwd = false;
         this.cancelChangePwd();

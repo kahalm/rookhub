@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { RepertoireService } from '../../core/repertoire.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -175,7 +175,7 @@ export class RepertoireDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient,
+    private repertoireService: RepertoireService,
     public viewerService: RepertoireViewerService,
     public treeService: MoveTreeService,
   ) {}
@@ -228,7 +228,7 @@ export class RepertoireDetailComponent implements OnInit {
 
   private loadRepertoire(): void {
     this.loading = true;
-    this.http.get<RepertoireDetail>(`/api/repertoires/${this.id}`).subscribe({
+    this.repertoireService.getDetail<RepertoireDetail>(this.id).subscribe({
       next: (r) => {
         this.repertoire = r;
         this.loading = false;
@@ -239,7 +239,7 @@ export class RepertoireDetailComponent implements OnInit {
   }
 
   private loadCombinedPgn(): void {
-    this.http.get(`/api/repertoires/${this.id}/pgn`, { responseType: 'text' }).subscribe({
+    this.repertoireService.getPgnText(this.id).subscribe({
       next: (pgn) => {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);

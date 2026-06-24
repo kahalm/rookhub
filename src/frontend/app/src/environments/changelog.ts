@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.21';
+export const APP_VERSION = '0.184.22';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,8 +14,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.22", date: "2026-06-24", changes: [
+    { en: "Internal cleanup: the friends, profile, public tournament, repertoire and games screens now talk to the backend through dedicated services instead of calling HTTP directly, with tests; password change moved into the auth service; two more presentational components switched to OnPush. No user-facing change.", de: "Interne Aufräumarbeit: Die Freunde-, Profil-, öffentliche-Turnier-, Repertoire- und Partien-Ansichten sprechen das Backend jetzt über eigene Services an statt direkt per HTTP, mit Tests; die Passwortänderung liegt jetzt im Auth-Service; zwei weitere Präsentations-Komponenten nutzen OnPush. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.21", date: "2026-06-24", changes: [
-    { en: "Crawler hardening (backend): the tournament crawler's IP-check endpoint now requires the API key (it exposed the VPN exit IP and triggered an outbound call), and round detection ignores bogus 'phantom' rounds from stray rd= links beyond the tournament's actual round count. No user-facing change.", de: "Crawler-Härtung (Backend): Der IP-Check-Endpoint des Turnier-Crawlers verlangt jetzt den API-Key (er gab die VPN-Exit-IP preis + löste einen Outbound-Call aus), und die Rundenerkennung ignoriert „Phantom-Runden" aus fremden rd=-Links jenseits der echten Rundenzahl. Keine sichtbare Änderung." },
+    { en: "Crawler hardening (backend): the tournament crawler's IP-check endpoint now requires the API key (it exposed the VPN exit IP and triggered an outbound call), and round detection ignores bogus 'phantom' rounds from stray rd= links beyond the tournament's actual round count. No user-facing change.", de: "Crawler-Härtung (Backend): Der IP-Check-Endpoint des Turnier-Crawlers verlangt jetzt den API-Key (er gab die VPN-Exit-IP preis + löste einen Outbound-Call aus), und die Rundenerkennung ignoriert „Phantom-Runden“ aus fremden rd=-Links jenseits der echten Rundenzahl. Keine sichtbare Änderung." },
   ]},
   { version: "0.184.20", date: "2026-06-24", changes: [
     { en: "Accessibility & performance: more clickable elements are now keyboard-operable (puzzle tag toggle, repertoire breadcrumb/move/line items — focusable, Enter/Space activates), and a few presentational components switched to OnPush change detection for less rendering work.", de: "Barrierefreiheit & Performance: Weitere klickbare Elemente sind jetzt per Tastatur bedienbar (Puzzle-Tag-Umschalter, Repertoire-Brotkrumen/-Zug-/-Linieneinträge — fokussierbar, Enter/Leertaste aktiviert), und einige präsentationale Komponenten nutzen jetzt OnPush-Change-Detection für weniger Rendering-Aufwand." },
