@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.16';
+export const APP_VERSION = '0.184.17';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.17", date: "2026-06-24", changes: [
+    { en: "Internal: the tournament list now uses a dedicated TournamentListService for its HTTP calls (list/subscribe/crawl), with tests. No user-facing change.", de: "Intern: Die Turnierliste nutzt für ihre HTTP-Aufrufe (Liste/Abo/Crawl) jetzt einen eigenen TournamentListService, mit Tests. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.16", date: "2026-06-24", changes: [
     { en: "Internal: the repertoires page now talks to the backend through a dedicated RepertoireService (instead of direct HTTP calls in the component), with tests. No user-facing change.", de: "Intern: Die Repertoire-Seite spricht das Backend jetzt über einen eigenen RepertoireService an (statt direkter HTTP-Aufrufe in der Komponente), mit Tests. Keine sichtbare Änderung." },
   ]},

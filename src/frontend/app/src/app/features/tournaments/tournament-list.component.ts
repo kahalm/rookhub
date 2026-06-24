@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +13,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
 import { Tournament, Subscription, CrawlJob } from '../../core/models';
+import { TournamentListService } from '../../core/tournament-list.service';
 
 @Component({
   selector: 'app-tournament-list',
@@ -132,7 +132,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     return this.tournaments.length - this.visibleTournaments.length;
   }
 
-  constructor(private http: HttpClient, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private tournamentService: TournamentListService, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   formatSubtitle(t: Tournament): string {
     return [t.location, t.date].filter((v) => !!v).join(' | ');
@@ -162,8 +162,8 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = false;
     forkJoin({
-      tournamentResponse: this.http.get<{ items: Tournament[]; totalCount: number }>('/api/tournaments?pageSize=200'),
-      subscriptions: this.http.get<Subscription[]>('/api/subscriptions')
+      tournamentResponse: this.tournamentService.getTournaments(),
+      subscriptions: this.tournamentService.getSubscriptions()
     }).subscribe({
       next: ({ tournamentResponse, subscriptions }) => {
         this.tournaments = tournamentResponse.items ?? [];
@@ -186,10 +186,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
 
   subscribe(tournament: Tournament): void {
     this.togglingId = tournament.id;
-    this.http.post<Subscription>('/api/subscriptions', {
-      crawlerTournamentId: tournament.id?.toString() ?? '',
-      tournamentName: tournament.name ?? ''
-    }).subscribe({
+    this.tournamentService.subscribe(tournament.id?.toString() ?? '', tournament.name ?? '').subscribe({
       next: (sub) => {
         this.subscriptions.push(sub);
         this.togglingId = null;
@@ -210,10 +207,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     this.crawling = true;
     this.crawlError = '';
     this.crawlJobId = null;
-    this.http.post<CrawlJob>('/api/tournaments/crawl', {
-      chessResultsId: id,
-      jobType: 'Full'
-    }).subscribe({
+    this.tournamentService.startCrawl(id).subscribe({
       next: (job) => {
         this.crawlJobId = job.id;
         this.pollCrawlJob(job.id);
@@ -227,7 +221,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
 
   private pollCrawlJob(jobId: number): void {
     this.pollInterval = setInterval(() => {
-      this.http.get<CrawlJob>(`/api/tournaments/crawl/${jobId}`).subscribe({
+      this.tournamentService.getCrawlJob(jobId).subscribe({
         next: (job) => {
           if (job.status === 'Completed') {
             if (this.pollInterval) clearInterval(this.pollInterval);
@@ -257,7 +251,7 @@ export class TournamentListComponent implements OnInit, OnDestroy {
     const sub = this.getSubscription(tournament);
     if (!sub) return;
     this.togglingId = tournament.id;
-    this.http.delete(`/api/subscriptions/${sub.id}`).subscribe({
+    this.tournamentService.unsubscribe(sub.id).subscribe({
       next: () => {
         this.subscriptions = this.subscriptions.filter(s => s.id !== sub.id);
         this.togglingId = null;
