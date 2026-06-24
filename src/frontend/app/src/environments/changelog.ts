@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.2';
+export const APP_VERSION = '0.184.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.3", date: "2026-06-24", changes: [
+    { en: "Performance: API-token validation (used by the browser extension) no longer writes to the database on every single request — the 'last used' timestamp is now updated at most once every 5 minutes. Reduces write load on the auth hot path. No visible change.", de: "Performance: Die API-Token-Prüfung (von der Browser-Extension genutzt) schreibt nicht mehr bei jedem Request in die Datenbank — der „zuletzt verwendet\"-Zeitstempel wird höchstens alle 5 Minuten aktualisiert. Reduziert die Schreiblast im Auth-Hot-Path. Keine sichtbare Änderung." },
+  ]},
   { version: "0.184.2", date: "2026-06-24", changes: [
     { en: "Security/privacy: when e-mail sending is not configured, password-reset links are no longer written to the server logs outside local development. The raw reset token therefore never lands in the central log store in production. No visible change.", de: "Sicherheit/Datenschutz: Wenn kein Mailversand konfiguriert ist, werden Passwort-Reset-Links außerhalb der lokalen Entwicklung nicht mehr in die Server-Logs geschrieben. Der Roh-Token landet dadurch in Produktion nie im zentralen Log-Speicher. Keine sichtbare Änderung." },
   ]},

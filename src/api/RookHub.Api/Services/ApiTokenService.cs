@@ -19,6 +19,8 @@ public class ApiTokenService
     public const string DefaultScope = "extension";
     public static readonly string[] AllowedScopes = { "extension" };
     public const int MaxTokensPerUser = 20;
+    /// <summary>LastUsedAt wird höchstens einmal pro diesem Fenster persistiert (Auth-Hot-Path-Drossel).</summary>
+    public static readonly TimeSpan LastUsedThrottle = TimeSpan.FromMinutes(5);
 
     private readonly AppDbContext _db;
     private readonly ILogger<ApiTokenService> _logger;
@@ -121,15 +123,21 @@ public class ApiTokenService
         if (token.ExpiresAt.HasValue && token.ExpiresAt.Value < DateTime.UtcNow)
             return null;
 
-        // LastUsedAt aktualisieren; bei DB-Fehler nicht die Auth verhindern.
-        try
+        // LastUsedAt aktualisieren — aber gedrosselt: jeder authentifizierte Request liefe sonst
+        // in ein SaveChanges (Auth-Hot-Path). Nur schreiben, wenn der letzte Zeitstempel fehlt
+        // oder älter als das Drossel-Fenster ist. Bei DB-Fehler nicht die Auth verhindern.
+        var now = DateTime.UtcNow;
+        if (token.LastUsedAt == null || now - token.LastUsedAt.Value >= LastUsedThrottle)
         {
-            token.LastUsedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "ApiToken: LastUsedAt update fehlgeschlagen (id={Id})", token.Id);
+            try
+            {
+                token.LastUsedAt = now;
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ApiToken: LastUsedAt update fehlgeschlagen (id={Id})", token.Id);
+            }
         }
 
         return token;

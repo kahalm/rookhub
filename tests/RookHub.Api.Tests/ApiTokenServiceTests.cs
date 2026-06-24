@@ -162,4 +162,37 @@ public class ApiTokenServiceTests : IDisposable
         var validated = await _svc.ValidateAsync(created.RawToken);
         Assert.Null(validated);
     }
+
+    [Fact]
+    public async Task ValidateAsync_DoesNotRewriteLastUsedAt_WithinThrottleWindow()
+    {
+        var uid = await CreateUserAsync();
+        var created = await _svc.CreateAsync(uid, "x", null, null);
+
+        await _svc.ValidateAsync(created.RawToken);
+        var first = (await _db.UserApiTokens.SingleAsync()).LastUsedAt;
+        Assert.NotNull(first);
+
+        // Zweite Nutzung sofort danach → innerhalb des Drossel-Fensters → kein erneutes Schreiben.
+        await _svc.ValidateAsync(created.RawToken);
+        var second = (await _db.UserApiTokens.SingleAsync()).LastUsedAt;
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_RewritesLastUsedAt_WhenStale()
+    {
+        var uid = await CreateUserAsync();
+        var created = await _svc.CreateAsync(uid, "x", null, null);
+
+        // LastUsedAt künstlich altern lassen (über das Drossel-Fenster hinaus).
+        var token = await _db.UserApiTokens.SingleAsync();
+        var stale = DateTime.UtcNow - ApiTokenService.LastUsedThrottle - TimeSpan.FromMinutes(1);
+        token.LastUsedAt = stale;
+        await _db.SaveChangesAsync();
+
+        await _svc.ValidateAsync(created.RawToken);
+        var updated = (await _db.UserApiTokens.SingleAsync()).LastUsedAt;
+        Assert.True(updated > stale);
+    }
 }
