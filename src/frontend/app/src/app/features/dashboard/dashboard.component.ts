@@ -1,7 +1,6 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,7 +10,8 @@ import { forkJoin, of, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
-import { Subscription, Repertoire, Friend, PuzzleStatsDto } from '../../core/models';
+import { Subscription } from '../../core/models';
+import { DashboardService } from '../../core/dashboard.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
 @Component({
   selector: 'app-dashboard',
@@ -140,7 +140,7 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     public auth: AuthService,
-    private http: HttpClient,
+    private dashboardService: DashboardService,
     private chessable: ChessableService,
     private translate: TranslateService,
   ) {}
@@ -155,10 +155,10 @@ export class DashboardComponent implements OnInit {
     }
 
     forkJoin({
-      repertoires: this.http.get<Repertoire[]>('/api/repertoires').pipe(catchError(() => of([]))),
-      subscriptions: this.http.get<Subscription[]>('/api/subscriptions').pipe(catchError(() => of([]))),
-      friends: this.http.get<Friend[]>('/api/friends').pipe(catchError(() => of([]))),
-      puzzleStats: this.http.get<PuzzleStatsDto>('/api/puzzles/stats').pipe(
+      repertoires: this.dashboardService.getRepertoires().pipe(catchError(() => of([]))),
+      subscriptions: this.dashboardService.getSubscriptions().pipe(catchError(() => of([]))),
+      friends: this.dashboardService.getFriends().pipe(catchError(() => of([]))),
+      puzzleStats: this.dashboardService.getPuzzleStats().pipe(
         catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0, puzzleElo: 1500 }))
       )
     }).pipe(
