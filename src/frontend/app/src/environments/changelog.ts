@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.25';
+export const APP_VERSION = '0.184.26';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.26", date: "2026-06-24", changes: [
+    { en: "User search (friends) is faster and tidier: account/identity fields (username, chess.com/Lichess/FIDE/ChessResults) now match by prefix so they can use the username index, only the display name still matches anywhere; the query is hard-capped in length and result count. You may notice a username now matches from its start rather than the middle.", de: "Die Nutzersuche (Freunde) ist schneller und sauberer: Konto-/Identitätsfelder (Benutzername, chess.com/Lichess/FIDE/ChessResults) treffen jetzt per Präfix, sodass der Benutzername-Index greifen kann; nur der Anzeigename trifft weiterhin überall. Suchbegriff-Länge und Trefferzahl sind hart begrenzt. Ein Benutzername trifft jetzt ab dem Anfang statt aus der Mitte." },
+  ]},
   { version: "0.184.25", date: "2026-06-24", changes: [
     { en: "Internal/reliability: Chessable course imports are now claimed atomically when a worker picks them up, so a resume burst or scaling out can no longer process the same import twice. No user-facing change.", de: "Intern/Zuverlässigkeit: Chessable-Kurs-Importe werden jetzt atomar übernommen, wenn ein Worker sie greift — ein Resume-Sturm oder Skalieren kann denselben Import damit nicht mehr doppelt verarbeiten. Keine sichtbare Änderung." },
   ]},

@@ -90,4 +90,36 @@ public class FriendServiceTests : IDisposable
         Assert.Single(results);
         Assert.Equal("bob", results[0].Username);
     }
+
+    [Fact]
+    public async Task SearchUsers_MatchesUsernameByPrefix_NotMidSubstring()
+    {
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("bobby");   // Präfix-Treffer für "bob"
+        await CreateUserAsync("alibob");  // Mid-Substring → KEIN Treffer mehr (präfix-anker)
+
+        var results = await _friendService.SearchUsersAsync("bob", me);
+        Assert.Single(results);
+        Assert.Equal("bobby", results[0].Username);
+    }
+
+    [Fact]
+    public async Task SearchUsers_EmptyOrWildcardOnlyQuery_ReturnsEmpty()
+    {
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("someone");
+
+        Assert.Empty(await _friendService.SearchUsersAsync("   ", me));
+        Assert.Empty(await _friendService.SearchUsersAsync("%%", me)); // Wildcards gestrippt → leer
+    }
+
+    [Fact]
+    public async Task SearchUsers_LongQuery_IsTruncated_NoThrow()
+    {
+        var me = await CreateUserAsync("me");
+        await CreateUserAsync("zzz");
+        // 200-Zeichen-Query darf nicht werfen (service-seitig auf 50 gekürzt) und nichts finden.
+        var results = await _friendService.SearchUsersAsync(new string('a', 200), me);
+        Assert.Empty(results);
+    }
 }

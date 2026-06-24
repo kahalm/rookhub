@@ -194,22 +194,36 @@ public class FriendService
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>Max. Treffer einer User-Suche (harte Obergrenze, auch service-seitig erzwungen).</summary>
+    private const int SearchTake = 20;
+    /// <summary>Max. Länge des Suchbegriffs (zusätzlich zur Controller-Kappung als Defense-in-Depth).</summary>
+    private const int MaxQueryLength = 50;
+
     public async Task<List<UserSearchResultDto>> SearchUsersAsync(string query, int currentUserId)
     {
-        var q = query.Replace("%", "").Replace("_", "");
+        // Eingabe normalisieren + hart begrenzen (Defense-in-Depth, falls ein Aufrufer den Controller-Cap umgeht):
+        // LIKE-Wildcards strippen und auf MaxQueryLength kürzen.
+        var q = (query ?? string.Empty).Replace("%", "").Replace("_", "").Trim();
+        if (q.Length > MaxQueryLength) q = q[..MaxQueryLength];
+        if (q.Length == 0) return new List<UserSearchResultDto>();
+
+        // Identitäts-/Konto-Felder (Username + externe Spiel-Accounts/IDs) sind PRÄFIX-Treffer
+        // (`LIKE q%`) — so kann der Username-Index greifen und es bleibt ein indexfreundlicher
+        // Scan; das deckt den Normalfall „ich tippe den Anfang eines Namens" ab. Nur der
+        // Anzeige-/Klarname (DisplayName) bleibt Teilstring-Suche, weil dort die Mitte zählt.
         return await _db.AppUsers
             .Include(u => u.Profile)
             .Where(u => u.Id != currentUserId &&
-                       (u.Username.Contains(q) ||
+                       (u.Username.StartsWith(q) ||
                         (u.Profile != null && (
                             (u.Profile.DisplayName != null && u.Profile.DisplayName.Contains(q)) ||
-                            (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.Contains(q)) ||
-                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.Contains(q)) ||
-                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.Contains(q)) ||
-                            (u.Profile.FideId != null && u.Profile.FideId.Contains(q))
+                            (u.Profile.ChessResultsId != null && u.Profile.ChessResultsId.StartsWith(q)) ||
+                            (u.Profile.ChessComUsername != null && u.Profile.ChessComUsername.StartsWith(q)) ||
+                            (u.Profile.LichessUsername != null && u.Profile.LichessUsername.StartsWith(q)) ||
+                            (u.Profile.FideId != null && u.Profile.FideId.StartsWith(q))
                         ))))
             .OrderBy(u => u.Username)
-            .Take(20)
+            .Take(SearchTake)
             .Select(u => new UserSearchResultDto
             {
                 UserId = u.Id,
