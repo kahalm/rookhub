@@ -16,6 +16,14 @@ public class AppUser
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Rotiert bei Passwort-Reset/-Änderung und invalidiert damit alle bereits ausgegebenen JWTs,
+    /// die den alten Stempel als <c>sstamp</c>-Claim tragen. <c>null</c> = noch kein Stempel
+    /// (Alt-Bestand) → die zugehörigen Tokens werden „grandfathered" (kein Massen-Logout beim Deploy).
+    /// </summary>
+    [MaxLength(64)]
+    public string? SecurityStamp { get; set; }
+
     public bool IsAdmin { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

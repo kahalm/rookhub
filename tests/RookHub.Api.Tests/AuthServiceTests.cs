@@ -252,6 +252,41 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Register_SetsSecurityStamp()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "stamped", Email = "s@example.com", Password = "password123" });
+        var stamp = _db.AppUsers.Single(u => u.Id == reg.UserId).SecurityStamp;
+        Assert.False(string.IsNullOrEmpty(stamp));
+    }
+
+    [Fact]
+    public async Task ChangePassword_RotatesSecurityStamp()
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });
+        var before = _db.AppUsers.Single().SecurityStamp;
+
+        await _authService.ChangePasswordAsync(reg.UserId, new ChangePasswordDto { CurrentPassword = "oldpass", NewPassword = "newpass99" });
+
+        var after = _db.AppUsers.Single().SecurityStamp;
+        Assert.False(string.IsNullOrEmpty(after));
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
+    public async Task Login_BackfillsMissingSecurityStamp()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "legacy", Email = "l@example.com", Password = "password123" });
+        // Alt-Bestand simulieren: Stempel entfernen.
+        var u = _db.AppUsers.Single();
+        u.SecurityStamp = null;
+        await _db.SaveChangesAsync();
+
+        await _authService.LoginAsync(new LoginDto { Username = "legacy", Password = "password123" });
+
+        Assert.False(string.IsNullOrEmpty(_db.AppUsers.Single().SecurityStamp));
+    }
+
+    [Fact]
     public async Task ChangePassword_WrongCurrentPassword_Throws()
     {
         var reg = await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "t@example.com", Password = "oldpass" });

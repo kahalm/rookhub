@@ -105,6 +105,8 @@ public class PasswordResetService
             throw new UnauthorizedAccessException("Invalid or expired reset token.");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, BcryptWorkFactor);
+        // Security-Stamp rotieren → bestehende JWTs (mit altem sstamp-Claim) werden ungültig.
+        user.SecurityStamp = AuthService.NewSecurityStamp();
         token.UsedAt = now;
 
         // Alle weiteren offenen Tokens des Users ebenfalls entwerten.

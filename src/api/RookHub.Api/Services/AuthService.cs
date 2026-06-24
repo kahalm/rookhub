@@ -51,6 +51,7 @@ public class AuthService
             Username = dto.Username,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password, BcryptWorkFactor),
+            SecurityStamp = NewSecurityStamp(),
             Profile = new UserProfile()
         };
 
@@ -93,6 +94,15 @@ public class AuthService
         if (user.DeletedAt != null)
             throw new UnauthorizedAccessException("Invalid username or password.");
 
+        // Lazy-Backfill: Alt-User ohne Security-Stamp bekommen beim ersten Login einen — damit ihre
+        // ab jetzt ausgegebenen Tokens den Stempel tragen und eine spätere Passwortänderung sie
+        // wirklich invalidiert (statt für immer grandfathered zu bleiben).
+        if (user.SecurityStamp == null)
+        {
+            user.SecurityStamp = NewSecurityStamp();
+            await _db.SaveChangesAsync();
+        }
+
         // Strukturierter Login-Event fuer Kibana: Logins/Tag (Count) + Unique Logins
         // (Cardinality auf fields.UserId). Nur bei erfolgreichem Login, analog zum
         // PuzzleAttempt-Log in PuzzleService. messageTemplate enthaelt "UserLogin".
@@ -118,8 +128,13 @@ public class AuthService
             throw new UnauthorizedAccessException("Current password is incorrect.");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword, BcryptWorkFactor);
+        // Security-Stamp rotieren → alle bisherigen JWTs (mit altem sstamp-Claim) werden ungültig.
+        user.SecurityStamp = NewSecurityStamp();
         await _db.SaveChangesAsync();
     }
+
+    /// <summary>Erzeugt einen frischen, kompakten Security-Stamp (Basis für die Token-Invalidierung).</summary>
+    public static string NewSecurityStamp() => Guid.NewGuid().ToString("N");
 
     private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null)
     {
@@ -134,6 +149,11 @@ public class AuthService
 
         if (user.IsAdmin)
             claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+
+        // Security-Stamp als Claim mitgeben (sofern gesetzt) → wird bei jedem Request gegen die DB
+        // geprüft; nach Passwort-Reset/-Änderung passt er nicht mehr → Token ungültig.
+        if (user.SecurityStamp != null)
+            claims.Add(new Claim("sstamp", user.SecurityStamp));
 
         if (extraClaims != null)
             claims.AddRange(extraClaims);

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.8';
+export const APP_VERSION = '0.184.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.9", date: "2026-06-24", changes: [
+    { en: "Security: changing or resetting your password now immediately invalidates all your other active login sessions. Older sessions issued before this update keep working until they expire (no forced mass logout).", de: "Sicherheit: Wenn du dein Passwort änderst oder zurücksetzt, werden jetzt alle deine anderen aktiven Login-Sitzungen sofort ungültig. Ältere, vor diesem Update ausgestellte Sitzungen bleiben bis zu ihrem Ablauf gültig (kein erzwungener Massen-Logout)." },
+  ]},
   { version: "0.184.8", date: "2026-06-24", changes: [
     { en: "Performance (admin/dashboard): the Chessable import status labels are now computed once per refresh instead of on every change-detection cycle, reducing UI work while imports are running.", de: "Performance (Admin/Dashboard): Die Chessable-Import-Statustexte werden jetzt einmal pro Aktualisierung berechnet statt bei jedem Change-Detection-Zyklus — weniger UI-Last während laufender Importe." },
     { en: "Admin: the 'download course for a user' progress no longer freezes when an import is paused — it keeps polling and resumes updating when the import continues.", de: "Admin: Der Fortschritt beim „Kurs für einen User holen\" friert nicht mehr ein, wenn ein Import pausiert ist — er pollt weiter und aktualisiert wieder, sobald der Import fortgesetzt wird." },
