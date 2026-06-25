@@ -49,7 +49,7 @@ public class BotStatsControllerTests : IDisposable
         return u;
     }
 
-    private BotStatsController BuildController(string? secret, string? signatureHeader)
+    private BotStatsController BuildController(string? secret, string? signatureHeader, string? timestampHeader = null)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["SchachBot:StatsSecret"] = secret })
@@ -60,11 +60,16 @@ public class BotStatsControllerTests : IDisposable
         };
         if (signatureHeader != null)
             controller.ControllerContext.HttpContext.Request.Headers["X-Bot-Signature"] = signatureHeader;
+        if (timestampHeader != null)
+            controller.ControllerContext.HttpContext.Request.Headers["X-Bot-Timestamp"] = timestampHeader;
         return controller;
     }
 
     private static string ValidHeader(string discordId)
         => "sha256=" + SchachBotWebhookService.ComputeHmacHex(Secret, discordId);
+
+    private static string TimestampedHeader(string discordId, long ts)
+        => "sha256=" + SchachBotWebhookService.ComputeHmacHex(Secret, ts + "." + discordId);
 
     [Fact]
     public async Task GetPlayerProgress_ValidSignatureLinkedUser_ReturnsProgress()
@@ -205,6 +210,45 @@ public class BotStatsControllerTests : IDisposable
         var dto = Assert.IsType<BotPlayerProgressDto>(ok.Value);
 
         Assert.Empty(dto.Tournaments);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_ValidTimestampedSignature_ReturnsProgress()
+    {
+        await CreateLinkedUserAsync("12345");
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var controller = BuildController(Secret, TimestampedHeader("12345", ts), ts.ToString());
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<BotPlayerProgressDto>(ok.Value);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_StaleTimestamp_ReturnsUnauthorized()
+    {
+        await CreateLinkedUserAsync("12345");
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 1000;   // außerhalb ±300 s
+        var controller = BuildController(Secret, TimestampedHeader("12345", ts), ts.ToString());
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_TimestampPresentButBodyOnlySignature_ReturnsUnauthorized()
+    {
+        // Ist ein Timestamp dabei, MUSS die Signatur über "<ts>.<did>" gehen → eine alte
+        // body-only-Signatur darf den Replay-Schutz nicht aushebeln.
+        await CreateLinkedUserAsync("12345");
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var controller = BuildController(Secret, ValidHeader("12345"), ts.ToString());
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
     [Fact]

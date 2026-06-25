@@ -44,7 +44,8 @@ public class BotStatsController : ControllerBase
             return NotFound();  // Feature nicht konfiguriert → wie nicht vorhanden behandeln
 
         var provided = Request.Headers["X-Bot-Signature"].FirstOrDefault();
-        if (!VerifySignature(secret, discordId, provided))
+        var timestamp = Request.Headers["X-Bot-Timestamp"].FirstOrDefault();
+        if (!VerifySignature(secret, discordId, provided, timestamp))
         {
             _logger.LogWarning("Bot-Stats: ungültige Signatur für Discord-ID {DiscordId}", discordId);
             return Unauthorized();
@@ -57,18 +58,43 @@ public class BotStatsController : ControllerBase
         return Ok(progress);
     }
 
+    /// <summary>±300 s Toleranz für den Replay-Schutz (analog zum Solver-Webhook).</summary>
+    private const int TimestampToleranceSeconds = 300;
+
     /// <summary>
-    /// Prüft den Header <c>X-Bot-Signature: sha256=&lt;hmac_hex(secret, discordId)&gt;</c> konstant-zeitig.
-    /// Nutzt dieselbe HMAC-Hex-Berechnung wie der ausgehende Solver-Webhook.
+    /// Prüft <c>X-Bot-Signature: sha256=&lt;hmac_hex&gt;</c> konstant-zeitig. Replay-Schutz (opt-in,
+    /// rückwärtskompatibel): ist <paramref name="timestamp"/> (Wert des <c>X-Bot-Timestamp</c>-Headers,
+    /// Unix-Sekunden) gesetzt, MUSS er innerhalb ±<see cref="TimestampToleranceSeconds"/> liegen und die
+    /// HMAC wird über <c>"&lt;ts&gt;.&lt;discordId&gt;"</c> gebildet. Fehlt der Header, greift der alte
+    /// Pfad (HMAC nur über die Discord-ID) — damit bricht nichts, solange der Bot den Timestamp noch
+    /// nicht mitschickt. Nutzt dieselbe HMAC-Hex-Berechnung wie der ausgehende Solver-Webhook.
     /// </summary>
-    private static bool VerifySignature(string secret, string discordId, string? provided)
+    private static bool VerifySignature(string secret, string discordId, string? provided, string? timestamp)
     {
         if (string.IsNullOrEmpty(provided))
             return false;
         var sig = provided.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase)
             ? provided["sha256=".Length..]
             : provided;
-        var expected = SchachBotWebhookService.ComputeHmacHex(secret, discordId);
+
+        string signedMessage;
+        if (!string.IsNullOrWhiteSpace(timestamp))
+        {
+            // Timestamp vorhanden → Fenster prüfen + in die HMAC einbeziehen (Replay-Schutz).
+            if (!long.TryParse(timestamp, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out var ts))
+                return false;
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (Math.Abs(now - ts) > TimestampToleranceSeconds)
+                return false;
+            signedMessage = ts.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + discordId;
+        }
+        else
+        {
+            signedMessage = discordId;  // rückwärtskompatibel (alter Bot ohne Timestamp)
+        }
+
+        var expected = SchachBotWebhookService.ComputeHmacHex(secret, signedMessage);
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(sig), Encoding.UTF8.GetBytes(expected));
     }
