@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.35';
+export const APP_VERSION = '0.184.36';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.36", date: "2026-06-25", changes: [
+    { en: "Crawler hardening (crawler repo): when no API key is configured, the crawler now fails closed in production (protected endpoints return 503) instead of leaving the gate open — a misconfiguration can no longer expose it. The local development fallback (open without a key) is unchanged, and the liveness/health endpoint stays reachable.", de: "Crawler-Härtung (Crawler-Repo): Ist kein API-Key konfiguriert, ist der Crawler in Produktion jetzt fail-closed (geschützte Endpunkte liefern 503) statt das Gate offen zu lassen — eine Fehlkonfiguration kann ihn nicht mehr exponieren. Der lokale Entwicklungs-Fallback (ohne Key offen) bleibt unverändert, und der Liveness-/Health-Endpunkt bleibt erreichbar." },
+  ]},
   { version: "0.184.35", date: "2026-06-25", changes: [
     { en: "Security hardening: the bot stats endpoint (player training progress for the motivation DM) now supports a signed timestamp with a 5-minute window, so the request signature can no longer be replayed indefinitely. Backward-compatible — the old signature without a timestamp is still accepted; pairs with bot v2.73.0.", de: "Sicherheits-Härtung: Der Bot-Stats-Endpunkt (Trainingsfortschritt für den Motivations-DM) unterstützt jetzt einen signierten Zeitstempel mit 5-Minuten-Fenster, sodass die Request-Signatur nicht mehr unbegrenzt wiederholbar ist. Rückwärtskompatibel — die alte Signatur ohne Zeitstempel wird weiterhin akzeptiert; Gegenstück zu Bot v2.73.0." },
   ]},
