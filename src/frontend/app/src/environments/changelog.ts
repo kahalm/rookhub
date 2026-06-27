@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.36';
+export const APP_VERSION = '0.184.37';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.184.37", date: "2026-06-27", changes: [
+    { en: "Chessable fix (piratechess repo): when your Chessable bearer is expired/invalid (or the request is blocked), Chessable returns an HTML page instead of JSON. Testing the token and listing courses used to surface the raw JSON parser text (\"'<' is an invalid start of a value\") — which looked like a cryptic syntax error. It now shows a clear, actionable message asking you to re-enter the bearer.", de: "Chessable-Fix (piratechess-Repo): Ist der Chessable-Bearer abgelaufen/ungültig (oder der Request wird blockiert), liefert Chessable eine HTML-Seite statt JSON. Beim Token-Test und beim Laden der Kursliste wurde bislang der rohe JSON-Parser-Text durchgereicht (\"'<' is an invalid start of a value\") — das sah aus wie ein kryptischer Syntaxfehler. Jetzt erscheint eine klare, umsetzbare Meldung mit der Bitte, den Bearer neu zu hinterlegen." },
+  ]},
   { version: "0.184.36", date: "2026-06-25", changes: [
     { en: "Crawler hardening (crawler repo): when no API key is configured, the crawler now fails closed in production (protected endpoints return 503) instead of leaving the gate open — a misconfiguration can no longer expose it. The local development fallback (open without a key) is unchanged, and the liveness/health endpoint stays reachable.", de: "Crawler-Härtung (Crawler-Repo): Ist kein API-Key konfiguriert, ist der Crawler in Produktion jetzt fail-closed (geschützte Endpunkte liefern 503) statt das Gate offen zu lassen — eine Fehlkonfiguration kann ihn nicht mehr exponieren. Der lokale Entwicklungs-Fallback (ohne Key offen) bleibt unverändert, und der Liveness-/Health-Endpunkt bleibt erreichbar." },
   ]},
