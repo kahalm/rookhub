@@ -142,6 +142,7 @@ try
     builder.Services.AddScoped<ChallengeService>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
+    builder.Services.AddScoped<RepertoireTrainingService>();
     builder.Services.AddScoped<RepertoireAnalyzeService>();
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleService>();

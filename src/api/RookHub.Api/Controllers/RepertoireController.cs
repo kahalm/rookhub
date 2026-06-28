@@ -12,11 +12,34 @@ public class RepertoireController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
     private readonly ImportReprocessService _reprocess;
+    private readonly RepertoireTrainingService _training;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, RepertoireTrainingService training)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
+        _training = training;
+    }
+
+    // ===== Repertoire-Trainer (Spaced Repetition) =====
+    // Brett-/Baumlogik liegt im Frontend; hier nur der SM-2-Kartenzustand je Stellung.
+
+    /// <summary>SM-2-Zustände aller Trainingskarten des eigenen Repertoires (Frontend ermittelt
+    /// daraus fällige/neue Karten). 404 wenn das Repertoire nicht existiert/nicht dem User gehört.</summary>
+    [HttpGet("{id}/training/cards")]
+    public async Task<ActionResult<List<RepertoireCardStateDto>>> TrainingCards(int id, CancellationToken ct)
+    {
+        var cards = await _training.GetCardsAsync(GetUserId(), id, ct);
+        return cards is null ? NotFound() : Ok(cards);
+    }
+
+    /// <summary>Bewertet eine Karte nach einem Versuch (legt sie bei Bedarf an) und plant sie neu.</summary>
+    [HttpPost("{id}/training/review")]
+    public async Task<ActionResult<RepertoireCardStateDto>> TrainingReview(int id, [FromBody] ReviewCardRequest req, CancellationToken ct)
+    {
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.CardKey)) return BadRequest();
+        var dto = await _training.ReviewAsync(GetUserId(), id, req, ct);
+        return dto is null ? NotFound() : Ok(dto);
     }
 
     [HttpGet]

@@ -1,4 +1,21 @@
 {
+  "repertoireTrainer": {
+    "train": "Treniraj",
+    "title": "Trener repertoara",
+    "white": "Bijeli",
+    "black": "Crni",
+    "noCards": "Trenutno ništa nije na redu — vrati se kasnije ili prođi repertoar da dodaš nove kartice.",
+    "done": "Sesija završena! {{correct}} od {{total}} točno.",
+    "again": "Treniraj ponovno",
+    "remaining": "Preostalo",
+    "whiteToMove": "Bijeli na potezu — odigraj svoj potez iz repertoara.",
+    "blackToMove": "Crni na potezu — odigraj svoj potez iz repertoara.",
+    "correct": "Točno!",
+    "tolerated": "Igrivo — ali potez iz repertoara je {{move}}.",
+    "wrong": "Nije u repertoaru. Potez je {{move}}.",
+    "continue": "Nastavi",
+    "playYourMove": "Odigraj svoj potez na ploči."
+  },
   "common": {
     "save": "Spremi",
     "cancel": "Odustani",

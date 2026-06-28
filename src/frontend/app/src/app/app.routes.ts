@@ -16,6 +16,7 @@ export const routes: Routes = [
   { path: 'friends/:userId/stats', loadComponent: () => import('./features/friends/friend-stats.component').then(m => m.FriendStatsComponent), canActivate: [authGuard, menuGuard('friends')] },
   { path: 'friends/:userId/revenge', loadComponent: () => import('./features/friends/friend-revenge.component').then(m => m.FriendRevengeComponent), canActivate: [authGuard, menuGuard('friends')] },
   { path: 'repertoires', loadComponent: () => import('./features/repertoire/repertoire-list.component').then(m => m.RepertoireListComponent), canActivate: [authGuard, menuGuard('repertoires')] },
+  { path: 'repertoires/:id/train', loadComponent: () => import('./features/repertoire/repertoire-trainer.component').then(m => m.RepertoireTrainerComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id', loadComponent: () => import('./features/repertoire/repertoire-detail.component').then(m => m.RepertoireDetailComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard, menuGuard('tournaments')] },
   { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard, menuGuard('tournaments')] },

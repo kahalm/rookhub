@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,7 +22,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
   selector: 'app-repertoire-detail',
   standalone: true,
   imports: [
-    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
+    CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
     TranslateModule, LoadingSpinnerComponent, ChessBoardComponent,
     RepertoireLinesComponent, RepertoireTreeComponent, RepertoireEditComponent,
   ],
@@ -38,6 +38,9 @@ type ViewMode = 'lines' | 'tree' | 'edit';
           <div class="header-info">
             <h2>{{ repertoire.name }}</h2>
             <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
+            <a mat-raised-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
+              <mat-icon>school</mat-icon> {{ 'repertoireTrainer.train' | translate }}
+            </a>
           </div>
           <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
             <mat-button-toggle value="lines" [attr.aria-label]="'repertoire.detail.modeLines' | translate" [attr.title]="'repertoire.detail.modeLines' | translate">

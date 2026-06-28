@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.185.2';
+export const APP_VERSION = '0.186.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.186.0", date: "2026-06-28", changes: [
+    { en: "New: repertoire trainer (spaced repetition). Open any repertoire and hit \"Train\" to drill your moves like on Chessable — the app builds a move tree from your PGN (mainline + variations), shows positions where it's your turn and quizzes your repertoire move, scheduling each move with an SM-2 algorithm (correct moves come back less often, missed ones sooner). Tolerated alternatives imported from Chessable (the [%alt] moves) are accepted but the trainer still asks you for the main repertoire move. Pick which colour to train (auto-detected, switchable). Repertoires re-imported after this update carry the tolerated-move data; older ones train fine without it.", de: "Neu: Repertoire-Trainer (Spaced Repetition). Öffne ein Repertoire und klick auf „Trainieren“, um deine Züge wie bei Chessable zu drillen — die App baut aus deinem PGN einen Zug-Baum (Hauptlinie + Varianten), zeigt Stellungen, in denen du am Zug bist, und fragt deinen Repertoirezug ab; jeder Zug wird per SM-2-Algorithmus geplant (richtige Züge kommen seltener wieder, verpasste früher). Aus Chessable importierte geduldete Alternativen (die [%alt]-Züge) werden akzeptiert, der Trainer verlangt aber trotzdem den Hauptzug. Trainingsfarbe wählbar (automatisch erkannt, umschaltbar). Nach diesem Update neu importierte Repertoires tragen die geduldeten Züge mit; ältere lassen sich auch ohne trainieren." },
+  ]},
   { version: "0.185.2", date: "2026-06-28", changes: [
     { en: "Groundwork for the upcoming repertoire trainer (piratechess repo): Chessable's \"tolerated moves\" (softFail — moves the trainer accepts at a position even though they aren't the main repertoire move) are now exported into the repertoire PGN as a machine-readable [%alt …] annotation on each move. Not yet visible in the app; it's the data foundation so the planned trainer can accept these alternatives.", de: "Grundlage für den kommenden Repertoire-Trainer (piratechess-Repo): Chessables „geduldete Züge\" (softFail — Züge, die der Trainer an einer Stellung akzeptiert, obwohl sie nicht der Hauptzug des Repertoires sind) werden jetzt als maschinenlesbare [%alt …]-Annotation am jeweiligen Zug ins Repertoire-PGN exportiert. Noch nicht in der App sichtbar; es ist die Datengrundlage, damit der geplante Trainer diese Alternativen akzeptieren kann." },
   ]},

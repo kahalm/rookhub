@@ -54,6 +54,7 @@ public class AppDbContext : DbContext
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
+    public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -370,6 +371,24 @@ public class AppDbContext : DbContext
             e.HasIndex(es => new { es.UserId, es.Timestamp });
             e.HasIndex(es => es.AnonymousSessionId);
             e.Property(es => es.AnonymousSessionId).HasMaxLength(36);
+        });
+
+        modelBuilder.Entity<RepertoireCardState>(e =>
+        {
+            // Karten sterben mit dem Repertoire (Cascade). User-FK bewusst Restrict, sonst zwei
+            // Cascade-Pfade zu AppUser (direkt + via Repertoire) → MySQL "multiple cascade paths".
+            e.HasOne(c => c.Repertoire)
+             .WithMany()
+             .HasForeignKey(c => c.RepertoireId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(c => new { c.UserId, c.RepertoireId, c.CardKey }).IsUnique();
+            e.HasIndex(c => new { c.UserId, c.RepertoireId, c.DueAt });
         });
 
         modelBuilder.Entity<CourseProgress>(e =>

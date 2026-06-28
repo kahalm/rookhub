@@ -1,4 +1,21 @@
 {
+  "repertoireTrainer": {
+    "train": "Trainieren",
+    "title": "Repertoire-Trainer",
+    "white": "Weiß",
+    "black": "Schwarz",
+    "noCards": "Aktuell nichts fällig — schau später wieder vorbei oder spiel das Repertoire durch, um neue Karten anzulegen.",
+    "done": "Sitzung abgeschlossen! {{correct}} von {{total}} richtig.",
+    "again": "Erneut trainieren",
+    "remaining": "Verbleibend",
+    "whiteToMove": "Weiß am Zug — spiel deinen Repertoirezug.",
+    "blackToMove": "Schwarz am Zug — spiel deinen Repertoirezug.",
+    "correct": "Richtig!",
+    "tolerated": "Spielbar — aber der Repertoirezug ist {{move}}.",
+    "wrong": "Nicht im Repertoire. Der Zug ist {{move}}.",
+    "continue": "Weiter",
+    "playYourMove": "Mach deinen Zug auf dem Brett."
+  },
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
