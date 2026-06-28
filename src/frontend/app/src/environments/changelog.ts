@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.187.3';
+export const APP_VERSION = '0.188.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.188.0", date: "2026-06-28", changes: [
+    { en: "Our Discord community is now linked prominently in the footer too (next to Help and Feedback), with the Discord logo and brand colour — in addition to the button already in the top navigation. Note: the footer only shows on desktop; on mobile the Discord link lives in the navigation menu.", de: "Unsere Discord-Community ist jetzt auch in der Fußzeile prominent verlinkt (neben Hilfe und Feedback) — mit Discord-Logo und Markenfarbe, zusätzlich zum bereits vorhandenen Knopf in der oberen Navigationsleiste. Hinweis: Die Fußzeile erscheint nur auf dem Desktop; mobil liegt der Discord-Link im Navigationsmenü." },
+  ]},
   { version: "0.187.3", date: "2026-06-28", changes: [
     { en: "Chessable import (piratechess repo): capped the connection timeout at 30s. When a VPN exit IP got soft-blocked, a request could previously hang for ~5 minutes (curl's default proxy-connect timeout), freezing the import. Now it aborts after 30s and the normal retry kicks in quickly. Large downloads are unaffected (only the connect phase is capped).", de: "Chessable-Import (piratechess-Repo): Das Verbindungs-Timeout auf 30 s begrenzt. Wenn eine VPN-Ausgangs-IP soft-geblockt wurde, konnte ein Request vorher ~5 Minuten hängen (curls Default-Proxy-Connect-Timeout) und den Import einfrieren. Jetzt bricht er nach 30 s ab und der normale Retry greift sofort. Große Downloads sind nicht betroffen (nur die Verbindungsphase ist gedeckelt)." },
   ]},

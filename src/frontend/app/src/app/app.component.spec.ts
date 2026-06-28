@@ -16,6 +16,7 @@ import { SnackbarService } from './core/snackbar.service';
 import { StockfishService } from './features/puzzles/stockfish.service';
 import { AnalysisEngineService } from './features/analysis/analysis-engine.service';
 import { ThemeService } from './core/theme.service';
+import { DISCORD_INVITE_URL } from './core/community';
 
 // Sichert das v0.181.1-Refactoring ab: die langlebigen Root-Subscriptions
 // (router.events, swUpdate.versionUpdates/unrecoverable) hängen jetzt an
@@ -68,5 +69,10 @@ describe('AppComponent lifecycle', () => {
     expect(routerEvents.observed).toBe(false);
     expect(versionUpdates.observed).toBe(false);
     expect(unrecoverable.observed).toBe(false);
+  });
+
+  it('exposes the Discord community invite for the footer link', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    expect(fixture.componentInstance.discordUrl).toBe(DISCORD_INVITE_URL);
   });
 });

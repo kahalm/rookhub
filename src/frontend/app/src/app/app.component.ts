@@ -4,8 +4,11 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 import { filter } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
+import { DISCORD_INVITE_URL } from './core/community';
 import { LocaleService } from './core/locale.service';
 import { AuthService } from './core/auth.service';
 import { MenuService } from './core/menu.service';
@@ -24,7 +27,7 @@ import { APK_VERSION } from '../environments/changelog';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule, A11yModule],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule, A11yModule, MatIconModule],
   template: `
     @if (showApkUpdate) {
       <div class="apk-banner">
@@ -53,6 +56,11 @@ import { APK_VERSION } from '../environments/changelog';
       <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
       <span class="footer-sep">·</span>
       <a class="feedback-link" href="https://github.com/kahalm/rookhub/issues" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
+      <span class="footer-sep">·</span>
+      <a class="discord-link" [href]="discordUrl" target="_blank" rel="noopener noreferrer"
+         [attr.aria-label]="'nav.discord' | translate">
+        <mat-icon svgIcon="discord" aria-hidden="true"></mat-icon><span>{{ 'nav.discord' | translate }}</span>
+      </a>
     </footer>
     @if (showChangelog) {
       <div class="changelog-overlay" (click)="showChangelog = false">
@@ -133,6 +141,15 @@ import { APK_VERSION } from '../environments/changelog';
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
+    .discord-link {
+      display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
+      color: #5865F2; font-weight: 600; text-decoration: none;
+    }
+    .discord-link:hover { color: #4752c4; text-decoration: underline; }
+    .discord-link mat-icon {
+      font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
+    }
+    .discord-link mat-icon svg { display: block; width: 100%; height: 100%; }
     .feedback-link { color: inherit; text-decoration: none; }
     .feedback-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .dev-badge { color: #ff9800; font-weight: bold; margin-left: 4px; }
@@ -163,6 +180,8 @@ export class AppComponent implements OnInit {
   version = environment.version;
   production = environment.production;
   changelog = environment.changelog;
+  /** Einladungslink zum öffentlichen RookHub-Discord (Community) — prominent in der Fußzeile. */
+  readonly discordUrl = DISCORD_INVITE_URL;
   showChangelog = false;
   showQuickstart = false;
   showApkUpdate = false;
@@ -198,9 +217,18 @@ export class AppComponent implements OnInit {
     analysisEngine: AnalysisEngineService,
     _theme: ThemeService,
     // App-weit instanziieren, damit beforeinstallprompt zuverlässig gefangen wird.
-    readonly pwa: PwaInstallService
+    readonly pwa: PwaInstallService,
+    iconRegistry: MatIconRegistry,
+    sanitizer: DomSanitizer
   ) {
     locale.init();
+    // Discord-Markenlogo als SVG-Icon registrieren (auch hier, damit der Footer-Link unabhängig
+    // von der Init-Reihenfolge der Navbar das Icon hat).
+    iconRegistry.addSvgIconLiteral('discord', sanitizer.bypassSecurityTrustHtml(
+      '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.036A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.291.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>' +
+      '</svg>'
+    ));
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).
     stockfish.reportEngineEvent = (kind, detail) => clientLog.report('engine_stockfish_' + kind, detail);
     analysisEngine.reportEngineEvent = (kind, detail) => clientLog.report('engine_analysis_' + kind, detail);
