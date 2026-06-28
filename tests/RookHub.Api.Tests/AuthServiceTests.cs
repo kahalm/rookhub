@@ -11,6 +11,7 @@ public class AuthServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly AuthService _authService;
+    private readonly IConfiguration _config;
     private readonly CapturingLogger<AuthService> _logger = new();
 
     public AuthServiceTests()
@@ -20,7 +21,7 @@ public class AuthServiceTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
 
-        var config = new ConfigurationBuilder()
+        _config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Jwt:Key"] = "TestSecretKeyThatIsAtLeast32Characters!",
@@ -29,7 +30,7 @@ public class AuthServiceTests : IDisposable
             })
             .Build();
 
-        _authService = new AuthService(_db, config, _logger);
+        _authService = new AuthService(_db, _config, _logger);
     }
 
     public void Dispose() => _db.Dispose();
@@ -45,6 +46,37 @@ public class AuthServiceTests : IDisposable
         Assert.NotEmpty(result.Token);
         Assert.True(result.UserId > 0);
         Assert.Single(_db.AppUsers);
+    }
+
+    [Fact]
+    public async Task Register_NotifiesAllAdmins_WithUsername()
+    {
+        // Zwei Admins + ein Nicht-Admin -> nur die Admins sollen benachrichtigt werden.
+        _db.AppUsers.AddRange(
+            new RookHub.Api.Models.AppUser { Username = "admin1", PasswordHash = "x", IsAdmin = true },
+            new RookHub.Api.Models.AppUser { Username = "admin2", PasswordHash = "x", IsAdmin = true },
+            new RookHub.Api.Models.AppUser { Username = "plebs", PasswordHash = "x", IsAdmin = false });
+        await _db.SaveChangesAsync();
+        var adminIds = _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToList();
+
+        var sut = new AuthService(_db, _config, _logger, new NotificationService(_db));
+        await sut.RegisterAsync(new RegisterDto { Username = "newbie", Password = "password123" });
+
+        var notifs = _db.Notifications
+            .Where(n => n.Type == RookHub.Api.Models.NotificationType.NewUserRegistered).ToList();
+        Assert.Equal(2, notifs.Count);
+        Assert.All(notifs, n => Assert.Contains(n.UserId, adminIds));
+        Assert.All(notifs, n => Assert.Equal("/admin", n.Link));
+        Assert.All(notifs, n => Assert.Contains("newbie", n.DataJson));
+    }
+
+    [Fact]
+    public async Task Register_WithoutNotificationService_StillSucceeds()
+    {
+        // Best-effort: ohne NotificationService (optionaler Ctor-Param) bleibt Registrierung intakt.
+        var result = await _authService.RegisterAsync(
+            new RegisterDto { Username = "solo", Password = "password123" });
+        Assert.True(result.UserId > 0);
     }
 
     [Fact]

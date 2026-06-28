@@ -32,7 +32,8 @@
       "challenge_resolved_failed": "{{username}} did not solve your challenge",
       "admin_message_received": "The admin team sent you a message",
       "user_message_received": "{{username}} sent the admin team a message",
-      "tournament_new_round": "New round in {{tournamentName}} (round {{round}})"
+      "tournament_new_round": "New round in {{tournamentName}} (round {{round}})",
+      "new_user_registered": "New user {{username}} registered"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",

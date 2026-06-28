@@ -15,6 +15,7 @@ public class AuthService
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthService> _logger;
+    private readonly NotificationService? _notifications;
 
     // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
     // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
@@ -22,11 +23,13 @@ public class AuthService
     private static readonly string DummyHash =
         BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy", BcryptWorkFactor);
 
-    public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
+    public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger,
+        NotificationService? notifications = null)
     {
         _db = db;
         _config = config;
         _logger = logger;
+        _notifications = notifications;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
@@ -65,6 +68,23 @@ public class AuthService
             // Race/Kollision am Unique-Index (gleichzeitige Registrierung oder
             // Casing-Kollision) -> sauberer Conflict (409) statt unbehandeltem 500.
             throw new InvalidOperationException("Username or email already exists.");
+        }
+
+        // Admins über die Neu-Registrierung informieren (best-effort: ein Fehler beim
+        // Benachrichtigen darf die erfolgreiche Registrierung nicht kippen).
+        if (_notifications != null)
+        {
+            try
+            {
+                var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+                if (adminIds.Count > 0)
+                    await _notifications.CreateManyAsync(adminIds, NotificationType.NewUserRegistered,
+                        new Dictionary<string, string> { ["username"] = user.Username }, "/admin");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Admin-Benachrichtigung über Neu-Registrierung fehlgeschlagen (userId={UserId})", user.Id);
+            }
         }
 
         return new AuthResponseDto

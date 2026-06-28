@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.184.39';
+export const APP_VERSION = '0.185.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.185.0", date: "2026-06-28", changes: [
+    { en: "Admins now get an in-app notification (bell) whenever a new user registers, linking straight to the admin area.", de: "Admins erhalten jetzt eine In-App-Benachrichtigung (Glocke), sobald sich ein neuer Benutzer registriert — mit Direktlink zum Admin-Bereich." },
+  ]},
   { version: "0.184.39", date: "2026-06-28", changes: [
     { en: "Offline fix: courses can now be started offline. Previously, opening a course while offline got stuck on the loading spinner because the very first puzzle was always fetched from the server. A course that you saved offline (☁ button in the course list) now serves its puzzles straight from the local cache — sequentially or randomly — and your attempts are queued and synced once you're back online. Non-admin users (e.g. students) are no longer locked out of the courses page when offline.", de: "Offline-Fix: Kurse lassen sich jetzt offline starten. Bisher hing der Kurs-Start offline im Ladespinner fest, weil das allererste Puzzle immer vom Server geholt wurde. Ein offline gespeicherter Kurs (☁-Knopf in der Kursliste) liefert seine Puzzles jetzt direkt aus dem lokalen Cache — sequenziell oder zufällig — und deine Versuche werden vorgemerkt und synchronisiert, sobald du wieder online bist. Nicht-Admin-Nutzer (z. B. Schüler) werden offline nicht mehr von der Kursseite ausgesperrt." },
   ]},

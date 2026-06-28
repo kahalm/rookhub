@@ -32,7 +32,8 @@
       "challenge_resolved_failed": "{{username}} nije riješio tvoj izazov",
       "admin_message_received": "Administratorski tim ti je poslao poruku",
       "user_message_received": "{{username}} je poslao poruku administratorskom timu",
-      "tournament_new_round": "Novo kolo u {{tournamentName}} (kolo {{round}})"
+      "tournament_new_round": "Novo kolo u {{tournamentName}} (kolo {{round}})",
+      "new_user_registered": "Novi korisnik {{username}} se registrirao"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",

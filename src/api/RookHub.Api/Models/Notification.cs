@@ -46,4 +46,7 @@ public static class NotificationType
     /// <summary>Neue Runde/Paarungen in einem abonnierten Turnier (→ Glocke der Abonnenten,
     /// Link auf die Turnier-Detailseite). Daten: tournamentName, round.</summary>
     public const string TournamentNewRound = "tournament_new_round";
+    /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller Admins, Link „/admin").
+    /// Daten: username.</summary>
+    public const string NewUserRegistered = "new_user_registered";
 }
