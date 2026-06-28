@@ -37,12 +37,25 @@ interface ReprocessResult { reprocessed: number; updatedLines: number; enqueued:
             <span class="rb-note">{{ ('reprocess.needsReimport.' + section) | translate: { count: status.needsReimport } }}</span>
           }
         </span>
-        @if (actionableCount > 0) {
-          <button mat-stroked-button (click)="run()" [disabled]="working">
-            @if (working) {
+        @if (allCount > 0) {
+          <!-- „Alle": lokal aufbereiten + Chessable-Re-Fetch übers Netz. -->
+          <button mat-stroked-button (click)="run(false)" [disabled]="!!working"
+                  [matTooltip]="'reprocess.updateAllTip' | translate">
+            @if (working === 'all') {
               <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
             } @else {
-              <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate }}
+              <mat-icon>refresh</mat-icon> {{ 'reprocess.updateAll' | translate: { count: allCount } }}
+            }
+          </button>
+        }
+        @if (cachedCount > 0 && cachedCount < allCount) {
+          <!-- „Aus Cache": nur Einträge mit serverseitig gespeicherter Quelle, KEIN Download. -->
+          <button mat-stroked-button (click)="run(true)" [disabled]="!!working"
+                  [matTooltip]="'reprocess.updateCachedTip' | translate">
+            @if (working === 'cached') {
+              <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
+            } @else {
+              <mat-icon>offline_pin</mat-icon> {{ 'reprocess.updateCached' | translate: { count: cachedCount } }}
             }
           </button>
         }
@@ -77,14 +90,21 @@ export class ReprocessBannerComponent implements OnInit {
   @Output() done = new EventEmitter<void>();
 
   status: ReprocessStatus | null = null;
-  working = false;
+  /** Welcher Knopf gerade läuft ('all'|'cached') bzw. null = nichts läuft (beide Knöpfe sperren). */
+  working: 'all' | 'cached' | null = null;
   /** Zuletzt bestätigter Re-Import-Hinweis (Anzahl bei der Bestätigung) — aus localStorage. */
   private reimportDismissedAt = 0;
 
-  /** Datensätze, die der Knopf tatsächlich aktualisieren kann (lokal aus SourcePgn oder per Chessable-Re-Fetch). */
-  get actionableCount(): number {
+  /** „Alle": lokal aufbereitbare + per Chessable-Re-Fetch holbare Datensätze. */
+  get allCount(): number {
     return this.status ? this.status.reprocessableLocally + this.status.refetchable : 0;
   }
+  /** „Aus Cache": nur die aus serverseitig gespeicherter Quelle aufbereitbaren (kein Netz-Re-Fetch). */
+  get cachedCount(): number {
+    return this.status ? this.status.reprocessableLocally : 0;
+  }
+  /** Irgendetwas aktualisierbar? (steuert das Banner zusammen mit dem Re-Import-Hinweis). */
+  get actionableCount(): number { return this.allCount; }
 
   /** Re-Import-Hinweis nur zeigen, solange es mehr manuelle Kurse sind als zuletzt bestätigt
    *  (einmal weggeklickt bleibt er weg, bis NEUE hinzukommen). */
@@ -116,12 +136,14 @@ export class ReprocessBannerComponent implements OnInit {
     });
   }
 
-  run(): void {
+  /** @param localOnly true = „Aus Cache" (nur lokale Quelle, kein Chessable-Re-Fetch), false = „Alle". */
+  run(localOnly: boolean): void {
     if (this.working) return;
-    this.working = true;
-    this.http.post<ReprocessResult>(`/api/${this.section}/reprocess`, {}).subscribe({
+    this.working = localOnly ? 'cached' : 'all';
+    const params = localOnly ? '?localOnly=true' : '';
+    this.http.post<ReprocessResult>(`/api/${this.section}/reprocess${params}`, {}).subscribe({
       next: res => {
-        this.working = false;
+        this.working = null;
         const parts: string[] = [];
         if (res.reprocessed > 0) parts.push(this.translate.instant('reprocess.doneLocal', { count: res.reprocessed }));
         if (res.enqueued > 0) parts.push(this.translate.instant('reprocess.doneQueued', { count: res.enqueued }));
@@ -129,7 +151,7 @@ export class ReprocessBannerComponent implements OnInit {
         this.refresh();
         this.done.emit();
       },
-      error: () => { this.working = false; this.snackbar.info(this.translate.instant('reprocess.failed')); },
+      error: () => { this.working = null; this.snackbar.info(this.translate.instant('reprocess.failed')); },
     });
   }
 }

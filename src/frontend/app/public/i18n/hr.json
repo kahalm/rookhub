@@ -1769,6 +1769,10 @@
       "repertoires": "{{count}} repertoar(a) treba ručni ponovni uvoz za ažuriranje."
     },
     "update": "Ažuriraj",
+    "updateAll": "Ažuriraj sve ({{count}})",
+    "updateAllTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (potreban internet).",
+    "updateCached": "Iz predmemorije ({{count}})",
+    "updateCachedTip": "Obradi samo stavke sa spremljenim izvorom — bez preuzimanja.",
     "working": "Ažuriranje…",
     "doneLocal": "{{count}} ažurirano.",
     "doneQueued": "{{count}} se osvježava u pozadini.",

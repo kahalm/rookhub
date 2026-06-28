@@ -34,14 +34,18 @@ describe('ReprocessBannerComponent', () => {
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('actionableCount = reprocessableLocally + refetchable (manuelle Re-Imports zählen NICHT mit)', () => {
+  it('allCount = reprocessableLocally + refetchable, cachedCount = reprocessableLocally (manuelle Re-Imports zählen NICHT mit)', () => {
     const c = createComponent();
     c.status = { currentVersion: 2, total: 50, stale: 48, reprocessableLocally: 5, refetchable: 31, needsReimport: 12 };
+    expect(c.allCount).toBe(36);
+    expect(c.cachedCount).toBe(5);
     expect(c.actionableCount).toBe(36);
   });
 
-  it('actionableCount = 0 ohne Status', () => {
-    expect(createComponent().actionableCount).toBe(0);
+  it('Zählungen = 0 ohne Status', () => {
+    const c = createComponent();
+    expect(c.allCount).toBe(0);
+    expect(c.cachedCount).toBe(0);
   });
 
   it('Re-Import-Hinweis: wegklickbar + bleibt verborgen, bis die Zahl steigt', () => {
@@ -63,18 +67,41 @@ describe('ReprocessBannerComponent', () => {
     localStorage.removeItem('rookhub_reprocess_reimport_dismissed_courses');
   });
 
-  it('run() bereitet nur auf, wenn aktualisierbare Datensätze existieren', () => {
+  it('„Alle" (run(false)) postet ohne localOnly und lädt danach den Status neu', () => {
     const c = createComponent();
     const http = TestBed.inject(HttpTestingController);
-    // Initialer Status-Load aus ngOnInit-losem Aufruf vermeiden: run() direkt.
-    c.run();
+    c.run(false);
     const req = http.expectOne('/api/courses/reprocess');
     expect(req.request.method).toBe('POST');
-    req.flush({ reprocessed: 0, updatedLines: 0, enqueued: 36, skipped: 12 });
+    req.flush({ reprocessed: 5, updatedLines: 0, enqueued: 31, skipped: 12 });
     // Nach Reprocess wird der Status neu geladen.
     http.expectOne('/api/courses/reprocess/status').flush(
       { currentVersion: 2, total: 50, stale: 12, reprocessableLocally: 0, refetchable: 0, needsReimport: 12 });
-    expect(c.actionableCount).toBe(0);   // nur noch manuell zu re-importierende → Knopf verschwindet
+    expect(c.allCount).toBe(0);   // nur noch manuell zu re-importierende → Knöpfe verschwinden
     expect(c.status!.needsReimport).toBe(12);
+  });
+
+  it('„Aus Cache" (run(true)) postet mit localOnly=true', () => {
+    const c = createComponent();
+    const http = TestBed.inject(HttpTestingController);
+    c.run(true);
+    const req = http.expectOne('/api/courses/reprocess?localOnly=true');
+    expect(req.request.method).toBe('POST');
+    req.flush({ reprocessed: 5, updatedLines: 12, enqueued: 0, skipped: 0 });
+    // Status neu geladen: nur noch die Chessable-Re-Fetch-baren übrig.
+    http.expectOne('/api/courses/reprocess/status').flush(
+      { currentVersion: 2, total: 50, stale: 31, reprocessableLocally: 0, refetchable: 31, needsReimport: 0 });
+    expect(c.cachedCount).toBe(0);
+    expect(c.allCount).toBe(31);
+  });
+
+  it('blockt den zweiten Klick, solange ein Lauf aktiv ist', () => {
+    const c = createComponent();
+    const http = TestBed.inject(HttpTestingController);
+    c.run(false);
+    http.expectOne('/api/courses/reprocess');   // erster Lauf offen
+    c.run(true);                                  // zweiter Klick wird ignoriert (working != null)
+    // Kein zweiter Request: verify() in afterEach würde sonst fehlschlagen.
+    expect(c.working).toBe('all');
   });
 });

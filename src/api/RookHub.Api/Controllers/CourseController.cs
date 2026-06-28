@@ -35,11 +35,12 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
         => Ok(await _reprocess.GetCourseStatusAsync(GetUserId(), IsAdmin, ct));
 
-    /// <summary>Bereitet alle veralteten, verwaltbaren Kurse neu auf (lokal aus gespeichertem PGN;
-    /// Chessable-Altbestand ohne Quelle wird als Re-Fetch-Hintergrund-Job eingereiht).</summary>
+    /// <summary>Bereitet veraltete, verwaltbare Kurse neu auf. <paramref name="localOnly"/>=true
+    /// („Aus Cache") nur lokal aus gespeichertem PGN; false („Alle") reiht zusätzlich Chessable-Altbestand
+    /// ohne Quelle als Re-Fetch-Hintergrund-Job ein.</summary>
     [HttpPost("reprocess")]
-    public async Task<ActionResult<ReprocessResultDto>> Reprocess(CancellationToken ct)
-        => Ok(await _reprocess.ReprocessCoursesAsync(GetUserId(), IsAdmin, ct));
+    public async Task<ActionResult<ReprocessResultDto>> Reprocess([FromQuery] bool localOnly, CancellationToken ct)
+        => Ok(await _reprocess.ReprocessCoursesAsync(GetUserId(), IsAdmin, localOnly, ct));
 
     /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
     [HttpGet("{bookId}/puzzles")]

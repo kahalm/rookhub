@@ -1771,6 +1771,10 @@
       "repertoires": "{{count}} repertoire(s) need a manual re-import to be updated."
     },
     "update": "Update",
+    "updateAll": "Update all ({{count}})",
+    "updateAllTip": "Reprocess items with a stored source and re-download Chessable items (needs internet).",
+    "updateCached": "From cache ({{count}})",
+    "updateCachedTip": "Only reprocess items with a stored source — no download.",
     "working": "Updating…",
     "doneLocal": "{{count}} updated.",
     "doneQueued": "{{count}} being refreshed in the background.",

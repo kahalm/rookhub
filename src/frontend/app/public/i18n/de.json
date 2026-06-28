@@ -1771,6 +1771,10 @@
       "repertoires": "{{count}} Repertoire(s) brauchen einen manuellen Re-Import zur Aktualisierung."
     },
     "update": "Aktualisieren",
+    "updateAll": "Alle aktualisieren ({{count}})",
+    "updateAllTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu herunterladen (braucht Internet).",
+    "updateCached": "Aus Cache ({{count}})",
+    "updateCachedTip": "Nur Einträge mit gespeicherter Quelle aufbereiten — kein Download.",
     "working": "Wird aktualisiert…",
     "doneLocal": "{{count}} aktualisiert.",
     "doneQueued": "{{count}} werden im Hintergrund neu geladen.",

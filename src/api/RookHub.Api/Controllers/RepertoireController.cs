@@ -54,10 +54,12 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
         => Ok(await _reprocess.GetRepertoireStatusAsync(GetUserId(), ct));
 
-    /// <summary>Bereitet alle veralteten eigenen Repertoires auf die aktuelle Pipeline-Version auf.</summary>
+    /// <summary>Bereitet veraltete eigene Repertoires auf. <paramref name="localOnly"/>=true („Aus Cache")
+    /// nur lokal aufbereitbare (Nicht-Chessable, Versions-Mark); false („Alle") holt zusätzlich
+    /// Chessable-Repertoires frisch.</summary>
     [HttpPost("reprocess")]
-    public async Task<ActionResult<ReprocessResultDto>> Reprocess(CancellationToken ct)
-        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), ct));
+    public async Task<ActionResult<ReprocessResultDto>> Reprocess([FromQuery] bool localOnly, CancellationToken ct)
+        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), localOnly, ct));
 
     [HttpPost]
     public async Task<ActionResult<RepertoireDto>> Create([FromBody] CreateRepertoireDto dto)

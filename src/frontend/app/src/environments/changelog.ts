@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.190.1';
+export const APP_VERSION = '0.191.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.191.0", date: "2026-06-28", changes: [
+    { en: "The \"update\" banner on the Courses and Repertoires pages now offers two buttons: \"Update all (N)\" reprocesses everything — including re-downloading Chessable items over the network — while \"From cache (M)\" only reprocesses items whose source is already stored on the server, with no download (faster, works even when Chessable is blocked). The cache button only appears when there's a difference between the two.", de: "Der „Aktualisieren\"-Hinweis auf den Seiten Kurse und Repertoires bietet jetzt zwei Knöpfe: „Alle aktualisieren (N)\" bereitet alles auf — inklusive Neu-Herunterladen der Chessable-Einträge übers Netz — während „Aus Cache (M)\" nur die Einträge aufbereitet, deren Quelle bereits auf dem Server liegt, ganz ohne Download (schneller, funktioniert auch wenn Chessable gerade blockiert). Der Cache-Knopf erscheint nur, wenn sich die beiden unterscheiden." },
+  ]},
   { version: "0.190.1", date: "2026-06-28", changes: [
     { en: "Updated the Discord community invite link to the correct server (discord.gg/wczc4BJtMf) everywhere it appears — navigation, footer, mobile menu and Help page.", de: "Den Discord-Einladungslink auf den richtigen Server aktualisiert (discord.gg/wczc4BJtMf) — überall, wo er vorkommt: Navigation, Fußzeile, Mobil-Menü und Hilfeseite." },
   ]},

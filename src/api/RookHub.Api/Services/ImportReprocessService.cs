@@ -75,7 +75,10 @@ public partial class ImportReprocessService
         };
     }
 
-    public async Task<ReprocessResultDto> ReprocessCoursesAsync(int userId, bool isAdmin, CancellationToken ct = default)
+    /// <param name="localOnly">true = nur aus dem serverseitig gespeicherten Quell-PGN aufbereiten
+    /// („Aus Cache"), KEIN Chessable-Re-Fetch übers Netz. false = zusätzlich Chessable-Altbestand
+    /// ohne Quelle als Re-Fetch-Job einreihen („Alle").</param>
+    public async Task<ReprocessResultDto> ReprocessCoursesAsync(int userId, bool isAdmin, bool localOnly = false, CancellationToken ct = default)
     {
         var stale = await ManageableBooks(userId, isAdmin)
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
@@ -94,6 +97,7 @@ public partial class ImportReprocessService
             }
             else if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
             {
+                if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
                 var ownerId = book.OwnerUserId ?? userId;
                 var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName, ct: ct);
                 if (importId != null) result.Enqueued++;
@@ -106,8 +110,8 @@ public partial class ImportReprocessService
         }
 
         _logger.LogInformation(
-            "Course-Reprocess für User {UserId} (admin={IsAdmin}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen",
-            userId, isAdmin, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped);
+            "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen",
+            userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped);
         return result;
     }
 
@@ -134,7 +138,10 @@ public partial class ImportReprocessService
         };
     }
 
-    public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, CancellationToken ct = default)
+    /// <param name="localOnly">true = nur lokal aufbereitbare Repertoires („Aus Cache": Nicht-Chessable
+    /// → reiner Versions-Mark), KEIN Chessable-Re-Fetch übers Netz. false = zusätzlich Chessable-Repertoires
+    /// frisch holen („Alle").</param>
+    public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool localOnly = false, CancellationToken ct = default)
     {
         var stale = await _db.Repertoires
             .Where(r => r.UserId == userId && r.ImportVersion < ImportPipeline.CurrentVersion)
@@ -147,6 +154,7 @@ public partial class ImportReprocessService
             var bid = ResolveRepertoireBid(r);
             if (bid != null)
             {
+                if (localOnly) continue; // „Aus Cache": Chessable-Re-Fetch übers Netz bewusst auslassen
                 // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende
                 // Repertoire schreiben (Id bleibt → Trainings-Fortschritt bleibt). ImportVersion wird
                 // erst beim Abschluss des Hintergrund-Jobs hochgesetzt (Datei-Upload).

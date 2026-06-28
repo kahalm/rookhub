@@ -104,6 +104,48 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReprocessCourses_LocalOnly_ReprocessesCachedSource_SkipsChessableRefetch()
+    {
+        // Lokal aufbereitbares Buch (mit Quelle) + Chessable-Altbestand ohne Quelle (bräuchte Re-Fetch).
+        var local = await SeedBookAsync("chessable-u7-loc.pgn", 0, SamplePgn, "chessable");
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = "chessable-u7-loc.pgn:1", BookFileName = local.FileName, BookId = local.Id, Round = "1",
+            Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+            Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1,
+        });
+        await SeedBookAsync("chessable-u7-abc123.pgn", 0, null, "chessable");
+        await _db.SaveChangesAsync();
+
+        var stub = new StubCourseReimporter { ReturnId = 42 };
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessCoursesAsync(UserId, isAdmin: false, localOnly: true);
+
+        Assert.Equal(1, result.Reprocessed);            // lokales Buch aufbereitet
+        Assert.Equal(0, result.Enqueued);               // KEIN Chessable-Re-Fetch
+        Assert.Empty(stub.Calls);
+        // Das Chessable-Altbuch bleibt veraltet (per „Alle" später nachholbar).
+        Assert.Equal(0, (await _db.Books.SingleAsync(b => b.FileName == "chessable-u7-abc123.pgn")).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_LocalOnly_MarksNonChessable_SkipsChessableRefetch()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(user.Id, 0, "my-own.pgn");            // lokal: Versions-Mark
+        var ch = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn"); // Chessable: Re-Fetch
+        var stub = new StubCourseReimporter { ReturnId = 555 };
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id, localOnly: true);
+
+        Assert.Equal(1, result.Reprocessed);            // nur das manuelle Repertoire
+        Assert.Equal(0, result.Enqueued);               // KEIN Chessable-Re-Fetch
+        Assert.Empty(stub.Calls);
+        Assert.Equal(0, (await _db.Repertoires.SingleAsync(r => r.Id == ch.Id)).ImportVersion); // Chessable bleibt veraltet
+    }
+
+    [Fact]
     public async Task ReprocessCourses_ChessableNoBearer_CountsSkipped()
     {
         await SeedBookAsync("chessable-u7-x.pgn", 0, null, "chessable");
