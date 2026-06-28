@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -19,6 +20,10 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+// Vom globalen 100-Req/min-pro-IP-Limit ausnehmen: Das Chessable-UI pollt laufende Importe und
+// reiht Kurse oft im Schwung ein — beides erschöpfte sonst das Minutenfenster (429 beim ~16. Add).
+// Endpoints sind ohnehin per [Authorize] geschützt.
+[DisableRateLimiting]
 public class ChessableController : BaseApiController
 {
     private readonly AppDbContext _db;

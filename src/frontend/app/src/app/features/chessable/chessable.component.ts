@@ -507,7 +507,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
   /** Admin: alle Importe laden + alle 5 s aktualisieren (zeigt aktive Queue + Verlauf live). */
   private startAdminPolling(): void {
     this.loadAdminImports();
-    this.adminPollSub = timer(5000, 5000).subscribe(() => this.loadAdminImports());
+    this.adminPollSub = timer(5000, 12000).subscribe(() => this.loadAdminImports());
   }
 
   private loadAdminImports(): void {
@@ -693,7 +693,9 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   private ensurePolling(): void {
     if (this.pollSub) return;
-    this.pollSub = timer(2000, 2500).subscribe(() => this.pollActive());
+    // Gedrosselt (2,5 s → 8 s): Import-Fortschritt braucht keine Sekunden-Auflösung; schont
+    // das Request-Budget (früher trug das Polling vieler aktiver Importe zum 429 bei).
+    this.pollSub = timer(3000, 8000).subscribe(() => this.pollActive());
   }
 
   private stopPolling(): void {

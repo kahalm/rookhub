@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.186.0';
+export const APP_VERSION = '0.186.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.186.1", date: "2026-06-28", changes: [
+    { en: "Chessable import: fixed sporadic errors when queueing many courses at once (the ~16th add failed with a rate-limit error). The Chessable endpoints are now exempt from the global per-IP request limit, and the import-status polling was slowed down (2.5s → 8s, admin view 5s → 12s) so background polling no longer eats into the request budget. Adds that previously errored were actually still queued — now they no longer error.", de: "Chessable-Import: sporadische Fehler beim Einreihen vieler Kurse auf einmal behoben (der ~16. Add scheiterte mit einem Rate-Limit-Fehler). Die Chessable-Endpoints sind jetzt vom globalen Pro-IP-Request-Limit ausgenommen, und das Import-Status-Polling wurde verlangsamt (2,5 s → 8 s, Admin-Ansicht 5 s → 12 s), damit das Hintergrund-Polling das Request-Budget nicht mehr aufbraucht. Adds, die vorher einen Fehler zeigten, waren in Wahrheit trotzdem eingereiht — jetzt erscheinen sie ohne Fehler." },
+  ]},
   { version: "0.186.0", date: "2026-06-28", changes: [
     { en: "New: repertoire trainer (spaced repetition). Open any repertoire and hit \"Train\" to drill your moves like on Chessable — the app builds a move tree from your PGN (mainline + variations), shows positions where it's your turn and quizzes your repertoire move, scheduling each move with an SM-2 algorithm (correct moves come back less often, missed ones sooner). Tolerated alternatives imported from Chessable (the [%alt] moves) are accepted but the trainer still asks you for the main repertoire move. Pick which colour to train (auto-detected, switchable). Repertoires re-imported after this update carry the tolerated-move data; older ones train fine without it.", de: "Neu: Repertoire-Trainer (Spaced Repetition). Öffne ein Repertoire und klick auf „Trainieren“, um deine Züge wie bei Chessable zu drillen — die App baut aus deinem PGN einen Zug-Baum (Hauptlinie + Varianten), zeigt Stellungen, in denen du am Zug bist, und fragt deinen Repertoirezug ab; jeder Zug wird per SM-2-Algorithmus geplant (richtige Züge kommen seltener wieder, verpasste früher). Aus Chessable importierte geduldete Alternativen (die [%alt]-Züge) werden akzeptiert, der Trainer verlangt aber trotzdem den Hauptzug. Trainingsfarbe wählbar (automatisch erkannt, umschaltbar). Nach diesem Update neu importierte Repertoires tragen die geduldeten Züge mit; ältere lassen sich auch ohne trainieren." },
   ]},
