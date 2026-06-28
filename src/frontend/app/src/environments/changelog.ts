@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.187.0';
+export const APP_VERSION = '0.187.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.187.1", date: "2026-06-28", changes: [
+    { en: "Chessable import speed is now tunable (piratechess repo): the delay between requests, how many lines of a chapter are fetched in parallel, and after how many requests the VPN IP rotates are all configurable via environment variables. Defaults keep the previous (serial) behaviour, so nothing changes unless configured. The VPN rotation was made drain-aware — it waits for in-flight requests to finish before switching IP — so parallel fetching no longer causes the brief TLS errors that a mid-flight rotation produced.", de: "Die Chessable-Import-Geschwindigkeit ist jetzt einstellbar (piratechess-Repo): die Pause zwischen Requests, wie viele Linien eines Kapitels parallel geholt werden und nach wie vielen Requests die VPN-IP rotiert, sind alle per Umgebungsvariablen konfigurierbar. Die Defaults behalten das bisherige (serielle) Verhalten — ohne Konfiguration ändert sich also nichts. Die VPN-Rotation ist jetzt drain-aware (wartet, bis laufende Requests fertig sind, bevor die IP wechselt), sodass paralleles Abrufen nicht mehr die kurzen TLS-Fehler auslöst, die ein IP-Wechsel mitten im Request verursachte." },
+  ]},
   { version: "0.187.0", date: "2026-06-28", changes: [
     { en: "New: a Discord button in the top navigation (and in the mobile menu) opens our community server — join at https://discord.gg/nKQCdC7Xff. The invite is also linked in the Help page's Discord section.", de: "Neu: Ein Discord-Knopf in der oberen Navigationsleiste (und im Mobil-Menü) öffnet unseren Community-Server — tritt bei unter https://discord.gg/nKQCdC7Xff. Der Einladungslink ist außerdem im Discord-Abschnitt der Hilfeseite verlinkt." },
   ]},
