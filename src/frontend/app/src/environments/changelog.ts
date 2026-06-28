@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.185.1';
+export const APP_VERSION = '0.185.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.185.2", date: "2026-06-28", changes: [
+    { en: "Groundwork for the upcoming repertoire trainer (piratechess repo): Chessable's \"tolerated moves\" (softFail — moves the trainer accepts at a position even though they aren't the main repertoire move) are now exported into the repertoire PGN as a machine-readable [%alt …] annotation on each move. Not yet visible in the app; it's the data foundation so the planned trainer can accept these alternatives.", de: "Grundlage für den kommenden Repertoire-Trainer (piratechess-Repo): Chessables „geduldete Züge\" (softFail — Züge, die der Trainer an einer Stellung akzeptiert, obwohl sie nicht der Hauptzug des Repertoires sind) werden jetzt als maschinenlesbare [%alt …]-Annotation am jeweiligen Zug ins Repertoire-PGN exportiert. Noch nicht in der App sichtbar; es ist die Datengrundlage, damit der geplante Trainer diese Alternativen akzeptieren kann." },
+  ]},
   { version: "0.185.1", date: "2026-06-28", changes: [
     { en: "Chessable import (piratechess repo): fixed the variation sidelines in exported repertoire PGNs. A Chessable course stores two kinds of \"V\" data — genuine sidelines (a real alternative move at that point) and transposition/reference notes (move sequences from move 1 that don't continue from here). Both used to be dumped blindly into the PGN as (…) variations, producing invalid, non-replayable notation (duplicated moves, foreign move numbers, null \"--\" moves). Now each sideline is replayed against the board from the parent position: if it's a legal continuation it becomes a proper, playable (…) variation; otherwise it's kept as a readable {comment} so the PGN stays valid. Also fixed an off-by-one that attached variations to the following move. Verified against a real course export — the PGN now parses cleanly with all variation moves legal.", de: "Chessable-Import (piratechess-Repo): Die Varianten-Seitenlinien in den exportierten Repertoire-PGNs wurden repariert. Ein Chessable-Kurs speichert zwei Sorten „V\"-Daten — echte Seitenlinien (ein tatsächlicher Alternativzug an dieser Stelle) und Transpositions-/Verweis-Notizen (Zugfolgen ab Zug 1, die hier nicht fortsetzen). Bisher wurden beide blind als (…)-Varianten ins PGN geschrieben → ungültige, nicht nachspielbare Notation (doppelte Züge, fremde Zugnummern, Nullzüge „--\"). Jetzt wird jede Seitenlinie ab der Elternstellung am Brett nachgespielt: ist sie legal, wird daraus eine saubere, spielbare (…)-Variante; sonst bleibt sie als lesbarer {Kommentar} erhalten, damit das PGN gültig bleibt. Zusätzlich wurde ein Off-by-one behoben, der Varianten an den Folgezug hängte. Gegen einen echten Kurs-Export verifiziert — das PGN ist jetzt fehlerfrei parsebar und alle Varianten-Züge sind legal." },
   ]},
