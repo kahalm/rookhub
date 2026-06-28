@@ -72,6 +72,14 @@ import { DISCORD_INVITE_URL } from '../../core/community';
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
           </a>
+          <button mat-menu-item (click)="theme.toggle()">
+            <mat-icon>{{ themeIcon }}</mat-icon>
+            <span>{{ themeTooltip }}</span>
+          </button>
+          <button mat-menu-item [matMenuTriggerFor]="langMenu">
+            <mat-icon>language</mat-icon>
+            <span>{{ 'nav.language' | translate }}</span>
+          </button>
         </mat-menu>
         <button mat-icon-button routerLink="/messages" class="msg-mail" [class.has-unseen]="messagesUnread > 0"
                 [matBadge]="messagesUnread" [matBadgeHidden]="messagesUnread === 0" matBadgeColor="warn" matBadgeSize="small"
@@ -113,13 +121,13 @@ import { DISCORD_INVITE_URL } from '../../core/community';
           </button>
         </mat-menu>
         <a mat-icon-button [href]="discordUrl" target="_blank" rel="noopener noreferrer"
-           class="discord-link" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
+           class="discord-link nav-extra" [matTooltip]="'nav.discord' | translate" [attr.aria-label]="'nav.discord' | translate">
           <mat-icon svgIcon="discord"></mat-icon>
         </a>
-        <button mat-icon-button (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
+        <button mat-icon-button class="nav-extra" (click)="theme.toggle()" [matTooltip]="themeTooltip" [attr.aria-label]="themeTooltip">
           <mat-icon>{{ themeIcon }}</mat-icon>
         </button>
-        <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
+        <button mat-icon-button class="nav-extra" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
           <mat-icon>language</mat-icon>
         </button>
         <button mat-icon-button [matMenuTriggerFor]="userMenu" [attr.aria-label]="'nav.account' | translate">
@@ -203,6 +211,9 @@ import { DISCORD_INVITE_URL } from '../../core/community';
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .mobile-menu-btn { display: inline-flex; }
+      /* Sekundäraktionen (Discord/Theme/Sprache) wandern auf Mobil ins Hamburger-Menü,
+         damit die Toolbar nicht überläuft und das Profil-Icon nicht aus dem Bild geschoben wird. */
+      .nav-extra { display: none; }
     }
   `]
 })
