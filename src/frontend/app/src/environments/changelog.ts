@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.189.1';
+export const APP_VERSION = '0.189.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.189.2", date: "2026-06-28", changes: [
+    { en: "Offline fix: opening the app offline (airplane mode) no longer collapses the navigation to just Admin + Discord. The menu visibility was loaded from a live server call that fails offline, leaving the menu empty. It's now cached locally, so the last known menu (Dashboard, Puzzles, Courses, …) stays available offline and the app seeds it instantly on a cold start.", de: "Offline-Fix: Die App offline zu öffnen (Flugmodus) klappt die Navigation nicht mehr auf nur Admin + Discord zusammen. Die Menü-Sichtbarkeit wurde über einen Server-Aufruf geladen, der offline scheitert und das Menü leer ließ. Sie wird jetzt lokal zwischengespeichert, sodass das zuletzt bekannte Menü (Dashboard, Puzzles, Kurse, …) offline erhalten bleibt und beim Kaltstart sofort da ist." },
+  ]},
   { version: "0.189.1", date: "2026-06-28", changes: [
     { en: "Mobile navigation fix: the top bar showed too many icons on phones, pushing the account/profile icon off the right edge. The secondary actions (Discord, light/dark theme, language) now move into the hamburger menu on mobile, leaving just the essentials (menu, messages, notifications, account) in the bar so the profile icon stays visible.", de: "Mobile-Navigation behoben: Die obere Leiste zeigte auf dem Handy zu viele Symbole, wodurch das Konto-/Profil-Symbol aus dem Bild geschoben wurde. Die Sekundäraktionen (Discord, Hell-/Dunkel-Design, Sprache) wandern auf dem Handy jetzt ins Hamburger-Menü, sodass nur das Wesentliche (Menü, Nachrichten, Benachrichtigungen, Konto) in der Leiste bleibt und das Profil-Symbol sichtbar bleibt." },
   ]},
