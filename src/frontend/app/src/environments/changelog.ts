@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.187.2';
+export const APP_VERSION = '0.187.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.187.3", date: "2026-06-28", changes: [
+    { en: "Chessable import (piratechess repo): capped the connection timeout at 30s. When a VPN exit IP got soft-blocked, a request could previously hang for ~5 minutes (curl's default proxy-connect timeout), freezing the import. Now it aborts after 30s and the normal retry kicks in quickly. Large downloads are unaffected (only the connect phase is capped).", de: "Chessable-Import (piratechess-Repo): Das Verbindungs-Timeout auf 30 s begrenzt. Wenn eine VPN-Ausgangs-IP soft-geblockt wurde, konnte ein Request vorher ~5 Minuten hängen (curls Default-Proxy-Connect-Timeout) und den Import einfrieren. Jetzt bricht er nach 30 s ab und der normale Retry greift sofort. Große Downloads sind nicht betroffen (nur die Verbindungsphase ist gedeckelt)." },
+  ]},
   { version: "0.187.2", date: "2026-06-28", changes: [
     { en: "Chessable import resilience: a brief outage of the import backend (e.g. a container restart) no longer instantly fails queued imports. Pure connection errors to the backend are now retried with backoff for a few minutes before an import is considered failed, so a short hiccup is ridden out instead of cascading the whole queue to 'failed'. Real backend error responses still fail immediately as before.", de: "Chessable-Import-Resilienz: Ein kurzer Ausfall des Import-Backends (z. B. ein Container-Neustart) lässt eingereihte Importe nicht mehr sofort scheitern. Reine Verbindungsfehler zum Backend werden jetzt mit Backoff über einige Minuten erneut versucht, bevor ein Import als fehlgeschlagen gilt — ein kurzer Aussetzer wird also überbrückt, statt die ganze Queue auf „fehlgeschlagen\" zu kippen. Echte Fehlerantworten des Backends scheitern weiterhin sofort wie bisher." },
   ]},
