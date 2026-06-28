@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.186.1';
+export const APP_VERSION = '0.187.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.187.0", date: "2026-06-28", changes: [
+    { en: "New: a Discord button in the top navigation (and in the mobile menu) opens our community server — join at https://discord.gg/nKQCdC7Xff. The invite is also linked in the Help page's Discord section.", de: "Neu: Ein Discord-Knopf in der oberen Navigationsleiste (und im Mobil-Menü) öffnet unseren Community-Server — tritt bei unter https://discord.gg/nKQCdC7Xff. Der Einladungslink ist außerdem im Discord-Abschnitt der Hilfeseite verlinkt." },
+  ]},
   { version: "0.186.1", date: "2026-06-28", changes: [
     { en: "Chessable import: fixed sporadic errors when queueing many courses at once (the ~16th add failed with a rate-limit error). The Chessable endpoints are now exempt from the global per-IP request limit, and the import-status polling was slowed down (2.5s → 8s, admin view 5s → 12s) so background polling no longer eats into the request budget. Adds that previously errored were actually still queued — now they no longer error.", de: "Chessable-Import: sporadische Fehler beim Einreihen vieler Kurse auf einmal behoben (der ~16. Add scheiterte mit einem Rate-Limit-Fehler). Die Chessable-Endpoints sind jetzt vom globalen Pro-IP-Request-Limit ausgenommen, und das Import-Status-Polling wurde verlangsamt (2,5 s → 8 s, Admin-Ansicht 5 s → 12 s), damit das Hintergrund-Polling das Request-Budget nicht mehr aufbraucht. Adds, die vorher einen Fehler zeigten, waren in Wahrheit trotzdem eingereiht — jetzt erscheinen sie ohne Fehler." },
   ]},

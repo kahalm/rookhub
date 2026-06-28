@@ -10,6 +10,8 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 import { MessageService } from '../../core/message.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService } from '../../core/theme.service';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 
 describe('NavbarComponent', () => {
   // Über TestBed in einem Injection-Context bauen: NavbarComponent nutzt
@@ -39,6 +41,8 @@ describe('NavbarComponent', () => {
       TestBed.inject(ThemeService),
       TestBed.inject(TranslateService),
       TestBed.inject(Router),
+      TestBed.inject(MatIconRegistry),
+      TestBed.inject(DomSanitizer),
     ));
   }
 

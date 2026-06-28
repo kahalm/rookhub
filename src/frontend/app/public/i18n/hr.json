@@ -60,6 +60,7 @@
     "markAllRead": "Označi sve kao pročitano"
   },
   "nav": {
+    "discord": "Discord zajednica",
     "dashboard": "Nadzorna ploča",
     "repertoires": "Repertoari",
     "tournaments": "Turniri",
@@ -1519,7 +1520,8 @@
         "t": "Povezivanje Discorda",
         "p": [
           "Ako je šahovski bot aktivan na tvom Discordu, možeš povezati svoj RookHub račun s Discordom. Bot ti šalje poveznicu s tokenom; ako si prijavljen, veza se uspostavlja odmah, inače nakon sljedeće prijave.",
-          "Povezan, pojavljuješ se na ljestvicama dnevne zagonetke i Tjedne objave sa svojim Discord imenom, a bot ti može prikazati napredak treninga. Vezu možeš u profilu prekinuti bilo kada."
+          "Povezan, pojavljuješ se na ljestvicama dnevne zagonetke i Tjedne objave sa svojim Discord imenom, a bot ti može prikazati napredak treninga. Vezu možeš u profilu prekinuti bilo kada.",
+          "Neovisno o povezivanju, svi su dobrodošli u našu Discord zajednicu — pridruži se na https://discord.gg/nKQCdC7Xff za razgovor, pitanja i novosti."
         ]
       },
       "friends": {

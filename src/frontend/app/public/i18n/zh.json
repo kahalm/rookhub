@@ -16,6 +16,7 @@
     "blackToMove": "黑方走棋"
   },
   "nav": {
+    "discord": "Discord 社区",
     "dashboard": "仪表盘",
     "repertoires": "开局库",
     "tournaments": "比赛",
