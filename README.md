@@ -2,7 +2,7 @@
 
 Zentrales Webportal fuer Schachspieler: PGN-Repertoire-Verwaltung, Live-Turnierdaten von chess-results.com, Benutzerprofile mit FIDE/ChessResults-Verlinkung und Freundeslisten.
 
-💬 **Community / Fragen?** Komm in unseren Discord: https://discord.gg/nKQCdC7Xff
+💬 **Community / Fragen?** Komm in unseren Discord: https://discord.gg/wczc4BJtMf
 
 ## Architektur
 

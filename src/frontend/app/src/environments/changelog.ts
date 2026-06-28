@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.190.0';
+export const APP_VERSION = '0.190.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.190.1", date: "2026-06-28", changes: [
+    { en: "Updated the Discord community invite link to the correct server (discord.gg/wczc4BJtMf) everywhere it appears — navigation, footer, mobile menu and Help page.", de: "Den Discord-Einladungslink auf den richtigen Server aktualisiert (discord.gg/wczc4BJtMf) — überall, wo er vorkommt: Navigation, Fußzeile, Mobil-Menü und Hilfeseite." },
+  ]},
   { version: "0.190.0", date: "2026-06-28", changes: [
     { en: "Offline now works without ceremony: opening a course while online automatically caches the whole book for offline use (no need to tap the ☁ save button first), and the daily puzzle is cached automatically when you view it online (last 14 days kept). The offline random-puzzle pool was also enlarged from 10 to 30 by default, so there's more to solve offline.", de: "Offline funktioniert jetzt ohne Umstände: Einen Kurs online zu öffnen legt das ganze Buch automatisch offline ab (kein vorheriges Tippen auf den ☁-Knopf nötig), und das Tagespuzzle wird automatisch gecacht, sobald du es online ansiehst (die letzten 14 Tage bleiben erhalten). Der Offline-Pool für Zufalls-Puzzles wurde außerdem von 10 auf 30 vergrößert, sodass offline mehr zum Lösen da ist." },
   ]},
@@ -39,7 +42,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     { en: "Chessable import speed is now tunable (piratechess repo): the delay between requests, how many lines of a chapter are fetched in parallel, and after how many requests the VPN IP rotates are all configurable via environment variables. Defaults keep the previous (serial) behaviour, so nothing changes unless configured. The VPN rotation was made drain-aware — it waits for in-flight requests to finish before switching IP — so parallel fetching no longer causes the brief TLS errors that a mid-flight rotation produced.", de: "Die Chessable-Import-Geschwindigkeit ist jetzt einstellbar (piratechess-Repo): die Pause zwischen Requests, wie viele Linien eines Kapitels parallel geholt werden und nach wie vielen Requests die VPN-IP rotiert, sind alle per Umgebungsvariablen konfigurierbar. Die Defaults behalten das bisherige (serielle) Verhalten — ohne Konfiguration ändert sich also nichts. Die VPN-Rotation ist jetzt drain-aware (wartet, bis laufende Requests fertig sind, bevor die IP wechselt), sodass paralleles Abrufen nicht mehr die kurzen TLS-Fehler auslöst, die ein IP-Wechsel mitten im Request verursachte." },
   ]},
   { version: "0.187.0", date: "2026-06-28", changes: [
-    { en: "New: a Discord button in the top navigation (and in the mobile menu) opens our community server — join at https://discord.gg/nKQCdC7Xff. The invite is also linked in the Help page's Discord section.", de: "Neu: Ein Discord-Knopf in der oberen Navigationsleiste (und im Mobil-Menü) öffnet unseren Community-Server — tritt bei unter https://discord.gg/nKQCdC7Xff. Der Einladungslink ist außerdem im Discord-Abschnitt der Hilfeseite verlinkt." },
+    { en: "New: a Discord button in the top navigation (and in the mobile menu) opens our community server — join at https://discord.gg/wczc4BJtMf. The invite is also linked in the Help page's Discord section.", de: "Neu: Ein Discord-Knopf in der oberen Navigationsleiste (und im Mobil-Menü) öffnet unseren Community-Server — tritt bei unter https://discord.gg/wczc4BJtMf. Der Einladungslink ist außerdem im Discord-Abschnitt der Hilfeseite verlinkt." },
   ]},
   { version: "0.186.1", date: "2026-06-28", changes: [
     { en: "Chessable import: fixed sporadic errors when queueing many courses at once (the ~16th add failed with a rate-limit error). The Chessable endpoints are now exempt from the global per-IP request limit, and the import-status polling was slowed down (2.5s → 8s, admin view 5s → 12s) so background polling no longer eats into the request budget. Adds that previously errored were actually still queued — now they no longer error.", de: "Chessable-Import: sporadische Fehler beim Einreihen vieler Kurse auf einmal behoben (der ~16. Add scheiterte mit einem Rate-Limit-Fehler). Die Chessable-Endpoints sind jetzt vom globalen Pro-IP-Request-Limit ausgenommen, und das Import-Status-Polling wurde verlangsamt (2,5 s → 8 s, Admin-Ansicht 5 s → 12 s), damit das Hintergrund-Polling das Request-Budget nicht mehr aufbraucht. Adds, die vorher einen Fehler zeigten, waren in Wahrheit trotzdem eingereiht — jetzt erscheinen sie ohne Fehler." },
