@@ -219,7 +219,8 @@ public class ChessableImportService : ICourseReimporter
                 // Async Job bei piratechess starten (oder bei Resume den gemerkten weiterpollen).
                 if (string.IsNullOrEmpty(import.FetchJobId))
                 {
-                    var start = await _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct);
+                    var start = await WithConnectionRetryAsync(
+                        () => _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct), import.Id, ct);
                     import.FetchJobId = start.JobId;
                     await _db.SaveChangesAsync(ct);
                 }
@@ -242,11 +243,13 @@ public class ChessableImportService : ICourseReimporter
                         return;
                     }
 
-                    var prog = await _proxy.GetCourseProgressAsync(import.FetchJobId!, ct);
+                    var prog = await WithConnectionRetryAsync(
+                        () => _proxy.GetCourseProgressAsync(import.FetchJobId!, ct), import.Id, ct);
                     if (prog is null)
                     {
                         // Job weg (piratechess-Neustart) → neu starten und weiter pollen.
-                        var start = await _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct);
+                        var start = await WithConnectionRetryAsync(
+                            () => _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct), import.Id, ct);
                         import.FetchJobId = start.JobId;
                         await _db.SaveChangesAsync(ct);
                         await Task.Delay(PollDelayMs, ct);
@@ -421,6 +424,50 @@ public class ChessableImportService : ICourseReimporter
         import.Imported = await _db.BookPuzzles.CountAsync(bp => bp.BookId == res.BookId, ct);
         import.Skipped = res.Skipped;
         import.Invalid = res.Invalid;
+    }
+
+    // Reine Verbindungsfehler zu piratechess (Container-Neustart/kurzer Ausfall) dürfen einen Import
+    // NICHT sofort scheitern lassen — sonst killt ein 5-Sekunden-Recreate die ganze Queue kaskadierend.
+    // Daher mit Backoff erneut versuchen (summiert ~2,5 min), bis piratechess wieder erreichbar ist;
+    // erst danach propagiert der Fehler und der Import scheitert. Echte Antwort-Fehler von piratechess
+    // (ChessableProxyException, kein Transportfehler) werden NICHT erneut versucht.
+    private static readonly int[] ConnRetryBackoffMs = { 3000, 5000, 10000, 15000, 20000, 30000, 30000, 30000 };
+
+    private async Task<T> WithConnectionRetryAsync<T>(Func<Task<T>> op, int importId, CancellationToken ct)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try { return await op(); }
+            // Bei Shutdown (ct abgebrochen) NICHT erneut versuchen → Abbruch sauber durchreichen.
+            catch (Exception ex) when (attempt < ConnRetryBackoffMs.Length && !ct.IsCancellationRequested && IsTransientConnectionError(ex))
+            {
+                var delay = ConnRetryBackoffMs[attempt];
+                _logger.LogWarning(
+                    "Chessable-Import {Id}: piratechess nicht erreichbar ({Msg}) — Verbindungs-Retry {Attempt}/{Max} in {Delay}s",
+                    importId, ex.Message, attempt + 1, ConnRetryBackoffMs.Length, delay / 1000);
+                await Task.Delay(delay, ct);
+            }
+        }
+    }
+
+    /// <summary>True für reine Transport-/Verbindungsfehler (piratechess down/Neustart): SocketException,
+    /// HttpRequestException oder typische „connection refused"/„timed out"-Meldungen. NICHT für
+    /// <see cref="ChessableProxyException"/> (= piratechess hat geantwortet, aber mit Fehler).</summary>
+    internal static bool IsTransientConnectionError(Exception ex)
+    {
+        for (var e = ex; e is not null; e = e.InnerException)
+        {
+            if (e is ChessableProxyException) return false;
+            if (e is System.Net.Sockets.SocketException or HttpRequestException or TaskCanceledException) return true;
+            var m = e.Message;
+            if (m.Contains("Connection refused", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("actively refused", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("No route to host", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("Name or service not known", StringComparison.OrdinalIgnoreCase)
+                || m.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     private async Task FailAsync(ChessableImport import, string error)
