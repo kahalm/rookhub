@@ -4,6 +4,10 @@ import { Injectable } from '@angular/core';
 export const ENDLESS_POOL_KEY = 'rookhub_endless_offline_pool';
 export const PUZZLE_POOL_KEY = 'rookhub_puzzle_offline_pool';
 export const BOOK_OFFLINE_PREFIX = 'rookhub_book_offline_';
+/** bookId→fileName-Index, damit der Kursmodus (kennt nur die bookId) das offline gespeicherte
+ *  Buch (per fileName gekeyt) auflösen kann. Bewusst ANDERER Präfix als BOOK_OFFLINE_PREFIX,
+ *  sonst würde er als „gecachtes Buch" mitgezählt/durchsucht. */
+export const BOOK_ID_MAP_KEY = 'rookhub_book_idmap';
 const SETTINGS_KEY = 'rookhub_offline_settings';
 
 export interface OfflineSettings {
@@ -56,7 +60,7 @@ export class OfflineService {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k.startsWith(BOOK_OFFLINE_PREFIX)) keys.push(k);
+      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k.startsWith(BOOK_OFFLINE_PREFIX)) keys.push(k);
     }
     return keys;
   }

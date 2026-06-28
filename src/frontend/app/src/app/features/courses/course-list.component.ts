@@ -290,7 +290,7 @@ export class CourseListComponent implements OnInit {
     this.savingOffline = c.bookId;
     this.courseService.getBookPuzzles(c.bookId).subscribe({
       next: puzzles => {
-        saveBookOffline(c.fileName, puzzles);
+        saveBookOffline(c.fileName, puzzles, c.bookId);
         this.offlineFiles.add(c.fileName);
         this.savingOffline = null;
         this.snackbar.info(this.translate.instant('courses.offlineSaved', { name: c.displayName, count: puzzles.length }), { action: 'common.ok', duration: 2500 });

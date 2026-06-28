@@ -1,4 +1,4 @@
-import { BOOK_OFFLINE_PREFIX } from '../../core/offline.service';
+import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY } from '../../core/offline.service';
 import { BookPuzzleDto } from './puzzle.service';
 
 /**
@@ -9,9 +9,29 @@ function bookKey(fileName: string): string {
   return BOOK_OFFLINE_PREFIX + encodeURIComponent(fileName);
 }
 
-export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[]): void {
+/** bookId→fileName-Index laden/speichern (der Kursmodus kennt nur die bookId). */
+function loadIdMap(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(BOOK_ID_MAP_KEY) || '{}') || {}; } catch { return {}; }
+}
+function saveIdMap(m: Record<string, string>): void {
+  try { localStorage.setItem(BOOK_ID_MAP_KEY, JSON.stringify(m)); } catch { /* ignore */ }
+}
+
+export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number): void {
   if (!fileName) return;
-  try { localStorage.setItem(bookKey(fileName), JSON.stringify(puzzles ?? [])); } catch { /* ignore (Quota) */ }
+  try { localStorage.setItem(bookKey(fileName), JSON.stringify(puzzles ?? [])); }
+  catch { return; /* Quota → gar nicht erst in den Index aufnehmen */ }
+  if (bookId != null) {
+    const m = loadIdMap();
+    m[String(bookId)] = fileName;
+    saveIdMap(m);
+  }
+}
+
+/** Offline gespeichertes Buch über die (Kurs-)bookId auflösen. Null, wenn nicht gespeichert. */
+export function getBookOfflineByBookId(bookId: number): BookPuzzleDto[] | null {
+  const fileName = loadIdMap()[String(bookId)];
+  return fileName ? getBookOffline(fileName) : null;
 }
 
 export function getBookOffline(fileName: string): BookPuzzleDto[] | null {
@@ -28,6 +48,12 @@ export function hasBookOffline(fileName: string): boolean {
 
 export function removeBookOffline(fileName: string): void {
   try { localStorage.removeItem(bookKey(fileName)); } catch { /* ignore */ }
+  try {
+    const m = loadIdMap();
+    let changed = false;
+    for (const k of Object.keys(m)) if (m[k] === fileName) { delete m[k]; changed = true; }
+    if (changed) saveIdMap(m);
+  } catch { /* ignore */ }
 }
 
 /** Sucht ein Puzzle nach Id über ALLE offline gespeicherten Bücher (für Offline-Direktaufruf). */

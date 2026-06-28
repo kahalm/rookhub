@@ -1,5 +1,6 @@
 import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
+import { saveBookOffline } from './book-offline.util';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -334,5 +335,61 @@ describe('BookPuzzleComponent „dumme Tipps" markieren (Admin)', () => {
 
     expect(spy).toHaveBeenCalledWith(5, false);
     expect(c.puzzle.hintsFlagged).toBeFalse();
+  });
+});
+
+describe('BookPuzzleComponent Offline-Kursmodus', () => {
+  const FILE = 'course-book.pgn';
+  const BOOK_ID = 77;
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  function offlineCourse(mode: 'sequential' | 'random'): any {
+    // Buch offline ablegen (bookId-Index inklusive).
+    saveBookOffline(FILE, [
+      { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE },
+      { id: 2, fen: FEN, moves: 'd2d4', bookFileName: FILE },
+      { id: 3, fen: FEN, moves: 'c2c4', bookFileName: FILE },
+    ] as any, BOOK_ID);
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    c.inCourse = true;
+    c.courseBookId = BOOK_ID;
+    c.courseModeKind = mode;
+    return c;
+  }
+
+  it('serviert offline das erste Buch-Puzzle aus dem Cache (sequenziell)', () => {
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try {
+      const c = offlineCourse('sequential');
+      (c as any).loadCourseNext();
+      expect(c.puzzle?.id).toBe(1);
+      expect(c.courseTotal).toBe(3);
+      expect(c.loadError).toBeFalse();
+    } finally { spy.and.callThrough(); }
+  });
+
+  it('rückt offline ans nächste ungelöste Puzzle vor', () => {
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try {
+      const c = offlineCourse('sequential');
+      (c as any).offlineCourseSolvedIds.add(1);
+      (c as any).loadCourseNext(1);   // nach Puzzle 1
+      expect(c.puzzle?.id).toBe(2);
+    } finally { spy.and.callThrough(); }
+  });
+
+  it('zeigt einen Fehler, wenn offline kein Buch gespeichert ist', () => {
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try {
+      const c = makeComponent();
+      spyOn(c as any, 'setupPuzzle');
+      c.inCourse = true;
+      c.courseBookId = 999;   // nicht gecacht
+      (c as any).loadCourseNext();
+      expect(c.loadError).toBeTrue();
+      expect(c.puzzle).toBeNull();
+    } finally { spy.and.callThrough(); }
   });
 });

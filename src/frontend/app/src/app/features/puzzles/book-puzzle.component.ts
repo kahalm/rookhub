@@ -30,7 +30,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle } from './book-offline.util';
+import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -69,6 +69,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   courseBookStats: CourseScopeStats | null = null;
   courseChapterStats: CourseScopeStats | null = null;
   courseChapterName: string | null = null;
+  /** Offline gelöste/übersprungene Kurs-Puzzles dieser Sitzung — vermeidet Dauerschleife auf
+   *  demselben Puzzle, solange der Server-Fortschritt nicht erreichbar ist. */
+  private offlineCourseSolvedIds = new Set<number>();
 
   // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen.
   // Per-User-Fortschritt wird serverseitig gemerkt: jedes gespielte Puzzle (gelöst oder nicht)
@@ -540,6 +543,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.retryFn = () => this.loadCourseNext(after, exclude);
     if (!hadPuzzle) this.state = 'LOADING';
 
+    // Offline → direkt aus dem lokal gespeicherten Buch bedienen (kein Netz-Roundtrip).
+    // Kein Cache vorhanden → Fehlerzustand (mit „Erneut versuchen") statt endlosem Spinner.
+    if (!navigator.onLine) {
+      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) {
+        this.state = 'LOADING'; this.loadError = true;
+        this.snackbar.info(this.translate.instant('book.offlineUnavailable'), { action: 'common.ok', duration: 3500 });
+      }
+      return;
+    }
+
     this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined).subscribe({
       next: res => {
         if (epoch !== this.loadEpoch) return;
@@ -557,8 +570,56 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.puzzle = res.puzzle;
         this.setupPuzzle(res.puzzle);
       },
-      error: () => { if (epoch !== this.loadEpoch) return; this.state = 'LOADING'; this.loadError = true; }
+      error: () => {
+        if (epoch !== this.loadEpoch) return;
+        // Netzfehler trotz onLine → letzter Versuch aus dem Offline-Cache.
+        if (this.loadCourseOffline(after, exclude, hadPuzzle)) return;
+        this.state = 'LOADING'; this.loadError = true;
+      }
     });
+  }
+
+  /**
+   * Offline-Fallback fürs Kurs-Laden: serviert Puzzles aus dem lokal gespeicherten Buch
+   * (über die bookId aufgelöst). Versuche werden via Offline-Queue nachgemeldet; der
+   * Server-Fortschritt („nächstes ungelöstes") lässt sich offline nicht exakt nachbilden,
+   * darum meiden wir nur die in DIESER Sitzung schon gelösten Puzzles. Liefert true, wenn
+   * ein Puzzle (oder das „fertig"-Panel) gesetzt wurde, sonst false (kein Cache vorhanden).
+   */
+  private loadCourseOffline(after: number | undefined, exclude: number | undefined, hadPuzzle: boolean): boolean {
+    if (this.courseBookId == null) return false;
+    const book = getBookOfflineByBookId(this.courseBookId);
+    if (!book || !book.length) return false;
+
+    this.courseTotal = book.length;
+    const cur = after ?? exclude;
+    let next: BookPuzzleDto | undefined;
+
+    if (this.courseModeKind === 'random') {
+      const fresh = book.filter(p => p.id !== cur && !this.offlineCourseSolvedIds.has(p.id));
+      const pick = fresh.length ? fresh : book.filter(p => p.id !== cur);
+      next = (pick.length ? pick : book)[Math.floor(Math.random() * (pick.length || book.length))];
+    } else {
+      // sequenziell: ab Position nach `after` das erste in dieser Sitzung noch nicht gelöste.
+      const start = after != null ? book.findIndex(p => p.id === after) : -1;
+      for (let j = 1; j <= book.length; j++) {
+        const cand = book[(Math.max(start, -1) + j + book.length) % book.length];
+        if (!this.offlineCourseSolvedIds.has(cand.id)) { next = cand; break; }
+      }
+    }
+
+    if (!next) {
+      // Alle (lokal) gelöst → fertig-Panel.
+      this.courseCompleted = true;
+      if (!hadPuzzle) { this.puzzle = null; this.state = 'COURSE_DONE'; }
+      return true;
+    }
+    this.courseCompleted = false;
+    this.gaveUp = false;
+    this.loadError = false;
+    this.puzzle = next;
+    this.setupPuzzle(next);
+    return true;
   }
 
   /** „Nächstes Puzzle" / „Überspringen": eins weiter im jeweiligen Modus. */
@@ -712,7 +773,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
-      if (solved) this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
+      if (solved) {
+        this.offlineCourseSolvedIds.add(this.puzzle.id);   // beim nächsten Laden überspringen
+        this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
+      }
       return;
     }
     this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.hintLevel).subscribe({

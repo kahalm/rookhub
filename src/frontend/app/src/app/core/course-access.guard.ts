@@ -16,8 +16,13 @@ export const courseAccessGuard: CanActivateFn = () => {
   if (!auth.isLoggedIn) return router.createUrlTree(['/login']);
   if (auth.isAdmin) return true;
 
+  // Offline: Zugriff nicht prüfbar → durchlassen, damit offline gespeicherte Kurse erreichbar
+  // bleiben (die Lese-/Schreib-Endpoints sichern sich serverseitig ohnehin selbst ab).
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+
   return courses.checkAccess().pipe(
     map(res => res.hasAccess ? true : router.createUrlTree(['/dashboard'])),
-    catchError(() => of(router.createUrlTree(['/dashboard'])))
+    // Netzfehler → fail-open (kein Lockout bei Netzproblemen; konsistent mit menuGuard).
+    catchError(() => of(true))
   );
 };

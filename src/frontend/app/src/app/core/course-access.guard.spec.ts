@@ -55,12 +55,23 @@ describe('courseAccessGuard', () => {
     });
   });
 
-  it('redirects to /dashboard on access-check error', (done) => {
+  it('allows through on access-check error (fail-open, no lockout on network glitches)', (done) => {
     setup({ isLoggedIn: true, isAdmin: false }, () => throwError(() => new Error('boom')));
     (run() as Observable<boolean | UrlTree>).subscribe(r => {
-      expect(r instanceof UrlTree).toBeTrue();
-      expect((r as UrlTree).toString()).toBe('/dashboard');
+      expect(r).toBeTrue();
       done();
     });
+  });
+
+  it('allows non-admin through offline without a server call (offline courses reachable)', () => {
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    let called = false;
+    setup({ isLoggedIn: true, isAdmin: false }, () => { called = true; return of({ hasAccess: false }); });
+    try {
+      expect(run()).toBeTrue();
+      expect(called).toBeFalse();
+    } finally {
+      spy.and.callThrough();
+    }
   });
 });
