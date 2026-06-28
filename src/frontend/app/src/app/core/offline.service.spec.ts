@@ -8,9 +8,9 @@ describe('OfflineService', () => {
   beforeEach(() => clearAllStorage());
   afterEach(() => clearAllStorage());
 
-  it('defaults to 10 puzzles / 2 endless runs', () => {
+  it('defaults to 30 puzzles / 2 endless runs', () => {
     const s = new OfflineService();
-    expect(s.puzzleCount).toBe(10);
+    expect(s.puzzleCount).toBe(30);
     expect(s.endlessRuns).toBe(2);
   });
 

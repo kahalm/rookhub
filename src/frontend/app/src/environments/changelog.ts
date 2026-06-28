@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.189.2';
+export const APP_VERSION = '0.190.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.190.0", date: "2026-06-28", changes: [
+    { en: "Offline now works without ceremony: opening a course while online automatically caches the whole book for offline use (no need to tap the ☁ save button first), and the daily puzzle is cached automatically when you view it online (last 14 days kept). The offline random-puzzle pool was also enlarged from 10 to 30 by default, so there's more to solve offline.", de: "Offline funktioniert jetzt ohne Umstände: Einen Kurs online zu öffnen legt das ganze Buch automatisch offline ab (kein vorheriges Tippen auf den ☁-Knopf nötig), und das Tagespuzzle wird automatisch gecacht, sobald du es online ansiehst (die letzten 14 Tage bleiben erhalten). Der Offline-Pool für Zufalls-Puzzles wurde außerdem von 10 auf 30 vergrößert, sodass offline mehr zum Lösen da ist." },
+  ]},
   { version: "0.189.2", date: "2026-06-28", changes: [
     { en: "Offline fix: opening the app offline (airplane mode) no longer collapses the navigation to just Admin + Discord. The menu visibility was loaded from a live server call that fails offline, leaving the menu empty. It's now cached locally, so the last known menu (Dashboard, Puzzles, Courses, …) stays available offline and the app seeds it instantly on a cold start.", de: "Offline-Fix: Die App offline zu öffnen (Flugmodus) klappt die Navigation nicht mehr auf nur Admin + Discord zusammen. Die Menü-Sichtbarkeit wurde über einen Server-Aufruf geladen, der offline scheitert und das Menü leer ließ. Sie wird jetzt lokal zwischengespeichert, sodass das zuletzt bekannte Menü (Dashboard, Puzzles, Kurse, …) offline erhalten bleibt und beim Kaltstart sofort da ist." },
   ]},

@@ -8,6 +8,8 @@ export const BOOK_OFFLINE_PREFIX = 'rookhub_book_offline_';
  *  Buch (per fileName gekeyt) auflösen kann. Bewusst ANDERER Präfix als BOOK_OFFLINE_PREFIX,
  *  sonst würde er als „gecachtes Buch" mitgezählt/durchsucht. */
 export const BOOK_ID_MAP_KEY = 'rookhub_book_idmap';
+/** Tagespuzzle-Cache (Datum→Puzzle); auto-befüllt beim Online-Abruf eines Tagespuzzles. */
+export const DAILY_CACHE_KEY = 'rookhub_daily_offline';
 const SETTINGS_KEY = 'rookhub_offline_settings';
 
 export interface OfflineSettings {
@@ -15,7 +17,7 @@ export interface OfflineSettings {
   endlessRuns: number;   // Anzahl vorab geladener Endless-Runs
 }
 
-const DEFAULTS: OfflineSettings = { puzzleCount: 10, endlessRuns: 2 };
+const DEFAULTS: OfflineSettings = { puzzleCount: 30, endlessRuns: 2 };
 
 /**
  * Geräte-lokale Offline-Einstellungen + Verwaltung aller Offline-Caches (Größe/Leeren).
@@ -60,7 +62,7 @@ export class OfflineService {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (!k) continue;
-      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k.startsWith(BOOK_OFFLINE_PREFIX)) keys.push(k);
+      if (k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY || k.startsWith(BOOK_OFFLINE_PREFIX)) keys.push(k);
     }
     return keys;
   }

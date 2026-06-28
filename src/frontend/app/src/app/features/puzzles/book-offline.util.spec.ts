@@ -1,4 +1,4 @@
-import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline } from './book-offline.util';
+import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
 import { BookPuzzleDto } from './puzzle.service';
 
 function puzzle(id: number, fileName: string): BookPuzzleDto {
@@ -32,5 +32,22 @@ describe('book-offline.util', () => {
     removeBookOffline('book-a.pgn');
     expect(getBookOfflineByBookId(42)).toBeNull();
     expect(hasBookOffline('book-a.pgn')).toBeFalse();
+  });
+
+  it('caches and reads a daily puzzle by date', () => {
+    saveDailyOffline('20260628', puzzle(7, 'daily.pgn'));
+    expect(getDailyOffline('20260628')?.id).toBe(7);
+    expect(getDailyOffline('20260627')).toBeNull();
+  });
+
+  it('keeps only the most recent 14 daily puzzles', () => {
+    // 16 aufeinanderfolgende Tage cachen → die 2 ältesten fallen raus.
+    for (let d = 1; d <= 16; d++) {
+      saveDailyOffline(`202606${String(d).padStart(2, '0')}`, puzzle(d, 'daily.pgn'));
+    }
+    expect(getDailyOffline('20260601')).toBeNull();   // ältester verdrängt
+    expect(getDailyOffline('20260602')).toBeNull();
+    expect(getDailyOffline('20260603')?.id).toBe(3);   // 14 jüngste bleiben
+    expect(getDailyOffline('20260616')?.id).toBe(16);
   });
 });

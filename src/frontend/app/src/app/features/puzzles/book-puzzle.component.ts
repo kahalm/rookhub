@@ -30,7 +30,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId } from './book-offline.util';
+import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -489,6 +489,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       const chapterParam = this.route.snapshot.paramMap.get('chapterIndex');
       this.courseChapterIndex = chapterParam != null ? Number(chapterParam) : null;
       this.loadCourseNext();
+      this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
       return;
     }
 
@@ -620,6 +621,24 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.puzzle = next;
     this.setupPuzzle(next);
     return true;
+  }
+
+  /**
+   * Lädt beim Öffnen eines Kurses (online) im Hintergrund alle Puzzles des Buchs und legt sie
+   * offline ab — damit der Kurs offline weiterläuft, ohne dass man vorher manuell auf ☁ tippen
+   * muss. Fire-and-forget, nur online, idempotent (überspringt, wenn schon gecacht).
+   */
+  private autoCacheCourse(): void {
+    if (this.courseBookId == null || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    if (getBookOfflineByBookId(this.courseBookId)?.length) return;   // schon offline vorhanden
+    const bookId = this.courseBookId;
+    this.courseService.getBookPuzzles(bookId).subscribe({
+      next: puzzles => {
+        const fileName = puzzles?.[0]?.bookFileName;
+        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId);
+      },
+      error: () => { /* offline/Fehler: ignorieren, ☁ bleibt als manueller Weg */ },
+    });
   }
 
   /** „Nächstes Puzzle" / „Überspringen": eins weiter im jeweiligen Modus. */
@@ -812,14 +831,25 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.alternativeSolve = false;
     this.gaveUp = false;
     const epoch = ++this.loadEpoch;
+
+    // Offline → aus dem auto-gecachten Tagespuzzle bedienen (kein endloser Spinner).
+    if (!navigator.onLine) {
+      const cached = getDailyOffline(date);
+      if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
+    }
+
     this.puzzleService.getDailyPuzzle(date).subscribe({
       next: puzzle => {
         if (epoch !== this.loadEpoch) return;
         this.puzzle = puzzle;
+        saveDailyOffline(date, puzzle);   // automatisch für Offline vorhalten
         this.setupPuzzle(puzzle);
       },
       error: () => {
         if (epoch !== this.loadEpoch) return;
+        // Netzfehler trotz onLine → letzter Versuch aus dem Offline-Cache.
+        const cached = getDailyOffline(date);
+        if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
         this.state = 'LOADING';
         this.puzzle = null;
         this.loadError = true;

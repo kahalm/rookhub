@@ -1,4 +1,4 @@
-import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY } from '../../core/offline.service';
+import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, DAILY_CACHE_KEY } from '../../core/offline.service';
 import { BookPuzzleDto } from './puzzle.service';
 
 /**
@@ -54,6 +54,31 @@ export function removeBookOffline(fileName: string): void {
     for (const k of Object.keys(m)) if (m[k] === fileName) { delete m[k]; changed = true; }
     if (changed) saveIdMap(m);
   } catch { /* ignore */ }
+}
+
+/** Wie viele Tagespuzzles offline vorgehalten werden (jüngste gewinnen). */
+const DAILY_CACHE_MAX = 14;
+
+/** Tagespuzzle eines UTC-Datums offline vorhalten (online-Abruf cacht automatisch). */
+export function saveDailyOffline(date: string, puzzle: BookPuzzleDto): void {
+  if (!date || !puzzle) return;
+  try {
+    const map: Record<string, BookPuzzleDto> = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || '{}') || {};
+    map[date] = puzzle;
+    // Auf die jüngsten DAILY_CACHE_MAX Datumsschlüssel begrenzen (lexikografisch = chronologisch bei yyyyMMdd).
+    const keys = Object.keys(map).sort();
+    while (keys.length > DAILY_CACHE_MAX) { delete map[keys.shift()!]; }
+    localStorage.setItem(DAILY_CACHE_KEY, JSON.stringify(map));
+  } catch { /* Quota/ignore */ }
+}
+
+/** Offline gecachtes Tagespuzzle eines Datums (oder null). */
+export function getDailyOffline(date: string): BookPuzzleDto | null {
+  if (!date) return null;
+  try {
+    const map = JSON.parse(localStorage.getItem(DAILY_CACHE_KEY) || '{}') || {};
+    return map[date] ?? null;
+  } catch { return null; }
 }
 
 /** Sucht ein Puzzle nach Id über ALLE offline gespeicherten Bücher (für Offline-Direktaufruf). */
