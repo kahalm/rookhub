@@ -149,4 +149,70 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(1, result.Reprocessed);
         Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
     }
+
+    private async Task<Repertoire> SeedRepertoireAsync(int userId, int version, string? fileName, string? courseId = null)
+    {
+        var rep = new Repertoire { UserId = userId, Name = "Rep", ImportVersion = version, ChessableCourseId = courseId };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        if (fileName != null)
+        {
+            _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep.Id, FileName = fileName, PgnContent = "x", FileSize = 1 });
+            await _db.SaveChangesAsync();
+        }
+        return rep;
+    }
+
+    [Fact]
+    public async Task GetRepertoireStatus_StaleChessableRepertoire_IsRefetchable()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn"); // Chessable (per Dateiname), ohne CourseId
+        await SeedRepertoireAsync(user.Id, 0, "my-own.pgn");           // manuell → nur lokaler Versions-Mark
+
+        var status = await ReprocessTestHelper.Build(_db).GetRepertoireStatusAsync(user.Id);
+
+        Assert.Equal(2, status.Stale);
+        Assert.Equal(1, status.Refetchable);          // nur das Chessable-Repertoire
+        Assert.Equal(1, status.ReprocessableLocally); // das manuelle
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_Chessable_EnqueuesInPlaceRefetch_KeepsRepertoireId()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "128648"); // CourseId-Weg
+        var stub = new StubCourseReimporter { ReturnId = 555 };
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.Enqueued);
+        Assert.Equal(0, result.Reprocessed);
+        var call = Assert.Single(stub.Calls);
+        Assert.Equal("repertoire", call.Target);
+        Assert.Equal("128648", call.Bid);
+        Assert.Equal(rep.Id, call.TargetRepertoireId);  // in-place ins bestehende Repertoire
+        // Version bleibt veraltet, bis der Hintergrund-Job das frische PGN eingespielt hat.
+        var reloaded = await _db.Repertoires.SingleAsync(r => r.Id == rep.Id);
+        Assert.Equal(0, reloaded.ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_Chessable_NoBearer_CountsAsSkipped()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn");
+        var stub = new StubCourseReimporter { ReturnId = null }; // kein Bearer → Enqueue scheitert
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(0, result.Enqueued);
+        Assert.Equal(1, result.Skipped);
+    }
 }

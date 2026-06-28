@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.188.0';
+export const APP_VERSION = '0.189.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.189.0", date: "2026-06-28", changes: [
+    { en: "Repertoire trainer: the repertoires page now offers to re-import Chessable repertoires so that tolerated alternative moves work. Chessable marks some moves as \"also acceptable\" (e.g. playing e5 instead of the main move e6); these now get exported into the PGN and the trainer accepts them as \"tolerated\" instead of marking them wrong. Repertoires imported before this feature don't carry that data, so the \"Update\" banner on the repertoires page now re-fetches them fresh from Chessable — in place, so your training progress is kept. Needs a stored Chessable login.", de: "Repertoire-Trainer: Die Repertoire-Seite bietet jetzt an, Chessable-Repertoires neu zu importieren, damit geduldete Alternativzüge funktionieren. Chessable markiert manche Züge als „auch akzeptabel\" (z. B. e5 statt des Hauptzugs e6); diese landen jetzt im PGN und der Trainer wertet sie als „geduldet\" statt als Fehler. Vor diesem Feature importierte Repertoires tragen diese Daten nicht — deshalb holt der „Aktualisieren\"-Hinweis auf der Repertoire-Seite sie jetzt frisch von Chessable, und zwar in-place, sodass dein Trainings-Fortschritt erhalten bleibt. Benötigt einen hinterlegten Chessable-Login." },
+  ]},
   { version: "0.188.0", date: "2026-06-28", changes: [
     { en: "Our Discord community is now linked prominently in the footer too (next to Help and Feedback), with the Discord logo and brand colour — in addition to the button already in the top navigation. Note: the footer only shows on desktop; on mobile the Discord link lives in the navigation menu.", de: "Unsere Discord-Community ist jetzt auch in der Fußzeile prominent verlinkt (neben Hilfe und Feedback) — mit Discord-Logo und Markenfarbe, zusätzlich zum bereits vorhandenen Knopf in der oberen Navigationsleiste. Hinweis: Die Fußzeile erscheint nur auf dem Desktop; mobil liegt der Discord-Link im Navigationsmenü." },
   ]},

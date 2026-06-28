@@ -78,7 +78,7 @@ public class ChessableImportService : ICourseReimporter
     /// veraltete Bücher dabei in-place. Liefert die Import-Id, oder <c>null</c>, wenn für
     /// <paramref name="ownerUserId"/> kein Chessable-Bearer hinterlegt ist (kein Re-Fetch möglich).
     /// </summary>
-    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, CancellationToken ct = default)
+    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, CancellationToken ct = default)
     {
         if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == ownerUserId, ct)) return null;
         var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == "running", ct);
@@ -88,6 +88,7 @@ public class ChessableImportService : ICourseReimporter
             Bid = bid,
             CourseName = courseName ?? string.Empty,
             Target = target,
+            TargetRepertoireId = targetRepertoireId,
             Status = "running",
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow,
@@ -370,6 +371,28 @@ public class ChessableImportService : ICourseReimporter
 
     private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
     {
+        // In-place-Re-Import (Reprocess-Re-Fetch): das frische PGN ersetzt ein BESTEHENDES Repertoire,
+        // damit dessen Id und damit der Trainings-Fortschritt erhalten bleiben.
+        if (import.TargetRepertoireId is int target
+            && await _db.Repertoires.AnyAsync(r => r.Id == target && r.UserId == import.UserId, ct))
+        {
+            // Erst die neue Datei hochladen, dann die alten löschen → nie ein Zeitfenster mit 0 Dateien.
+            var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == target).Select(f => f.Id).ToListAsync(ct);
+            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
+                await _repertoires.UploadFileAsync(target, import.UserId, $"chessable-{import.Bid}.pgn", ms); // setzt ImportVersion + ChessableCourseId neu
+            if (oldIds.Count > 0)
+            {
+                var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
+                _db.RepertoireFiles.RemoveRange(olds);
+                await _db.SaveChangesAsync(ct);
+            }
+            import.ResultId = target;
+            import.Imported = import.LineCount;
+            import.Skipped = 0;
+            import.Invalid = 0;
+            return;
+        }
+
         // Resume: Repertoire evtl. in einem vorigen Versuch schon angelegt → nicht doppeln.
         int repId;
         if (import.ResultId is int existing

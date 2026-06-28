@@ -19,10 +19,17 @@ namespace RookHub.Api.Services;
 ///   beim Import wird der motivverratende Teil nach „Chapter N:"/„Kapitel N:" aus
 ///   <c>BookPuzzle.Chapter</c> entfernt (→ nur noch „Chapter N"). Study-Bücher behalten ihre
 ///   Kapitelnamen. Bestehende Puzzle-Bücher werden über den Reprocess-Knopf entschärft.</item>
+/// <item><c>3</c> — Geduldete Alternativzüge (Chessable <c>softFail</c>) werden vom piratechess-Export
+///   jetzt als <c>{[%alt …]}</c> ins PGN geschrieben (Grundlage für den Repertoire-Trainer: e5/c5/…
+///   als „geduldet" statt „falsch"). Diese Daten stehen NICHT im lokal gespeicherten PGN, sie kommen
+///   nur aus einem frischen Chessable-Abruf → für Chessable-Repertoires ist der Reprocess ein
+///   Re-Fetch (in-place ins bestehende Repertoire, Trainings-Fortschritt bleibt). Nicht-Chessable-
+///   bzw. lokal aus <c>Book.SourcePgn</c> aufbereitbare Datensätze ändern sich an dieser Version
+///   inhaltlich nicht (reiner Versions-Mark bzw. idempotenter Re-Import).</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 }

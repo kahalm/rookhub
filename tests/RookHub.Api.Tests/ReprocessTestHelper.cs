@@ -10,12 +10,12 @@ namespace RookHub.Api.Tests;
 /// </summary>
 public class StubCourseReimporter : ICourseReimporter
 {
-    public List<(int OwnerUserId, string Bid, string Target, string CourseName)> Calls { get; } = new();
+    public List<(int OwnerUserId, string Bid, string Target, string CourseName, int? TargetRepertoireId)> Calls { get; } = new();
     public int? ReturnId { get; set; }
 
-    public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, CancellationToken ct = default)
+    public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, CancellationToken ct = default)
     {
-        Calls.Add((ownerUserId, bid, target, courseName));
+        Calls.Add((ownerUserId, bid, target, courseName, targetRepertoireId));
         return Task.FromResult(ReturnId);
     }
 }

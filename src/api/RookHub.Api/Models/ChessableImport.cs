@@ -54,6 +54,12 @@ public class ChessableImport
     /// <summary>Bei Erfolg: RepertoireId bzw. BookId des angelegten Ergebnisses.</summary>
     public int? ResultId { get; set; }
 
+    /// <summary>Re-Import IN ein bestehendes Repertoire (Target "repertoire"): dessen Id. Gesetzt vom
+    /// Reprocess-Re-Fetch, damit das frische PGN (inkl. <c>[%alt]</c>) das vorhandene Repertoire
+    /// IN-PLACE ersetzt (Id bleibt → Trainings-Karten/Fortschritt bleiben erhalten), statt ein
+    /// Duplikat anzulegen. null ⇒ normaler Import (neues Repertoire bzw. Resume via <see cref="ResultId"/>).</summary>
+    public int? TargetRepertoireId { get; set; }
+
     /// <summary>Importierte Einheiten (Buch: Puzzles; Repertoire: Linien des Kurses).</summary>
     public int Imported { get; set; }
     public int Skipped { get; set; }

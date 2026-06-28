@@ -13,7 +13,7 @@ namespace RookHub.Api.Services;
 /// </summary>
 public interface ICourseReimporter
 {
-    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, CancellationToken ct = default);
+    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -95,7 +95,7 @@ public partial class ImportReprocessService
             else if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
             {
                 var ownerId = book.OwnerUserId ?? userId;
-                var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName, ct);
+                var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName, ct: ct);
                 if (importId != null) result.Enqueued++;
                 else result.Skipped++; // kein Bearer hinterlegt
             }
@@ -115,16 +115,22 @@ public partial class ImportReprocessService
 
     public async Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, CancellationToken ct = default)
     {
-        var reps = _db.Repertoires.Where(r => r.UserId == userId);
-        var total = await reps.CountAsync(ct);
-        var stale = await reps.CountAsync(r => r.ImportVersion < ImportPipeline.CurrentVersion, ct);
+        var reps = await _db.Repertoires
+            .Where(r => r.UserId == userId)
+            .Include(r => r.Files)
+            .ToListAsync(ct);
+        var total = reps.Count;
+        var stale = reps.Where(r => r.ImportVersion < ImportPipeline.CurrentVersion).ToList();
+        // Chessable-Repertoires bekommen [%alt] nur per frischem Re-Fetch (Refetchable); alle anderen
+        // haben keine Quelle für geduldete Züge → reiner Versions-Mark (lokal „aufbereitbar", inhaltl. No-op).
+        var refetchable = stale.Count(r => ResolveRepertoireBid(r) != null);
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
             Total = total,
-            Stale = stale,
-            // Repertoire-Quelle (PgnContent) ist immer vorhanden → grundsätzlich aufbereitbar.
-            ReprocessableLocally = stale,
+            Stale = stale.Count,
+            ReprocessableLocally = stale.Count - refetchable,
+            Refetchable = refetchable,
         };
     }
 
@@ -132,18 +138,33 @@ public partial class ImportReprocessService
     {
         var stale = await _db.Repertoires
             .Where(r => r.UserId == userId && r.ImportVersion < ImportPipeline.CurrentVersion)
+            .Include(r => r.Files)
             .ToListAsync(ct);
+        var result = new ReprocessResultDto();
         var now = DateTime.UtcNow;
         foreach (var r in stale)
         {
-            // Heute keine gespeicherten abgeleiteten Daten zu erneuern (Auswertung läuft live) →
-            // nur auf die aktuelle Pipeline-Version markieren. Zukunftssicher: kommt später ein
-            // gecachtes/precomputed Repertoire-Artefakt dazu, wird es hier neu erzeugt.
-            r.ImportVersion = ImportPipeline.CurrentVersion;
-            r.UpdatedAt = now;
+            var bid = ResolveRepertoireBid(r);
+            if (bid != null)
+            {
+                // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende
+                // Repertoire schreiben (Id bleibt → Trainings-Fortschritt bleibt). ImportVersion wird
+                // erst beim Abschluss des Hintergrund-Jobs hochgesetzt (Datei-Upload).
+                var importId = await _chessableImport.EnqueueReimportAsync(
+                    userId, bid, "repertoire", r.Name, targetRepertoireId: r.Id, ct: ct);
+                if (importId != null) result.Enqueued++;
+                else result.Skipped++; // z. B. kein hinterlegter Chessable-Bearer
+            }
+            else
+            {
+                // Nicht-Chessable: keine Quelle für geduldete Züge → nur auf aktuelle Version markieren.
+                r.ImportVersion = ImportPipeline.CurrentVersion;
+                r.UpdatedAt = now;
+                result.Reprocessed++;
+            }
         }
         await _db.SaveChangesAsync(ct);
-        return new ReprocessResultDto { Reprocessed = stale.Count };
+        return result;
     }
 
     // ===== Helpers =====
@@ -161,5 +182,22 @@ public partial class ImportReprocessService
         var m = ChessableBidRegex().Match(fileName);
         bid = m.Success ? m.Groups[1].Value : string.Empty;
         return m.Success;
+    }
+
+    [GeneratedRegex(@"^chessable-(\d+)\.pgn$", RegexOptions.IgnoreCase)]
+    private static partial Regex RepertoireBidRegex();
+
+    /// <summary>Chessable-bid eines Repertoires: bevorzugt <see cref="Repertoire.ChessableCourseId"/>,
+    /// sonst aus dem Repertoire-Dateinamen <c>chessable-{bid}.pgn</c> (Altbestand ohne gesetzte CourseId,
+    /// z. B. vor dem [Site]-Auto-Extract importiert). null ⇒ kein Chessable-Repertoire / nicht auflösbar.</summary>
+    private static string? ResolveRepertoireBid(Repertoire rep)
+    {
+        if (!string.IsNullOrWhiteSpace(rep.ChessableCourseId)) return rep.ChessableCourseId;
+        foreach (var f in rep.Files)
+        {
+            var m = RepertoireBidRegex().Match(f.FileName);
+            if (m.Success) return m.Groups[1].Value;
+        }
+        return null;
     }
 }
