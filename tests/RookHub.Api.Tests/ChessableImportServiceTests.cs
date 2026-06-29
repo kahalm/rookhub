@@ -279,6 +279,58 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunNextAsync_DownloadLane_GateBlocksSecondConcurrentDrive()
+    {
+        // Regression (2026-06-29, zwei Kurse zogen gleichzeitig): die Download-Lane wird von ZWEI
+        // unabhängigen Treibern bedient — dem Queue-Worker UND dem Watchdog (ruft RunNextAsync an der
+        // Queue vorbei direkt). Der atomare Claim verhindert nur DOPPEL-Verarbeitung DESSELBEN Jobs,
+        // nicht, dass jeder Treiber einen ANDEREN wartenden Job greift und parallel herunterlädt.
+        // Das prozessweite Gate (SemaphoreSlim(1)) erzwingt höchstens EINEN gleichzeitigen Download:
+        // solange einer läuft, kehrt ein zweiter Drive SOFORT zurück (zweiter Job bleibt "queued").
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        var t0 = DateTime.UtcNow;
+        var j1 = new ChessableImport { UserId = 7, Bid = "j1", CourseName = "", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, FetchedPgn = null, CreatedAt = t0 };
+        var j2 = new ChessableImport { UserId = 7, Bid = "j2", CourseName = "", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, FetchedPgn = null, CreatedAt = t0.AddSeconds(1) };
+        _db.ChessableImports.AddRange(j1, j2);
+        await _db.SaveChangesAsync();
+
+        var inFlight = new TaskCompletionSource();
+        var release = new TaskCompletionSource();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            // Der (einzige) Fetch hängt im Progress-Poll fest → das Download-Gate bleibt gehalten.
+            inFlight.TrySetResult();
+            release.Task.GetAwaiter().GetResult();
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1, chapterCount = 1, lineCount = 1, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        // Treiber 1 (z. B. Queue-Worker): hält das Gate, blockiert mitten im Fetch von j1 (fair zuerst dran).
+        var first = Task.Run(() => svc.RunNextAsync());
+        await inFlight.Task.WaitAsync(TimeSpan.FromSeconds(10)); // j1 ist jetzt "fetching", Gate gehalten
+
+        try
+        {
+            // Treiber 2 (z. B. Watchdog) feuert parallel — MUSS sofort zurückkehren, ohne j2 zu greifen.
+            await svc.RunNextAsync();
+            Assert.Equal("queued", (await _db.ChessableImports.FindAsync(j2.Id))!.Phase); // Gate blockte den 2. Download
+        }
+        finally
+        {
+            release.TrySetResult();           // Fetch von j1 abschließen lassen → Gate wird freigegeben
+            await first.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(j1.Id))!.Status);
+    }
+
+    [Fact]
     public async Task RunAsync_AlreadyCompleted_IsNoOp()
     {
         var imp = await SeedImportAsync("repertoire", status: "completed");

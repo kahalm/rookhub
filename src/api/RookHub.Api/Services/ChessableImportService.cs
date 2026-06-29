@@ -30,6 +30,17 @@ public class ChessableImportService : ICourseReimporter
     internal int FetchStallPolls = 240;   // aufeinanderfolgende Polls OHNE Fortschritt → Stillstand (≈10 min)
     internal int FetchMaxPolls = 2160;    // Absolut-Backstop (≈90 min) gegen echte Endlosschleifen
 
+    /// <summary>Prozessweites Gate für die DOWNLOAD-Lane: höchstens EIN gleichzeitiger Download-Import.
+    /// Die Lane wird von zwei unabhängigen Treibern bedient — dem einzelnen <c>BackgroundTaskWorker</c>
+    /// (Queue-Tickets) UND dem <see cref="ChessableImportWatchdogService"/> (ruft <see cref="RunNextAsync"/>
+    /// an der bounded Queue VORBEI direkt auf). Der atomare Claim (<see cref="TryClaimAsync"/>) verhindert
+    /// nur, dass zwei Treiber DENSELBEN Job greifen — NICHT, dass jeder einen ANDEREN wartenden Job claimt
+    /// und parallel herunterlädt (beobachtet 2026-06-29: Watchdog-Drive + Queue-Worker zogen zwei Kurse
+    /// gleichzeitig). Dieses Gate erzwingt die „seriell"-Annahme der Download-Lane prozessweit. Statisch,
+    /// weil <see cref="ChessableImportService"/> scoped ist (eine Instanz je Scope/Request).
+    /// Die Fast-Lane (netzfrei, eigener serieller Loop) bleibt bewusst ungated und läuft NEBENLÄUFIG.</summary>
+    private static readonly SemaphoreSlim _downloadLaneGate = new(1, 1);
+
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _proxy;
@@ -131,6 +142,33 @@ public class ChessableImportService : ICourseReimporter
     /// (<c>FullyCached==false</c> ODER noch null/unklassifiziert → läuft sicher als Download statt zu
     /// hängen).</param>
     public async Task RunNextAsync(CancellationToken ct = default, bool fastLane = false)
+    {
+        // Fast-Lane: ungated (eigener serieller Loop, netzfrei) → bewusst nebenläufig zur Download-Lane.
+        if (fastLane)
+        {
+            await DrainNextAsync(ct, fastLane: true);
+            return;
+        }
+
+        // Download-Lane: prozessweit auf höchstens EINEN gleichzeitigen Lauf begrenzen. Greift bereits
+        // ein Download (Gate belegt), kehrt dieser Aufruf SOFORT zurück (WaitAsync(0)) statt einen
+        // zweiten Kurs parallel zu ziehen — der laufende Treiber (Queue-Worker bzw. Watchdog) draint
+        // den Rest weiter, der Watchdog holt verpasste Jobs ohnehin periodisch nach.
+        if (!await _downloadLaneGate.WaitAsync(0, ct))
+            return;
+        try
+        {
+            await DrainNextAsync(ct, fastLane: false);
+        }
+        finally
+        {
+            _downloadLaneGate.Release();
+        }
+    }
+
+    /// <summary>Claimt + verarbeitet GENAU einen fair als Nächstes dran befindlichen wartenden Import
+    /// der gewählten Lane. Erwartet, dass der Aufrufer ggf. die Lane-Begrenzung (Download-Gate) hält.</summary>
+    private async Task DrainNextAsync(CancellationToken ct, bool fastLane)
     {
         var queued = await _db.ChessableImports
             .Where(i => i.Status == "running" && i.Phase == "queued"

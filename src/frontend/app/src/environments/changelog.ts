@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.195.3';
+export const APP_VERSION = '0.195.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.195.4", date: "2026-06-29", changes: [
+    { en: "Fixed Chessable imports occasionally downloading two courses at once. The serial download lane is driven by two independent triggers (the queue worker and the stall-recovery watchdog); the per-job claim only stopped them grabbing the same job, not from each grabbing a different one and downloading in parallel. A process-wide gate now enforces at most one download at a time — a second trigger returns immediately while one is running (the fully-cached fast lane stays parallel by design).", de: "Behoben: Chessable-Importe luden gelegentlich zwei Kurse gleichzeitig herunter. Die serielle Download-Lane wird von zwei unabhängigen Auslösern angetrieben (dem Queue-Worker und dem Stillstands-Watchdog); der Pro-Job-Claim verhinderte nur, dass beide DENSELBEN Job greifen — nicht, dass jeder einen ANDEREN greift und parallel herunterlädt. Ein prozessweites Gate erzwingt jetzt höchstens einen Download gleichzeitig — ein zweiter Auslöser kehrt sofort zurück, solange einer läuft (die voll-gecachte Fast-Lane bleibt absichtlich parallel)." },
+  ]},
   { version: "0.195.3", date: "2026-06-29", changes: [
     { en: "Per-IP request/block tracking for Chessable imports (piratechess): every VPN exit IP now records how many requests went through it and how many were blocked/timed out, accumulated across rotations. An IP that repeatedly misbehaves is logged as \"recurring bad\" (with totals), and a new admin endpoint exposes the per-IP table (worst first) for ad-hoc analysis — so a consistently bad IP is now visible instead of guessable.", de: "Pro-IP-Request-/Block-Erfassung für Chessable-Importe (piratechess): Jede VPN-Ausgangs-IP protokolliert jetzt, wie viele Requests über sie liefen und wie viele blockiert/getimeoutet wurden — über alle Rotationen kumuliert. Eine IP, die wiederholt auffällt, wird als „wiederholt schlecht“ geloggt (mit Summen), und ein neuer Admin-Endpoint liefert die Per-IP-Tabelle (schlechteste zuerst) zur Ad-hoc-Auswertung — eine dauerhaft schlechte IP ist damit sichtbar statt nur vermutbar." },
   ]},
