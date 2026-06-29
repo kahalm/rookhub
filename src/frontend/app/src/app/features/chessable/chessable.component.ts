@@ -29,9 +29,9 @@ import {
  * Hol-Durchsatz (Prod-Messung 2026-06-15, inkl. VPN-Rotationspausen): grob ~15–20 Zeilen/min.
  * Für Schätzungen konservativ die Faustregel 500 Zeilen ≈ 30 Min (≈ 16,7/min) verwenden.
  */
-// Gemessener Durchsatz echter (nicht-gecachter) Linien-Abrufe ≈ 25 Linien/Min (gepoolt 26,6 über
-// ~80 reale Kurs-Fetches; gecachte Linien sind quasi sofort). Für die Rest-Zeit-Schätzung.
-export const CHESSABLE_LINES_PER_MIN = 25;
+// Durchsatz echter (nicht-gecachter) Linien-Abrufe für die Rest-Zeit-Schätzung. Auf 40 Linien/Min
+// gesetzt (nach dem Rotate-on-Block-Speedup; vorher gemessen ~26). Gecachte Linien sind quasi sofort.
+export const CHESSABLE_LINES_PER_MIN = 40;
 
 /** Kompakte Dauer aus Millisekunden: "1 h 5 min", "12 min", "45 s"; "—" bei ungültig/negativ. */
 export function formatDuration(ms: number): string {

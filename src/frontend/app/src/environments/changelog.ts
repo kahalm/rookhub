@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.195.0';
+export const APP_VERSION = '0.195.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.195.1", date: "2026-06-29", changes: [
+    { en: "Chessable import time estimates now assume ~40 lines/min (up from ~25), reflecting the faster import after the block-rotation speedup — so the \"~M min\" estimates in the import progress and the admin size estimate read more realistically.", de: "Die Chessable-Import-Zeitschätzungen rechnen jetzt mit ~40 Linien/Min (statt ~25), passend zum schnelleren Import nach dem Block-Rotations-Speedup — so sind die „~M Min\"-Angaben im Import-Fortschritt und in der Admin-Größenschätzung realistischer." },
+  ]},
   { version: "0.195.0", date: "2026-06-29", changes: [
     { en: "Admin course download: each course now has an \"estimate size\" button that shows the course's total line count and a rough time estimate (e.g. \"≈299 lines · ~12 min\") before you import it — fetched on demand per course (instant for already-cached courses, otherwise one quick lookup).", de: "Admin-Kursdownload: Jeder Kurs hat jetzt einen „Größe schätzen\"-Knopf, der die Gesamt-Linienzahl und eine grobe Zeitschätzung anzeigt (z. B. „≈299 Linien · ~12 Min\"), bevor man importiert — on-demand pro Kurs geholt (sofort bei bereits gecachten Kursen, sonst eine schnelle Abfrage)." },
   ]},

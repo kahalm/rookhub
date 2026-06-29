@@ -20,6 +20,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../chessable/chessable.service';
+import { CHESSABLE_LINES_PER_MIN } from '../chessable/chessable.component';
 import { timer, Subscription, Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
 import { MenuService } from '../../core/menu.service';
@@ -346,15 +347,15 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   /** Kurs des Users ins eigene Admin-Konto herunterladen — als Repertoire oder Buch. */
   /** Geschätzte Rest-Holzeit (Min) eines laufenden Imports aus der bekannten Gesamt-Linienzahl;
-   *  0 = unbekannt/fertig (Anzeige unterdrückt). ~25 Linien/Min (gemessen). */
+   *  0 = unbekannt/fertig (Anzeige unterdrückt). Durchsatz: CHESSABLE_LINES_PER_MIN. */
   dlEtaMin(imp: ChessableImport): number {
     if (!imp.linesTotal || imp.linesTotal <= imp.linesDone) return 0;
-    return Math.ceil((imp.linesTotal - imp.linesDone) / 25);
+    return Math.ceil((imp.linesTotal - imp.linesDone) / CHESSABLE_LINES_PER_MIN);
   }
 
-  /** Geschätzte Holzeit (Min) aus einer Linienzahl; gecacht ⇒ 0 (quasi sofort). ~25 Linien/Min. */
+  /** Geschätzte Holzeit (Min) aus einer Linienzahl; gecacht ⇒ 0 (quasi sofort). */
   estMinFromLines(totalLines: number): number {
-    return Math.ceil(totalLines / 25);
+    return Math.ceil(totalLines / CHESSABLE_LINES_PER_MIN);
   }
 
   /** On-demand: Gesamt-Linienzahl + grobe Zeit eines Kurses schätzen (1 getCourse-Call bzw. Cache). */
