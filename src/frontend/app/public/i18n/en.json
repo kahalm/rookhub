@@ -14,7 +14,8 @@
     "tolerated": "Playable — but the repertoire move is {{move}}.",
     "wrong": "Not in the repertoire. The move is {{move}}.",
     "continue": "Continue",
-    "playYourMove": "Make your move on the board."
+    "playYourMove": "Make your move on the board.",
+    "tapToContinue": "Continuing… (tap to skip)"
   },
   "common": {
     "save": "Save",

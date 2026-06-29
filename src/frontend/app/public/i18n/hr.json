@@ -14,7 +14,8 @@
     "tolerated": "Igrivo — ali potez iz repertoara je {{move}}.",
     "wrong": "Nije u repertoaru. Potez je {{move}}.",
     "continue": "Nastavi",
-    "playYourMove": "Odigraj svoj potez na ploči."
+    "playYourMove": "Odigraj svoj potez na ploči.",
+    "tapToContinue": "Nastavak… (dodirni za preskakanje)"
   },
   "common": {
     "save": "Spremi",

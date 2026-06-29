@@ -14,7 +14,8 @@
     "tolerated": "Spielbar — aber der Repertoirezug ist {{move}}.",
     "wrong": "Nicht im Repertoire. Der Zug ist {{move}}.",
     "continue": "Weiter",
-    "playYourMove": "Mach deinen Zug auf dem Brett."
+    "playYourMove": "Mach deinen Zug auf dem Brett.",
+    "tapToContinue": "Weiter… (tippen zum Überspringen)"
   },
   "common": {
     "save": "Speichern",

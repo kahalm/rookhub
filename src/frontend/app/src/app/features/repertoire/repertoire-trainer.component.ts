@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -22,6 +22,9 @@ type Outcome = 'correct' | 'tolerated' | 'wrong';
 
 const NEW_LIMIT = 20;
 const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
+// Auto-Weiter nach richtigem/geduldetem Zug (kein „Weiter"-Knopf). Geduldet länger,
+// damit die Visualisierung des Repertoirezugs lesbar bleibt; antippen springt sofort weiter.
+const ADVANCE_MS: Record<Outcome, number> = { correct: 700, tolerated: 1800, wrong: 0 };
 
 @Component({
   selector: 'app-repertoire-trainer',
@@ -56,7 +59,7 @@ const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
       <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
     </mat-card>
 
-    <div *ngSwitchDefault class="play">
+    <div *ngSwitchDefault class="play" (click)="onPlayClick()">
       <app-puzzle-board
         [fen]="fen" [orientation]="color === 'w' ? 'white' : 'black'"
         [turnColor]="color === 'w' ? 'white' : 'black'"
@@ -80,7 +83,9 @@ const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
             {{ 'repertoireTrainer.tolerated' | translate: { move: expectedDisplay } }}</p>
           <p *ngIf="outcome === 'wrong'"><mat-icon>cancel</mat-icon>
             {{ 'repertoireTrainer.wrong' | translate: { move: expectedDisplay } }}</p>
-          <button mat-raised-button color="primary" (click)="next()">{{ 'repertoireTrainer.continue' | translate }}</button>
+          <!-- Richtig/geduldet: kein Knopf, läuft automatisch weiter (Tippen springt sofort). -->
+          <button *ngIf="outcome === 'wrong'" mat-raised-button color="primary" (click)="next(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
+          <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
         <p *ngIf="phase === 'PLAYING'" class="hint">{{ 'repertoireTrainer.playYourMove' | translate }}</p>
       </div>
@@ -106,10 +111,11 @@ const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
     .feedback.correct { background: rgba(46,125,50,.12); }
     .feedback.tolerated { background: rgba(255,160,0,.15); }
     .feedback.wrong { background: rgba(198,40,40,.12); }
+    .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); }
   `],
 })
-export class RepertoireTrainerComponent implements OnInit {
+export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   repertoireId = 0;
   phase: Phase = 'LOADING';
   color: 'w' | 'b' = 'w';
@@ -128,6 +134,7 @@ export class RepertoireTrainerComponent implements OnInit {
   outcome: Outcome = 'correct';
   expectedDisplay = '';
   private statesByKey = new Map<string, RepertoireCardStateDto>();
+  private advanceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -159,10 +166,13 @@ export class RepertoireTrainerComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void { this.clearAdvance(); }
+
   private graphCache: ReturnType<typeof buildRepertoireGraph> | null = null;
 
   setColor(c: 'w' | 'b'): void {
     if (c === this.color || !this.graphCache) return;
+    this.clearAdvance();
     this.color = c;
     localStorage.setItem(COLOR_KEY(this.repertoireId), c);
     this.allCards = cardsForColor(this.graphCache, c);
@@ -170,6 +180,7 @@ export class RepertoireTrainerComponent implements OnInit {
   }
 
   private buildQueue(): void {
+    this.clearAdvance();
     const now = Date.now();
     const due: RepCard[] = [];
     const fresh: RepCard[] = [];
@@ -238,10 +249,29 @@ export class RepertoireTrainerComponent implements OnInit {
     this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade })
       .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
 
+    // Richtig/geduldet: kein „Weiter"-Knopf — automatisch weiterspielen (Tippen springt sofort).
+    // Bei geduldetem Zug etwas länger, damit die Visualisierung des Repertoirezugs lesbar bleibt.
+    if (this.outcome !== 'wrong') this.scheduleAdvance(ADVANCE_MS[this.outcome]);
+
     this.cdr.markForCheck();
   }
 
+  /** Klick irgendwo im Spielbereich überspringt die Auto-Weiter-Wartezeit. */
+  onPlayClick(): void {
+    if (this.phase === 'FEEDBACK' && this.advanceTimer !== null) this.next();
+  }
+
+  private scheduleAdvance(ms: number): void {
+    this.clearAdvance();
+    this.advanceTimer = setTimeout(() => { this.advanceTimer = null; this.next(); }, ms);
+  }
+
+  private clearAdvance(): void {
+    if (this.advanceTimer !== null) { clearTimeout(this.advanceTimer); this.advanceTimer = null; }
+  }
+
   next(): void {
+    this.clearAdvance();
     this.index++;
     this.showCurrent();
   }

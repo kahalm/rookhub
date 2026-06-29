@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.195.5';
+export const APP_VERSION = '0.196.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.196.0", date: "2026-06-29", changes: [
+    { en: "Repertoire trainer: no more \"Continue\" button after a correct or tolerated move — the trainer flows straight on to the next position. A correct move advances after a brief acknowledgement; a tolerated (playable-but-not-the-main) move keeps its visualization on screen a bit longer so you can read which move the repertoire prefers, then continues automatically. Tapping the board skips the wait and plays on immediately. A wrong move still waits for an explicit Continue so you can study the right move.", de: "Repertoire-Trainer: Kein „Weiter“-Knopf mehr nach einem richtigen oder geduldeten Zug — der Trainer spielt direkt zur nächsten Stellung weiter. Ein richtiger Zug schaltet nach kurzer Bestätigung weiter; ein geduldeter (spielbar, aber nicht der Hauptzug) lässt seine Visualisierung etwas länger stehen, damit du den bevorzugten Repertoirezug noch lesen kannst, und geht dann automatisch weiter. Ein Tippen aufs Brett überspringt die Wartezeit und spielt sofort weiter. Bei einem falschen Zug bleibt der Trainer wie bisher stehen (expliziter „Weiter“-Knopf), damit du den richtigen Zug in Ruhe ansehen kannst." },
+  ]},
   { version: "0.195.5", date: "2026-06-29", changes: [
     { en: "Tuned the per-IP \"recurring bad\" detection for Chessable imports (piratechess) to stop false alarms. Live data showed healthy VPN exit IPs (≈4% block rate overall) being flagged as repeatedly bad, only because individual short windows (one block out of two requests = 50%) crossed the per-window threshold. Now a window only counts as bad once it is large enough, and \"recurring bad\" is judged on an IP's cumulative block rate over enough requests — so the warning fires for an IP that is genuinely, consistently blocked, not for normal noise.", de: "Die Per-IP-Erkennung „wiederholt schlecht“ für Chessable-Importe (piratechess) gegen Fehlalarme nachgeschärft. Live-Daten zeigten gesunde VPN-Ausgangs-IPs (≈4 % Block-Rate insgesamt), die als wiederholt schlecht geflaggt wurden — nur weil einzelne kurze Phasen (ein Block von zwei Requests = 50 %) über der Phasen-Schwelle lagen. Jetzt zählt eine Phase erst ab ausreichender Größe als schlecht, und „wiederholt schlecht“ bemisst sich an der kumulativen Block-Rate einer IP über genug Requests — die Warnung feuert also für eine IP, die echt und dauerhaft blockt, nicht für normales Rauschen." },
   ]},
