@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.195.1';
+export const APP_VERSION = '0.195.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.195.2", date: "2026-06-29", changes: [
+    { en: "Chessable import robustness (piratechess): a hung VPN exit no longer freezes the import. Each request now has a hard total timeout (~20s) so a stalling IP fails fast instead of after 1–2 minutes, and a tunnel that gets blocked too often (≥5 of the last 8 requests) is dropped from the rotation pool for a cooldown (default 2 min) so traffic sticks to the healthy tunnels — instead of repeatedly landing on the bad one and waiting on it.", de: "Robustheit des Chessable-Imports (piratechess): Ein hängender VPN-Ausgang friert den Import nicht mehr ein. Jeder Request hat jetzt ein hartes Gesamt-Timeout (~20s), sodass eine zähe IP schnell scheitert statt nach 1–2 Minuten, und ein Tunnel, der zu oft blockiert (≥5 der letzten 8 Requests), fliegt für eine Cooldown-Zeit (Standard 2 Min) ganz aus dem Rotations-Pool — so bleibt der Verkehr auf den gesunden Tunneln, statt immer wieder auf dem schlechten zu landen und auf ihn zu warten." },
+  ]},
   { version: "0.195.1", date: "2026-06-29", changes: [
     { en: "Chessable import time estimates now assume ~40 lines/min (up from ~25), reflecting the faster import after the block-rotation speedup — so the \"~M min\" estimates in the import progress and the admin size estimate read more realistically.", de: "Die Chessable-Import-Zeitschätzungen rechnen jetzt mit ~40 Linien/Min (statt ~25), passend zum schnelleren Import nach dem Block-Rotations-Speedup — so sind die „~M Min\"-Angaben im Import-Fortschritt und in der Admin-Größenschätzung realistischer." },
   ]},
