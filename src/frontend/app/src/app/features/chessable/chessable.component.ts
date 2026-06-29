@@ -24,45 +24,20 @@ import {
   ChessableAdminImport,
   ChessableImportTarget,
 } from './chessable.service';
+import {
+  CHESSABLE_LINES_PER_MIN,
+  formatDuration,
+  effectiveTotalLines,
+  estimateRemainingMinutes,
+  chessableStatusLabel,
+  chessableQueueLabel,
+  compareImportsByQueue,
+} from './chessable-progress.util';
 
-/**
- * Hol-Durchsatz (Prod-Messung 2026-06-15, inkl. VPN-Rotationspausen): grob ~15–20 Zeilen/min.
- * Für Schätzungen konservativ die Faustregel 500 Zeilen ≈ 30 Min (≈ 16,7/min) verwenden.
- */
-// Durchsatz echter (nicht-gecachter) Linien-Abrufe für die Rest-Zeit-Schätzung. Auf 40 Linien/Min
-// gesetzt (nach dem Rotate-on-Block-Speedup; vorher gemessen ~26). Gecachte Linien sind quasi sofort.
-export const CHESSABLE_LINES_PER_MIN = 40;
-
-/** Kompakte Dauer aus Millisekunden: "1 h 5 min", "12 min", "45 s"; "—" bei ungültig/negativ. */
-export function formatDuration(ms: number): string {
-  if (!isFinite(ms) || ms < 0) return '—';
-  const s = Math.floor(ms / 1000);
-  if (s >= 3600) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
-  if (s >= 60) return `${Math.floor(s / 60)} min`;
-  return `${s} s`;
-}
-
-/**
- * Gesamt-Zeilenzahl: bevorzugt den EXAKTEN Wert (`linesTotal`, aus getCourse?includeVariations);
- * fällt auf die lineare Hochrechnung aus dem Kapitel-Fortschritt zurück, solange der exakte Wert
- * (noch) nicht vorliegt (0). 0 = (noch) nicht bestimmbar.
- */
-export function effectiveTotalLines(linesDone: number, chaptersDone: number, chaptersTotal: number, linesTotal = 0): number {
-  if (linesTotal > 0) return linesTotal;
-  if (linesDone <= 0 || chaptersDone <= 0 || chaptersTotal <= 0) return 0;
-  return Math.round((linesDone * chaptersTotal) / chaptersDone);
-}
-
-/**
- * Geschätzte Rest-Holzeit in Minuten: (Gesamt − geholt) / Durchsatz, aufgerundet. Nutzt die exakte
- * Gesamtzahl, sobald bekannt, sonst die Hochrechnung. 0 = nicht schätzbar.
- */
-export function estimateRemainingMinutes(linesDone: number, chaptersDone: number, chaptersTotal: number, linesTotal = 0): number {
-  const total = effectiveTotalLines(linesDone, chaptersDone, chaptersTotal, linesTotal);
-  if (total <= 0) return 0;
-  const remaining = Math.max(0, total - linesDone);
-  return Math.ceil(remaining / CHESSABLE_LINES_PER_MIN);
-}
+// Rückwärtskompatible Re-Exports: die Fortschritts-/ETA-Helfer liegen jetzt in
+// `chessable-progress.util` (geteilt mit der Kursseiten-Warteschlange), bestehende Importe
+// (admin.component, Specs) ziehen sie weiterhin von hier.
+export { CHESSABLE_LINES_PER_MIN, formatDuration, effectiveTotalLines, estimateRemainingMinutes };
 
 /** Aktiver Import + EINMAL je Update vorberechnetes Statuslabel (statt `translate.instant`
  *  je CD-Zyklus pro Zeile während des 2,5-s-Pollings — analog Dashboard/Admin-Importliste). */
@@ -635,19 +610,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   /** Text für den Zeilen-Status (Phase + ggf. Kapitel/Linien-Fortschritt). */
   statusLabel(imp: ChessableImport): string {
-    let s = this.translate.instant('chessable.phase_' + (imp.phase || 'queued'));
-    if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
-      // Mit bekannter Gesamt-Linienzahl „Linien X/Gesamt" zeigen, sonst nur die geholten.
-      s += ' ' + (imp.linesTotal > 0
-        ? this.translate.instant('chessable.fetchProgressTotal',
-            { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone, linesTotal: imp.linesTotal })
-        : this.translate.instant('chessable.fetchProgress',
-            { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone }));
-      // Restzeit: exakte Gesamtzahl nutzen, sobald bekannt; sonst Hochrechnung.
-      const eta = estimateRemainingMinutes(imp.linesDone, imp.chaptersDone, imp.chaptersTotal, imp.linesTotal);
-      if (eta > 0) s += ' · ' + this.translate.instant('chessable.etaRemaining', { min: eta });
-    }
-    return s;
+    return chessableStatusLabel(imp, this.translate);
   }
 
   /** „Wartezeit X · Holzeit Y" eines abgeschlossenen Imports; '' solange keine Zeiten vorliegen. */
@@ -658,16 +621,15 @@ export class ChessableComponent implements OnInit, OnDestroy {
     return this.translate.instant('chessable.importDuration', { queue, fetch });
   }
 
-  /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben). */
+  /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben),
+   *  nach „#" (globaler Abarbeitungs-Position) sortiert: in Arbeit zuoberst, dann Warteposition 2, 3, … */
   activeList(): ActiveImport[] {
-    return Object.values(this.activeImports);
+    return Object.values(this.activeImports).sort(compareImportsByQueue);
   }
 
   /** Status für Warteschlange/Zeile: pausiert / globale Position / Hol-Fortschritt. */
   queueLabel(imp: ChessableImport): string {
-    if (imp.status === 'paused') return this.translate.instant('chessable.statusPaused');
-    if (imp.phase === 'queued') return this.translate.instant('chessable.queuePos', { pos: imp.queuedAhead + 1 });
-    return this.statusLabel(imp);
+    return chessableQueueLabel(imp, this.translate);
   }
 
   pauseImport(imp: ChessableImport): void {

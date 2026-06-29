@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.196.2';
+export const APP_VERSION = '0.197.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.197.0", date: "2026-06-29", changes: [
+    { en: "The courses page now shows a live import banner: while a Chessable course is being imported, you see it right where your courses are — \"fetching course… chapter 7/36 · 82/1000 lines · ~23 min left\" — the same progress + ETA as on the Chessable tab. When an import finishes, the course list refreshes so the new course appears. Also: the import queue on the Chessable tab is now ordered by # (queue position) — the one being fetched on top, then waiting position 2, 3, …", de: "Die Kursseite zeigt jetzt ein Live-Import-Banner: Während ein Chessable-Kurs importiert wird, siehst du ihn direkt dort, wo deine Kurse stehen — „hole Kurs… Kapitel 7/36 · 82/1000 Linien · noch ca. 23 Min“ — derselbe Fortschritt + ETA wie im Chessable-Tab. Ist ein Import fertig, lädt die Kursliste neu, sodass der neue Kurs erscheint. Außerdem: Die Import-Warteschlange im Chessable-Tab ist jetzt nach # (Warteposition) sortiert — der gerade geholte Kurs oben, dann Warteposition 2, 3, …" },
+  ]},
   { version: "0.196.2", date: "2026-06-29", changes: [
     { en: "Daily puzzle in Discord now shows the 💡 hint marker again behind solvers who used hints. The bot already renders the badge, but the daily solver-update payload never actually included the per-solver hint count (only the weekly post did) — so it always read as zero. The daily payload now sends it too, matching the weekly post.", de: "Das Tagespuzzle in Discord zeigt wieder das 💡-Tipp-Zeichen hinter Lösern, die Tipps verwendet haben. Der Bot kann das Badge längst anzeigen, aber das Daily-Solver-Update hat die Tipp-Anzahl pro Löser nie mitgeschickt (nur die Wochenpost tat das) — also wurde sie immer als null gelesen. Das Daily-Payload sendet sie jetzt ebenfalls, analog zur Wochenpost." },
   ]},
