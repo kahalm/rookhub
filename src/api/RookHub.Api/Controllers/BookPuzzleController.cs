@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,8 @@ namespace RookHub.Api.Controllers;
 [Authorize]   // secure by default; öffentliche Endpoints sind explizit mit [AllowAnonymous] markiert
 public class BookPuzzleController : BaseApiController
 {
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
+
     private readonly BookPuzzleService _service;
     private readonly HintGenerationService _hints;
     private readonly IBackgroundTaskQueue _bgQueue;
@@ -72,6 +75,35 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("{id}/results")]
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
         => Ok(await _service.GetResultsAsync(id, since));
+
+    /// <summary>„Track solves" eines per Link geteilten Puzzles: erfasst den Erstversuch des Besuchers
+    /// (eingeloggt via Token, sonst via anonymer SessionId) und liefert die aktuellen Zähler.
+    /// <c>solved=false</c> deckt Fehlzug/Aufgeben/Reset ab. Pro Besucher zählt nur der erste Versuch.</summary>
+    [AllowAnonymous]
+    [HttpPost("{id}/track")]
+    public async Task<ActionResult<SharedPuzzleCountsDto>> Track(int id, [FromBody] RecordSharedAttemptDto dto)
+    {
+        var userId = GetUserIdOrNull();
+        string identityKey;
+        if (userId is int uid)
+        {
+            identityKey = $"u:{uid}";
+        }
+        else
+        {
+            if (!SessionIdPattern.IsMatch(dto.SessionId ?? ""))
+                return BadRequest(new { message = "Invalid sessionId." });
+            identityKey = $"s:{dto.SessionId}";
+        }
+        try { return Ok(await _service.RecordSharedAttemptAsync(id, identityKey, dto.Solved)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Aktuelle „Track solves"-Zähler (solved/failed, Erstversuch je Besucher) eines geteilten Puzzles.</summary>
+    [AllowAnonymous]
+    [HttpGet("{id}/track-counts")]
+    public async Task<ActionResult<SharedPuzzleCountsDto>> TrackCounts(int id)
+        => Ok(await _service.GetSharedCountsAsync(id));
 
     /// <summary>
     /// Monats-Wertung des Tagespuzzles. <paramref name="month"/> als <c>yyyy-MM</c> (Default:

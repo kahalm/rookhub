@@ -18,7 +18,7 @@ import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettings
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { ChallengeService } from '../../core/challenge.service';
-import { PuzzleService, BookPuzzleDto } from './puzzle.service';
+import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
@@ -200,6 +200,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`): nach dem Lösen am Puzzle stehen
    *  bleiben statt automatisch weiterzuspringen, und keine Buch-Navigation anbieten. */
   singlePuzzle = false;
+  /** „Track solves" (Teilen-Link `?track=1`): Erstversuche der Besucher zählen + unter dem Puzzle
+   *  anzeigen (solved/failed). Failed = alles inkl. Reset/Aufgeben; nur der erste Versuch zählt. */
+  trackSolves = false;
+  sharedCounts: SharedPuzzleCounts | null = null;
+  private trackRecorded = false;
 
   // Zuletzt gelöstes Puzzle merken (überlebt den Auto-Advance) — analog Standard/Endless:
   // ermöglicht „Letztes Puzzle analysieren" + „Letztes teilen" im Share-Dialog.
@@ -406,6 +411,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordCourseAttempt(true);
     this.recordWeeklyAttempt(true);
     this.recordBookAttempt(true);
+    this.recordTrack(true);   // „Track solves": Erstversuch gelöst
     // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
     // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
     if (this.solveAlternative) return;
@@ -455,6 +461,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordCourseAttempt(false);
     this.recordWeeklyAttempt(false);
     this.recordBookAttempt(false);
+    this.recordTrack(false);   // „Track solves": Erstversuch nicht gelöst (Fehlzug)
   }
 
   /**
@@ -480,6 +487,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.solveSeconds)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     }
+  }
+
+  /** „Track solves": meldet den ERSTEN Versuch des Besuchers (solved/failed) und aktualisiert die
+   *  angezeigten Zähler. Nur einmal pro geöffnetem Puzzle (serverseitig zusätzlich erstversuch-dedupliziert).
+   *  `solved=false` deckt Fehlzug, Aufgeben und Reset ab. */
+  private recordTrack(solved: boolean): void {
+    if (!this.trackSolves || this.trackRecorded || !this.puzzle) return;
+    this.trackRecorded = true;
+    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved).subscribe({
+      next: c => this.sharedCounts = c,
+      error: () => { this.trackRecorded = false; }   // bei Fehler erneut versuchbar
+    });
   }
 
   ngOnInit(): void {
@@ -521,6 +540,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       if (challengeParam) this.challengeId = Number(challengeParam) || null;
       // Direkt geteiltes Einzel-Puzzle (Teilen-Link) → am Ende stehen bleiben, nicht weiterspringen.
       this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
+      // „Track solves": Erstversuche zählen + anzeigen; aktuelle Zähler gleich laden.
+      this.trackSolves = this.route.snapshot.queryParamMap.get('track') === '1';
+      if (this.trackSolves) {
+        this.puzzleService.getSharedCounts(Number(idParam)).subscribe({ next: c => this.sharedCounts = c, error: () => {} });
+      }
       this.loadPuzzle(Number(idParam));
     }
   }
@@ -934,6 +958,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.recordCourseAttempt(false);   // Aufgeben = Versuch mit verbrachter Zeit (zählt fürs Trainingsziel)
     this.recordWeeklyAttempt(false);   // Aufgeben zählt im Wochenpost als ✗ (gespielt, nicht gelöst)
     this.recordBookAttempt(false);
+    this.recordTrack(false);   // „Track solves": Aufgeben zählt als failed
     // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
     this.playSolutionFromStart();
   }
@@ -1086,6 +1111,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.isDaily && this.moveLog.length > 0) this.recordBookAttempt(false);
     // Wochenpost: Reset nach mind. einem Zug zählt als ✗ (gespielt, nicht gelöst).
     if (this.inWeekly && this.moveLog.length > 0) this.recordWeeklyAttempt(false);
+    // „Track solves": Reset zählt als failed (alles mit Reset gilt als nicht gelöst).
+    this.recordTrack(false);
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.setupPuzzle(this.puzzle);

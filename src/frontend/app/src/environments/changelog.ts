@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.199.1';
+export const APP_VERSION = '0.200.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.200.0", date: "2026-06-29", changes: [
+    { en: "Shared puzzles can now track solves. When you share a single puzzle, the share dialog has a \"Track solves\" option; the resulting link shows a Solved / Failed counter under the puzzle for everyone who opens it. Only each visitor's first attempt counts, and anything that isn't a clean first-try solve — a wrong move, giving up, or a reset — counts as failed.", de: "Geteilte Puzzles können jetzt Versuche mitzählen. Wenn du ein einzelnes Puzzle teilst, gibt es im Teilen-Dialog die Option „Versuche zählen\"; der erzeugte Link zeigt dann allen, die ihn öffnen, einen Gelöst-/Fehlversuch-Zähler unter dem Puzzle. Es zählt nur der erste Versuch jedes Besuchers, und alles, was keine saubere Erstlösung ist — ein Fehlzug, Aufgeben oder ein Reset — zählt als Fehlversuch." },
+  ]},
   { version: "0.199.1", date: "2026-06-29", changes: [
     { en: "When you share a single puzzle directly, the recipient now stays on that puzzle after solving instead of auto-advancing to the next one in the book. The share link is marked as a single puzzle (so there's no countdown, no \"next\" button, and no in-book browse buttons) — the puzzle simply stays solved on screen. Opening puzzles normally (browsing a book) is unchanged.", de: "Wenn du ein einzelnes Puzzle direkt teilst, bleibt der Empfänger nach dem Lösen jetzt auf diesem Puzzle stehen, statt automatisch zum nächsten im Buch weiterzuspringen. Der Teilen-Link ist als Einzel-Puzzle markiert (kein Countdown, kein „Weiter\"-Knopf, keine Buch-Navigation) — das Puzzle bleibt einfach gelöst stehen. Normales Öffnen (Buch durchblättern) bleibt unverändert." },
   ]},

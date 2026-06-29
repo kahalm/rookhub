@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
+    public DbSet<SharedPuzzleAttempt> SharedPuzzleAttempts => Set<SharedPuzzleAttempt>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
@@ -284,6 +285,12 @@ public class AppDbContext : DbContext
             e.HasIndex(a => new { a.UserId, a.VisualizationLevel });
             e.HasIndex(a => a.AnonymousSessionId);
             e.HasIndex(a => a.AttemptedAt).IsDescending();
+        });
+
+        modelBuilder.Entity<SharedPuzzleAttempt>(e =>
+        {
+            // Ein Besucher zählt genau einmal je Puzzle (Erstversuch gewinnt).
+            e.HasIndex(a => new { a.BookPuzzleId, a.IdentityKey }).IsUnique();
         });
 
         modelBuilder.Entity<Book>(e =>

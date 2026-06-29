@@ -134,6 +134,44 @@ public class BookPuzzleService
         }
     }
 
+    /// <summary>„Track solves" eines per Link geteilten Puzzles: erfasst den ERSTEN Versuch je Besucher
+    /// (<paramref name="identityKey"/>). Spätere Versuche desselben Besuchers werden ignoriert (Unique-Index;
+    /// hier zusätzlich vorab geprüft, damit InMemory-Tests ohne DB-Constraint korrekt sind). Liefert die
+    /// aktuellen Zähler zurück.</summary>
+    public async Task<SharedPuzzleCountsDto> RecordSharedAttemptAsync(int id, string identityKey, bool solved)
+    {
+        if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
+            throw new KeyNotFoundException("Book puzzle not found.");
+
+        var exists = await _db.SharedPuzzleAttempts
+            .AnyAsync(a => a.BookPuzzleId == id && a.IdentityKey == identityKey);
+        if (!exists)
+        {
+            _db.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt
+            {
+                BookPuzzleId = id,
+                IdentityKey = identityKey,
+                Solved = solved,
+                CreatedAt = DateTime.UtcNow,
+            });
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException)
+            {
+                // Race: ein paralleler Erstversuch desselben Besuchers hat den Unique-Index zuerst belegt.
+                _db.ChangeTracker.Clear();
+            }
+        }
+        return await GetSharedCountsAsync(id);
+    }
+
+    /// <summary>Aggregierte „Track solves"-Zähler (Erstversuch je Besucher) eines geteilten Puzzles.</summary>
+    public async Task<SharedPuzzleCountsDto> GetSharedCountsAsync(int id)
+    {
+        var solved = await _db.SharedPuzzleAttempts.CountAsync(a => a.BookPuzzleId == id && a.Solved);
+        var failed = await _db.SharedPuzzleAttempts.CountAsync(a => a.BookPuzzleId == id && !a.Solved);
+        return new SharedPuzzleCountsDto { Solved = solved, Failed = failed };
+    }
+
     /// <summary>
     /// Überträgt anonyme BookPuzzleAttempts einer Session auf den eingeloggten User.
     /// Bereits vorhandene Attempts des Users für dasselbe Puzzle werden übersprungen (Unique-Constraint).

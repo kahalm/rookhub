@@ -3,6 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+/** „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher). */
+export interface SharedPuzzleCounts {
+  solved: number;
+  failed: number;
+}
+
 export interface PuzzleDto {
   id: number;
   lichessId: string;
@@ -277,6 +283,20 @@ export class PuzzleService {
     return this.http.post(`/api/book-puzzles/${id}/attempt/anonymous`, {
       solved, timeSeconds, sessionId: this.ensureSessionId()
     });
+  }
+
+  /** „Track solves" eines geteilten Puzzles: Erstversuch des Besuchers melden, liefert aktuelle Zähler.
+   *  `solved=false` deckt Fehlzug/Aufgeben/Reset ab. Eingeloggte werden serverseitig per Token erkannt,
+   *  Anonyme über die SessionId. Pro Besucher zählt nur der erste Versuch. */
+  trackSharedAttempt(id: number, solved: boolean): Observable<SharedPuzzleCounts> {
+    return this.http.post<SharedPuzzleCounts>(`/api/book-puzzles/${id}/track`, {
+      solved, sessionId: this.ensureSessionId()
+    });
+  }
+
+  /** Aktuelle „Track solves"-Zähler (solved/failed) eines geteilten Puzzles. */
+  getSharedCounts(id: number): Observable<SharedPuzzleCounts> {
+    return this.http.get<SharedPuzzleCounts>(`/api/book-puzzles/${id}/track-counts`);
   }
 
   getBookList(): Observable<BookInfoDto[]> {

@@ -326,6 +326,14 @@
             />
           }
 
+          <!-- „Track solves": Erstversuch-Zähler unter dem geteilten Puzzle -->
+          @if (trackSolves && sharedCounts) {
+            <div class="track-counts">
+              <span class="track-solved"><mat-icon>check_circle</mat-icon> {{ 'book.track.solved' | translate }}: {{ sharedCounts.solved }}</span>
+              <span class="track-failed"><mat-icon>cancel</mat-icon> {{ 'book.track.failed' | translate }}: {{ sharedCounts.failed }}</span>
+            </div>
+          }
+
           <!-- Zug-Kommentar (Buch-Kommentar zum aktuell durchgespielten Zug) -->
           @if (reviewMode && moveComment) {
             <mat-card class="move-comment-card" appearance="outlined">

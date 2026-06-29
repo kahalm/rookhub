@@ -778,7 +778,9 @@
       "copied": "Link copied!",
       "copyFailed": "Copy failed",
       "current": "Current puzzle",
-      "previous": "Previous puzzle"
+      "previous": "Previous puzzle",
+      "trackSolves": "Track solves",
+      "trackSolvesHint": "Show solved / failed counts under the puzzle (first attempt per visitor; a reset counts as failed)."
     }
   },
   "courses": {
@@ -1111,6 +1113,10 @@
       "question": "You spent {{time}} on this puzzle. Did it really take that long, or were you away in between?",
       "wasAway": "I was away",
       "reallyTookThatLong": "Yes, it really took that long"
+    },
+    "track": {
+      "solved": "Solved",
+      "failed": "Failed"
     }
   },
   "admin": {

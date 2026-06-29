@@ -19,6 +19,22 @@ public class ClaimBookSessionDto
     public string SessionId { get; set; } = string.Empty;
 }
 
+/// <summary>Body für das „Track solves" eines per Link geteilten Puzzles. <c>Solved</c>=true nur bei
+/// sauberer Erstlösung, sonst false (Fehlzug/Aufgeben/Reset). <c>SessionId</c> nur für anonyme Besucher
+/// (eingeloggte werden über das Token identifiziert). Pro Besucher zählt nur der erste Versuch.</summary>
+public class RecordSharedAttemptDto
+{
+    public bool Solved { get; set; }
+    public string? SessionId { get; set; }
+}
+
+/// <summary>Aggregierte „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher).</summary>
+public class SharedPuzzleCountsDto
+{
+    public int Solved { get; set; }
+    public int Failed { get; set; }
+}
+
 public class BookSolverDto
 {
     public string Name { get; set; } = string.Empty;

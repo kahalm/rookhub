@@ -152,3 +152,12 @@
       .puzzle-layout { flex-direction: column; }
       .board-section { width: 100%; }
     }
+
+    .track-counts {
+      display: flex; justify-content: center; gap: 1.25rem; margin-top: 0.25rem;
+      font-size: 0.95em; font-weight: 500;
+      span { display: inline-flex; align-items: center; gap: 0.3rem; }
+      mat-icon { font-size: 1.1em; width: 1.1em; height: 1.1em; }
+      .track-solved { color: #2e7d32; }
+      .track-failed { color: #c62828; }
+    }

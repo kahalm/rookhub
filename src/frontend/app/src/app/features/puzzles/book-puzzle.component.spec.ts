@@ -161,6 +161,48 @@ describe('BookPuzzleComponent direkt geteiltes Einzel-Puzzle (single)', () => {
   });
 });
 
+describe('BookPuzzleComponent track solves', () => {
+  it('recordTrack meldet einmalig und übernimmt die Zähler', () => {
+    const c = makeComponent();
+    const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 3, failed: 2 }));
+    c.puzzleService.trackSharedAttempt = spy;
+    c.trackSolves = true;
+    c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+
+    (c as any).recordTrack(true);
+    (c as any).recordTrack(false);   // zweiter Aufruf wird vom Guard verschluckt
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(9, true);
+    expect(c.sharedCounts).toEqual({ solved: 3, failed: 2 });
+  });
+
+  it('recordTrack tut nichts ohne trackSolves', () => {
+    const c = makeComponent();
+    const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 0, failed: 0 }));
+    c.puzzleService.trackSharedAttempt = spy;
+    c.trackSolves = false;
+    c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+
+    (c as any).recordTrack(false);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('resetPuzzle meldet einen failed-Track (Reset zählt als failed)', () => {
+    const c = makeComponent();
+    const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 0, failed: 1 }));
+    c.puzzleService.trackSharedAttempt = spy;
+    spyOn(c as any, 'setupPuzzle');
+    c.trackSolves = true;
+    c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
+
+    c.resetPuzzle();
+
+    expect(spy).toHaveBeenCalledWith(9, false);
+  });
+});
+
 describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
   function solvedComp(elapsed: number, resolvedSeconds: number) {
     const c = makeComponent();

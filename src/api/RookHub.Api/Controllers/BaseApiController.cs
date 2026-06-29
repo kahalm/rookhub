@@ -13,6 +13,14 @@ public abstract class BaseApiController : ControllerBase
         return userId;
     }
 
+    /// <summary>UserId des aktuellen Tokens, oder <c>null</c> wenn nicht (gültig) eingeloggt — für
+    /// <c>[AllowAnonymous]</c>-Endpoints, die optional einen eingeloggten Nutzer berücksichtigen.</summary>
+    protected int? GetUserIdOrNull()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(claim, out var userId) ? userId : null;
+    }
+
     /// <summary>
     /// True, wenn das aktuelle Token aus einer Admin-Impersonation stammt (trägt den <c>imp</c>-Claim).
     /// Destruktive/irreversible Aktionen (Konto löschen, Passwort ändern, API-Token erstellen) dürfen

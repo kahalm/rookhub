@@ -920,4 +920,77 @@ public class BookPuzzleControllerTests : IDisposable
         Assert.Empty(hof.MostGolds);
         Assert.Null(hof.Fastest);
     }
+
+    // ---- Track solves (geteilte Einzel-Puzzles) ----
+
+    private void SetAnonymous() => _controller.ControllerContext = new ControllerContext
+    {
+        HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) }
+    };
+
+    private static SharedPuzzleCountsDto TrackResult(ActionResult<SharedPuzzleCountsDto> r)
+        => Assert.IsType<SharedPuzzleCountsDto>(Assert.IsType<OkObjectResult>(r.Result).Value);
+
+    [Fact]
+    public async Task Track_CountsSolvedAndFailed_PerVisitor()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:1", bookFileName: "track.pgn");
+
+        SetUser(11);
+        TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true }));
+        SetUser(22);
+        var afterTwo = TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = false }));
+
+        Assert.Equal(1, afterTwo.Solved);
+        Assert.Equal(1, afterTwo.Failed);
+    }
+
+    [Fact]
+    public async Task Track_OnlyFirstAttemptCountsPerVisitor()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:2", bookFileName: "track.pgn");
+
+        SetUser(11);
+        TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true }));   // Erstversuch: gelöst
+        var after = TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = false })); // Reset später → ignoriert
+
+        Assert.Equal(1, after.Solved);
+        Assert.Equal(0, after.Failed);   // Erstversuch bleibt „gelöst"
+    }
+
+    [Fact]
+    public async Task Track_Anonymous_UsesSessionId_AndDistinctSessionsCountSeparately()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:3", bookFileName: "track.pgn");
+        SetAnonymous();
+
+        TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, SessionId = "11111111-1111-1111-1111-111111111111" }));
+        var after = TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = false, SessionId = "22222222-2222-2222-2222-222222222222" }));
+
+        Assert.Equal(1, after.Solved);
+        Assert.Equal(1, after.Failed);
+    }
+
+    [Fact]
+    public async Task Track_Anonymous_InvalidSession_ReturnsBadRequest()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:4", bookFileName: "track.pgn");
+        SetAnonymous();
+
+        var result = await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, SessionId = "short" });
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task TrackCounts_ReturnsCurrentTotals()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:5", bookFileName: "track.pgn");
+        SetUser(11);
+        await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = false });
+
+        SetAnonymous();
+        var counts = Assert.IsType<SharedPuzzleCountsDto>(Assert.IsType<OkObjectResult>((await _controller.TrackCounts(p.Id)).Result).Value);
+        Assert.Equal(0, counts.Solved);
+        Assert.Equal(1, counts.Failed);
+    }
 }

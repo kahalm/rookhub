@@ -778,7 +778,9 @@
       "copied": "Link kopiert!",
       "copyFailed": "Kopieren fehlgeschlagen",
       "current": "Aktuelles Puzzle",
-      "previous": "Vorheriges Puzzle"
+      "previous": "Vorheriges Puzzle",
+      "trackSolves": "Versuche zählen",
+      "trackSolvesHint": "Zeigt unter dem Puzzle Gelöst-/Fehlversuch-Zähler (erster Versuch je Besucher; ein Reset zählt als Fehlversuch)."
     }
   },
   "courses": {
@@ -1111,6 +1113,10 @@
       "question": "Du warst {{time}} an diesem Puzzle. Hat das wirklich so lange gedauert — oder warst du zwischendurch weg?",
       "wasAway": "War zwischendurch weg",
       "reallyTookThatLong": "Ja, so lange gedauert"
+    },
+    "track": {
+      "solved": "Gelöst",
+      "failed": "Fehlversuch"
     }
   },
   "admin": {

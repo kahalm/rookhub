@@ -776,7 +776,9 @@
       "copied": "Poveznica kopirana!",
       "copyFailed": "Kopiranje nije uspjelo",
       "current": "Trenutna zagonetka",
-      "previous": "Prethodna zagonetka"
+      "previous": "Prethodna zagonetka",
+      "trackSolves": "Broji pokušaje",
+      "trackSolvesHint": "Prikazuje ispod zagonetke brojače riješeno/neuspjelo (prvi pokušaj po posjetitelju; reset se broji kao neuspjeh)."
     }
   },
   "courses": {
@@ -1109,6 +1111,10 @@
       "question": "Proveo si {{time}} na ovoj zagonetki. Je li stvarno toliko trajalo — ili si bio odsutan u međuvremenu?",
       "wasAway": "Bio sam odsutan",
       "reallyTookThatLong": "Da, stvarno toliko"
+    },
+    "track": {
+      "solved": "Riješeno",
+      "failed": "Neuspjelo"
     }
   },
   "admin": {
