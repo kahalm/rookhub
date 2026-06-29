@@ -6,7 +6,8 @@ const STORAGE_KEY = 'rookhub_app_theme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private _preference: AppTheme = 'system';
+  // Default = dark; eine gespeicherte Nutzerwahl (siehe Konstruktor) hat Vorrang.
+  private _preference: AppTheme = 'dark';
   private _systemDark = false;
   private mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 

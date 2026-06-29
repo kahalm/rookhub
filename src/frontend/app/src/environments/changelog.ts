@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.200.2';
+export const APP_VERSION = '0.200.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.200.3", date: "2026-06-29", changes: [
+    { en: "Dark mode is now the default. New visitors (without a saved theme choice) start in dark; anyone who already picked light/dark/system keeps their setting, and the theme toggle works as before.", de: "Dark Mode ist jetzt der Standard. Neue Besucher (ohne gespeicherte Theme-Wahl) starten im Dunkelmodus; wer bereits hell/dunkel/system gewählt hat, behält seine Einstellung, und der Theme-Umschalter funktioniert wie bisher." },
+  ]},
   { version: "0.200.2", date: "2026-06-29", changes: [
     { en: "Leaderboard \"This week\" / \"This month\" are now rolling windows — the last 7 and the last 31 days — instead of the calendar week (Monday start) and calendar month.", de: "Bestenlisten „Diese Woche\" / „Dieser Monat\" sind jetzt rollierende Zeiträume — die letzten 7 bzw. die letzten 31 Tage — statt Kalenderwoche (ab Montag) und Kalendermonat." },
   ]},
