@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.195.4';
+export const APP_VERSION = '0.195.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.195.5", date: "2026-06-29", changes: [
+    { en: "Tuned the per-IP \"recurring bad\" detection for Chessable imports (piratechess) to stop false alarms. Live data showed healthy VPN exit IPs (≈4% block rate overall) being flagged as repeatedly bad, only because individual short windows (one block out of two requests = 50%) crossed the per-window threshold. Now a window only counts as bad once it is large enough, and \"recurring bad\" is judged on an IP's cumulative block rate over enough requests — so the warning fires for an IP that is genuinely, consistently blocked, not for normal noise.", de: "Die Per-IP-Erkennung „wiederholt schlecht“ für Chessable-Importe (piratechess) gegen Fehlalarme nachgeschärft. Live-Daten zeigten gesunde VPN-Ausgangs-IPs (≈4 % Block-Rate insgesamt), die als wiederholt schlecht geflaggt wurden — nur weil einzelne kurze Phasen (ein Block von zwei Requests = 50 %) über der Phasen-Schwelle lagen. Jetzt zählt eine Phase erst ab ausreichender Größe als schlecht, und „wiederholt schlecht“ bemisst sich an der kumulativen Block-Rate einer IP über genug Requests — die Warnung feuert also für eine IP, die echt und dauerhaft blockt, nicht für normales Rauschen." },
+  ]},
   { version: "0.195.4", date: "2026-06-29", changes: [
     { en: "Fixed Chessable imports occasionally downloading two courses at once. The serial download lane is driven by two independent triggers (the queue worker and the stall-recovery watchdog); the per-job claim only stopped them grabbing the same job, not from each grabbing a different one and downloading in parallel. A process-wide gate now enforces at most one download at a time — a second trigger returns immediately while one is running (the fully-cached fast lane stays parallel by design).", de: "Behoben: Chessable-Importe luden gelegentlich zwei Kurse gleichzeitig herunter. Die serielle Download-Lane wird von zwei unabhängigen Auslösern angetrieben (dem Queue-Worker und dem Stillstands-Watchdog); der Pro-Job-Claim verhinderte nur, dass beide DENSELBEN Job greifen — nicht, dass jeder einen ANDEREN greift und parallel herunterlädt. Ein prozessweites Gate erzwingt jetzt höchstens einen Download gleichzeitig — ein zweiter Auslöser kehrt sofort zurück, solange einer läuft (die voll-gecachte Fast-Lane bleibt absichtlich parallel)." },
   ]},
