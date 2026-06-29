@@ -200,8 +200,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`): nach dem Lösen am Puzzle stehen
    *  bleiben statt automatisch weiterzuspringen, und keine Buch-Navigation anbieten. */
   singlePuzzle = false;
-  /** „Track solves" (Teilen-Link `?track=1`): Erstversuche der Besucher zählen + unter dem Puzzle
-   *  anzeigen (solved/failed). Failed = alles inkl. Reset/Aufgeben; nur der erste Versuch zählt. */
+  /** „Track solves": für jedes direkt geteilte Einzel-Puzzle (= `singlePuzzle`) aktiv — Erstversuche
+   *  der Besucher zählen + unter dem Puzzle anzeigen (solved/failed). Failed = alles inkl. Reset/Aufgeben;
+   *  nur der erste Versuch zählt. */
   trackSolves = false;
   sharedCounts: SharedPuzzleCounts | null = null;
   private trackRecorded = false;
@@ -538,10 +539,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // Aus einer Freundes-Challenge geöffnet (nur Standalone-Buch-Modus) → Ergebnis zurückmelden.
       const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
       if (challengeParam) this.challengeId = Number(challengeParam) || null;
-      // Direkt geteiltes Einzel-Puzzle (Teilen-Link) → am Ende stehen bleiben, nicht weiterspringen.
+      // Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`) → am Ende stehen bleiben, nicht
+      // weiterspringen UND Erstversuche immer mitzählen + anzeigen (kein separates Opt-in mehr).
       this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
-      // „Track solves": Erstversuche zählen + anzeigen; aktuelle Zähler gleich laden.
-      this.trackSolves = this.route.snapshot.queryParamMap.get('track') === '1';
+      this.trackSolves = this.singlePuzzle;
       if (this.trackSolves) {
         this.puzzleService.getSharedCounts(Number(idParam)).subscribe({ next: c => this.sharedCounts = c, error: () => {} });
       }

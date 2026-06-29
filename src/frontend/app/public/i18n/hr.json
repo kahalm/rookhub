@@ -776,9 +776,7 @@
       "copied": "Poveznica kopirana!",
       "copyFailed": "Kopiranje nije uspjelo",
       "current": "Trenutna zagonetka",
-      "previous": "Prethodna zagonetka",
-      "trackSolves": "Broji pokušaje",
-      "trackSolvesHint": "Prikazuje ispod zagonetke brojače riješeno/neuspjelo (prvi pokušaj po posjetitelju; reset se broji kao neuspjeh)."
+      "previous": "Prethodna zagonetka"
     }
   },
   "courses": {

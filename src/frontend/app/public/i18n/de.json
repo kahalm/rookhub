@@ -778,9 +778,7 @@
       "copied": "Link kopiert!",
       "copyFailed": "Kopieren fehlgeschlagen",
       "current": "Aktuelles Puzzle",
-      "previous": "Vorheriges Puzzle",
-      "trackSolves": "Versuche zählen",
-      "trackSolvesHint": "Zeigt unter dem Puzzle Gelöst-/Fehlversuch-Zähler (erster Versuch je Besucher; ein Reset zählt als Fehlversuch)."
+      "previous": "Vorheriges Puzzle"
     }
   },
   "courses": {

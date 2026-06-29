@@ -778,9 +778,7 @@
       "copied": "Link copied!",
       "copyFailed": "Copy failed",
       "current": "Current puzzle",
-      "previous": "Previous puzzle",
-      "trackSolves": "Track solves",
-      "trackSolvesHint": "Show solved / failed counts under the puzzle (first attempt per visitor; a reset counts as failed)."
+      "previous": "Previous puzzle"
     }
   },
   "courses": {
