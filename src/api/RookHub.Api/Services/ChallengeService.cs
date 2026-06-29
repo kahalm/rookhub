@@ -160,6 +160,16 @@ public class ChallengeService
     public async Task<int> GetIncomingCountAsync(int userId)
         => await _db.PuzzleChallenges.CountAsync(c => c.ToUserId == userId && c.Status == ChallengeStatus.Pending);
 
+    /// <summary>Pro Freund die Anzahl der von <paramref name="fromUserId"/> an ihn geschickten, noch OFFENEN
+    /// (Pending) Challenges — also Puzzle, die der Freund noch nicht versucht hat. Für die Klammer-Anzeige
+    /// „Freund (n)" im „An Freund schicken"-Menü. Liefert nur Freunde mit n &gt; 0 (Map ToUserId → Count).</summary>
+    public async Task<Dictionary<int, int>> GetPendingOutgoingCountsAsync(int fromUserId)
+        => await _db.PuzzleChallenges
+            .Where(c => c.FromUserId == fromUserId && c.Status == ChallengeStatus.Pending)
+            .GroupBy(c => c.ToUserId)
+            .Select(g => new { ToUserId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ToUserId, x => x.Count);
+
     /// <summary>Ergebnis einer Challenge melden (nur der Empfänger, nur solange offen).
     /// <para>
     /// <paramref name="clientSolved"/> wird NICHT blind geglaubt: ein gemeldetes „gelöst" wird serverseitig

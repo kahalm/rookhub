@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.197.1';
+export const APP_VERSION = '0.198.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.198.0", date: "2026-06-29", changes: [
+    { en: "Send-a-puzzle-to-a-friend now shows, in parentheses behind each friend, how many of the puzzles you sent them are still open (not yet attempted) — e.g. \"Max (3)\". This is the friend's outstanding backlog of your challenges; once they attempt a puzzle (solved or failed) it no longer counts. Friends with nothing open show no number. The counts refresh after you send.", de: "„Puzzle an Freund schicken“ zeigt jetzt in Klammern hinter jedem Freund, wie viele der von dir geschickten Puzzle noch offen sind (noch nicht versucht) — z. B. „Max (3)“. Das ist der offene Rückstand deiner Challenges beim Freund; sobald er ein Puzzle versucht (gelöst oder gescheitert), zählt es nicht mehr. Freunde ohne offene Puzzle zeigen keine Zahl. Die Zähler aktualisieren sich nach dem Senden." },
+  ]},
   { version: "0.197.1", date: "2026-06-29", changes: [
     { en: "Fixed: when a friend accepted your invite, your friend count didn't update until you refreshed the page. The dashboard friend count (and the friends page) now refresh automatically when a new notification comes in — this hooks into the existing 60-second notification poll (no extra polling), so within a minute the count reflects the accepted request without a manual refresh.", de: "Behoben: Wenn ein Freund deine Einladung annahm, aktualisierte sich deine Freundeszahl erst nach einem Seiten-Refresh. Die Freundeszahl auf dem Dashboard (und die Freunde-Seite) lädt jetzt automatisch nach, sobald eine neue Benachrichtigung eintrifft — angedockt an den vorhandenen 60-Sekunden-Benachrichtigungs-Poll (kein zusätzliches Polling), sodass die Zahl die angenommene Anfrage binnen einer Minute ohne manuellen Refresh widerspiegelt." },
   ]},

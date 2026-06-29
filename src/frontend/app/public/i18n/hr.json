@@ -660,7 +660,8 @@
       "selectAll": "Odaberi sve",
       "send": "Pošalji ({{count}})",
       "batchResult": "Poslano za {{sent}}, preskočeno {{skipped}}",
-      "error": "Izazov nije moguće poslati"
+      "error": "Izazov nije moguće poslati",
+      "unsolvedTitle": "{{count}} tvojih zagonetki još nije riješeno"
     },
     "revengeDone": {
       "title": "Osveta dovršena!",

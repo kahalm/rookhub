@@ -43,6 +43,12 @@ public class ChallengeController : BaseApiController
     public async Task<IActionResult> IncomingCount()
         => Ok(new { count = await _challengeService.GetIncomingCountAsync(GetUserId()) });
 
+    /// <summary>Pro Freund die Anzahl der von mir geschickten, noch offenen (Pending) Challenges —
+    /// für die „Freund (n)"-Anzeige im „An Freund schicken"-Menü. Map ToUserId → Count (nur n &gt; 0).</summary>
+    [HttpGet("outgoing/pending-counts")]
+    public async Task<ActionResult<Dictionary<int, int>>> OutgoingPendingCounts()
+        => Ok(await _challengeService.GetPendingOutgoingCountsAsync(GetUserId()));
+
     /// <summary>Ergebnis einer Challenge melden (nur der Empfänger).</summary>
     [HttpPost("{id}/resolve")]
     public async Task<IActionResult> Resolve(int id, [FromBody] ResolveChallengeDto dto)

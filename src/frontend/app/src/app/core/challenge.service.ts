@@ -65,6 +65,12 @@ export class ChallengeService {
     return this.http.get<OutgoingChallenge[]>('/api/challenges/outgoing');
   }
 
+  /** Pro Freund (Map userId → Anzahl) die von mir geschickten, noch OFFENEN Challenges —
+   *  für die „Freund (n)"-Anzeige im „An Freund schicken"-Menü. Nur Freunde mit n > 0 enthalten. */
+  getPendingCounts(): Observable<Record<number, number>> {
+    return this.http.get<Record<number, number>>('/api/challenges/outgoing/pending-counts');
+  }
+
   resolve(id: number, solved: boolean, timeSpentSeconds: number): Observable<unknown> {
     return this.http.post(`/api/challenges/${id}/resolve`, { solved, timeSpentSeconds });
   }

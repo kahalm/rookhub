@@ -37,6 +37,9 @@ import { Friend } from '../../core/models';
           <div class="challenge-menu-row" (click)="$event.stopPropagation()">
             <mat-checkbox [checked]="selected.has(f.userId)" (change)="toggle(f.userId, $event.checked)">
               {{ f.displayName || f.username }}
+              @if (pendingCounts[f.userId]) {
+                <span class="challenge-pending" [attr.title]="'puzzles.challenge.unsolvedTitle' | translate: { count: pendingCounts[f.userId] }">({{ pendingCounts[f.userId] }})</span>
+              }
             </mat-checkbox>
           </div>
         }
@@ -53,6 +56,7 @@ import { Friend } from '../../core/models';
     .challenge-menu-all { border-bottom: 1px solid rgba(0,0,0,.12); margin-bottom: 4px; padding-bottom: 8px; }
     .challenge-menu-send { padding: 8px 16px; }
     .challenge-menu-send button { width: 100%; }
+    .challenge-pending { margin-left: 4px; opacity: .6; font-size: .85em; }
   `]
 })
 export class ChallengeFriendsComponent implements OnChanges {
@@ -65,6 +69,8 @@ export class ChallengeFriendsComponent implements OnChanges {
   @Output() opened = new EventEmitter<void>();
 
   friends: Friend[] = [];
+  /** Pro Freund (userId → Anzahl) die von mir geschickten, noch OFFENEN Puzzle-Challenges. */
+  pendingCounts: Record<number, number> = {};
   selected = new Set<number>();
   sending = false;
   private loaded = false;
@@ -96,6 +102,11 @@ export class ChallengeFriendsComponent implements OnChanges {
       next: f => this.friends = f,
       error: () => { this.loaded = false; }
     });
+    // Offene-Challenges-Zähler je Freund nachladen (leise; ohne den ihn die Liste trotzdem funktioniert).
+    this.challengeService.getPendingCounts().subscribe({
+      next: c => this.pendingCounts = c ?? {},
+      error: () => {}
+    });
   }
 
   toggle(userId: number, checked: boolean): void {
@@ -114,6 +125,8 @@ export class ChallengeFriendsComponent implements OnChanges {
       next: res => {
         this.sending = false;
         this.selected.clear();
+        // Die frisch verschickten Puzzle sind nun offene Challenges → Zähler je Freund auffrischen.
+        this.challengeService.getPendingCounts().subscribe({ next: c => this.pendingCounts = c ?? {}, error: () => {} });
         const skipped = res.skipped?.length ?? 0;
         if (skipped > 0) {
           this.snackbar.info(this.translate.instant('puzzles.challenge.batchResult', { sent: res.sent, skipped }));

@@ -316,6 +316,36 @@ public class ChallengeControllerTests : IDisposable
         Assert.Equal(2, (int)ok.Value!.GetType().GetProperty("count")!.GetValue(ok.Value)!);
     }
 
+    [Fact]
+    public async Task OutgoingPendingCounts_GroupsByFriend_OnlyMyPending()
+    {
+        var me = await CreateUserAsync("me");
+        var alice = await CreateUserAsync("alice");
+        var bob = await CreateUserAsync("bob");
+        var other = await CreateUserAsync("other");
+        var puzzle = await CreatePuzzleAsync();
+
+        // 2 offene an Alice, 1 offene an Bob.
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = me.Id, ToUserId = alice.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending });
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = me.Id, ToUserId = alice.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending });
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = me.Id, ToUserId = bob.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending });
+        // Bereits gelöste/gescheiterte an Alice zählen NICHT (nur „noch nicht gelöst" = offen).
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = me.Id, ToUserId = alice.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Solved });
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = me.Id, ToUserId = alice.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Failed });
+        // Offene Challenge eines ANDEREN Absenders an mich zählt nicht.
+        _db.PuzzleChallenges.Add(new PuzzleChallenge { FromUserId = other.Id, ToUserId = me.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.OutgoingPendingCounts();
+
+        var counts = Assert.IsType<Dictionary<int, int>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal(2, counts[alice.Id]);
+        Assert.Equal(1, counts[bob.Id]);
+        Assert.False(counts.ContainsKey(other.Id));
+        Assert.Equal(2, counts.Count); // nur Freunde mit offenen Challenges
+    }
+
     // ---- Resolve ----
 
     [Fact]

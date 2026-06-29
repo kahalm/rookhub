@@ -9,6 +9,8 @@ import { Friend } from '../../core/models';
 describe('ChallengeFriendsComponent', () => {
   let httpMock: HttpTestingController;
 
+  const PENDING_URL = '/api/challenges/outgoing/pending-counts';
+
   function create(source: 'standard' | 'book' = 'standard') {
     const fixture = TestBed.createComponent(ChallengeFriendsComponent);
     fixture.componentInstance.puzzleId = 42;
@@ -20,6 +22,12 @@ describe('ChallengeFriendsComponent', () => {
     { friendshipId: 1, userId: 7, username: 'a', displayName: null, chessComUsername: null, lichessUsername: null, fideId: null, chessResultsId: null },
     { friendshipId: 2, userId: 8, username: 'b', displayName: null, chessComUsername: null, lichessUsername: null, fideId: null, chessResultsId: null },
   ];
+
+  /** loadFriends() feuert zwei Requests: Freundesliste + Offene-Challenges-Zähler. Beide beantworten. */
+  function flushLoad(counts: Record<number, number> = {}) {
+    httpMock.expectOne('/api/friends').flush(friends);
+    httpMock.expectOne(PENDING_URL).flush(counts);
+  }
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -34,16 +42,17 @@ describe('ChallengeFriendsComponent', () => {
   it('loads friends lazily only once', () => {
     const c = create().componentInstance;
     c.loadFriends();
-    httpMock.expectOne('/api/friends').flush(friends);
+    flushLoad();
     c.loadFriends(); // zweiter Aufruf darf keinen weiteren Request feuern
     httpMock.expectNone('/api/friends');
+    httpMock.expectNone(PENDING_URL);
     expect(c.friends.length).toBe(2);
   });
 
   it('toggleAll selects and clears all friends', () => {
     const c = create().componentInstance;
     c.loadFriends();
-    httpMock.expectOne('/api/friends').flush(friends);
+    flushLoad();
 
     c.toggleAll(true);
     expect(c.selected.size).toBe(2);
@@ -56,17 +65,27 @@ describe('ChallengeFriendsComponent', () => {
   it('someSelected is true for a partial selection', () => {
     const c = create().componentInstance;
     c.loadFriends();
-    httpMock.expectOne('/api/friends').flush(friends);
+    flushLoad();
 
     c.toggle(7, true);
     expect(c.someSelected).toBeTrue();
     expect(c.allSelected).toBeFalse();
   });
 
-  it('send() posts the selected ids with the given source', () => {
-    const c = create('book').componentInstance;
+  it('loads the per-friend count of my still-open challenges', () => {
+    const c = create().componentInstance;
     c.loadFriends();
     httpMock.expectOne('/api/friends').flush(friends);
+    httpMock.expectOne(PENDING_URL).flush({ 7: 3 });
+
+    expect(c.pendingCounts[7]).toBe(3);
+    expect(c.pendingCounts[8]).toBeUndefined(); // kein offener Rückstand → keine Klammer
+  });
+
+  it('send() posts the selected ids with the given source and refreshes the counts', () => {
+    const c = create('book').componentInstance;
+    c.loadFriends();
+    flushLoad({ 7: 1 });
 
     c.toggle(7, true);
     c.toggle(8, true);
@@ -75,6 +94,10 @@ describe('ChallengeFriendsComponent', () => {
     const req = httpMock.expectOne('/api/challenges');
     expect(req.request.body).toEqual({ toUserIds: [7, 8], puzzleId: 42, source: 'book' });
     req.flush({ sent: 2, skipped: [] });
+
+    // Nach dem Senden werden die Zähler neu geladen (die frisch verschickten sind nun offen).
+    httpMock.expectOne(PENDING_URL).flush({ 7: 2, 8: 1 });
+    expect(c.pendingCounts[8]).toBe(1);
 
     expect(c.selected.size).toBe(0);
     expect(c.sending).toBeFalse();
@@ -85,7 +108,7 @@ describe('ChallengeFriendsComponent', () => {
     let emitted = false;
     c.opened.subscribe(() => emitted = true);
     c.onMenuOpened();
-    httpMock.expectOne('/api/friends').flush(friends);
+    flushLoad();
     expect(emitted).toBeTrue();
   });
 

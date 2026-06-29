@@ -662,7 +662,8 @@
       "selectAll": "Select all",
       "send": "Send ({{count}})",
       "batchResult": "Sent to {{sent}}, {{skipped}} skipped",
-      "error": "Could not send challenge"
+      "error": "Could not send challenge",
+      "unsolvedTitle": "{{count}} of your puzzles not yet solved"
     },
     "revengeDone": {
       "title": "Revenge complete!",
