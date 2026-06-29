@@ -19,15 +19,18 @@ public class LeaderboardService
 
     public static readonly string[] Periods = { "weekly", "monthly", "alltime" };
 
-    /// <summary>Untere (inklusive) UTC-Zeitgrenze der Periode; alltime = MinValue (keine Grenze).</summary>
+    /// <summary>Untere (inklusive) UTC-Zeitgrenze der Periode; alltime = MinValue (keine Grenze).
+    /// „weekly"/„monthly" sind ROLLIERENDE Fenster: die letzten 7 bzw. 31 Tage (taggenau, inkl. heute),
+    /// NICHT Kalenderwoche/-monat.</summary>
     public static DateTime WindowStart(string period, DateTime nowUtc)
     {
         var today = nowUtc.Date;   // 00:00 UTC heute
         return period switch
         {
-            // ISO-Woche: Montag als Wochenstart.
-            "weekly" => today.AddDays(-(((int)today.DayOfWeek + 6) % 7)),
-            "monthly" => new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            // Letzte 7 Tage (heute + 6 vorherige).
+            "weekly" => today.AddDays(-6),
+            // Letzte 31 Tage (heute + 30 vorherige).
+            "monthly" => today.AddDays(-30),
             _ => DateTime.MinValue,   // alltime
         };
     }

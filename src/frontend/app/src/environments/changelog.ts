@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.200.1';
+export const APP_VERSION = '0.200.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.200.2", date: "2026-06-29", changes: [
+    { en: "Leaderboard \"This week\" / \"This month\" are now rolling windows — the last 7 and the last 31 days — instead of the calendar week (Monday start) and calendar month.", de: "Bestenlisten „Diese Woche\" / „Dieser Monat\" sind jetzt rollierende Zeiträume — die letzten 7 bzw. die letzten 31 Tage — statt Kalenderwoche (ab Montag) und Kalendermonat." },
+  ]},
   { version: "0.200.1", date: "2026-06-29", changes: [
     { en: "Shared puzzles now always track solves — the opt-in checkbox and the extra link parameter were removed. Every shared single-puzzle link shows the Solved / Failed counter automatically.", de: "Geteilte Puzzles zählen Versuche jetzt immer — die Opt-in-Checkbox und der zusätzliche Link-Parameter wurden entfernt. Jeder geteilte Einzel-Puzzle-Link zeigt den Gelöst-/Fehlversuch-Zähler automatisch." },
   ]},

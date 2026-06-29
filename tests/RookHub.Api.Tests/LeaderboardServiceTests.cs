@@ -199,12 +199,14 @@ public class LeaderboardServiceTests : IDisposable
     }
 
     [Fact]
-    public void WindowStart_ComputesUtcBoundaries()
+    public void WindowStart_ComputesRollingWindows()
     {
         // Mittwoch, 2026-06-17 12:00 UTC
         var now = new DateTime(2026, 6, 17, 12, 0, 0, DateTimeKind.Utc);
-        Assert.Equal(new DateTime(2026, 6, 15), LeaderboardService.WindowStart("weekly", now));   // Montag dieser Woche
-        Assert.Equal(new DateTime(2026, 6, 1), LeaderboardService.WindowStart("monthly", now));
+        // weekly = letzte 7 Tage (heute + 6 vorherige) → 2026-06-11 00:00 UTC
+        Assert.Equal(new DateTime(2026, 6, 11), LeaderboardService.WindowStart("weekly", now));
+        // monthly = letzte 31 Tage (heute + 30 vorherige) → 2026-05-18 00:00 UTC
+        Assert.Equal(new DateTime(2026, 5, 18), LeaderboardService.WindowStart("monthly", now));
         Assert.Equal(DateTime.MinValue, LeaderboardService.WindowStart("alltime", now));
     }
 
