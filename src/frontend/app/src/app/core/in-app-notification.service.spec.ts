@@ -99,6 +99,22 @@ describe('InAppNotificationService', () => {
     expect(count).toBe(1);
   });
 
+  it('emits arrived$ only when the unseen count rises (a new notification came in)', () => {
+    let arrivals = 0;
+    service.arrived$.subscribe(() => arrivals++);
+
+    setCount(0);                 // 0 → 0: keine Steigerung
+    expect(arrivals).toBe(0);
+    setCount(2);                 // 0 → 2: neue Benachrichtigung(en) → 1×
+    expect(arrivals).toBe(1);
+    setCount(2);                 // unverändert → kein Feuern
+    expect(arrivals).toBe(1);
+    setCount(5);                 // 2 → 5: erneut neue → 2×
+    expect(arrivals).toBe(2);
+    setCount(1);                 // gesunken (gelesen) → kein Feuern
+    expect(arrivals).toBe(2);
+  });
+
   it('list requests take + unseenOnly as query params', () => {
     service.list(10, true).subscribe();
     const req = httpMock.expectOne('/api/notifications?take=10&unseenOnly=true');

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.197.0';
+export const APP_VERSION = '0.197.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.197.1", date: "2026-06-29", changes: [
+    { en: "Fixed: when a friend accepted your invite, your friend count didn't update until you refreshed the page. The dashboard friend count (and the friends page) now refresh automatically when a new notification comes in — this hooks into the existing 60-second notification poll (no extra polling), so within a minute the count reflects the accepted request without a manual refresh.", de: "Behoben: Wenn ein Freund deine Einladung annahm, aktualisierte sich deine Freundeszahl erst nach einem Seiten-Refresh. Die Freundeszahl auf dem Dashboard (und die Freunde-Seite) lädt jetzt automatisch nach, sobald eine neue Benachrichtigung eintrifft — angedockt an den vorhandenen 60-Sekunden-Benachrichtigungs-Poll (kein zusätzliches Polling), sodass die Zahl die angenommene Anfrage binnen einer Minute ohne manuellen Refresh widerspiegelt." },
+  ]},
   { version: "0.197.0", date: "2026-06-29", changes: [
     { en: "The courses page now shows a live import banner: while a Chessable course is being imported, you see it right where your courses are — \"fetching course… chapter 7/36 · 82/1000 lines · ~23 min left\" — the same progress + ETA as on the Chessable tab. When an import finishes, the course list refreshes so the new course appears. Also: the import queue on the Chessable tab is now ordered by # (queue position) — the one being fetched on top, then waiting position 2, 3, …", de: "Die Kursseite zeigt jetzt ein Live-Import-Banner: Während ein Chessable-Kurs importiert wird, siehst du ihn direkt dort, wo deine Kurse stehen — „hole Kurs… Kapitel 7/36 · 82/1000 Linien · noch ca. 23 Min“ — derselbe Fortschritt + ETA wie im Chessable-Tab. Ist ein Import fertig, lädt die Kursliste neu, sodass der neue Kurs erscheint. Außerdem: Die Import-Warteschlange im Chessable-Tab ist jetzt nach # (Warteposition) sortiert — der gerade geholte Kurs oben, dann Warteposition 2, 3, …" },
   ]},

@@ -3,11 +3,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { FriendsComponent } from './friends.component';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { InAppNotificationService } from '../../core/in-app-notification.service';
 
 describe('FriendsComponent search race', () => {
   let component: FriendsComponent;
@@ -91,5 +92,39 @@ describe('FriendsComponent revenge notifications (flattened subscribe)', () => {
   it('does NOT mark seen when all notifications are already seen', () => {
     const { markSeen } = setup([{ id: 1, seen: true }]);
     expect(markSeen).not.toHaveBeenCalled();
+  });
+});
+
+describe('FriendsComponent reactive reload on notification arrival', () => {
+  it('quietly reloads the friends list when a notification arrives (no manual refresh)', () => {
+    const arrived = new Subject<void>();
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+        { provide: InAppNotificationService, useValue: { arrived$: arrived.asObservable() } },
+      ],
+    });
+    TestBed.overrideComponent(FriendsComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit → erster (nicht-stiller) Load
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/friends').flush([{ friendshipId: 1 } as any]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    expect(component.loading).toBeFalse();
+
+    // Benachrichtigung trifft ein (z. B. Anfrage angenommen) → stiller Reload, KEIN Spinner.
+    arrived.next();
+    expect(component.loading).toBeFalse();
+    httpMock.expectOne('/api/friends').flush([{ friendshipId: 1 }, { friendshipId: 2 } as any]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    expect(component.friends.length).toBe(2);
+
+    httpMock.verify();
   });
 });

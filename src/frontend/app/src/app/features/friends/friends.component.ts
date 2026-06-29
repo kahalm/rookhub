@@ -20,6 +20,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
 import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../core/challenge.service';
 import { RevengeService, RevengeNotification } from '../../core/revenge.service';
+import { InAppNotificationService } from '../../core/in-app-notification.service';
 
 @Component({
   selector: 'app-friends',
@@ -212,7 +213,8 @@ export class FriendsComponent implements OnInit {
     private translate: TranslateService,
     private router: Router,
     private challenge: ChallengeService,
-    private revenge: RevengeService
+    private revenge: RevengeService,
+    private notif: InAppNotificationService
   ) {}
 
   ngOnInit(): void {
@@ -223,11 +225,15 @@ export class FriendsComponent implements OnInit {
       tap(r => { if (r) this.searchResults = r; }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe();
+    // Neue Benachrichtigung (z. B. Anfrage angenommen) → Listen still nachladen (ohne Spinner-Flackern).
+    this.notif.arrived$.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.loadData(true));
     this.loadData();
   }
 
-  loadData(): void {
-    this.loading = true;
+  loadData(quiet = false): void {
+    if (!quiet) this.loading = true;
     this.friendsService.getFriends().subscribe({
       next: f => { this.friends = f; this.loading = false; },
       error: () => { this.loading = false; this.snackbar.info(this.translate.instant('friends.errors.loadFriends')); }

@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription } from '../../core/models';
 import { DashboardService } from '../../core/dashboard.service';
+import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
 @Component({
   selector: 'app-dashboard',
@@ -143,9 +144,18 @@ export class DashboardComponent implements OnInit {
     private dashboardService: DashboardService,
     private chessable: ChessableService,
     private translate: TranslateService,
+    private notif: InAppNotificationService,
   ) {}
 
   ngOnInit(): void {
+    // Trifft eine neue Benachrichtigung ein (z. B. jemand nimmt meine Freundschaftsanfrage an),
+    // die Freundeszahl ohne Seiten-Refresh nachziehen. Hängt am vorhandenen 60-s-Glocken-Poll —
+    // kein zusätzlicher Timer.
+    this.notif.arrived$.pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.dashboardService.getFriends().pipe(catchError(() => of([])))
+      .subscribe(friends => this.friendCount = friends.length));
+
     // Admin: aktive Chessable-Queue laufend anzeigen (sofort + alle 10 s).
     if (this.auth.isAdmin) {
       timer(0, 10000).pipe(
