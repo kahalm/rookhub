@@ -25,6 +25,9 @@ public record ChessableCourseDto(string Bid, string Name)
     public bool ImportedBook { get; init; }
     /// <summary>Rohdaten liegen in der piratechess-DB (gecacht) → Import quasi sofort (kein Chessable-Abruf).</summary>
     public bool Cached { get; init; }
+    /// <summary>Für diesen Kurs läuft bereits ein Import (Status "running": wartend oder in Arbeit) →
+    /// nicht erneut einreihen.</summary>
+    public bool Queued { get; init; }
 }
 
 /// <summary>Kursliste + Zeitpunkt des Abrufs (aus dem DB-Cache oder frisch geholt).</summary>

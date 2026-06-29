@@ -19,6 +19,8 @@ export interface ChessableCourse {
   importedBook?: boolean;
   /** Rohdaten in der DB gecacht → Import quasi sofort verfügbar. */
   cached?: boolean;
+  /** Für diesen Kurs läuft bereits ein Import (eingereiht oder in Arbeit). */
+  queued?: boolean;
 }
 
 export interface ChessableCoursesResult {

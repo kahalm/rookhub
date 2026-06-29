@@ -585,6 +585,11 @@
                           <mat-icon class="err">error_outline</mat-icon> {{ imp.error || ('admin.courseDl.failed' | translate) }}
                         }
                       </span>
+                    } @else if (c.queued) {
+                      <!-- Bereits (z. B. aus einem früheren Schwung) eingereiht/in Arbeit → nicht doppelt einreihen. -->
+                      <span class="dl-status dl-queued">
+                        <mat-icon>schedule</mat-icon> {{ 'admin.courseDl.alreadyQueued' | translate }}
+                      </span>
                     } @else {
                       <span class="dl-import-actions">
                         @if (c.importedRepertoire) {

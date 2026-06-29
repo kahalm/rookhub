@@ -1301,7 +1301,8 @@
       "import": "Preuzmi u moj račun",
       "done": "U tvojim repertoarima",
       "failed": "Neuspjelo",
-      "queued": "pozicija {{n}} u redu"
+      "queued": "pozicija {{n}} u redu",
+      "alreadyQueued": "Već u redu čekanja"
     }
   },
   "games": {

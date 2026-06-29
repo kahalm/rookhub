@@ -1303,7 +1303,8 @@
       "import": "In mein Konto laden",
       "done": "In deinen Repertoires",
       "failed": "Fehlgeschlagen",
-      "queued": "Position {{n}} in der Warteschlange"
+      "queued": "Position {{n}} in der Warteschlange",
+      "alreadyQueued": "Bereits in Warteschlange"
     }
   },
   "games": {

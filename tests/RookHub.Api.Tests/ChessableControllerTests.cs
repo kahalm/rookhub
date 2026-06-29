@@ -318,6 +318,32 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Courses_MarksQueuedCourses()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42,
+            EncryptedBearer = _encryption.Encrypt("b"),
+            CachedCoursesJson = "[{\"bid\":\"1\",\"name\":\"A\"},{\"bid\":\"2\",\"name\":\"B\"}]",
+            CoursesCachedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        // Bid 1 hat einen laufenden (eingereihten) Import, Bid 2 nur einen abgeschlossenen.
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "1", Target = "repertoire", Status = "running", Phase = "queued", CreatedAt = DateTime.UtcNow });
+        _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.Courses(refresh: false, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ChessableCoursesDto>(ok.Value);
+        Assert.True(body.Courses.Single(c => c.Bid == "1").Queued);
+        Assert.False(body.Courses.Single(c => c.Bid == "2").Queued);
+    }
+
+    [Fact]
     public async Task GetUserCoursesAdmin_MarksImportsAgainstAdminNotTargetUser()
     {
         await SeedUserAsync(42);          // Admin (Aufrufer, Controller-User)

@@ -113,4 +113,5 @@
 .dl-status mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .dl-status .ok { color: #2e7d32; }
 .dl-status .err { color: #d32f2f; }
+.dl-status.dl-queued { color: #ef6c00; opacity: 1; }   /* „bereits in Warteschlange" — Amber-Hinweis */
 .dl-course-name .cached-badge { color: #f9a825; font-size: 18px; width: 18px; height: 18px; vertical-align: text-bottom; margin-left: 4px; }

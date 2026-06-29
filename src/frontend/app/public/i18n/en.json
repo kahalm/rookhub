@@ -1303,7 +1303,8 @@
       "import": "Download to my account",
       "done": "In your repertoires",
       "failed": "Failed",
-      "queued": "position {{n}} in queue"
+      "queued": "position {{n}} in queue",
+      "alreadyQueued": "Already in queue"
     }
   },
   "games": {
