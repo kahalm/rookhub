@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.191.0';
+export const APP_VERSION = '0.192.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.192.0", date: "2026-06-29", changes: [
+    { en: "Chessable import reliability: added a background watchdog that keeps the import queue draining. Previously a large batch of imports queued at once could leave some jobs stuck waiting forever (the in-memory task queue is bounded and drops the oldest tickets, and a finished job didn't kick off the next), so the queue only resumed after an API restart. The watchdog now periodically checks for waiting imports with nothing actively running and restarts the drain on its own — no restart needed.", de: "Zuverlässigkeit des Chessable-Imports: ein Hintergrund-Watchdog hält die Import-Warteschlange am Laufen. Bisher konnte ein großer Schwung gleichzeitig eingereihter Importe dazu führen, dass einzelne Jobs für immer warten blieben (die In-Memory-Aufgaben-Queue ist begrenzt und verwirft die ältesten Tickets, und ein fertiger Job stieß den nächsten nicht an) — der Drain lief erst nach einem API-Neustart wieder. Der Watchdog prüft jetzt regelmäßig, ob Importe warten, während nichts aktiv läuft, und startet den Drain selbstständig neu — ohne Neustart." },
+  ]},
   { version: "0.191.0", date: "2026-06-28", changes: [
     { en: "The \"update\" banner on the Courses and Repertoires pages now offers two buttons: \"Update all (N)\" reprocesses everything — including re-downloading Chessable items over the network — while \"From cache (M)\" only reprocesses items whose source is already stored on the server, with no download (faster, works even when Chessable is blocked). The cache button only appears when there's a difference between the two.", de: "Der „Aktualisieren\"-Hinweis auf den Seiten Kurse und Repertoires bietet jetzt zwei Knöpfe: „Alle aktualisieren (N)\" bereitet alles auf — inklusive Neu-Herunterladen der Chessable-Einträge übers Netz — während „Aus Cache (M)\" nur die Einträge aufbereitet, deren Quelle bereits auf dem Server liegt, ganz ohne Download (schneller, funktioniert auch wenn Chessable gerade blockiert). Der Cache-Knopf erscheint nur, wenn sich die beiden unterscheiden." },
   ]},
