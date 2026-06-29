@@ -73,8 +73,8 @@ public class SchachBotWebhookServiceTests
             AttemptCount = 5,
             Solvers = new List<BookSolverDto>
             {
-                new() { Name = "Anna", DiscordId = "111", DiscordUsername = "anna#1", TimeSeconds = 42 },
-                new() { Name = "Ben", DiscordId = null, DiscordUsername = null, TimeSeconds = 7 },
+                new() { Name = "Anna", DiscordId = "111", DiscordUsername = "anna#1", TimeSeconds = 42, HintsUsed = 2 },
+                new() { Name = "Ben", DiscordId = null, DiscordUsername = null, TimeSeconds = 7, HintsUsed = 0 },
             },
         };
         await svc.NotifyAttemptAsync(42, results);
@@ -108,6 +108,9 @@ public class SchachBotWebhookServiceTests
         Assert.Equal("111", solvers[0].GetProperty("discordId").GetString());
         Assert.Equal(42, solvers[0].GetProperty("timeSeconds").GetInt32());   // Lösungszeit im Payload
         Assert.Equal(7, solvers[1].GetProperty("timeSeconds").GetInt32());
+        // hintsUsed muss mit (sonst kein 💡-Badge beim Daily im Discord, puzzle/daily_results.py)
+        Assert.Equal(2, solvers[0].GetProperty("hintsUsed").GetInt32());
+        Assert.Equal(0, solvers[1].GetProperty("hintsUsed").GetInt32());
     }
 
     [Fact]

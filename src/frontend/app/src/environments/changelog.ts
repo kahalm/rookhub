@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.196.1';
+export const APP_VERSION = '0.196.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.196.2", date: "2026-06-29", changes: [
+    { en: "Daily puzzle in Discord now shows the 💡 hint marker again behind solvers who used hints. The bot already renders the badge, but the daily solver-update payload never actually included the per-solver hint count (only the weekly post did) — so it always read as zero. The daily payload now sends it too, matching the weekly post.", de: "Das Tagespuzzle in Discord zeigt wieder das 💡-Tipp-Zeichen hinter Lösern, die Tipps verwendet haben. Der Bot kann das Badge längst anzeigen, aber das Daily-Solver-Update hat die Tipp-Anzahl pro Löser nie mitgeschickt (nur die Wochenpost tat das) — also wurde sie immer als null gelesen. Das Daily-Payload sendet sie jetzt ebenfalls, analog zur Wochenpost." },
+  ]},
   { version: "0.196.1", date: "2026-06-29", changes: [
     { en: "Fixed: when you solved the daily puzzle (or made weekly-post progress) while a large Chessable import was running, your solve sometimes did not show up in Discord. The Discord solver-update push shared one background queue with the imports — and that queue is bounded and drops its oldest item under load, so a burst of (minutes-long) import jobs could evict the quick Discord notification before it ever ran. Discord pushes now have their own dedicated queue and worker, completely independent of import load, so daily/weekly solver updates always go out.", de: "Behoben: Wenn du das Tagespuzzle gelöst (oder Wochenpost-Fortschritt gemacht) hast, während ein großer Chessable-Import lief, tauchte dein Solve manchmal nicht in Discord auf. Der Discord-Solver-Update-Push teilte sich EINE Hintergrund-Queue mit den Importen — und die ist begrenzt und verwirft unter Last ihr ältestes Element, sodass ein Schwung (minutenlanger) Import-Jobs die schnelle Discord-Benachrichtigung verdrängen konnte, bevor sie je lief. Discord-Pushes haben jetzt eine eigene, dedizierte Queue samt eigenem Worker, völlig unabhängig von der Import-Last — Tagespuzzle-/Wochenpost-Solver-Updates gehen damit immer raus." },
   ]},
