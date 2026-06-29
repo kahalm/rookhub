@@ -200,6 +200,42 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunNextAsync_FastLane_OnlyClaimsFullyCached()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        // Download-Job ist FAIR ZUERST dran (frühere CreatedAt), aber nicht gecacht.
+        var dl = new ChessableImport { UserId = 1, Bid = "dl", CourseName = "DL", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = false, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(dl, cached);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(fastLane: true);
+
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(cached.Id))!.Status); // gecacht verarbeitet
+        Assert.Equal("queued", (await _db.ChessableImports.FindAsync(dl.Id))!.Phase);        // Download unangetastet
+    }
+
+    [Fact]
+    public async Task RunNextAsync_DownloadLane_ClaimsNonCachedIncludingUnclassified()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        // Unklassifiziert (null) gilt als Download und MUSS gegriffen werden (darf nie hängen bleiben).
+        var nullJob = new ChessableImport { UserId = 1, Bid = "n", CourseName = "N", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = null, CreatedAt = t0, FetchedPgn = "1. e4 *", LineCount = 1 };
+        var cached = new ChessableImport { UserId = 1, Bid = "c", CourseName = "C", Target = "repertoire", Status = "running", Phase = "queued", FullyCached = true, CreatedAt = t0.AddSeconds(1), FetchedPgn = "1. e4 *", LineCount = 1 };
+        _db.ChessableImports.AddRange(nullJob, cached);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(); // Download-Lane (Default)
+
+        Assert.Equal("completed", (await _db.ChessableImports.FindAsync(nullJob.Id))!.Status); // null = Download verarbeitet
+        Assert.Equal("queued", (await _db.ChessableImports.FindAsync(cached.Id))!.Phase);      // Fast-Lane-Job unangetastet
+    }
+
+    [Fact]
     public async Task RunNextAsync_SkipsAlreadyClaimedJob_PicksGenuinelyQueuedOne()
     {
         // Atomarer Claim: ein bereits von einem anderen Worker übernommener Job (Phase != "queued")

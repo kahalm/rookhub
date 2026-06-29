@@ -171,9 +171,11 @@ try
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
     builder.Services.AddHostedService<ChessableImportResumeService>();
-    // Laufender Sicherheitsnetz-Drain: stößt wartende Importe an, falls der Queue-Antrieb steht
-    // (bounded-DropOldest-Ticketverlust / fehlende Nachreihung nach Abschluss).
+    // Download-Lane-Sicherheitsnetz: stößt wartende (nicht-gecachte) Importe an, falls der
+    // Queue-Antrieb steht (bounded-DropOldest-Ticketverlust / fehlende Nachreihung nach Abschluss).
     builder.Services.AddHostedService<ChessableImportWatchdogService>();
+    // Schnelle Lane: treibt voll-gecachte Importe sofort + seriell, parallel zur Download-Lane.
+    builder.Services.AddHostedService<ChessableImportFastLaneService>();
     builder.Services.AddSingleton<AutoSubscriptionService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
     builder.Services.AddHostedService<RoundMonitorService>();

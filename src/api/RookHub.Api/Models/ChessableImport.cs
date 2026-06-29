@@ -31,6 +31,12 @@ public class ChessableImport
     public string Phase { get; set; } = "queued";
     public string? Error { get; set; }
 
+    /// <summary>Lane-Klassifikation: true = Kurs ist bei piratechess VOLLSTÄNDIG gecacht (kein
+    /// Chessable-Abruf nötig) → schnelle, netzfreie Lane; false/null = Download nötig → Download-Lane.
+    /// null = noch nicht klassifiziert (wird wie Download behandelt, kann nie „hängen bleiben"). Beim
+    /// Anlegen via <c>IsCourseCachedAsync</c> gesetzt; Altbestand klassifiziert die Fast-Lane lazy nach.</summary>
+    public bool? FullyCached { get; set; }
+
     /// <summary>
     /// Das von piratechess geholte Kurs-PGN (Checkpoint): einmal geholt, wird es hier persistiert,
     /// damit ein Resume nach einem Neustart NICHT erneut über die VPN bei Chessable abrufen muss.

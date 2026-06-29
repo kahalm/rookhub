@@ -70,12 +70,13 @@ public class ChessableImportWatchdogService : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         if (!await IsDrainStalledAsync(db, ct)) return false;
 
-        var queued = await db.ChessableImports.CountAsync(i => i.Status == "running" && i.Phase == "queued", ct);
+        var queued = await db.ChessableImports.CountAsync(
+            i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
         _logger.LogWarning(
-            "Chessable-Import-Watchdog: {Queued} wartende Importe, kein aktiver — stoße den Drain an", queued);
+            "Chessable-Import-Watchdog: {Queued} wartende Download-Importe, kein aktiver — stoße den Drain an", queued);
 
         var svc = scope.ServiceProvider.GetRequiredService<ChessableImportService>();
-        await svc.RunNextAsync(ct);   // claimt + verarbeitet GENAU einen wartenden Job (atomar)
+        await svc.RunNextAsync(ct);   // Download-Lane (fastLane=false default): claimt + verarbeitet einen Job
         return true;
     }
 
@@ -83,12 +84,14 @@ public class ChessableImportWatchdogService : BackgroundService
     /// aktiv (Phase "claimed"/"fetching"/"importing"). Rein/testbar.</summary>
     internal static async Task<bool> IsDrainStalledAsync(AppDbContext db, CancellationToken ct = default)
     {
+        // Nur die Download-Lane (alles außer voll-gecacht; null = unklassifiziert zählt als Download).
+        // Die schnelle, netzfreie Lane treibt der ChessableImportFastLaneService.
         var hasQueued = await db.ChessableImports
-            .AnyAsync(i => i.Status == "running" && i.Phase == "queued", ct);
+            .AnyAsync(i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
         if (!hasQueued) return false;
 
         var hasInflight = await db.ChessableImports
-            .AnyAsync(i => i.Status == "running" && InflightPhases.Contains(i.Phase), ct);
+            .AnyAsync(i => i.Status == "running" && i.FullyCached != true && InflightPhases.Contains(i.Phase), ct);
         return !hasInflight;
     }
 }

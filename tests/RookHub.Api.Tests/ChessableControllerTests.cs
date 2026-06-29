@@ -43,9 +43,8 @@ public class ChessableControllerTests : IDisposable
         var httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://piratechess-api:8080") };
         _proxy = new ChessableProxyService(httpClient);
 
-        var sp = new ServiceCollection().BuildServiceProvider();
         _controller = new ChessableController(_db, _encryption, _proxy, new BackgroundTaskQueue(),
-            sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<ChessableController>.Instance);
+            NullLogger<ChessableController>.Instance);
         SetUser(42);
     }
 

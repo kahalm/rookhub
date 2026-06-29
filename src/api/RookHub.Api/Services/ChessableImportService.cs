@@ -92,10 +92,15 @@ public class ChessableImportService : ICourseReimporter
             Status = "running",
             QueueRound = queueRound,
             CreatedAt = DateTime.UtcNow,
+            // Lane-Klassifikation: voll-gecachte Kurse → schnelle, netzfreie Lane (kein Warten hinter
+            // den seriellen Downloads). Cache-Check ist piratechess-DB-lokal (kein Chessable-Abruf).
+            FullyCached = await _proxy.IsCourseCachedAsync(bid, ct),
         };
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync(ct);
-        await EnqueueNextAsync();
+        // Nur die Download-Lane braucht ein Queue-Ticket; die Fast-Lane treibt ihr eigener Drain-Service.
+        if (import.FullyCached != true)
+            await EnqueueNextAsync();
         return import.Id;
     }
 
@@ -121,10 +126,15 @@ public class ChessableImportService : ICourseReimporter
     /// mehreren parallelen Tickets kann so kein zweiter Worker denselben wartenden Job greifen
     /// (verhindert Doppelverarbeitung). Verliert der Claim (0 Zeilen), wird der nächste Kandidat
     /// versucht.</summary>
-    public async Task RunNextAsync(CancellationToken ct = default)
+    /// <param name="fastLane">true = nur voll-gecachte Importe (<c>FullyCached==true</c>, netzfrei) der
+    /// schnellen Lane greifen; false (Default) = die Download-Lane, also alles ANDERE
+    /// (<c>FullyCached==false</c> ODER noch null/unklassifiziert → läuft sicher als Download statt zu
+    /// hängen).</param>
+    public async Task RunNextAsync(CancellationToken ct = default, bool fastLane = false)
     {
         var queued = await _db.ChessableImports
-            .Where(i => i.Status == "running" && i.Phase == "queued")
+            .Where(i => i.Status == "running" && i.Phase == "queued"
+                && (fastLane ? i.FullyCached == true : i.FullyCached != true))
             .ToListAsync(ct);
 
         foreach (var next in FairOrder(queued))

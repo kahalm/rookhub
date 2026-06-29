@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.193.0';
+export const APP_VERSION = '0.193.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.193.1", date: "2026-06-29", changes: [
+    { en: "Chessable imports now have a separate fast lane: a course whose data is already fully cached needs no Chessable download, so it no longer waits behind the slow, network-bound downloads. Fully-cached imports run on their own serial lane (immediate, in parallel with the download queue) across all import paths — including the repertoire re-fetch, which previously queued cached courses behind downloads. Partially-cached courses still go through the download lane but reuse their cached lines (only the missing ones are fetched).", de: "Chessable-Importe haben jetzt eine eigene schnelle Lane: Ein Kurs, dessen Daten bereits vollständig gecacht sind, braucht keinen Chessable-Download und wartet daher nicht mehr hinter den langsamen, netzgebundenen Downloads. Voll-gecachte Importe laufen in ihrer eigenen seriellen Lane (sofort, parallel zur Download-Queue) — über alle Import-Wege hinweg, auch beim Repertoire-Neuabruf, der gecachte Kurse vorher hinter die Downloads einreihte. Teilweise gecachte Kurse laufen weiterhin über die Download-Lane, nutzen dort aber ihre gecachten Linien (nur die fehlenden werden geholt)." },
+  ]},
   { version: "0.193.0", date: "2026-06-29", changes: [
     { en: "Training goals now display times with sensible units: up to 120 minutes is shown in minutes, then in hours, and from 48 hours onward in days — so the breakdowns, daily history and per-course totals stay readable even for large accumulated times instead of showing thousands of minutes.", de: "Trainingsziele zeigen Zeiten jetzt mit passenden Einheiten an: bis 120 Minuten in Minuten, danach in Stunden und ab 48 Stunden in Tagen — so bleiben die Aufschlüsselungen, die Tageshistory und die Kurs-Summen auch bei großen Gesamtzeiten lesbar, statt tausende Minuten anzuzeigen." },
   ]},
