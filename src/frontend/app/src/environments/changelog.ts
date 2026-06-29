@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.196.0';
+export const APP_VERSION = '0.196.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.196.1", date: "2026-06-29", changes: [
+    { en: "Fixed: when you solved the daily puzzle (or made weekly-post progress) while a large Chessable import was running, your solve sometimes did not show up in Discord. The Discord solver-update push shared one background queue with the imports — and that queue is bounded and drops its oldest item under load, so a burst of (minutes-long) import jobs could evict the quick Discord notification before it ever ran. Discord pushes now have their own dedicated queue and worker, completely independent of import load, so daily/weekly solver updates always go out.", de: "Behoben: Wenn du das Tagespuzzle gelöst (oder Wochenpost-Fortschritt gemacht) hast, während ein großer Chessable-Import lief, tauchte dein Solve manchmal nicht in Discord auf. Der Discord-Solver-Update-Push teilte sich EINE Hintergrund-Queue mit den Importen — und die ist begrenzt und verwirft unter Last ihr ältestes Element, sodass ein Schwung (minutenlanger) Import-Jobs die schnelle Discord-Benachrichtigung verdrängen konnte, bevor sie je lief. Discord-Pushes haben jetzt eine eigene, dedizierte Queue samt eigenem Worker, völlig unabhängig von der Import-Last — Tagespuzzle-/Wochenpost-Solver-Updates gehen damit immer raus." },
+  ]},
   { version: "0.196.0", date: "2026-06-29", changes: [
     { en: "Repertoire trainer: no more \"Continue\" button after a correct or tolerated move — the trainer flows straight on to the next position. A correct move advances after a brief acknowledgement; a tolerated (playable-but-not-the-main) move keeps its visualization on screen a bit longer so you can read which move the repertoire prefers, then continues automatically. Tapping the board skips the wait and plays on immediately. A wrong move still waits for an explicit Continue so you can study the right move.", de: "Repertoire-Trainer: Kein „Weiter“-Knopf mehr nach einem richtigen oder geduldeten Zug — der Trainer spielt direkt zur nächsten Stellung weiter. Ein richtiger Zug schaltet nach kurzer Bestätigung weiter; ein geduldeter (spielbar, aber nicht der Hauptzug) lässt seine Visualisierung etwas länger stehen, damit du den bevorzugten Repertoirezug noch lesen kannst, und geht dann automatisch weiter. Ein Tippen aufs Brett überspringt die Wartezeit und spielt sofort weiter. Bei einem falschen Zug bleibt der Trainer wie bisher stehen (expliziter „Weiter“-Knopf), damit du den richtigen Zug in Ruhe ansehen kannst." },
   ]},

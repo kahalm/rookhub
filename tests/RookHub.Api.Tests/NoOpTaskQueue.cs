@@ -6,7 +6,7 @@ namespace RookHub.Api.Tests;
 /// No-op implementation of IBackgroundTaskQueue for unit tests.
 /// Enqueued tasks are silently discarded.
 /// </summary>
-public class NoOpTaskQueue : IBackgroundTaskQueue
+public class NoOpTaskQueue : IWebhookTaskQueue
 {
     public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
         => ValueTask.CompletedTask;
@@ -19,7 +19,7 @@ public class NoOpTaskQueue : IBackgroundTaskQueue
 /// Zählt enqueuete Work-Items (führt sie nicht aus) — für Tests, die prüfen, OB ein
 /// Hintergrund-Job angestoßen wurde (z.B. Auto-Subscription nur bei Identitätsänderung).
 /// </summary>
-public class CountingTaskQueue : IBackgroundTaskQueue
+public class CountingTaskQueue : IWebhookTaskQueue
 {
     public int EnqueuedCount { get; private set; }
 
@@ -36,7 +36,7 @@ public class CountingTaskQueue : IBackgroundTaskQueue
 /// <summary>
 /// Executes work items synchronously for tests that need to verify background logic.
 /// </summary>
-public class ImmediateTaskQueue : IBackgroundTaskQueue
+public class ImmediateTaskQueue : IWebhookTaskQueue
 {
     public async ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
     {

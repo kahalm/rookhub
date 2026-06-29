@@ -17,9 +17,9 @@ public class BookPuzzleService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<BookPuzzleService> _logger;
-    private readonly IBackgroundTaskQueue _bgQueue;
+    private readonly IWebhookTaskQueue _bgQueue;
 
-    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IBackgroundTaskQueue bgQueue)
+    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IWebhookTaskQueue bgQueue)
     {
         _db = db;
         _logger = logger;

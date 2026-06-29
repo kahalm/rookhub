@@ -15,9 +15,9 @@ public class WeeklyPostService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<WeeklyPostService> _logger;
-    private readonly IBackgroundTaskQueue? _bgQueue;
+    private readonly IWebhookTaskQueue? _bgQueue;
 
-    public WeeklyPostService(AppDbContext db, ILogger<WeeklyPostService> logger, IBackgroundTaskQueue? bgQueue = null)
+    public WeeklyPostService(AppDbContext db, ILogger<WeeklyPostService> logger, IWebhookTaskQueue? bgQueue = null)
     {
         _db = db;
         _logger = logger;

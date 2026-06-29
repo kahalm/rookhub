@@ -169,6 +169,10 @@ try
     builder.Services.AddScoped<MenuVisibilityService>();
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
+    // Eigene Queue + Consumer NUR für schach-bot-Webhooks, damit Solver-Updates nicht
+    // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
+    builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
+    builder.Services.AddHostedService<WebhookTaskWorker>();
     // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
     builder.Services.AddHostedService<ChessableImportResumeService>();
     // Download-Lane-Sicherheitsnetz: stößt wartende (nicht-gecachte) Importe an, falls der
