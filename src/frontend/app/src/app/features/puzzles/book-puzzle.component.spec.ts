@@ -103,8 +103,9 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     c.sharePuzzle();
 
     const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
-    expect(data.url.endsWith('/puzzles/book/200')).toBeTrue();
-    expect(data.previousUrl.endsWith('/puzzles/book/100')).toBeTrue();
+    // Teilen-Link markiert das Einzel-Puzzle als „single" → Empfänger bleibt am Ende stehen.
+    expect(data.url.endsWith('/puzzles/book/200?single=1')).toBeTrue();
+    expect(data.previousUrl.endsWith('/puzzles/book/100?single=1')).toBeTrue();
     expect(data.previousPuzzleId).toBe(100);
   });
 
@@ -119,6 +120,44 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
     expect(data.previousUrl).toBeUndefined();
     expect(data.previousPuzzleId).toBeUndefined();
+  });
+});
+
+describe('BookPuzzleComponent direkt geteiltes Einzel-Puzzle (single)', () => {
+  it('singlePuzzle: kein Auto-Advance-Countdown nach dem Lösen', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    const countdown = spyOn(c as any, 'startSolvedCountdown');
+    c.singlePuzzle = true;
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+
+    (c as any).handleSolved();   // ruft finalizeSolve (longSolve synchron)
+
+    expect(countdown).not.toHaveBeenCalled();
+  });
+
+  it('singlePuzzle: solvedAutoNext springt nicht ins Buch', () => {
+    const c = makeComponent();
+    const next = spyOn(c as any, 'nextInBook');
+    c.singlePuzzle = true;
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+
+    (c as any).solvedAutoNext();
+
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('browseInBook ist false für ein single-Puzzle, sonst true im Standalone', () => {
+    const c = makeComponent();
+    c.singlePuzzle = true;
+    expect(c.browseInBook).toBeFalse();
+    c.singlePuzzle = false;
+    expect(c.browseInBook).toBeTrue();   // standalone, kein Daily/Kurs/Weekly
   });
 });
 

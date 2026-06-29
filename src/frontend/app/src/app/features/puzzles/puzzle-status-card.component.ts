@@ -178,9 +178,11 @@ const CK = {
                       <mat-icon>replay</mat-icon> {{ ck.showOriginalSolution | translate }}
                     </button>
                   }
-                  <button mat-raised-button color="primary" (click)="nextClicked.emit()">
-                    {{ ck.nextPuzzle | translate }}@if (solvedCountdown > 0) { ({{ solvedCountdown }})}
-                  </button>
+                  @if (showNext) {
+                    <button mat-raised-button color="primary" (click)="nextClicked.emit()">
+                      {{ ck.nextPuzzle | translate }}@if (solvedCountdown > 0) { ({{ solvedCountdown }})}
+                    </button>
+                  }
                   <button mat-button (click)="analyzeClicked.emit()">
                     <mat-icon>biotech</mat-icon> {{ ck.analyze | translate }}
                   </button>
@@ -250,6 +252,8 @@ export class PuzzleStatusCardComponent {
   @Input() alternativeSolve = false;
   @Input() lastEloChange: number | null = null;
   @Input() solvedCountdown = 0;
+  /** „Weiter"-Knopf im Gelöst-Zustand zeigen. Aus für direkt geteilte Einzel-Puzzles (stehen bleiben). */
+  @Input() showNext = true;
   @Input() reviewIndex = 0;
   @Input() reviewTotal = 0;
   /** Buch-Modus: Ganze-Partie-Review (statt State-Switch). */

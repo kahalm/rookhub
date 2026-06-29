@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.199.0';
+export const APP_VERSION = '0.199.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.199.1", date: "2026-06-29", changes: [
+    { en: "When you share a single puzzle directly, the recipient now stays on that puzzle after solving instead of auto-advancing to the next one in the book. The share link is marked as a single puzzle (so there's no countdown, no \"next\" button, and no in-book browse buttons) — the puzzle simply stays solved on screen. Opening puzzles normally (browsing a book) is unchanged.", de: "Wenn du ein einzelnes Puzzle direkt teilst, bleibt der Empfänger nach dem Lösen jetzt auf diesem Puzzle stehen, statt automatisch zum nächsten im Buch weiterzuspringen. Der Teilen-Link ist als Einzel-Puzzle markiert (kein Countdown, kein „Weiter\"-Knopf, keine Buch-Navigation) — das Puzzle bleibt einfach gelöst stehen. Normales Öffnen (Buch durchblättern) bleibt unverändert." },
+  ]},
   { version: "0.199.0", date: "2026-06-29", changes: [
     { en: "Friends page now also shows your pending (not-yet-accepted) friend requests. The Requests tab gained a \"Sent (awaiting confirmation)\" section listing everyone you've requested who hasn't accepted yet — previously these were invisible. Each has an undo button to withdraw the request. The tab count now includes both incoming and pending sent requests.", de: "Die Freunde-Seite zeigt jetzt auch deine ausstehenden (noch nicht angenommenen) Freundschaftsanfragen. Der Anfragen-Tab hat einen Abschnitt „Gesendet (wartet auf Bestätigung)\" bekommen, der alle von dir angefragten Personen auflistet, die noch nicht angenommen haben — bisher waren die nirgends sichtbar. Jede lässt sich per Rückgängig-Knopf zurückziehen. Der Tab-Zähler umfasst jetzt eingehende UND ausstehende gesendete Anfragen." },
   ]},

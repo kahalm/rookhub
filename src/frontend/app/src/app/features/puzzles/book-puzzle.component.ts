@@ -182,6 +182,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
+  /** Buch-Navigation (nächstes/zufälliges im selben Buch) anbieten — entfällt für ein direkt
+   *  geteiltes Einzel-Puzzle (`?single=1`) und im Tagespuzzle (Datums-Navigation). */
+  get browseInBook(): boolean { return this.standalone && !this.isDaily && !this.singlePuzzle; }
   bookNavLoading = false;
   loadError = false;
   /** Monotone Epoche je Ladevorgang (Buch/Kurs/Daily/Wochenpost). Schnelle Navigation kann
@@ -194,6 +197,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Gesetzt, wenn dieses Buch-Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
   private challengeId: number | null = null;
   private challengeResolved = false;
+  /** Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`): nach dem Lösen am Puzzle stehen
+   *  bleiben statt automatisch weiterzuspringen, und keine Buch-Navigation anbieten. */
+  singlePuzzle = false;
 
   // Zuletzt gelöstes Puzzle merken (überlebt den Auto-Advance) — analog Standard/Endless:
   // ermöglicht „Letztes Puzzle analysieren" + „Letztes teilen" im Share-Dialog.
@@ -238,11 +244,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   sharePuzzle(): void {
     if (!this.puzzle) return;
-    const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}`;
+    // „single=1" markiert den Link als direkt geteiltes Einzel-Puzzle → Empfänger bleibt nach
+    // dem Lösen auf dem Puzzle stehen (kein Auto-Advance, keine Buch-Navigation).
+    const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}?single=1`;
     // Nach dem Auto-Advance kann zusätzlich das zuletzt gelöste Puzzle geteilt werden.
     const hasPrevious = this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
     const previousUrl = hasPrevious
-      ? `${window.location.origin}/puzzles/book/${this.lastSolvedPuzzleId}`
+      ? `${window.location.origin}/puzzles/book/${this.lastSolvedPuzzleId}?single=1`
       : undefined;
     this.dialog.open(SharePuzzleDialogComponent, {
       data: {
@@ -401,6 +409,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
     // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
     if (this.solveAlternative) return;
+    // Direkt geteiltes Einzel-Puzzle: am Ende stehen bleiben, kein Auto-Advance.
+    if (this.singlePuzzle) return;
     // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
     // Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
     this.startSolvedCountdown(() => this.solvedAutoNext());
@@ -409,6 +419,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
   solvedAutoNextPublic(): void { this.solvedAutoNext(); }
   private solvedAutoNext(): void {
+    if (this.singlePuzzle) return;       // Direkt geteiltes Einzel-Puzzle: stehen bleiben
     if (this.isDaily) return;            // Tagespuzzle: kein Auto-Advance, Navigation via Datum
     if (this.inCourse) this.courseNext();
     else if (this.inWeekly) this.weeklyNext();
@@ -508,6 +519,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // Aus einer Freundes-Challenge geöffnet (nur Standalone-Buch-Modus) → Ergebnis zurückmelden.
       const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
       if (challengeParam) this.challengeId = Number(challengeParam) || null;
+      // Direkt geteiltes Einzel-Puzzle (Teilen-Link) → am Ende stehen bleiben, nicht weiterspringen.
+      this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
       this.loadPuzzle(Number(idParam));
     }
   }

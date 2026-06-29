@@ -188,7 +188,7 @@
                         </button>
                       }
                     }
-                    @if (standalone && !isDaily) {
+                    @if (browseInBook) {
                       <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                       </button>
@@ -215,7 +215,7 @@
                         </button>
                       }
                     }
-                    @if (standalone && !isDaily) {
+                    @if (browseInBook) {
                       <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                       </button>
@@ -241,7 +241,7 @@
                       </button>
                     }
                   </div>
-                } @else if (standalone) {
+                } @else if (browseInBook) {
                   <div class="ctx-nav">
                     <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
                       <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
@@ -306,6 +306,7 @@
               [hasMadeFirstMove]="hasMadeFirstMove"
               [alternativeSolve]="alternativeSolve"
               [solvedCountdown]="solvedCountdown"
+              [showNext]="!singlePuzzle"
               [reviewIndex]="reviewIndex"
               [reviewTotal]="reviewTotal"
               [fullGameReview]="reviewMode && !solutionReview"
