@@ -1091,6 +1091,8 @@
     "setTitle": "حدد أهدافك",
     "tracker": "متتبع الأهداف",
     "min": "دقيقة",
+    "hours": "س",
+    "days": "ي",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

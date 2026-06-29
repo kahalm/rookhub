@@ -1091,6 +1091,8 @@
     "setTitle": "Sätt dina mål",
     "tracker": "Måluppföljning",
     "min": "min",
+    "hours": "tim",
+    "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

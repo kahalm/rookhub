@@ -109,6 +109,31 @@ export function toMinutes(seconds: number): number {
   return Math.round(seconds / 60);
 }
 
+/** Schwellen für die gestufte Dauer-Anzeige. */
+const DURATION_HOURS_FROM_SECONDS = 120 * 60;   // bis 120 min → Minuten, danach Stunden
+const DURATION_DAYS_FROM_SECONDS = 48 * 3600;   // ab 48 h → Tage
+
+/**
+ * Formatiert eine Dauer (Sekunden) gestuft als Zahl + i18n-Einheitenschlüssel:
+ * < 120 min → Minuten (ganzzahlig), < 48 h → Stunden, sonst Tage (je 1 Nachkommastelle).
+ * `lang` steuert nur das Dezimaltrennzeichen.
+ */
+export function formatDuration(seconds: number, lang = 'en'): { value: string; unitKey: string } {
+  const s = Math.max(0, seconds);
+  if (s < DURATION_HOURS_FROM_SECONDS) {
+    return { value: String(Math.round(s / 60)), unitKey: 'trainingGoals.min' };
+  }
+  const isHours = s < DURATION_DAYS_FROM_SECONDS;
+  const amount = isHours ? s / 3600 : s / 86400;
+  let value: string;
+  try {
+    value = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(amount);
+  } catch {
+    value = amount.toFixed(1);
+  }
+  return { value, unitKey: isHours ? 'trainingGoals.hours' : 'trainingGoals.days' };
+}
+
 /** Tageshistory-Reihenfolge: neueste zuerst (die Tracker-Tage kommen aufsteigend sortiert). */
 export function orderHistory(days: TrackerDay[]): TrackerDay[] {
   return [...days].reverse();
@@ -221,7 +246,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                       <div class="bd-row">
                         <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
                         <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
+                        <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
                       </div>
                     }
                   </div>
@@ -231,7 +256,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                       <div class="bd-row">
                         <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
                         <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                        <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
+                        <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
                       </div>
                     }
                   </div>
@@ -394,7 +419,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                         <div class="bd-row">
                           <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
                           <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                          <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
+                          <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
                         </div>
                       }
                     </div>
@@ -404,7 +429,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                         <div class="bd-row">
                           <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
                           <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                          <span class="bd-val">{{ minutes(r.seconds) }} {{ 'trainingGoals.min' | translate }}</span>
+                          <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
                         </div>
                       }
                     </div>
@@ -438,10 +463,10 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                     @for (d of historyDays; track d.date) {
                       <tr>
                         <td class="td-date">{{ d.date }}</td>
-                        <td class="strong">{{ mins(d.totalSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.courseBookSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
-                        <td>{{ mins(d.bySource.chessableSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></td>
+                        <td class="strong">{{ durValue(d.totalSeconds) }} <span class="unit">{{ durUnit(d.totalSeconds) | translate }}</span></td>
+                        <td>{{ durValue(d.bySource.randomPuzzleSeconds) }} <span class="unit">{{ durUnit(d.bySource.randomPuzzleSeconds) | translate }}</span></td>
+                        <td>{{ durValue(d.bySource.courseBookSeconds) }} <span class="unit">{{ durUnit(d.bySource.courseBookSeconds) | translate }}</span></td>
+                        <td>{{ durValue(d.bySource.chessableSeconds) }} <span class="unit">{{ durUnit(d.bySource.chessableSeconds) | translate }}</span></td>
                         <td>{{ d.playGames }} <span class="unit">{{ 'trainingGoals.games' | translate }}</span></td>
                       </tr>
                     }
@@ -477,7 +502,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                       <span class="c-name">{{ c.courseName || ('trainingGoals.chessable.course' | translate) }}</span>
                       <span class="c-id">#{{ c.courseId }}</span>
                     </div>
-                    <span class="c-time">{{ mins(c.totalSeconds) }} <span class="unit">{{ 'trainingGoals.min' | translate }}</span></span>
+                    <span class="c-time">{{ durValue(c.totalSeconds) }} <span class="unit">{{ durUnit(c.totalSeconds) | translate }}</span></span>
                     @if (!c.assignedTheme && c.autoTheme) {
                       <span class="c-auto" [matTooltip]="'trainingGoals.chessable.autoHint' | translate">
                         {{ 'trainingGoals.chessable.auto' | translate }}: {{ ('trainingGoals.theme.' + c.autoTheme) | translate }}
@@ -644,9 +669,13 @@ export class TrainingGoalsComponent implements OnInit {
     return !!g && (g.dailyMinutes > 0 || g.playGames > 0);
   }
 
-  /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
-  mins(seconds: number): number {
-    return toMinutes(seconds);
+  /** Gestufte Dauer-Anzeige: Zahlteil (Min < 2 h, Std < 48 h, sonst Tage). */
+  durValue(seconds: number): string {
+    return formatDuration(seconds, this.translate.currentLang).value;
+  }
+  /** i18n-Einheitenschlüssel passend zu {@link durValue} (min/hours/days). */
+  durUnit(seconds: number): string {
+    return formatDuration(seconds, this.translate.currentLang).unitKey;
   }
 
   ngOnInit(): void { this.reload(); }

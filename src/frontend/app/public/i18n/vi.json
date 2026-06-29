@@ -1091,6 +1091,8 @@
     "setTitle": "Đặt mục tiêu của bạn",
     "tracker": "Theo dõi mục tiêu",
     "min": "phút",
+    "hours": "g",
+    "days": "ngày",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

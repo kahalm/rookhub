@@ -1091,6 +1091,8 @@
     "setTitle": "Establece tus objetivos",
     "tracker": "Seguimiento de objetivos",
     "min": "min",
+    "hours": "h",
+    "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

@@ -1091,6 +1091,8 @@
     "setTitle": "Ορίστε τους στόχους σας",
     "tracker": "Παρακολούθηση στόχων",
     "min": "λεπτ.",
+    "hours": "ώ",
+    "days": "ημ",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

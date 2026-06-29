@@ -1091,6 +1091,8 @@
     "setTitle": "Ustaw swoje cele",
     "tracker": "Śledzenie celów",
     "min": "min",
+    "hours": "godz.",
+    "days": "dni",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

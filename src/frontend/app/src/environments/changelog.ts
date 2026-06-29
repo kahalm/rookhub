@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.192.1';
+export const APP_VERSION = '0.193.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.193.0", date: "2026-06-29", changes: [
+    { en: "Training goals now display times with sensible units: up to 120 minutes is shown in minutes, then in hours, and from 48 hours onward in days — so the breakdowns, daily history and per-course totals stay readable even for large accumulated times instead of showing thousands of minutes.", de: "Trainingsziele zeigen Zeiten jetzt mit passenden Einheiten an: bis 120 Minuten in Minuten, danach in Stunden und ab 48 Stunden in Tagen — so bleiben die Aufschlüsselungen, die Tageshistory und die Kurs-Summen auch bei großen Gesamtzeiten lesbar, statt tausende Minuten anzuzeigen." },
+  ]},
   { version: "0.192.1", date: "2026-06-29", changes: [
     { en: "Admin course download: courses that already have a running/queued import are now marked \"Already in queue\" instead of offering the import buttons again — so you can't accidentally queue the same course twice.", de: "Admin-Kursdownload: Kurse, für die bereits ein Import läuft/eingereiht ist, werden jetzt als „Bereits in Warteschlange\" markiert, statt erneut die Import-Knöpfe anzubieten — so kann derselbe Kurs nicht versehentlich doppelt eingereiht werden." },
   ]},

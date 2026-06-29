@@ -1091,6 +1091,8 @@
     "setTitle": "अपने लक्ष्य निर्धारित करें",
     "tracker": "लक्ष्य ट्रैकर",
     "min": "मिनट",
+    "hours": "घं",
+    "days": "दि",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

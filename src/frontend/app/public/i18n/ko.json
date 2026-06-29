@@ -1091,6 +1091,8 @@
     "setTitle": "목표 설정",
     "tracker": "목표 추적기",
     "min": "분",
+    "hours": "시간",
+    "days": "일",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

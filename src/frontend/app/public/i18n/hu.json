@@ -1091,6 +1091,8 @@
     "setTitle": "Állítsd be a céljaidat",
     "tracker": "Célkövető",
     "min": "perc",
+    "hours": "ó",
+    "days": "nap",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

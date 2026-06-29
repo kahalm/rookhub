@@ -1091,6 +1091,8 @@
     "setTitle": "设置你的目标",
     "tracker": "目标追踪器",
     "min": "分钟",
+    "hours": "小时",
+    "days": "天",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

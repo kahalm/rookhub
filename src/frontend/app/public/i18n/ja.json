@@ -1091,6 +1091,8 @@
     "setTitle": "目標を設定する",
     "tracker": "目標トラッカー",
     "min": "分",
+    "hours": "時間",
+    "days": "日",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

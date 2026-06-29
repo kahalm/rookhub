@@ -1091,6 +1091,8 @@
     "setTitle": "Nastavte své cíle",
     "tracker": "Sledovač cílů",
     "min": "min",
+    "hours": "h",
+    "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

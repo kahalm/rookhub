@@ -1091,6 +1091,8 @@
     "setTitle": "اهداف خود را تعیین کنید",
     "tracker": "ردیاب هدف",
     "min": "دقیقه",
+    "hours": "س",
+    "days": "روز",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

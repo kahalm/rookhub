@@ -1091,6 +1091,8 @@
     "setTitle": "Stel je doelen in",
     "tracker": "Doeltracker",
     "min": "min",
+    "hours": "u",
+    "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

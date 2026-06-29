@@ -1091,6 +1091,8 @@
     "setTitle": "Hedeflerinizi belirleyin",
     "tracker": "Hedef takibi",
     "min": "dk",
+    "hours": "sa",
+    "days": "g",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

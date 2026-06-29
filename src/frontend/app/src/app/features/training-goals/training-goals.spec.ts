@@ -1,6 +1,6 @@
 import {
   buildGoalTracker, statusLevel, toMinutes, orderHistory, isMinutesKind, breakdownRows,
-  ymd, parseYmd, periodBounds, shiftAnchor, sumBreakdown,
+  ymd, parseYmd, periodBounds, shiftAnchor, sumBreakdown, formatDuration,
 } from './training-goals.component';
 import { TrackerDay, SOURCE_KEYS, THEME_KEYS } from './training-goals.service';
 
@@ -19,6 +19,34 @@ describe('toMinutes', () => {
     expect(toMinutes(30)).toBe(1);
     expect(toMinutes(90)).toBe(2);
     expect(toMinutes(600)).toBe(10);
+  });
+});
+
+describe('formatDuration', () => {
+  it('shows minutes up to 120 min (exclusive of the 2 h threshold)', () => {
+    expect(formatDuration(0)).toEqual({ value: '0', unitKey: 'trainingGoals.min' });
+    expect(formatDuration(90)).toEqual({ value: '2', unitKey: 'trainingGoals.min' });      // 90 s → 2 min
+    expect(formatDuration(119 * 60)).toEqual({ value: '119', unitKey: 'trainingGoals.min' });
+    expect(formatDuration(7199)).toEqual({ value: '120', unitKey: 'trainingGoals.min' });   // knapp unter 2 h
+  });
+
+  it('switches to hours from 120 min up to 48 h', () => {
+    expect(formatDuration(120 * 60, 'en')).toEqual({ value: '2', unitKey: 'trainingGoals.hours' });
+    expect(formatDuration(150 * 60, 'en')).toEqual({ value: '2.5', unitKey: 'trainingGoals.hours' });
+    expect(formatDuration(47 * 3600, 'en')).toEqual({ value: '47', unitKey: 'trainingGoals.hours' });
+  });
+
+  it('switches to days from 48 h', () => {
+    expect(formatDuration(48 * 3600, 'en')).toEqual({ value: '2', unitKey: 'trainingGoals.days' });
+    expect(formatDuration(60 * 3600, 'en')).toEqual({ value: '2.5', unitKey: 'trainingGoals.days' });
+  });
+
+  it('honours the locale decimal separator', () => {
+    expect(formatDuration(150 * 60, 'de').value).toBe('2,5');
+  });
+
+  it('clamps negatives to zero', () => {
+    expect(formatDuration(-100)).toEqual({ value: '0', unitKey: 'trainingGoals.min' });
   });
 });
 

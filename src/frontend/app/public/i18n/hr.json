@@ -1394,6 +1394,8 @@
     "setTitle": "Postavi ciljeve",
     "tracker": "Praćenje ciljeva",
     "min": "min",
+    "hours": "h",
+    "days": "dana",
     "games": "partije",
     "gamesPerWeek": "partije/tjedan",
     "thisWeek": "ovaj tjedan",

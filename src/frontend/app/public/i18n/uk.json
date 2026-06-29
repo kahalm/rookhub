@@ -1091,6 +1091,8 @@
     "setTitle": "Встановіть свої цілі",
     "tracker": "Трекер цілей",
     "min": "хв",
+    "hours": "год",
+    "days": "дн",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

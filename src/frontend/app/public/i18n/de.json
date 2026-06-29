@@ -1396,6 +1396,8 @@
     "setTitle": "Ziele festlegen",
     "tracker": "Ziele-Tracker",
     "min": "Min",
+    "hours": "Std",
+    "days": "Tage",
     "games": "Partien",
     "gamesPerWeek": "Partien/Woche",
     "thisWeek": "diese Woche",

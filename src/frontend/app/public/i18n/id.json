@@ -1091,6 +1091,8 @@
     "setTitle": "Tetapkan tujuan Anda",
     "tracker": "Pelacak tujuan",
     "min": "mnt",
+    "hours": "j",
+    "days": "h",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

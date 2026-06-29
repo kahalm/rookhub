@@ -1091,6 +1091,8 @@
     "setTitle": "Setează-ți obiectivele",
     "tracker": "Monitor obiective",
     "min": "min",
+    "hours": "h",
+    "days": "z",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",

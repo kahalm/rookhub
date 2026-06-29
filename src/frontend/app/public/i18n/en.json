@@ -1396,6 +1396,8 @@
     "setTitle": "Set your goals",
     "tracker": "Goal tracker",
     "min": "min",
+    "hours": "h",
+    "days": "d",
     "games": "games",
     "gamesPerWeek": "games/week",
     "thisWeek": "this week",
