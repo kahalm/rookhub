@@ -157,11 +157,15 @@
                     <button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
                   </div>
                 } @else if (courseCompleted) {
-                  <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+                  @if (courseFullyDone) {
+                    <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+                  } @else {
+                    <p class="ctx-done"><mat-icon>replay</mat-icon> {{ 'book.course.roundFinished' | translate:{remaining: courseRemaining} }}</p>
+                  }
                   <div class="ctx-nav">
                     @if (courseModeKind === 'random') {
                       <button mat-raised-button color="primary" (click)="restartCourse()">
-                        <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
+                        <mat-icon>replay</mat-icon> {{ (courseFullyDone ? 'book.course.restart' : 'book.course.continueRemaining') | translate }}
                       </button>
                     }
                     <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>

@@ -13,6 +13,7 @@ import { Key } from 'chessground/types';
 
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { calcDests } from '../puzzles/puzzle-move.util';
+import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, RepertoireCardStateDto, ReviewCardRequest } from './repertoire-training.service';
 import { buildRepertoireGraph, cardsForColor, normSan, RepCard } from './repertoire-tree.util';
@@ -79,12 +80,32 @@ const ADVANCE_MS: Record<Outcome, number> = { correct: 700, tolerated: 1800, wro
 
         <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
           <p *ngIf="outcome === 'correct'"><mat-icon>check_circle</mat-icon> {{ 'repertoireTrainer.correct' | translate }}</p>
-          <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon>
-            {{ 'repertoireTrainer.tolerated' | translate: { move: expectedDisplay } }}</p>
-          <p *ngIf="outcome === 'wrong'"><mat-icon>cancel</mat-icon>
-            {{ 'repertoireTrainer.wrong' | translate: { move: expectedDisplay } }}</p>
-          <!-- Richtig/geduldet: kein Knopf, läuft automatisch weiter (Tippen springt sofort). -->
-          <button *ngIf="outcome === 'wrong'" mat-raised-button color="primary" (click)="next(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
+          <!-- Geduldet: keinen richtigen Zug verraten, nur „spielbarer Zug" anzeigen. -->
+          <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon> {{ 'repertoireTrainer.toleratedPlayable' | translate }}</p>
+          <ng-container *ngIf="outcome === 'wrong'">
+            <p *ngIf="!wrongRevealed"><mat-icon>cancel</mat-icon> {{ 'repertoireTrainer.wrongNoHint' | translate }}</p>
+            <p *ngIf="wrongRevealed"><mat-icon>cancel</mat-icon>
+              {{ 'repertoireTrainer.wrong' | translate: { move: expectedDisplay } }}</p>
+            <p class="eval-info" *ngIf="evalLoading"><mat-icon>hourglass_top</mat-icon> {{ 'repertoireTrainer.evalLoading' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === 'missed'"><mat-icon>flash_on</mat-icon> {{ 'repertoireTrainer.evalMateMissed' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === 'allowed'"><mat-icon>flash_on</mat-icon> {{ 'repertoireTrainer.evalMateAllowed' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns < -0.05">
+              <mat-icon>trending_down</mat-icon>
+              {{ 'repertoireTrainer.evalWorse' | translate: { delta: evalDeltaAbsDisplay } }}
+            </p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns >= -0.05 && evalDeltaPawns <= 0.05">
+              <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
+            </p>
+            <div class="wrong-actions" *ngIf="!wrongRevealed">
+              <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
+                <mat-icon>undo</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
+              </button>
+              <button mat-raised-button color="primary" (click)="showSolution(); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.showSolution' | translate }}
+              </button>
+            </div>
+            <button *ngIf="wrongRevealed" mat-raised-button color="primary" (click)="next(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
+          </ng-container>
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
         <p *ngIf="phase === 'PLAYING'" class="hint">{{ 'repertoireTrainer.playYourMove' | translate }}</p>
@@ -113,6 +134,8 @@ const ADVANCE_MS: Record<Outcome, number> = { correct: 700, tolerated: 1800, wro
     .feedback.wrong { background: rgba(198,40,40,.12); }
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); }
+    .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .eval-info { font-size: 13px; opacity: .85; margin: 0 0 8px; }
   `],
 })
 export class RepertoireTrainerComponent implements OnInit, OnDestroy {
@@ -133,6 +156,20 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   outcome: Outcome = 'correct';
   expectedDisplay = '';
+  /** Bei falschem Zug erst nach Klick auf „Lösung zeigen" wahr — bis dahin keinen Hint preisgeben. */
+  wrongRevealed = false;
+  /** Stockfish-Eval-Vergleich (Repertoire-Zug vs. eigener Zug) während FEEDBACK. */
+  evalLoading = false;
+  /** Differenz aus Spieler-Sicht in „Bauern" (negativ = eigener Zug schlechter). */
+  evalDeltaPawns: number | null = null;
+  /** Mate-Hinweis: 'missed' = Spieler-Mate verpasst, 'allowed' = Gegen-Mate erlaubt, null = keine Mate-Linie. */
+  evalMateNote: 'missed' | 'allowed' | null = null;
+  /** Karte+Zug, deren Eval gerade berechnet werden — alte Antworten ignorieren bei Karten-/Zugwechsel. */
+  private evalEpoch = 0;
+  /** Letzter falscher Zug (wird für Mouseslip auf Rückgängig gebraucht). */
+  private wrongMove: { orig: Key; dest: Key; promotion?: string } | null = null;
+  /** Bei falschem Zug gemerkter Server-Review-Trigger (wird erst bei „Lösung zeigen" gefeuert). */
+  private pendingWrongReview: (() => void) | null = null;
   private statesByKey = new Map<string, RepertoireCardStateDto>();
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -142,12 +179,15 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     public prefs: PreferencesService,
     private translate: TranslateService,
     private cdr: ChangeDetectorRef,
+    private stockfish: StockfishService,
   ) {}
 
   ngOnInit(): void {
     this.repertoireId = Number(this.route.snapshot.paramMap.get('id')) || 0;
     const saved = localStorage.getItem(COLOR_KEY(this.repertoireId));
     if (saved === 'w' || saved === 'b') this.color = saved;
+    // Stockfish warmup im Hintergrund — beim ersten falschen Zug ist der Worker dann schon bereit.
+    this.stockfish.init().catch(() => {});
 
     forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
@@ -204,6 +244,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return this.sessionTotal === 0 ? 0 : Math.round((this.index / this.sessionTotal) * 100);
   }
 
+  /** Formatierter absoluter Eval-Verlust (z.B. "1.4") für die Lokalisierung. */
+  get evalDeltaAbsDisplay(): string {
+    if (this.evalDeltaPawns === null) return '';
+    return Math.abs(this.evalDeltaPawns).toFixed(2).replace(/\.?0+$/, '');
+  }
+
   private get current(): RepCard | null {
     return this.index < this.queue.length ? this.queue[this.index] : null;
   }
@@ -213,6 +259,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (!card) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
     this.fen = card.fenBefore + ' 0 1';   // normFen → volle FEN für chess.js/Brett
     this.lastMove = undefined;
+    this.wrongRevealed = false;
+    this.wrongMove = null;
+    this.pendingWrongReview = null;
+    this.evalLoading = false;
+    this.evalDeltaPawns = null;
+    this.evalMateNote = null;
+    this.evalEpoch++;
     try {
       const c = new Chess(this.fen);
       this.dests = calcDests(c);
@@ -226,10 +279,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (!card || this.phase !== 'PLAYING') return;
 
     let san = '';
+    let fenAfterPlayerMove = '';
     try {
       const c = new Chess(this.fen);
       const mv = c.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' });
       san = normSan(mv.san);
+      fenAfterPlayerMove = c.fen();
       this.lastMove = [ev.orig, ev.dest];
     } catch { return; }   // illegaler Zug ignorieren
 
@@ -238,27 +293,115 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     let grade: ReviewCardRequest['grade'];
     if (san === expected) { this.outcome = 'correct'; this.correct++; grade = 2; }
     else if (accepted.includes(san)) { this.outcome = 'tolerated'; grade = 1; }
-    else { this.outcome = 'wrong'; this.wrong++; grade = 0; }
+    else { this.outcome = 'wrong'; grade = 0; }   // wrong-Counter erst beim „Lösung zeigen"
 
     this.expectedDisplay = card.expected;
+    this.wrongRevealed = false;
     this.phase = 'FEEDBACK';
 
-    // Bei „falsch" die Karte am Sitzungsende erneut zeigen.
-    if (this.outcome === 'wrong') this.queue.push(card);
-
-    this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade })
-      .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
-
-    // Richtig/geduldet: kein „Weiter"-Knopf — automatisch weiterspielen (Tippen springt sofort).
-    // Bei geduldetem Zug etwas länger, damit die Visualisierung des Repertoirezugs lesbar bleibt.
-    if (this.outcome !== 'wrong') this.scheduleAdvance(ADVANCE_MS[this.outcome]);
+    if (this.outcome === 'wrong') {
+      // Falsche Karte: noch KEIN Review senden, noch KEIN Re-Queue — erst wenn der Spieler
+      // „Lösung zeigen" wählt. Bei „Mouseslip" wird nichts gewertet (Tippfehler-Toleranz).
+      this.wrongMove = { orig: ev.orig, dest: ev.dest, promotion: ev.promotion };
+      this.pendingWrongReview = () =>
+        this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade: 0 })
+          .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
+      this.kickOffEvalCompare(card, fenAfterPlayerMove);
+    } else {
+      this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade })
+        .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
+      // Richtig/geduldet: kein „Weiter"-Knopf — automatisch weiterspielen (Tippen springt sofort).
+      this.scheduleAdvance(ADVANCE_MS[this.outcome]);
+    }
 
     this.cdr.markForCheck();
   }
 
-  /** Klick irgendwo im Spielbereich überspringt die Auto-Weiter-Wartezeit. */
+  /** Klick irgendwo im Spielbereich überspringt die Auto-Weiter-Wartezeit (richtig/geduldet).
+   *  Im wrong-Zustand passiert hier nichts — der Spieler entscheidet bewusst Mouseslip oder Show. */
   onPlayClick(): void {
-    if (this.phase === 'FEEDBACK' && this.advanceTimer !== null) this.next();
+    if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.next();
+  }
+
+  /** „Mouseslip": kein Penalty, kein Server-Review, kein Re-Queue. Zurück zur Karte. */
+  mouseslip(): void {
+    this.pendingWrongReview = null;
+    this.wrongMove = null;
+    this.wrongRevealed = false;
+    this.evalLoading = false;
+    this.evalDeltaPawns = null;
+    this.evalMateNote = null;
+    this.evalEpoch++;   // laufende Eval-Antworten verwerfen
+    this.outcome = 'correct';   // neutraler Zustand für CSS-Klasse
+    this.lastMove = undefined;
+    // Brett-Position ist unverändert (this.fen) → einfach in PLAYING zurück und Dests neu setzen.
+    try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
+    this.phase = 'PLAYING';
+    this.cdr.markForCheck();
+  }
+
+  /** „Lösung zeigen": wertet die Karte jetzt als falsch (Server-Review + Re-Queue) und enthüllt den Zug. */
+  showSolution(): void {
+    if (this.wrongRevealed) return;
+    this.wrongRevealed = true;
+    this.wrong++;
+    const card = this.current;
+    if (card) this.queue.push(card);
+    this.pendingWrongReview?.();
+    this.pendingWrongReview = null;
+    this.cdr.markForCheck();
+  }
+
+  /** Startet zwei Stockfish-Evals (Spielerzug vs. Repertoire-Zug) und berechnet die Differenz
+   *  aus Spieler-Sicht. Läuft im Hintergrund; FEEDBACK-Anzeige aktualisiert sich, sobald fertig. */
+  private kickOffEvalCompare(card: RepCard, fenAfterPlayerMove: string): void {
+    const epoch = ++this.evalEpoch;
+    this.evalLoading = true;
+    this.evalDeltaPawns = null;
+    this.evalMateNote = null;
+
+    let fenAfterRep = '';
+    try {
+      const c = new Chess(this.fen);
+      c.move(card.expected);
+      fenAfterRep = c.fen();
+    } catch { this.evalLoading = false; this.cdr.markForCheck(); return; }
+
+    const parseCpWhite = (s: string): { cp: number; mateFor: 'w' | 'b' | null } => {
+      if (!s) return { cp: 0, mateFor: null };
+      if (s.startsWith('#-')) return { cp: -100000 + parseInt(s.slice(2), 10), mateFor: 'b' };
+      if (s.startsWith('#'))  return { cp:  100000 - parseInt(s.slice(1), 10), mateFor: 'w' };
+      const v = parseFloat(s);
+      return { cp: isNaN(v) ? 0 : Math.round(v * 100), mateFor: null };
+    };
+
+    Promise.all([
+      this.stockfish.getEval(fenAfterPlayerMove, 14).catch(() => ''),
+      this.stockfish.getEval(fenAfterRep, 14).catch(() => ''),
+    ]).then(([sPlayer, sRep]) => {
+      if (epoch !== this.evalEpoch) return;
+      this.evalLoading = false;
+      if (!sPlayer || !sRep) { this.cdr.markForCheck(); return; }
+
+      const ep = parseCpWhite(sPlayer);
+      const er = parseCpWhite(sRep);
+      const sign = this.color === 'w' ? 1 : -1;
+      const cpPlayer = ep.cp * sign;
+      const cpRep    = er.cp * sign;
+
+      // Mate-Sonderfälle: gewinnbares Matt verpasst / Matt erlaubt
+      const playerWasInWin = er.mateFor && (er.mateFor === this.color);
+      const playerNowLosing = ep.mateFor && (ep.mateFor !== this.color);
+      if (playerNowLosing) this.evalMateNote = 'allowed';
+      else if (playerWasInWin && !ep.mateFor) this.evalMateNote = 'missed';
+
+      this.evalDeltaPawns = (cpPlayer - cpRep) / 100;   // negativ = eigener Zug schlechter
+      this.cdr.markForCheck();
+    }).catch(() => {
+      if (epoch !== this.evalEpoch) return;
+      this.evalLoading = false;
+      this.cdr.markForCheck();
+    });
   }
 
   private scheduleAdvance(ms: number): void {

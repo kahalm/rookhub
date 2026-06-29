@@ -573,6 +573,19 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       : 0;
   }
 
+  /** Wirklich alle Kurs-Puzzles gelöst (nicht nur „Random-Pool leer"). Im Random-Modus signalisiert
+   *  `courseCompleted` lediglich, dass der aktuelle Durchgang vorbei ist — gescheiterte/ungelöste
+   *  Puzzles bleiben übrig, bis ein Reset den Pool wieder auffüllt. Erst wenn solved == total ist
+   *  das Buch tatsächlich durch. */
+  get courseFullyDone(): boolean {
+    return this.courseTotal > 0 && this.courseSolved >= this.courseTotal;
+  }
+
+  /** Im Random-Modus übrige (nicht gelöste) Puzzles, wenn der Pool des aktuellen Durchgangs leer ist. */
+  get courseRemaining(): number {
+    return Math.max(0, this.courseTotal - this.courseSolved);
+  }
+
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
   private loadCourseNext(after?: number, exclude?: number): void {
     if (this.courseBookId == null) return;

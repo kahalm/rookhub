@@ -15,7 +15,8 @@ function make(): RepertoireTrainerComponent {
   const prefs: any = {};
   const translate: any = {};
   const cdr: any = { markForCheck: () => {} };
-  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr);
+  const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('+0.0') };
+  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish);
   c.fen = START + ' 0 1';
   c.queue = [card('e4', ['d4']), card('Nf3')];
   c.index = 0;
@@ -61,6 +62,8 @@ describe('RepertoireTrainerComponent auto-advance', () => {
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
     expect(c.outcome).toBe('wrong');
     expect(c.phase).toBe('FEEDBACK');
+    expect(c.wrongRevealed).toBeFalse();    // erst nach „Lösung zeigen" enthüllt
+    expect(c.wrong).toBe(0);                 // wrong-Zähler erst beim Show
     tick(3000);
     expect(c.index).toBe(0);   // bleibt stehen bis „Weiter"
     expect(c.phase).toBe('FEEDBACK');
@@ -69,4 +72,25 @@ describe('RepertoireTrainerComponent auto-advance', () => {
     c.next();
     expect(c.index).toBe(1);
   }));
+
+  it('mouseslip after wrong move: no penalty, return to PLAYING', () => {
+    const c = make();
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+    expect(c.outcome).toBe('wrong');
+    const queueLenBefore = c.queue.length;
+    c.mouseslip();
+    expect(c.phase).toBe('PLAYING');
+    expect(c.wrong).toBe(0);
+    expect(c.queue.length).toBe(queueLenBefore);   // KEIN Re-Queue der Karte
+  });
+
+  it('showSolution after wrong move: counts as wrong + reveal + re-queue', () => {
+    const c = make();
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+    const queueLenBefore = c.queue.length;
+    c.showSolution();
+    expect(c.wrongRevealed).toBeTrue();
+    expect(c.wrong).toBe(1);
+    expect(c.queue.length).toBe(queueLenBefore + 1);
+  });
 });
