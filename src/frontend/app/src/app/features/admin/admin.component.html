@@ -578,6 +578,10 @@
                         @if (imp.status === 'running') {
                           {{ ('chessable.phase_' + imp.phase) | translate }}
                           @if (imp.chaptersTotal > 0) { · {{ imp.chaptersDone }}/{{ imp.chaptersTotal }} }
+                          @if (imp.linesTotal > 0) {
+                            · {{ imp.linesDone }}/{{ imp.linesTotal }} {{ 'admin.courseDl.lines' | translate }}
+                            @if (dlEtaMin(imp); as eta) { · {{ 'chessable.etaRemaining' | translate:{ min: eta } }} }
+                          }
                           @if (imp.queuedAhead > 0) { · {{ 'admin.courseDl.queued' | translate:{ n: imp.queuedAhead } }} }
                         } @else if (imp.status === 'completed') {
                           <mat-icon class="ok">check_circle</mat-icon> {{ 'admin.courseDl.done' | translate }}

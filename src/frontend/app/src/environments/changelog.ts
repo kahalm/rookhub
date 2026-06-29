@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.193.2';
+export const APP_VERSION = '0.194.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.194.0", date: "2026-06-29", changes: [
+    { en: "Chessable import progress now shows the real total line count and a more accurate time estimate. The course's total number of lines is fetched up front (via Chessable's variation list), so the progress reads \"lines X / total\" with a remaining-time estimate, instead of extrapolating from chapter progress. The throughput estimate was also corrected to the measured ~25 lines/min.", de: "Der Chessable-Import-Fortschritt zeigt jetzt die echte Gesamt-Linienzahl und eine genauere Restzeit. Die Gesamtzahl der Linien wird vorab geholt (über die Chessable-Variantenliste), sodass der Fortschritt „Linien X / Gesamt\" samt Restzeit-Schätzung anzeigt, statt aus dem Kapitel-Fortschritt hochzurechnen. Der Durchsatz-Wert wurde außerdem auf die gemessenen ~25 Linien/Min korrigiert." },
+  ]},
   { version: "0.193.2", date: "2026-06-29", changes: [
     { en: "Chessable import is much faster now (piratechess): when a request gets soft-blocked by Chessable (~6% of line fetches), the import used to wait a fixed 30 seconds before retrying on the same exhausted IP — by far the biggest time sink (~77% of the wall-clock time). It now retires that IP immediately, rotates it in the background, and continues on the next, already-rested VPN tunnel (ping-pong), retrying on the fresh IP after a short delay. Expected throughput improvement roughly 4–5× (~26 → ~100–150 lines/min). The inter-request delay default was also lowered, since blocking is driven by requests-per-IP, not timing.", de: "Chessable-Import ist jetzt deutlich schneller (piratechess): Wird eine Anfrage von Chessable soft-geblockt (~6% der Zeilen-Abrufe), wartete der Import bisher fix 30 Sekunden und versuchte es dann auf derselben verbrauchten IP erneut — mit Abstand der größte Zeitfresser (~77% der Gesamtzeit). Jetzt wird diese IP sofort stillgelegt, im Hintergrund rotiert, und es geht auf dem nächsten, bereits ausgeruhten VPN-Tunnel weiter (Ping-Pong) — der erneute Versuch läuft nach kurzer Pause auf der frischen IP. Erwartete Beschleunigung grob 4–5× (~26 → ~100–150 Zeilen/min). Der Default-Abstand zwischen Anfragen wurde ebenfalls gesenkt, da der Block requests-pro-IP- und nicht timing-getrieben ist." },
   ]},

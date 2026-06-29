@@ -29,7 +29,9 @@ import {
  * Hol-Durchsatz (Prod-Messung 2026-06-15, inkl. VPN-Rotationspausen): grob ~15–20 Zeilen/min.
  * Für Schätzungen konservativ die Faustregel 500 Zeilen ≈ 30 Min (≈ 16,7/min) verwenden.
  */
-export const CHESSABLE_LINES_PER_MIN = 500 / 30;
+// Gemessener Durchsatz echter (nicht-gecachter) Linien-Abrufe ≈ 25 Linien/Min (gepoolt 26,6 über
+// ~80 reale Kurs-Fetches; gecachte Linien sind quasi sofort). Für die Rest-Zeit-Schätzung.
+export const CHESSABLE_LINES_PER_MIN = 25;
 
 /** Kompakte Dauer aus Millisekunden: "1 h 5 min", "12 min", "45 s"; "—" bei ungültig/negativ. */
 export function formatDuration(ms: number): string {
@@ -40,18 +42,23 @@ export function formatDuration(ms: number): string {
   return `${s} s`;
 }
 
-/** Lineare Hochrechnung der Gesamt-Zeilenzahl aus dem Kapitel-Fortschritt. 0 = (noch) nicht schätzbar. */
-export function estimateTotalLines(linesDone: number, chaptersDone: number, chaptersTotal: number): number {
+/**
+ * Gesamt-Zeilenzahl: bevorzugt den EXAKTEN Wert (`linesTotal`, aus getCourse?includeVariations);
+ * fällt auf die lineare Hochrechnung aus dem Kapitel-Fortschritt zurück, solange der exakte Wert
+ * (noch) nicht vorliegt (0). 0 = (noch) nicht bestimmbar.
+ */
+export function effectiveTotalLines(linesDone: number, chaptersDone: number, chaptersTotal: number, linesTotal = 0): number {
+  if (linesTotal > 0) return linesTotal;
   if (linesDone <= 0 || chaptersDone <= 0 || chaptersTotal <= 0) return 0;
   return Math.round((linesDone * chaptersTotal) / chaptersDone);
 }
 
 /**
- * Geschätzte Rest-Holzeit in Minuten: Gesamt-Zeilen aus den bisher geholten Kapiteln hochrechnen,
- * Rest durch den Durchsatz teilen. 0 = nicht schätzbar (zu wenig Fortschritt). Aufgerundet.
+ * Geschätzte Rest-Holzeit in Minuten: (Gesamt − geholt) / Durchsatz, aufgerundet. Nutzt die exakte
+ * Gesamtzahl, sobald bekannt, sonst die Hochrechnung. 0 = nicht schätzbar.
  */
-export function estimateRemainingMinutes(linesDone: number, chaptersDone: number, chaptersTotal: number): number {
-  const total = estimateTotalLines(linesDone, chaptersDone, chaptersTotal);
+export function estimateRemainingMinutes(linesDone: number, chaptersDone: number, chaptersTotal: number, linesTotal = 0): number {
+  const total = effectiveTotalLines(linesDone, chaptersDone, chaptersTotal, linesTotal);
   if (total <= 0) return 0;
   const remaining = Math.max(0, total - linesDone);
   return Math.ceil(remaining / CHESSABLE_LINES_PER_MIN);
@@ -612,7 +619,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
     this.setActiveImport({
       id: 0, bid: c.bid, courseName: c.name, target, status: 'running', phase: 'queued',
       error: null, resultId: null, imported: 0, skipped: 0, invalid: 0,
-      chaptersDone: 0, chaptersTotal: 0, linesDone: 0, queuedAhead: 0,
+      chaptersDone: 0, chaptersTotal: 0, linesDone: 0, linesTotal: 0, queuedAhead: 0,
       createdAt: new Date().toISOString(), startedAt: null, completedAt: null,
     });
     this.chessable.startImport(c.bid, target, c.name).subscribe({
@@ -630,10 +637,14 @@ export class ChessableComponent implements OnInit, OnDestroy {
   statusLabel(imp: ChessableImport): string {
     let s = this.translate.instant('chessable.phase_' + (imp.phase || 'queued'));
     if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
-      s += ' ' + this.translate.instant('chessable.fetchProgress',
-        { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone });
-      // Restzeit aus dem bisherigen Kapitel-Fortschritt hochrechnen (sobald genug Daten da sind).
-      const eta = estimateRemainingMinutes(imp.linesDone, imp.chaptersDone, imp.chaptersTotal);
+      // Mit bekannter Gesamt-Linienzahl „Linien X/Gesamt" zeigen, sonst nur die geholten.
+      s += ' ' + (imp.linesTotal > 0
+        ? this.translate.instant('chessable.fetchProgressTotal',
+            { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone, linesTotal: imp.linesTotal })
+        : this.translate.instant('chessable.fetchProgress',
+            { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone }));
+      // Restzeit: exakte Gesamtzahl nutzen, sobald bekannt; sonst Hochrechnung.
+      const eta = estimateRemainingMinutes(imp.linesDone, imp.chaptersDone, imp.chaptersTotal, imp.linesTotal);
       if (eta > 0) s += ' · ' + this.translate.instant('chessable.etaRemaining', { min: eta });
     }
     return s;

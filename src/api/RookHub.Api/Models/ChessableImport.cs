@@ -51,6 +51,9 @@ public class ChessableImport
     public int ChaptersDone { get; set; }
     public int ChaptersTotal { get; set; }
     public int LinesDone { get; set; }
+    /// <summary>Gesamt-Linienzahl des Kurses (aus getCourse?includeVariations), bekannt schon zu
+    /// Beginn des Abrufs → Fortschritts-Nenner + ETA-Anzeige. 0 solange unbekannt.</summary>
+    public int LinesTotal { get; set; }
     /// <summary>JobId des laufenden piratechess-Fetch-Jobs (zum Weiterpollen, auch nach Resume).</summary>
     public string? FetchJobId { get; set; }
 

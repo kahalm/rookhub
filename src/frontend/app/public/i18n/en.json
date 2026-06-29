@@ -1304,7 +1304,8 @@
       "done": "In your repertoires",
       "failed": "Failed",
       "queued": "position {{n}} in queue",
-      "alreadyQueued": "Already in queue"
+      "alreadyQueued": "Already in queue",
+      "lines": "lines"
     }
   },
   "games": {
@@ -1714,6 +1715,7 @@
     "phase_importing": "importing…",
     "phase_done": "done",
     "fetchProgress": "chapter {{ch}}/{{total}} · {{lines}} lines",
+    "fetchProgressTotal": "chapter {{ch}}/{{total}} · {{lines}}/{{linesTotal}} lines",
     "adminImportsTitle": "All imports (Admin)",
     "adminImportsSubtitle": "Every user's Chessable imports — current queue and history.",
     "adminNoImports": "No imports yet.",

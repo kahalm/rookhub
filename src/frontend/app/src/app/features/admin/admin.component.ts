@@ -342,6 +342,13 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   /** Kurs des Users ins eigene Admin-Konto herunterladen — als Repertoire oder Buch. */
+  /** Geschätzte Rest-Holzeit (Min) eines laufenden Imports aus der bekannten Gesamt-Linienzahl;
+   *  0 = unbekannt/fertig (Anzeige unterdrückt). ~25 Linien/Min (gemessen). */
+  dlEtaMin(imp: ChessableImport): number {
+    if (!imp.linesTotal || imp.linesTotal <= imp.linesDone) return 0;
+    return Math.ceil((imp.linesTotal - imp.linesDone) / 25);
+  }
+
   dlImport(course: ChessableCourse, target: ChessableImportTarget): void {
     if (this.dlSelectedUserId == null) return;
     const bid = course.bid;

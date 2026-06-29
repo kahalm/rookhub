@@ -270,6 +270,7 @@ public class ChessableImportService : ICourseReimporter
                     import.ChaptersDone = prog.ChaptersDone;
                     import.ChaptersTotal = prog.ChaptersTotal;
                     import.LinesDone = prog.LinesDone;
+                    if (prog.LinesTotal > 0) import.LinesTotal = prog.LinesTotal;
 
                     if (prog.Status == "completed")
                     {

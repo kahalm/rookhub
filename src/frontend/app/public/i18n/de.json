@@ -1304,7 +1304,8 @@
       "done": "In deinen Repertoires",
       "failed": "Fehlgeschlagen",
       "queued": "Position {{n}} in der Warteschlange",
-      "alreadyQueued": "Bereits in Warteschlange"
+      "alreadyQueued": "Bereits in Warteschlange",
+      "lines": "Linien"
     }
   },
   "games": {
@@ -1714,6 +1715,7 @@
     "phase_importing": "importiere…",
     "phase_done": "fertig",
     "fetchProgress": "Kapitel {{ch}}/{{total}} · {{lines}} Linien",
+    "fetchProgressTotal": "Kapitel {{ch}}/{{total}} · {{lines}}/{{linesTotal}} Linien",
     "adminImportsTitle": "Alle Importe (Admin)",
     "adminImportsSubtitle": "Chessable-Importe aller Nutzer — aktuelle Warteschlange und Verlauf.",
     "adminNoImports": "Noch keine Importe.",

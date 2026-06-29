@@ -1,7 +1,7 @@
 import {
   ChessableComponent,
   buildChessableBookmarklet, parseChessbearerFragment,
-  estimateTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN, formatDuration,
+  effectiveTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN, formatDuration,
 } from './chessable.component';
 
 describe('parseChessbearerFragment', () => {
@@ -20,25 +20,34 @@ describe('parseChessbearerFragment', () => {
   });
 });
 
-describe('estimateTotalLines', () => {
-  it('extrapolates total lines linearly from chapter progress', () => {
-    // 100 Zeilen in 2 von 10 Kapiteln → ~500 gesamt.
-    expect(estimateTotalLines(100, 2, 10)).toBe(500);
-    expect(estimateTotalLines(60, 3, 6)).toBe(120);
+describe('effectiveTotalLines', () => {
+  it('prefers the exact linesTotal when known', () => {
+    // Exakter Wert (aus includeVariations) schlägt die Hochrechnung.
+    expect(effectiveTotalLines(100, 2, 10, 333)).toBe(333);
+    expect(effectiveTotalLines(0, 0, 0, 299)).toBe(299); // sofort bekannt, noch nichts geholt
   });
 
-  it('returns 0 when not yet estimable', () => {
-    expect(estimateTotalLines(0, 1, 10)).toBe(0);
-    expect(estimateTotalLines(50, 0, 10)).toBe(0);
-    expect(estimateTotalLines(50, 2, 0)).toBe(0);
+  it('extrapolates total lines linearly when the exact total is not yet known', () => {
+    // 100 Zeilen in 2 von 10 Kapiteln → ~500 gesamt.
+    expect(effectiveTotalLines(100, 2, 10)).toBe(500);
+    expect(effectiveTotalLines(60, 3, 6)).toBe(120);
+  });
+
+  it('returns 0 when neither exact nor estimable', () => {
+    expect(effectiveTotalLines(0, 1, 10)).toBe(0);
+    expect(effectiveTotalLines(50, 0, 10)).toBe(0);
+    expect(effectiveTotalLines(50, 2, 0)).toBe(0);
   });
 });
 
 describe('estimateRemainingMinutes', () => {
-  it('estimates remaining minutes from extrapolated lines and the throughput', () => {
-    // 100 in 2/10 → ~500 gesamt, 400 verbleibend, /16,7 ≈ 24 min.
+  it('uses the exact total when known', () => {
+    // 299 gesamt, 99 geholt → 200 verbleibend / Durchsatz.
+    expect(estimateRemainingMinutes(99, 1, 17, 299)).toBe(Math.ceil(200 / CHESSABLE_LINES_PER_MIN));
+  });
+
+  it('falls back to extrapolation when the exact total is unknown', () => {
     expect(estimateRemainingMinutes(100, 2, 10)).toBe(Math.ceil(400 / CHESSABLE_LINES_PER_MIN));
-    // Faustregel-Check: 500 Zeilen frisch → ca. 30 min.
     expect(estimateRemainingMinutes(50, 1, 10)).toBe(Math.ceil(450 / CHESSABLE_LINES_PER_MIN));
   });
 

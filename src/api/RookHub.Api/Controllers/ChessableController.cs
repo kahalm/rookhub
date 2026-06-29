@@ -515,11 +515,11 @@ public class ChessableController : BaseApiController
 
     private static ChessableImportDto ToDto(ChessableImport i, int queuedAhead) => new(
         i.Id, i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error, i.ResultId, i.Imported, i.Skipped, i.Invalid,
-        i.ChaptersDone, i.ChaptersTotal, i.LinesDone, queuedAhead, i.CreatedAt, i.StartedAt, i.CompletedAt);
+        i.ChaptersDone, i.ChaptersTotal, i.LinesDone, i.LinesTotal, queuedAhead, i.CreatedAt, i.StartedAt, i.CompletedAt);
 
     private static ChessableAdminImportDto ToAdminDto(ChessableImport i, int queuedAhead) => new(
         i.Id, i.UserId, i.User?.Username ?? "?", i.Bid, i.CourseName, i.Target, i.Status, i.Phase, i.Error,
-        i.ResultId, i.Imported, i.Skipped, i.Invalid, i.ChaptersDone, i.ChaptersTotal, i.LinesDone, queuedAhead,
+        i.ResultId, i.Imported, i.Skipped, i.Invalid, i.ChaptersDone, i.ChaptersTotal, i.LinesDone, i.LinesTotal, queuedAhead,
         i.CreatedAt, i.StartedAt, i.CompletedAt);
 
     private async Task<string?> LoadBearerAsync()

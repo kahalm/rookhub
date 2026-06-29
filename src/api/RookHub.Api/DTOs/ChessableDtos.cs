@@ -44,7 +44,7 @@ public record ChessableCourseStartDto(string JobId);
 
 /// <summary>Fortschritt/Ergebnis eines piratechess-Kurs-Abruf-Jobs (/direct/course/{jobId}).</summary>
 public record ChessableCourseProgressDto(
-    string Status, int ChaptersDone, int ChaptersTotal, int LinesDone,
+    string Status, int ChaptersDone, int ChaptersTotal, int LinesDone, int LinesTotal,
     int ChapterCount, int LineCount, string? CourseName, string? Pgn, string? Error);
 
 /// <summary>Startet einen Kurs-Import. Target: "repertoire" oder "book". Name optional (Anzeigename).</summary>
@@ -66,6 +66,7 @@ public record ChessableImportDto(
     int ChaptersDone,
     int ChaptersTotal,
     int LinesDone,
+    int LinesTotal,
     int QueuedAhead,
     DateTime CreatedAt,
     DateTime? StartedAt,
@@ -90,6 +91,7 @@ public record ChessableAdminImportDto(
     int ChaptersDone,
     int ChaptersTotal,
     int LinesDone,
+    int LinesTotal,
     int QueuedAhead,
     DateTime CreatedAt,
     DateTime? StartedAt,

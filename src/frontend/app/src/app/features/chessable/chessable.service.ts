@@ -45,6 +45,8 @@ export interface ChessableImport {
   chaptersDone: number;
   chaptersTotal: number;
   linesDone: number;
+  /** Gesamt-Linienzahl des Kurses (aus getCourse?includeVariations); 0 solange unbekannt. */
+  linesTotal: number;
   queuedAhead: number;
   createdAt: string;
   /** Hol-Beginn (aus der Queue gezogen); null solange noch wartend. */
