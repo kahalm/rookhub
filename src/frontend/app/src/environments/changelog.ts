@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.200.3';
+export const APP_VERSION = '0.200.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.200.4", date: "2026-06-29", changes: [
+    { en: "Mobile fix: on phones the status cards (Correct! / timer / settings) under the board no longer collapse to a narrow column. They now span the full board width like on desktop. Applied to standard puzzles and book/course/daily/weekly/shared puzzles (Endless already had the fix).", de: "Mobile-Fix: Auf dem Smartphone schrumpfen die Status-Karten (Korrekt! / Timer / Einstellungen) unter dem Brett nicht mehr auf eine schmale Spalte. Sie nehmen jetzt die volle Brettbreite ein wie am Desktop. Gilt für Standard-Puzzles und Buch-/Kurs-/Tages-/Wochen-/Geteilte-Puzzles (Endless hatte den Fix bereits)." },
+  ]},
   { version: "0.200.3", date: "2026-06-29", changes: [
     { en: "Dark mode is now the default. New visitors (without a saved theme choice) start in dark; anyone who already picked light/dark/system keeps their setting, and the theme toggle works as before.", de: "Dark Mode ist jetzt der Standard. Neue Besucher (ohne gespeicherte Theme-Wahl) starten im Dunkelmodus; wer bereits hell/dunkel/system gewählt hat, behält seine Einstellung, und der Theme-Umschalter funktioniert wie bisher." },
   ]},

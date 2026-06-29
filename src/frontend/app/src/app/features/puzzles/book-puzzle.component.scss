@@ -150,7 +150,11 @@
 
     @media (max-width: 768px) {
       .puzzle-layout { flex-direction: column; }
-      .board-section { width: 100%; }
+      // .info-section explizit auf 100 % — der .puzzle-layout-Container hat
+      // align-items: flex-start, daher streckt flex-direction: column allein die
+      // Info-Spalte nicht horizontal. Ohne explizite width bleiben die Status-
+      // /Info-Karten schmaler als das Brett darüber (Mobile-Bug, vor v0.186).
+      .board-section, .info-section { width: 100%; }
     }
 
     .track-counts {
