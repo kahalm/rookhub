@@ -1303,7 +1303,11 @@
       "failed": "Neuspjelo",
       "queued": "pozicija {{n}} u redu",
       "alreadyQueued": "Već u redu čekanja",
-      "lines": "linija"
+      "lines": "linija",
+      "estimate": "Procijeni veličinu",
+      "estimateError": "Procjena nije uspjela",
+      "cachedInstant": "predmemorirano (odmah)",
+      "min": "min"
     }
   },
   "games": {

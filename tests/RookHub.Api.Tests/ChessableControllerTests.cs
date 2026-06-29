@@ -373,6 +373,39 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task EstimateCourseAdmin_ReturnsTotalLines_FromTargetUserBearer()
+    {
+        await SeedUserAsync(7);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("real-bearer-1234567890"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        _handler.Reply = (req, _) =>
+        {
+            Assert.Equal("/api/chessable/direct/course/info", req.RequestUri!.AbsolutePath);
+            return JsonResponse(HttpStatusCode.OK, new { bid = "128648", totalLines = 299, cached = false });
+        };
+
+        var result = await _controller.EstimateCourseAdmin(7, "128648", CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<ChessableCourseInfoDto>(ok.Value);
+        Assert.Equal(299, body.TotalLines);
+        Assert.False(body.Cached);
+    }
+
+    [Fact]
+    public async Task EstimateCourseAdmin_UserWithoutBearer_Returns400()
+    {
+        await SeedUserAsync(7);
+        var result = await _controller.EstimateCourseAdmin(7, "128648", CancellationToken.None);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task GetUserCoursesAdmin_UnknownUser_Returns404_NotMisleading400()
     {
         await SeedUserAsync(42);   // nur der Admin existiert, Ziel-User 999 nicht

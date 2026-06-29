@@ -23,6 +23,13 @@ export interface ChessableCourse {
   queued?: boolean;
 }
 
+/** Vorab-Schätzung der Kursgröße (Admin-Kursliste). */
+export interface ChessableCourseInfo {
+  bid: string;
+  totalLines: number;
+  cached: boolean;
+}
+
 export interface ChessableCoursesResult {
   courses: ChessableCourse[];
   cachedAt: string | null;
@@ -144,6 +151,12 @@ export class ChessableService {
   importForUserAdmin(userId: number, bid: string, target: ChessableImportTarget, name: string): Observable<ChessableImport> {
     return this.http.post<ChessableImport>(
       `${this.apiUrl}/admin/users/${userId}/import/${encodeURIComponent(bid)}`, { target, name });
+  }
+
+  /** Vorab-Schätzung der Gesamt-Linienzahl eines Kurses (on-demand pro Zeile in der Admin-Kursliste). */
+  estimateCourseForUser(userId: number, bid: string): Observable<ChessableCourseInfo> {
+    return this.http.get<ChessableCourseInfo>(
+      `${this.apiUrl}/admin/users/${userId}/courses/${encodeURIComponent(bid)}/estimate`);
   }
 
   cancelImport(id: number): Observable<ChessableImport> {

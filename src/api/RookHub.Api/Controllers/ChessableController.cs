@@ -358,6 +358,30 @@ public class ChessableController : BaseApiController
         }
     }
 
+    /// <summary>ADMIN: Vorab-Schätzung der Gesamt-Linienzahl eines Kurses {bid} (mit dem Bearer des
+    /// Users) — für die „~N Linien · ~M min"-Anzeige in der Kursliste vor dem Import. On-demand pro
+    /// Kurs (ein getCourse-Call bzw. gratis aus dem Cache).</summary>
+    [HttpGet("admin/users/{userId:int}/courses/{bid}/estimate")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> EstimateCourseAdmin(int userId, string bid, CancellationToken ct)
+    {
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
+        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+        if (bearer is null) return BadRequest(new { message = "Stored Chessable bearer could not be read — please re-enter it." });
+        try
+        {
+            var info = await _chessable.GetCourseInfoAsync(bearer, bid, ct);
+            if (info is null) return BadRequest(new { message = "Could not estimate the course size." });
+            return Ok(info);
+        }
+        catch (ChessableProxyException ex)
+        {
+            _logger.LogWarning("Admin course estimate (user {UserId}, bid {Bid}) failed: {Status} {Message}", userId, bid, ex.Status, ex.Message);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>ADMIN: Lädt den Kurs {bid} eines Users (mit dessen Bearer) in das EIGENE (Admin-)Konto
     /// herunter — als Repertoire ("repertoire", Default) oder als Buch/Kurs ("book").
     /// Besitzer/Empfänger der Benachrichtigung = der aufrufende Admin; nur der Bearer stammt vom Ziel-User.</summary>

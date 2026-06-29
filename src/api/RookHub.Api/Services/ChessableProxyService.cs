@@ -79,6 +79,16 @@ public class ChessableProxyService
         return await response.Content.ReadFromJsonAsync<ChessableCourseProgressDto>(JsonOpts, ct);
     }
 
+    /// <summary>Leichte Vorab-Schätzung: Gesamt-Linienzahl eines Kurses (für die „~N Linien · ~M min"-
+    /// Anzeige in der Admin-Kursliste). Gecacht → ohne Chessable-Abruf; sonst EIN getCourse-Call.</summary>
+    public async Task<ChessableCourseInfoDto?> GetCourseInfoAsync(string bearer, string bid, CancellationToken ct = default)
+    {
+        var response = await _httpClient.PostAsJsonAsync(
+            "/api/chessable/direct/course/info", new { Bearer = bearer, Bid = bid }, ct);
+        await EnsureSuccessOrThrowAsync(response, ct);
+        return await response.Content.ReadFromJsonAsync<ChessableCourseInfoDto>(JsonOpts, ct);
+    }
+
     /// <summary>True, wenn piratechess die Rohdaten des Kurses schon gecacht hat (Import braucht
     /// dann keinen Chessable-Abruf). Fehler/unerreichbar → false (dann normal über die Queue).</summary>
     public async Task<bool> IsCourseCachedAsync(string bid, CancellationToken ct = default)

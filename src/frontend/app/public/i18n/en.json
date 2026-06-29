@@ -1305,7 +1305,11 @@
       "failed": "Failed",
       "queued": "position {{n}} in queue",
       "alreadyQueued": "Already in queue",
-      "lines": "lines"
+      "lines": "lines",
+      "estimate": "Estimate size",
+      "estimateError": "Estimate failed",
+      "cachedInstant": "cached (instant)",
+      "min": "min"
     }
   },
   "games": {

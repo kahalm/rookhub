@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.194.0';
+export const APP_VERSION = '0.195.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.195.0", date: "2026-06-29", changes: [
+    { en: "Admin course download: each course now has an \"estimate size\" button that shows the course's total line count and a rough time estimate (e.g. \"≈299 lines · ~12 min\") before you import it — fetched on demand per course (instant for already-cached courses, otherwise one quick lookup).", de: "Admin-Kursdownload: Jeder Kurs hat jetzt einen „Größe schätzen\"-Knopf, der die Gesamt-Linienzahl und eine grobe Zeitschätzung anzeigt (z. B. „≈299 Linien · ~12 Min\"), bevor man importiert — on-demand pro Kurs geholt (sofort bei bereits gecachten Kursen, sonst eine schnelle Abfrage)." },
+  ]},
   { version: "0.194.0", date: "2026-06-29", changes: [
     { en: "Chessable import progress now shows the real total line count and a more accurate time estimate. The course's total number of lines is fetched up front (via Chessable's variation list), so the progress reads \"lines X / total\" with a remaining-time estimate, instead of extrapolating from chapter progress. The throughput estimate was also corrected to the measured ~25 lines/min.", de: "Der Chessable-Import-Fortschritt zeigt jetzt die echte Gesamt-Linienzahl und eine genauere Restzeit. Die Gesamtzahl der Linien wird vorab geholt (über die Chessable-Variantenliste), sodass der Fortschritt „Linien X / Gesamt\" samt Restzeit-Schätzung anzeigt, statt aus dem Kapitel-Fortschritt hochzurechnen. Der Durchsatz-Wert wurde außerdem auf die gemessenen ~25 Linien/Min korrigiert." },
   ]},

@@ -572,6 +572,20 @@
                       @if (c.cached) {
                         <mat-icon class="cached-badge" [matTooltip]="'chessable.cachedHint' | translate">bolt</mat-icon>
                       }
+                      @if (dlEstimates[c.bid]; as est) {
+                        @if (est.loading) {
+                          <mat-spinner diameter="14" class="dl-est-spin"></mat-spinner>
+                        } @else if (est.info) {
+                          <span class="dl-est">≈{{ est.info.totalLines }} {{ 'admin.courseDl.lines' | translate }}@if (est.info.cached) { · {{ 'admin.courseDl.cachedInstant' | translate }} } @else { · ~{{ estMinFromLines(est.info.totalLines) }} {{ 'admin.courseDl.min' | translate }} }</span>
+                        } @else if (est.error) {
+                          <span class="dl-est-err" [matTooltip]="est.error">{{ 'admin.courseDl.estimateError' | translate }}</span>
+                        }
+                      } @else {
+                        <button mat-icon-button class="dl-est-btn" (click)="dlEstimate(c)"
+                                [matTooltip]="'admin.courseDl.estimate' | translate" [attr.aria-label]="'admin.courseDl.estimate' | translate">
+                          <mat-icon>straighten</mat-icon>
+                        </button>
+                      }
                     </span>
                     @if (dlImports[c.bid]; as imp) {
                       <span class="dl-status">

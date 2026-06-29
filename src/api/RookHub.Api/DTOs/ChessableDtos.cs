@@ -42,6 +42,10 @@ public record ChessableCourseDataDto(string Bid, string Name, string Mode, int C
 /// <summary>Antwort von piratechess /direct/course/start (async).</summary>
 public record ChessableCourseStartDto(string JobId);
 
+/// <summary>Vorab-Schätzung der Gesamt-Linienzahl eines Kurses (für die Admin-Kursliste).
+/// <c>Cached</c>=true → sofort verfügbar (kein Chessable-Abruf nötig).</summary>
+public record ChessableCourseInfoDto(string Bid, int TotalLines, bool Cached);
+
 /// <summary>Fortschritt/Ergebnis eines piratechess-Kurs-Abruf-Jobs (/direct/course/{jobId}).</summary>
 public record ChessableCourseProgressDto(
     string Status, int ChaptersDone, int ChaptersTotal, int LinesDone, int LinesTotal,

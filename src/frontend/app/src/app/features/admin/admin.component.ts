@@ -15,10 +15,11 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
-import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget } from '../chessable/chessable.service';
+import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../chessable/chessable.service';
 import { timer, Subscription, Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
 import { MenuService } from '../../core/menu.service';
@@ -33,7 +34,7 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent
+    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
@@ -115,6 +116,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   dlCoursesError: string | null = null;
   /** Laufende/abgeschlossene Admin-Importe je bid (für Fortschritt + Button-Status). */
   dlImports: Record<string, ChessableImport> = {};
+  /** Vorab-Schätzungen je bid (on-demand geladen). */
+  dlEstimates: Record<string, { info?: ChessableCourseInfo; loading: boolean; error?: string }> = {};
   private dlPollSubs: Record<string, Subscription> = {};
 
   /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
@@ -347,6 +350,23 @@ export class AdminComponent implements OnInit, OnDestroy {
   dlEtaMin(imp: ChessableImport): number {
     if (!imp.linesTotal || imp.linesTotal <= imp.linesDone) return 0;
     return Math.ceil((imp.linesTotal - imp.linesDone) / 25);
+  }
+
+  /** Geschätzte Holzeit (Min) aus einer Linienzahl; gecacht ⇒ 0 (quasi sofort). ~25 Linien/Min. */
+  estMinFromLines(totalLines: number): number {
+    return Math.ceil(totalLines / 25);
+  }
+
+  /** On-demand: Gesamt-Linienzahl + grobe Zeit eines Kurses schätzen (1 getCourse-Call bzw. Cache). */
+  dlEstimate(course: ChessableCourse): void {
+    if (this.dlSelectedUserId == null) return;
+    const bid = course.bid;
+    if (this.dlEstimates[bid]?.loading) return;
+    this.dlEstimates[bid] = { loading: true };
+    this.chessable.estimateCourseForUser(this.dlSelectedUserId, bid).subscribe({
+      next: info => { this.dlEstimates[bid] = { info, loading: false }; },
+      error: err => { this.dlEstimates[bid] = { loading: false, error: err?.error?.message || this.translate.instant('admin.courseDl.estimateError') }; },
+    });
   }
 
   dlImport(course: ChessableCourse, target: ChessableImportTarget): void {

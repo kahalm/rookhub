@@ -1305,7 +1305,11 @@
       "failed": "Fehlgeschlagen",
       "queued": "Position {{n}} in der Warteschlange",
       "alreadyQueued": "Bereits in Warteschlange",
-      "lines": "Linien"
+      "lines": "Linien",
+      "estimate": "Größe schätzen",
+      "estimateError": "Schätzung fehlgeschlagen",
+      "cachedInstant": "gecacht (sofort)",
+      "min": "Min"
     }
   },
   "games": {
