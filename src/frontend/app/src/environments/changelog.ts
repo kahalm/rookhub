@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.198.0';
+export const APP_VERSION = '0.199.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.199.0", date: "2026-06-29", changes: [
+    { en: "Friends page now also shows your pending (not-yet-accepted) friend requests. The Requests tab gained a \"Sent (awaiting confirmation)\" section listing everyone you've requested who hasn't accepted yet — previously these were invisible. Each has an undo button to withdraw the request. The tab count now includes both incoming and pending sent requests.", de: "Die Freunde-Seite zeigt jetzt auch deine ausstehenden (noch nicht angenommenen) Freundschaftsanfragen. Der Anfragen-Tab hat einen Abschnitt „Gesendet (wartet auf Bestätigung)\" bekommen, der alle von dir angefragten Personen auflistet, die noch nicht angenommen haben — bisher waren die nirgends sichtbar. Jede lässt sich per Rückgängig-Knopf zurückziehen. Der Tab-Zähler umfasst jetzt eingehende UND ausstehende gesendete Anfragen." },
+  ]},
   { version: "0.198.0", date: "2026-06-29", changes: [
     { en: "Send-a-puzzle-to-a-friend now shows, in parentheses behind each friend, how many of the puzzles you sent them are still open (not yet attempted) — e.g. \"Max (3)\". This is the friend's outstanding backlog of your challenges; once they attempt a puzzle (solved or failed) it no longer counts. Friends with nothing open show no number. The counts refresh after you send.", de: "„Puzzle an Freund schicken“ zeigt jetzt in Klammern hinter jedem Freund, wie viele der von dir geschickten Puzzle noch offen sind (noch nicht versucht) — z. B. „Max (3)“. Das ist der offene Rückstand deiner Challenges beim Freund; sobald er ein Puzzle versucht (gelöst oder gescheitert), zählt es nicht mehr. Freunde ohne offene Puzzle zeigen keine Zahl. Die Zähler aktualisieren sich nach dem Senden." },
   ]},

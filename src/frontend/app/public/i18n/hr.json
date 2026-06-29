@@ -438,13 +438,22 @@
       "sendRequest": "Slanje zahtjeva nije uspjelo",
       "acceptRequest": "Prihvaćanje zahtjeva nije uspjelo",
       "declineRequest": "Odbijanje zahtjeva nije uspjelo",
-      "removeFriend": "Uklanjanje prijatelja nije uspjelo"
+      "removeFriend": "Uklanjanje prijatelja nije uspjelo",
+      "withdrawRequest": "Zahtjev nije moguće povući."
     },
     "aria": {
       "sendRequest": "Pošalji zahtjev za prijateljstvo",
       "accept": "Prihvati zahtjev",
       "decline": "Odbij zahtjev",
-      "removeFriend": "Ukloni prijatelja"
+      "removeFriend": "Ukloni prijatelja",
+      "withdraw": "Povuci zahtjev"
+    },
+    "requests": {
+      "incoming": "Dolazni",
+      "sent": "Poslano (čeka potvrdu)",
+      "awaiting": "čeka potvrdu",
+      "emptySent": "Nema poslanih zahtjeva na čekanju.",
+      "withdrawn": "Zahtjev povučen."
     }
   },
   "repertoire": {

@@ -95,6 +95,25 @@ public class FriendService
             .ToListAsync();
     }
 
+    /// <summary>Von mir gesendete, noch nicht angenommene (Pending) Freundschaftsanfragen —
+    /// für die Anzeige „wartet auf Bestätigung" in der Freundesliste.</summary>
+    public async Task<List<SentFriendRequestDto>> GetSentPendingRequestsAsync(int userId)
+    {
+        return await _db.Friendships
+            .Include(f => f.Addressee).ThenInclude(u => u.Profile)
+            .Where(f => f.RequesterId == userId && f.Status == FriendshipStatus.Pending)
+            .OrderByDescending(f => f.CreatedAt)
+            .Select(f => new SentFriendRequestDto
+            {
+                FriendshipId = f.Id,
+                AddresseeId = f.AddresseeId,
+                AddresseeUsername = f.Addressee.Username,
+                AddresseeDisplayName = f.Addressee.Profile != null ? f.Addressee.Profile.DisplayName : null,
+                CreatedAt = f.CreatedAt
+            })
+            .ToListAsync();
+    }
+
     public async Task<Friendship> SendRequestAsync(int requesterId, int addresseeId)
     {
         if (requesterId == addresseeId)

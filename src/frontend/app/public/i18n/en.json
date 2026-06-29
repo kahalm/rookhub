@@ -438,13 +438,22 @@
       "sendRequest": "Failed to send request",
       "acceptRequest": "Failed to accept request",
       "declineRequest": "Failed to decline request",
-      "removeFriend": "Failed to remove friend"
+      "removeFriend": "Failed to remove friend",
+      "withdrawRequest": "Could not withdraw request."
     },
     "aria": {
       "sendRequest": "Send friend request",
       "accept": "Accept request",
       "decline": "Decline request",
-      "removeFriend": "Remove friend"
+      "removeFriend": "Remove friend",
+      "withdraw": "Withdraw request"
+    },
+    "requests": {
+      "incoming": "Incoming",
+      "sent": "Sent (awaiting confirmation)",
+      "awaiting": "awaiting confirmation",
+      "emptySent": "No pending sent requests.",
+      "withdrawn": "Request withdrawn."
     }
   },
   "repertoire": {

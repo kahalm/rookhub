@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Friend, FriendRequest, UserSearchResult } from './models';
+import { Friend, FriendRequest, SentFriendRequest, UserSearchResult } from './models';
 
 /**
  * Kapselt die Freundes-HTTP-Calls (`/api/friends/*`), damit die Komponenten nicht direkt den
@@ -25,6 +25,11 @@ export class FriendsService {
 
   getRequests(): Observable<FriendRequest[]> {
     return this.http.get<FriendRequest[]>(`${this.apiUrl}/requests`);
+  }
+
+  /** Von mir gesendete, noch nicht angenommene Anfragen (ausstehend). */
+  getSentRequests(): Observable<SentFriendRequest[]> {
+    return this.http.get<SentFriendRequest[]>(`${this.apiUrl}/requests/sent`);
   }
 
   sendRequest(userId: number): Observable<unknown> {

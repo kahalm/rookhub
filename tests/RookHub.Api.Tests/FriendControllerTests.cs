@@ -119,6 +119,31 @@ public class FriendControllerTests : IDisposable
         Assert.Single(requests!);
     }
 
+    [Fact]
+    public async Task GetSentRequests_ReturnsOnlyMyPendingOutgoing()
+    {
+        var me = await CreateUserAsync("me");
+        var pendingTo = await CreateUserAsync("pendingTo");
+        var acceptedWith = await CreateUserAsync("acceptedWith");
+        var someoneElse = await CreateUserAsync("someoneElse");
+
+        // Von mir gesendet + pending → soll erscheinen.
+        _db.Friendships.Add(new Friendship { RequesterId = me.Id, AddresseeId = pendingTo.Id, Status = FriendshipStatus.Pending });
+        // Von mir gesendet, aber schon akzeptiert → kein ausstehender Request mehr.
+        _db.Friendships.Add(new Friendship { RequesterId = me.Id, AddresseeId = acceptedWith.Id, Status = FriendshipStatus.Accepted });
+        // An mich gesendet (eingehend) → gehört nicht in „gesendet".
+        _db.Friendships.Add(new Friendship { RequesterId = someoneElse.Id, AddresseeId = me.Id, Status = FriendshipStatus.Pending });
+        await _db.SaveChangesAsync();
+        SetUser(me.Id);
+
+        var result = await _controller.GetSentRequests();
+
+        var sent = Assert.IsType<List<SentFriendRequestDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Single(sent);
+        Assert.Equal(pendingTo.Id, sent[0].AddresseeId);
+        Assert.Equal("pendingTo", sent[0].AddresseeUsername);
+    }
+
     // ---- SendRequest ----
 
     [Fact]

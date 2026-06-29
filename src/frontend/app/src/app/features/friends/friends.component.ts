@@ -17,7 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Friend, FriendRequest, UserSearchResult } from '../../core/models';
+import { Friend, FriendRequest, SentFriendRequest, UserSearchResult } from '../../core/models';
 import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../core/challenge.service';
 import { RevengeService, RevengeNotification } from '../../core/revenge.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
@@ -90,7 +90,8 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
             </mat-list>
           }
         </mat-tab>
-        <mat-tab [label]="'friends.tabs.requests' | translate:{ count: requests.length }">
+        <mat-tab [label]="'friends.tabs.requests' | translate:{ count: requests.length + sentRequests.length }">
+          <h3 class="section-title">{{ 'friends.requests.incoming' | translate }}</h3>
           <mat-list>
             @for (req of requests; track req.friendshipId) {
               <mat-list-item>
@@ -109,6 +110,22 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
               </mat-list-item>
             } @empty {
               <p class="empty-text">{{ 'friends.empty.requests' | translate }}</p>
+            }
+          </mat-list>
+
+          <h3 class="section-title">{{ 'friends.requests.sent' | translate }}</h3>
+          <mat-list>
+            @for (req of sentRequests; track req.friendshipId) {
+              <mat-list-item>
+                <span matListItemTitle>{{ req.addresseeDisplayName || req.addresseeUsername }}</span>
+                <span matListItemLine class="status">⏳ {{ 'friends.requests.awaiting' | translate }} · {{ 'friends.sentOn' | translate:{ date: (req.createdAt | date) } }}</span>
+                <button mat-icon-button color="warn" matListItemMeta (click)="withdrawRequest(req.friendshipId)"
+                        [attr.aria-label]="'friends.aria.withdraw' | translate" [matTooltip]="'friends.aria.withdraw' | translate">
+                  <mat-icon>undo</mat-icon>
+                </button>
+              </mat-list-item>
+            } @empty {
+              <p class="empty-text">{{ 'friends.requests.emptySent' | translate }}</p>
             }
           </mat-list>
         </mat-tab>
@@ -195,6 +212,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 export class FriendsComponent implements OnInit {
   friends: Friend[] = [];
   requests: FriendRequest[] = [];
+  sentRequests: SentFriendRequest[] = [];
   searchResults: UserSearchResult[] = [];
   incoming: IncomingChallenge[] = [];
   outgoing: OutgoingChallenge[] = [];
@@ -241,6 +259,10 @@ export class FriendsComponent implements OnInit {
     this.friendsService.getRequests().subscribe({
       next: r => this.requests = r,
       error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
+    });
+    this.friendsService.getSentRequests().subscribe({
+      next: r => this.sentRequests = r,
+      error: () => {}
     });
     this.loadChallenges();
   }
@@ -300,6 +322,14 @@ export class FriendsComponent implements OnInit {
     this.friendsService.remove(id).subscribe({
       next: () => this.loadData(),
       error: () => this.snackbar.info(this.translate.instant('friends.errors.removeFriend'))
+    });
+  }
+
+  /** Eine von mir gesendete, noch ausstehende Anfrage zurückziehen (löscht die Pending-Friendship). */
+  withdrawRequest(id: number): void {
+    this.friendsService.remove(id).subscribe({
+      next: () => { this.snackbar.success(this.translate.instant('friends.requests.withdrawn')); this.loadData(); },
+      error: () => this.snackbar.info(this.translate.instant('friends.errors.withdrawRequest'))
     });
   }
 

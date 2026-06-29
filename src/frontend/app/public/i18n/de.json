@@ -438,13 +438,22 @@
       "sendRequest": "Anfrage konnte nicht gesendet werden",
       "acceptRequest": "Anfrage konnte nicht angenommen werden",
       "declineRequest": "Anfrage konnte nicht abgelehnt werden",
-      "removeFriend": "Freund konnte nicht entfernt werden"
+      "removeFriend": "Freund konnte nicht entfernt werden",
+      "withdrawRequest": "Anfrage konnte nicht zurückgezogen werden."
     },
     "aria": {
       "sendRequest": "Freundschaftsanfrage senden",
       "accept": "Anfrage annehmen",
       "decline": "Anfrage ablehnen",
-      "removeFriend": "Freund entfernen"
+      "removeFriend": "Freund entfernen",
+      "withdraw": "Anfrage zurückziehen"
+    },
+    "requests": {
+      "incoming": "Eingehend",
+      "sent": "Gesendet (wartet auf Bestätigung)",
+      "awaiting": "wartet auf Bestätigung",
+      "emptySent": "Keine ausstehenden gesendeten Anfragen.",
+      "withdrawn": "Anfrage zurückgezogen."
     }
   },
   "repertoire": {

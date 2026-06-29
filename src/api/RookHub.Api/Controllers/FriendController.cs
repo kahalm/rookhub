@@ -79,6 +79,13 @@ public class FriendController : BaseApiController
         return Ok(await _friendService.GetPendingRequestsAsync(GetUserId()));
     }
 
+    /// <summary>Von mir gesendete, noch nicht angenommene Anfragen (ausstehend). Literal-Route vor `{...}`.</summary>
+    [HttpGet("requests/sent")]
+    public async Task<ActionResult<List<SentFriendRequestDto>>> GetSentRequests()
+    {
+        return Ok(await _friendService.GetSentPendingRequestsAsync(GetUserId()));
+    }
+
     [HttpPost("request/{userId}")]
     public async Task<IActionResult> SendRequest(int userId)
     {

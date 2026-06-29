@@ -91,6 +91,15 @@ export interface FriendRequest {
   createdAt: string;
 }
 
+/** Von mir gesendete, noch nicht angenommene Anfrage (ausstehend). */
+export interface SentFriendRequest {
+  friendshipId: number;
+  addresseeId: number;
+  addresseeUsername: string;
+  addresseeDisplayName: string | null;
+  createdAt: string;
+}
+
 export interface UserSearchResult {
   userId: number;
   username: string;

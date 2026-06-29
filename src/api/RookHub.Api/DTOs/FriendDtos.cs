@@ -16,6 +16,17 @@ public class FriendRequestDto
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>Eine von mir gesendete, noch nicht angenommene Freundschaftsanfrage (ausstehend) — zum Anzeigen
+/// „du hast XY angefragt, wartet auf Bestätigung" und zum Zurückziehen.</summary>
+public class SentFriendRequestDto
+{
+    public int FriendshipId { get; set; }
+    public int AddresseeId { get; set; }
+    public string AddresseeUsername { get; set; } = string.Empty;
+    public string? AddresseeDisplayName { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 public class UserSearchResultDto
 {
     public int UserId { get; set; }
