@@ -182,8 +182,10 @@ public class AuthService
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            // „Eingeloggt bleiben": 1 Jahr, sonst 30 Tage.
-            expires: DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 365 : 30)),
+            // „Eingeloggt bleiben": 90 Tage, sonst 30. JWTs sind stateless und werden nur über DeletedAt
+            // + SecurityStamp (Passwort-Reset/-Änderung) invalidiert — ein abgegriffenes Token bliebe sonst
+            // unnötig lange gültig, daher kein Jahr mehr.
+            expires: DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 90 : 30)),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         );
 

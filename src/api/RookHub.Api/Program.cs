@@ -279,15 +279,17 @@ try
                 .WithMethods("GET", "POST")
                 .WithHeaders("Authorization", "Content-Type");
         });
-        // Default policy for frontend
+        // Default policy for frontend (nur lokale Dev-Origins; Prod ist same-origin hinter nginx).
+        // KEIN AllowCredentials: Auth läuft ausschließlich über den Bearer-Header (JWT aus localStorage),
+        // es werden keine Cookies gebraucht. Die Kombination AllowCredentials + AllowAnyHeader wäre eine
+        // gefährliche Default-Fläche, sobald jemand später eine weitere Origin hinzufügt — daher weglassen.
         options.AddDefaultPolicy(policy =>
         {
             policy.WithOrigins(
                     "http://localhost:4200",
                     "http://localhost:8085")
                 .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
+                .AllowAnyHeader();
         });
     });
 
@@ -323,27 +325,25 @@ try
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
-        options.AddFixedWindowLimiter("auth", limiter =>
-        {
-            limiter.PermitLimit = 10;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-        });
-        options.AddFixedWindowLimiter("anonymous-puzzle", limiter =>
-        {
-            limiter.PermitLimit = 30;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-        });
+        // Die benannten Limiter MÜSSEN pro Client-IP partitionieren (wie der GlobalLimiter), sonst
+        // wäre jeder ein EINZIGER globaler Bucket: ein Angreifer könnte mit 10 Logins/min das Fenster
+        // site-weit für alle Nutzer ausschöpfen (Login/Register/Forgot-DoS) UND Brute-Force wäre nicht
+        // pro-IP gedrosselt. Partition-Key = aufgelöste Client-IP (UseForwardedHeaders läuft davor).
+        static RateLimitPartition<string> PerIpFixedWindow(HttpContext ctx, int permit) =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = permit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+        options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10));
+        options.AddPolicy("anonymous-puzzle", ctx => PerIpFixedWindow(ctx, 30));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
-        options.AddFixedWindowLimiter("anonymous-tournament", limiter =>
-        {
-            limiter.PermitLimit = 60;
-            limiter.Window = TimeSpan.FromMinutes(1);
-            limiter.QueueLimit = 0;
-        });
+        options.AddPolicy("anonymous-tournament", ctx => PerIpFixedWindow(ctx, 60));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.202.1';
+export const APP_VERSION = '0.202.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.202.2", date: "2026-06-30", changes: [
+    { en: "Security hardening (code review): the named rate limiters (auth, anonymous-puzzle, anonymous-tournament) now partition per client IP like the global limiter — previously each was a single shared bucket, so one attacker could exhaust the 10 logins/min window for everyone (login/register/forgot-password DoS) and brute-force wasn't throttled per IP. The default CORS policy no longer sets AllowCredentials (auth is Bearer-header only, no cookies) to avoid a dangerous credentials+any-header combination. \"Stay logged in\" tokens now last 90 days instead of a year.", de: "Sicherheits-Härtung (Code Review): Die benannten Rate-Limiter (auth, anonymous-puzzle, anonymous-tournament) partitionieren jetzt pro Client-IP wie der globale Limiter — vorher war jeder ein einziger gemeinsamer Topf, sodass ein Angreifer das 10-Logins/min-Fenster für alle ausschöpfen konnte (Login/Register/Passwort-vergessen-DoS) und Brute-Force nicht pro IP gedrosselt war. Die Default-CORS-Policy setzt kein AllowCredentials mehr (Auth läuft nur über den Bearer-Header, keine Cookies) — vermeidet die gefährliche Kombination Credentials + beliebige Header. „Eingeloggt bleiben\"-Tokens gelten jetzt 90 statt 365 Tage." },
+  ]},
   { version: "0.202.1", date: "2026-06-30", changes: [
     { en: "Visualization/blindfold puzzle gestures hardened (code-review follow-up): drag detection is now multi-touch safe (a second finger no longer corrupts the gesture), the tap-vs-drag threshold scales with the board size (fixes mis-taps on small phone boards), an interrupted touch (pointercancel) resets cleanly instead of leaving the gesture stuck, and a drag released just off the board edge now snaps to the edge square instead of doing nothing. The shared tap/drag move-commit logic was unified to keep both paths in sync. Also removed the now-unused Chessable import-queue banner component left over from the Courses page.", de: "Visualisierungs-/Blind-Puzzle-Gesten gehärtet (Code-Review-Nachzug): Die Drag-Erkennung ist jetzt Multi-Touch-fest (ein zweiter Finger verfälscht die Geste nicht mehr), die Tap-/Drag-Schwelle skaliert mit der Brettgröße (behebt Fehl-Taps auf kleinen Handy-Brettern), eine abgebrochene Berührung (pointercancel) setzt sauber zurück statt hängen zu bleiben, und ein knapp neben dem Brett losgelassener Drag rastet aufs Randfeld statt ins Leere zu laufen. Die gemeinsame Tap-/Drag-Zug-Logik wurde vereinheitlicht, damit beide Pfade synchron bleiben. Außerdem die nun ungenutzte Chessable-Import-Queue-Banner-Komponente von der Kurse-Seite entfernt." },
   ]},

@@ -159,11 +159,11 @@ public class AuthServiceTests : IDisposable
         var normalExp = handler.ReadJwtToken(normal.Token).ValidTo;
         var rememberExp = handler.ReadJwtToken(remember.Token).ValidTo;
 
-        // Ohne „Eingeloggt bleiben": ~30 Tage; mit: ~1 Jahr (365 Tage).
+        // Ohne „Eingeloggt bleiben": ~30 Tage; mit: ~90 Tage.
         Assert.True(normalExp > DateTime.UtcNow.AddDays(29), "normales Token sollte mindestens 29 Tage gültig sein");
         Assert.True(normalExp < DateTime.UtcNow.AddDays(31), "normales Token sollte höchstens 31 Tage gültig sein");
-        Assert.True(rememberExp > DateTime.UtcNow.AddDays(364), "Remember-Me-Token sollte mindestens 364 Tage gültig sein");
-        Assert.True(rememberExp < DateTime.UtcNow.AddDays(366), "Remember-Me-Token sollte höchstens 366 Tage gültig sein");
+        Assert.True(rememberExp > DateTime.UtcNow.AddDays(89), "Remember-Me-Token sollte mindestens 89 Tage gültig sein");
+        Assert.True(rememberExp < DateTime.UtcNow.AddDays(91), "Remember-Me-Token sollte höchstens 91 Tage gültig sein");
     }
 
     [Fact]
