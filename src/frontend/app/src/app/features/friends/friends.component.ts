@@ -14,6 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -25,7 +26,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 @Component({
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, MatTooltipModule, MatBadgeModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -74,9 +75,12 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
                             [attr.aria-label]="'friends.stats.compare' | translate" [matTooltip]="'friends.stats.compare' | translate">
                       <mat-icon>bar_chart</mat-icon>
                     </button>
-                    <button mat-icon-button color="primary" [routerLink]="['/friends', friend.userId, 'revenge']"
-                            [attr.aria-label]="'friends.revenge.menu' | translate" [matTooltip]="'friends.revenge.menu' | translate">
-                      <mat-icon>sports_martial_arts</mat-icon>
+                    <button mat-icon-button [color]="friend.openRevengeCount ? 'warn' : 'primary'"
+                            [routerLink]="['/friends', friend.userId, 'revenge']"
+                            [attr.aria-label]="(friend.openRevengeCount ? 'friends.revenge.menuOpen' : 'friends.revenge.menu') | translate:{ count: friend.openRevengeCount }"
+                            [matTooltip]="(friend.openRevengeCount ? 'friends.revenge.menuOpen' : 'friends.revenge.menu') | translate:{ count: friend.openRevengeCount }">
+                      <mat-icon [matBadge]="friend.openRevengeCount" [matBadgeHidden]="!friend.openRevengeCount"
+                                matBadgeColor="warn" matBadgeSize="small">sports_martial_arts</mat-icon>
                     </button>
                     <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)"
                             [attr.aria-label]="'friends.aria.removeFriend' | translate" [matTooltip]="'friends.aria.removeFriend' | translate">

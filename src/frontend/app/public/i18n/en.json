@@ -458,6 +458,7 @@
     },
     "revenge": {
       "menu": "Revenge a Friend",
+      "menuOpen": "{{count}} open revenge(s) — go get them!",
       "title": "Revenge on {{name}}",
       "hint": "Puzzles {{name}} failed and hasn't solved yet — crack them and do better!",
       "back": "Back to friends",

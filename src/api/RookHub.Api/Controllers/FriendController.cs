@@ -23,7 +23,16 @@ public class FriendController : BaseApiController
     [HttpGet]
     public async Task<ActionResult<List<FriendDto>>> GetFriends()
     {
-        return Ok(await _friendService.GetFriendsAsync(GetUserId()));
+        var userId = GetUserId();
+        var friends = await _friendService.GetFriendsAsync(userId);
+        // Offene-Revenge-Zähler je Freund anreichern (rotes Icon in der Liste) — ein Aufruf für alle Freunde.
+        if (friends.Count > 0)
+        {
+            var counts = await _puzzleService.GetOpenRevengeCountsAsync(userId, friends.Select(f => f.UserId).ToList());
+            foreach (var f in friends)
+                f.OpenRevengeCount = counts.GetValueOrDefault(f.UserId);
+        }
+        return Ok(friends);
     }
 
     /// <summary>Puzzle-Statistik eines Freundes für den Vergleich „Du vs. Freund". Nur zwischen Freunden sichtbar.</summary>

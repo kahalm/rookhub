@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.205.3';
+export const APP_VERSION = '0.206.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.206.0", date: "2026-06-30", changes: [
+    { en: "Friends list: the Revenge-a-Friend icon now turns red (with a small count badge) when there are open revenges against that friend — i.e. puzzles the friend failed and never solved that you also have not solved yet. The friends endpoint computes the open-revenge count per friend; no open revenges keeps the icon in its normal color. Lets you see at a glance which friends you can still get back at.", de: "Freundesliste: Das Revenge-a-Friend-Icon wird jetzt rot (mit kleinem Anzahl-Badge), wenn es offene Revanchen gegen den Freund gibt — also Puzzles, an denen der Freund gescheitert ist und die er nie gelöst hat und die auch du noch nicht gelöst hast. Der Freunde-Endpoint berechnet die Zahl offener Revanchen je Freund; ohne offene Revanchen bleibt das Icon in der normalen Farbe. So siehst du auf einen Blick, bei welchen Freunden noch eine Revanche offen ist." },
+  ]},
   { version: "0.205.3", date: "2026-06-30", changes: [
     { en: "Observability: admin impersonation is now visible per request in the logs. When an admin acts as another user, the JWT carries an imp claim (the admin id); the request-logging middleware now writes it as the ImpersonatorId field (ECS labels), so every impersonated request is filterable in Kibana. Previously only the one-time impersonation-start event was logged and individual requests looked identical to the real user.", de: "Observability: Admin-Impersonation ist jetzt pro Request in den Logs sichtbar. Agiert ein Admin als anderer User, trägt das JWT einen imp-Claim (die Admin-Id); die Request-Logging-Middleware schreibt ihn jetzt als Feld ImpersonatorId (ECS labels), sodass jeder impersonierte Request in Kibana filterbar ist. Vorher war nur das einmalige Impersonation-Start-Event geloggt und einzelne Requests sahen identisch zum echten User aus." },
   ]},

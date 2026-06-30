@@ -6,6 +6,10 @@ public class FriendDto
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
+    /// <summary>Anzahl offener „Revenge"-Puzzle gegen diesen Freund: Puzzles, an denen der Freund
+    /// gescheitert ist und die er nie gelöst hat UND die der Aufrufer selbst noch nicht gelöst hat.
+    /// &gt; 0 → die Freundesliste zeigt das Revenge-Icon rot.</summary>
+    public int OpenRevengeCount { get; set; }
 }
 
 public class FriendRequestDto

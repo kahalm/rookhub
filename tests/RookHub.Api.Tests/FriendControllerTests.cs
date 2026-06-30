@@ -432,6 +432,36 @@ public class FriendControllerTests : IDisposable
         Assert.Equal(403, status.StatusCode);
     }
 
+    [Fact]
+    public async Task GetFriends_SetsOpenRevengeCount_OnlyForUnavengedFailures()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        var noRevengeFriend = await CreateUserAsync("clean");
+        await MakeFriendsAsync(me.Id, friend.Id);
+        await MakeFriendsAsync(me.Id, noRevengeFriend.Id);
+
+        var open = await CreatePuzzleAsync("p1", 1700, "fork");          // Freund gescheitert, ich nicht gelöst → offen
+        var avenged = await CreatePuzzleAsync("p2", 1650, "pin");        // Freund gescheitert, ICH gelöst → nicht offen
+        var friendSolved = await CreatePuzzleAsync("p3", 1500, "skewer"); // Freund gescheitert+gelöst → nicht offen
+
+        _db.PuzzleAttempts.AddRange(
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = open.Id, Solved = false, TimeSpentSeconds = 10 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = open.Id, Solved = false, TimeSpentSeconds = 8 },  // dasselbe Puzzle, zählt 1×
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = avenged.Id, Solved = false, TimeSpentSeconds = 9 },
+            new PuzzleAttempt { UserId = me.Id, PuzzleId = avenged.Id, Solved = true, TimeSpentSeconds = 7 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = friendSolved.Id, Solved = false, TimeSpentSeconds = 6 },
+            new PuzzleAttempt { UserId = friend.Id, PuzzleId = friendSolved.Id, Solved = true, TimeSpentSeconds = 4 });
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.GetFriends();
+        var list = Assert.IsType<List<FriendDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(1, list.Single(f => f.UserId == friend.Id).OpenRevengeCount);       // nur das offene Puzzle, distinct
+        Assert.Equal(0, list.Single(f => f.UserId == noRevengeFriend.Id).OpenRevengeCount);
+    }
+
     // ---- GetRevenge ----
 
     private async Task<Puzzle> CreatePuzzleAsync(string lichessId, int rating, string themes)

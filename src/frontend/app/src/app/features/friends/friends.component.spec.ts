@@ -60,6 +60,19 @@ describe('FriendsComponent search race', () => {
     httpMock.expectNone(r => r.url.includes('/friends/search'));
     expect(component.searchResults).toEqual([]);
   });
+
+  it('keeps openRevengeCount from the friends payload (drives the red revenge icon)', () => {
+    component.loadData();
+    httpMock.expectOne('/api/friends').flush([
+      { friendshipId: 1, userId: 7, username: 'rival', displayName: null, openRevengeCount: 3 },
+      { friendshipId: 2, userId: 8, username: 'calm', displayName: null, openRevengeCount: 0 },
+    ]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    httpMock.expectOne('/api/friends/requests/sent').flush([]);
+
+    expect(component.friends.find(f => f.userId === 7)?.openRevengeCount).toBe(3);
+    expect(component.friends.find(f => f.userId === 8)?.openRevengeCount).toBe(0);
+  });
 });
 
 describe('FriendsComponent revenge notifications (flattened subscribe)', () => {

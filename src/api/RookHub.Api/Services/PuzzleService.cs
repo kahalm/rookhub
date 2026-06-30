@@ -893,6 +893,44 @@ public class PuzzleService
     /// es selbst schon gelöst hat (<see cref="RevengePuzzleDto.SolvedByViewer"/>), damit das Frontend
     /// erledigte von offenen Revanchen trennen kann.
     /// </summary>
+    /// <summary>Zählt je Freund die OFFENEN Revenge-Puzzle für die Freundesliste (rotes Icon): Puzzles,
+    /// an denen der Freund gescheitert ist und die er nie gelöst hat UND die der Aufrufer (<paramref
+    /// name="viewerUserId"/>) selbst noch nicht gelöst hat. Liefert nur Freunde mit Count &gt; 0.
+    /// Bewusst provider-sicher: einfache Projektionen laden + Aggregation in-memory (Datenmenge ist durch
+    /// die Versuche der wenigen Freunde beschränkt) — vermeidet riskante GroupBy/Distinct-SQL-Übersetzung.</summary>
+    public async Task<Dictionary<int, int>> GetOpenRevengeCountsAsync(int viewerUserId, IReadOnlyList<int> friendIds)
+    {
+        var result = new Dictionary<int, int>();
+        if (friendIds.Count == 0) return result;
+
+        // Puzzles, die der Aufrufer selbst gelöst hat → keine offene Rechnung mehr.
+        var viewerSolved = (await _db.PuzzleAttempts
+            .Where(a => a.UserId == viewerUserId && a.Solved)
+            .Select(a => a.PuzzleId)
+            .Distinct()
+            .ToListAsync())
+            .ToHashSet();
+
+        // Alle Versuche der Freunde (schlanke Projektion) — je Freund in-memory auswerten.
+        var rows = await _db.PuzzleAttempts
+            .Where(a => a.UserId != null && friendIds.Contains(a.UserId.Value))
+            .Select(a => new { UserId = a.UserId!.Value, a.PuzzleId, a.Solved })
+            .ToListAsync();
+
+        foreach (var byFriend in rows.GroupBy(r => r.UserId))
+        {
+            var solvedByFriend = byFriend.Where(r => r.Solved).Select(r => r.PuzzleId).ToHashSet();
+            var open = byFriend
+                .Where(r => !r.Solved)
+                .Select(r => r.PuzzleId)
+                .Where(pid => !solvedByFriend.Contains(pid) && !viewerSolved.Contains(pid))
+                .Distinct()
+                .Count();
+            if (open > 0) result[byFriend.Key] = open;
+        }
+        return result;
+    }
+
     public async Task<List<RevengePuzzleDto>> GetUnsolvedFailuresAsync(int targetUserId, int viewerUserId, int limit = 200)
     {
         limit = Math.Clamp(limit, 1, 500);

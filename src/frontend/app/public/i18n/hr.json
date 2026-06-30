@@ -458,6 +458,7 @@
     },
     "revenge": {
       "menu": "Osveta prijatelju",
+      "menuOpen": "{{count}} otvorenih osveta — idi po njih!",
       "title": "Osveta protiv {{name}}",
       "hint": "Zagonetke koje {{name}} nije riješio/la — riješi ih i budi bolji/a!",
       "back": "Natrag na prijatelje",

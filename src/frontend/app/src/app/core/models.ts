@@ -82,6 +82,9 @@ export interface Friend {
   lichessUsername: string | null;
   fideId: string | null;
   chessResultsId: string | null;
+  /** Offene „Revenge"-Puzzle gegen diesen Freund (er gescheitert + nie gelöst, ich noch nicht gelöst).
+   *  > 0 → Revenge-Icon rot. Optional, da andere Endpoints es nicht liefern. */
+  openRevengeCount?: number;
 }
 
 export interface FriendRequest {
