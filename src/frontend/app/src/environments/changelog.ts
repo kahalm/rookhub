@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.209.0';
+export const APP_VERSION = '0.209.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,8 +14,11 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.209.1", date: "2026-06-30", changes: [
+    { en: "Build fix: a straight quote in the German 0.209.0 changelog entry closed the string early and broke the production build (and therefore the dev image). Corrected to a typographic quote; the production build is green again.", de: "Build-Fix: Ein gerades Anführungszeichen im deutschen 0.209.0-Changelog-Eintrag beendete den String vorzeitig und brach den Production-Build (und damit das Dev-Image). Auf ein typografisches Anführungszeichen korrigiert; der Production-Build ist wieder grün." },
+  ]},
   { version: "0.209.0", date: "2026-06-30", changes: [
-    { en: "Courses and Repertoires now have a search box at the top of the list to filter by name as you type (courses by title; repertoires by name and description) — case-insensitive, with a clear button and a friendly “no matches” message. Purely client-side over the already-loaded list, so it's instant. On the courses page the filter applies across all sections (in-progress / public / Chessable).", de: "Kurse und Repertoires haben jetzt oben in der Liste ein Suchfeld, das beim Tippen nach Namen filtert (Kurse nach Titel; Repertoires nach Name und Beschreibung) — case-insensitive, mit Leeren-Knopf und freundlicher „keine Treffer"-Meldung. Rein clientseitig über die bereits geladene Liste, daher sofort. Auf der Kurse-Seite wirkt der Filter über alle Sektionen (In Arbeit / Öffentlich / Chessable)." },
+    { en: "Courses and Repertoires now have a search box at the top of the list to filter by name as you type (courses by title; repertoires by name and description) — case-insensitive, with a clear button and a friendly “no matches” message. Purely client-side over the already-loaded list, so it's instant. On the courses page the filter applies across all sections (in-progress / public / Chessable).", de: "Kurse und Repertoires haben jetzt oben in der Liste ein Suchfeld, das beim Tippen nach Namen filtert (Kurse nach Titel; Repertoires nach Name und Beschreibung) — case-insensitive, mit Leeren-Knopf und freundlicher „keine Treffer“-Meldung. Rein clientseitig über die bereits geladene Liste, daher sofort. Auf der Kurse-Seite wirkt der Filter über alle Sektionen (In Arbeit / Öffentlich / Chessable)." },
   ]},
   { version: "0.208.0", date: "2026-06-30", changes: [
     { en: "Dashboard customize mode no longer rearranges the page: the tile grid keeps its exact layout, just with every tile shown (disabled ones greyed out). Each tile now has an eye toggle in its top-right corner to show/hide it, plus up/down arrows to reorder — and drag & drop still works (now grid-aware). Tile buttons are click-shielded while customizing so you can't navigate away by accident.", de: "Der Dashboard-Bearbeitungsmodus sortiert die Seite nicht mehr um: Das Kachelraster behält exakt sein Layout, es werden lediglich alle Kacheln angezeigt (deaktivierte ausgegraut). Jede Kachel hat jetzt oben rechts ein Auge zum Ein-/Ausblenden sowie Pfeile rauf/runter zum Sortieren — und Drag & Drop funktioniert weiterhin (jetzt rastertauglich). Die Kachel-Buttons sind beim Bearbeiten klick-geschützt, damit man nicht versehentlich wegnavigiert." },
