@@ -87,6 +87,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private routePuzzleId: number | null = null;
 
+  /** Direkt geteiltes Einzel-Puzzle (?single=1): nach dem Lösen kein Auto-Weiter (der „Weiter"-Knopf
+   *  bleibt aber, der Empfänger kann selbst weiterblättern). */
+  singlePuzzle = false;
+
   /** Gesetzt, wenn dieses Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
   private challengeId: number | null = null;
   private challengeResolved = false;
@@ -206,6 +210,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       // Bei alternativer (eigener) Lösung NICHT automatisch weiterspringen — wie im Endless-Modus:
       // der Spieler entscheidet selbst (Weiter / Originallösung zeigen).
       if (alternative) return;
+      // Direkt geteiltes Einzel-Puzzle (?single=1): kein Auto-Weiter. Der „Weiter"-Knopf bleibt,
+      // der Empfänger entscheidet selbst, ob er ins nächste (Zufalls-)Puzzle wechselt.
+      if (this.singlePuzzle) return;
       this.startSolvedCountdown(() => this.loadNext());
     });
   }
@@ -267,6 +274,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
     if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
+
+    // Direkt geteiltes Einzel-Puzzle: nach dem Lösen nicht automatisch weiterspringen.
+    this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
 
     // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
     this.loadSettingsOpen();

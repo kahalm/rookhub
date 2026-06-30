@@ -53,6 +53,14 @@ describe('PuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
     expect((c as any).startSolvedCountdown).not.toHaveBeenCalled();
     expect(c.state).toBe('SOLVED');
   });
+
+  it('singlePuzzle (?single=1): kein Auto-Weiter, bleibt aber gelöst stehen', () => {
+    const c = solvedComponent();
+    c.singlePuzzle = true;
+    (c as any).handleSolved(false);
+    expect((c as any).startSolvedCountdown).not.toHaveBeenCalled();
+    expect(c.state).toBe('SOLVED');
+  });
 });
 
 describe('PuzzleComponent give-up', () => {

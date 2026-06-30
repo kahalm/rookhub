@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.216.0';
+export const APP_VERSION = '0.217.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.217.0", date: "2026-06-30", changes: [
+    { en: "Standard puzzle links now honour ?single=1: after you solve such a puzzle it no longer auto-advances to a random next one — it stays put. The “Next” button is still there, so you can move on whenever you want. (Previously ?single=1 only worked on book/course puzzle links.)", de: "Standard-Puzzle-Links beachten jetzt `?single=1`: Nach dem Lösen springt ein solches Puzzle nicht mehr automatisch zum nächsten (Zufalls-)Puzzle weiter, sondern bleibt stehen. Der „Weiter“-Knopf bleibt erhalten — du kannst also jederzeit selbst weiterblättern. (Bisher wirkte `?single=1` nur bei Buch-/Kurs-Puzzle-Links.)" },
+  ]},
   { version: "0.216.0", date: "2026-06-30", changes: [
     { en: "Love your puzzles ♥: after solving (or giving up on) any puzzle — standard, endless, course/book or daily — a new heart button lets you mark it as a favorite. The “Analyze last puzzle” button is now split into two: “Analyze last puzzle” and “♥ Last puzzle” (love the one you just finished). A new Favorites page (and dashboard tile) lists every loved puzzle so you can replay or analyze it anytime, or remove it. Weekly-post puzzles can't be loved (they have no permanent id).", de: "Liebe deine Puzzles ♥: Nach dem Lösen (oder Aufgeben) eines Puzzles — Standard, Endlos, Kurs/Buch oder Tagespuzzle — kannst du es mit einem neuen Herz-Knopf als Favorit markieren. Der „Letztes Puzzle analysieren“-Knopf ist jetzt zweigeteilt: „Letztes Puzzle analysieren“ und „♥ Letztes Puzzle“ (das gerade beendete lieben). Eine neue Favoriten-Seite (plus Dashboard-Kachel) listet alle geliebten Puzzles zum jederzeitigen Nachspielen, Analysieren oder Entfernen auf. Wochenpost-Puzzles lassen sich nicht lieben (keine dauerhafte Id)." },
   ]},
