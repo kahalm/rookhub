@@ -537,6 +537,55 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(0, _queue.Count);            // kein weiterer Resume
     }
 
+    [Fact]
+    public async Task EnqueueReimport_CourseInOwnerLibrary_Enqueues()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"128648\",\"name\":\"Mine\"}]",   // Kurs in der Bibliothek
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // Eigentum via Cache → kein /courses-Call; nur der /cached-Lane-Check fragt piratechess.
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "128648", "repertoire", "Mine");
+
+        Assert.NotNull(id);
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.Bid == "128648" && i.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_CourseNotInOwnerLibrary_ReturnsNull_NoImport()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"111\",\"name\":\"Mine\"}]",   // fremder bid 999 NICHT enthalten
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // Fallback-Frischabruf /courses liefert ebenfalls NICHT 999 → Re-Fetch muss verweigert werden
+        // (schließt den Reprocess-Bypass über ein selbst angelegtes Repertoire mit fremdem bid).
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses"
+                ? JsonOk(new[] { new { bid = "111", name = "Mine" } })
+                : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "repertoire", "Geklaut");
+
+        Assert.Null(id);
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "999"));
+    }
+
     private static HttpResponseMessage JsonOk(object payload) =>
         new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
 

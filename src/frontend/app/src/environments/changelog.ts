@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.8';
+export const APP_VERSION = '0.203.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.9", date: "2026-06-30", changes: [
+    { en: "Security fix (second review pass): closed a second door to the cached-course content bypass. The reprocess/re-fetch path (EnqueueReimportAsync) did not check course ownership, so a user could create a repertoire with an arbitrary Chessable course id (or a crafted chessable-{bid}.pgn filename), mark it stale, and trigger /reprocess to fetch a course they don't own from the shared cache. The re-fetch choke point now verifies the bid is in the owner's Chessable library (same check as direct import) and otherwise skips. +2 tests.", de: "Sicherheits-Fix (zweiter Review-Pass): eine zweite Tür zum Cached-Kurs-Content-Bypass geschlossen. Der Reprocess-/Re-Fetch-Pfad (EnqueueReimportAsync) prüfte das Kurs-Eigentum nicht — ein User konnte ein Repertoire mit beliebiger Chessable-Kurs-ID (oder präpariertem Dateinamen chessable-{bid}.pgn) anlegen, es als veraltet markieren und per /reprocess den Inhalt eines nicht besessenen Kurses aus dem geteilten Cache holen. Der Re-Fetch-Choke-Point prüft den bid jetzt gegen die Chessable-Bibliothek des Owners (gleicher Check wie beim Direkt-Import) und überspringt sonst. +2 Tests." },
+  ]},
   { version: "0.203.8", date: "2026-06-30", changes: [
     { en: "Follow-ups to the import security fix (code review): the admin \"import on behalf of a user\" endpoint now applies the same ownership check against the target user's library; and anonymous daily-puzzle solves are now deduplicated at the database level (unique index on book-puzzle id + anonymous session; migration AddAnonBookAttemptUniqueDedup, which also clears any pre-existing duplicates) so a parallel double-submit can no longer inflate the solved count or fire a duplicate Discord webhook. Authenticated attempts are unaffected (multiple attempts per user remain allowed).", de: "Nachzieher zum Import-Security-Fix (Code Review): Der Admin-Endpoint „Import im Namen eines Users" wendet denselben Eigentums-Check gegen die Bibliothek des Ziel-Users an; und anonyme Tagespuzzle-Lösungen werden jetzt auf DB-Ebene dedupliziert (Unique-Index auf Buch-Puzzle-Id + anonyme Session; Migration AddAnonBookAttemptUniqueDedup, entfernt zugleich etwaige Alt-Duplikate) — ein paralleler Doppel-Submit kann den Lösungszähler nicht mehr aufblähen oder einen doppelten Discord-Webhook auslösen. Authentifizierte Versuche bleiben unberührt (mehrere Versuche je User weiter erlaubt)." },
   ]},
