@@ -15,6 +15,7 @@
             [check]="isCheck"
             [boardTheme]="boardTheme"
             [pieceSet]="pieceSet"
+            [crazyPieceMode]="crazyPieceMode"
             [visualization]="(!reviewMode && state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             [vizOpponentArrow]="vizOpponentLastMove"
             (moveMade)="onMoveMade($event)"

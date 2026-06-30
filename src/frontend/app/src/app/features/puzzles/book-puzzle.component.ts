@@ -580,6 +580,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
     if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
+    if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
   }
 
   /** Meldet das Ergebnis genau einmal an eine offene Buch-Challenge zurück (fire-and-forget). */

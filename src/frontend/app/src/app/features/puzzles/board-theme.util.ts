@@ -43,20 +43,26 @@ export interface ShareViewParams {
   visualization?: number;
   /** Anarchy-Modus (`?anarchy=max`): wenn ein En-passant-Schlag möglich ist, ist er verpflichtend. */
   enPassantForced?: boolean;
+  /** Crazy-Figuren-Modus (`?anarchy=max+1` → 'square'): das Feld bestimmt den Figurenstil. */
+  crazyPieceMode?: CrazyPieceMode;
 }
 
 /**
  * Liest optionale Anzeige-Overrides aus den Query-Parametern eines (geteilten) Puzzle-Links:
- *  - `crazy=1`      → Brett-Theme-Modus „crazy"
- *  - `visualmode=N` → Visualisierungs-Stufe N (0–4)
- *  - `anarchy=max`  → Crazy-Brett + en passant verpflichtend („en passant is forced")
+ *  - `crazy=1`        → Brett-Theme-Modus „crazy"
+ *  - `visualmode=N`   → Visualisierungs-Stufe N (0–4)
+ *  - `anarchy=max`    → Crazy-Brett + en passant verpflichtend („en passant is forced")
+ *  - `anarchy=max+1`  → wie max, aber das FELD bestimmt den Figurenstil (crazyPieceMode='square')
  * Rein lesend; verändert KEINE gespeicherten Nutzereinstellungen (transient pro Aufruf).
  */
 export function parseShareViewParams(q: { get(key: string): string | null }): ShareViewParams {
   const out: ShareViewParams = {};
   if (q.get('crazy') === '1') out.themeMode = 'crazy';
-  // Anarchy: Crazy-Brett UND erzwungenes En passant.
-  if (q.get('anarchy') === 'max') { out.themeMode = 'crazy'; out.enPassantForced = true; }
+  // `+` wird in Query-Strings teils als Leerzeichen dekodiert → beide Schreibweisen akzeptieren.
+  const anarchy = q.get('anarchy');
+  const isMaxPlus = anarchy === 'max+1' || anarchy === 'max 1';
+  if (anarchy === 'max' || isMaxPlus) { out.themeMode = 'crazy'; out.enPassantForced = true; }
+  if (isMaxPlus) out.crazyPieceMode = 'square';
   const vm = q.get('visualmode');
   if (vm != null && /^[0-4]$/.test(vm)) out.visualization = Number(vm);
   return out;
@@ -100,26 +106,60 @@ const PIECE_CODES: Record<string, string> = { pawn: 'P', knight: 'N', bishop: 'B
 const COLOR_PREFIX: Record<string, string> = { white: 'w', black: 'b' };
 
 /**
- * Pro DOM-Figur ein einzeln gewürfeltes Figurenset (stabil, solange chessground das <piece>-Element
- * wiederverwendet → beim Ziehen behält eine Figur „ihr" Set; ein Komplett-Neuaufbau des Bretts
- * [neues Puzzle, Resize/redrawAll] würfelt neu). Ersetzt das frühere „pro Rolle+Farbe ein Set"
- * (= alle Bauern gleich). Das GC räumt entfernte Figuren automatisch ab.
+ * Crazy-Figuren-Modus:
+ *  - 'piece'  (Default, `?anarchy=max`): jede Figur würfelt ihr eigenes Set, behält es beim Ziehen.
+ *  - 'square' (`?anarchy=max+1`): das FELD bestimmt das Set — eine Figur nimmt das Set ihres aktuellen
+ *    Feldes an (beim Ziehen wechselt also ihr Aussehen passend zum Zielfeld).
  */
+export type CrazyPieceMode = 'piece' | 'square';
+
+/** Pro DOM-Figur ein einzeln gewürfeltes Figurenset (stabil, solange chessground das Element
+ *  wiederverwendet). GC räumt entfernte Figuren automatisch ab. */
 const crazyPieceSets = new WeakMap<Element, string>();
 
+const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+/** 64 zufällige Set-Zuordnungen je Feld (lazily erzeugt, stabil über die Sitzung). */
+let crazySquareSets: Record<string, string> | null = null;
+function squareSets(): Record<string, string> {
+  if (crazySquareSets) return crazySquareSets;
+  const m: Record<string, string> = {};
+  for (const f of FILES) for (let r = 1; r <= 8; r++) m[`${f}${r}`] = randomItem(PIECE_SETS).key;
+  return (crazySquareSets = m);
+}
+
+/** Feld eines <piece>-Elements aus seinem `transform: translate(x,y)` ableiten (chessground positioniert
+ *  Figuren per Pixel-Translate; Feldgröße = Brettbreite/8). Null, wenn (noch) nicht ableitbar. */
+export function squareOfPiece(el: HTMLElement, boardWidth: number, orientation: 'white' | 'black'): string | null {
+  const m = /translate\(\s*([-\d.]+)px[,\s]+([-\d.]+)px/.exec(el.style.transform || '');
+  if (!m || boardWidth <= 0) return null;
+  const sq = boardWidth / 8;
+  const fi = Math.round(parseFloat(m[1]) / sq);
+  const ti = Math.round(parseFloat(m[2]) / sq);   // 0 = oberste Reihe
+  if (fi < 0 || fi > 7 || ti < 0 || ti > 7) return null;
+  return orientation === 'white' ? `${FILES[fi]}${8 - ti}` : `${FILES[7 - fi]}${ti + 1}`;
+}
+
 /**
- * Malt im Crazy-Modus JEDE Figur einzeln: jedes <piece>-Element bekommt ein eigenes, zufälliges
- * Figurenset als Inline-Hintergrund. Muss nach jedem Brett-Render aufgerufen werden (Board-Component),
- * weil chessground beim Rendern Inline-Styles nicht selbst setzt. Idempotent (WeakMap hält das Set fest).
+ * Malt im Crazy-Modus jede Figur per Inline-Hintergrund (chessground setzt das beim Render nicht selbst,
+ * daher nach jedem Render vom Board-Component aufrufen). `mode='piece'` → eigenes Set je Figur (WeakMap);
+ * `mode='square'` → Set nach aktuellem Feld (für `?anarchy=max+1`, braucht die Brett-`orientation`).
  */
-export function paintCrazyPieces(root: HTMLElement): void {
+export function paintCrazyPieces(root: HTMLElement, mode: CrazyPieceMode = 'piece', orientation: 'white' | 'black' = 'white'): void {
+  const boardWidth = (root.querySelector('cg-board') as HTMLElement | null)?.clientWidth ?? root.clientWidth;
   root.querySelectorAll<HTMLElement>('cg-board piece').forEach(el => {
     if (el.classList.contains('ghost')) return;   // Drag-/Animations-Klon nicht anfassen
     const color = el.classList.contains('white') ? 'white' : el.classList.contains('black') ? 'black' : null;
     const role = PIECE_ROLES.find(r => el.classList.contains(r));
     if (!color || !role) return;
-    let set = crazyPieceSets.get(el);
-    if (!set) { set = randomItem(PIECE_SETS).key; crazyPieceSets.set(el, set); }
+    let set: string | undefined;
+    if (mode === 'square') {
+      const sq = squareOfPiece(el, boardWidth, orientation);
+      if (sq) set = squareSets()[sq];
+    }
+    if (!set) {   // Default (per Figur) bzw. Fallback, solange das Feld nicht ableitbar ist
+      set = crazyPieceSets.get(el);
+      if (!set) { set = randomItem(PIECE_SETS).key; crazyPieceSets.set(el, set); }
+    }
     const url = `url("/piece/${set}/${COLOR_PREFIX[color]}${PIECE_CODES[role]}.svg")`;
     if (el.style.backgroundImage !== url) el.style.backgroundImage = url;
   });

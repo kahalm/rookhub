@@ -274,6 +274,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
     if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
+    if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
 
     // Direkt geteiltes Einzel-Puzzle: nach dem Lösen nicht automatisch weiterspringen.
     this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';

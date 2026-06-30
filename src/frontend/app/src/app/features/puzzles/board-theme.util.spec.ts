@@ -1,7 +1,7 @@
 import {
   BOARD_THEMES, PIECE_SETS, randomBoardTheme, randomPieceSet,
   applyThemeMode, clearCrazyStyles, applyVisualizationHide, clearVisualizationHide,
-  parseShareViewParams, paintCrazyPieces, clearCrazyPieces
+  parseShareViewParams, paintCrazyPieces, clearCrazyPieces, squareOfPiece
 } from './board-theme.util';
 
 // Mini-ParamMap-Stub (nur .get wird gebraucht).
@@ -32,14 +32,44 @@ describe('parseShareViewParams', () => {
     expect(r.themeMode).toBe('crazy');
     expect(r.visualization).toBe(3);
   });
-  it('anarchy=max setzt Crazy-Brett UND erzwingt En passant', () => {
+  it('anarchy=max setzt Crazy-Brett UND erzwingt En passant (Modus piece = Default)', () => {
     const r = parseShareViewParams(qp({ anarchy: 'max' }));
     expect(r.themeMode).toBe('crazy');
     expect(r.enPassantForced).toBeTrue();
+    expect(r.crazyPieceMode).toBeUndefined();   // 'piece' bleibt Default
+  });
+  it('anarchy=max+1 (auch „max 1" wegen +-Dekodierung) → zusätzlich crazyPieceMode square', () => {
+    for (const v of ['max+1', 'max 1']) {
+      const r = parseShareViewParams(qp({ anarchy: v }));
+      expect(r.themeMode).toBe('crazy');
+      expect(r.enPassantForced).toBeTrue();
+      expect(r.crazyPieceMode).toBe('square');
+    }
   });
   it('ohne anarchy kein enPassantForced', () => {
     expect(parseShareViewParams(qp({})).enPassantForced).toBeUndefined();
     expect(parseShareViewParams(qp({ anarchy: 'mild' })).enPassantForced).toBeUndefined();
+  });
+});
+
+describe('squareOfPiece (Feld aus transform)', () => {
+  function pieceAt(transform: string): HTMLElement {
+    const el = document.createElement('piece');
+    el.style.transform = transform;
+    return el;
+  }
+  it('rechnet translate→Feld bei Orientierung Weiß (a8 oben links, sq=100 bei 800px)', () => {
+    expect(squareOfPiece(pieceAt('translate(0px, 0px)'), 800, 'white')).toBe('a8');
+    expect(squareOfPiece(pieceAt('translate(700px, 700px)'), 800, 'white')).toBe('h1');
+    expect(squareOfPiece(pieceAt('translate(400px, 600px)'), 800, 'white')).toBe('e2');
+  });
+  it('spiegelt bei Orientierung Schwarz', () => {
+    expect(squareOfPiece(pieceAt('translate(0px, 0px)'), 800, 'black')).toBe('h1');
+    expect(squareOfPiece(pieceAt('translate(700px, 700px)'), 800, 'black')).toBe('a8');
+  });
+  it('liefert null ohne transform oder bei Breite 0', () => {
+    expect(squareOfPiece(pieceAt(''), 800, 'white')).toBeNull();
+    expect(squareOfPiece(pieceAt('translate(0px,0px)'), 0, 'white')).toBeNull();
   });
 });
 
@@ -157,6 +187,24 @@ describe('board-theme.util', () => {
       paintCrazyPieces(root);
       clearCrazyPieces(root);
       root.querySelectorAll<HTMLElement>('piece').forEach(el => expect(el.style.backgroundImage).toBe(''));
+    });
+
+    it('square-Modus: zwei Figuren auf DEMSELBEN Feld bekommen dasselbe Set (Feld bestimmt den Stil)', () => {
+      const root = document.createElement('div');
+      const cg = document.createElement('cg-board');
+      cg.style.cssText = 'display:block;width:800px;height:800px;position:relative';
+      const p1 = document.createElement('piece'); p1.className = 'white pawn'; p1.style.transform = 'translate(0px, 0px)';
+      const p2 = document.createElement('piece'); p2.className = 'white knight'; p2.style.transform = 'translate(0px, 0px)';  // gleiches Feld a8
+      cg.append(p1, p2); root.appendChild(cg); document.body.appendChild(root);
+      try {
+        expect(cg.clientWidth).toBe(800);   // Layout vorhanden → Feld ableitbar
+        paintCrazyPieces(root, 'square', 'white');
+        const set1 = p1.style.backgroundImage.match(/\/piece\/([^/]+)\//)![1];
+        const set2 = p2.style.backgroundImage.match(/\/piece\/([^/]+)\//)![1];
+        expect(set1).toBe(set2);                                   // gleiches Feld → gleiches Set
+        expect(p1.style.backgroundImage).toContain('/wP.svg');     // Rolle/Farbe trotzdem korrekt
+        expect(p2.style.backgroundImage).toContain('/wN.svg');
+      } finally { document.body.removeChild(root); }
     });
   });
 });

@@ -32,6 +32,9 @@ export abstract class BasePuzzleSolver {
   dests: Map<Key, Key[]> = new Map();
   /** Anarchy-Modus (`?anarchy=max`): erzwingt En passant, wenn verfügbar (schränkt `dests` ein). */
   enPassantForced = false;
+  /** Crazy-Figuren-Modus: 'piece' = je Figur eigenes Set (Default), 'square' = das Feld bestimmt
+   *  den Stil (`?anarchy=max+1`). Wird ans `app-puzzle-board` durchgereicht. */
+  crazyPieceMode: import('./board-theme.util').CrazyPieceMode = 'piece';
   lastMove?: [Key, Key];
   isCheck = false;
 

@@ -8,7 +8,7 @@ import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Chess, Square } from 'chess.js';
-import { paintCrazyPieces, clearCrazyPieces } from './board-theme.util';
+import { paintCrazyPieces, clearCrazyPieces, CrazyPieceMode } from './board-theme.util';
 
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
@@ -102,6 +102,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() premovable = false;
   @Input() boardTheme = 'brown';
   @Input() pieceSet = 'cburnett';
+  /** Crazy-Figuren-Modus: 'piece' (je Figur) oder 'square' (Feld bestimmt den Stil, `?anarchy=max+1`). */
+  @Input() crazyPieceMode: CrazyPieceMode = 'piece';
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
   @Input() visualization = 0;
@@ -493,8 +495,13 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (!root) return;
     requestAnimationFrame(() => {
       if (this.destroyed) return;
-      if (this.pieceSet === '_crazy') paintCrazyPieces(root);
-      else clearCrazyPieces(root);
+      if (this.pieceSet !== '_crazy') { clearCrazyPieces(root); return; }
+      paintCrazyPieces(root, this.crazyPieceMode, this.orientation);
+      // Square-Modus: nach der chessground-Zug-Animation (~200ms) erneut malen, damit die Figur den
+      // Stil ihres ZIEL-Feldes annimmt (während des Gleitens steht sie noch auf dem Startfeld-Stil).
+      if (this.crazyPieceMode === 'square') {
+        setTimeout(() => { if (!this.destroyed) paintCrazyPieces(root, 'square', this.orientation); }, 230);
+      }
     });
   }
 

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.217.1';
+export const APP_VERSION = '0.218.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.218.0", date: "2026-06-30", changes: [
+    { en: "One more anarchy level: ?anarchy=max+1 does everything max does (crazy board + forced en passant) and additionally makes the SQUARE decide a piece's look — a piece adopts the random style of the square it's on, so as you drag it across the board its appearance changes to match the destination square. (Plain ?anarchy=max keeps rolling a separate style per piece.)", de: "Eine Anarchy-Stufe mehr: `?anarchy=max+1` macht alles wie max (Crazy-Brett + erzwungenes En passant) und zusätzlich bestimmt das FELD den Figurenstil — eine Figur nimmt den Zufallsstil ihres Feldes an, beim Ziehen übers Brett wechselt ihr Aussehen also passend zum Zielfeld. (`?anarchy=max` würfelt weiterhin pro Figur ein eigenes Set.)" },
+  ]},
   { version: "0.217.1", date: "2026-06-30", changes: [
     { en: "Fix: the “Last puzzle” favorite button showed two hearts (the icon plus a ♥ in the label). Removed the duplicate ♥ from the label — only the heart icon remains.", de: "Fix: Der „Letztes Puzzle“-Favoriten-Knopf zeigte zwei Herzen (Icon plus ein ♥ im Text). Das doppelte ♥ aus dem Text entfernt — es bleibt nur das Herz-Icon." },
   ]},
