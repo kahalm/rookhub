@@ -186,6 +186,14 @@ const CK = {
                   <button mat-button (click)="analyzeClicked.emit()">
                     <mat-icon>biotech</mat-icon> {{ ck.analyze | translate }}
                   </button>
+                  @if (canFavorite) {
+                    <button mat-button class="psc-love" [class.psc-loved]="isFavorite" (click)="favoriteToggled.emit()"
+                            [attr.aria-pressed]="isFavorite"
+                            [attr.aria-label]="(isFavorite ? 'favorites.loved' : 'favorites.love') | translate">
+                      <mat-icon>{{ isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                      {{ (isFavorite ? 'favorites.loved' : 'favorites.love') | translate }}
+                    </button>
+                  }
                 </div>
               </div>
             }
@@ -208,6 +216,14 @@ const CK = {
                   <button mat-button (click)="analyzeClicked.emit()">
                     <mat-icon>biotech</mat-icon> {{ ck.analyze | translate }}
                   </button>
+                  @if (canFavorite) {
+                    <button mat-button class="psc-love" [class.psc-loved]="isFavorite" (click)="favoriteToggled.emit()"
+                            [attr.aria-pressed]="isFavorite"
+                            [attr.aria-label]="(isFavorite ? 'favorites.loved' : 'favorites.love') | translate">
+                      <mat-icon>{{ isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                      {{ (isFavorite ? 'favorites.loved' : 'favorites.love') | translate }}
+                    </button>
+                  }
                   <button mat-raised-button color="primary" (click)="failedNextClicked.emit()">
                     {{ ck.failedNext | translate }}
                   </button>
@@ -234,6 +250,7 @@ const CK = {
     .psc-elo-up { color: #4caf50; }
     .psc-elo-down { color: #f44336; }
     .psc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
+    .psc-loved { color: #e91e63; }
   `],
 })
 export class PuzzleStatusCardComponent {
@@ -258,6 +275,10 @@ export class PuzzleStatusCardComponent {
   @Input() reviewTotal = 0;
   /** Buch-Modus: Ganze-Partie-Review (statt State-Switch). */
   @Input() fullGameReview = false;
+  /** Herz-Button („geliebtes Puzzle") im Gelöst-/Gescheitert-Zustand zeigen (nur eingeloggt). */
+  @Input() canFavorite = false;
+  /** Ist das aktuelle Puzzle bereits favorisiert? */
+  @Input() isFavorite = false;
 
   @Output() settingsClicked = new EventEmitter<void>();
   @Output() evalToggled = new EventEmitter<void>();
@@ -273,6 +294,8 @@ export class PuzzleStatusCardComponent {
   @Output() exitReviewClicked = new EventEmitter<void>();
   /** „Originale Lösung zeigen" — nur bei alternativem (eigenem) Mattweg sichtbar. */
   @Output() showOriginalSolutionClicked = new EventEmitter<void>();
+  /** Herz umschalten (aktuelles Puzzle lieben/entlieben). */
+  @Output() favoriteToggled = new EventEmitter<void>();
 
   get ck() { return CK[this.mode]; }
 

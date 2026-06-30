@@ -205,8 +205,13 @@
     .failed .gave-up-icon { color: #ff9800; }
     .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .alt-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .last-actions { display: flex; gap: 0.5rem; }
+    .last-actions > button { flex: 1; }
     .review-last-btn { width: 100%; height: 40px; font-size: 0.9em; }
     .review-last-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
+    .love-last-btn { height: 40px; font-size: 0.9em; }
+    .love-last-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
+    .love-last-btn.loved { color: #e91e63; }
     .wrong-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
     .solution-review { color: color-mix(in srgb, currentColor 60%, transparent); }
     .eval-compare {

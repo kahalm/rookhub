@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<PuzzleChallenge> PuzzleChallenges => Set<PuzzleChallenge>();
+    public DbSet<FavoritePuzzle> FavoritePuzzles => Set<FavoritePuzzle>();
     public DbSet<RevengeNotification> RevengeNotifications => Set<RevengeNotification>();
     public DbSet<Repertoire> Repertoires => Set<Repertoire>();
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
@@ -125,6 +126,20 @@ public class AppDbContext : DbContext
             e.HasIndex(c => c.FromUserId);
             // Dedup offener Challenges je Quelle+Puzzle.
             e.HasIndex(c => new { c.Source, c.PuzzleId });
+        });
+
+        modelBuilder.Entity<FavoritePuzzle>(e =>
+        {
+            e.HasOne(f => f.User)
+             .WithMany()
+             .HasForeignKey(f => f.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // PuzzleId ist polymorph (Puzzles ODER BookPuzzles, je nach Source) → bewusst KEIN FK.
+            // Ein Puzzle je User+Quelle nur einmal favorisierbar.
+            e.HasIndex(f => new { f.UserId, f.Source, f.PuzzleId }).IsUnique();
+            // Auflistung „neueste zuerst".
+            e.HasIndex(f => new { f.UserId, f.CreatedAt });
         });
 
         modelBuilder.Entity<RevengeNotification>(e =>

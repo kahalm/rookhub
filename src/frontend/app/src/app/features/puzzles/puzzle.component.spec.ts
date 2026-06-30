@@ -23,7 +23,8 @@ function makeComponent(): any {
   const translate: any = { instant: (k: string) => k };
   const http: any = { get: () => ({ subscribe: () => {} }) };
   const longSolve: any = { resolve: (s: number) => of(s) };
-  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, revengeService, translate, http, longSolve);
+  const favorites: any = { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) };
+  return new PuzzleComponent(puzzleService, stockfish, auth, prefs, router, route, dialog, offline, offlineQueue, snackbar, challengeService, revengeService, translate, http, longSolve, favorites);
 }
 
 const PUZZLE = { id: 1, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5 g1f3', rating: 1500 };

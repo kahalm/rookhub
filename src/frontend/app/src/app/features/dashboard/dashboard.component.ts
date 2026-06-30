@@ -17,6 +17,7 @@ import { DashboardService } from '../../core/dashboard.service';
 import { DashboardLayoutService } from '../../core/dashboard-layout.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
+import { FavoritesService } from '../../core/favorites.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
 
 /** Ein Schnellzugriff-Button auf einer Kachel. */
@@ -42,7 +43,7 @@ const DEFAULT_VISIBLE = [
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
 const DEFAULT_ORDER = [
   ...DEFAULT_VISIBLE,
-  'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
+  'favorites', 'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
 ];
 /** Im Standard ausgeblendete Kacheln (alles außer DEFAULT_VISIBLE). */
 const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id));
@@ -182,6 +183,7 @@ export class DashboardComponent implements OnInit {
   repertoireCount = 0;
   subscriptionCount = 0;
   friendCount = 0;
+  favoriteCount = 0;
   puzzleSolved = 0;
   puzzleAccuracy = 0;
   puzzleElo = 1500;
@@ -253,6 +255,12 @@ export class DashboardComponent implements OnInit {
       subtitle: () => ({ key: 'dashboard.games.subtitle' }),
       buttons: [{ labelKey: 'dashboard.games.open', link: '/games' }],
     },
+    favorites: {
+      id: 'favorites', icon: 'favorite', titleKey: 'dashboard.favorites.title',
+      eligible: () => this.menuKeys.has('favorites'),
+      subtitle: () => ({ key: 'dashboard.favorites.count', params: { count: this.favoriteCount } }),
+      buttons: [{ labelKey: 'dashboard.favorites.open', link: '/favorites' }],
+    },
     weekly: {
       id: 'weekly', icon: 'article', titleKey: 'dashboard.weekly.title',
       eligible: () => this.menuKeys.has('weekly'),
@@ -293,6 +301,7 @@ export class DashboardComponent implements OnInit {
     private chessable: ChessableService,
     private translate: TranslateService,
     private notif: InAppNotificationService,
+    private favorites: FavoritesService,
   ) {}
 
   // ----- Kachel-Layout -----------------------------------------------------
@@ -404,14 +413,16 @@ export class DashboardComponent implements OnInit {
       friends: this.dashboardService.getFriends().pipe(catchError(() => of([]))),
       puzzleStats: this.dashboardService.getPuzzleStats().pipe(
         catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0, puzzleElo: 1500 }))
-      )
+      ),
+      favorites: this.favorites.count().pipe(catchError(() => of(0))),
     }).pipe(
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(({ repertoires, subscriptions, friends, puzzleStats }) => {
+    ).subscribe(({ repertoires, subscriptions, friends, puzzleStats, favorites }) => {
       this.repertoireCount = repertoires.length;
       this.subscriptions = subscriptions;
       this.subscriptionCount = subscriptions.length;
       this.friendCount = friends.length;
+      this.favoriteCount = favorites;
       this.puzzleSolved = puzzleStats.solved || 0;
       this.puzzleAccuracy = puzzleStats.accuracy || 0;
       this.puzzleElo = puzzleStats.puzzleElo || 1500;

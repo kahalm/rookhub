@@ -77,6 +77,7 @@
     "tournaments": "Turniri",
     "friends": "Prijatelji",
     "puzzles": "Zagonetke",
+    "favorites": "Favoriti",
     "weekly": "Tjedna objava",
     "courses": "Tečajevi",
     "admin": "Administracija",
@@ -228,6 +229,11 @@
       "title": "Partije",
       "subtitle": "Tvoje spremljene partije",
       "open": "Otvori partije"
+    },
+    "favorites": {
+      "title": "Favoriti",
+      "count": "{{count}} voljenih zagonetki",
+      "open": "Otvori favorite"
     },
     "weekly": {
       "title": "Tjedna objava",
@@ -1400,6 +1406,22 @@
       "cachedInstant": "predmemorirano (odmah)",
       "min": "min"
     }
+  },
+  "favorites": {
+    "title": "Voljene zagonetke",
+    "hint": "Zagonetke koje označiš srcem nakon rješavanja ili predaje pojavljuju se ovdje — ponovno ih riješi ili analiziraj bilo kada.",
+    "empty": "Još nema voljenih zagonetki. Nakon rješavanja (ili predaje) zagonetke dodirni srce da je dodaš ovdje.",
+    "rating": "Rejting",
+    "replay": "Riješi ponovno",
+    "analyze": "Analiziraj",
+    "removeTooltip": "Ukloni iz favorita",
+    "removeError": "Favorit se nije mogao ukloniti.",
+    "sourceStandard": "Standardna zagonetka",
+    "sourceBook": "Zagonetka tečaja / knjige",
+    "love": "Sviđa mi se",
+    "loved": "Voljeno",
+    "loveLast": "♥ Zadnja zagonetka",
+    "addTooltip": "Dodaj u favorite"
   },
   "games": {
     "title": "Spremljene partije",

@@ -22,9 +22,10 @@ function makeComponent(): any {
   const challengeService: any = { resolve: () => ({ subscribe: () => {} }) };
   // Default: keine Kappung — gibt die gemessene Zeit unverändert zurück (Tests überschreiben bei Bedarf).
   const longSolve: any = { resolve: (s: number) => of(s) };
+  const favorites: any = { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) };
   return new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
-    router, translate, auth, snackbar, offlineQueue, challengeService, longSolve
+    router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites
   );
 }
 

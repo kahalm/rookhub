@@ -28,6 +28,8 @@ import { buildChainWindows, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_
 import { EndlessFasttrackState } from './endless-fasttrack-state';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
@@ -297,6 +299,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
+  readonly favoriteTracker: FavoriteTracker;
 
   constructor(
     private puzzleService: PuzzleService,
@@ -311,9 +315,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private offline: OfflineService,
     private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService,
-    private longSolve: LongSolveService
+    private longSolve: LongSolveService,
+    private favorites: FavoritesService
   ) {
     super(stockfish);
+    this.favoriteTracker = new FavoriteTracker(
+      this.favorites, 'standard',
+      () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
+    );
     this.state = 'CONFIG';
     this.loadSettingsOpen();
     // Load board theme from preferences service
@@ -990,6 +999,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.lastSolvedMoves = this.puzzle.moves;
       this.lastSolvedOrientation = this.orientation;
     }
+    this.favoriteTracker.refresh();
     this.syncActiveGameToServer();
     this.updateBoard();
     this.enterSolutionReview();
@@ -1167,6 +1177,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       }
     }
     this.state = 'FAILED';
+    this.favoriteTracker.refresh();
     this.updateBoard();
     this.enterSolutionReview();
   }

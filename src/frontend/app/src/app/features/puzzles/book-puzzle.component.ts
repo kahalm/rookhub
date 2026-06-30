@@ -32,6 +32,8 @@ import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -214,6 +216,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** „Geliebtes Puzzle"-Zustand (Herz). In Wochenpost-Modus deaktiviert (keine echte Id). */
+  readonly favoriteTracker: FavoriteTracker;
 
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
@@ -241,9 +245,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService,
     private challengeService: ChallengeService,
-    private longSolve: LongSolveService
+    private longSolve: LongSolveService,
+    private favorites: FavoritesService
   ) {
     super(stockfish);
+    // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
+    this.favoriteTracker = new FavoriteTracker(
+      this.favorites, 'book',
+      () => this.puzzle?.id, () => this.lastSolvedPuzzleId,
+      () => this.isLoggedIn && !this.inWeekly,
+    );
     this.loadConfig();
     this.loadSettingsOpen();
     this.stockfish.init().catch(() => {});
@@ -398,6 +409,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.lastSolvedMoves = this.puzzle.moves ?? '';
       this.lastSolvedOrientation = this.orientation;
     }
+    this.favoriteTracker.refresh();
     this.enterSolutionReview();
     this.solveAlternative = alternative;
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
@@ -458,6 +470,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.state = 'FAILED';
     this.stopTimer();
     this.updateBoard();
+    this.favoriteTracker.refresh();
     this.enterSolutionReview();
     this.solveSeconds = this.elapsedSeconds;
     this.recordCourseAttempt(false);

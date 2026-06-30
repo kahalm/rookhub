@@ -322,6 +322,9 @@
                 [solvedCountdown]="reviewingWrongPuzzle ? 0 : solvedCountdown"
                 [reviewIndex]="reviewIndex"
                 [reviewTotal]="reviewTotal"
+                [canFavorite]="isLoggedIn && !!puzzle"
+                [isFavorite]="favoriteTracker.currentIsFavorite"
+                (favoriteToggled)="favoriteTracker.toggleCurrent()"
                 (settingsClicked)="openSettingsDialog()"
                 (evalToggled)="toggleEval()"
                 (resetClicked)="resetPuzzle()"
@@ -338,9 +341,18 @@
 
 
               @if (lastSolvedPuzzleId) {
-                <button mat-stroked-button class="review-last-btn" (click)="reviewLastPuzzle()">
-                  <mat-icon>history</mat-icon> {{ 'endless.game.reviewLast' | translate }}
-                </button>
+                <div class="last-actions">
+                  <button mat-stroked-button class="review-last-btn" (click)="reviewLastPuzzle()">
+                    <mat-icon>history</mat-icon> {{ 'endless.game.reviewLast' | translate }}
+                  </button>
+                  @if (isLoggedIn) {
+                    <button mat-stroked-button class="love-last-btn" [class.loved]="favoriteTracker.lastIsFavorite"
+                            (click)="favoriteTracker.toggleLast()" [attr.aria-pressed]="favoriteTracker.lastIsFavorite">
+                      <mat-icon>{{ favoriteTracker.lastIsFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                      {{ 'favorites.loveLast' | translate }}
+                    </button>
+                  }
+                </div>
               }
 
               @if (puzzle) {

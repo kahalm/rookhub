@@ -36,6 +36,7 @@ import { DISCORD_INVITE_URL } from '../../core/community';
           @if (can('tournaments')) { <button mat-button routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
           @if (can('friends')) { <button mat-button routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-button routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (can('favorites')) { <button mat-button routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
           @if (can('training-goals')) { <button mat-button routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-button routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('games')) { <button mat-button routerLink="/games">{{ 'nav.games' | translate }}</button> }
@@ -57,6 +58,7 @@ import { DISCORD_INVITE_URL } from '../../core/community';
           @if (can('tournaments')) { <button mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</button> }
           @if (can('friends')) { <button mat-menu-item routerLink="/friends">{{ 'nav.friends' | translate }}</button> }
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
+          @if (can('favorites')) { <button mat-menu-item routerLink="/favorites">{{ 'nav.favorites' | translate }}</button> }
           @if (can('training-goals')) { <button mat-menu-item routerLink="/training-goals">{{ 'nav.trainingGoals' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }

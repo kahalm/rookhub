@@ -347,6 +347,9 @@
               [reviewIndex]="reviewIndex"
               [reviewTotal]="reviewTotal"
               [fullGameReview]="reviewMode && !solutionReview"
+              [canFavorite]="isLoggedIn && !inWeekly && !!puzzle"
+              [isFavorite]="favoriteTracker.currentIsFavorite"
+              (favoriteToggled)="favoriteTracker.toggleCurrent()"
               (settingsClicked)="openSettingsDialog()"
               (evalToggled)="toggleEval()"
               (resetClicked)="resetPuzzle()"
@@ -392,6 +395,13 @@
               @if (lastSolvedPuzzleId) {
                 <button mat-stroked-button class="review-last" (click)="reviewLastPuzzle()">
                   <mat-icon>history</mat-icon> {{ 'book.actions.reviewLast' | translate }}
+                </button>
+              }
+              @if (lastSolvedPuzzleId && isLoggedIn && !inWeekly) {
+                <button mat-stroked-button class="love-last" [class.loved]="favoriteTracker.lastIsFavorite"
+                        (click)="favoriteTracker.toggleLast()" [attr.aria-pressed]="favoriteTracker.lastIsFavorite">
+                  <mat-icon>{{ favoriteTracker.lastIsFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                  {{ 'favorites.loveLast' | translate }}
                 </button>
               }
               <button mat-stroked-button class="share-full" (click)="sharePuzzle()">

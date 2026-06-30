@@ -18,6 +18,7 @@ public static class MenuRegistry
         new MenuItemDef("tournaments", MenuVisibilityLevel.Registered),
         new MenuItemDef("friends", MenuVisibilityLevel.Registered),
         new MenuItemDef("puzzles", MenuVisibilityLevel.All),
+        new MenuItemDef("favorites", MenuVisibilityLevel.Registered),
         new MenuItemDef("training-goals", MenuVisibilityLevel.Registered),
         new MenuItemDef("analysis", MenuVisibilityLevel.All),
         new MenuItemDef("games", MenuVisibilityLevel.Registered),

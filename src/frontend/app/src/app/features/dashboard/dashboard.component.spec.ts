@@ -10,6 +10,7 @@ import { ChessableService } from '../chessable/chessable.service';
 import { AuthService } from '../../core/auth.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
+import { FavoritesService } from '../../core/favorites.service';
 
 const MENU = new Set<string>([
   'puzzles', 'friends', 'tournaments', 'repertoires', 'training-goals',
@@ -34,6 +35,7 @@ function setup(opts: { isAdmin?: boolean; friends?: unknown[]; arrived?: Subject
       { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
       { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
       { provide: InAppNotificationService, useValue: { arrived$: arrived.asObservable() } },
+      { provide: FavoritesService, useValue: { count: () => of(0) } },
     ],
   });
   TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
@@ -63,6 +65,7 @@ describe('DashboardComponent friend-count reactivity', () => {
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
         { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
         { provide: InAppNotificationService, useValue: { arrived$: arrived.asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
       ],
     });
     TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });

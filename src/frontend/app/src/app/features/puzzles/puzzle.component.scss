@@ -51,8 +51,13 @@
     .theme-filter-bar mat-icon { font-size: 18px; width: 18px; height: 18px; color: color-mix(in srgb, currentColor 55%, transparent); }
     .theme-chip { padding: 2px 8px; border-radius: 10px; text-transform: capitalize; background: color-mix(in srgb, currentColor 10%, transparent); transition: background 0.2s, color 0.2s; }
     .theme-chip.matched { background: #2e7d32; color: #fff; font-weight: 600; }
+    .last-actions { display: flex; gap: 0.5rem; }
+    .last-actions > button { flex: 1; }
     .review-btn { width: 100%; height: 40px; font-size: 0.9em; }
     .review-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
+    .love-last-btn { height: 40px; font-size: 0.9em; }
+    .love-last-btn mat-icon { margin-right: 0.25rem; font-size: 18px; width: 18px; height: 18px; }
+    .love-last-btn.loved { color: #e91e63; }
     .endless-btn { width: 100%; height: 44px; font-size: 1em; }
     .endless-btn mat-icon { margin-right: 0.25rem; }
     .status-card { position: relative; }

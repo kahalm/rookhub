@@ -26,6 +26,7 @@ export const routes: Routes = [
   { path: 'puzzles/daily/:date', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent) },
   { path: 'puzzles/:id', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent) },
   { path: 'puzzles', loadComponent: () => import('./features/puzzles/puzzle.component').then(m => m.PuzzleComponent), canActivate: [menuGuard('puzzles')] },
+  { path: 'favorites', loadComponent: () => import('./features/favorites/favorites.component').then(m => m.FavoritesComponent), canActivate: [authGuard, menuGuard('favorites')] },
   { path: 'weekly', loadComponent: () => import('./features/weekly/weekly-list.component').then(m => m.WeeklyListComponent), canActivate: [authGuard, menuGuard('weekly')] },
   { path: 'weekly/:weeklyId', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('weekly')] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },

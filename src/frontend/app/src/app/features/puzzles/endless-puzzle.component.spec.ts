@@ -66,8 +66,9 @@ function makeComponent(): any {
   const snackBar: any = { info: jasmine.createSpy('info') };
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   const longSolve: any = { resolve: (s: number) => sub(s) };
+  const favorites: any = { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) };
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve
+    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites
   );
 }
 

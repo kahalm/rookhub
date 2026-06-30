@@ -28,6 +28,8 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { FavoriteTracker } from './favorite-tracker';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
@@ -105,6 +107,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
   private lastSolvedOrientation: 'white' | 'black' = 'white';
+  /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
+  readonly favoriteTracker: FavoriteTracker;
   /** True wenn der User aufgegeben hat. Brett wird zurueckgesetzt damit er die Loesung
    *  selber durchspielen kann; im AWAITING/PLAYING/THINKING-State zeigt das Status-Panel
    *  einen Hinweis statt "Your turn!". Reset bei loadNext/retry. */
@@ -125,9 +129,14 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     private revengeService: RevengeService,
     private translate: TranslateService,
     private http: HttpClient,
-    private longSolve: LongSolveService
+    private longSolve: LongSolveService,
+    private favorites: FavoritesService
   ) {
     super(stockfish);
+    this.favoriteTracker = new FavoriteTracker(
+      this.favorites, 'standard',
+      () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
+    );
     this.loadConfig();
     this.offlinePuzzlePool = this.loadOfflinePool();
     this.stockfish.init().catch(() => {});
@@ -188,6 +197,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.lastSolvedFen = this.puzzle?.fen ?? null;
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
+    this.favoriteTracker.refresh();
     this.enterSolutionReview();
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
     // Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
@@ -205,6 +215,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.stopTimer();
     this.updateBoard();
     this.recordAttempt(false);
+    this.favoriteTracker.refresh();
     this.enterSolutionReview();
   }
 

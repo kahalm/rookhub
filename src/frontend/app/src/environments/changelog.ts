@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.215.0';
+export const APP_VERSION = '0.216.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.216.0", date: "2026-06-30", changes: [
+    { en: "Love your puzzles ♥: after solving (or giving up on) any puzzle — standard, endless, course/book or daily — a new heart button lets you mark it as a favorite. The “Analyze last puzzle” button is now split into two: “Analyze last puzzle” and “♥ Last puzzle” (love the one you just finished). A new Favorites page (and dashboard tile) lists every loved puzzle so you can replay or analyze it anytime, or remove it. Weekly-post puzzles can't be loved (they have no permanent id).", de: "Liebe deine Puzzles ♥: Nach dem Lösen (oder Aufgeben) eines Puzzles — Standard, Endlos, Kurs/Buch oder Tagespuzzle — kannst du es mit einem neuen Herz-Knopf als Favorit markieren. Der „Letztes Puzzle analysieren“-Knopf ist jetzt zweigeteilt: „Letztes Puzzle analysieren“ und „♥ Letztes Puzzle“ (das gerade beendete lieben). Eine neue Favoriten-Seite (plus Dashboard-Kachel) listet alle geliebten Puzzles zum jederzeitigen Nachspielen, Analysieren oder Entfernen auf. Wochenpost-Puzzles lassen sich nicht lieben (keine dauerhafte Id)." },
+  ]},
   { version: "0.215.0", date: "2026-06-30", changes: [
     { en: "Crazy board now rolls the dice for every single piece individually: instead of all white pawns (or all knights, etc.) sharing one random piece set, each piece on the board gets its own randomly-chosen set. A piece keeps its look while it moves; a fresh position (or resize) re-rolls. Applies to crazy theme and ?anarchy=max.", de: "Das Crazy-Brett würfelt jetzt jede einzelne Figur eigens aus: statt dass alle weißen Bauern (oder alle Springer usw.) dasselbe Zufallsset teilen, bekommt jede Figur auf dem Brett ihr eigenes zufälliges Figurenset. Eine Figur behält ihr Aussehen beim Ziehen; eine neue Stellung (oder ein Resize) würfelt neu. Gilt für das Crazy-Theme und `?anarchy=max`." },
   ]},
