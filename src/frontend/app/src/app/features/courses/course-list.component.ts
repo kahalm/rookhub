@@ -1,9 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -17,9 +20,9 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
   selector: 'app-course-list',
   standalone: true,
   imports: [
-    CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, LoadingSpinnerComponent, TranslateModule,
-    ReprocessBannerComponent
+    CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
+    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
+    LoadingSpinnerComponent, TranslateModule, ReprocessBannerComponent
   ],
   template: `
     <div class="courses-container">
@@ -33,6 +36,19 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
       } @else if (courses.length === 0) {
         <p class="empty-hint">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
+        <mat-form-field appearance="outline" class="list-search" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="search" [placeholder]="'courses.searchPlaceholder' | translate"
+                 [attr.aria-label]="'common.search' | translate">
+          @if (search) {
+            <button matSuffix mat-icon-button (click)="search = ''" [attr.aria-label]="'common.clear' | translate">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+        @if (filtered.length === 0) {
+          <p class="empty-hint">{{ 'courses.noMatch' | translate:{ query: search } }}</p>
+        }
         @if (inProgressCourses.length > 0) {
           <section class="course-section">
             <h2>{{ 'courses.sectionInProgress' | translate }}</h2>
@@ -166,6 +182,7 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
   styles: [`
     .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
+    .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .course-section { margin-bottom: 28px; }
     .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
@@ -224,6 +241,8 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
 })
 export class CourseListComponent implements OnInit {
   courses: CourseListItem[] = [];
+  /** Freitext-Suche (filtert clientseitig nach Kurstitel). */
+  search = '';
   loading = false;
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
@@ -241,20 +260,27 @@ export class CourseListComponent implements OnInit {
   /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
    *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
    *  verwendet zuerst (durch sortCourses bereits vorsortiert). */
+  /** Kurse nach Suchtext gefiltert (Titel, case-insensitive); Basis für alle Sektionen. */
+  get filtered(): CourseListItem[] {
+    const q = this.search.trim().toLowerCase();
+    if (!q) return this.courses;
+    return this.courses.filter(c => (c.displayName || '').toLowerCase().includes(q));
+  }
+
   get inProgressCourses(): CourseListItem[] {
     // „In Arbeit" = tatsächlich begonnen (≥1 gelöst) und noch nicht fertig. Nach einem Reset
     // ist solvedCount=0 → der Kurs verschwindet hier wieder (auch wenn lastActivityAt gesetzt bleibt).
-    return this.courses.filter(c => c.solvedCount > 0 && c.solvedCount < c.puzzleCount);
+    return this.filtered.filter(c => c.solvedCount > 0 && c.solvedCount < c.puzzleCount);
   }
 
   /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
   get publicCourses(): CourseListItem[] {
-    return this.courses.filter(c => !c.isOwned);
+    return this.filtered.filter(c => !c.isOwned);
   }
 
   /** Eigene, selbst importierte Chessable-Kurse. */
   get chessableCourses(): CourseListItem[] {
-    return this.courses.filter(c => c.isOwned);
+    return this.filtered.filter(c => c.isOwned);
   }
 
   isOffline(c: CourseListItem): boolean {

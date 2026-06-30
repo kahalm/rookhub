@@ -85,5 +85,19 @@ describe('CourseListComponent sorting', () => {
       comp.courses[0].solvedCount = 0;   // Reset hat den Fortschritt geleert
       expect(comp.inProgressCourses.length).toBe(0);
     });
+
+    it('filtert Kurse nach Suchtext (Titel, case-insensitive) über alle Sektionen', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, displayName: 'Sicilian Defense', isOwned: true }),
+        item2({ bookId: 2, displayName: 'French Defense', isOwned: true }),
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      comp.loadCourses();
+      comp.search = 'SICIL';
+      expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
+      expect(comp.chessableCourses.map(c => c.bookId)).toEqual([1]);
+      comp.search = '';
+      expect(comp.filtered.length).toBe(2);
+    });
   });
 });

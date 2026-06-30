@@ -1,9 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -18,7 +21,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent, ReprocessBannerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -41,8 +44,20 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
       @if (loading) {
         <app-loading-spinner />
       } @else {
+        @if (repertoires.length > 0) {
+          <mat-form-field appearance="outline" class="list-search" subscriptSizing="dynamic">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [(ngModel)]="search" [placeholder]="'repertoire.list.searchPlaceholder' | translate"
+                   [attr.aria-label]="'common.search' | translate">
+            @if (search) {
+              <button matSuffix mat-icon-button (click)="search = ''" [attr.aria-label]="'common.clear' | translate">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        }
         <div class="repertoire-grid">
-          @for (rep of repertoires; track rep.id) {
+          @for (rep of filteredRepertoires; track rep.id) {
             <mat-card>
               <mat-card-header>
                 <mat-card-title>
@@ -66,7 +81,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
               </mat-card-actions>
             </mat-card>
           } @empty {
-            <p>{{ 'repertoire.list.empty' | translate }}</p>
+            <p>{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
           }
         </div>
       }
@@ -81,6 +96,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
                 color: color-mix(in srgb, currentColor 80%, transparent); }
     .ext-hint mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .ext-hint a { color: inherit; text-decoration: underline; cursor: pointer; }
+    .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 1rem; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
     .kind-chip-set { display: inline-flex; margin-left: 8px; vertical-align: middle; }
     .kind-chip { font-size: 0.72rem; min-height: 22px; }
@@ -91,7 +107,17 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
 })
 export class RepertoireListComponent implements OnInit {
   repertoires: Repertoire[] = [];
+  /** Freitext-Suche (filtert clientseitig nach Name + Beschreibung). */
+  search = '';
   loading = true;
+
+  /** Repertoires nach Suchtext gefiltert (Name + Beschreibung, case-insensitive). */
+  get filteredRepertoires(): Repertoire[] {
+    const q = this.search.trim().toLowerCase();
+    if (!q) return this.repertoires;
+    return this.repertoires.filter(r =>
+      (r.name || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
+  }
   /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
   readonly Kind = RepertoireKind;
 
