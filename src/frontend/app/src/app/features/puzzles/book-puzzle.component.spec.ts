@@ -173,7 +173,7 @@ describe('BookPuzzleComponent track solves', () => {
     (c as any).recordTrack(false);   // zweiter Aufruf wird vom Guard verschluckt
 
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith(9, true);
+    expect(spy).toHaveBeenCalledWith(9, true, 0);   // 3. Arg = genutzte Tipp-Stufe (seit v0.202.0)
     expect(c.sharedCounts).toEqual({ solved: 3, failed: 2 });
   });
 
@@ -199,7 +199,7 @@ describe('BookPuzzleComponent track solves', () => {
 
     c.resetPuzzle();
 
-    expect(spy).toHaveBeenCalledWith(9, false);
+    expect(spy).toHaveBeenCalledWith(9, false, 0);   // 3. Arg = genutzte Tipp-Stufe (seit v0.202.0)
   });
 });
 

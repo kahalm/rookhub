@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.205.0';
+export const APP_VERSION = '0.205.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.205.1", date: "2026-06-30", changes: [
+    { en: "Fixed two stale frontend unit tests (book-puzzle \"track solves\"): the expectations still asserted the old two-argument trackSharedAttempt(id, solved) call, but since v0.202.0 the solver also passes the hint level used as a third argument. Updated both expectations to (id, solved, 0). Test-only change — the whole frontend suite is green again (745 passing).", de: "Zwei veraltete Frontend-Unit-Tests korrigiert (Buch-Puzzle „track solves“): Die Erwartungen prüften noch den alten Zwei-Argument-Aufruf trackSharedAttempt(id, solved), seit v0.202.0 übergibt der Solver aber zusätzlich die genutzte Tipp-Stufe als drittes Argument. Beide Erwartungen auf (id, solved, 0) aktualisiert. Reine Test-Änderung — die gesamte Frontend-Suite ist wieder grün (745 Tests)." },
+  ]},
   { version: "0.205.0", date: "2026-06-30", changes: [
     { en: "Customizable dashboard tiles: the dashboard is now a configurable tile grid covering the modules that make sense for you — Puzzles, Training Goals, Courses, Leaderboards, Tournaments, Friends, Repertoires, Games, Weekly Post, Statistics, Analysis, Messages and (admins) the Chessable queue. A new “Customize” button enters an edit mode where you can drag tiles to reorder them and toggle each one on/off with the eye button; a “Reset” restores the default layout. Your arrangement is remembered per device (localStorage), only ever shows tiles your menu visibility allows, and newly added tiles automatically appear at the end of an existing layout.", de: "Anpassbare Dashboard-Kacheln: Das Dashboard ist jetzt ein konfigurierbares Kachelraster über die für dich sinnvollen Module — Puzzles, Trainingsziele, Kurse, Bestenlisten, Turniere, Freunde, Repertoires, Partien, Wochenpost, Statistik, Analyse, Nachrichten und (für Admins) die Chessable-Warteschlange. Ein neuer „Anpassen“-Knopf öffnet einen Bearbeitungsmodus: Kacheln per Drag & Drop sortieren und mit dem Augen-Knopf einzeln ein-/ausblenden; „Zurücksetzen“ stellt das Standard-Layout wieder her. Deine Anordnung wird pro Gerät gemerkt (localStorage), zeigt nur Kacheln, die deine Menü-Sichtbarkeit erlaubt, und neu hinzugekommene Kacheln erscheinen automatisch am Ende eines bestehenden Layouts." },
   ]},
