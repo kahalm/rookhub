@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.9';
+export const APP_VERSION = '0.203.10';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.10", date: "2026-06-30", changes: [
+    { en: "piratechess code review (resilience + hygiene, backend-only — no user-visible change): the export worker now survives a queue-reader error instead of dying permanently (the \"stuck import\" failure mode); the curl subprocess reads stdout/stderr in parallel to avoid a pipe deadlock on large courses; the job queue is now bounded (backpressure); required config (DB connection string, JWT secret/issuer/audience) is validated at startup (fail-fast) instead of crashing on first request; a global ProblemDetails exception handler prevents stack-trace leaks; the health endpoint returns 503 (not 200) when the DB is down; the course list no longer throws on duplicate course ids; and course ids are format-validated (numeric), which also closes an unbounded per-id lock leak. 242 piratechess tests green.", de: "piratechess Code-Review (Resilienz + Hygiene, reines Backend — keine sichtbare Änderung): Der Export-Worker überlebt jetzt einen Queue-Reader-Fehler, statt dauerhaft zu sterben (das „eingeschlafener Import"-Muster); der curl-Subprozess liest stdout/stderr parallel → kein Pipe-Deadlock bei großen Kursen; die Job-Queue ist jetzt bounded (Backpressure); Pflicht-Config (DB-ConnString, JWT-Secret/Issuer/Audience) wird beim Start validiert (Fail-fast) statt beim ersten Request zu crashen; ein globaler ProblemDetails-Exception-Handler verhindert Stacktrace-Leaks; der Health-Endpoint liefert bei DB-Ausfall 503 (nicht 200); die Kursliste wirft nicht mehr bei doppelter Kurs-ID; und Kurs-IDs werden formatvalidiert (numerisch), was zugleich ein unbegrenztes Per-ID-Lock-Leck schließt. 242 piratechess-Tests grün." },
+  ]},
   { version: "0.203.9", date: "2026-06-30", changes: [
     { en: "Security fix (second review pass): closed a second door to the cached-course content bypass. The reprocess/re-fetch path (EnqueueReimportAsync) did not check course ownership, so a user could create a repertoire with an arbitrary Chessable course id (or a crafted chessable-{bid}.pgn filename), mark it stale, and trigger /reprocess to fetch a course they don't own from the shared cache. The re-fetch choke point now verifies the bid is in the owner's Chessable library (same check as direct import) and otherwise skips. +2 tests.", de: "Sicherheits-Fix (zweiter Review-Pass): eine zweite Tür zum Cached-Kurs-Content-Bypass geschlossen. Der Reprocess-/Re-Fetch-Pfad (EnqueueReimportAsync) prüfte das Kurs-Eigentum nicht — ein User konnte ein Repertoire mit beliebiger Chessable-Kurs-ID (oder präpariertem Dateinamen chessable-{bid}.pgn) anlegen, es als veraltet markieren und per /reprocess den Inhalt eines nicht besessenen Kurses aus dem geteilten Cache holen. Der Re-Fetch-Choke-Point prüft den bid jetzt gegen die Chessable-Bibliothek des Owners (gleicher Check wie beim Direkt-Import) und überspringt sonst. +2 Tests." },
   ]},
