@@ -272,6 +272,8 @@ public class ChessableControllerTests : IDisposable
         {
             UserId = 42,
             EncryptedBearer = _encryption.Encrypt("bearer"),
+            // Kurs liegt in der Bibliothek des Users → Import erlaubt (Eigentums-Check).
+            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"My Course\"}]",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
@@ -465,12 +467,37 @@ public class ChessableControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task StartImport_CourseNotInUserLibrary_Returns403()
+    {
+        await SeedUserAsync(42);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 42, EncryptedBearer = _encryption.Encrypt("bearer"),
+            // Bibliothek enthält NUR bid-1; der User versucht den fremden (ggf. gecachten) bid-999 zu importieren.
+            CachedCoursesJson = "[{\"bid\":\"bid-1\",\"name\":\"Mine\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        // Frische Kursliste (Fallback) liefert ebenfalls NICHT den fremden bid → Import muss verweigert werden.
+        _handler.Reply = (req, _) => req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses"
+            ? JsonResponse(HttpStatusCode.OK, new[] { new { bid = "bid-1", name = "Mine" } })
+            : new HttpResponseMessage(HttpStatusCode.OK);
+
+        var result = await _controller.StartImport("bid-999", new StartChessableImportRequest("book", "Geklaut"));
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "bid-999"));
+    }
+
+    [Fact]
     public async Task StartImport_WhenCached_RunsImmediately_QueuedAheadZero()
     {
         await SeedUserAsync(42);
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 42, EncryptedBearer = _encryption.Encrypt("b"),
+            CachedCoursesJson = "[{\"bid\":\"bid-x\",\"name\":\"X\"}]",   // Kurs in der Bibliothek → Import erlaubt
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();

@@ -221,7 +221,7 @@ public class ChessableController : BaseApiController
     /// das Frontend pollt GET /api/chessable/imports/{id}.
     /// </summary>
     [HttpPost("courses/{bid}/import")]
-    public async Task<IActionResult> StartImport(string bid, [FromBody] StartChessableImportRequest request)
+    public async Task<IActionResult> StartImport(string bid, [FromBody] StartChessableImportRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(bid))
             return BadRequest(new { message = "bid is required" });
@@ -230,8 +230,17 @@ public class ChessableController : BaseApiController
             return BadRequest(new { message = "target must be 'repertoire' or 'book'" });
 
         var userId = GetUserId();
-        if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
+        if (cred is null)
             return BadRequest(new { message = "No Chessable bearer saved" });
+
+        // SICHERHEIT: Nur Kurse importieren, die WIRKLICH in der Chessable-Bibliothek dieses Users liegen.
+        // Andernfalls könnte ein User einen beliebigen (öffentlich aus der chessable.com-URL bekannten)
+        // Kurs-bid importieren — und für bereits GECACHTE Kurse umgeht die piratechess-Seite die
+        // Chessable-Eigentumsprüfung (liefert den Cache-Inhalt direkt, ohne den Bearer gegen Chessable
+        // zu validieren). Der Check hier schließt diesen Content-Bypass für ALLE Lanes (cached + fetch).
+        if (!await UserOwnsCourseAsync(cred, bid, ct))
+            return StatusCode(403, new { message = "Dieser Kurs ist nicht in deiner Chessable-Bibliothek." });
 
         // Round-Robin-Runde einfrieren: wie viele Importe dieses Users sind GERADE schon aktiv?
         // (0 = erster ⇒ Runde 0). Bestimmt die faire Position; siehe ChessableImportService.FairOrder.
@@ -260,6 +269,36 @@ public class ChessableController : BaseApiController
         if (import.FullyCached != true)
             await EnqueueNextAsync();
         return Accepted(ToDto(import, await QueuedAheadAsync(import)));
+    }
+
+    /// <summary>Prüft, ob <paramref name="bid"/> in der Chessable-Bibliothek zum Bearer von
+    /// <paramref name="cred"/> liegt. Erst gegen die gecachte Kursliste (schnell, kein Chessable-Call);
+    /// fehlt der bid dort, wird die Liste EINMAL frisch geladen (deckt frisch gekaufte Kurse / leeren
+    /// Cache ab) und der Cache aktualisiert. Nicht verifizierbar (Bearer kaputt / Chessable-Fehler) ⇒
+    /// fail-closed (kein Import).</summary>
+    private async Task<bool> UserOwnsCourseAsync(ChessableCredential cred, string bid, CancellationToken ct)
+    {
+        bool Has(string? json) =>
+            !string.IsNullOrEmpty(json)
+            && (JsonSerializer.Deserialize<List<ChessableCourseDto>>(json, JsonOpts) ?? new())
+               .Any(c => c.Bid == bid);
+
+        if (Has(cred.CachedCoursesJson)) return true;
+
+        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+        if (bearer is null) return false;
+        try
+        {
+            var courses = await _chessable.GetCoursesAsync(bearer, ct);
+            cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
+            cred.CoursesCachedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            return courses.Any(c => c.Bid == bid);
+        }
+        catch (ChessableProxyException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Status/Fortschritt eines Imports (Polling bis status != "running").</summary>

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.6';
+export const APP_VERSION = '0.203.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.7", date: "2026-06-30", changes: [
+    { en: "Security fix: a Chessable course import now verifies the course is actually in the requesting user's own Chessable library before starting. Previously, because already-cached courses are served from the shared cache without re-checking ownership, any logged-in user with a saved bearer could import the full content of any cached course just by posting its (publicly known) course id. The import endpoint now checks the bid against the user's library (cached list first, one fresh fetch as fallback) and returns 403 otherwise.", de: "Sicherheits-Fix: Ein Chessable-Kurs-Import prüft jetzt vor dem Start, dass der Kurs wirklich in der eigenen Chessable-Bibliothek des anfragenden Users liegt. Vorher konnte — weil bereits gecachte Kurse aus dem geteilten Cache ohne erneute Eigentumsprüfung ausgeliefert werden — jeder eingeloggte User mit hinterlegtem Bearer den vollen Inhalt jedes gecachten Kurses importieren, allein durch Angabe der (öffentlich bekannten) Kurs-ID. Der Import-Endpoint gleicht den bid jetzt gegen die Bibliothek des Users ab (erst gecachte Liste, sonst einmal frisch laden) und liefert sonst 403." },
+  ]},
   { version: "0.203.6", date: "2026-06-30", changes: [
     { en: "Docs: recorded the 2026-06-30 API code-review in TODO.md — what was fixed (v0.202.0–0.203.5) and which findings were deliberately left as-is after checking them against the real production scale (49 users): the \"unbounded read\" items load only 50–1900 tiny rows here, so rewriting them to SQL aggregation would add real query-translation risk for no benefit; the import concurrency hardening is already covered by the atomic claim + watchdog + lane gate. No code change.", de: "Doku: Das API-Code-Review vom 2026-06-30 in der TODO.md festgehalten — was gefixt wurde (v0.202.0–0.203.5) und welche Funde nach Prüfung gegen die echte Prod-Größe (49 User) bewusst so bleiben: Die „unbounded read\"-Punkte laden hier nur 50–1900 winzige Zeilen, ein SQL-Umbau brächte echtes Query-Übersetzungsrisiko ohne Nutzen; die Import-Concurrency ist bereits durch atomaren Claim + Watchdog + Lane-Gate abgedeckt. Keine Code-Änderung." },
   ]},
