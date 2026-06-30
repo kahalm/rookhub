@@ -207,6 +207,55 @@
       "count": "{{count}} aktive(r) Import(e)",
       "view": "Alle anzeigen",
       "heading": "Aktive Chessable-Importe"
+    },
+    "trainingGoals": {
+      "title": "Trainingsziele",
+      "subtitle": "Dein tägliches Training",
+      "open": "Ziele öffnen"
+    },
+    "courses": {
+      "title": "Kurse",
+      "subtitle": "Arbeite deine Bücher durch",
+      "open": "Kurse öffnen"
+    },
+    "leaderboards": {
+      "title": "Bestenlisten",
+      "subtitle": "Sieh, wo du stehst",
+      "view": "Bestenlisten ansehen"
+    },
+    "games": {
+      "title": "Partien",
+      "subtitle": "Deine gespeicherten Partien",
+      "open": "Partien öffnen"
+    },
+    "weekly": {
+      "title": "Wochenpost",
+      "subtitle": "Die Puzzles dieser Woche",
+      "view": "Wochenpost öffnen"
+    },
+    "stats": {
+      "title": "Statistik",
+      "subtitle": "Deine Puzzle-Elo-Kurve",
+      "view": "Statistik ansehen"
+    },
+    "analysis": {
+      "title": "Analyse",
+      "subtitle": "Eine Stellung analysieren",
+      "open": "Brett öffnen"
+    },
+    "messages": {
+      "title": "Nachrichten",
+      "subtitle": "Kontaktiere das Admin-Team",
+      "open": "Nachrichten öffnen"
+    },
+    "edit": {
+      "customize": "Anpassen",
+      "done": "Fertig",
+      "reset": "Zurücksetzen",
+      "hint": "Kacheln zum Sortieren ziehen; mit dem Augen-Schalter ein- oder ausblenden.",
+      "dragAria": "Kachel zum Sortieren ziehen",
+      "hideAria": "Kachel ausblenden",
+      "showAria": "Kachel einblenden"
     }
   },
   "pgnViewer": {

@@ -207,6 +207,55 @@
       "count": "{{count}} active import(s)",
       "view": "View all",
       "heading": "Active Chessable Imports"
+    },
+    "trainingGoals": {
+      "title": "Training Goals",
+      "subtitle": "Track your daily training",
+      "open": "Open goals"
+    },
+    "courses": {
+      "title": "Courses",
+      "subtitle": "Work through your books",
+      "open": "Open courses"
+    },
+    "leaderboards": {
+      "title": "Leaderboards",
+      "subtitle": "See how you rank",
+      "view": "View leaderboards"
+    },
+    "games": {
+      "title": "Games",
+      "subtitle": "Your saved games",
+      "open": "Open games"
+    },
+    "weekly": {
+      "title": "Weekly Post",
+      "subtitle": "This week's puzzles",
+      "view": "Open weekly"
+    },
+    "stats": {
+      "title": "Statistics",
+      "subtitle": "Your puzzle Elo curve",
+      "view": "View stats"
+    },
+    "analysis": {
+      "title": "Analysis",
+      "subtitle": "Analyse a position",
+      "open": "Open board"
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Contact the admin team",
+      "open": "Open messages"
+    },
+    "edit": {
+      "customize": "Customize",
+      "done": "Done",
+      "reset": "Reset",
+      "hint": "Drag tiles to reorder; use the eye toggle to show or hide them.",
+      "dragAria": "Drag to reorder tile",
+      "hideAria": "Hide tile",
+      "showAria": "Show tile"
     }
   },
   "pgnViewer": {

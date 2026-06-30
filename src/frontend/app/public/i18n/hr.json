@@ -207,6 +207,55 @@
       "count": "{{count}} aktivnih uvoza",
       "view": "Prikaži sve",
       "heading": "Aktivni Chessable uvozi"
+    },
+    "trainingGoals": {
+      "title": "Ciljevi treninga",
+      "subtitle": "Tvoj dnevni trening",
+      "open": "Otvori ciljeve"
+    },
+    "courses": {
+      "title": "Tečajevi",
+      "subtitle": "Prolazi kroz svoje knjige",
+      "open": "Otvori tečajeve"
+    },
+    "leaderboards": {
+      "title": "Ljestvice",
+      "subtitle": "Pogledaj svoj poredak",
+      "view": "Prikaži ljestvice"
+    },
+    "games": {
+      "title": "Partije",
+      "subtitle": "Tvoje spremljene partije",
+      "open": "Otvori partije"
+    },
+    "weekly": {
+      "title": "Tjedna objava",
+      "subtitle": "Zagonetke ovog tjedna",
+      "view": "Otvori tjednu objavu"
+    },
+    "stats": {
+      "title": "Statistika",
+      "subtitle": "Tvoja krivulja Elo zagonetki",
+      "view": "Prikaži statistiku"
+    },
+    "analysis": {
+      "title": "Analiza",
+      "subtitle": "Analiziraj poziciju",
+      "open": "Otvori ploču"
+    },
+    "messages": {
+      "title": "Poruke",
+      "subtitle": "Kontaktiraj administratorski tim",
+      "open": "Otvori poruke"
+    },
+    "edit": {
+      "customize": "Prilagodi",
+      "done": "Gotovo",
+      "reset": "Poništi",
+      "hint": "Povuci pločice za promjenu redoslijeda; gumbom s okom prikaži ili sakrij.",
+      "dragAria": "Povuci za promjenu redoslijeda pločice",
+      "hideAria": "Sakrij pločicu",
+      "showAria": "Prikaži pločicu"
     }
   },
   "pgnViewer": {

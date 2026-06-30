@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.13';
+export const APP_VERSION = '0.205.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.205.0", date: "2026-06-30", changes: [
+    { en: "Customizable dashboard tiles: the dashboard is now a configurable tile grid covering the modules that make sense for you — Puzzles, Training Goals, Courses, Leaderboards, Tournaments, Friends, Repertoires, Games, Weekly Post, Statistics, Analysis, Messages and (admins) the Chessable queue. A new “Customize” button enters an edit mode where you can drag tiles to reorder them and toggle each one on/off with the eye button; a “Reset” restores the default layout. Your arrangement is remembered per device (localStorage), only ever shows tiles your menu visibility allows, and newly added tiles automatically appear at the end of an existing layout.", de: "Anpassbare Dashboard-Kacheln: Das Dashboard ist jetzt ein konfigurierbares Kachelraster über die für dich sinnvollen Module — Puzzles, Trainingsziele, Kurse, Bestenlisten, Turniere, Freunde, Repertoires, Partien, Wochenpost, Statistik, Analyse, Nachrichten und (für Admins) die Chessable-Warteschlange. Ein neuer „Anpassen“-Knopf öffnet einen Bearbeitungsmodus: Kacheln per Drag & Drop sortieren und mit dem Augen-Knopf einzeln ein-/ausblenden; „Zurücksetzen“ stellt das Standard-Layout wieder her. Deine Anordnung wird pro Gerät gemerkt (localStorage), zeigt nur Kacheln, die deine Menü-Sichtbarkeit erlaubt, und neu hinzugekommene Kacheln erscheinen automatisch am Ende eines bestehenden Layouts." },
+  ]},
   { version: "0.203.13", date: "2026-06-30", changes: [
     { en: "Build fix: several German changelog entries (v0.203.8/.10/.11) opened a quote with the typographic mark but closed it with a straight one, which terminated the string early and broke the frontend production build (and therefore the dev image). Quotes corrected; the production build is green again.", de: "Build-Fix: Mehrere deutsche Changelog-Einträge (v0.203.8/.10/.11) öffneten ein Zitat typografisch, schlossen es aber mit einem geraden Anführungszeichen — das beendete den String vorzeitig und brach den Frontend-Production-Build (und damit das Dev-Image). Anführungszeichen korrigiert; der Production-Build ist wieder grün." },
   ]},
