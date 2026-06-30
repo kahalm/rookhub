@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.201.2';
+export const APP_VERSION = '0.201.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.201.3", date: "2026-06-30", changes: [
+    { en: "Test coverage: added unit tests for previously untested frontend pieces (move/board-theme helpers, theme service, admin/menu route guards, notification service, and the games/leaderboard/puzzle/repertoire-training/tournament-detail HTTP services) plus the backend menu registry. Writing them surfaced a small bug: a free promotion move without an explicitly chosen piece underpromoted to a knight instead of defaulting to a queen — now fixed to default to queen as documented.", de: "Testabdeckung: Unit-Tests für bisher ungetestete Frontend-Teile ergänzt (Zug-/Brett-Theme-Helfer, Theme-Service, Admin-/Menü-Routen-Guards, Benachrichtigungs-Service sowie die HTTP-Services games/leaderboard/puzzle/repertoire-training/tournament-detail) plus die Backend-Menü-Registry. Dabei kam ein kleiner Bug ans Licht: ein freier Umwandlungszug ohne explizit gewählte Figur wandelte in einen Springer statt standardmäßig in eine Dame um — jetzt korrekt auf Dame gesetzt." },
+  ]},
   { version: "0.201.2", date: "2026-06-30", changes: [
     { en: "Visualization/blindfold puzzles: you can now drag pieces as well, not just tap them. A drag from one square to another is treated exactly like tapping the piece and then the target square (same legality and promotion handling). This fixes the impression on phones that \"the pieces don't move\" — dragging now works too.", de: "Visualisierungs-/Blind-Puzzles: Figuren lassen sich jetzt auch ziehen, nicht nur antippen. Eine Ziehgeste von einem Feld zum anderen wird genau wie „Figur antippen, dann Zielfeld antippen\" behandelt (gleiche Legalitäts- und Umwandlungs-Logik). Das behebt den Eindruck am Handy, dass „sich die Figuren nicht bewegen\" — Ziehen funktioniert jetzt ebenfalls." },
   ]},

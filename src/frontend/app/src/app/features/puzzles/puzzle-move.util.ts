@@ -34,7 +34,10 @@ export function tryFreeMove(chess: Chess, orig: Key, dest: Key, promotion?: stri
       return chess.move({ from, to, promotion: promotion as Promo });
     }
     const match = chess.moves({ verbose: true }).find(m => m.from === from && m.to === to);
-    return match ? chess.move(match) : chess.move({ from, to, promotion: 'q' });
+    if (!match) return null;                                   // illegaler Zug
+    // Umwandlungszug ohne explizit gewählte Figur → Dame (chess.js' erster Verbose-Move
+    // wäre sonst der Springer). Sonst der gefundene reguläre Zug.
+    return match.promotion ? chess.move({ from, to, promotion: 'q' }) : chess.move(match);
   } catch {
     return null;
   }
