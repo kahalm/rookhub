@@ -846,6 +846,29 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task DailyLeaderboard_TiedTime_BothGetGoldAndEqualBonus()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "lbt.pgn:1", bookFileName: "lbt.pgn");
+        await AssignDailyAsync(new DateOnly(2026, 6, 10), p);
+        var anna = await CreateUserAsync("anna");
+        var ben = await CreateUserAsync("ben");
+
+        // Beide lösen in EXAKT 20s (z. B. weil der Client keine Zeit meldet → 0/0, oder echter Gleichstand).
+        await AddAttemptAsync(p, anna, true, 20, new DateTime(2026, 6, 10, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p, ben, true, 20, new DateTime(2026, 6, 10, 9, 0, 0, DateTimeKind.Utc));
+
+        var lb = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
+        var annaE = lb.Entries.Single(e => e.Name == "anna");
+        var benE = lb.Entries.Single(e => e.Name == "ben");
+
+        // Zeitgleich → beide Rang 1: je 10 + 5 (🥇) = 15 Punkte und je 1 Gold (nicht 🥇 vs. 🥈 nach Submit-Reihenfolge).
+        Assert.Equal(15, annaE.Points);
+        Assert.Equal(15, benE.Points);
+        Assert.Equal(1, annaE.Golds);
+        Assert.Equal(1, benE.Golds);
+    }
+
+    [Fact]
     public async Task DailyLeaderboard_OnlyFirstAttemptCounts()
     {
         var p = await CreateBookPuzzleAsync(lineId: "lbf.pgn:1", bookFileName: "lbf.pgn");

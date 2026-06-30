@@ -120,20 +120,22 @@ public class AdminMessageService
             {
                 UserId = g.Key,
                 LastAt = g.Max(m => m.CreatedAt),
+                // Eindeutige PK der jüngsten Nachricht je Thread — der Nachlade-Join MUSS darüber gehen,
+                // nicht über CreatedAt: zeitgleiche Nachrichten aus FREMDEN Threads würden sonst mit-matchen
+                // (falsche Vorschau) und der CreatedAt-IN-Filter ist nicht indexnutzbar.
+                LastId = g.Max(m => m.Id),
                 Unread = g.Count(m => !m.FromAdmin && m.SeenByAdminAt == null),
             })
             .ToListAsync();
         if (agg.Count == 0) return new List<AdminThreadSummaryDto>();
 
-        // Nur die jeweils JÜNGSTE Nachricht je Thread nachladen (≈ eine Zeile pro Thread) für Preview/Richtung.
-        var lastAts = agg.Select(a => a.LastAt).Distinct().ToList();
+        // Nur die jeweils JÜNGSTE Nachricht je Thread nachladen (genau eine Zeile pro Thread, PK-Lookup).
+        var lastIds = agg.Select(a => a.LastId).ToList();
         var lastMsgs = await _db.AdminMessages
-            .Where(m => lastAts.Contains(m.CreatedAt))
+            .Where(m => lastIds.Contains(m.Id))
             .Select(m => new { m.UserId, m.Body, m.CreatedAt, m.FromAdmin, Username = m.User.Username })
             .ToListAsync();
-        var lastByUser = lastMsgs
-            .GroupBy(m => m.UserId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(m => m.CreatedAt).First());
+        var lastByUser = lastMsgs.ToDictionary(m => m.UserId, m => m);
 
         // Zuweisung (Claim) je Thread + Admin-Namen für die Anzeige auflösen.
         var claims = await _db.MessageThreads

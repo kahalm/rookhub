@@ -249,6 +249,24 @@ public class AdminMessageTests : IDisposable
         Assert.Equal(0, carol.UnreadFromUser);
     }
 
+    [Fact]
+    public async Task GetThreads_IdenticalTimestampsAcrossThreads_DoNotCrossMatchPreview()
+    {
+        await UserAsync(1, "admin", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "carol");
+        // Zwei Threads mit EXAKT gleichem CreatedAt — früher matchte der CreatedAt-IN-Filter beide
+        // Bodies in beiden Threads (falsche/zufällige Vorschau). Mit Max(Id) ist es eindeutig.
+        var ts = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        _db.AdminMessages.Add(new RookHub.Api.Models.AdminMessage { UserId = 2, SenderId = 1, FromAdmin = true, Body = "an bob", CreatedAt = ts });
+        _db.AdminMessages.Add(new RookHub.Api.Models.AdminMessage { UserId = 3, SenderId = 1, FromAdmin = true, Body = "an carol", CreatedAt = ts });
+        await _db.SaveChangesAsync();
+
+        var threads = await _service.GetThreadsAsync();
+        Assert.Equal("an bob", threads.Single(t => t.UserId == 2).LastMessagePreview);
+        Assert.Equal("an carol", threads.Single(t => t.UserId == 3).LastMessagePreview);
+    }
+
     // ---- Controller: User-Seite ----
 
     private MessageController UserController(int userId)

@@ -710,10 +710,12 @@ public class BookPuzzleService
         foreach (var day in rows.GroupBy(r => r.Date))
         {
             var ranked = day.OrderBy(r => r.TimeSeconds).ThenBy(r => r.FirstAt).ToList();
-            for (int i = 0; i < ranked.Count; i++)
+            foreach (var r in ranked)
             {
-                var rank = i + 1;
-                var r = ranked[i];
+                // Competition-Ranking: Rang = 1 + Anzahl strikt SCHNELLERER Löser. Zeitgleiche Löser
+                // bekommen denselben Rang/Bonus — und alle mit der Bestzeit zählen als 🥇 (statt dass
+                // Submit-Reihenfolge/Mikrosekunden über Gold vs. Silber entscheiden, insb. bei TimeSeconds==0).
+                var rank = 1 + ranked.Count(o => o.TimeSeconds < r.TimeSeconds);
                 acc.TryGetValue(r.UserId, out var cur);
                 acc[r.UserId] = (cur.points + 10 + RankBonus(rank), cur.solved + 1, cur.golds + (rank == 1 ? 1 : 0));
             }

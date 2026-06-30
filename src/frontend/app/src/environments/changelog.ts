@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.1';
+export const APP_VERSION = '0.203.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.2", date: "2026-06-30", changes: [
+    { en: "Two correctness fixes (code review): (1) The daily-puzzle leaderboard now uses competition ranking by solve time — solvers with the exact same time share the same rank/bonus and all of them count as gold (🥇), instead of submit order / microseconds deciding gold vs. silver (this mattered especially when the client reports no time, i.e. 0s). (2) The admin message thread list picks each thread's latest message by its unique id instead of matching on timestamp, so two threads with an identical message timestamp can no longer show the wrong preview.", de: "Zwei Korrektheits-Fixes (Code Review): (1) Das Tagespuzzle-Leaderboard nutzt jetzt Competition-Ranking nach Lösezeit — zeitgleiche Löser teilen sich denselben Rang/Bonus und zählen alle als Gold (🥇), statt dass Submit-Reihenfolge/Mikrosekunden über Gold vs. Silber entscheiden (relevant v. a. wenn der Client keine Zeit meldet, also 0s). (2) Die Admin-Nachrichten-Threadliste wählt die jüngste Nachricht je Thread über deren eindeutige Id statt über den Zeitstempel — zwei Threads mit identischem Nachrichten-Zeitstempel zeigen so keine falsche Vorschau mehr." },
+  ]},
   { version: "0.203.1", date: "2026-06-30", changes: [
     { en: "Performance (code review): the weekly-posts overview no longer runs one DB query plus an expensive PGN parse per played post. The puzzle count is now cached on the post (new WeeklyPost.PuzzleCount column, computed once at upload; migration AddWeeklyPostPuzzleCount), all played posts load in a single query, and legacy posts backfill their count lazily on first access. Removes the N+1 on /weekly-posts/progress and the repeated LONGTEXT parse on attempt/results/progress.", de: "Performance (Code Review): Die Wochenpost-Übersicht macht nicht mehr je gespieltem Post eine DB-Abfrage plus einen teuren PGN-Parse. Die Puzzle-Anzahl wird jetzt am Post gecacht (neue Spalte WeeklyPost.PuzzleCount, einmal beim Upload berechnet; Migration AddWeeklyPostPuzzleCount), alle gespielten Posts werden in einer Abfrage geladen, und Alt-Datensätze ziehen ihre Anzahl beim ersten Zugriff lazy nach. Behebt das N+1 auf /weekly-posts/progress und den wiederholten LONGTEXT-Parse bei Versuch/Ergebnis/Fortschritt." },
   ]},
