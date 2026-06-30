@@ -79,26 +79,34 @@ public class AutoSubscriptionService : BackgroundService
 
     private async Task CheckAllUsersAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
+        // Kandidaten-User einmal mit einem kurzlebigen Scope laden …
+        List<int> userIds;
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            userIds = await db.UserProfiles
+                .Where(p => p.ChessResultsId != null && p.LastName != null)
+                .Select(p => p.UserId)
+                .ToListAsync(ct);
+        }
 
-        var profiles = await db.UserProfiles
-            .Where(p => p.ChessResultsId != null && p.LastName != null)
-            .Select(p => new { p.UserId, p.LastName, p.FirstName })
-            .ToListAsync(ct);
+        _logger.LogInformation("AutoSubscriptionService checking {Count} users", userIds.Count);
 
-        _logger.LogInformation("AutoSubscriptionService checking {Count} users", profiles.Count);
-
-        foreach (var profile in profiles)
+        // … dann pro User einen FRISCHEN Scope/DbContext. Vorher teilte sich der ganze Lauf einen Context:
+        // der ChangeTracker wuchs über alle User unbeschränkt (jedes spätere SaveChanges langsamer) und ein
+        // Teilfehler konnte getrackte Entitäten zwischen Usern verschleppen. Jetzt ist jeder User isoliert.
+        foreach (var userId in userIds)
         {
             try
             {
-                await CheckUserAsync(db, proxy, profile.UserId, ct);
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
+                await CheckUserAsync(db, proxy, userId, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogWarning(ex, "AutoSubscription check failed for user {UserId}", profile.UserId);
+                _logger.LogWarning(ex, "AutoSubscription check failed for user {UserId}", userId);
             }
         }
     }
@@ -319,11 +327,16 @@ public class AutoSubscriptionService : BackgroundService
             .Select(s => s.CrawlerTournamentId)
             .ToListAsync(ct);
 
+        // Profile (User + Freunde) EINMAL je User laden und über alle Turniere wiederverwenden,
+        // statt sie in AutoFavoritePlayersAsync je Turnier neu zu ziehen.
+        var favProfiles = subsWithoutFavorites.Count > 0
+            ? await LoadFavoriteProfilesAsync(db, userId, ct)
+            : null;
         foreach (var tid in subsWithoutFavorites)
         {
             try
             {
-                await AutoFavoritePlayersAsync(db, proxy, userId, tid, ct);
+                await AutoFavoritePlayersAsync(db, proxy, userId, tid, ct, favProfiles);
             }
             catch (Exception ex)
             {
@@ -332,8 +345,24 @@ public class AutoSubscriptionService : BackgroundService
         }
     }
 
+    /// <summary>Profile, die für Auto-Favoriten in Frage kommen: der User selbst + seine akzeptierten Freunde.
+    /// Hängt nur am User → kann je User einmal geladen und über alle Turniere wiederverwendet werden.</summary>
+    private static async Task<List<UserProfile>> LoadFavoriteProfilesAsync(AppDbContext db, int userId, CancellationToken ct)
+    {
+        var friendUserIds = await db.Friendships
+            .Where(f => (f.RequesterId == userId || f.AddresseeId == userId)
+                      && f.Status == FriendshipStatus.Accepted)
+            .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
+            .ToListAsync(ct);
+        var allUserIds = friendUserIds.Prepend(userId).Distinct().ToList();
+        return await db.UserProfiles
+            .Where(p => allUserIds.Contains(p.UserId))
+            .ToListAsync(ct);
+    }
+
     public async Task AutoFavoritePlayersAsync(AppDbContext db, CrawlerProxyService proxy,
-        int userId, string crawlerTournamentId, CancellationToken ct)
+        int userId, string crawlerTournamentId, CancellationToken ct,
+        IReadOnlyList<UserProfile>? preloadedProfiles = null)
     {
         // 1. Fetch players from crawler
         JsonElement playersJson;
@@ -364,18 +393,9 @@ public class AutoSubscriptionService : BackgroundService
 
         if (players.Count == 0) return;
 
-        // 2. Load profiles: user + accepted friends
-        var friendUserIds = await db.Friendships
-            .Where(f => (f.RequesterId == userId || f.AddresseeId == userId)
-                      && f.Status == FriendshipStatus.Accepted)
-            .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
-            .ToListAsync(ct);
-
-        var allUserIds = friendUserIds.Prepend(userId).Distinct().ToList();
-        var profiles = await db.UserProfiles
-            .Where(p => allUserIds.Contains(p.UserId))
-            .ToListAsync(ct);
-
+        // 2. Profile (User + akzeptierte Freunde). Diese hängen NUR am User, nicht am Turnier — bei mehreren
+        // Abos ohne Favoriten reicht der Aufrufer sie deshalb vorgeladen durch (1× statt je Turnier neu laden).
+        var profiles = preloadedProfiles ?? await LoadFavoriteProfilesAsync(db, userId, ct);
         if (profiles.Count == 0) return;
 
         // 3. Load existing favorites to avoid duplicates
