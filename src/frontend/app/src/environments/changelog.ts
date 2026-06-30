@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.205.2';
+export const APP_VERSION = '0.205.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.205.3", date: "2026-06-30", changes: [
+    { en: "Observability: admin impersonation is now visible per request in the logs. When an admin acts as another user, the JWT carries an imp claim (the admin id); the request-logging middleware now writes it as the ImpersonatorId field (ECS labels), so every impersonated request is filterable in Kibana. Previously only the one-time impersonation-start event was logged and individual requests looked identical to the real user.", de: "Observability: Admin-Impersonation ist jetzt pro Request in den Logs sichtbar. Agiert ein Admin als anderer User, trägt das JWT einen imp-Claim (die Admin-Id); die Request-Logging-Middleware schreibt ihn jetzt als Feld ImpersonatorId (ECS labels), sodass jeder impersonierte Request in Kibana filterbar ist. Vorher war nur das einmalige Impersonation-Start-Event geloggt und einzelne Requests sahen identisch zum echten User aus." },
+  ]},
   { version: "0.205.2", date: "2026-06-30", changes: [
     { en: "Chessable bearer circuit-breaker (merged from the v0.204.0 line and reconciled with the 0.203.x Chessable security fixes): when Chessable rejects a stored bearer as fatally dead (account banned/deleted or token expired/invalid — e.g. “User is banned or deleted”), RookHub now stops making any further request with that bearer instead of hammering it. The breaker opens automatically on the first such failure; queued imports using that bearer pause (they don't fail) and read-only course fetches/new imports are refused — until you confirm validity with the “Test” button. A successful test closes the breaker and automatically resumes the paused imports. A banner on the Chessable page (and a 🔒 marker + per-user “Test bearer” button in the admin course-download tab) makes the blocked state visible. The blocked-bearer check sits in front of the course-ownership check so a dead bearer never triggers a fetch. Crucially, a mere IP/Cloudflare/VPN block does NOT trip the breaker (that's the exit IP, not the bearer).", de: "Chessable-Bearer-Circuit-Breaker (aus der v0.204.0-Linie gemergt und mit den 0.203.x-Chessable-Security-Fixes versöhnt): Weist Chessable einen gespeicherten Bearer endgültig ab (Account gesperrt/gelöscht oder Token abgelaufen/ungültig — z. B. „User is banned or deleted“), macht RookHub KEINE weitere Anfrage mehr mit diesem Bearer, statt ihn immer wieder anzuklopfen. Der Breaker öffnet automatisch beim ersten solchen Fehlschlag; wartende Importe mit diesem Bearer pausieren (statt zu scheitern), Lese-Abrufe der Kursliste/neue Importe werden verweigert — bis du die Gültigkeit per „Testen“ bestätigst. Ein erfolgreicher Test schließt den Breaker und nimmt die pausierten Importe automatisch wieder auf. Ein Banner auf der Chessable-Seite (und ein 🔒-Marker + „Bearer testen“-Knopf je User im Admin-Kursdownload-Tab) macht den Sperr-Status sichtbar. Die Bearer-Sperr-Prüfung sitzt vor der Kurs-Eigentumsprüfung, damit ein toter Bearer keinen Request mehr auslöst. Wichtig: Ein reiner IP-/Cloudflare-/VPN-Block löst den Breaker NICHT aus (das ist die Ausgangs-IP, nicht der Bearer)." },
   ]},

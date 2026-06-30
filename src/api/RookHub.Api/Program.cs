@@ -447,6 +447,12 @@ try
                 scopes.Add(LogContext.PushProperty("UserId", userId));
             if (!string.IsNullOrEmpty(ctx.User.Identity.Name))
                 scopes.Add(LogContext.PushProperty("UserName", ctx.User.Identity.Name));
+            // Admin-Impersonation: das Token trägt dann den `imp`-Claim (Id des impersonierenden Admins).
+            // Ohne Marker sehen impersonierte Requests im Log identisch zum echten User aus → hier als
+            // ImpersonatorId mitschreiben, damit jeder impersonierte Request in Kibana filterbar ist.
+            var imp = ctx.User.FindFirst("imp")?.Value;
+            if (!string.IsNullOrEmpty(imp))
+                scopes.Add(LogContext.PushProperty("ImpersonatorId", imp));
         }
         // VisitorId fuer Kibana „Unique Visits": Username (eingeloggt) sonst validierte Anon-Session-Id
         // aus dem X-Visitor-Id-Header. So zaehlen eingeloggte UND anonyme Besucher in EINEM Feld.
