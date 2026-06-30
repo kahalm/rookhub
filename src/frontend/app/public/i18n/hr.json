@@ -824,6 +824,7 @@
       "level2Name": "Žetoni",
       "level3Name": "Tamno",
       "level4Name": "Nevidljivo",
+      "modeSelectAria": "Odaberi način vizualizacije",
       "level0Desc": "Povuci i ispusti — ploča vidljiva, bez ograničenja.",
       "level1Desc": "Ploča zamrznuta, potezi prikazani samo kao tekst.",
       "level2Desc": "Figure se nakon 3 s zamjenjuju žetonima u boji.",

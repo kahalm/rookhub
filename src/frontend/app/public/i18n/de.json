@@ -826,6 +826,7 @@
       "level2Name": "Checker",
       "level3Name": "Dunkel",
       "level4Name": "Unsichtbar",
+      "modeSelectAria": "Visualisierungsmodus wählen",
       "level0Desc": "Drag & Drop — Brett sichtbar, keine Einschränkungen.",
       "level1Desc": "Brett eingefroren, Züge nur als Text sichtbar.",
       "level2Desc": "Figuren werden nach 3 s durch farbige Spielsteine ersetzt.",

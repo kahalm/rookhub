@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.206.0';
+export const APP_VERSION = '0.207.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.207.0", date: "2026-06-30", changes: [
+    { en: "Visualization modes now have a quick icon switcher right in the hint line under the board (replacing the old “Show” button). Five chess-themed icons — normal piece, piece in chains (frozen board), black/white token, white token, and an eye-with-a-slash for invisible — let you flip the blindfold level mid-puzzle without opening settings; the active mode is highlighted. To reveal the pieces again just pick mode 0 (Normal). Works in all three solvers (standard, book/course/daily, endless). Icons are registered as inline SVG (like the Discord logo) and adapt to light/dark theme; the two token icons are fixed black/white. The separate “Show/reveal” button is gone.", de: "Die Visualisierungsmodi haben jetzt einen schnellen Icon-Umschalter direkt in der Hinweiszeile unter dem Brett (ersetzt den früheren „Aufdecken“-Knopf). Fünf schachthematische Icons — normale Figur, Figur in Ketten (eingefrorenes Brett), schwarz/weißes Token, weißes Token und ein durchgestrichenes Auge für unsichtbar — lassen dich die Blind-Stufe mitten im Puzzle wechseln, ohne die Einstellungen zu öffnen; der aktive Modus ist hervorgehoben. Zum Wiederaufdecken einfach Modus 0 (Normal) wählen. Funktioniert in allen drei Solvern (Standard, Buch/Kurs/Täglich, Endlos). Die Icons sind als Inline-SVG registriert (wie das Discord-Logo) und passen sich Hell/Dunkel an; die zwei Token-Icons sind fest schwarz/weiß. Der separate „Aufdecken“-Knopf entfällt." },
+  ]},
   { version: "0.206.0", date: "2026-06-30", changes: [
     { en: "Friends list: the Revenge-a-Friend icon now turns red (with a small count badge) when there are open revenges against that friend — i.e. puzzles the friend failed and never solved that you also have not solved yet. The friends endpoint computes the open-revenge count per friend; no open revenges keeps the icon in its normal color. Lets you see at a glance which friends you can still get back at.", de: "Freundesliste: Das Revenge-a-Friend-Icon wird jetzt rot (mit kleinem Anzahl-Badge), wenn es offene Revanchen gegen den Freund gibt — also Puzzles, an denen der Freund gescheitert ist und die er nie gelöst hat und die auch du noch nicht gelöst hast. Der Freunde-Endpoint berechnet die Zahl offener Revanchen je Freund; ohne offene Revanchen bleibt das Icon in der normalen Farbe. So siehst du auf einen Blick, bei welchen Freunden noch eine Revanche offen ist." },
   ]},

@@ -229,6 +229,36 @@ export class AppComponent implements OnInit {
       '<path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.036A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.291.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>' +
       '</svg>'
     ));
+    // Visualisierungsmodi 0–4 als SVG-Icons (Inline-Umschalter in der Solver-Hinweiszeile).
+    // 0/1/4 nutzen currentColor (theme-/aktiv-getönt), 2/3 sind feste Schwarz/Weiß-Spielsteine.
+    const P = '<circle cx="12" cy="6.2" r="3.4"/>'
+      + '<path d="M8.7 9.3h6.6a1 1 0 0 1 .96 1.27l-.4 1.4a1 1 0 0 1-.96.73H9.1a1 1 0 0 1-.96-.73l-.4-1.4A1 1 0 0 1 8.7 9.3z"/>'
+      + '<path d="M9.5 12.9c-.6 1.9-1.4 3.6-2.5 5.3h10c-1.1-1.7-1.9-3.4-2.5-5.3z"/>'
+      + '<rect x="5.8" y="18" width="12.4" height="2.7" rx="1.1"/>';
+    const vizIcons: Record<string, string> = {
+      'viz-0': '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' + P + '</svg>',
+      'viz-1': '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">'
+        + '<g opacity="0.24">' + P + '</g>'
+        + '<g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">'
+        + '<ellipse cx="7.7" cy="16.2" rx="3" ry="1.6" transform="rotate(-33 7.7 16.2)"/>'
+        + '<ellipse cx="12" cy="12.7" rx="3" ry="1.6" transform="rotate(-33 12 12.7)"/>'
+        + '<ellipse cx="16.3" cy="9.2" rx="3" ry="1.6" transform="rotate(-33 16.3 9.2)"/>'
+        + '</g></svg>',
+      'viz-2': '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+        + '<circle cx="12" cy="12" r="7" fill="#fff" stroke="#1b1b1b" stroke-width="1.3"/>'
+        + '<path d="M12 5.1a6.9 6.9 0 0 0 0 13.8z" fill="#1b1b1b"/></svg>',
+      'viz-3': '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+        + '<circle cx="12" cy="12" r="7" fill="#fff" stroke="#1b1b1b" stroke-width="1.3"/></svg>',
+      'viz-4': '<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">'
+        + '<mask id="vizEyeMask"><rect width="24" height="24" fill="#fff"/>'
+        + '<circle cx="12" cy="12" r="3.5" fill="#000"/><circle cx="12" cy="12" r="1.55" fill="#fff"/>'
+        + '<line x1="4" y1="3.1" x2="20" y2="19.9" stroke="#000" stroke-width="4" stroke-linecap="round"/></mask>'
+        + '<path mask="url(#vizEyeMask)" d="M2.7 12C5.4 7.7 8.5 5.6 12 5.6s6.6 2.1 9.3 6.4c-2.7 4.3-5.8 6.4-9.3 6.4S5.4 16.3 2.7 12Z"/>'
+        + '<line x1="4" y1="3.1" x2="20" y2="19.9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>',
+    };
+    for (const [name, svg] of Object.entries(vizIcons)) {
+      iconRegistry.addSvgIconLiteral(name, sanitizer.bypassSecurityTrustHtml(svg));
+    }
     // Browser-Engine-Crashes/Hänger an die API melden (→ Elasticsearch/Kibana).
     stockfish.reportEngineEvent = (kind, detail) => clientLog.report('engine_stockfish_' + kind, detail);
     analysisEngine.reportEngineEvent = (kind, detail) => clientLog.report('engine_analysis_' + kind, detail);

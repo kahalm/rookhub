@@ -32,11 +32,7 @@
                   {{ (turnColor === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
                 </span>
               }
-              @if (vizPiecesHidden || visualizationMode === 1) {
-                <button class="board-hint-show" (click)="onVizShow()">
-                  {{ (vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate }}
-                </button>
-              }
+              <app-viz-mode-selector [mode]="visualizationMode" (modeChange)="setVisualizationLevel($event)"></app-viz-mode-selector>
               @if (hasHints && canShowMoreHints) {
                 <button class="board-hint-tip" (click)="showNextHint()"
                         [attr.title]="'book.hints.show' | translate">

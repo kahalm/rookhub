@@ -826,6 +826,7 @@
       "level2Name": "Checker",
       "level3Name": "Dark",
       "level4Name": "Invisible",
+      "modeSelectAria": "Choose visualization mode",
       "level0Desc": "Drag & drop — board visible, no restrictions.",
       "level1Desc": "Board frozen, moves shown only as text.",
       "level2Desc": "Pieces are replaced by colored checkers after 3s.",
