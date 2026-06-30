@@ -72,7 +72,14 @@ public partial class PgnImportService
     /// Ungültige/unparsebare Einträge werden übersprungen und in <see cref="ParseResult.Invalid"/>
     /// gezählt, nicht geworfen.
     /// </summary>
-    public static ParseResult ParsePgn(string fileName, string pgnText)
+    /// <summary>Standard-Grundstellung (für synthetische Info-Linien ohne eigene Züge).</summary>
+    private const string StartPositionFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    /// <param name="keepCommentOnlyAsInfo">Wenn true (Buch-/Kurs-Import): zug-lose Linien MIT Erklärtext
+    /// (Chessable-Intro-/Info-Seiten) werden nicht verworfen, sondern als Info-Linie behalten — Fake-Zug
+    /// e4 ab Grundstellung, <c>IsInfoOnly</c>, damit der Text beim sequenziellen Durcharbeiten erscheint
+    /// (kein Quiz, nicht in Random/Daily). Default false (z. B. Wochenpost = index-basiert, unverändert).</param>
+    public static ParseResult ParsePgn(string fileName, string pgnText, bool keepCommentOnlyAsInfo = false)
     {
         var result = new List<ParsedPuzzle>();
         var invalid = 0;
@@ -87,7 +94,30 @@ public partial class PgnImportService
             var comment = ExtractFirstComment(moveText);
             var moveComments = ExtractMoveComments(moveText);
             var uci = TryExtractUciMainline(fen, moveText);
-            if (uci == null || uci.Count == 0) { invalid++; continue; }
+            if (uci == null || uci.Count == 0)
+            {
+                // Zug-lose Linie mit Erklärtext (Chessable-Intro-/Info-Seite): nicht verwerfen, sondern
+                // als Info-Linie behalten — Fake-Zug e4 ab Grundstellung, IsInfoOnly, nur sequenziell
+                // zum Durchklicken (zeigt den Text). Ohne Text (leer) bleibt es ein Skip.
+                if (keepCommentOnlyAsInfo && !string.IsNullOrEmpty(comment))
+                {
+                    var iw = headers.GetValueOrDefault("White", "").Trim();
+                    var ib = headers.GetValueOrDefault("Black", "").Trim();
+                    result.Add(new ParsedPuzzle(
+                        LineId: Truncate($"{fileName}:{round}", 300),
+                        Round: Truncate(round, 20),
+                        Fen: StartPositionFen,
+                        Moves: "e2e4",
+                        StartPly: -1,
+                        Title: iw.Length == 0 ? null : Truncate(iw, 300),
+                        Chapter: ib.Length == 0 ? null : Truncate(ib, 200),
+                        Comment: comment,
+                        MoveComments: moveComments,
+                        IsInfoOnly: true));
+                    continue;
+                }
+                invalid++; continue;
+            }
 
             // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
             // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren
@@ -406,7 +436,8 @@ public partial class PgnImportService
 
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
     {
-        var (parsed, invalid) = ParsePgn(fileName, pgnText);
+        // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
+        var (parsed, invalid) = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true);
         var now = DateTime.UtcNow;
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.FileName == fileName, ct);

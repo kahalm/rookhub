@@ -401,6 +401,65 @@ public class PgnImportServiceTests : IDisposable
         Assert.True(BookPuzzleService.MapToDto(bp).IsInfoOnly);
     }
 
+    // ---- Zug-lose Erklär-/Intro-Seiten (Kommentar, keine Züge) -------------
+    private const string CommentOnlyPgn = @"
+[Event ""Course""]
+[Round ""002.002""]
+[White ""Introduction #1""]
+[Black ""Introduction""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{Welcome to the course. This page only explains things — there are no moves.}
+";
+
+    [Fact]
+    public void ParsePgn_CommentOnlyLine_KeptAsInfoLine_WhenFlagSet()
+    {
+        var result = PgnImportService.ParsePgn("c.pgn", CommentOnlyPgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(result.Puzzles);
+        Assert.Equal(0, result.Invalid);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("e2e4", p.Moves);                 // synthetischer Fake-Zug
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);
+        Assert.Contains("only explains things", p.Comment);   // Erklärtext bleibt erhalten
+        Assert.Equal("Introduction #1", p.Title);
+    }
+
+    [Fact]
+    public void ParsePgn_CommentOnlyLine_DroppedByDefault()
+    {
+        // Default (z. B. Wochenpost) unverändert: zug-lose Linie wird verworfen.
+        var result = PgnImportService.ParsePgn("c.pgn", CommentOnlyPgn);
+        Assert.Empty(result.Puzzles);
+        Assert.Equal(1, result.Invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_NoMoveNoComment_DroppedEvenWithFlag()
+    {
+        var pgn = @"
+[Event ""C""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+*
+";
+        var result = PgnImportService.ParsePgn("c.pgn", pgn, keepCommentOnlyAsInfo: true);
+        Assert.Empty(result.Puzzles);   // ohne Text nichts anzuzeigen → Skip
+        Assert.Equal(1, result.Invalid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_KeepsCommentOnlyLine_AsInfoLine()
+    {
+        await _service.ImportFileAsync("intro.pgn", CommentOnlyPgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.True(bp.IsInfoOnly);
+        Assert.Equal("e2e4", bp.Moves);
+        Assert.Contains("only explains things", bp.Comment);
+    }
+
     [Fact]
     public void CleanDisplayName_StripsSuffixes()
     {

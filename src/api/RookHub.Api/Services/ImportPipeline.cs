@@ -31,10 +31,15 @@ namespace RookHub.Api.Services;
 ///   werden nicht mehr als Quiz abgefragt (aus Random-/Tagespuzzle-Töpfen ausgeblendet, zählen nicht
 ///   zum Kurs-Fortschritt, sequenziell nur zum Durchklicken). Der Marker steht NICHT im lokal
 ///   gespeicherten Alt-PGN → für Chessable-Bücher/-Repertoires ist der Reprocess ein Re-Fetch.</item>
+/// <item><c>5</c> — Zug-lose Erklär-/Intro-Seiten (Kommentar, keine Züge) werden beim Buch-/Kurs-Import
+///   nicht mehr verworfen, sondern als Info-Linie behalten (synthetischer Fake-Zug e4 ab Grundstellung,
+///   <c>IsInfoOnly</c>) → erscheinen beim sequenziellen Durcharbeiten als Durchklick-Text. Diese Seiten
+///   stehen bereits im gespeicherten <c>Book.SourcePgn</c> (Kommentar-only-Spiel) → der Reprocess ist
+///   hier ein reiner LOKALER Re-Import aus der Quelle, KEIN Chessable-Re-Fetch nötig.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 }
