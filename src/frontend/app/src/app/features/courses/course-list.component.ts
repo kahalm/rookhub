@@ -11,7 +11,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
-import { ChessableImportsBannerComponent } from '../chessable/chessable-imports-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
 
 @Component({
@@ -20,14 +19,13 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressBarModule, MatTooltipModule, LoadingSpinnerComponent, TranslateModule,
-    ReprocessBannerComponent, ChessableImportsBannerComponent
+    ReprocessBannerComponent
   ],
   template: `
     <div class="courses-container">
       <h1>{{ 'courses.title' | translate }}</h1>
       <p class="intro">{{ 'courses.intro' | translate }}</p>
 
-      <app-chessable-imports-banner (importCompleted)="loadCourses()" />
       <app-reprocess-banner section="courses" (done)="loadCourses()" />
 
       @if (loading) {
