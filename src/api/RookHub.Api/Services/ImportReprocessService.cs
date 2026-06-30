@@ -64,14 +64,18 @@ public partial class ImportReprocessService
             .Select(b => new { HasSource = b.SourcePgn != null, b.Tags, b.FileName })
             .ToListAsync(ct);
 
+        // Chessable-Kurse werden IMMER per Re-Fetch aufbereitet (auch wenn ein Alt-PGN als
+        // Quelle vorliegt): markerbasierte Pipeline-Schritte wie [%info]/[%alt] stehen NICHT im
+        // gecachten PGN, ein lokales Reprocess würde sie also nicht setzen, aber die Version
+        // dennoch hochmarkieren. Lokal aufbereitet wird nur Nicht-Chessable mit Quelle.
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
             Total = total,
             Stale = stale.Count,
-            ReprocessableLocally = stale.Count(b => b.HasSource),
-            Refetchable = stale.Count(b => !b.HasSource && IsChessable(b.Tags, b.FileName)),
-            NeedsReimport = stale.Count(b => !b.HasSource && !IsChessable(b.Tags, b.FileName)),
+            Refetchable = stale.Count(b => CanRefetch(b.Tags, b.FileName)),
+            ReprocessableLocally = stale.Count(b => !CanRefetch(b.Tags, b.FileName) && b.HasSource),
+            NeedsReimport = stale.Count(b => !CanRefetch(b.Tags, b.FileName) && !b.HasSource),
         };
     }
 
@@ -88,20 +92,23 @@ public partial class ImportReprocessService
         foreach (var book in stale)
         {
             ct.ThrowIfCancellationRequested();
-            if (!string.IsNullOrEmpty(book.SourcePgn))
+            if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
             {
-                // Lokal, verlustfrei, in-place (ImportFileAsync erkennt das veraltete Buch und aktualisiert).
-                var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, ct);
-                result.Reprocessed++;
-                result.UpdatedLines += res.Updated;
-            }
-            else if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
-            {
+                // Chessable: vollständiger Re-Fetch. Das gecachte Alt-PGN enthält marker­basierte
+                // Pipeline-Daten ([%info]/[%alt] …) NICHT, ein lokales Reprocess würde sie nicht
+                // setzen, aber die Version hochmarkieren (still falsch) — daher VOR dem SourcePgn-Pfad.
                 if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
                 var ownerId = book.OwnerUserId ?? userId;
                 var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName, ct: ct);
                 if (importId != null) result.Enqueued++;
                 else result.Skipped++; // kein Bearer hinterlegt
+            }
+            else if (!string.IsNullOrEmpty(book.SourcePgn))
+            {
+                // Nicht-Chessable, lokal verlustfrei + in-place (ImportFileAsync erkennt das veraltete Buch).
+                var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, ct);
+                result.Reprocessed++;
+                result.UpdatedLines += res.Updated;
             }
             else
             {
@@ -176,6 +183,13 @@ public partial class ImportReprocessService
     }
 
     // ===== Helpers =====
+
+    /// <summary>Ein Buch kann (vollständig) per Chessable-Re-Fetch aufbereitet werden, wenn es als
+    /// Chessable-Import erkennbar ist UND sich die bid aus dem Dateinamen lösen lässt — sonst bleibt
+    /// nur lokales Reprocess (mit Quelle) bzw. manueller Re-Import. Muss zur Verzweigung in
+    /// <see cref="ReprocessCoursesAsync"/> passen, damit Status-Zählung und Ausführung übereinstimmen.</summary>
+    private static bool CanRefetch(string? tags, string fileName) =>
+        IsChessable(tags, fileName) && TryParseBid(fileName, out _);
 
     private static bool IsChessable(string? tags, string fileName) =>
         (tags ?? string.Empty).Contains("chessable", StringComparison.OrdinalIgnoreCase)

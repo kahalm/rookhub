@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.213.0';
+export const APP_VERSION = '0.213.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.213.1", date: "2026-06-30", changes: [
+    { en: "Fix: the “Update (N)” banner now does the right thing for existing Chessable courses after the info-line change. Such a course's cached PGN predates the [%info] marker, so a local re-process would have bumped the version without ever marking the info lines (silently leaving them as quizzes). Chessable courses are now always refreshed via a full re-fetch instead of a local re-process — the only path that actually pulls in the info markers. Non-Chessable courses keep their lossless local re-process.", de: "Fix: Der „Aktualisieren (N)“-Knopf macht für bestehende Chessable-Kurse nach der Info-Linien-Änderung jetzt das Richtige. Das gecachte PGN eines solchen Kurses ist älter als der [%info]-Marker, ein lokales Reprocess hätte die Version hochgesetzt, ohne die Info-Linien je zu markieren (sie blieben still als Quiz). Chessable-Kurse werden jetzt immer per vollständigem Re-Fetch aktualisiert statt lokal aufbereitet — nur dieser Weg zieht die Info-Marker tatsächlich nach. Nicht-Chessable-Kurse behalten ihr verlustfreies lokales Reprocess." },
+  ]},
   { version: "0.213.0", date: "2026-06-30", changes: [
     { en: "Course click-through UI for Chessable info/explanatory lines (the backend side shipped in 0.212.0): in a course's sequential mode such a line now opens in a read-only “explanatory line” view — board on view-only, step through the moves with ◀/▶ (with the per-move comments), and a “Next” button to move on. No quiz, no timer, no give-up. In random mode and the daily puzzle they never appear, and they don't count toward course completion. Reminder: this only kicks in for courses re-imported/re-fetched from Chessable.", de: "Durchklick-Oberfläche für Chessable-Info-/Erklärlinien (die Backend-Seite kam in 0.212.0): im sequenziellen Kurs-Modus öffnet eine solche Linie jetzt eine schreibgeschützte „Erklärlinie“-Ansicht — Brett nur lesend, mit ◀/▶ durch die Züge klicken (samt Zug-Kommentaren), „Weiter“-Knopf zum Fortfahren. Kein Quiz, kein Timer, kein Aufgeben. Im Zufallsmodus und beim Tagespuzzle tauchen sie nie auf und zählen nicht zum Kurs-Abschluss. Erinnerung: greift nur für aus Chessable neu importierte/abgerufene Kurse." },
   ]},

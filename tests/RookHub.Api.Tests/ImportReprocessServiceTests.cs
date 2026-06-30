@@ -44,8 +44,9 @@ public class ImportReprocessServiceTests : IDisposable
     [Fact]
     public async Task GetCourseStatus_CategorisesStaleBooks()
     {
-        await SeedBookAsync("chessable-u7-loc.pgn", 0, SamplePgn, "chessable");      // veraltet, lokal aufbereitbar
-        await SeedBookAsync("chessable-u7-ref.pgn", 0, null, "chessable");           // veraltet, Re-Fetch
+        await SeedBookAsync("manual-loc.pgn", 0, SamplePgn, null);                    // veraltet, lokal aufbereitbar (nicht-Chessable)
+        await SeedBookAsync("chessable-u7-loc.pgn", 0, SamplePgn, "chessable");       // Chessable MIT Quelle → trotzdem Re-Fetch (Alt-PGN ohne Marker)
+        await SeedBookAsync("chessable-u7-ref.pgn", 0, null, "chessable");            // Chessable ohne Quelle → Re-Fetch
         await SeedBookAsync("manual.pgn", 0, null, null);                            // veraltet, nur Re-Import
         await SeedBookAsync("current.pgn", ImportPipeline.CurrentVersion, "x", null); // aktuell
 
@@ -53,20 +54,20 @@ public class ImportReprocessServiceTests : IDisposable
         var status = await svc.GetCourseStatusAsync(UserId, isAdmin: false);
 
         Assert.Equal(ImportPipeline.CurrentVersion, status.CurrentVersion);
-        Assert.Equal(4, status.Total);
-        Assert.Equal(3, status.Stale);
-        Assert.Equal(1, status.ReprocessableLocally);
-        Assert.Equal(1, status.Refetchable);
+        Assert.Equal(5, status.Total);
+        Assert.Equal(4, status.Stale);
+        Assert.Equal(1, status.ReprocessableLocally); // nur das nicht-Chessable-Buch mit Quelle
+        Assert.Equal(2, status.Refetchable);          // beide Chessable-Kurse, auch der mit gecachter Quelle
         Assert.Equal(1, status.NeedsReimport);
     }
 
     [Fact]
     public async Task ReprocessCourses_LocalSource_UpdatesPuzzlesInPlace_AndBumpsVersion()
     {
-        var book = await SeedBookAsync("chessable-u7-loc.pgn", 0, SamplePgn, "chessable");
+        var book = await SeedBookAsync("manual-loc.pgn", 0, SamplePgn, null);
         var puzzle = new BookPuzzle
         {
-            LineId = "chessable-u7-loc.pgn:1", BookFileName = book.FileName, BookId = book.Id, Round = "1",
+            LineId = "manual-loc.pgn:1", BookFileName = book.FileName, BookId = book.Id, Round = "1",
             Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
             Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1, MoveComments = null,
         };
@@ -104,13 +105,33 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReprocessCourses_ChessableWithSource_RefetchesInsteadOfLocalReprocess()
+    {
+        // Bestehender Chessable-Kurs MIT gecachtem Alt-PGN, dem markerbasierte Daten ([%info]) fehlen.
+        // Lokales Reprocess würde die Version hochmarkieren, ohne IsInfoOnly zu setzen → muss Re-Fetch sein.
+        var book = await SeedBookAsync("chessable-u7-abc123.pgn", 0, SamplePgn, "chessable");
+        var stub = new StubCourseReimporter { ReturnId = 42 };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Enqueued);      // Re-Fetch eingereiht …
+        Assert.Equal(0, result.Reprocessed);   // … KEIN lokales Reprocess aus dem Alt-PGN
+        var call = Assert.Single(stub.Calls);
+        Assert.Equal("abc123", call.Bid);
+        Assert.Equal("book", call.Target);
+        // Version bleibt veraltet, bis der Re-Fetch-Job das frische PGN eingespielt hat.
+        Assert.Equal(0, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
+    [Fact]
     public async Task ReprocessCourses_LocalOnly_ReprocessesCachedSource_SkipsChessableRefetch()
     {
-        // Lokal aufbereitbares Buch (mit Quelle) + Chessable-Altbestand ohne Quelle (bräuchte Re-Fetch).
-        var local = await SeedBookAsync("chessable-u7-loc.pgn", 0, SamplePgn, "chessable");
+        // Lokal aufbereitbares (nicht-Chessable) Buch mit Quelle + Chessable-Altbestand (bräuchte Re-Fetch).
+        var local = await SeedBookAsync("manual-loc.pgn", 0, SamplePgn, null);
         _db.BookPuzzles.Add(new BookPuzzle
         {
-            LineId = "chessable-u7-loc.pgn:1", BookFileName = local.FileName, BookId = local.Id, Round = "1",
+            LineId = "manual-loc.pgn:1", BookFileName = local.FileName, BookId = local.Id, Round = "1",
             Fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
             Moves = "g1f3 b8c6 f1b5 a7a6", StartPly = -1,
         });
