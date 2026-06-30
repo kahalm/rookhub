@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.207.0';
+export const APP_VERSION = '0.208.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.208.0", date: "2026-06-30", changes: [
+    { en: "Dashboard customize mode no longer rearranges the page: the tile grid keeps its exact layout, just with every tile shown (disabled ones greyed out). Each tile now has an eye toggle in its top-right corner to show/hide it, plus up/down arrows to reorder — and drag & drop still works (now grid-aware). Tile buttons are click-shielded while customizing so you can't navigate away by accident.", de: "Der Dashboard-Bearbeitungsmodus sortiert die Seite nicht mehr um: Das Kachelraster behält exakt sein Layout, es werden lediglich alle Kacheln angezeigt (deaktivierte ausgegraut). Jede Kachel hat jetzt oben rechts ein Auge zum Ein-/Ausblenden sowie Pfeile rauf/runter zum Sortieren — und Drag & Drop funktioniert weiterhin (jetzt rastertauglich). Die Kachel-Buttons sind beim Bearbeiten klick-geschützt, damit man nicht versehentlich wegnavigiert." },
+  ]},
   { version: "0.207.0", date: "2026-06-30", changes: [
     { en: "Visualization modes now have a quick icon switcher right in the hint line under the board (replacing the old “Show” button). Five chess-themed icons — normal piece, piece in chains (frozen board), black/white token, white token, and an eye-with-a-slash for invisible — let you flip the blindfold level mid-puzzle without opening settings; the active mode is highlighted. To reveal the pieces again just pick mode 0 (Normal). Works in all three solvers (standard, book/course/daily, endless). Icons are registered as inline SVG (like the Discord logo) and adapt to light/dark theme; the two token icons are fixed black/white. The separate “Show/reveal” button is gone.", de: "Die Visualisierungsmodi haben jetzt einen schnellen Icon-Umschalter direkt in der Hinweiszeile unter dem Brett (ersetzt den früheren „Aufdecken“-Knopf). Fünf schachthematische Icons — normale Figur, Figur in Ketten (eingefrorenes Brett), schwarz/weißes Token, weißes Token und ein durchgestrichenes Auge für unsichtbar — lassen dich die Blind-Stufe mitten im Puzzle wechseln, ohne die Einstellungen zu öffnen; der aktive Modus ist hervorgehoben. Zum Wiederaufdecken einfach Modus 0 (Normal) wählen. Funktioniert in allen drei Solvern (Standard, Buch/Kurs/Täglich, Endlos). Die Icons sind als Inline-SVG registriert (wie das Discord-Logo) und passen sich Hell/Dunkel an; die zwei Token-Icons sind fest schwarz/weiß. Der separate „Aufdecken“-Knopf entfällt." },
   ]},

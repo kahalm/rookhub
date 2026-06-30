@@ -252,8 +252,10 @@
       "customize": "Prilagodi",
       "done": "Gotovo",
       "reset": "Poništi",
-      "hint": "Povuci pločice za promjenu redoslijeda; gumbom s okom prikaži ili sakrij.",
+      "hint": "Okom prikaži ili sakrij pločicu; promijeni redoslijed strelicama ili povlačenjem.",
       "dragAria": "Povuci za promjenu redoslijeda pločice",
+      "moveUp": "Pomakni gore",
+      "moveDown": "Pomakni dolje",
       "hideAria": "Sakrij pločicu",
       "showAria": "Prikaži pločicu"
     }

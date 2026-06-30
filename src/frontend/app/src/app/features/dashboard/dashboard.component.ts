@@ -71,20 +71,26 @@ const DEFAULT_ORDER = [
         <p class="edit-hint">{{ 'dashboard.edit.hint' | translate }}</p>
       }
 
-      <div class="dashboard-grid" [class.editing]="editing"
-           cdkDropList [cdkDropListDisabled]="!editing" (cdkDropListDropped)="drop($event)">
-        @for (tile of visibleTiles; track tile.id) {
+      <div class="dashboard-grid"
+           cdkDropList cdkDropListOrientation="mixed" [cdkDropListDisabled]="!editing" (cdkDropListDropped)="drop($event)">
+        @for (tile of visibleTiles; track tile.id; let first = $first; let last = $last) {
           @let sub = tile.subtitle();
-          <mat-card cdkDrag [cdkDragDisabled]="!editing" [class.tile-off]="editing && !isEnabled(tile)">
+          <mat-card cdkDrag [cdkDragDisabled]="!editing"
+                    [class.tile-off]="editing && !isEnabled(tile)" [class.tile-editing]="editing">
             @if (editing) {
-              <div class="tile-edit-bar">
-                <button mat-icon-button cdkDragHandle class="drag-handle"
-                        [matTooltip]="'dashboard.edit.dragAria' | translate"
-                        [attr.aria-label]="'dashboard.edit.dragAria' | translate">
-                  <mat-icon>drag_indicator</mat-icon>
+              <!-- Transparentes Schild: fängt Klicks auf den Kachel-Buttons ab (keine versehentliche
+                   Navigation) UND ist die Drag-Fläche; die Steuerelemente liegen darüber. -->
+              <div class="tile-shield" cdkDragHandle></div>
+              <div class="tile-controls">
+                <button mat-icon-button class="tc-btn" [disabled]="first" (click)="moveUp(tile)"
+                        [matTooltip]="'dashboard.edit.moveUp' | translate" [attr.aria-label]="'dashboard.edit.moveUp' | translate">
+                  <mat-icon>arrow_upward</mat-icon>
                 </button>
-                <span class="spacer"></span>
-                <button mat-icon-button (click)="toggle(tile)"
+                <button mat-icon-button class="tc-btn" [disabled]="last" (click)="moveDown(tile)"
+                        [matTooltip]="'dashboard.edit.moveDown' | translate" [attr.aria-label]="'dashboard.edit.moveDown' | translate">
+                  <mat-icon>arrow_downward</mat-icon>
+                </button>
+                <button mat-icon-button class="tc-btn tc-eye" (click)="toggle(tile)"
                         [matTooltip]="(isEnabled(tile) ? 'dashboard.edit.hideAria' : 'dashboard.edit.showAria') | translate"
                         [attr.aria-label]="(isEnabled(tile) ? 'dashboard.edit.hideAria' : 'dashboard.edit.showAria') | translate">
                   <mat-icon>{{ isEnabled(tile) ? 'visibility' : 'visibility_off' }}</mat-icon>
@@ -96,13 +102,11 @@ const DEFAULT_ORDER = [
               <mat-card-title>{{ tile.titleKey | translate }}</mat-card-title>
               <mat-card-subtitle>{{ sub.key | translate:sub.params }}</mat-card-subtitle>
             </mat-card-header>
-            @if (!editing) {
-              <mat-card-actions>
-                @for (b of tile.buttons; track b.link) {
-                  <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
-                }
-              </mat-card-actions>
-            }
+            <mat-card-actions>
+              @for (b of tile.buttons; track b.link) {
+                <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
+              }
+            </mat-card-actions>
           </mat-card>
         }
       </div>
@@ -141,16 +145,22 @@ const DEFAULT_ORDER = [
     .head-actions button mat-icon { margin-right: 0.25rem; }
     .edit-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0.25rem 0 0.5rem; }
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1rem; margin: 1rem 0; }
-    .dashboard-grid.editing { display: flex; flex-direction: column; }
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
-    .tile-edit-bar { display: flex; align-items: center; padding: 0 0.25rem; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
-    .tile-edit-bar .spacer { flex: 1; }
-    .drag-handle { cursor: grab; }
-    mat-card.tile-off { opacity: 0.5; }
+    /* Bearbeitungsmodus: gleiche Rasteransicht, nur Schild + Steuerelemente als Overlay. */
+    mat-card.tile-editing { position: relative; }
+    mat-card.tile-editing.cdk-drag { cursor: grab; }
+    mat-card.tile-off { opacity: 0.45; }
+    .tile-shield { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+    .tile-controls { position: absolute; top: 4px; right: 4px; z-index: 2; display: flex; gap: 2px;
+      background: color-mix(in srgb, var(--mat-sys-surface-container-high, #fff) 88%, transparent);
+      border-radius: 999px; padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    .tile-controls .tc-btn { width: 30px; height: 30px; line-height: 30px; }
+    .tile-controls .tc-btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
+    .tile-controls .tc-eye { color: var(--mat-sys-primary, #3f51b5); }
     .cdk-drag-preview { box-shadow: 0 5px 16px rgba(0,0,0,0.3); border-radius: 8px; }
     .cdk-drag-placeholder { opacity: 0.3; }
     .cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
-    .dashboard-grid.editing.cdk-drop-list-dragging mat-card:not(.cdk-drag-placeholder) { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
+    .dashboard-grid.cdk-drop-list-dragging mat-card:not(.cdk-drag-placeholder) { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
     .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
     .tournament-link:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
     @media (max-width: 768px) {
@@ -309,9 +319,26 @@ export class DashboardComponent implements OnInit {
     if (event.previousIndex === event.currentIndex) return;
     const ids = this.tiles.map(t => t.id); // geeignete Kacheln in aktueller Reihenfolge
     moveItemInArray(ids, event.previousIndex, event.currentIndex);
-    // Volle Reihenfolge neu zusammensetzen: geeignete (neu sortiert) + nicht-geeignete (bewahrt).
-    const ineligible = this.order.filter(id => !ids.includes(id));
-    this.order = [...ids, ...ineligible];
+    this.commitOrder(ids);
+  }
+
+  /** Kachel per Pfeil eine Position nach oben/unten schieben (Alternative zu Drag & Drop). */
+  moveUp(tile: TileDef): void { this.shift(tile, -1); }
+  moveDown(tile: TileDef): void { this.shift(tile, 1); }
+
+  private shift(tile: TileDef, delta: number): void {
+    const ids = this.tiles.map(t => t.id);
+    const i = ids.indexOf(tile.id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    this.commitOrder(ids);
+  }
+
+  /** Geeignete Kacheln neu sortiert + nicht-geeignete (bewahrt) → persistieren. */
+  private commitOrder(orderedEligibleIds: string[]): void {
+    const ineligible = this.order.filter(id => !orderedEligibleIds.includes(id));
+    this.order = [...orderedEligibleIds, ...ineligible];
     this.persist();
   }
 

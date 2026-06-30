@@ -121,6 +121,25 @@ describe('DashboardComponent tiles', () => {
     expect(savedOrder.indexOf('puzzles')).toBe(2);
   });
 
+  it('moveDown / moveUp shift a tile by one and persist', () => {
+    const { component } = setup();
+    expect(component.visibleTiles[0].id).toBe('puzzles');
+    const puzzles = component.tiles[0];
+    component.moveDown(puzzles);
+    expect(component.visibleTiles[1].id).toBe('puzzles');
+    component.moveUp(puzzles);
+    expect(component.visibleTiles[0].id).toBe('puzzles');
+    const savedOrder: string[] = JSON.parse(localStorage.getItem('rookhub_dashboard_layout')!).order;
+    expect(savedOrder[0]).toBe('puzzles');
+  });
+
+  it('moveUp on the first tile is a no-op', () => {
+    const { component } = setup();
+    const before = component.visibleTiles.map(t => t.id);
+    component.moveUp(component.tiles[0]);
+    expect(component.visibleTiles.map(t => t.id)).toEqual(before);
+  });
+
   it('reset restores the default order and clears hidden tiles', () => {
     const { component } = setup();
     const puzzles = component.tiles.find(t => t.id === 'puzzles')!;

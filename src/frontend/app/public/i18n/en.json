@@ -252,8 +252,10 @@
       "customize": "Customize",
       "done": "Done",
       "reset": "Reset",
-      "hint": "Drag tiles to reorder; use the eye toggle to show or hide them.",
+      "hint": "Toggle the eye to show or hide a tile; reorder with the arrows or by drag & drop.",
       "dragAria": "Drag to reorder tile",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
       "hideAria": "Hide tile",
       "showAria": "Show tile"
     }

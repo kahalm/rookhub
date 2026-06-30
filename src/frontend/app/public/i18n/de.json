@@ -252,8 +252,10 @@
       "customize": "Anpassen",
       "done": "Fertig",
       "reset": "Zurücksetzen",
-      "hint": "Kacheln zum Sortieren ziehen; mit dem Augen-Schalter ein- oder ausblenden.",
+      "hint": "Mit dem Auge eine Kachel ein-/ausblenden; mit den Pfeilen oder per Drag & Drop sortieren.",
       "dragAria": "Kachel zum Sortieren ziehen",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
       "hideAria": "Kachel ausblenden",
       "showAria": "Kachel einblenden"
     }
