@@ -32,6 +32,15 @@ describe('parseShareViewParams', () => {
     expect(r.themeMode).toBe('crazy');
     expect(r.visualization).toBe(3);
   });
+  it('anarchy=max setzt Crazy-Brett UND erzwingt En passant', () => {
+    const r = parseShareViewParams(qp({ anarchy: 'max' }));
+    expect(r.themeMode).toBe('crazy');
+    expect(r.enPassantForced).toBeTrue();
+  });
+  it('ohne anarchy kein enPassantForced', () => {
+    expect(parseShareViewParams(qp({})).enPassantForced).toBeUndefined();
+    expect(parseShareViewParams(qp({ anarchy: 'mild' })).enPassantForced).toBeUndefined();
+  });
 });
 
 describe('board-theme.util', () => {

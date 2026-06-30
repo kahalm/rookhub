@@ -30,6 +30,8 @@ export abstract class BasePuzzleSolver {
   orientation: Color = 'white';
   turnColor: Color = 'white';
   dests: Map<Key, Key[]> = new Map();
+  /** Anarchy-Modus (`?anarchy=max`): erzwingt En passant, wenn verfügbar (schränkt `dests` ein). */
+  enPassantForced = false;
   lastMove?: [Key, Key];
   isCheck = false;
 
@@ -445,7 +447,7 @@ export abstract class BasePuzzleSolver {
     this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
     this.isCheck = this.chess.isCheck();
     const interactive = (this.state === 'AWAITING_USER_MOVE' || this.state === 'PLAYING') && this.turnColor === this.orientation;
-    this.dests = interactive ? calcDests(this.chess) : new Map();
+    this.dests = interactive ? calcDests(this.chess, this.enPassantForced) : new Map();
   }
 
   // ===== Visualization Level 2-4: Countdown + Hide =====

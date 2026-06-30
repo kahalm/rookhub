@@ -57,6 +57,20 @@ describe('puzzle-move.util', () => {
       expect(dests.get('e2' as Key)).toContain('e4' as Key);
       expect(dests.get('g1' as Key)).toContain('f3' as Key);
     });
+
+    it('enPassantForced: nur der En-passant-Schlag bleibt erlaubt, wenn einer möglich ist', () => {
+      // Weiß Bauer e5, Schwarz gerade d7-d5 → en passant auf d6 möglich.
+      const fen = 'rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3';
+      const all = calcDests(new Chess(fen));
+      const forced = calcDests(new Chess(fen), true);
+      expect(all.size).toBeGreaterThan(1);          // normal viele Züge
+      expect(forced.size).toBe(1);                  // erzwungen: nur e5
+      expect(forced.get('e5' as Key)).toEqual(['d6' as Key]);
+    });
+
+    it('enPassantForced ohne verfügbares En passant lässt alle Züge zu', () => {
+      expect(calcDests(new Chess(), true).size).toBe(10);
+    });
   });
 
   describe('formatSanList', () => {

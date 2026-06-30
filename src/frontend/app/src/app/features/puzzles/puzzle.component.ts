@@ -255,6 +255,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
+    if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
 
     // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
     this.loadSettingsOpen();

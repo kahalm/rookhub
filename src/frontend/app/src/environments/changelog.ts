@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.213.1';
+export const APP_VERSION = '0.214.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.214.0", date: "2026-06-30", changes: [
+    { en: "Anarchy mode: append ?anarchy=max to any puzzle link (standard or course/book) for a bit of chaos — the board switches to the “crazy” randomly-coloured theme, and en passant is forced: whenever an en passant capture is available, it's the only move the board will let you play. Holy hell. Purely a transient view option from the link; it changes none of your saved settings.", de: "Anarchy-Modus: Hänge an einen beliebigen Puzzle-Link (Standard oder Kurs/Buch) `?anarchy=max` an für etwas Chaos — das Brett wird zum „Crazy“-Theme mit zufällig gefärbten Feldern, und en passant ist verpflichtend: sobald ein En-passant-Schlag möglich ist, lässt das Brett nur noch genau diesen Zug zu. Holy hell. Reine transiente Anzeige-Option aus dem Link; ändert keine gespeicherten Einstellungen." },
+  ]},
   { version: "0.213.1", date: "2026-06-30", changes: [
     { en: "Fix: the “Update (N)” banner now does the right thing for existing Chessable courses after the info-line change. Such a course's cached PGN predates the [%info] marker, so a local re-process would have bumped the version without ever marking the info lines (silently leaving them as quizzes). Chessable courses are now always refreshed via a full re-fetch instead of a local re-process — the only path that actually pulls in the info markers. Non-Chessable courses keep their lossless local re-process.", de: "Fix: Der „Aktualisieren (N)“-Knopf macht für bestehende Chessable-Kurse nach der Info-Linien-Änderung jetzt das Richtige. Das gecachte PGN eines solchen Kurses ist älter als der [%info]-Marker, ein lokales Reprocess hätte die Version hochgesetzt, ohne die Info-Linien je zu markieren (sie blieben still als Quiz). Chessable-Kurse werden jetzt immer per vollständigem Re-Fetch aktualisiert statt lokal aufbereitet — nur dieser Weg zieht die Info-Marker tatsächlich nach. Nicht-Chessable-Kurse behalten ihr verlustfreies lokales Reprocess." },
   ]},

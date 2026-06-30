@@ -566,6 +566,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
+    if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
   }
 
   /** Meldet das Ergebnis genau einmal an eine offene Buch-Challenge zurück (fire-and-forget). */

@@ -41,17 +41,22 @@ export function randomPieceSet(): string {
 export interface ShareViewParams {
   themeMode?: ThemeMode;
   visualization?: number;
+  /** Anarchy-Modus (`?anarchy=max`): wenn ein En-passant-Schlag möglich ist, ist er verpflichtend. */
+  enPassantForced?: boolean;
 }
 
 /**
  * Liest optionale Anzeige-Overrides aus den Query-Parametern eines (geteilten) Puzzle-Links:
  *  - `crazy=1`      → Brett-Theme-Modus „crazy"
  *  - `visualmode=N` → Visualisierungs-Stufe N (0–4)
+ *  - `anarchy=max`  → Crazy-Brett + en passant verpflichtend („en passant is forced")
  * Rein lesend; verändert KEINE gespeicherten Nutzereinstellungen (transient pro Aufruf).
  */
 export function parseShareViewParams(q: { get(key: string): string | null }): ShareViewParams {
   const out: ShareViewParams = {};
   if (q.get('crazy') === '1') out.themeMode = 'crazy';
+  // Anarchy: Crazy-Brett UND erzwungenes En passant.
+  if (q.get('anarchy') === 'max') { out.themeMode = 'crazy'; out.enPassantForced = true; }
   const vm = q.get('visualmode');
   if (vm != null && /^[0-4]$/.test(vm)) out.visualization = Number(vm);
   return out;

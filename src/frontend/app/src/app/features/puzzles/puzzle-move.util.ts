@@ -43,10 +43,19 @@ export function tryFreeMove(chess: Chess, orig: Key, dest: Key, promotion?: stri
   }
 }
 
-/** Legale Züge der aktuellen Stellung als chessground-dests-Map (from → [to,...]). */
-export function calcDests(chess: Chess): Map<Key, Key[]> {
+/**
+ * Legale Züge der aktuellen Stellung als chessground-dests-Map (from → [to,...]).
+ * <p>`enPassantForced` (Anarchy-Modus, `?anarchy=max`): Ist in der Stellung ein En-passant-Schlag
+ * möglich (chess.js-Flag `e`), werden NUR diese Züge zurückgegeben — „en passant is forced". Sonst
+ * (kein En passant verfügbar) bleiben alle legalen Züge erlaubt.</p>
+ */
+export function calcDests(chess: Chess, enPassantForced = false): Map<Key, Key[]> {
+  const moves = chess.moves({ verbose: true });
+  const list = enPassantForced && moves.some(m => (m.flags as string).includes('e'))
+    ? moves.filter(m => (m.flags as string).includes('e'))
+    : moves;
   const dests = new Map<Key, Key[]>();
-  for (const m of chess.moves({ verbose: true })) {
+  for (const m of list) {
     const from = m.from as Key;
     if (!dests.has(from)) dests.set(from, []);
     dests.get(from)!.push(m.to as Key);
