@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.3';
+export const APP_VERSION = '0.203.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.4", date: "2026-06-30", changes: [
+    { en: "Saved games are now deduplicated at the database level (code review): a unique index on (user, source, external id) guarantees the same external game can't be stored twice, even on a parallel double-click — previously only a best-effort pre-check guarded it (migration AddSavedGameUniqueDedup, which also removes any pre-existing duplicates; manual saves without an external id stay allowed). The save path handles the constraint gracefully and returns the existing game.", de: "Gespeicherte Partien werden jetzt auf DB-Ebene dedupliziert (Code Review): Ein Unique-Index auf (User, Quelle, externe Id) garantiert, dass dieselbe externe Partie nicht doppelt gespeichert werden kann — auch nicht bei parallelem Doppelklick; vorher schützte nur eine Best-Effort-Vorabprüfung (Migration AddSavedGameUniqueDedup, entfernt zugleich etwaige Alt-Duplikate; manuelle Saves ohne externe Id bleiben erlaubt). Der Speicherpfad fängt die Constraint-Verletzung ab und gibt die bestehende Partie zurück." },
+  ]},
   { version: "0.203.3", date: "2026-06-30", changes: [
     { en: "Performance of the daily auto-subscription background job (code review): it now uses a fresh DB context per user instead of sharing one context across the whole run (the change tracker grew unbounded and could leak entities between users on a partial failure), and it loads each user's friend/profile set once per user instead of re-querying it for every subscribed tournament. No behavior change — purely fewer queries and bounded memory.", de: "Performance des täglichen Auto-Abo-Hintergrundjobs (Code Review): Er nutzt jetzt einen frischen DB-Kontext pro User statt einen gemeinsamen für den ganzen Lauf (der ChangeTracker wuchs unbeschränkt und konnte bei Teilfehlern Entitäten zwischen Usern verschleppen) und lädt das Freundes-/Profil-Set je User nur EINMAL statt für jedes abonnierte Turnier neu. Kein Verhaltensänderung — nur weniger Queries und beschränkter Speicher." },
   ]},

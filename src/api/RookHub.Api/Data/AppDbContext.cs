@@ -523,9 +523,12 @@ public class AppDbContext : DbContext
             e.Property(g => g.SourceUrl).HasMaxLength(1000);
             e.Property(g => g.ShareToken).HasMaxLength(32);
             e.HasIndex(g => g.ShareToken).IsUnique();
-            // Auflistung je User (neueste zuerst) + Dedup-Lookup (UserId, Source, ExternalId).
+            // Auflistung je User (neueste zuerst).
             e.HasIndex(g => new { g.UserId, g.CreatedAt });
-            e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId });
+            // Dedup hart auf DB-Ebene erzwingen (statt nur check-then-insert): dieselbe externe Partie kann
+            // nicht doppelt gespeichert werden, auch nicht bei parallelem Doppel-Klick. MySQL behandelt
+            // NULL-ExternalId als verschieden → mehrere Saves OHNE externe Id (manuell) bleiben erlaubt.
+            e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId }).IsUnique();
         });
 
         modelBuilder.Entity<MenuItemSetting>(e =>

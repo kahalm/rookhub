@@ -73,7 +73,20 @@ public class SavedGameService
             CreatedAt = DateTime.UtcNow,
         };
         _db.SavedGames.Add(entity);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (externalId != null)
+        {
+            // Race: ein paralleler Save derselben externen Partie hat den Unique-Index zuerst belegt.
+            // Idempotent: getrackten Versuch verwerfen und die bereits gespeicherte Partie zurückgeben.
+            _db.ChangeTracker.Clear();
+            var existing = await _db.SavedGames.AsNoTracking()
+                .FirstOrDefaultAsync(g => g.UserId == userId && g.Source == source && g.ExternalId == externalId);
+            if (existing != null) return MapDetail(existing);
+            throw;
+        }
         return MapDetail(entity);
     }
 

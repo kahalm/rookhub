@@ -52,6 +52,21 @@ public class GamesControllerTests : IDisposable
         });
 
     [Fact]
+    public async Task Save_SameExternalId_DedupsToSingleGame()
+    {
+        var user = await CreateUserAsync();
+        var input = new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b", Result = "0-1", ExternalId = "ext-123",
+        };
+        var first = await _service.SaveAsync(user.Id, input);
+        var second = await _service.SaveAsync(user.Id, input);
+
+        Assert.Equal(first.Id, second.Id);   // dieselbe Partie zurückgegeben
+        Assert.Equal(1, _db.SavedGames.Count(g => g.UserId == user.Id && g.ExternalId == "ext-123"));
+    }
+
+    [Fact]
     public async Task List_ReturnsOwnGamesNewestFirst()
     {
         var user = await CreateUserAsync();
