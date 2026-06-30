@@ -54,10 +54,12 @@ public class TournamentMonitorController : BaseApiController
         int knownRounds = 0;
         int dbId = 0;
         var result = await _proxy.GetAsync($"/api/tournaments/{tournamentId}");
-        if (result.TryGetProperty("totalRounds", out var totalRoundsProp))
-            knownRounds = totalRoundsProp.GetInt32();
-        if (result.TryGetProperty("id", out var idProp))
-            dbId = idProp.GetInt32();
+        // TryGetInt32 statt GetInt32: liefert der Crawler das Feld als String/Null/anderen Typ, würde
+        // GetInt32 werfen → unbehandelter 500 statt sauberem Fallback (knownRounds bleibt 0, dbId-Check greift).
+        if (result.TryGetProperty("totalRounds", out var totalRoundsProp) && totalRoundsProp.TryGetInt32(out var tr))
+            knownRounds = tr;
+        if (result.TryGetProperty("id", out var idProp) && idProp.TryGetInt32(out var did))
+            dbId = did;
 
         // Ohne aufloesbare Crawler-DB-Id wuerde der Hintergrund-Monitor dauerhaft
         // /api/tournaments/0/rounds/check pollen -> erst gar nicht aktivieren.
@@ -73,8 +75,8 @@ public class TournamentMonitorController : BaseApiController
         try
         {
             var checkResult = await _proxy.GetAsync($"/api/tournaments/{tournamentId}/rounds/check");
-            if (checkResult.TryGetProperty("knownRounds", out var kr))
-                knownRounds = kr.GetInt32();
+            if (checkResult.TryGetProperty("knownRounds", out var kr) && kr.TryGetInt32(out var krv))
+                knownRounds = krv;
         }
         catch (Exception ex)
         {

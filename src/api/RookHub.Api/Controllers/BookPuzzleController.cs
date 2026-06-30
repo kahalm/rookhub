@@ -31,7 +31,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
         var dto = await _service.GetByIdAsync(id);
@@ -39,7 +39,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [HttpGet("{id}/next")]
+    [HttpGet("{id:int}/next")]
     public async Task<IActionResult> GetNextInBook(int id)
     {
         try { return Ok(await _service.GetNextInBookAsync(id)); }
@@ -47,7 +47,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [HttpGet("{id}/random")]
+    [HttpGet("{id:int}/random")]
     public async Task<IActionResult> GetRandomInBook(int id)
     {
         try { return Ok(await _service.GetRandomInBookAsync(id)); }
@@ -55,7 +55,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [Authorize]
-    [HttpPost("{id}/attempt")]
+    [HttpPost("{id:int}/attempt")]
     public async Task<IActionResult> RecordAttempt(int id, [FromBody] RecordBookAttemptDto dto)
     {
         try { await _service.RecordAttemptAsync(id, GetUserId(), dto); return Ok(); }
@@ -63,7 +63,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [HttpPost("{id}/attempt/anonymous")]
+    [HttpPost("{id:int}/attempt/anonymous")]
     public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] RecordAnonymousBookAttemptDto dto)
     {
         try { await _service.RecordAnonymousAttemptAsync(id, dto); return Ok(); }
@@ -72,7 +72,7 @@ public class BookPuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [HttpGet("{id}/results")]
+    [HttpGet("{id:int}/results")]
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
         => Ok(await _service.GetResultsAsync(id, since));
 
@@ -80,7 +80,7 @@ public class BookPuzzleController : BaseApiController
     /// (eingeloggt via Token, sonst via anonymer SessionId) und liefert die aktuellen Zähler.
     /// <c>solved=false</c> deckt Fehlzug/Aufgeben/Reset ab. Pro Besucher zählt nur der erste Versuch.</summary>
     [AllowAnonymous]
-    [HttpPost("{id}/track")]
+    [HttpPost("{id:int}/track")]
     public async Task<ActionResult<SharedPuzzleCountsDto>> Track(int id, [FromBody] RecordSharedAttemptDto dto)
     {
         var userId = GetUserIdOrNull();
@@ -101,7 +101,7 @@ public class BookPuzzleController : BaseApiController
 
     /// <summary>Aktuelle „Track solves"-Zähler (solved/failed, Erstversuch je Besucher) eines geteilten Puzzles.</summary>
     [AllowAnonymous]
-    [HttpGet("{id}/track-counts")]
+    [HttpGet("{id:int}/track-counts")]
     public async Task<ActionResult<SharedPuzzleCountsDto>> TrackCounts(int id)
         => Ok(await _service.GetSharedCountsAsync(id));
 
@@ -245,7 +245,7 @@ public class BookPuzzleController : BaseApiController
 
     /// <summary>Admin: Tipps eines einzelnen Buch-Puzzles (neu) generieren — synchron, fürs Testen.
     /// 400 wenn kein API-Key konfiguriert ist; 404 wenn das Puzzle fehlt; sonst die generierten Tipps.</summary>
-    [HttpPost("/api/admin/book-puzzles/{id}/regenerate-hints")]
+    [HttpPost("/api/admin/book-puzzles/{id:int}/regenerate-hints")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> RegenerateHints(int id)
     {
@@ -259,7 +259,7 @@ public class BookPuzzleController : BaseApiController
     /// <summary>Markiert die Tipps eines Buch-Puzzles als „dumm/schlecht" (oder hebt das auf) —
     /// Review-Flag fürs spätere gezielte Neu-Generieren. Darf jeder eingeloggte User setzen.
     /// 404 wenn das Puzzle fehlt.</summary>
-    [HttpPost("{id}/flag-hints")]
+    [HttpPost("{id:int}/flag-hints")]
     [Authorize]
     public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
     {

@@ -52,7 +52,23 @@ public class RepertoireTrainingService
 
         Schedule(card, req.Grade, DateTime.UtcNow);
         card.ExpectedMove = req.ExpectedMove;
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Race: zwei schnelle Reviews derselben Karte (Auto-Advance des Trainers feuert rasch) →
+            // der Unique-Index (UserId, RepertoireId, CardKey) hat den parallelen Insert abgefangen.
+            // Idempotent: getrackten Neu-Insert verwerfen, vorhandene Karte laden, Planung erneut anwenden.
+            _db.ChangeTracker.Clear();
+            card = await _db.RepertoireCardStates
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.CardKey, ct);
+            if (card == null) throw;
+            Schedule(card, req.Grade, DateTime.UtcNow);
+            card.ExpectedMove = req.ExpectedMove;
+            await _db.SaveChangesAsync(ct);
+        }
 
         return new RepertoireCardStateDto(
             card.CardKey, card.ExpectedMove, card.Reps, card.Lapses, card.IntervalDays, card.Ease, card.DueAt, card.LastReviewedAt);

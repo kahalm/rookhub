@@ -7,8 +7,11 @@ namespace RookHub.Api.DTOs;
 /// Quelle bestimmt, ob <see cref="PuzzleId"/> ein Standard- oder ein Buch-Puzzle referenziert.</summary>
 public class CreateChallengeBatchDto
 {
+    // Obergrenze gegen Missbrauch: pro Challenge-Batch eine begrenzte Empfängerliste (der Service
+    // iteriert je Empfänger + legt Notifications an). 50 ist weit über jeder realen Freundeszahl im Menü.
     [Required]
     [MinLength(1)]
+    [MaxLength(50)]
     public List<int> ToUserIds { get; set; } = new();
 
     [Required]

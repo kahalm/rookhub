@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.4';
+export const APP_VERSION = '0.203.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.5", date: "2026-06-30", changes: [
+    { en: "Small robustness fixes (code review): challenge batches are capped at 50 recipients (was unbounded → a DoS vector); the book-puzzle routes now carry an explicit integer id constraint; the repertoire trainer's review save handles the rare concurrent-insert race on the same card gracefully (reloads + reapplies instead of erroring); and the tournament-monitor activation reads crawler round numbers defensively (a non-numeric field no longer turns into a 500). Two earlier review items turned out to be already handled in the current code (attempt time/hint values are clamped server-side; list endpoints already clamp take/page).", de: "Kleine Robustheits-Fixes (Code Review): Challenge-Batches sind auf 50 Empfänger begrenzt (vorher unbegrenzt → DoS-Vektor); die Buch-Puzzle-Routen tragen jetzt einen expliziten Ganzzahl-Id-Constraint; das Speichern im Repertoire-Trainer fängt den seltenen Parallel-Insert derselben Karte sauber ab (lädt neu + wendet erneut an, statt zu scheitern); und die Turnier-Monitor-Aktivierung liest Crawler-Rundenzahlen defensiv (ein nicht-numerisches Feld wird nicht mehr zum 500). Zwei frühere Review-Punkte waren im aktuellen Code bereits erledigt (Versuchs-Zeit/Tipp-Werte serverseitig geklemmt; Listen-Endpoints klemmen take/page bereits)." },
+  ]},
   { version: "0.203.4", date: "2026-06-30", changes: [
     { en: "Saved games are now deduplicated at the database level (code review): a unique index on (user, source, external id) guarantees the same external game can't be stored twice, even on a parallel double-click — previously only a best-effort pre-check guarded it (migration AddSavedGameUniqueDedup, which also removes any pre-existing duplicates; manual saves without an external id stay allowed). The save path handles the constraint gracefully and returns the existing game.", de: "Gespeicherte Partien werden jetzt auf DB-Ebene dedupliziert (Code Review): Ein Unique-Index auf (User, Quelle, externe Id) garantiert, dass dieselbe externe Partie nicht doppelt gespeichert werden kann — auch nicht bei parallelem Doppelklick; vorher schützte nur eine Best-Effort-Vorabprüfung (Migration AddSavedGameUniqueDedup, entfernt zugleich etwaige Alt-Duplikate; manuelle Saves ohne externe Id bleiben erlaubt). Der Speicherpfad fängt die Constraint-Verletzung ab und gibt die bestehende Partie zurück." },
   ]},
