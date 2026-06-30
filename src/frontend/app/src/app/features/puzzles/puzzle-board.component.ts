@@ -123,6 +123,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private vizFrom?: Key;
   /** Aktuell im Viz-Modus angetapptes Feld — rendert den grünen Overlay-Ring oben drüber. */
   vizSelectedSquare: Key | null = null;
+  // Geste-Tracking im Viz-Modus (Tap vs. Ziehen).
+  private vizPointerStartKey?: Key;
+  private vizPointerStartX = 0;
+  private vizPointerStartY = 0;
+  /** Mindest-Fingerweg (px), ab dem eine Geste als Ziehen statt Tap gilt. */
+  private static readonly VIZ_DRAG_THRESHOLD_PX = 10;
 
   // Promotion overlay state
   showPromotionOverlay = false;
@@ -146,28 +152,63 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
     this.initBoard();
-    // Eigener Capture-Listener für den Visualisierungs-Modus: erfasst jeden Klick als
+    // Eigene Capture-Listener für den Visualisierungs-Modus: erfassen jede Geste als
     // Brett-Koordinate (unabhängig davon, welche Figur auf dem eingefrorenen Brett steht).
-    this.boardEl.nativeElement.addEventListener('pointerdown', this.onVizPointer, true);
+    // pointerdown merkt sich das Startfeld, pointerup entscheidet Tap vs. Ziehen.
+    this.boardEl.nativeElement.addEventListener('pointerdown', this.onVizPointerDown, true);
+    this.boardEl.nativeElement.addEventListener('pointerup', this.onVizPointerUp, true);
   }
 
-  private onVizPointer = (ev: PointerEvent): void => {
-    if (!this.visualization || !this.ground) return;
-    ev.preventDefault();
-    ev.stopPropagation();              // verhindert, dass Chessground den Klick (Figur wählen) verarbeitet
+  /** Rechnet einen Pointer-Event in ein Brettfeld um (oder null, wenn außerhalb/nicht vermessbar). */
+  private keyFromPointer(ev: PointerEvent): Key | null {
     const rect = this.boardEl.nativeElement.getBoundingClientRect();
-    if (rect.width === 0) return;
+    if (rect.width === 0) return null;
     const x = ev.clientX - rect.left;
     const y = ev.clientY - rect.top;
-    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
     let col = Math.floor(x / (rect.width / 8));   // 0..7 von links
     let row = Math.floor(y / (rect.height / 8));  // 0..7 von oben
     col = Math.max(0, Math.min(7, col));
     row = Math.max(0, Math.min(7, row));
     const fileIdx = this.orientation === 'white' ? col : 7 - col;
     const rankIdx = this.orientation === 'white' ? 7 - row : row;
-    const key = (String.fromCharCode(97 + fileIdx) + (rankIdx + 1)) as Key;
+    return (String.fromCharCode(97 + fileIdx) + (rankIdx + 1)) as Key;
+  }
 
+  private onVizPointerDown = (ev: PointerEvent): void => {
+    if (!this.visualization || !this.ground) return;
+    ev.preventDefault();
+    ev.stopPropagation();              // verhindert, dass Chessground den Klick (Figur wählen) verarbeitet
+    const key = this.keyFromPointer(ev);
+    this.vizPointerStartKey = key ?? undefined;
+    this.vizPointerStartX = ev.clientX;
+    this.vizPointerStartY = ev.clientY;
+    // Pointer einfangen, damit das pointerup auch dann ankommt, wenn der Finger das Brett
+    // beim Ziehen kurz verlässt.
+    if (key) { try { this.boardEl.nativeElement.setPointerCapture(ev.pointerId); } catch { /* nicht unterstützt */ } }
+  };
+
+  private onVizPointerUp = (ev: PointerEvent): void => {
+    if (!this.visualization || !this.ground) return;
+    const startKey = this.vizPointerStartKey;
+    this.vizPointerStartKey = undefined;
+    if (!startKey) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const endKey = this.keyFromPointer(ev) ?? startKey;
+    const movedFar = Math.hypot(ev.clientX - this.vizPointerStartX, ev.clientY - this.vizPointerStartY)
+                     >= PuzzleBoardComponent.VIZ_DRAG_THRESHOLD_PX;
+    // Ziehgeste (Finger merklich bewegt UND auf einem anderen Feld losgelassen) → Start→Ziel
+    // direkt als Zug werten, damit „Figur ziehen" im Viz-Modus genauso geht wie Antippen.
+    if (movedFar && endKey !== startKey) {
+      this.handleVizDrag(startKey, endKey);
+    } else {
+      this.handleVizTap(startKey);
+    }
+  };
+
+  /** Zwei-Tap-Auswahl: 1. Tap wählt das Ausgangsfeld, 2. Tap das Zielfeld. */
+  private handleVizTap(key: Key): void {
     if (!this.vizFrom) {
       this.vizFrom = key;
       this.markVizSelection(key);
@@ -196,7 +237,25 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       return;
     }
     this.moveMade.emit({ orig, dest: key });
-  };
+  }
+
+  /** Ziehgeste Start→Ziel: gleiche Legalitäts-/Promotion-Prüfung wie der 2. Tap. */
+  private handleVizDrag(orig: Key, dest: Key): void {
+    const promo = this.detectVizPromotion(orig, dest);
+    if (!this.isVizLegalMove(orig, dest, promo)) {
+      // Illegale Ziehgeste → wie ein Tap das Startfeld auswählen (Orientierung bleibt erhalten).
+      this.vizFrom = orig;
+      this.markVizSelection(orig);
+      return;
+    }
+    this.vizFrom = undefined;
+    this.clearVizSelection();
+    if (promo) {
+      this.showVizPromotionDialog(orig, dest);
+      return;
+    }
+    this.moveMade.emit({ orig, dest });
+  }
 
   /**
    * Markiert die Viz-Auswahl visuell. Der primäre Marker ist ein DOM-Overlay-`<div>`
@@ -520,7 +579,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   ngOnDestroy(): void {
     this.destroyed = true;
     if (this.premoveTimer) clearTimeout(this.premoveTimer);
-    this.boardEl?.nativeElement?.removeEventListener('pointerdown', this.onVizPointer, true);
+    this.boardEl?.nativeElement?.removeEventListener('pointerdown', this.onVizPointerDown, true);
+    this.boardEl?.nativeElement?.removeEventListener('pointerup', this.onVizPointerUp, true);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }

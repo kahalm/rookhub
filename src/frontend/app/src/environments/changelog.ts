@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.201.1';
+export const APP_VERSION = '0.201.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.201.2", date: "2026-06-30", changes: [
+    { en: "Visualization/blindfold puzzles: you can now drag pieces as well, not just tap them. A drag from one square to another is treated exactly like tapping the piece and then the target square (same legality and promotion handling). This fixes the impression on phones that \"the pieces don't move\" — dragging now works too.", de: "Visualisierungs-/Blind-Puzzles: Figuren lassen sich jetzt auch ziehen, nicht nur antippen. Eine Ziehgeste von einem Feld zum anderen wird genau wie „Figur antippen, dann Zielfeld antippen\" behandelt (gleiche Legalitäts- und Umwandlungs-Logik). Das behebt den Eindruck am Handy, dass „sich die Figuren nicht bewegen\" — Ziehen funktioniert jetzt ebenfalls." },
+  ]},
   { version: "0.201.1", date: "2026-06-30", changes: [
     { en: "Removed the Chessable import/download queue from the Courses page — it now only appears on the Chessable tab where it belongs. The Courses page is back to just the reprocess banner.", de: "Die Chessable-Import-/Download-Warteschlange von der Kurse-Seite entfernt — sie erscheint jetzt nur noch im Chessable-Tab, wo sie hingehört. Die Kurse-Seite zeigt wieder nur das Aktualisieren-Banner." },
   ]},
