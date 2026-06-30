@@ -1,7 +1,7 @@
 import {
   BOARD_THEMES, PIECE_SETS, randomBoardTheme, randomPieceSet,
   applyThemeMode, clearCrazyStyles, applyVisualizationHide, clearVisualizationHide,
-  parseShareViewParams
+  parseShareViewParams, paintCrazyPieces, clearCrazyPieces
 } from './board-theme.util';
 
 // Mini-ParamMap-Stub (nur .get wird gebraucht).
@@ -69,11 +69,12 @@ describe('board-theme.util', () => {
       expect(PIECE_SETS.some(p => p.key === res.pieceSet)).toBeTrue();
     });
 
-    it('crazy gibt _crazy zurück und injiziert die Crazy-Style-Tags', () => {
+    it('crazy gibt _crazy zurück und injiziert das Brett-Style-Tag (Figuren werden pro Stück gemalt)', () => {
       const res = applyThemeMode('crazy', 'brown', 'cburnett');
       expect(res).toEqual({ boardTheme: '_crazy', pieceSet: '_crazy' });
       expect(document.getElementById('crazy-board-css')).not.toBeNull();
-      expect(document.getElementById('crazy-piece-css')).not.toBeNull();
+      // Kein globales Figuren-CSS mehr — die Figuren bekommen Inline-Styles via paintCrazyPieces().
+      expect(document.getElementById('crazy-piece-css')).toBeNull();
     });
 
     it('fixed räumt zuvor angelegte Crazy-Styles wieder ab', () => {
@@ -99,6 +100,63 @@ describe('board-theme.util', () => {
       applyVisualizationHide(3);
       clearVisualizationHide();
       expect(document.getElementById('viz-hide-css')).toBeNull();
+    });
+  });
+
+  describe('paintCrazyPieces (jede Figur einzeln gewürfelt)', () => {
+    function board(...specs: string[]): HTMLElement {
+      const root = document.createElement('div');
+      const cg = document.createElement('cg-board');
+      for (const s of specs) {
+        const p = document.createElement('piece');
+        p.className = s;
+        cg.appendChild(p);
+      }
+      root.appendChild(cg);
+      return root;
+    }
+    const setKeys = PIECE_SETS.map(p => p.key);
+    function setOf(el: HTMLElement): string | null {
+      const m = el.style.backgroundImage.match(/\/piece\/([^/]+)\//);
+      return m ? m[1] : null;
+    }
+
+    it('gibt jeder Figur ein gültiges Figurenset als Inline-Hintergrund mit korrektem Rollen-Code', () => {
+      const root = board('white pawn', 'black knight');
+      paintCrazyPieces(root);
+      const [wp, bn] = Array.from(root.querySelectorAll<HTMLElement>('piece'));
+      expect(setKeys).toContain(setOf(wp)!);
+      expect(wp.style.backgroundImage).toContain('/wP.svg');
+      expect(bn.style.backgroundImage).toContain('/bN.svg');
+    });
+
+    it('hält das Set je Element stabil über mehrere Aufrufe (WeakMap)', () => {
+      const root = board('white pawn');
+      paintCrazyPieces(root);
+      const first = setOf(root.querySelector('piece') as HTMLElement);
+      paintCrazyPieces(root);
+      expect(setOf(root.querySelector('piece') as HTMLElement)).toBe(first);
+    });
+
+    it('würfelt unabhängig pro Element (zwei gleiche Bauern können verschiedene Sets haben)', () => {
+      // Über viele gleiche Bauern ist die Wahrscheinlichkeit, dass NICHT alle identisch sind, ~1.
+      const root = board(...Array(12).fill('white pawn'));
+      paintCrazyPieces(root);
+      const sets = new Set(Array.from(root.querySelectorAll<HTMLElement>('piece')).map(setOf));
+      expect(sets.size).toBeGreaterThan(1);
+    });
+
+    it('lässt Geister-Figuren (Drag-Klon) unangetastet', () => {
+      const root = board('white pawn ghost');
+      paintCrazyPieces(root);
+      expect((root.querySelector('piece') as HTMLElement).style.backgroundImage).toBe('');
+    });
+
+    it('clearCrazyPieces entfernt die Inline-Hintergründe wieder', () => {
+      const root = board('white pawn', 'black queen');
+      paintCrazyPieces(root);
+      clearCrazyPieces(root);
+      root.querySelectorAll<HTMLElement>('piece').forEach(el => expect(el.style.backgroundImage).toBe(''));
     });
   });
 });

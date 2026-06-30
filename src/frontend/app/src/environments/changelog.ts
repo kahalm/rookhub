@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.214.0';
+export const APP_VERSION = '0.215.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.215.0", date: "2026-06-30", changes: [
+    { en: "Crazy board now rolls the dice for every single piece individually: instead of all white pawns (or all knights, etc.) sharing one random piece set, each piece on the board gets its own randomly-chosen set. A piece keeps its look while it moves; a fresh position (or resize) re-rolls. Applies to crazy theme and ?anarchy=max.", de: "Das Crazy-Brett würfelt jetzt jede einzelne Figur eigens aus: statt dass alle weißen Bauern (oder alle Springer usw.) dasselbe Zufallsset teilen, bekommt jede Figur auf dem Brett ihr eigenes zufälliges Figurenset. Eine Figur behält ihr Aussehen beim Ziehen; eine neue Stellung (oder ein Resize) würfelt neu. Gilt für das Crazy-Theme und `?anarchy=max`." },
+  ]},
   { version: "0.214.0", date: "2026-06-30", changes: [
     { en: "Anarchy mode: append ?anarchy=max to any puzzle link (standard or course/book) for a bit of chaos — the board switches to the “crazy” randomly-coloured theme, and en passant is forced: whenever an en passant capture is available, it's the only move the board will let you play. Holy hell. Purely a transient view option from the link; it changes none of your saved settings.", de: "Anarchy-Modus: Hänge an einen beliebigen Puzzle-Link (Standard oder Kurs/Buch) `?anarchy=max` an für etwas Chaos — das Brett wird zum „Crazy“-Theme mit zufällig gefärbten Feldern, und en passant ist verpflichtend: sobald ein En-passant-Schlag möglich ist, lässt das Brett nur noch genau diesen Zug zu. Holy hell. Reine transiente Anzeige-Option aus dem Link; ändert keine gespeicherten Einstellungen." },
   ]},

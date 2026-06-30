@@ -8,6 +8,7 @@ import { Api } from 'chessground/api';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Chess, Square } from 'chess.js';
+import { paintCrazyPieces, clearCrazyPieces } from './board-theme.util';
 
 type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
@@ -467,7 +468,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     });
 
     // After init, force a redraw to ensure correct dimensions
-    requestAnimationFrame(() => this.ground?.redrawAll());
+    requestAnimationFrame(() => { this.ground?.redrawAll(); this.repaintCrazyPieces(); });
 
     this.resizeObserver = new ResizeObserver(() => {
       const hostEl = el.parentElement as HTMLElement;
@@ -477,8 +478,24 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         el.style.height = `${w}px`;
       }
       this.ground?.redrawAll();
+      this.repaintCrazyPieces();   // redrawAll baut die Figuren neu → erneut würfeln/malen
     });
     this.resizeObserver.observe(el.parentElement || el);
+  }
+
+  /**
+   * Crazy-Modus: jede Figur einzeln zufällig einfärben (statt „alle Bauern gleich"). Wird nach jedem
+   * Brett-Render aufgerufen; bei anderem Figurenset werden etwaige Inline-Hintergründe wieder entfernt.
+   * rAF, damit chessground die <piece>-Elemente schon angelegt/verschoben hat.
+   */
+  private repaintCrazyPieces(): void {
+    const root = this.boardEl?.nativeElement;
+    if (!root) return;
+    requestAnimationFrame(() => {
+      if (this.destroyed) return;
+      if (this.pieceSet === '_crazy') paintCrazyPieces(root);
+      else clearCrazyPieces(root);
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -517,6 +534,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if ('vizOpponentArrow' in changes || 'visualization' in changes) {
       this.applyVizOpponentArrow();
     }
+
+    // Figuren nach jedem Render neu einfärben (Crazy = pro Stück eigenes Set; sonst Inline-Reset).
+    this.repaintCrazyPieces();
 
     // Execute pending premove when transitioning from THINKING to PLAYING
     if (wasPremovable && isNowInteractive && hasPremove) {

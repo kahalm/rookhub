@@ -94,31 +94,40 @@ function applyCrazyBoard(): void {
   style.textContent = `.board-theme-_crazy cg-board { background-image: url("${dataUri}"); background-size: cover; }`;
 }
 
-/** Piece roles and colors for CSS generation */
+/** Figurenrollen + Datei-Codes/Farb-Präfixe für die Crazy-Figuren-Zufallswahl. */
 const PIECE_ROLES = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king'] as const;
 const PIECE_CODES: Record<string, string> = { pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', king: 'K' };
-const PIECE_COLORS = ['white', 'black'] as const;
 const COLOR_PREFIX: Record<string, string> = { white: 'w', black: 'b' };
 
-/** CSS for crazy pieces — each role+color combo gets a random piece set. */
-function applyCrazyPieces(): void {
-  let style = document.getElementById('crazy-piece-css') as HTMLStyleElement | null;
-  if (!style) {
-    style = document.createElement('style');
-    style.id = 'crazy-piece-css';
-    document.head.appendChild(style);
-  }
-  let css = '';
-  for (const color of PIECE_COLORS) {
-    for (const role of PIECE_ROLES) {
-      const set = randomItem(PIECE_SETS).key;
-      const code = PIECE_CODES[role];
-      const prefix = COLOR_PREFIX[color];
-      // High specificity to override default cburnett and piece-set-* rules
-      css += `.piece-set-_crazy cg-board piece.${role}.${color} { background-image: url('/piece/${set}/${prefix}${code}.svg') !important; }\n`;
-    }
-  }
-  style.textContent = css;
+/**
+ * Pro DOM-Figur ein einzeln gewürfeltes Figurenset (stabil, solange chessground das <piece>-Element
+ * wiederverwendet → beim Ziehen behält eine Figur „ihr" Set; ein Komplett-Neuaufbau des Bretts
+ * [neues Puzzle, Resize/redrawAll] würfelt neu). Ersetzt das frühere „pro Rolle+Farbe ein Set"
+ * (= alle Bauern gleich). Das GC räumt entfernte Figuren automatisch ab.
+ */
+const crazyPieceSets = new WeakMap<Element, string>();
+
+/**
+ * Malt im Crazy-Modus JEDE Figur einzeln: jedes <piece>-Element bekommt ein eigenes, zufälliges
+ * Figurenset als Inline-Hintergrund. Muss nach jedem Brett-Render aufgerufen werden (Board-Component),
+ * weil chessground beim Rendern Inline-Styles nicht selbst setzt. Idempotent (WeakMap hält das Set fest).
+ */
+export function paintCrazyPieces(root: HTMLElement): void {
+  root.querySelectorAll<HTMLElement>('cg-board piece').forEach(el => {
+    if (el.classList.contains('ghost')) return;   // Drag-/Animations-Klon nicht anfassen
+    const color = el.classList.contains('white') ? 'white' : el.classList.contains('black') ? 'black' : null;
+    const role = PIECE_ROLES.find(r => el.classList.contains(r));
+    if (!color || !role) return;
+    let set = crazyPieceSets.get(el);
+    if (!set) { set = randomItem(PIECE_SETS).key; crazyPieceSets.set(el, set); }
+    const url = `url("/piece/${set}/${COLOR_PREFIX[color]}${PIECE_CODES[role]}.svg")`;
+    if (el.style.backgroundImage !== url) el.style.backgroundImage = url;
+  });
+}
+
+/** Entfernt die im Crazy-Modus gesetzten Inline-Hintergründe wieder (Wechsel zurück zu fixed/random). */
+export function clearCrazyPieces(root: HTMLElement): void {
+  root.querySelectorAll<HTMLElement>('cg-board piece').forEach(el => { el.style.backgroundImage = ''; });
 }
 
 export function clearCrazyStyles(): void {
@@ -181,8 +190,8 @@ export function applyThemeMode(
     clearCrazyStyles();
     return { boardTheme: randomBoardTheme(), pieceSet: randomPieceSet() };
   }
-  // crazy
+  // crazy: zufälliges Brett-SVG; die Figuren werden pro Stück vom Board-Component via
+  // paintCrazyPieces() inline gewürfelt (nicht mehr per Rolle+Farbe-CSS).
   applyCrazyBoard();
-  applyCrazyPieces();
   return { boardTheme: '_crazy', pieceSet: '_crazy' };
 }
