@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.11';
+export const APP_VERSION = '0.203.12';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.12", date: "2026-06-30", changes: [
+    { en: "piratechess VPN concurrency fixes (code review, backend-only): the per-IP health table is now capped (no unbounded memory growth over long uptimes); a manual VPN rotation now rotates tunnels one after another instead of all at once (previously all tunnels went down together for a few seconds, freezing a running import); and a soft-block is now counted against the IP that actually caused it (a timing race could otherwise attribute it to the next IP or drop it, skewing the \"repeatedly bad IP\" detection). 253 piratechess tests green.", de: "piratechess VPN-Concurrency-Fixes (Code Review, reines Backend): Die Per-IP-Health-Tabelle ist jetzt gedeckelt (kein unbegrenztes Speicherwachstum bei langer Laufzeit); eine manuelle VPN-Rotation rotiert die Tunnel jetzt nacheinander statt alle gleichzeitig (vorher gingen alle Tunnel für ein paar Sekunden zusammen runter → laufender Import fror ein); und ein Soft-Block wird jetzt der IP angelastet, die ihn wirklich verursacht hat (ein Timing-Rennen konnte ihn sonst der nächsten IP zuschreiben oder verlieren → verzerrte die „wiederholt schlechte IP\"-Erkennung). 253 piratechess-Tests grün." },
+  ]},
   { version: "0.203.11", date: "2026-06-30", changes: [
     { en: "piratechess parsing fix (code review batch 2): pawn promotions that are a straight push (e.g. \"e8=Q\", not a capture) were not resolved when generating training moves — ChessDotNet 1.0.0 omits push-promotions from its legal-move list — so any course line with such a promotion produced an empty trainer move (\"find the move\" with no answer) and even truncated the following training moves. Now the promotion move is constructed directly. Matters for endgame courses. Capture-promotions, castling, disambiguation and en passant were verified correct; +10 lib fixtures. (Two other review findings checked out as non-issues: the cached-line index and the soft-fail/[%alt] indexing are both correct as-is.)", de: "piratechess Parsing-Fix (Code-Review-Batch 2): Bauern-Umwandlungen als gerader Vorstoß (z. B. „e8=Q", kein Schlag) wurden beim Erzeugen der Trainingszüge nicht aufgelöst — ChessDotNet 1.0.0 listet Push-Umwandlungen nicht als legale Züge — wodurch jede Kurslinie mit so einer Umwandlung einen leeren Trainerzug erzeugte („finde den Zug" ohne Lösung) und sogar die folgenden Trainingszüge abbrach. Der Umwandlungszug wird jetzt direkt konstruiert. Relevant für Endspiel-Kurse. Schlag-Umwandlung, Rochade, Disambiguierung und en passant wurden als korrekt verifiziert; +10 Lib-Fixtures. (Zwei weitere Review-Funde waren Nicht-Probleme: die Cache-Linien-Indizierung und die softFail-/[%alt]-Indizierung sind so korrekt.)" },
   ]},
