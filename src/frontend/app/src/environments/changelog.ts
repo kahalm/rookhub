@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.209.1';
+export const APP_VERSION = '0.210.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.210.0", date: "2026-06-30", changes: [
+    { en: "Reverted the under-the-board visualization mode switcher (the five icons added in 0.207.0) — it didn't feel right. The reveal control is back as before, but now as an eye icon instead of a text button: crossed out while the pieces are hidden in a visualization mode, and clicking it reveals them (open eye), exactly like the old Show button. The visualization mode is again chosen in the settings dialog.", de: "Den Visualisierungs-Umschalter unter dem Brett (die fünf Icons aus 0.207.0) wieder entfernt — er gefiel nicht. Der Aufdecken-Knopf ist wie früher zurück, jetzt aber als Auge-Icon statt Text-Knopf: durchgestrichen, solange die Figuren in einem Visualisierungsmodus verdeckt sind, und ein Klick deckt sie auf (offenes Auge), genau wie der alte Aufdecken-Knopf. Der Visualisierungsmodus wird wieder im Einstellungsdialog gewählt." },
+  ]},
   { version: "0.209.1", date: "2026-06-30", changes: [
     { en: "Build fix: a straight quote in the German 0.209.0 changelog entry closed the string early and broke the production build (and therefore the dev image). Corrected to a typographic quote; the production build is green again.", de: "Build-Fix: Ein gerades Anführungszeichen im deutschen 0.209.0-Changelog-Eintrag beendete den String vorzeitig und brach den Production-Build (und damit das Dev-Image). Auf ein typografisches Anführungszeichen korrigiert; der Production-Build ist wieder grün." },
   ]},

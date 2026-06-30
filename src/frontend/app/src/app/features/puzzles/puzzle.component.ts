@@ -13,7 +13,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
-import { VizModeSelectorComponent } from './viz-mode-selector.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
@@ -46,7 +45,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
-    PuzzleRatingCardComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, VizModeSelectorComponent
+    PuzzleRatingCardComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],

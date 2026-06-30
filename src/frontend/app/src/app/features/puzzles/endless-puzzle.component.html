@@ -254,7 +254,13 @@
                       {{ (turnColor === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
                     </span>
                   }
-                  <app-viz-mode-selector [mode]="visualizationMode" (modeChange)="setVisualizationLevel($event)"></app-viz-mode-selector>
+                  @if (vizPiecesHidden || visualizationMode === 1) {
+                    <button class="board-hint-show board-hint-eye" (click)="onVizShow()"
+                            [attr.title]="(vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate"
+                            [attr.aria-label]="(vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate">
+                      <mat-icon>{{ vizShowPressed ? 'visibility' : 'visibility_off' }}</mat-icon>
+                    </button>
+                  }
                   @if (hasHints && canShowMoreHints) {
                     <button class="board-hint-tip" (click)="showNextHint()"
                             [attr.title]="'puzzles.hints.show' | translate">

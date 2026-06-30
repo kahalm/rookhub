@@ -16,7 +16,6 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
-import { VizModeSelectorComponent } from './viz-mode-selector.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.service';
@@ -45,7 +44,7 @@ type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' |
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, PuzzleTagsComponent,
-    TranslateModule, PuzzleStatusCardComponent, ChallengeFriendsComponent, VizModeSelectorComponent
+    TranslateModule, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],

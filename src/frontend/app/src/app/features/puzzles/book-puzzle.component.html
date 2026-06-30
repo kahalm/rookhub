@@ -32,7 +32,13 @@
                   {{ (turnColor === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
                 </span>
               }
-              <app-viz-mode-selector [mode]="visualizationMode" (modeChange)="setVisualizationLevel($event)"></app-viz-mode-selector>
+              @if (vizPiecesHidden || visualizationMode === 1) {
+                <button class="board-hint-show board-hint-eye" (click)="onVizShow()"
+                        [attr.title]="(vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate"
+                        [attr.aria-label]="(vizShowPressed ? 'book.viz.showing' : 'book.viz.show') | translate">
+                  <mat-icon>{{ vizShowPressed ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
+              }
               @if (hasHints && canShowMoreHints) {
                 <button class="board-hint-tip" (click)="showNextHint()"
                         [attr.title]="'book.hints.show' | translate">
