@@ -197,6 +197,9 @@ public class WeeklyPostController : BaseApiController
             FileName = safeName,
             PgnContent = content,
             FileSize = file.Length,
+            // Puzzle-Anzahl einmal beim Upload berechnen (PGN ist danach unveränderlich) → spart den
+            // teuren LONGTEXT-Parse auf den Lese-/Aufzeichnungspfaden.
+            PuzzleCount = PgnImportService.ParsePgn(safeName, content).Puzzles.Count,
             ScheduledAt = scheduledAt == default ? now : scheduledAt,
             CreatedAt = now,
             UpdatedAt = now,

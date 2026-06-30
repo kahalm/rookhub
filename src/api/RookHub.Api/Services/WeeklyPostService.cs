@@ -24,13 +24,30 @@ public class WeeklyPostService
         _bgQueue = bgQueue;
     }
 
+    /// <summary>
+    /// Liefert die gecachte Puzzle-Anzahl eines Posts; ist sie 0 (Alt-Datensatz vor Einführung der Spalte),
+    /// wird sie aus dem PGN nachberechnet und persistiert (einmaliger Lazy-Backfill, danach parse-frei).
+    /// </summary>
+    private async Task<int> GetTotalAsync(WeeklyPost post)
+    {
+        if (post.PuzzleCount > 0) return post.PuzzleCount;
+        var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+        if (total > 0)
+        {
+            post.PuzzleCount = total;
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+        }
+        return total;
+    }
+
     /// <summary>Zeichnet einen gespielten Puzzle-Versuch auf (erster Versuch je Index zählt) und liefert den Stand.</summary>
     public async Task<WeeklyPostProgressDto> RecordAttemptAsync(int weeklyPostId, int userId, RecordWeeklyAttemptDto dto)
     {
         var post = await _db.WeeklyPosts.FindAsync(weeklyPostId)
             ?? throw new KeyNotFoundException("Weekly post not found.");
 
-        var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+        var total = await GetTotalAsync(post);
         if (dto.PuzzleIndex < 0 || dto.PuzzleIndex >= total)
             throw new KeyNotFoundException("Puzzle index out of range.");
 
@@ -81,7 +98,7 @@ public class WeeklyPostService
     {
         var post = await _db.WeeklyPosts.FindAsync(weeklyPostId)
             ?? throw new KeyNotFoundException("Weekly post not found.");
-        var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+        var total = await GetTotalAsync(post);
 
         var perUser = await _db.WeeklyPostAttempts
             .Where(a => a.WeeklyPostId == weeklyPostId)
@@ -159,8 +176,8 @@ public class WeeklyPostService
 
     /// <summary>
     /// Fortschritt des Users über ALLE Wochenposts, an denen er Versuche hat (für die Übersicht).
-    /// Posts ohne Versuche werden weggelassen (Frontend zeigt dort nichts). Parst nur die PGNs der
-    /// gespielten Posts (nicht aller) → günstig.
+    /// Posts ohne Versuche werden weggelassen (Frontend zeigt dort nichts). Lädt alle gespielten Posts
+    /// in EINER Query (kein FindAsync je Post) und nutzt die gecachte Puzzle-Anzahl (kein PGN-Parse).
     /// </summary>
     public async Task<List<WeeklyPostProgressDto>> GetAllProgressAsync(int userId)
     {
@@ -169,12 +186,23 @@ public class WeeklyPostService
             .Select(a => new { a.WeeklyPostId, a.Solved, a.TimeSeconds })
             .ToListAsync();
 
+        var postIds = attempts.Select(a => a.WeeklyPostId).Distinct().ToList();
+        var posts = await _db.WeeklyPosts
+            .Where(w => postIds.Contains(w.Id))
+            .ToDictionaryAsync(w => w.Id);
+
+        var needsBackfill = false;
         var result = new List<WeeklyPostProgressDto>();
         foreach (var grp in attempts.GroupBy(a => a.WeeklyPostId))
         {
-            var post = await _db.WeeklyPosts.FindAsync(grp.Key);
-            if (post == null) continue;   // Post inzwischen gelöscht → ignorieren
-            var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+            if (!posts.TryGetValue(grp.Key, out var post)) continue;   // Post inzwischen gelöscht → ignorieren
+            var total = post.PuzzleCount;
+            if (total <= 0)
+            {
+                // Alt-Datensatz ohne gecachte Anzahl: einmal parsen und für künftige Aufrufe persistieren.
+                total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+                if (total > 0) { post.PuzzleCount = total; needsBackfill = true; }
+            }
             var played = grp.Count();
             result.Add(new WeeklyPostProgressDto
             {
@@ -186,6 +214,11 @@ public class WeeklyPostService
                 TotalSeconds = grp.Sum(a => a.TimeSeconds),
             });
         }
+        if (needsBackfill)
+        {
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+        }
         return result;
     }
 
@@ -194,7 +227,7 @@ public class WeeklyPostService
     {
         var post = await _db.WeeklyPosts.FindAsync(weeklyPostId)
             ?? throw new KeyNotFoundException("Weekly post not found.");
-        var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+        var total = await GetTotalAsync(post);
         return await BuildProgressAsync(weeklyPostId, userId, total);
     }
 

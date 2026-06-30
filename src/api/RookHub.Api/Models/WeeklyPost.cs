@@ -23,6 +23,14 @@ public class WeeklyPost
 
     public long FileSize { get; set; }
 
+    /// <summary>
+    /// Anzahl der Puzzles im PGN, beim Upload einmal berechnet und gecacht. Der PGN-Inhalt ist nach
+    /// dem Anlegen unveränderlich (Update ändert nur Titel/Termin), daher genügt einmaliges Setzen.
+    /// 0 = noch nicht gesetzt (Alt-Datensatz) → wird beim ersten Zugriff lazy nachgezogen. Spart den
+    /// teuren LONGTEXT-Parse auf den Lese-/Aufzeichnungspfaden (Progress/Results/Attempt).
+    /// </summary>
+    public int PuzzleCount { get; set; }
+
     /// <summary>Geplanter Termin (lokale Wall-Clock-Zeit, wie vom Admin gewählt; Standard-Uhrzeit 19:00).</summary>
     public DateTime ScheduledAt { get; set; }
 

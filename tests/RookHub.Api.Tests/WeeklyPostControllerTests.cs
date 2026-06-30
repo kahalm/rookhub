@@ -293,6 +293,33 @@ public class WeeklyPostControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_CachesPuzzleCount()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        var post = await _db.WeeklyPosts.FindAsync(id);
+        Assert.NotNull(post);
+        Assert.Equal(2, post!.PuzzleCount);   // beim Upload einmal berechnet + persistiert
+    }
+
+    [Fact]
+    public async Task GetProgress_BackfillsPuzzleCount_ForLegacyPostWithZero()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        // Alt-Datensatz simulieren: gecachte Anzahl zurücksetzen.
+        var post = await _db.WeeklyPosts.FindAsync(id);
+        post!.PuzzleCount = 0;
+        await _db.SaveChangesAsync();
+
+        SetUser(1);
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(id));
+        Assert.Equal(2, p.Total);   // aus dem PGN nachberechnet
+
+        // … und für künftige Aufrufe persistiert (kein erneuter Parse).
+        var reloaded = await _db.WeeklyPosts.FindAsync(id);
+        Assert.Equal(2, reloaded!.PuzzleCount);
+    }
+
+    [Fact]
     public async Task GetAllProgress_ReturnsOnlyPostsWithAttempts_PerUser()
     {
         var id = await CreateTwoPuzzlePostAsync();
