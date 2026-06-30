@@ -56,7 +56,8 @@ public class BookPuzzleService
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
 
-        var others = BookSiblings(current).Where(bp => bp.Id != current.Id);
+        // Info-/Erklärlinien sind kein Quiz → nicht zufällig ziehen.
+        var others = BookSiblings(current).Where(bp => bp.Id != current.Id && !bp.IsInfoOnly);
         var count = await others.CountAsync();
         if (count == 0)
             return MapToDto(await BookSiblings(current).Include(bp => bp.Book).FirstAsync(bp => bp.Id == current.Id));
@@ -355,7 +356,8 @@ public class BookPuzzleService
         if (pool != "random" && pool != "daily" && pool != "blind")
             throw new InvalidOperationException("pool must be one of: random, daily, blind.");
 
-        var query = _db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Book != null);
+        // Info-/Erklärlinien (IsInfoOnly) sind keine Quizaufgaben → in KEINEM Zufalls-/Tagespuzzle-Topf.
+        var query = _db.BookPuzzles.Include(bp => bp.Book).Where(bp => bp.Book != null && !bp.IsInfoOnly);
         if (bookId.HasValue)
             // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch.
             query = query.Where(bp => bp.BookId == bookId.Value);
@@ -851,7 +853,8 @@ public class BookPuzzleService
         BookRating = bp.Book?.Rating ?? bp.BookRating,
         Tags = bp.Book?.Tags ?? bp.Tags,
         Hints = ParseHints(bp.HintsJson),
-        HintsFlagged = bp.HintsFlagged
+        HintsFlagged = bp.HintsFlagged,
+        IsInfoOnly = bp.IsInfoOnly
     };
 
     /// <summary>Deserialisiert <see cref="BookPuzzle.HintsJson"/> (sprach-keyed Tipp-Listen).

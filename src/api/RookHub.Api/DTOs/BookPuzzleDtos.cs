@@ -148,6 +148,11 @@ public class BookPuzzleDto
 
     /// <summary>Admin-Review-Flag: Tipps wurden als „dumm/schlecht" markiert (siehe <c>BookPuzzle.HintsFlagged</c>).</summary>
     public bool HintsFlagged { get; set; }
+
+    /// <summary>„Info-/Erklärlinie" (Chessable <c>IsInfo</c>): nur zum Durchklicken, wird nicht als Quiz
+    /// abgefragt (siehe <c>BookPuzzle.IsInfoOnly</c>). Das Frontend schaltet solche Einträge im
+    /// sequenziellen Kurs-Modus auf reines Durchspielen statt Lösen-Logik.</summary>
+    public bool IsInfoOnly { get; set; }
 }
 
 /// <summary>Body für das Admin-Tipp-Flag (POST /api/admin/book-puzzles/{id}/flag-hints).</summary>

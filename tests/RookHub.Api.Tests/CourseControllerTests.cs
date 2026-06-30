@@ -255,6 +255,78 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(2, next.Total);
     }
 
+    /// <summary>Buch mit gemischten Quiz-/Info-Linien (info[i]=true ⇒ IsInfoOnly). Ids aufsteigend.</summary>
+    private async Task<(Book book, List<int> puzzleIds)> SeedMixedBookAsync(string name, params bool[] info)
+    {
+        var book = new Book { FileName = $"{name}.pgn", DisplayName = name, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var ids = new List<int>();
+        for (var i = 0; i < info.Length; i++)
+        {
+            var p = new BookPuzzle
+            {
+                LineId = $"{name}-{i}", BookFileName = book.FileName, BookId = book.Id,
+                Round = "1", Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", Moves = "a1a2", IsInfoOnly = info[i],
+            };
+            _db.BookPuzzles.Add(p);
+            await _db.SaveChangesAsync();
+            ids.Add(p.Id);
+        }
+        return (book, ids);
+    }
+
+    [Fact]
+    public async Task GetNext_Random_ExcludesInfoLines()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixR", false, true, false);  // quiz, info, quiz
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+
+        // Nur ids[2] (quiz) bleibt ziehbar; die Info-Linie ids[1] darf NIE kommen.
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "random"));
+        Assert.Equal(ids[2], next.Puzzle!.Id);
+        Assert.Equal(2, next.Total);          // Info-Linie zählt nicht zum Total
+    }
+
+    [Fact]
+    public async Task GetNext_Sequential_IncludesInfoLine_ForClickThrough()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixS", false, true, false);  // quiz, info, quiz
+
+        // Nach ids[0] kommt sequenziell die Info-Linie ids[1] (zum Durchklicken).
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential", after: ids[0]));
+        Assert.Equal(ids[1], next.Puzzle!.Id);
+        Assert.True(next.Puzzle.IsInfoOnly);
+        Assert.Equal(2, next.Total);
+    }
+
+    [Fact]
+    public async Task GetNext_InfoLinesDoNotBlockCompletion()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixC", false, true);  // 1 quiz + 1 info
+        await _controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true });
+
+        // Einzige Quiz-Linie gelöst → Kurs durch, obwohl die Info-Linie nie „gelöst" wird.
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.True(next.Completed);
+        Assert.Null(next.Puzzle);
+        Assert.Equal(1, next.Total);
+        Assert.Equal(1, next.SolvedCount);
+    }
+
+    [Fact]
+    public async Task GetCourses_ExcludesInfoLinesFromPuzzleCount()
+    {
+        await CreateUserAsync();
+        await SeedMixedBookAsync("MixL", false, true, false, true);  // 2 quiz + 2 info
+
+        var list = Unwrap<List<CourseListItemDto>>(await _controller.GetCourses());
+        Assert.Equal(2, Assert.Single(list).PuzzleCount);
+    }
+
     [Fact]
     public async Task GetNext_BookNotFound_Returns404()
     {

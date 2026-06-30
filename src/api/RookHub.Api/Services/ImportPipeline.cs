@@ -26,10 +26,15 @@ namespace RookHub.Api.Services;
 ///   Re-Fetch (in-place ins bestehende Repertoire, Trainings-Fortschritt bleibt). Nicht-Chessable-
 ///   bzw. lokal aus <c>Book.SourcePgn</c> aufbereitbare Datensätze ändern sich an dieser Version
 ///   inhaltlich nicht (reiner Versions-Mark bzw. idempotenter Re-Import).</item>
+/// <item><c>4</c> — Chessable-Info-/Erklärlinien (<c>IsInfo=1</c>) werden vom piratechess-Export jetzt
+///   mit <c>[%info]</c> markiert; der Import setzt daraus <c>BookPuzzle.IsInfoOnly</c>. Solche Linien
+///   werden nicht mehr als Quiz abgefragt (aus Random-/Tagespuzzle-Töpfen ausgeblendet, zählen nicht
+///   zum Kurs-Fortschritt, sequenziell nur zum Durchklicken). Der Marker steht NICHT im lokal
+///   gespeicherten Alt-PGN → für Chessable-Bücher/-Repertoires ist der Reprocess ein Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 }

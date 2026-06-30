@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.211.0';
+export const APP_VERSION = '0.212.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.212.0", date: "2026-06-30", changes: [
+    { en: "Chessable info/explanatory variations (lines Chessable marks as IsInfo) are no longer quizzed. piratechess now tags such lines with [%info] in the PGN and the import stores it as BookPuzzle.IsInfoOnly. These lines never appear in any random/daily puzzle pool, don't count toward course progress (total / “X solved” / 100 %), and in a course's sequential mode they are only there to click through — not to solve. NOTE: the marker comes from a fresh Chessable fetch, so existing courses only pick this up after a re-import/re-fetch (Update button → re-fetch for Chessable books). Backend + pipeline version bump (4); frontend click-through UI follows.", de: "Chessable-Info-/Erklärvarianten (von Chessable als IsInfo markierte Linien) werden nicht mehr als Quiz abgefragt. piratechess kennzeichnet solche Linien jetzt mit [%info] im PGN, der Import speichert das als BookPuzzle.IsInfoOnly. Diese Linien erscheinen in keinem Zufalls-/Tagespuzzle-Topf, zählen nicht zum Kurs-Fortschritt (Total / „X gelöst“ / 100 %) und sind im sequenziellen Kurs-Modus nur zum Durchklicken da — nicht zum Lösen. HINWEIS: Der Marker entsteht erst beim frischen Chessable-Abruf, bestehende Kurse übernehmen das daher erst nach einem Re-Import/Re-Fetch (Aktualisieren-Knopf → Re-Fetch für Chessable-Bücher). Backend + Pipeline-Version-Bump (4); die Durchklick-Oberfläche folgt." },
+  ]},
   { version: "0.211.0", date: "2026-06-30", changes: [
     { en: "Dashboard customize: added a Default button that restores a curated starting layout — Puzzles, Weekly Post, Repertoires, Courses, Training Goals, Leaderboards, in that order — with every other tile hidden (you can toggle them back on anytime in customize). This curated layout is now also the initial default for everyone: the stored-layout key was bumped, so all users start fresh on it once.", de: "Dashboard-Anpassen: Ein Standard-Knopf stellt ein kuratiertes Start-Layout her — Puzzles, Wochenpost, Repertoires, Kurse, Trainingsziele, Bestenlisten, in dieser Reihenfolge — alle übrigen Kacheln ausgeblendet (im Anpassen-Modus jederzeit wieder zuschaltbar). Dieses Layout ist jetzt auch der anfängliche Standard für alle: der Layout-Speicherschlüssel wurde erhöht, daher starten alle Nutzer einmalig frisch darauf." },
   ]},

@@ -48,7 +48,7 @@ public partial class PgnImportService
     public record ParsedPuzzle(
         string LineId, string Round, string Fen, string Moves, int StartPly,
         string? Title, string? Chapter, string? Comment,
-        Dictionary<int, string>? MoveComments = null);
+        Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false);
 
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
@@ -89,6 +89,11 @@ public partial class PgnImportService
             var uci = TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0) { invalid++; continue; }
 
+            // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
+            // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren
+            // und (anders als normale marker-lose Linien) auch aus der Grundstellung NICHT verwerfen.
+            var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
+
             // Trainingsstart bestimmen. Zwei Buch-Typen kommen vor:
             //  (a) Mid-line-[%tqu]: ganze Partie ab Grundstellung, der Marker hängt an Zug k
             //      → StartPly = k, fen+moves bleiben die KOMPLETTE Partie, gelöst ab moves[k+1].
@@ -104,7 +109,9 @@ public partial class PgnImportService
             }
             else
             {
-                if (IsStartPosition(fen)) { invalid++; continue; }
+                // Grundstellung ohne Trainingsmarker = kein definierter Trainingsstart → verwerfen.
+                // AUSNAHME: Info-Linien behalten wir (werden nicht abgefragt, nur durchgeklickt).
+                if (IsStartPosition(fen) && !isInfoOnly) { invalid++; continue; }
                 startPly = -1;
             }
 
@@ -120,7 +127,8 @@ public partial class PgnImportService
                 Title: string.IsNullOrEmpty(white) ? null : Truncate(white, 300),
                 Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
                 Comment: comment,
-                MoveComments: moveComments));
+                MoveComments: moveComments,
+                IsInfoOnly: isInfoOnly));
         }
         return new ParseResult(result, invalid);
     }
@@ -449,6 +457,7 @@ public partial class PgnImportService
                     bp.Chapter = ChapterForBook(book.Kind, p.Chapter);
                     bp.Comment = p.Comment;
                     bp.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
+                    bp.IsInfoOnly = p.IsInfoOnly;
                     updated++;
                 }
                 else { skipped++; }
@@ -467,6 +476,7 @@ public partial class PgnImportService
                 Chapter = ChapterForBook(book.Kind, p.Chapter),
                 Comment = p.Comment,
                 MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments),
+                IsInfoOnly = p.IsInfoOnly,
             });
         }
 

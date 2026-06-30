@@ -345,6 +345,63 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParsePgn_InfoMarker_SetsIsInfoOnly_AndKeepsComment()
+    {
+        // piratechess markiert Chessable-Info-/Erklärlinien mit [%info] (im Kommentar vor dem 1. Zug).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+{[%info] Nur zur Erklärung.} 1. Bxa7 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("t.pgn", pgn).Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("Nur zur Erklärung.", p.Comment);   // [%info]-Annotation rausgefiltert
+    }
+
+    [Fact]
+    public void ParsePgn_NoInfoMarker_IsInfoOnlyFalse()
+    {
+        var p = Assert.Single(PgnImportService.ParsePgn("book.pgn", SamplePgn).Puzzles);
+        Assert.False(p.IsInfoOnly);
+    }
+
+    [Fact]
+    public void ParsePgn_InfoMarker_StartFen_NotSkipped()
+    {
+        // Anders als marker-lose Grundstellungen bleiben Info-Linien erhalten (zum Durchklicken).
+        var pgn = @"
+[Event ""T""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+
+{[%info]} 1. e4 e5 2. Nf3 *
+";
+        var result = PgnImportService.ParsePgn("t.pgn", pgn);
+        var p = Assert.Single(result.Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(0, result.Invalid);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_InfoLine_RoundtripsIsInfoOnly()
+    {
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""1q5r/4kpp1/Q2p1n1p/1r2p3/8/4B3/1P3PPP/R2R2K1 w - - 0 1""]
+
+{[%info] Erklärlinie.} 1. Bxa7 *
+";
+        await _service.ImportFileAsync("info.pgn", pgn, CancellationToken.None);
+
+        var bp = await _db.BookPuzzles.SingleAsync();
+        Assert.True(bp.IsInfoOnly);
+        Assert.True(BookPuzzleService.MapToDto(bp).IsInfoOnly);
+    }
+
+    [Fact]
     public void CleanDisplayName_StripsSuffixes()
     {
         Assert.Equal("My Book", PgnImportService.CleanDisplayName("My Book_firstkey.pgn"));

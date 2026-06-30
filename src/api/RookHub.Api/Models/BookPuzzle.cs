@@ -82,4 +82,13 @@ public class BookPuzzle
     /// bleiben unberührt.
     /// </summary>
     public bool Retired { get; set; }
+
+    /// <summary>
+    /// „Info-/Erklärlinie": eine aus Chessable importierte Variante, die nur der Erklärung dient
+    /// (Chessable <c>IsInfo=1</c> → piratechess emittiert den <c>[%info]</c>-Marker im PGN). Solche
+    /// Linien werden <b>nicht als Quiz abgefragt</b>: sie erscheinen in keinem Zufalls-/Tagespuzzle-Topf,
+    /// zählen nicht zum Kurs-Fortschritt (Total/„X gelöst"/100 %) und sind im sequenziellen Kurs-Modus
+    /// nur zum Durchklicken da. Wird beim Import aus dem <c>[%info]</c>-Marker gesetzt.
+    /// </summary>
+    public bool IsInfoOnly { get; set; }
 }
