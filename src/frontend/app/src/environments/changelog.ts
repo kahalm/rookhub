@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.5';
+export const APP_VERSION = '0.203.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.6", date: "2026-06-30", changes: [
+    { en: "Docs: recorded the 2026-06-30 API code-review in TODO.md — what was fixed (v0.202.0–0.203.5) and which findings were deliberately left as-is after checking them against the real production scale (49 users): the \"unbounded read\" items load only 50–1900 tiny rows here, so rewriting them to SQL aggregation would add real query-translation risk for no benefit; the import concurrency hardening is already covered by the atomic claim + watchdog + lane gate. No code change.", de: "Doku: Das API-Code-Review vom 2026-06-30 in der TODO.md festgehalten — was gefixt wurde (v0.202.0–0.203.5) und welche Funde nach Prüfung gegen die echte Prod-Größe (49 User) bewusst so bleiben: Die „unbounded read\"-Punkte laden hier nur 50–1900 winzige Zeilen, ein SQL-Umbau brächte echtes Query-Übersetzungsrisiko ohne Nutzen; die Import-Concurrency ist bereits durch atomaren Claim + Watchdog + Lane-Gate abgedeckt. Keine Code-Änderung." },
+  ]},
   { version: "0.203.5", date: "2026-06-30", changes: [
     { en: "Small robustness fixes (code review): challenge batches are capped at 50 recipients (was unbounded → a DoS vector); the book-puzzle routes now carry an explicit integer id constraint; the repertoire trainer's review save handles the rare concurrent-insert race on the same card gracefully (reloads + reapplies instead of erroring); and the tournament-monitor activation reads crawler round numbers defensively (a non-numeric field no longer turns into a 500). Two earlier review items turned out to be already handled in the current code (attempt time/hint values are clamped server-side; list endpoints already clamp take/page).", de: "Kleine Robustheits-Fixes (Code Review): Challenge-Batches sind auf 50 Empfänger begrenzt (vorher unbegrenzt → DoS-Vektor); die Buch-Puzzle-Routen tragen jetzt einen expliziten Ganzzahl-Id-Constraint; das Speichern im Repertoire-Trainer fängt den seltenen Parallel-Insert derselben Karte sauber ab (lädt neu + wendet erneut an, statt zu scheitern); und die Turnier-Monitor-Aktivierung liest Crawler-Rundenzahlen defensiv (ein nicht-numerisches Feld wird nicht mehr zum 500). Zwei frühere Review-Punkte waren im aktuellen Code bereits erledigt (Versuchs-Zeit/Tipp-Werte serverseitig geklemmt; Listen-Endpoints klemmen take/page bereits)." },
   ]},

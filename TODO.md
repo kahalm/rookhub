@@ -81,6 +81,23 @@ _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06
 - Crawler `HtmlParserService` ist durch Tests abgedeckt (`HtmlParserServiceTests.cs`, ~448 Z.)
 - Crawler `RoundDetectionService` cacht bereits 60 s (`:50`)
 
+## Code-Review 2026-06-30 (rookhub API, 5-Dimensionen-Fan-out)
+Umfangreiches API-Review (Auth/Security, EF/Datenschicht, Controller, Geschäftslogik, Hintergrund-Services). **Gefixt + gepusht (v0.202.0–0.203.5):**
+- [x] Rate-Limiter `auth`/`anonymous-puzzle`/`anonymous-tournament` pro-IP partitioniert (war je ein globaler Bucket → Login-DoS); Default-CORS ohne `AllowCredentials`; JWT-„Bleib eingeloggt" 365→90 T (v0.202.2)
+- [x] Wochenpost-Übersicht N+1 + PGN-Parse je Post → `WeeklyPost.PuzzleCount` gecacht (v0.203.1)
+- [x] Daily-Leaderboard Gold-Tie → Competition-Ranking; AdminMessages „letzte Nachricht" via `Max(Id)` statt `CreatedAt` (v0.203.2)
+- [x] AutoSubscription: frischer Scope/DbContext pro User + Freundes-/Profil-Set 1× je User (v0.203.3)
+- [x] SavedGame-Dedup hart per Unique-Index `(UserId,Source,ExternalId)` (v0.203.4)
+- [x] Challenge-Batch `[MaxLength(50)]`; BookPuzzle-Routen `{id:int}`; RepertoireTraining-Review Race-Catch; TournamentMonitor `TryGetInt32` (v0.203.5)
+
+**Bewusst NICHT umgebaut (gegen reale Prod-Größe geprüft 2026-06-30 — 49 User):** Die „unbounded read"-Funde sind bei dieser Größenordnung Nicht-Probleme und ein SQL-Umbau brächte echtes Pomelo-Übersetzungsrisiko ohne Nutzen:
+- [ ] Daily Hall-of-Fame lädt „alle" Daily-Attempts in den Speicher → real **50 Zeilen** (14 Dailies). Revisit erst bei ~100× Nutzerwachstum.
+- [ ] TrainingGoal `daily-series` lädt ganze User-Historie → real max **1355 Zeilen** (ein User). Unkritisch.
+- [ ] Leaderboard `alltime` lädt distinct (User,Puzzle)-Paare → real **~1900 Zeilen**; zudem **bewusst provider-sicher** designt (Kommentar: vermeidet `COUNT(DISTINCT)` im GroupBy). Nicht anfassen.
+- [ ] ChessableImport ohne `RowVersion`-Concurrency-Token: die realen Stall-Incidents sind bereits anderweitig adressiert (atomarer `ExecuteUpdate`-Claim v0.184.25 + Watchdog v0.192.0 + Download-Lane-Gate v0.195.4). RowVersion-Retrofit auf dem Import-Hot-Path = hohes Regressionsrisiko bei marginalem Zusatznutzen → zurückgestellt.
+- [ ] PuzzleChallenge-Pending-Dedup als DB-Constraint: MySQL kann keine partiellen Indizes; ein voller Unique-Index würde legitime Re-Challenges nach Auflösung blocken. Race nur bei Doppelklick → geringer Nutzen, ausgelassen.
+- [ ] Anonymer Buch-Versuch ohne Unique-Constraint (Doppel-Solve bei Parallel-Request möglich): braucht Migration + Dedup + MySQL-NULL-Nuance; geringer Nutzen, offen.
+
 ## Audit-Funde 2026-06-18 (Frontend Code Review)
 Fan-out-Review des Angular-Frontends (6 Dimensionen: Security, State/RxJS, Performance, Robustheit/TS, A11y/i18n, Wartbarkeit). **Alle [Hoch]-Funde + 2 [Mittel] direkt gefixt** (v0.155.4–0.155.12, committet+gepusht, 429 FE-Tests grün, Prod-Build sauber):
 - hr-Übersetzung vervollständigt (39 fehlende Keys, ganzer `messages`-Namespace) — 0.155.4
