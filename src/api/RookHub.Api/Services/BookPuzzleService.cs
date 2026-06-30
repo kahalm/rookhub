@@ -125,7 +125,17 @@ public class BookPuzzleService
                     TimeSeconds = timeSeconds,
                     AttemptedAt = solvedAt,
                 });
-                await _db.SaveChangesAsync();
+                try
+                {
+                    await _db.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    // Race: paralleler Erstversuch derselben Session hat den Unique-Index
+                    // (BookPuzzleId, AnonymousSessionId) zuerst belegt → idempotent, kein Doppel-Webhook.
+                    _db.ChangeTracker.Clear();
+                    return;
+                }
                 _logger.LogInformation(
                     "BookPuzzleAttempt: Anonymous solved book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
                     id, solvedAt.AddSeconds(-timeSeconds), solvedAt, timeSeconds);

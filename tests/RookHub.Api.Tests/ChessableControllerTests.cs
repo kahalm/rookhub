@@ -686,6 +686,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
+            CachedCoursesJson = "[{\"bid\":\"bid-9\",\"name\":\"Holzkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();
@@ -709,6 +710,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableCredentials.Add(new ChessableCredential
         {
             UserId = 7, EncryptedBearer = _encryption.Encrypt("user7-bearer"),
+            CachedCoursesJson = "[{\"bid\":\"bid-b\",\"name\":\"Buchkurs\"}]",   // Kurs in Bibliothek des Ziel-Users
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         await _db.SaveChangesAsync();

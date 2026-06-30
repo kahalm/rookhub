@@ -348,7 +348,11 @@ public class AppDbContext : DbContext
             e.Property(a => a.AnonymousSessionId).HasMaxLength(36);
             e.HasIndex(a => new { a.BookPuzzleId, a.AttemptedAt });
             e.HasIndex(a => new { a.BookPuzzleId, a.UserId });
-            e.HasIndex(a => new { a.BookPuzzleId, a.AnonymousSessionId });
+            // Anonyme Lösungen sind „genau einmal je (Puzzle, Session)" — hart per Unique-Index erzwingen
+            // (statt nur check-then-insert), sonst blähen Parallel-Requests AnonymousSolvedCount + Webhooks auf.
+            // Authentifizierte Versuche haben AnonymousSessionId = NULL → MySQL erlaubt beliebig viele NULLs,
+            // d. h. mehrere Versuche je User bleiben möglich; nur anonyme Sessions sind dedupliziert.
+            e.HasIndex(a => new { a.BookPuzzleId, a.AnonymousSessionId }).IsUnique();
         });
 
         modelBuilder.Entity<EndlessProgress>(e =>

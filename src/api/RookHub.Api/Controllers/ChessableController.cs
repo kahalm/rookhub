@@ -426,7 +426,7 @@ public class ChessableController : BaseApiController
     /// Besitzer/Empfänger der Benachrichtigung = der aufrufende Admin; nur der Bearer stammt vom Ziel-User.</summary>
     [HttpPost("admin/users/{userId:int}/import/{bid}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request)
+    public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(bid))
             return BadRequest(new { message = "bid is required" });
@@ -436,8 +436,12 @@ public class ChessableController : BaseApiController
             return BadRequest(new { message = "target must be 'repertoire' or 'book'" });
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
             return NotFound(new { message = "User not found" });
-        if (!await _db.ChessableCredentials.AnyAsync(c => c.UserId == userId))
+        var targetCred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
+        if (targetCred is null)
             return BadRequest(new { message = "User has no Chessable bearer saved" });
+        // Auch hier: nur Kurse, die in der Bibliothek des ZIEL-Users liegen (dessen Bearer fetcht/cached).
+        if (!await UserOwnsCourseAsync(targetCred, bid, ct))
+            return StatusCode(403, new { message = "Dieser Kurs ist nicht in der Chessable-Bibliothek des Users." });
 
         var adminId = GetUserId();
         var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == adminId && x.Status == "running");
