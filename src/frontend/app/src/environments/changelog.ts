@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.203.10';
+export const APP_VERSION = '0.203.11';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.11", date: "2026-06-30", changes: [
+    { en: "piratechess parsing fix (code review batch 2): pawn promotions that are a straight push (e.g. \"e8=Q\", not a capture) were not resolved when generating training moves — ChessDotNet 1.0.0 omits push-promotions from its legal-move list — so any course line with such a promotion produced an empty trainer move (\"find the move\" with no answer) and even truncated the following training moves. Now the promotion move is constructed directly. Matters for endgame courses. Capture-promotions, castling, disambiguation and en passant were verified correct; +10 lib fixtures. (Two other review findings checked out as non-issues: the cached-line index and the soft-fail/[%alt] indexing are both correct as-is.)", de: "piratechess Parsing-Fix (Code-Review-Batch 2): Bauern-Umwandlungen als gerader Vorstoß (z. B. „e8=Q", kein Schlag) wurden beim Erzeugen der Trainingszüge nicht aufgelöst — ChessDotNet 1.0.0 listet Push-Umwandlungen nicht als legale Züge — wodurch jede Kurslinie mit so einer Umwandlung einen leeren Trainerzug erzeugte („finde den Zug" ohne Lösung) und sogar die folgenden Trainingszüge abbrach. Der Umwandlungszug wird jetzt direkt konstruiert. Relevant für Endspiel-Kurse. Schlag-Umwandlung, Rochade, Disambiguierung und en passant wurden als korrekt verifiziert; +10 Lib-Fixtures. (Zwei weitere Review-Funde waren Nicht-Probleme: die Cache-Linien-Indizierung und die softFail-/[%alt]-Indizierung sind so korrekt.)" },
+  ]},
   { version: "0.203.10", date: "2026-06-30", changes: [
     { en: "piratechess code review (resilience + hygiene, backend-only — no user-visible change): the export worker now survives a queue-reader error instead of dying permanently (the \"stuck import\" failure mode); the curl subprocess reads stdout/stderr in parallel to avoid a pipe deadlock on large courses; the job queue is now bounded (backpressure); required config (DB connection string, JWT secret/issuer/audience) is validated at startup (fail-fast) instead of crashing on first request; a global ProblemDetails exception handler prevents stack-trace leaks; the health endpoint returns 503 (not 200) when the DB is down; the course list no longer throws on duplicate course ids; and course ids are format-validated (numeric), which also closes an unbounded per-id lock leak. 242 piratechess tests green.", de: "piratechess Code-Review (Resilienz + Hygiene, reines Backend — keine sichtbare Änderung): Der Export-Worker überlebt jetzt einen Queue-Reader-Fehler, statt dauerhaft zu sterben (das „eingeschlafener Import"-Muster); der curl-Subprozess liest stdout/stderr parallel → kein Pipe-Deadlock bei großen Kursen; die Job-Queue ist jetzt bounded (Backpressure); Pflicht-Config (DB-ConnString, JWT-Secret/Issuer/Audience) wird beim Start validiert (Fail-fast) statt beim ersten Request zu crashen; ein globaler ProblemDetails-Exception-Handler verhindert Stacktrace-Leaks; der Health-Endpoint liefert bei DB-Ausfall 503 (nicht 200); die Kursliste wirft nicht mehr bei doppelter Kurs-ID; und Kurs-IDs werden formatvalidiert (numerisch), was zugleich ein unbegrenztes Per-ID-Lock-Leck schließt. 242 piratechess-Tests grün." },
   ]},
