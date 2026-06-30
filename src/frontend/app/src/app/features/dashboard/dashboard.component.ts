@@ -34,11 +34,18 @@ interface TileDef {
   buttons: TileButton[];
 }
 
-/** Kanonische Standardreihenfolge ALLER bekannten Kacheln (neue IDs hier ergänzen). */
-const DEFAULT_ORDER = [
-  'puzzles', 'trainingGoals', 'courses', 'leaderboards', 'tournaments', 'friends',
-  'repertoires', 'games', 'weekly', 'stats', 'analysis', 'messages', 'chessableQueue',
+/** Kuratierter Standard: diese Kacheln sind anfänglich sichtbar — in genau dieser Reihenfolge. */
+const DEFAULT_VISIBLE = [
+  'puzzles', 'weekly', 'repertoires', 'courses', 'trainingGoals', 'leaderboards',
 ];
+/** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
+ *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
+const DEFAULT_ORDER = [
+  ...DEFAULT_VISIBLE,
+  'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
+];
+/** Im Standard ausgeblendete Kacheln (alles außer DEFAULT_VISIBLE). */
+const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id));
 
 @Component({
   selector: 'app-dashboard',
@@ -53,8 +60,8 @@ const DEFAULT_ORDER = [
         <h1>{{ 'dashboard.welcome' | translate:{ username: auth.currentUser?.username } }}</h1>
         <div class="head-actions">
           @if (editing) {
-            <button mat-button (click)="resetLayout()">
-              <mat-icon>restart_alt</mat-icon> {{ 'dashboard.edit.reset' | translate }}
+            <button mat-button (click)="applyDefault()">
+              <mat-icon>restart_alt</mat-icon> {{ 'dashboard.edit.default' | translate }}
             </button>
             <button mat-raised-button color="primary" (click)="toggleEdit()">
               <mat-icon>done</mat-icon> {{ 'dashboard.edit.done' | translate }}
@@ -342,10 +349,12 @@ export class DashboardComponent implements OnInit {
     this.persist();
   }
 
-  resetLayout(): void {
-    this.layout.reset();
+  /** „Standard"-Knopf: kuratierten Default anwenden (DEFAULT_VISIBLE sichtbar in fester Reihenfolge,
+   *  Rest ausgeblendet) und persistieren. */
+  applyDefault(): void {
     this.order = [...DEFAULT_ORDER];
-    this.hidden = new Set<string>();
+    this.hidden = new Set<string>(DEFAULT_HIDDEN);
+    this.persist();
   }
 
   private persist(): void {
@@ -359,10 +368,17 @@ export class DashboardComponent implements OnInit {
     // danach noch nicht gesehene (neu hinzugekommene) Kacheln in Standardreihenfolge anhängen.
     const saved = this.layout.load();
     const known = new Set(DEFAULT_ORDER);
-    const fromSaved = saved.order.filter(id => known.has(id));
-    const appended = DEFAULT_ORDER.filter(id => !fromSaved.includes(id));
-    this.order = [...fromSaved, ...appended];
-    this.hidden = new Set(saved.hidden.filter(id => known.has(id)));
+    if (saved.order.length === 0) {
+      // Kein gespeichertes Layout → kuratierter Standard (DEFAULT_VISIBLE sichtbar, Rest aus).
+      this.order = [...DEFAULT_ORDER];
+      this.hidden = new Set(DEFAULT_HIDDEN);
+    } else {
+      // Vorhandenes Layout respektieren; neu hinzugekommene Kacheln hinten anhängen.
+      const fromSaved = saved.order.filter(id => known.has(id));
+      const appended = DEFAULT_ORDER.filter(id => !fromSaved.includes(id));
+      this.order = [...fromSaved, ...appended];
+      this.hidden = new Set(saved.hidden.filter(id => known.has(id)));
+    }
 
     // Menü-Sichtbarkeit live nachziehen (steuert, welche Kacheln überhaupt erscheinen).
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef))

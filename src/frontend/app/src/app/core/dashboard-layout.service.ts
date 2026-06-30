@@ -15,7 +15,9 @@ export interface DashboardLayout {
   hidden: string[];
 }
 
-const LAYOUT_KEY = 'rookhub_dashboard_layout';
+// v2: kuratierter Standard eingeführt (Puzzles/Weekly/Repertoires/Kurse/Trainingsziele/Bestenlisten
+// sichtbar, Rest aus). Schlüssel-Bump = jeder User startet einmalig frisch auf dem neuen Standard.
+const LAYOUT_KEY = 'rookhub_dashboard_layout_v2';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardLayoutService {

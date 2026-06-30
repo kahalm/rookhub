@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.210.0';
+export const APP_VERSION = '0.211.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.211.0", date: "2026-06-30", changes: [
+    { en: "Dashboard customize: added a Default button that restores a curated starting layout — Puzzles, Weekly Post, Repertoires, Courses, Training Goals, Leaderboards, in that order — with every other tile hidden (you can toggle them back on anytime in customize). This curated layout is now also the initial default for everyone: the stored-layout key was bumped, so all users start fresh on it once.", de: "Dashboard-Anpassen: Ein Standard-Knopf stellt ein kuratiertes Start-Layout her — Puzzles, Wochenpost, Repertoires, Kurse, Trainingsziele, Bestenlisten, in dieser Reihenfolge — alle übrigen Kacheln ausgeblendet (im Anpassen-Modus jederzeit wieder zuschaltbar). Dieses Layout ist jetzt auch der anfängliche Standard für alle: der Layout-Speicherschlüssel wurde erhöht, daher starten alle Nutzer einmalig frisch darauf." },
+  ]},
   { version: "0.210.0", date: "2026-06-30", changes: [
     { en: "Reverted the under-the-board visualization mode switcher (the five icons added in 0.207.0) — it didn't feel right. The reveal control is back as before, but now as an eye icon instead of a text button: crossed out while the pieces are hidden in a visualization mode, and clicking it reveals them (open eye), exactly like the old Show button. The visualization mode is again chosen in the settings dialog.", de: "Den Visualisierungs-Umschalter unter dem Brett (die fünf Icons aus 0.207.0) wieder entfernt — er gefiel nicht. Der Aufdecken-Knopf ist wie früher zurück, jetzt aber als Auge-Icon statt Text-Knopf: durchgestrichen, solange die Figuren in einem Visualisierungsmodus verdeckt sind, und ein Klick deckt sie auf (offenes Auge), genau wie der alte Aufdecken-Knopf. Der Visualisierungsmodus wird wieder im Einstellungsdialog gewählt." },
   ]},

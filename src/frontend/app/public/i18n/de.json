@@ -253,6 +253,7 @@
       "customize": "Anpassen",
       "done": "Fertig",
       "reset": "Zurücksetzen",
+      "default": "Standard",
       "hint": "Mit dem Auge eine Kachel ein-/ausblenden; mit den Pfeilen oder per Drag & Drop sortieren.",
       "dragAria": "Kachel zum Sortieren ziehen",
       "moveUp": "Nach oben",

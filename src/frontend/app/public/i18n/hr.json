@@ -253,6 +253,7 @@
       "customize": "Prilagodi",
       "done": "Gotovo",
       "reset": "Poništi",
+      "default": "Zadano",
       "hint": "Okom prikaži ili sakrij pločicu; promijeni redoslijed strelicama ili povlačenjem.",
       "dragAria": "Povuci za promjenu redoslijeda pločice",
       "moveUp": "Pomakni gore",

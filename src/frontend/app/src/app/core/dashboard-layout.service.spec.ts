@@ -4,11 +4,11 @@ describe('DashboardLayoutService', () => {
   let service: DashboardLayoutService;
 
   beforeEach(() => {
-    localStorage.removeItem('rookhub_dashboard_layout');
+    localStorage.removeItem('rookhub_dashboard_layout_v2');
     service = new DashboardLayoutService();
   });
 
-  afterEach(() => localStorage.removeItem('rookhub_dashboard_layout'));
+  afterEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
 
   it('returns empty defaults when nothing is stored', () => {
     expect(service.load()).toEqual({ order: [], hidden: [] });
@@ -20,12 +20,12 @@ describe('DashboardLayoutService', () => {
   });
 
   it('ignores non-string and malformed entries', () => {
-    localStorage.setItem('rookhub_dashboard_layout', JSON.stringify({ order: ['a', 5, null], hidden: 'nope' }));
+    localStorage.setItem('rookhub_dashboard_layout_v2', JSON.stringify({ order: ['a', 5, null], hidden: 'nope' }));
     expect(service.load()).toEqual({ order: ['a'], hidden: [] });
   });
 
   it('falls back to defaults on invalid JSON', () => {
-    localStorage.setItem('rookhub_dashboard_layout', '{not json');
+    localStorage.setItem('rookhub_dashboard_layout_v2', '{not json');
     expect(service.load()).toEqual({ order: [], hidden: [] });
   });
 
