@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.202.0';
+export const APP_VERSION = '0.202.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.202.1", date: "2026-06-30", changes: [
+    { en: "Visualization/blindfold puzzle gestures hardened (code-review follow-up): drag detection is now multi-touch safe (a second finger no longer corrupts the gesture), the tap-vs-drag threshold scales with the board size (fixes mis-taps on small phone boards), an interrupted touch (pointercancel) resets cleanly instead of leaving the gesture stuck, and a drag released just off the board edge now snaps to the edge square instead of doing nothing. The shared tap/drag move-commit logic was unified to keep both paths in sync. Also removed the now-unused Chessable import-queue banner component left over from the Courses page.", de: "Visualisierungs-/Blind-Puzzle-Gesten gehärtet (Code-Review-Nachzug): Die Drag-Erkennung ist jetzt Multi-Touch-fest (ein zweiter Finger verfälscht die Geste nicht mehr), die Tap-/Drag-Schwelle skaliert mit der Brettgröße (behebt Fehl-Taps auf kleinen Handy-Brettern), eine abgebrochene Berührung (pointercancel) setzt sauber zurück statt hängen zu bleiben, und ein knapp neben dem Brett losgelassener Drag rastet aufs Randfeld statt ins Leere zu laufen. Die gemeinsame Tap-/Drag-Zug-Logik wurde vereinheitlicht, damit beide Pfade synchron bleiben. Außerdem die nun ungenutzte Chessable-Import-Queue-Banner-Komponente von der Kurse-Seite entfernt." },
+  ]},
   { version: "0.202.0", date: "2026-06-30", changes: [
     { en: "Shared-puzzle \"track solves\" now also records how many hints the visitor used (0–3) on their first attempt. The counts response carries a per-level breakdown of solved attempts (solvedByHints[0..3]) alongside the existing solved/failed totals, so it's now possible to see how many people solved with no hints vs. 1/2/3 hints. New SharedPuzzleAttempt.HintsUsed column (migration AddSharedPuzzleAttemptHints), clamped 0–3 server-side; the book-puzzle solver sends its current hint level. +2 backend tests.", de: "Das „Track solves\" geteilter Puzzles erfasst jetzt zusätzlich, wie viele Tipps der Besucher (0–3) beim Erstversuch genutzt hat. Die Zähler-Antwort enthält neben dem bisherigen gelöst/gescheitert eine Aufschlüsselung der gelösten Versuche je Tipp-Stufe (solvedByHints[0..3]) — so ist jetzt sichtbar, wie viele ohne bzw. mit 1/2/3 Tipps gelöst haben. Neue Spalte SharedPuzzleAttempt.HintsUsed (Migration AddSharedPuzzleAttemptHints), serverseitig auf 0–3 geklemmt; der Buch-Puzzle-Solver schickt seine aktuelle Tipp-Stufe mit. +2 Backend-Tests." },
   ]},

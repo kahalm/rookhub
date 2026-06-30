@@ -114,3 +114,87 @@ describe('PuzzleBoardComponent Viz-Drag', () => {
     expect(emit).toHaveBeenCalledWith({ orig: 'e2' as Key, dest: 'e4' as Key });
   });
 });
+
+/**
+ * Viz-Gesten-Verwaltung (Pointer-Ebene): Multi-Touch-Festigkeit, pointercancel-Reset,
+ * an die Feldgröße skalierte Drag-Schwelle und Randfeld-Clamp.
+ */
+describe('PuzzleBoardComponent Viz-Gesten', () => {
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  type GestPriv = {
+    onVizPointerDown(ev: PointerEvent): void;
+    onVizPointerUp(ev: PointerEvent): void;
+    onVizPointerCancel(ev: PointerEvent): void;
+    vizDragThresholdPx(): number;
+    keyFromPointer(ev: PointerEvent, clamp?: boolean): Key | null;
+    vizPointerId?: number;
+    vizPointerStartKey?: Key;
+  };
+
+  // 800px-Brett → Feldbreite 100. Weiß: col=floor(x/100), rankIdx=7-floor(y/100).
+  function mounted(): { comp: PuzzleBoardComponent; captures: number[] } {
+    const comp = new PuzzleBoardComponent();
+    comp.actualFen = START;
+    comp.orientation = 'white';
+    comp.visualization = 2;
+    const captures: number[] = [];
+    (comp as unknown as { boardEl: unknown }).boardEl = {
+      nativeElement: {
+        getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 800 }),
+        setPointerCapture: (id: number) => captures.push(id),
+      },
+    };
+    (comp as unknown as { ground: unknown }).ground = {
+      setShapes: () => {}, selectSquare: () => {}, setAutoShapes: () => {},
+    };
+    return { comp, captures };
+  }
+
+  function ptr(pointerId: number, clientX: number, clientY: number): PointerEvent {
+    return { pointerId, clientX, clientY, preventDefault: () => {}, stopPropagation: () => {} } as unknown as PointerEvent;
+  }
+
+  it('Multi-Touch: ein zweiter Pointer überschreibt die laufende Geste nicht', () => {
+    const { comp, captures } = mounted();
+    const p = comp as unknown as GestPriv;
+    p.onVizPointerDown(ptr(1, 50, 750));    // a1, Geste startet
+    expect(p.vizPointerId).toBe(1);
+    expect(p.vizPointerStartKey).toBe('a1' as Key);
+    p.onVizPointerDown(ptr(2, 250, 550));   // 2. Finger → ignoriert
+    expect(p.vizPointerId).toBe(1);
+    expect(p.vizPointerStartKey).toBe('a1' as Key);
+    expect(captures).toEqual([1]);          // kein zweiter setPointerCapture
+  });
+
+  it('pointercancel setzt die Geste zurück → folgendes pointerup emittiert nichts', () => {
+    const { comp } = mounted();
+    const p = comp as unknown as GestPriv;
+    const emit = spyOn(comp.moveMade, 'emit');
+    p.onVizPointerDown(ptr(1, 50, 750));
+    p.onVizPointerCancel(ptr(1, 50, 750));
+    expect(p.vizPointerId).toBeUndefined();
+    p.onVizPointerUp(ptr(1, 250, 550));     // keine aktive Geste mehr
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('Drag-Schwelle skaliert mit der Brettgröße (~35% einer Feldbreite)', () => {
+    const { comp } = mounted();             // 800/8=100 → 35
+    expect((comp as unknown as GestPriv).vizDragThresholdPx()).toBeCloseTo(35, 5);
+  });
+
+  it('keyFromPointer: Release knapp außerhalb → null ohne, Randfeld mit Clamp', () => {
+    const p = mounted().comp as unknown as GestPriv;
+    expect(p.keyFromPointer(ptr(1, 820, 10))).toBeNull();
+    expect(p.keyFromPointer(ptr(1, 820, 10), true)).toBe('h8' as Key);
+  });
+
+  it('echte Ziehgeste über Pointer-Events emittiert den Zug a2→a4', () => {
+    const { comp } = mounted();
+    const p = comp as unknown as GestPriv;
+    const emit = spyOn(comp.moveMade, 'emit');
+    p.onVizPointerDown(ptr(1, 50, 650));    // a2
+    p.onVizPointerUp(ptr(1, 50, 450));      // a4 (200px bewegt > 35) → Drag
+    expect(emit).toHaveBeenCalledWith({ orig: 'a2' as Key, dest: 'a4' as Key });
+  });
+});

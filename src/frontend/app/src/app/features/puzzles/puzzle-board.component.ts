@@ -123,12 +123,15 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   private vizFrom?: Key;
   /** Aktuell im Viz-Modus angetapptes Feld — rendert den grünen Overlay-Ring oben drüber. */
   vizSelectedSquare: Key | null = null;
-  // Geste-Tracking im Viz-Modus (Tap vs. Ziehen).
+  // Geste-Tracking im Viz-Modus (Tap vs. Ziehen). Nur EINE Geste gleichzeitig,
+  // identifiziert über die pointerId (Multi-Touch-fest).
+  private vizPointerId?: number;
   private vizPointerStartKey?: Key;
   private vizPointerStartX = 0;
   private vizPointerStartY = 0;
-  /** Mindest-Fingerweg (px), ab dem eine Geste als Ziehen statt Tap gilt. */
-  private static readonly VIZ_DRAG_THRESHOLD_PX = 10;
+  /** Drag-Schwelle = Anteil einer Feldbreite (an Brettgröße skaliert), mind. VIZ_DRAG_MIN_PX. */
+  private static readonly VIZ_DRAG_SQUARE_FRACTION = 0.35;
+  private static readonly VIZ_DRAG_MIN_PX = 6;
 
   // Promotion overlay state
   showPromotionOverlay = false;
@@ -157,15 +160,25 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // pointerdown merkt sich das Startfeld, pointerup entscheidet Tap vs. Ziehen.
     this.boardEl.nativeElement.addEventListener('pointerdown', this.onVizPointerDown, true);
     this.boardEl.nativeElement.addEventListener('pointerup', this.onVizPointerUp, true);
+    this.boardEl.nativeElement.addEventListener('pointercancel', this.onVizPointerCancel, true);
   }
 
-  /** Rechnet einen Pointer-Event in ein Brettfeld um (oder null, wenn außerhalb/nicht vermessbar). */
-  private keyFromPointer(ev: PointerEvent): Key | null {
+  /**
+   * Rechnet einen Pointer-Event in ein Brettfeld um. Ohne `clampToBoard` → null außerhalb des
+   * Bretts; mit `clampToBoard` → das nächstgelegene Randfeld (für Drag-Release knapp daneben,
+   * das dank setPointerCapture außerhalb des Bretts ankommen kann).
+   */
+  private keyFromPointer(ev: PointerEvent, clampToBoard = false): Key | null {
     const rect = this.boardEl.nativeElement.getBoundingClientRect();
     if (rect.width === 0) return null;
-    const x = ev.clientX - rect.left;
-    const y = ev.clientY - rect.top;
-    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+    let x = ev.clientX - rect.left;
+    let y = ev.clientY - rect.top;
+    if (clampToBoard) {
+      x = Math.max(0, Math.min(rect.width, x));
+      y = Math.max(0, Math.min(rect.height, y));
+    } else if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      return null;
+    }
     let col = Math.floor(x / (rect.width / 8));   // 0..7 von links
     let row = Math.floor(y / (rect.height / 8));  // 0..7 von oben
     col = Math.max(0, Math.min(7, col));
@@ -175,29 +188,51 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     return (String.fromCharCode(97 + fileIdx) + (rankIdx + 1)) as Key;
   }
 
+  /** Drag-Schwelle in px, skaliert an der aktuellen Feldgröße (mobil-tauglich). */
+  private vizDragThresholdPx(): number {
+    const w = this.boardEl.nativeElement.getBoundingClientRect().width;
+    const square = w > 0 ? w / 8 : 80;
+    return Math.max(PuzzleBoardComponent.VIZ_DRAG_MIN_PX,
+                    square * PuzzleBoardComponent.VIZ_DRAG_SQUARE_FRACTION);
+  }
+
+  private resetVizGesture(): void {
+    this.vizPointerId = undefined;
+    this.vizPointerStartKey = undefined;
+  }
+
   private onVizPointerDown = (ev: PointerEvent): void => {
     if (!this.visualization || !this.ground) return;
     ev.preventDefault();
     ev.stopPropagation();              // verhindert, dass Chessground den Klick (Figur wählen) verarbeitet
+    // Nur EINE Geste gleichzeitig verfolgen — ein zweiter (Multi-Touch-)Finger wird ignoriert,
+    // damit er die Start-Koordinaten der laufenden Geste nicht überschreibt.
+    if (this.vizPointerId !== undefined) return;
     const key = this.keyFromPointer(ev);
-    this.vizPointerStartKey = key ?? undefined;
+    if (!key) return;                  // Start außerhalb des Bretts → keine Geste
+    this.vizPointerId = ev.pointerId;
+    this.vizPointerStartKey = key;
     this.vizPointerStartX = ev.clientX;
     this.vizPointerStartY = ev.clientY;
     // Pointer einfangen, damit das pointerup auch dann ankommt, wenn der Finger das Brett
     // beim Ziehen kurz verlässt.
-    if (key) { try { this.boardEl.nativeElement.setPointerCapture(ev.pointerId); } catch { /* nicht unterstützt */ } }
+    try { this.boardEl.nativeElement.setPointerCapture(ev.pointerId); } catch { /* nicht unterstützt */ }
   };
 
   private onVizPointerUp = (ev: PointerEvent): void => {
     if (!this.visualization || !this.ground) return;
-    const startKey = this.vizPointerStartKey;
-    this.vizPointerStartKey = undefined;
-    if (!startKey) return;
     ev.preventDefault();
     ev.stopPropagation();
-    const endKey = this.keyFromPointer(ev) ?? startKey;
-    const movedFar = Math.hypot(ev.clientX - this.vizPointerStartX, ev.clientY - this.vizPointerStartY)
-                     >= PuzzleBoardComponent.VIZ_DRAG_THRESHOLD_PX;
+    // Nur das pointerup der aktiven Geste behandeln (Multi-Touch-fest).
+    if (this.vizPointerId === undefined || ev.pointerId !== this.vizPointerId) return;
+    const startKey = this.vizPointerStartKey;
+    const startX = this.vizPointerStartX;
+    const startY = this.vizPointerStartY;
+    this.resetVizGesture();
+    if (!startKey) return;
+    // Drag-Release knapp neben dem Brett (durch Pointer-Capture möglich) aufs nächste Randfeld clampen.
+    const endKey = this.keyFromPointer(ev, true) ?? startKey;
+    const movedFar = Math.hypot(ev.clientX - startX, ev.clientY - startY) >= this.vizDragThresholdPx();
     // Ziehgeste (Finger merklich bewegt UND auf einem anderen Feld losgelassen) → Start→Ziel
     // direkt als Zug werten, damit „Figur ziehen" im Viz-Modus genauso geht wie Antippen.
     if (movedFar && endKey !== startKey) {
@@ -205,6 +240,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     } else {
       this.handleVizTap(startKey);
     }
+  };
+
+  private onVizPointerCancel = (ev: PointerEvent): void => {
+    // Vom OS abgebrochene Geste (Scroll/Palm/App-Wechsel) → State sauber zurücksetzen,
+    // sonst bliebe die laufende Geste „hängen".
+    if (ev.pointerId === this.vizPointerId) this.resetVizGesture();
   };
 
   /** Zwei-Tap-Auswahl: 1. Tap wählt das Ausgangsfeld, 2. Tap das Zielfeld. */
@@ -219,33 +260,27 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       this.clearVizSelection();
       return;
     }
-    const orig = this.vizFrom;
-    // Promotion-Erkennung über die tatsächliche chess.js-Stellung (das eingefrorene Brett
-    // weiß nichts vom Bauern auf der 7. Reihe, der durch bisherige Viz-Züge dort hingekommen ist).
-    const promo = this.detectVizPromotion(orig, key);
-    // Legalitäts-Check: ein illegaler 2. Klick wird zum neuen Ausgangsfeld
-    // (sonst verschwindet die Auswahl wirkungslos und der Spieler verliert die Orientierung).
-    if (!this.isVizLegalMove(orig, key, promo)) {
-      this.vizFrom = key;
-      this.markVizSelection(key);
-      return;
-    }
-    this.vizFrom = undefined;
-    this.clearVizSelection();
-    if (promo) {
-      this.showVizPromotionDialog(orig, key);
-      return;
-    }
-    this.moveMade.emit({ orig, dest: key });
+    // Illegaler 2. Tap → das eben getippte Feld wird neues Ausgangsfeld (gewohntes Tap-Verhalten).
+    this.commitVizMove(this.vizFrom, key, key);
   }
 
-  /** Ziehgeste Start→Ziel: gleiche Legalitäts-/Promotion-Prüfung wie der 2. Tap. */
+  /** Ziehgeste Start→Ziel. Illegal → Startfeld bleibt ausgewählt (Orientierung bleibt erhalten). */
   private handleVizDrag(orig: Key, dest: Key): void {
+    this.commitVizMove(orig, dest, orig);
+  }
+
+  /**
+   * Gemeinsamer Zug-Commit für Tap (2. Tap) und Drag: Promotion-Erkennung, Legalitäts-Check,
+   * Auswahl-Reset und Emit. `reselectOnIllegal` legt fest, welches Feld bei illegalem Zug
+   * neu ausgewählt wird (Tap: das Zielfeld; Drag: das Startfeld).
+   * Promotion-Erkennung läuft über die tatsächliche chess.js-Stellung (das eingefrorene Brett
+   * weiß nichts vom Bauern, der durch bisherige Viz-Züge auf die 7. Reihe gekommen ist).
+   */
+  private commitVizMove(orig: Key, dest: Key, reselectOnIllegal: Key): void {
     const promo = this.detectVizPromotion(orig, dest);
     if (!this.isVizLegalMove(orig, dest, promo)) {
-      // Illegale Ziehgeste → wie ein Tap das Startfeld auswählen (Orientierung bleibt erhalten).
-      this.vizFrom = orig;
-      this.markVizSelection(orig);
+      this.vizFrom = reselectOnIllegal;
+      this.markVizSelection(reselectOnIllegal);
       return;
     }
     this.vizFrom = undefined;
@@ -581,6 +616,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (this.premoveTimer) clearTimeout(this.premoveTimer);
     this.boardEl?.nativeElement?.removeEventListener('pointerdown', this.onVizPointerDown, true);
     this.boardEl?.nativeElement?.removeEventListener('pointerup', this.onVizPointerUp, true);
+    this.boardEl?.nativeElement?.removeEventListener('pointercancel', this.onVizPointerCancel, true);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }
