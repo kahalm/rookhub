@@ -36,15 +36,27 @@ describe('RepertoireTrainerComponent auto-advance', () => {
     expect(c.phase).toBe('PLAYING');
   }));
 
-  it('tolerated move auto-advances after the longer delay', fakeAsync(() => {
+  it('tolerated move is taken back and retries the same card (does not auto-play the main move)', fakeAsync(() => {
     const c = make();
+    const startFen = c.fen;
     c.onMove({ orig: 'd2' as any, dest: 'd4' as any });
     expect(c.outcome).toBe('tolerated');
     expect(c.phase).toBe('FEEDBACK');
+    expect(c.lastMove).toBeUndefined();   // Zug zurückgenommen
+    expect(c.fen).toBe(startFen);         // Brett bleibt auf der Ausgangsstellung
     tick(700);
-    expect(c.index).toBe(0);   // bei geduldet länger sichtbar
+    expect(c.index).toBe(0);              // bei geduldet länger sichtbar
     tick(1100);
-    expect(c.index).toBe(1);
+    expect(c.index).toBe(0);              // KEIN Weiterspringen — dieselbe Karte erneut
+    expect(c.phase).toBe('PLAYING');
+  }));
+
+  it('correct move keeps the played move on the board (no flicker)', fakeAsync(() => {
+    const c = make();
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.fen).not.toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    expect(c.lastMove).toEqual(['e2', 'e4'] as any);   // gespielter Zug bleibt markiert
   }));
 
   it('tapping skips the wait and continues immediately', fakeAsync(() => {

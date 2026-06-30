@@ -291,9 +291,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const expected = normSan(card.expected);
     const accepted = card.accepted.map(normSan);
     let grade: ReviewCardRequest['grade'];
-    if (san === expected) { this.outcome = 'correct'; this.correct++; grade = 2; }
-    else if (accepted.includes(san)) { this.outcome = 'tolerated'; grade = 1; }
-    else { this.outcome = 'wrong'; grade = 0; }   // wrong-Counter erst beim „Lösung zeigen"
+    if (san === expected) {
+      this.outcome = 'correct'; this.correct++; grade = 2;
+      // Richtigen Zug auf dem Brett STEHEN lassen (sonst wird er kurz zurückgenommen und
+      // beim nächsten Karten-Schritt erneut gespielt → Flackern).
+      this.fen = fenAfterPlayerMove;
+    } else if (accepted.includes(san)) {
+      this.outcome = 'tolerated'; grade = 1;
+      // Spielbarer (aber nicht der Hauptzug): einfach zurücknehmen — Brett bleibt auf der
+      // Ausgangsstellung (this.fen unverändert), Zug-Markierung weg, kein Vorspielen des Hauptzugs.
+      this.lastMove = undefined;
+    } else {
+      this.outcome = 'wrong'; grade = 0;   // wrong-Counter erst beim „Lösung zeigen"
+    }
 
     this.expectedDisplay = card.expected;
     this.wrongRevealed = false;
@@ -320,7 +330,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Klick irgendwo im Spielbereich überspringt die Auto-Weiter-Wartezeit (richtig/geduldet).
    *  Im wrong-Zustand passiert hier nichts — der Spieler entscheidet bewusst Mouseslip oder Show. */
   onPlayClick(): void {
-    if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.next();
+    if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
   }
 
   /** „Mouseslip": kein Penalty, kein Server-Review, kein Re-Queue. Zurück zur Karte. */
@@ -406,7 +416,25 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   private scheduleAdvance(ms: number): void {
     this.clearAdvance();
-    this.advanceTimer = setTimeout(() => { this.advanceTimer = null; this.next(); }, ms);
+    this.advanceTimer = setTimeout(() => { this.advanceTimer = null; this.runAdvance(); }, ms);
+  }
+
+  /** Nach dem Reveal: richtig → nächste Karte; geduldet → dieselbe Karte erneut (Hauptzug üben),
+   *  damit der Trainer NICHT selbst den Hauptzug vorspielt. */
+  private runAdvance(): void {
+    if (this.outcome === 'tolerated') this.retryCurrentCard();
+    else this.next();
+  }
+
+  /** Geduldeter Zug ist bereits zurückgenommen (Brett auf fenBefore) → dieselbe Stellung erneut
+   *  spielbar machen, ohne im Zug-Verlauf weiterzuspringen. */
+  private retryCurrentCard(): void {
+    this.clearAdvance();
+    this.outcome = 'correct';   // neutraler CSS-Zustand
+    this.lastMove = undefined;
+    try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
+    this.phase = 'PLAYING';
+    this.cdr.markForCheck();
   }
 
   private clearAdvance(): void {

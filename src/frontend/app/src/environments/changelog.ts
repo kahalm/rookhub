@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.218.0';
+export const APP_VERSION = '0.218.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.218.1", date: "2026-06-30", changes: [
+    { en: "Repertoire trainer move feedback fixed. A correct move now stays on the board instead of briefly snapping back and being replayed on the next step (no more flicker). A “playable” (tolerated) alternative is now simply taken back — the board returns to the position and lets you play the actual main move, instead of the trainer auto-playing the main move for you.", de: "Repertoire-Trainer-Zug-Feedback korrigiert. Ein richtiger Zug bleibt jetzt auf dem Brett stehen, statt kurz zurückgenommen und im nächsten Schritt erneut gespielt zu werden (kein Flackern mehr). Ein „spielbarer“ (geduldeter) Alternativzug wird jetzt einfach zurückgenommen — das Brett kehrt zur Stellung zurück und lässt dich den eigentlichen Hauptzug selbst spielen, statt dass der Trainer den Hauptzug für dich vorspielt." },
+  ]},
   { version: "0.218.0", date: "2026-06-30", changes: [
     { en: "One more anarchy level: ?anarchy=max+1 does everything max does (crazy board + forced en passant) and additionally makes the SQUARE decide a piece's look — a piece adopts the random style of the square it's on, so as you drag it across the board its appearance changes to match the destination square. (Plain ?anarchy=max keeps rolling a separate style per piece.)", de: "Eine Anarchy-Stufe mehr: `?anarchy=max+1` macht alles wie max (Crazy-Brett + erzwungenes En passant) und zusätzlich bestimmt das FELD den Figurenstil — eine Figur nimmt den Zufallsstil ihres Feldes an, beim Ziehen übers Brett wechselt ihr Aussehen also passend zum Zielfeld. (`?anarchy=max` würfelt weiterhin pro Figur ein eigenes Set.)" },
   ]},
