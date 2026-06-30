@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.219.0';
+export const APP_VERSION = '0.219.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.219.1", date: "2026-06-30", changes: [
+    { en: "Repertoire trainer: when you play an alternative (tolerated) or a wrong move, the move now stays visible on the board for about a second before springing back, instead of snapping back instantly — so you can see what you played. (Alternative: held ~1.8s, then taken back and the same card becomes playable again; wrong: held ~1s, then taken back with the “mouse-slip / show solution” buttons staying.)", de: "Repertoire-Trainer: Bei einem alternativen (geduldeten) oder falschen Zug bleibt der Zug jetzt etwa eine Sekunde sichtbar auf dem Brett stehen, bevor er zurückspringt — statt sofort zurückzuschnappen, sodass man sieht, was man gezogen hat. (Alternativ: ~1,8 s gehalten, dann zurückgenommen und dieselbe Karte wieder spielbar; falsch: ~1 s gehalten, dann zurückgenommen, die Knöpfe „Mausrutscher / Lösung zeigen“ bleiben.)" },
+  ]},
   { version: "0.219.0", date: "2026-06-30", changes: [
     { en: "Course intro/explanatory pages that have text but no moves are no longer dropped on import. They're kept as an info line (a fake e4 move is added so there's something to show) and appear only when working through a course sequentially — read the text, click Next. They aren't quizzed, never show up in random/daily, and don't count toward course progress. These pages are already in the stored source PGN, so existing courses just need the “Update” button (a local re-process, no Chessable re-fetch).", de: "Kurs-Intro-/Erklärseiten, die nur Text und keine Züge haben, werden beim Import nicht mehr verworfen. Sie bleiben als Info-Linie erhalten (ein Fake-Zug e4 wird ergänzt, damit etwas anzeigbar ist) und erscheinen nur beim sequenziellen Durcharbeiten eines Kurses — Text lesen, „Weiter“ klicken. Sie werden nicht abgefragt, tauchen nie in Zufall/Tagespuzzle auf und zählen nicht zum Kurs-Fortschritt. Diese Seiten stehen bereits im gespeicherten Quell-PGN → bestehende Kurse brauchen nur den „Aktualisieren“-Knopf (lokale Aufbereitung, kein Chessable-Re-Fetch)." },
   ]},

@@ -24,8 +24,12 @@ type Outcome = 'correct' | 'tolerated' | 'wrong';
 const NEW_LIMIT = 20;
 const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
 // Auto-Weiter nach richtigem/geduldetem Zug (kein „Weiter"-Knopf). Geduldet länger,
-// damit die Visualisierung des Repertoirezugs lesbar bleibt; antippen springt sofort weiter.
+// damit der gespielte (zurückzunehmende) Zug lesbar auf dem Brett stehen bleibt;
+// antippen springt sofort weiter.
 const ADVANCE_MS: Record<Outcome, number> = { correct: 700, tolerated: 1800, wrong: 0 };
+// Falscher Zug: bleibt diese Zeitspanne sichtbar auf dem Brett stehen, bevor er
+// zurückgenommen wird (Buttons „Mausrutscher"/„Lösung zeigen" bleiben sichtbar).
+const WRONG_HOLD_MS = 1000;
 
 @Component({
   selector: 'app-repertoire-trainer',
@@ -172,6 +176,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private pendingWrongReview: (() => void) | null = null;
   private statesByKey = new Map<string, RepertoireCardStateDto>();
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Timer, der einen falschen Zug nach kurzer Sichtbarkeit zurücknimmt (Buttons bleiben). */
+  private wrongRevertTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Ausgangsstellung der aktuellen Karte (für das Zurücknehmen nach dem Sicht-Halt). */
+  private startFen = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -258,6 +266,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const card = this.current;
     if (!card) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
     this.fen = card.fenBefore + ' 0 1';   // normFen → volle FEN für chess.js/Brett
+    this.startFen = this.fen;
     this.lastMove = undefined;
     this.wrongRevealed = false;
     this.wrongMove = null;
@@ -278,6 +287,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const card = this.current;
     if (!card || this.phase !== 'PLAYING') return;
 
+    this.startFen = this.fen;   // Ausgangsstellung der Karte (für späteres Zurücknehmen)
     let san = '';
     let fenAfterPlayerMove = '';
     try {
@@ -298,11 +308,15 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.fen = fenAfterPlayerMove;
     } else if (accepted.includes(san)) {
       this.outcome = 'tolerated'; grade = 1;
-      // Spielbarer (aber nicht der Hauptzug): einfach zurücknehmen — Brett bleibt auf der
-      // Ausgangsstellung (this.fen unverändert), Zug-Markierung weg, kein Vorspielen des Hauptzugs.
-      this.lastMove = undefined;
+      // Spielbarer (aber nicht der Hauptzug): Zug erst sichtbar stehen lassen (this.fen =
+      // Stellung NACH dem Zug, Markierung bleibt), erst nach ADVANCE_MS in retryCurrentCard
+      // zurücknehmen → kein sofortiges Zurückspringen.
+      this.fen = fenAfterPlayerMove;
     } else {
       this.outcome = 'wrong'; grade = 0;   // wrong-Counter erst beim „Lösung zeigen"
+      // Falschen Zug ebenfalls erst sichtbar stehen lassen (statt sofort zurückspringen);
+      // wird nach WRONG_HOLD_MS zurückgenommen, Buttons bleiben.
+      this.fen = fenAfterPlayerMove;
     }
 
     this.expectedDisplay = card.expected;
@@ -317,6 +331,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade: 0 })
           .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
       this.kickOffEvalCompare(card, fenAfterPlayerMove);
+      this.scheduleWrongRevert();
     } else {
       this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade })
         .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
@@ -335,6 +350,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** „Mouseslip": kein Penalty, kein Server-Review, kein Re-Queue. Zurück zur Karte. */
   mouseslip(): void {
+    this.clearWrongRevert();
     this.pendingWrongReview = null;
     this.wrongMove = null;
     this.wrongRevealed = false;
@@ -343,8 +359,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.evalMateNote = null;
     this.evalEpoch++;   // laufende Eval-Antworten verwerfen
     this.outcome = 'correct';   // neutraler Zustand für CSS-Klasse
+    this.fen = this.startFen;   // ggf. noch sichtbaren falschen Zug zurücknehmen
     this.lastMove = undefined;
-    // Brett-Position ist unverändert (this.fen) → einfach in PLAYING zurück und Dests neu setzen.
     try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
@@ -353,6 +369,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** „Lösung zeigen": wertet die Karte jetzt als falsch (Server-Review + Re-Queue) und enthüllt den Zug. */
   showSolution(): void {
     if (this.wrongRevealed) return;
+    this.clearWrongRevert();
     this.wrongRevealed = true;
     this.wrong++;
     const card = this.current;
@@ -426,19 +443,38 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     else this.next();
   }
 
-  /** Geduldeter Zug ist bereits zurückgenommen (Brett auf fenBefore) → dieselbe Stellung erneut
-   *  spielbar machen, ohne im Zug-Verlauf weiterzuspringen. */
+  /** Geduldeter Zug stand sichtbar auf dem Brett → jetzt zurücknehmen (Brett auf fenBefore)
+   *  und dieselbe Stellung erneut spielbar machen, ohne im Zug-Verlauf weiterzuspringen. */
   private retryCurrentCard(): void {
     this.clearAdvance();
     this.outcome = 'correct';   // neutraler CSS-Zustand
+    this.fen = this.startFen;   // geduldeten Zug zurücknehmen
     this.lastMove = undefined;
     try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
   }
 
+  private scheduleWrongRevert(): void {
+    this.clearWrongRevert();
+    this.wrongRevertTimer = setTimeout(() => { this.wrongRevertTimer = null; this.revertWrongHold(); }, WRONG_HOLD_MS);
+  }
+
+  /** Nimmt den noch sichtbaren falschen Zug zurück, bleibt aber im FEEDBACK (Buttons sichtbar). */
+  private revertWrongHold(): void {
+    if (this.outcome !== 'wrong' || this.phase !== 'FEEDBACK') return;
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    this.cdr.markForCheck();
+  }
+
+  private clearWrongRevert(): void {
+    if (this.wrongRevertTimer !== null) { clearTimeout(this.wrongRevertTimer); this.wrongRevertTimer = null; }
+  }
+
   private clearAdvance(): void {
     if (this.advanceTimer !== null) { clearTimeout(this.advanceTimer); this.advanceTimer = null; }
+    this.clearWrongRevert();
   }
 
   next(): void {
