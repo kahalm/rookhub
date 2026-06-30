@@ -1127,7 +1127,9 @@
       "nextDaily": "Next day",
       "sharePuzzle": "Share puzzle",
       "backToPuzzle": "Back to puzzle",
-      "showOriginalSolution": "Show original solution"
+      "showOriginalSolution": "Show original solution",
+      "prev": "Previous",
+      "next": "Next"
     },
     "settings": {
       "title": "Settings",
@@ -1185,6 +1187,10 @@
     "track": {
       "solved": "Solved",
       "failed": "Failed"
+    },
+    "info": {
+      "title": "Explanatory line",
+      "subtitle": "For reference only — click through, nothing to solve."
     }
   },
   "admin": {

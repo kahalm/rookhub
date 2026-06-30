@@ -15,7 +15,7 @@
             [check]="isCheck"
             [boardTheme]="boardTheme"
             [pieceSet]="pieceSet"
-            [visualization]="(state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
+            [visualization]="(!reviewMode && state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             [vizOpponentArrow]="vizOpponentLastMove"
             (moveMade)="onMoveMade($event)"
           />
@@ -172,6 +172,22 @@
                     }
                     <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
                   </div>
+                } @else if (state === 'INFO') {
+                  <div class="ctx-nav">
+                    @if (inCourse) {
+                      <button mat-raised-button color="primary" (click)="courseNext()">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
+                      </button>
+                    }
+                    @if (browseInBook) {
+                      <button mat-raised-button color="primary" (click)="nextInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+                      </button>
+                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                        <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+                      </button>
+                    }
+                  </div>
                 } @else if (state === 'SOLVED') {
                   <div class="ctx-nav">
                     @if (inWeekly) {
@@ -296,6 +312,21 @@
                 <mat-icon color="warn">error_outline</mat-icon>
                 <p style="margin:0">{{ 'book.status.loadError' | translate }}</p>
                 <button mat-raised-button color="primary" (click)="retryLoad()">{{ 'common.retry' | translate }}</button>
+              </mat-card-content>
+            </mat-card>
+          } @else if (state === 'INFO') {
+            <!-- Info-/Erklärlinie: kein Quiz, nur Durchklicken -->
+            <mat-card class="info-line-card" appearance="outlined">
+              <mat-card-content>
+                <p class="info-line-head"><mat-icon>info</mat-icon> {{ 'book.info.title' | translate }}</p>
+                <p class="info-line-sub">{{ 'book.info.subtitle' | translate }}</p>
+                <div class="info-line-nav">
+                  <button mat-icon-button (click)="reviewPrev()" [disabled]="reviewIndex === 0"
+                          [attr.aria-label]="'book.actions.prev' | translate"><mat-icon>chevron_left</mat-icon></button>
+                  <span class="info-line-pos">{{ reviewIndex }} / {{ reviewTotal }}</span>
+                  <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"
+                          [attr.aria-label]="'book.actions.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+                </div>
               </mat-card-content>
             </mat-card>
           } @else if (puzzle || state === 'LOADING') {

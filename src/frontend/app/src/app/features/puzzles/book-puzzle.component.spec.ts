@@ -474,3 +474,28 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
     } finally { spy.and.callThrough(); }
   });
 });
+
+describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
+  it('eine IsInfoOnly-Linie geht in den INFO-Durchklick-Modus statt ins Quiz', () => {
+    const c = makeComponent();
+    const setup = spyOn(c as any, 'setupSolver');   // darf für Info-Linien NICHT laufen
+    const puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5 g1f3', bookFileName: 'b', isInfoOnly: true };
+    c.puzzle = puzzle;
+    (c as any).setupPuzzle(puzzle);
+    expect(setup).not.toHaveBeenCalled();
+    expect(c.state).toBe('INFO');
+    expect(c.reviewMode).toBeTrue();
+    expect(c.reviewIndex).toBe(0);
+    expect(c.reviewTotal).toBe(3);   // ganze Linie durchklickbar
+  });
+
+  it('eine normale Linie startet den Solver und geht NICHT in INFO', () => {
+    const c = makeComponent();
+    const setup = spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 8, fen: FEN, moves: 'e2e4 e7e5 g1f3', bookFileName: 'b' };
+    c.puzzle = puzzle;
+    (c as any).setupPuzzle(puzzle);
+    expect(setup).toHaveBeenCalled();
+    expect(c.state).not.toBe('INFO');
+  });
+});

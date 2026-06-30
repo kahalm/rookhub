@@ -88,6 +88,9 @@ export interface BookPuzzleDto {
   hints?: { [lang: string]: string[] };
   /** Admin-Review-Flag: Tipps wurden als „dumm/schlecht" markiert (nur Admin sichtbar/änderbar). */
   hintsFlagged?: boolean;
+  /** „Info-/Erklärlinie" (Chessable IsInfo): kein Quiz, nur Durchklicken — im Kurs sequenziell als
+   *  schreibgeschützte Erklärlinie, nie in Random/Tagespuzzle, zählt nicht zum Kurs-Fortschritt. */
+  isInfoOnly?: boolean;
 }
 
 export interface BookInfoDto {

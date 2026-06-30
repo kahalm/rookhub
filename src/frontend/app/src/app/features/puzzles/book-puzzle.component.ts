@@ -35,7 +35,8 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
-type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE';
+// 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
+type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE' | 'INFO';
 
 @Component({
   selector: 'app-book-puzzle',
@@ -970,8 +971,28 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.showEval = false;
     this.initialEval = '';
     this.currentEval = '';
+    // Info-/Erklärlinie (Chessable IsInfo): nicht abfragen, nur durchklicken.
+    if (puzzle.isInfoOnly) { this.enterInfoReview(puzzle); return; }
     // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
+  }
+
+  /**
+   * Info-/Erklärlinie statt Quiz aufsetzen: Brett auf die Startstellung der Linie, Review-Modus an
+   * (Brett nur lesend, ◀/▶-Navigation + Zug-Kommentare wie beim „Ganze Partie"-Durchspielen). Es gibt
+   * keinen Trainingsstart, kein Aufgeben/Lösen und keinen Timer — nur „Weiter" (sequenziell/Buch).
+   */
+  private enterInfoReview(puzzle: BookPuzzleDto): void {
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.clearSolutionPlay();
+    this.stopTimer();
+    this.gaveUp = false;
+    this.solutionReview = false;
+    this.reviewMode = true;
+    this.state = 'INFO';
+    this.chess = new Chess(puzzle.fen);
+    this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
+    this.reviewGoTo(0);   // setzt boardFen/turnColor/Kommentar für die Ausgangsstellung
   }
 
   /** Zug aufs Brett anwenden ohne lastMove-Highlight (Vorspiel/Review-Aufbau). */

@@ -1127,7 +1127,9 @@
       "nextDaily": "Nächster Tag",
       "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle",
-      "showOriginalSolution": "Originale Lösung zeigen"
+      "showOriginalSolution": "Originale Lösung zeigen",
+      "prev": "Zurück",
+      "next": "Weiter"
     },
     "settings": {
       "title": "Einstellungen",
@@ -1185,6 +1187,10 @@
     "track": {
       "solved": "Gelöst",
       "failed": "Fehlversuch"
+    },
+    "info": {
+      "title": "Erklärlinie",
+      "subtitle": "Nur zur Erklärung — durchklicken, nichts zu lösen."
     }
   },
   "admin": {

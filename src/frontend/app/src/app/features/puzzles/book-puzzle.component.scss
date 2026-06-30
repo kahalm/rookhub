@@ -167,3 +167,17 @@
       .track-solved { color: #2e7d32; }
       .track-failed { color: #c62828; }
     }
+
+    // Info-/Erklärlinie (kein Quiz, nur Durchklicken)
+    .info-line-card {
+      .info-line-head {
+        display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.25rem;
+        font-weight: 600;
+        mat-icon { color: #1565c0; }
+      }
+      .info-line-sub { margin: 0 0 0.5rem; opacity: 0.75; font-size: 0.95em; }
+      .info-line-nav {
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        .info-line-pos { font-variant-numeric: tabular-nums; min-width: 3.5rem; text-align: center; }
+      }
+    }

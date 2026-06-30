@@ -1125,7 +1125,9 @@
       "nextDaily": "Sljedeći dan",
       "sharePuzzle": "Podijeli zagonetku",
       "backToPuzzle": "Natrag na zagonetku",
-      "showOriginalSolution": "Prikaži izvorno rješenje"
+      "showOriginalSolution": "Prikaži izvorno rješenje",
+      "prev": "Natrag",
+      "next": "Dalje"
     },
     "settings": {
       "title": "Postavke",
@@ -1183,6 +1185,10 @@
     "track": {
       "solved": "Riješeno",
       "failed": "Neuspjelo"
+    },
+    "info": {
+      "title": "Linija s objašnjenjem",
+      "subtitle": "Samo za pregled — kliktaj kroz poteze, nema zadatka."
     }
   },
   "admin": {
