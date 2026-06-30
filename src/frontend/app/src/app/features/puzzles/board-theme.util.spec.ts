@@ -1,7 +1,38 @@
 import {
   BOARD_THEMES, PIECE_SETS, randomBoardTheme, randomPieceSet,
-  applyThemeMode, clearCrazyStyles, applyVisualizationHide, clearVisualizationHide
+  applyThemeMode, clearCrazyStyles, applyVisualizationHide, clearVisualizationHide,
+  parseShareViewParams
 } from './board-theme.util';
+
+// Mini-ParamMap-Stub (nur .get wird gebraucht).
+function qp(map: Record<string, string>) {
+  return { get: (k: string) => (k in map ? map[k] : null) };
+}
+
+describe('parseShareViewParams', () => {
+  it('crazy=1 setzt themeMode crazy', () => {
+    expect(parseShareViewParams(qp({ crazy: '1' })).themeMode).toBe('crazy');
+  });
+  it('crazy!=1 setzt keinen themeMode', () => {
+    expect(parseShareViewParams(qp({ crazy: '0' })).themeMode).toBeUndefined();
+    expect(parseShareViewParams(qp({})).themeMode).toBeUndefined();
+  });
+  it('visualmode 0–4 wird als Zahl übernommen', () => {
+    for (const n of ['0', '1', '2', '3', '4']) {
+      expect(parseShareViewParams(qp({ visualmode: n })).visualization).toBe(Number(n));
+    }
+  });
+  it('visualmode außerhalb 0–4 / unsinnig wird ignoriert', () => {
+    expect(parseShareViewParams(qp({ visualmode: '5' })).visualization).toBeUndefined();
+    expect(parseShareViewParams(qp({ visualmode: '-1' })).visualization).toBeUndefined();
+    expect(parseShareViewParams(qp({ visualmode: 'x' })).visualization).toBeUndefined();
+  });
+  it('kombiniert crazy + visualmode', () => {
+    const r = parseShareViewParams(qp({ crazy: '1', visualmode: '3' }));
+    expect(r.themeMode).toBe('crazy');
+    expect(r.visualization).toBe(3);
+  });
+});
 
 describe('board-theme.util', () => {
   afterEach(() => {

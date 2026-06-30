@@ -21,7 +21,7 @@ import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
@@ -505,6 +505,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   ngOnInit(): void {
+    // Optionale Anzeige-Overrides aus dem (geteilten) Link anwenden, BEVOR das Puzzle aufgebaut wird
+    // (onSetupStart liest themeMode, der Solver-Setup liest visualizationMode). Gilt für alle Modi.
+    this.applyShareViewOverrides();
+
     const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
     if (weeklyIdParam) {
       this.inWeekly = true;
@@ -550,6 +554,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       }
       this.loadPuzzle(Number(idParam));
     }
+  }
+
+  /**
+   * Transiente Anzeige-Overrides aus dem Link (`?crazy=1`, `?visualmode=0–4`) — verändert keine
+   * gespeicherten Einstellungen. Praktisch, um ein geteiltes Puzzle als Blind-/Crazy-Variante zu
+   * verlinken (Parameter manuell an den Teilen-Link anhängen).
+   */
+  private applyShareViewOverrides(): void {
+    const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
+    if (ov.themeMode) this.themeMode = ov.themeMode;
+    if (ov.visualization != null) this.visualizationMode = ov.visualization;
   }
 
   /** Meldet das Ergebnis genau einmal an eine offene Buch-Challenge zurück (fire-and-forget). */

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.202.2';
+export const APP_VERSION = '0.203.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.203.0", date: "2026-06-30", changes: [
+    { en: "Shared/opened puzzle links now honor two optional query parameters so you can hand-craft a link to a specific view: `?crazy=1` opens the puzzle with the crazy board theme, and `?visualmode=0` (off) … `4` (pieces invisible) sets the blindfold/visualization level (your usual values 0–3 work). Both are transient — they don't change your saved settings — and work on standard, book, course, daily and weekly puzzle URLs (e.g. append `?single=1&crazy=1&visualmode=3`).", de: "Geteilte/geöffnete Puzzle-Links berücksichtigen jetzt zwei optionale Query-Parameter, mit denen du gezielt eine Ansicht verlinken kannst: `?crazy=1` öffnet das Puzzle mit dem Crazy-Brett-Theme, und `?visualmode=0` (aus) … `4` (Figuren unsichtbar) setzt die Blind-/Visualisierungs-Stufe (deine üblichen Werte 0–3 funktionieren). Beide sind transient — sie ändern deine gespeicherten Einstellungen nicht — und gelten für Standard-, Buch-, Kurs-, Tages- und Wochen-Puzzle-URLs (z. B. `?single=1&crazy=1&visualmode=3` anhängen)." },
+  ]},
   { version: "0.202.2", date: "2026-06-30", changes: [
     { en: "Security hardening (code review): the named rate limiters (auth, anonymous-puzzle, anonymous-tournament) now partition per client IP like the global limiter — previously each was a single shared bucket, so one attacker could exhaust the 10 logins/min window for everyone (login/register/forgot-password DoS) and brute-force wasn't throttled per IP. The default CORS policy no longer sets AllowCredentials (auth is Bearer-header only, no cookies) to avoid a dangerous credentials+any-header combination. \"Stay logged in\" tokens now last 90 days instead of a year.", de: "Sicherheits-Härtung (Code Review): Die benannten Rate-Limiter (auth, anonymous-puzzle, anonymous-tournament) partitionieren jetzt pro Client-IP wie der globale Limiter — vorher war jeder ein einziger gemeinsamer Topf, sodass ein Angreifer das 10-Logins/min-Fenster für alle ausschöpfen konnte (Login/Register/Passwort-vergessen-DoS) und Brute-Force nicht pro IP gedrosselt war. Die Default-CORS-Policy setzt kein AllowCredentials mehr (Auth läuft nur über den Bearer-Header, keine Cookies) — vermeidet die gefährliche Kombination Credentials + beliebige Header. „Eingeloggt bleiben\"-Tokens gelten jetzt 90 statt 365 Tage." },
   ]},

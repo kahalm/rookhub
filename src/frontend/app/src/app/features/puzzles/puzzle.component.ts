@@ -28,7 +28,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
@@ -250,6 +250,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   ngOnInit(): void {
+    // Optionale Anzeige-Overrides aus dem (geteilten) Link (`?crazy=1`, `?visualmode=0–4`),
+    // bevor das Puzzle aufgebaut wird. Transient — verändert keine gespeicherten Einstellungen.
+    const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
+    if (ov.themeMode) this.themeMode = ov.themeMode;
+    if (ov.visualization != null) this.visualizationMode = ov.visualization;
+
     // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
     this.loadSettingsOpen();
 

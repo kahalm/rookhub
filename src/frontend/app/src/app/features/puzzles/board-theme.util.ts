@@ -36,6 +36,27 @@ export function randomPieceSet(): string {
   return randomItem(PIECE_SETS).key;
 }
 
+// --- Share-Link-Anzeige-Overrides ---
+
+export interface ShareViewParams {
+  themeMode?: ThemeMode;
+  visualization?: number;
+}
+
+/**
+ * Liest optionale Anzeige-Overrides aus den Query-Parametern eines (geteilten) Puzzle-Links:
+ *  - `crazy=1`      → Brett-Theme-Modus „crazy"
+ *  - `visualmode=N` → Visualisierungs-Stufe N (0–4)
+ * Rein lesend; verändert KEINE gespeicherten Nutzereinstellungen (transient pro Aufruf).
+ */
+export function parseShareViewParams(q: { get(key: string): string | null }): ShareViewParams {
+  const out: ShareViewParams = {};
+  if (q.get('crazy') === '1') out.themeMode = 'crazy';
+  const vm = q.get('visualmode');
+  if (vm != null && /^[0-4]$/.test(vm)) out.visualization = Number(vm);
+  return out;
+}
+
 // --- Crazy Mode ---
 
 // Only simple (flat-color) themes are used for crazy squares
