@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.217.0';
+export const APP_VERSION = '0.217.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.217.1", date: "2026-06-30", changes: [
+    { en: "Fix: the “Last puzzle” favorite button showed two hearts (the icon plus a ♥ in the label). Removed the duplicate ♥ from the label — only the heart icon remains.", de: "Fix: Der „Letztes Puzzle“-Favoriten-Knopf zeigte zwei Herzen (Icon plus ein ♥ im Text). Das doppelte ♥ aus dem Text entfernt — es bleibt nur das Herz-Icon." },
+  ]},
   { version: "0.217.0", date: "2026-06-30", changes: [
     { en: "Standard puzzle links now honour ?single=1: after you solve such a puzzle it no longer auto-advances to a random next one — it stays put. The “Next” button is still there, so you can move on whenever you want. (Previously ?single=1 only worked on book/course puzzle links.)", de: "Standard-Puzzle-Links beachten jetzt `?single=1`: Nach dem Lösen springt ein solches Puzzle nicht mehr automatisch zum nächsten (Zufalls-)Puzzle weiter, sondern bleibt stehen. Der „Weiter“-Knopf bleibt erhalten — du kannst also jederzeit selbst weiterblättern. (Bisher wirkte `?single=1` nur bei Buch-/Kurs-Puzzle-Links.)" },
   ]},
