@@ -95,7 +95,7 @@ public class BookPuzzleController : BaseApiController
                 return BadRequest(new { message = "Invalid sessionId." });
             identityKey = $"s:{dto.SessionId}";
         }
-        try { return Ok(await _service.RecordSharedAttemptAsync(id, identityKey, dto.Solved)); }
+        try { return Ok(await _service.RecordSharedAttemptAsync(id, identityKey, dto.Solved, dto.HintsUsed)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 

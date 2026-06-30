@@ -23,5 +23,9 @@ public class SharedPuzzleAttempt
 
     public bool Solved { get; set; }
 
+    /// <summary>Höchste angesehene Tipp-Stufe (0–3) im wertungsrelevanten Erstversuch des Besuchers;
+    /// > 0 = mit Tipps gelöst/gescheitert. Analog zu <see cref="BookPuzzleAttempt.HintsUsed"/>.</summary>
+    public int HintsUsed { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

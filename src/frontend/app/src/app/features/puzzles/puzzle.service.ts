@@ -7,6 +7,8 @@ import { map } from 'rxjs/operators';
 export interface SharedPuzzleCounts {
   solved: number;
   failed: number;
+  /** Gelöste Erstversuche nach genutzter Tipp-Stufe: Index 0 = ohne Tipp, 1/2/3 = mit so vielen Tipps. */
+  solvedByHints?: number[];
 }
 
 export interface PuzzleDto {
@@ -288,9 +290,9 @@ export class PuzzleService {
   /** „Track solves" eines geteilten Puzzles: Erstversuch des Besuchers melden, liefert aktuelle Zähler.
    *  `solved=false` deckt Fehlzug/Aufgeben/Reset ab. Eingeloggte werden serverseitig per Token erkannt,
    *  Anonyme über die SessionId. Pro Besucher zählt nur der erste Versuch. */
-  trackSharedAttempt(id: number, solved: boolean): Observable<SharedPuzzleCounts> {
+  trackSharedAttempt(id: number, solved: boolean, hintsUsed = 0): Observable<SharedPuzzleCounts> {
     return this.http.post<SharedPuzzleCounts>(`/api/book-puzzles/${id}/track`, {
-      solved, sessionId: this.ensureSessionId()
+      solved, hintsUsed, sessionId: this.ensureSessionId()
     });
   }
 

@@ -138,7 +138,7 @@ public class BookPuzzleService
     /// (<paramref name="identityKey"/>). Spätere Versuche desselben Besuchers werden ignoriert (Unique-Index;
     /// hier zusätzlich vorab geprüft, damit InMemory-Tests ohne DB-Constraint korrekt sind). Liefert die
     /// aktuellen Zähler zurück.</summary>
-    public async Task<SharedPuzzleCountsDto> RecordSharedAttemptAsync(int id, string identityKey, bool solved)
+    public async Task<SharedPuzzleCountsDto> RecordSharedAttemptAsync(int id, string identityKey, bool solved, int hintsUsed = 0)
     {
         if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
             throw new KeyNotFoundException("Book puzzle not found.");
@@ -152,6 +152,7 @@ public class BookPuzzleService
                 BookPuzzleId = id,
                 IdentityKey = identityKey,
                 Solved = solved,
+                HintsUsed = Math.Clamp(hintsUsed, 0, 3),
                 CreatedAt = DateTime.UtcNow,
             });
             try { await _db.SaveChangesAsync(); }
@@ -164,12 +165,34 @@ public class BookPuzzleService
         return await GetSharedCountsAsync(id);
     }
 
-    /// <summary>Aggregierte „Track solves"-Zähler (Erstversuch je Besucher) eines geteilten Puzzles.</summary>
+    /// <summary>Aggregierte „Track solves"-Zähler (Erstversuch je Besucher) eines geteilten Puzzles,
+    /// inkl. Aufschlüsselung der gelösten Erstversuche nach genutzter Tipp-Stufe (0–3).</summary>
     public async Task<SharedPuzzleCountsDto> GetSharedCountsAsync(int id)
     {
-        var solved = await _db.SharedPuzzleAttempts.CountAsync(a => a.BookPuzzleId == id && a.Solved);
-        var failed = await _db.SharedPuzzleAttempts.CountAsync(a => a.BookPuzzleId == id && !a.Solved);
-        return new SharedPuzzleCountsDto { Solved = solved, Failed = failed };
+        // Eine Aggregat-Query: solved/failed + gelöste je Tipp-Stufe (0–3). HintsUsed ist bereits 0–3 geklemmt.
+        var byHint = await _db.SharedPuzzleAttempts
+            .Where(a => a.BookPuzzleId == id)
+            .GroupBy(a => new { a.Solved, a.HintsUsed })
+            .Select(g => new { g.Key.Solved, g.Key.HintsUsed, Count = g.Count() })
+            .ToListAsync();
+
+        var solvedByHints = new List<int> { 0, 0, 0, 0 };
+        var solved = 0;
+        var failed = 0;
+        foreach (var row in byHint)
+        {
+            if (row.Solved)
+            {
+                solved += row.Count;
+                var lvl = Math.Clamp(row.HintsUsed, 0, 3);
+                solvedByHints[lvl] += row.Count;
+            }
+            else
+            {
+                failed += row.Count;
+            }
+        }
+        return new SharedPuzzleCountsDto { Solved = solved, Failed = failed, SolvedByHints = solvedByHints };
     }
 
     /// <summary>

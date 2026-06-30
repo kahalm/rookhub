@@ -26,6 +26,8 @@ public class RecordSharedAttemptDto
 {
     public bool Solved { get; set; }
     public string? SessionId { get; set; }
+    /// <summary>Höchste angesehene Tipp-Stufe (0–3) beim Erstversuch; serverseitig auf 0–3 geklemmt.</summary>
+    public int HintsUsed { get; set; }
 }
 
 /// <summary>Aggregierte „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher).</summary>
@@ -33,6 +35,9 @@ public class SharedPuzzleCountsDto
 {
     public int Solved { get; set; }
     public int Failed { get; set; }
+    /// <summary>Gelöste Erstversuche aufgeschlüsselt nach genutzter Tipp-Stufe: Index 0 = ohne Tipp,
+    /// 1/2/3 = mit so vielen Tipps. Summe entspricht <see cref="Solved"/>.</summary>
+    public List<int> SolvedByHints { get; set; } = new() { 0, 0, 0, 0 };
 }
 
 public class BookSolverDto

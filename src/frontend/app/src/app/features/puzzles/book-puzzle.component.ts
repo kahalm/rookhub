@@ -496,7 +496,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordTrack(solved: boolean): void {
     if (!this.trackSolves || this.trackRecorded || !this.puzzle) return;
     this.trackRecorded = true;
-    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved).subscribe({
+    // Genutzte Tipp-Stufe (0–3) mitschicken; serverseitig geklemmt. So zeigt der Zähler künftig auch,
+    // wie viele Löser ohne/mit 1/2/3 Tipps gelöst haben.
+    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved, this.hintLevel).subscribe({
       next: c => this.sharedCounts = c,
       error: () => { this.trackRecorded = false; }   // bei Fehler erneut versuchbar
     });

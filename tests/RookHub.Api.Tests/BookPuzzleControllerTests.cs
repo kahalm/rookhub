@@ -982,6 +982,33 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Track_BreaksDownSolvedByHintLevel()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:5", bookFileName: "track.pgn");
+
+        SetUser(31); TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, HintsUsed = 0 }));
+        SetUser(32); TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, HintsUsed = 2 }));
+        SetUser(33); TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, HintsUsed = 2 }));
+        SetUser(34); var after = TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = false, HintsUsed = 3 }));
+
+        Assert.Equal(3, after.Solved);
+        Assert.Equal(1, after.Failed);
+        // Index = Tipp-Stufe: 1× ohne Tipp, 0× mit 1, 2× mit 2, 0× mit 3. Gescheiterte zählen nicht in die Aufschlüsselung.
+        Assert.Equal(new List<int> { 1, 0, 2, 0 }, after.SolvedByHints);
+    }
+
+    [Fact]
+    public async Task Track_ClampsHintsUsedOutOfRange()
+    {
+        var p = await CreateBookPuzzleAsync(lineId: "track.pgn:6", bookFileName: "track.pgn");
+
+        SetUser(41); var after = TrackResult(await _controller.Track(p.Id, new RecordSharedAttemptDto { Solved = true, HintsUsed = 99 }));
+
+        Assert.Equal(1, after.Solved);
+        Assert.Equal(1, after.SolvedByHints[3]);   // auf 3 geklemmt
+    }
+
+    [Fact]
     public async Task TrackCounts_ReturnsCurrentTotals()
     {
         var p = await CreateBookPuzzleAsync(lineId: "track.pgn:5", bookFileName: "track.pgn");

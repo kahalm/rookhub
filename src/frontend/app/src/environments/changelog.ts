@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.201.3';
+export const APP_VERSION = '0.202.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.202.0", date: "2026-06-30", changes: [
+    { en: "Shared-puzzle \"track solves\" now also records how many hints the visitor used (0–3) on their first attempt. The counts response carries a per-level breakdown of solved attempts (solvedByHints[0..3]) alongside the existing solved/failed totals, so it's now possible to see how many people solved with no hints vs. 1/2/3 hints. New SharedPuzzleAttempt.HintsUsed column (migration AddSharedPuzzleAttemptHints), clamped 0–3 server-side; the book-puzzle solver sends its current hint level. +2 backend tests.", de: "Das „Track solves\" geteilter Puzzles erfasst jetzt zusätzlich, wie viele Tipps der Besucher (0–3) beim Erstversuch genutzt hat. Die Zähler-Antwort enthält neben dem bisherigen gelöst/gescheitert eine Aufschlüsselung der gelösten Versuche je Tipp-Stufe (solvedByHints[0..3]) — so ist jetzt sichtbar, wie viele ohne bzw. mit 1/2/3 Tipps gelöst haben. Neue Spalte SharedPuzzleAttempt.HintsUsed (Migration AddSharedPuzzleAttemptHints), serverseitig auf 0–3 geklemmt; der Buch-Puzzle-Solver schickt seine aktuelle Tipp-Stufe mit. +2 Backend-Tests." },
+  ]},
   { version: "0.201.3", date: "2026-06-30", changes: [
     { en: "Test coverage: added unit tests for previously untested frontend pieces (move/board-theme helpers, theme service, admin/menu route guards, notification service, and the games/leaderboard/puzzle/repertoire-training/tournament-detail HTTP services) plus the backend menu registry. Writing them surfaced a small bug: a free promotion move without an explicitly chosen piece underpromoted to a knight instead of defaulting to a queen — now fixed to default to queen as documented.", de: "Testabdeckung: Unit-Tests für bisher ungetestete Frontend-Teile ergänzt (Zug-/Brett-Theme-Helfer, Theme-Service, Admin-/Menü-Routen-Guards, Benachrichtigungs-Service sowie die HTTP-Services games/leaderboard/puzzle/repertoire-training/tournament-detail) plus die Backend-Menü-Registry. Dabei kam ein kleiner Bug ans Licht: ein freier Umwandlungszug ohne explizit gewählte Figur wandelte in einen Springer statt standardmäßig in eine Dame um — jetzt korrekt auf Dame gesetzt." },
   ]},
