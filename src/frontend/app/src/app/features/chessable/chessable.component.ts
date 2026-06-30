@@ -113,13 +113,32 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
           </mat-card-content>
         </mat-card>
       }
+      @if (credentials?.blocked) {
+        <div class="blocked-banner" role="alert">
+          <mat-icon>block</mat-icon>
+          <div class="blocked-text">
+            <strong>{{ 'chessable.blockedTitle' | translate }}</strong>
+            <p>{{ 'chessable.blockedInfo' | translate }}</p>
+            @if (credentials?.blockedReason) {
+              <p class="blocked-reason">{{ credentials!.blockedReason }}</p>
+            }
+          </div>
+          <button mat-raised-button color="primary" [disabled]="testing" (click)="test()">
+            <mat-icon>cable</mat-icon>
+            {{ (testing ? 'chessable.testing' : 'chessable.testNow') | translate }}
+          </button>
+        </div>
+      }
       <mat-card>
         <mat-card-content>
           @if (loadingStatus) {
             <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
           } @else {
             <p class="status">
-              @if (credentials?.hasCredentials) {
+              @if (credentials?.blocked) {
+                <mat-icon class="err">block</mat-icon>
+                {{ 'chessable.statusBlocked' | translate }}
+              } @else if (credentials?.hasCredentials) {
                 <mat-icon class="ok">check_circle</mat-icon>
                 {{ 'chessable.currentToken' | translate: { masked: credentials!.maskedBearer } }}
               } @else {
@@ -327,6 +346,17 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
     .status { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem; }
     .status mat-icon.ok { color: #2e7d32; }
     .status mat-icon.neutral { color: var(--mat-sys-on-surface-variant, #888); }
+    .status mat-icon.err { color: #c62828; }
+    .blocked-banner {
+      display: flex; align-items: center; gap: 1rem; margin: 0 0 1rem; padding: 0.85rem 1rem;
+      border-radius: 8px; border: 1px solid #ef9a9a;
+      background: rgba(198, 40, 40, 0.08); color: var(--mat-sys-on-surface, inherit);
+    }
+    .blocked-banner > mat-icon { color: #c62828; flex: 0 0 auto; }
+    .blocked-banner .blocked-text { flex: 1 1 auto; }
+    .blocked-banner .blocked-text p { margin: 0.25rem 0 0; font-size: 0.9rem; }
+    .blocked-banner .blocked-reason { font-style: italic; opacity: 0.8; }
+    .blocked-banner button { flex: 0 0 auto; }
     .bearer-field { width: 100%; }
     .bearer-field textarea { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
     .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
@@ -570,9 +600,19 @@ export class ChessableComponent implements OnInit, OnDestroy {
     this.chessable.test().subscribe({
       next: (r: ChessableTestResult) => {
         this.testing = false;
+        // Erfolg → Circuit-Breaker ist serverseitig geschlossen und pausierte Importe nehmen wieder
+        // auf: Status + Importliste frisch ziehen, damit der Sperr-Banner verschwindet.
+        if (this.credentials) this.credentials = { ...this.credentials, blocked: false, blockedReason: null };
+        this.refresh();
+        this.loadActiveImports();
         this.snackbar.success(this.translate.instant('chessable.testOk', { uid: r.uid, count: r.courseCount }));
       },
-      error: e => { this.testing = false; this.showError(e); }
+      error: e => {
+        this.testing = false;
+        // Fehlschlag kann den Breaker (neu) geöffnet haben → Status auffrischen.
+        this.refresh();
+        this.showError(e);
+      }
     });
   }
 

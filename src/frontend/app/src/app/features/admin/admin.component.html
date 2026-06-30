@@ -544,7 +544,7 @@
                 <mat-label>{{ 'admin.courseDl.selectUser' | translate }}</mat-label>
                 <mat-select [(ngModel)]="dlSelectedUserId" (selectionChange)="onDlUserChange()">
                   @for (u of dlUsers; track u.userId) {
-                    <mat-option [value]="u.userId">{{ u.username }}</mat-option>
+                    <mat-option [value]="u.userId">{{ u.username }}{{ u.blocked ? ' 🔒' : '' }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
@@ -553,7 +553,15 @@
                   <mat-icon>refresh</mat-icon> {{ 'admin.courseDl.refresh' | translate }}
                 </button>
               }
+              @if (dlSelectedUser()?.blocked) {
+                <button mat-raised-button color="primary" [disabled]="dlTesting" (click)="dlTestUser()">
+                  <mat-icon>cable</mat-icon> {{ (dlTesting ? 'chessable.testing' : 'chessable.testNow') | translate }}
+                </button>
+              }
             </div>
+            @if (dlSelectedUser()?.blocked) {
+              <p class="empty" role="alert">🔒 {{ 'chessable.blockedInfo' | translate }}</p>
+            }
 
             @if (dlUsers.length === 0 && !dlUsersLoading) {
               <p class="empty">{{ 'admin.courseDl.noUsers' | translate }}</p>

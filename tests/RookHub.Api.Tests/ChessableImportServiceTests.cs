@@ -44,8 +44,9 @@ public class ChessableImportServiceTests : IDisposable
     private ChessableImportService BuildSvc(HttpMessageHandler handler)
     {
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
+        var breaker = new ChessableBearerBreaker(_db, _queue, NullLogger<ChessableBearerBreaker>.Instance);
         return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
-            _queue, new NotificationService(_db), NullLogger<ChessableImportService>.Instance);
+            _queue, new NotificationService(_db), breaker, NullLogger<ChessableImportService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -336,6 +337,60 @@ public class ChessableImportServiceTests : IDisposable
         var imp = await SeedImportAsync("repertoire", status: "completed");
         await _svc.RunAsync(imp.Id);
         Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_BearerBreakerOpen_PausesWithoutCallingProxy()
+    {
+        // Bearer von User 7 gesperrt → der Import darf Chessable GAR NICHT anfragen.
+        await SeedCredentialAsync(7, blocked: true);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null); // braucht Fetch → Bearer-Pfad
+
+        // _svc nutzt den Default-Handler, der bei JEDEM Proxy-Aufruf wirft. Kein Wurf = kein Request.
+        await _svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("paused", reloaded!.Status);
+        Assert.Equal("bearer-blocked", reloaded.Phase);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchFailsBanned_TripsBreaker()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "failed", chaptersDone = 0, chaptersTotal = 0, linesDone = 0,
+                chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null,
+                error = "Chessable: User is banned or deleted" });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("failed", reloaded!.Status);
+        // Der fatale Fehlschlag hat den Circuit-Breaker des Bearers geöffnet.
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.NotNull(cred.BlockedAt);
+    }
+
+    private async Task SeedCredentialAsync(int userId, bool blocked)
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
+            _db.AppUsers.Add(new AppUser { Id = userId, Username = $"u{userId}", PasswordHash = "x" });
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = userId,
+            EncryptedBearer = _encryption.Encrypt("dummy-bearer"),
+            BlockedAt = blocked ? DateTime.UtcNow : null,
+            BlockedReason = blocked ? "Chessable: User is banned or deleted" : null,
+        });
+        await _db.SaveChangesAsync();
     }
 
     [Fact]

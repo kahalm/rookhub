@@ -111,6 +111,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   // --- Kurse von Usern holen (Chessable-Download im Namen eines Users) ---
   dlUsers: ChessableCredentialedUser[] = [];
   dlUsersLoading = false;
+  dlTesting = false;
   dlSelectedUserId: number | null = null;
   dlCourses: ChessableCourse[] = [];
   dlCoursesLoading = false;
@@ -322,6 +323,30 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.chessable.getCredentialedUsersAdmin().subscribe({
       next: list => { this.dlUsers = list; this.dlUsersLoading = false; },
       error: () => { this.dlUsersLoading = false; },
+    });
+  }
+
+  /** Der aktuell gewählte Download-User (oder undefined). */
+  dlSelectedUser(): ChessableCredentialedUser | undefined {
+    return this.dlUsers.find(u => u.userId === this.dlSelectedUserId);
+  }
+
+  /** ADMIN: Bearer des gewählten Users testen — setzt bei Erfolg dessen Circuit-Breaker zurück und
+   *  nimmt seine pausierten Importe wieder auf. */
+  dlTestUser(): void {
+    if (this.dlSelectedUserId == null) return;
+    this.dlTesting = true;
+    this.chessable.testUser(this.dlSelectedUserId).subscribe({
+      next: r => {
+        this.dlTesting = false;
+        this.snackbar.info(this.translate.instant('chessable.testOk', { uid: r.uid, count: r.courseCount }));
+        this.loadDlUsers(); // Blocked-Flag aktualisieren
+      },
+      error: err => {
+        this.dlTesting = false;
+        this.snackbar.info(err?.error?.message || this.translate.instant('chessable.testFailed'));
+        this.loadDlUsers();
+      },
     });
   }
 

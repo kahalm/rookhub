@@ -30,6 +30,7 @@ public class ChessableController : BaseApiController
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _chessable;
     private readonly IBackgroundTaskQueue _taskQueue;
+    private readonly ChessableBearerBreaker _breaker;
     private readonly ILogger<ChessableController> _logger;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -38,12 +39,14 @@ public class ChessableController : BaseApiController
         EncryptionService encryption,
         ChessableProxyService chessable,
         IBackgroundTaskQueue taskQueue,
+        ChessableBearerBreaker breaker,
         ILogger<ChessableController> logger)
     {
         _db = db;
         _encryption = encryption;
         _chessable = chessable;
         _taskQueue = taskQueue;
+        _breaker = breaker;
         _logger = logger;
     }
 
@@ -83,7 +86,8 @@ public class ChessableController : BaseApiController
 
         // Robust gegen Key-Rotation/korrupte Daten: kein 500, nur keine Maske (Re-Eingabe nötig).
         var plain = _encryption.TryDecrypt(cred.EncryptedBearer);
-        return Ok(new ChessableCredentialResponse(true, plain is null ? null : Mask(plain)));
+        return Ok(new ChessableCredentialResponse(
+            true, plain is null ? null : Mask(plain), cred.BlockedAt is not null, cred.BlockedReason));
     }
 
     [HttpPost("credentials")]
@@ -114,6 +118,11 @@ public class ChessableController : BaseApiController
             // Bearer gewechselt → gecachte Kursliste verwerfen (kann zu anderem Account gehören).
             cred.CachedCoursesJson = null;
             cred.CoursesCachedAt = null;
+            // Frischer Bearer → Circuit-Breaker schließen (ein neuer Token verdient einen Versuch).
+            // Pausierte Importe werden NICHT automatisch aufgenommen — das macht erst ein erfolgreicher
+            // „Testen“-Klick (ClearAndResumeAsync), damit kein gleich wieder toter Token sie hetzt.
+            cred.BlockedAt = null;
+            cred.BlockedReason = null;
         }
 
         await _db.SaveChangesAsync();
@@ -133,20 +142,28 @@ public class ChessableController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>Prüft den Bearer aktiv gegen Chessable. Das ist zugleich der „Reset" des
+    /// Circuit-Breakers: erfolgreicher Test ⇒ Breaker schließen + wegen ihm pausierte Importe wieder
+    /// aufnehmen; fatale Ablehnung (Account gesperrt/gelöscht, Token tot) ⇒ Breaker (erneut) öffnen.
+    /// Der Test ist die EINZIGE Anfrage, die auch bei offenem Breaker bewusst durchgelassen wird.</summary>
     [HttpPost("test")]
     public async Task<IActionResult> Test(CancellationToken ct)
     {
+        var userId = GetUserId();
         var bearer = await LoadBearerAsync();
         if (bearer is null) return BadRequest(new { message = "No Chessable bearer saved" });
 
         try
         {
             var result = await _chessable.TestAsync(bearer, ct);
+            await _breaker.ClearAndResumeAsync(userId, ct);
             return Ok(result);
         }
         catch (ChessableProxyException ex)
         {
             _logger.LogWarning("Chessable test failed: {Status} {Message}", ex.Status, ex.Message);
+            if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
+                await _breaker.TripAsync(userId, ex.Message, ct);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -168,6 +185,10 @@ public class ChessableController : BaseApiController
             return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(cached, userId, ct), cred.CoursesCachedAt));
         }
 
+        // Frischer Abruf braucht den Bearer → bei offenem Circuit-Breaker NICHT anfragen.
+        if (cred.BlockedAt is not null)
+            return BadRequest(new { message = BlockedMessage(cred.BlockedReason), blocked = true });
+
         try
         {
             var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
@@ -182,9 +203,17 @@ public class ChessableController : BaseApiController
         catch (ChessableProxyException ex)
         {
             _logger.LogWarning("Chessable courses failed: {Status} {Message}", ex.Status, ex.Message);
+            if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
+                await _breaker.TripAsync(userId, ex.Message, ct);
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>Sprechende „Bearer gesperrt"-Meldung für Lese-/Import-Endpoints bei offenem Breaker.</summary>
+    private static string BlockedMessage(string? reason) =>
+        string.IsNullOrWhiteSpace(reason)
+            ? "Chessable-Bearer gesperrt — bitte zuerst „Testen“ (Validität bestätigen)."
+            : $"Chessable-Bearer gesperrt ({reason}) — bitte zuerst „Testen“ (Validität bestätigen).";
 
     /// <summary>Markiert je Kurs, ob er vom User bereits als Repertoire bzw. Buch importiert wurde
     /// (Quelle: abgeschlossene ChessableImports) — Basis fürs Ausblenden der erledigten Buttons.</summary>
@@ -233,6 +262,9 @@ public class ChessableController : BaseApiController
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
         if (cred is null)
             return BadRequest(new { message = "No Chessable bearer saved" });
+        // Circuit-Breaker offen → gar nicht erst einreihen (würde sofort wieder pausieren).
+        if (cred.BlockedAt is not null)
+            return BadRequest(new { message = BlockedMessage(cred.BlockedReason), blocked = true });
 
         // SICHERHEIT: Nur Kurse importieren, die WIRKLICH in der Chessable-Bibliothek dieses Users liegen.
         // Andernfalls könnte ein User einen beliebigen (öffentlich aus der chessable.com-URL bekannten)
@@ -357,7 +389,8 @@ public class ChessableController : BaseApiController
         var users = await _db.ChessableCredentials
             .Include(c => c.User)
             .OrderBy(c => c.User!.Username)
-            .Select(c => new ChessableCredentialedUserDto(c.UserId, c.User!.Username, c.CoursesCachedAt))
+            .Select(c => new ChessableCredentialedUserDto(
+                c.UserId, c.User!.Username, c.CoursesCachedAt, c.BlockedAt != null, c.BlockedReason))
             .ToListAsync();
         return Ok(users);
     }
@@ -379,6 +412,9 @@ public class ChessableController : BaseApiController
             var cached = JsonSerializer.Deserialize<List<ChessableCourseDto>>(cred.CachedCoursesJson, JsonOpts) ?? new();
             return Ok(new ChessableCoursesDto(await EnrichImportStateAsync(cached, GetUserId(), ct), cred.CoursesCachedAt));
         }
+        // Frischer Abruf mit dem Bearer des Ziel-Users → bei offenem Breaker nicht anfragen.
+        if (cred.BlockedAt is not null)
+            return BadRequest(new { message = BlockedMessage(cred.BlockedReason), blocked = true });
         try
         {
             var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
@@ -393,6 +429,8 @@ public class ChessableController : BaseApiController
         catch (ChessableProxyException ex)
         {
             _logger.LogWarning("Admin Chessable courses (user {UserId}) failed: {Status} {Message}", userId, ex.Status, ex.Message);
+            if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
+                await _breaker.TripAsync(userId, ex.Message, ct);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -406,6 +444,8 @@ public class ChessableController : BaseApiController
     {
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
+        if (cred.BlockedAt is not null)
+            return BadRequest(new { message = BlockedMessage(cred.BlockedReason), blocked = true });
         var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
         if (bearer is null) return BadRequest(new { message = "Stored Chessable bearer could not be read — please re-enter it." });
         try
@@ -417,6 +457,35 @@ public class ChessableController : BaseApiController
         catch (ChessableProxyException ex)
         {
             _logger.LogWarning("Admin course estimate (user {UserId}, bid {Bid}) failed: {Status} {Message}", userId, bid, ex.Status, ex.Message);
+            if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
+                await _breaker.TripAsync(userId, ex.Message, ct);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>ADMIN: Testet den Bearer eines Users aktiv gegen Chessable — zugleich der „Reset" des
+    /// Circuit-Breakers dieses Users (Erfolg ⇒ Breaker schließen + pausierte Importe aufnehmen; fatale
+    /// Ablehnung ⇒ Breaker öffnen). Damit kann der Admin einen gesperrten Fremd-Bearer freigeben,
+    /// ohne dass der betroffene User selbst aktiv werden muss.</summary>
+    [HttpPost("admin/users/{userId:int}/test")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> TestUserBearerAdmin(int userId, CancellationToken ct)
+    {
+        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
+        if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
+        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+        if (bearer is null) return BadRequest(new { message = "Stored Chessable bearer could not be read — please re-enter it." });
+        try
+        {
+            var result = await _chessable.TestAsync(bearer, ct);
+            await _breaker.ClearAndResumeAsync(userId, ct);
+            return Ok(result);
+        }
+        catch (ChessableProxyException ex)
+        {
+            _logger.LogWarning("Admin Chessable test (user {UserId}) failed: {Status} {Message}", userId, ex.Status, ex.Message);
+            if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
+                await _breaker.TripAsync(userId, ex.Message, ct);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -439,6 +508,10 @@ public class ChessableController : BaseApiController
         var targetCred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
         if (targetCred is null)
             return BadRequest(new { message = "User has no Chessable bearer saved" });
+        // Bearer des Ziel-Users gesperrt → nicht einreihen (würde sofort pausieren).
+        // Vor der (ggf. fetchenden) Eigentumsprüfung, damit ein toter Bearer keinen Request auslöst.
+        if (targetCred.BlockedAt is not null)
+            return BadRequest(new { message = BlockedMessage(targetCred.BlockedReason), blocked = true });
         // Auch hier: nur Kurse, die in der Bibliothek des ZIEL-Users liegen (dessen Bearer fetcht/cached).
         if (!await UserOwnsCourseAsync(targetCred, bid, ct))
             return StatusCode(403, new { message = "Dieser Kurs ist nicht in der Chessable-Bibliothek des Users." });

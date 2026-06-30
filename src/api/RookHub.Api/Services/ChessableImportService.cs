@@ -48,6 +48,7 @@ public class ChessableImportService : ICourseReimporter
     private readonly PgnImportService _pgnImport;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly NotificationService _notifications;
+    private readonly ChessableBearerBreaker _breaker;
     private readonly ILogger<ChessableImportService> _logger;
 
     public ChessableImportService(
@@ -58,6 +59,7 @@ public class ChessableImportService : ICourseReimporter
         PgnImportService pgnImport,
         IBackgroundTaskQueue taskQueue,
         NotificationService notifications,
+        ChessableBearerBreaker breaker,
         ILogger<ChessableImportService> logger)
     {
         _db = db;
@@ -67,6 +69,7 @@ public class ChessableImportService : ICourseReimporter
         _pgnImport = pgnImport;
         _taskQueue = taskQueue;
         _notifications = notifications;
+        _breaker = breaker;
         _logger = logger;
     }
 
@@ -292,6 +295,22 @@ public class ChessableImportService : ICourseReimporter
                     await FailAsync(import, "Kein Chessable-Bearer gespeichert");
                     return;
                 }
+                // Circuit-Breaker: ist der Bearer als unbrauchbar markiert (Account gesperrt/gelöscht
+                // bzw. Token tot), KEINE weitere Chessable-Anfrage damit machen. Statt zu scheitern
+                // pausieren (Phase "bearer-blocked") — ein erfolgreicher „Testen“-Klick nimmt den
+                // Import via ChessableBearerBreaker.ClearAndResumeAsync automatisch wieder auf.
+                if (cred.BlockedAt is not null)
+                {
+                    import.Status = "paused";
+                    import.Phase = "bearer-blocked";
+                    import.Attempts = 0;
+                    await _db.SaveChangesAsync(ct);
+                    _logger.LogInformation(
+                        "Chessable-Import {Id} pausiert: Bearer von User {UserId} gesperrt (Circuit-Breaker) — wartet auf „Testen“",
+                        import.Id, bearerUserId);
+                    return;
+                }
+
                 var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
                 if (bearer is null)
                 {
@@ -589,6 +608,13 @@ public class ChessableImportService : ICourseReimporter
         // (Timeout-)Cancellation, muss er trotzdem als "failed" persistiert werden — sonst bliebe er als
         // Zombie auf "running" haengen und wuerde beim Neustart endlos resumed.
         await _db.SaveChangesAsync(CancellationToken.None);
+
+        // Circuit-Breaker: war der Fehlschlag fatal für den Bearer selbst (Account gesperrt/gelöscht
+        // bzw. Token tot), den Bearer sperren — danach pausieren weitere Importe sofort, statt mit dem
+        // toten Bearer immer wieder fehlzuschlagen (siehe ChessableBearerBreaker). IP-/VPN-Blocks lösen
+        // das bewusst NICHT aus.
+        if (ChessableBearerBreaker.IsBearerFatal(error))
+            await _breaker.TripAsync(import.BearerUserId ?? import.UserId, error, CancellationToken.None);
 
         // User benachrichtigen: Import fehlgeschlagen.
         var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";

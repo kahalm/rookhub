@@ -43,7 +43,9 @@ public class ChessableControllerTests : IDisposable
         var httpClient = new HttpClient(_handler) { BaseAddress = new Uri("http://piratechess-api:8080") };
         _proxy = new ChessableProxyService(httpClient);
 
-        _controller = new ChessableController(_db, _encryption, _proxy, new BackgroundTaskQueue(),
+        var queue = new BackgroundTaskQueue();
+        var breaker = new ChessableBearerBreaker(_db, queue, NullLogger<ChessableBearerBreaker>.Instance);
+        _controller = new ChessableController(_db, _encryption, _proxy, queue, breaker,
             NullLogger<ChessableController>.Instance);
         SetUser(42);
     }
@@ -187,6 +189,80 @@ public class ChessableControllerTests : IDisposable
 
         var bad = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Contains("Invalid bearer", JsonSerializer.Serialize(bad.Value));
+    }
+
+    [Fact]
+    public async Task Test_BannedBearer_OpensBreaker()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("dead-bearer-1234567890"));
+        _handler.Reply = (_, _) =>
+            JsonResponse(HttpStatusCode.BadRequest, new { message = "Chessable: User is banned or deleted" });
+
+        var result = await _controller.Test(CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        Assert.NotNull(cred.BlockedAt); // Circuit-Breaker geöffnet
+    }
+
+    [Fact]
+    public async Task Test_Success_ClearsBreaker_AndResumesPausedImports()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("real-bearer-1234567890"));
+        // Breaker offen + ein wegen des Breakers pausierter Import.
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        cred.BlockedAt = DateTime.UtcNow;
+        cred.BlockedReason = "Chessable: User is banned or deleted";
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = 42, Bid = "b1", CourseName = "C", Target = "repertoire",
+            Status = "paused", Phase = "bearer-blocked", FullyCached = false, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        _handler.Reply = (_, _) => JsonResponse(HttpStatusCode.OK, new ChessableTestResultDto("uid-1", 3));
+
+        var result = await _controller.Test(CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        Assert.Null(cred.BlockedAt); // geschlossen
+        var imp = await _db.ChessableImports.SingleAsync();
+        Assert.Equal("running", imp.Status);
+        Assert.Equal("queued", imp.Phase); // wieder aufgenommen
+    }
+
+    [Fact]
+    public async Task Courses_BreakerOpen_Returns400_WithoutCallingProxy()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("dead-bearer-1234567890"));
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        cred.BlockedAt = DateTime.UtcNow;
+        cred.BlockedReason = "Chessable: User is banned or deleted";
+        await _db.SaveChangesAsync();
+        _handler.Reply = (_, _) => throw new Exception("Proxy darf bei offenem Breaker nicht aufgerufen werden");
+
+        var result = await _controller.Courses(refresh: true, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task StartImport_BreakerOpen_Returns400()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("dead-bearer-1234567890"));
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        cred.BlockedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var result = await _controller.StartImport("b1", new StartChessableImportRequest("repertoire", null));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(0, await _db.ChessableImports.CountAsync()); // nicht eingereiht
     }
 
     [Fact]

@@ -7,14 +7,20 @@ public record SaveChessableBearerRequest(string Bearer);
 /// (Default "repertoire", falls leer); optional ein Name. Besitzer des Ergebnisses ist immer der Admin.</summary>
 public record AdminChessableImportRequest(string? Name, string? Target = null);
 
-/// <summary>ADMIN: Ein User mit hinterlegtem Chessable-Bearer (Auswahl für „Kurse holen").</summary>
-public record ChessableCredentialedUserDto(int UserId, string Username, System.DateTime? CoursesCachedAt);
+/// <summary>ADMIN: Ein User mit hinterlegtem Chessable-Bearer (Auswahl für „Kurse holen").
+/// <paramref name="Blocked"/>=true ⇒ Circuit-Breaker offen (Bearer abgewiesen, bis „Testen" bestätigt).</summary>
+public record ChessableCredentialedUserDto(
+    int UserId, string Username, System.DateTime? CoursesCachedAt, bool Blocked, string? BlockedReason);
 
 /// <summary>Ob der User den Chessable-Haftungsausschluss bestätigt hat.</summary>
 public record ChessableDisclaimerDto(bool Accepted);
 
-/// <summary>Antwort der credentials-Endpoints. Bearer wird nur maskiert zurueckgegeben.</summary>
-public record ChessableCredentialResponse(bool HasCredentials, string? MaskedBearer);
+/// <summary>Antwort der credentials-Endpoints. Bearer wird nur maskiert zurueckgegeben.
+/// <paramref name="Blocked"/>=true ⇒ der Circuit-Breaker ist offen (Bearer wurde von Chessable als
+/// gesperrt/gelöscht bzw. tot abgewiesen) — es laufen keine Anfragen mehr, bis „Testen" die
+/// Gültigkeit bestätigt; <paramref name="BlockedReason"/> trägt die auslösende Meldung.</summary>
+public record ChessableCredentialResponse(
+    bool HasCredentials, string? MaskedBearer, bool Blocked = false, string? BlockedReason = null);
 
 /// <summary>Ein Chessable-Kurs (vom piratechess-Backend durchgereicht).</summary>
 public record ChessableCourseDto(string Bid, string Name)

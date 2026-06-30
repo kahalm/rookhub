@@ -5,6 +5,11 @@ import { Observable } from 'rxjs';
 export interface ChessableCredential {
   hasCredentials: boolean;
   maskedBearer: string | null;
+  /** Circuit-Breaker offen: Bearer von Chessable als gesperrt/gelöscht bzw. tot abgewiesen →
+   *  es laufen KEINE Anfragen mehr, bis „Testen" die Gültigkeit bestätigt. */
+  blocked?: boolean;
+  /** Die Meldung, die den Breaker ausgelöst hat (für die Anzeige). */
+  blockedReason?: string | null;
 }
 
 export interface ChessableTestResult {
@@ -72,6 +77,9 @@ export interface ChessableCredentialedUser {
   userId: number;
   username: string;
   coursesCachedAt: string | null;
+  /** Circuit-Breaker für den Bearer dieses Users offen (gesperrt bis Test bestätigt). */
+  blocked?: boolean;
+  blockedReason?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -102,6 +110,11 @@ export class ChessableService {
 
   test(): Observable<ChessableTestResult> {
     return this.http.post<ChessableTestResult>(`${this.apiUrl}/test`, {});
+  }
+
+  /** ADMIN: Bearer eines Users testen (zugleich Circuit-Breaker-Reset dieses Users). */
+  testUser(userId: number): Observable<ChessableTestResult> {
+    return this.http.post<ChessableTestResult>(`${this.apiUrl}/admin/users/${userId}/test`, {});
   }
 
   /** Kursliste — aus dem DB-Cache, oder mit refresh=true frisch von piratechess (+ Cache-Update). */

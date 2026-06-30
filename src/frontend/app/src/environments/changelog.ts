@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.205.1';
+export const APP_VERSION = '0.205.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.205.2", date: "2026-06-30", changes: [
+    { en: "Chessable bearer circuit-breaker (merged from the v0.204.0 line and reconciled with the 0.203.x Chessable security fixes): when Chessable rejects a stored bearer as fatally dead (account banned/deleted or token expired/invalid — e.g. “User is banned or deleted”), RookHub now stops making any further request with that bearer instead of hammering it. The breaker opens automatically on the first such failure; queued imports using that bearer pause (they don't fail) and read-only course fetches/new imports are refused — until you confirm validity with the “Test” button. A successful test closes the breaker and automatically resumes the paused imports. A banner on the Chessable page (and a 🔒 marker + per-user “Test bearer” button in the admin course-download tab) makes the blocked state visible. The blocked-bearer check sits in front of the course-ownership check so a dead bearer never triggers a fetch. Crucially, a mere IP/Cloudflare/VPN block does NOT trip the breaker (that's the exit IP, not the bearer).", de: "Chessable-Bearer-Circuit-Breaker (aus der v0.204.0-Linie gemergt und mit den 0.203.x-Chessable-Security-Fixes versöhnt): Weist Chessable einen gespeicherten Bearer endgültig ab (Account gesperrt/gelöscht oder Token abgelaufen/ungültig — z. B. „User is banned or deleted“), macht RookHub KEINE weitere Anfrage mehr mit diesem Bearer, statt ihn immer wieder anzuklopfen. Der Breaker öffnet automatisch beim ersten solchen Fehlschlag; wartende Importe mit diesem Bearer pausieren (statt zu scheitern), Lese-Abrufe der Kursliste/neue Importe werden verweigert — bis du die Gültigkeit per „Testen“ bestätigst. Ein erfolgreicher Test schließt den Breaker und nimmt die pausierten Importe automatisch wieder auf. Ein Banner auf der Chessable-Seite (und ein 🔒-Marker + „Bearer testen“-Knopf je User im Admin-Kursdownload-Tab) macht den Sperr-Status sichtbar. Die Bearer-Sperr-Prüfung sitzt vor der Kurs-Eigentumsprüfung, damit ein toter Bearer keinen Request mehr auslöst. Wichtig: Ein reiner IP-/Cloudflare-/VPN-Block löst den Breaker NICHT aus (das ist die Ausgangs-IP, nicht der Bearer)." },
+  ]},
   { version: "0.205.1", date: "2026-06-30", changes: [
     { en: "Fixed two stale frontend unit tests (book-puzzle \"track solves\"): the expectations still asserted the old two-argument trackSharedAttempt(id, solved) call, but since v0.202.0 the solver also passes the hint level used as a third argument. Updated both expectations to (id, solved, 0). Test-only change — the whole frontend suite is green again (745 passing).", de: "Zwei veraltete Frontend-Unit-Tests korrigiert (Buch-Puzzle „track solves“): Die Erwartungen prüften noch den alten Zwei-Argument-Aufruf trackSharedAttempt(id, solved), seit v0.202.0 übergibt der Solver aber zusätzlich die genutzte Tipp-Stufe als drittes Argument. Beide Erwartungen auf (id, solved, 0) aktualisiert. Reine Test-Änderung — die gesamte Frontend-Suite ist wieder grün (745 Tests)." },
   ]},

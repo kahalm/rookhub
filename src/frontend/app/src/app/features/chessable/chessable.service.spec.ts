@@ -75,4 +75,22 @@ describe('ChessableService', () => {
     service.getActiveImportsAdmin().subscribe();
     httpMock.expectOne('/api/chessable/admin/active').flush([]);
   });
+
+  it('testUser POSTs to the admin per-user test route', () => {
+    service.testUser(42).subscribe();
+    const req = httpMock.expectOne('/api/chessable/admin/users/42/test');
+    expect(req.request.method).toBe('POST');
+    req.flush({ uid: 'u', courseCount: 3 });
+  });
+
+  it('getCredentials surfaces the blocked circuit-breaker state', () => {
+    let result: { blocked?: boolean; blockedReason?: string | null } | undefined;
+    service.getCredentials().subscribe(c => (result = c));
+    httpMock.expectOne('/api/chessable/credentials').flush({
+      hasCredentials: true, maskedBearer: '…123',
+      blocked: true, blockedReason: 'Chessable: User is banned or deleted',
+    });
+    expect(result?.blocked).toBeTrue();
+    expect(result?.blockedReason).toContain('banned');
+  });
 });

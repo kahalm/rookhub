@@ -148,6 +148,7 @@ try
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<ChessableImportService>();
+    builder.Services.AddScoped<ChessableBearerBreaker>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
