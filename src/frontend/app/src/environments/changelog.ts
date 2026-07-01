@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.1';
+export const APP_VERSION = '0.237.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.2", date: "2026-07-01", changes: [
+    { en: "Fixed course reading order: intro/explanation pages that were added by a later re-fetch (e.g. the long intro in \"100 Tactical Patterns You Must Know\") showed up in the wrong place — after the first couple of puzzles instead of at the very start. Courses now follow the original Chessable line order (the Round number) instead of the internal database id, so re-fetched info lines land in their correct position. Applies to every course, no re-import needed.", de: "Kurs-Lesereihenfolge korrigiert: Intro-/Erklärseiten, die durch einen späteren Re-Fetch ergänzt wurden (z. B. die lange Einleitung in „100 Tactical Patterns You Must Know“), erschienen an der falschen Stelle — hinter den ersten Puzzles statt ganz am Anfang. Kurse folgen jetzt der originalen Chessable-Zeilenreihenfolge (der Round-Nummer) statt der internen Datenbank-Id, sodass nachträglich geholte Info-Linien an der richtigen Position landen. Gilt für jeden Kurs, kein Re-Import nötig." },
+  ]},
   { version: "0.237.1", date: "2026-07-01", changes: [
     { en: "Pinned courses dashboard tile polished: each pinned course now shows a progress bar (like the courses page), the Sequential button is the visual primary and Random the outlined secondary, both stretch full width, and a trophy 🏆 appears next to the progress when a course is fully solved. Old version looked cramped with two identical tiny pill buttons.", de: "Kachel „Angepinnte Kurse“ auf dem Dashboard aufgehübscht: je Kurs gibt es jetzt einen Fortschrittsbalken (wie auf der Kurse-Seite), der Sequenziell-Knopf ist optisch primär und Zufällig sekundär mit Rahmen, beide füllen die Breite; ist ein Kurs komplett gelöst, erscheint eine 🏆 neben dem Fortschritt. Vorher wirkten die zwei gleich aussehenden Mini-Pill-Buttons gequetscht." },
   ]},

@@ -37,16 +37,24 @@ public class BookPuzzleService
         return puzzle == null ? null : MapToDto(puzzle);
     }
 
-    /// <summary>Nächstes Puzzle im selben Buch (Id-Reihenfolge = Buchreihenfolge); am Ende wieder das erste.</summary>
+    /// <summary>Nächstes Puzzle im selben Buch in Lesereihenfolge (Round = Chessable-Zeilennummer,
+    /// dann Id; NICHT die DB-Id, da re-gefetchte Linien höhere Ids haben); am Ende wieder das erste.</summary>
     public async Task<BookPuzzleDto> GetNextInBookAsync(int id)
     {
         var current = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id)
             ?? throw new KeyNotFoundException("Book puzzle not found.");
 
-        var siblings = BookSiblings(current).Include(bp => bp.Book);
-        var next = await siblings.Where(bp => bp.Id > current.Id).OrderBy(bp => bp.Id).FirstOrDefaultAsync()
-                   ?? await siblings.OrderBy(bp => bp.Id).FirstOrDefaultAsync()   // am Ende → erstes (Loop)
-                   ?? throw new KeyNotFoundException("No puzzles in book.");
+        // Nur Schlüssel (Id, Round) in Round-Reihenfolge laden; der Cursor-Vergleich passiert
+        // in-memory (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
+        var keys = await BookSiblings(current).OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .Select(bp => new { bp.Id, bp.Round })
+            .ToListAsync();
+        var nextId = keys.FirstOrDefault(k =>
+                        string.CompareOrdinal(k.Round, current.Round) > 0 ||
+                        (k.Round == current.Round && k.Id > current.Id))?.Id
+                     ?? keys.Select(k => (int?)k.Id).FirstOrDefault();   // am Ende → erstes (Loop)
+        if (nextId == null) throw new KeyNotFoundException("No puzzles in book.");
+        var next = await BookSiblings(current).Include(bp => bp.Book).FirstAsync(bp => bp.Id == nextId.Value);
         return MapToDto(next);
     }
 
