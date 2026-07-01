@@ -572,8 +572,14 @@
             } @else if (dlCoursesError) {
               <p class="empty">{{ dlCoursesError }}</p>
             } @else if (dlSelectedUserId != null && dlCourses.length > 0) {
+              <mat-slide-toggle class="dl-hide-loaded" [(ngModel)]="dlHideLoaded">
+                {{ 'admin.courseDl.hideLoaded' | translate }}
+              </mat-slide-toggle>
+              @if (dlVisibleCourses().length === 0) {
+                <p class="empty">{{ 'admin.courseDl.allLoaded' | translate }}</p>
+              }
               <div class="dl-courses">
-                @for (c of dlCourses; track c.bid) {
+                @for (c of dlVisibleCourses(); track c.bid) {
                   <div class="dl-course-row">
                     <span class="dl-course-name">
                       {{ c.name || c.bid }}

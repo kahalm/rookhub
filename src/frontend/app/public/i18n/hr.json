@@ -1438,6 +1438,8 @@
       "failed": "Neuspjelo",
       "queued": "pozicija {{n}} u redu",
       "alreadyQueued": "Već u redu čekanja",
+      "hideLoaded": "Sakrij učitane tečajeve",
+      "allLoaded": "Svi su tečajevi već učitani.",
       "lines": "linija",
       "estimate": "Procijeni veličinu",
       "estimateError": "Procjena nije uspjela",

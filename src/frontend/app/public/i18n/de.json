@@ -1440,6 +1440,8 @@
       "failed": "Fehlgeschlagen",
       "queued": "Position {{n}} in der Warteschlange",
       "alreadyQueued": "Bereits in Warteschlange",
+      "hideLoaded": "Geladene Kurse ausblenden",
+      "allLoaded": "Alle Kurse sind bereits geladen.",
       "lines": "Linien",
       "estimate": "Größe schätzen",
       "estimateError": "Schätzung fehlgeschlagen",

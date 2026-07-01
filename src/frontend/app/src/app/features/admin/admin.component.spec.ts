@@ -54,6 +54,21 @@ describe('AdminComponent', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
+  it('dlVisibleCourses hides already-loaded courses only when dlHideLoaded is on', () => {
+    const { c } = make();
+    c.dlCourses = [
+      { bid: '1', name: 'fresh' },
+      { bid: '2', name: 'as-rep', importedRepertoire: true },
+      { bid: '3', name: 'as-book', importedBook: true },
+    ] as any;
+
+    c.dlHideLoaded = false;
+    expect(c.dlVisibleCourses().length).toBe(3);
+
+    c.dlHideLoaded = true;
+    expect(c.dlVisibleCourses().map(x => x.bid)).toEqual(['1']);
+  });
+
   it('loadAllUsers populates allUsers and the cached availableUsers', () => {
     const users = [{ id: 1, username: 'a' }, { id: 2, username: 'b' }];
     const { c } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: users, total: 2 })) });

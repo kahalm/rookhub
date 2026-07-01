@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.2';
+export const APP_VERSION = '0.236.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.3", date: "2026-07-01", changes: [
+    { en: "Admin course download: new “Hide loaded courses” toggle that hides courses already imported as a repertoire or book, so the list only shows what's still to load.", de: "Admin-Kursdownload: neuer Schalter „Geladene Kurse ausblenden“ — versteckt Kurse, die bereits als Repertoire oder Buch importiert wurden, sodass die Liste nur noch das Offene zeigt." },
+  ]},
   { version: "0.236.2", date: "2026-07-01", changes: [
     { en: "New app versions now show up much faster: the app actively checks for a new version on startup, every 15 minutes, and whenever the tab comes back into focus — a long-open tab or installed PWA no longer keeps running an old build until a manual reload. When a new version is ready the existing “reload” banner appears. (The service worker previously only checked on (re)start.)", de: "Neue App-Versionen erscheinen jetzt deutlich schneller: die App sucht aktiv beim Start, alle 15 Minuten und immer wenn der Tab wieder in den Vordergrund kommt nach einer neuen Version — ein lange offener Tab bzw. eine installierte PWA fährt nicht mehr bis zum manuellen Neuladen eine alte Version. Ist eine neue Version bereit, erscheint der vorhandene „Neu laden“-Hinweis. (Der Service Worker prüfte vorher nur beim (Neu-)Start.)" },
     { en: "Bot: the monthly daily-puzzle leaderboard final standings are now posted together with the daily puzzle on the 1st, inside that puzzle's thread, instead of as a separate standalone post.", de: "Bot: die Monats-Endabrechnung der Tagespuzzle-Bestenliste wird am 1. jetzt zusammen mit dem Tagespuzzle in dessen Thread gepostet, statt als eigenständiger Einzelpost." },

@@ -116,6 +116,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   dlTesting = false;
   dlSelectedUserId: number | null = null;
   dlCourses: ChessableCourse[] = [];
+  /** „Geladene Kurse ausblenden": versteckt Kurse, die schon als Repertoire ODER Buch importiert sind. */
+  dlHideLoaded = false;
   dlCoursesLoading = false;
   dlCoursesError: string | null = null;
   /** Laufende/abgeschlossene Admin-Importe je bid (für Fortschritt + Button-Status). */
@@ -331,6 +333,12 @@ export class AdminComponent implements OnInit, OnDestroy {
   /** Der aktuell gewählte Download-User (oder undefined). */
   dlSelectedUser(): ChessableCredentialedUser | undefined {
     return this.dlUsers.find(u => u.userId === this.dlSelectedUserId);
+  }
+
+  /** Anzuzeigende Kurse — bei aktivem „geladene ausblenden" ohne bereits als Repertoire/Buch importierte. */
+  dlVisibleCourses(): ChessableCourse[] {
+    if (!this.dlHideLoaded) return this.dlCourses;
+    return this.dlCourses.filter(c => !c.importedRepertoire && !c.importedBook);
   }
 
   /** ADMIN: Bearer des gewählten Users testen — setzt bei Erfolg dessen Circuit-Breaker zurück und

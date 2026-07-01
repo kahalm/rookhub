@@ -1440,6 +1440,8 @@
       "failed": "Failed",
       "queued": "position {{n}} in queue",
       "alreadyQueued": "Already in queue",
+      "hideLoaded": "Hide loaded courses",
+      "allLoaded": "All courses are already loaded.",
       "lines": "lines",
       "estimate": "Estimate size",
       "estimateError": "Estimate failed",
