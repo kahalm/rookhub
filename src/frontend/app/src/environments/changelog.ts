@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.222.0';
+export const APP_VERSION = '0.223.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.223.0", date: "2026-07-01", changes: [
+    { en: "New puzzle theme “enPassantPossible”: standard (Lichess) puzzles are scanned for positions where — on the solver's turn — an en passant capture was legally available but a different move was played, and tagged accordingly (both in the theme string and the normalized tag index, so it's filterable). Only the solver's moves count, not the opponent's setup replies. Distinct from Lichess's “enPassant” theme (where the solution IS the en passant). Admin-triggered background scan (POST /api/admin/puzzles/tag-en-passant), idempotent.", de: "Neues Puzzle-Thema „enPassantPossible“: Standard-Puzzles (Lichess) werden auf Stellungen geprüft, in denen — am Zug des Lösers — ein En-passant-Schlag legal möglich war, aber ein anderer Zug gespielt wurde, und entsprechend getaggt (im Themes-String UND im normalisierten Tag-Index, also filterbar). Es zählen nur die Züge des Lösers, nicht die vorgespielten Gegnerzüge. Abgegrenzt vom Lichess-Thema „enPassant“ (wo die Lösung SELBST ein En passant ist). Admin-Hintergrund-Scan (POST /api/admin/puzzles/tag-en-passant), idempotent." },
+  ]},
   { version: "0.222.0", date: "2026-07-01", changes: [
     { en: "Course re-fetches no longer flood Chessable. Two protections: (1) a course that's already being fetched won't be enqueued a second time, so clicking “Update all” again (or a retry) can't fire off duplicate downloads of the same course. (2) A course that comes back truncated can't be cached, so it would otherwise be fully re-downloaded from Chessable on every “Update all”; such a course is now skipped for 24h after an unsuccessful fetch instead of being hammered every time. (A targeted admin re-import still forces an immediate fetch.)", de: "Kurs-Re-Fetches fluten Chessable nicht mehr. Zwei Schutzmechanismen: (1) Ein Kurs, der bereits geholt wird, wird kein zweites Mal eingereiht — ein erneuter „Alle aktualisieren“-Klick (oder ein Retry) löst also keine doppelten Downloads desselben Kurses mehr aus. (2) Ein Kurs, der truncated ankommt, lässt sich nicht cachen und würde sonst bei jedem „Alle aktualisieren“ komplett neu von Chessable geladen; ein solcher Kurs wird nach einem erfolglosen Fetch jetzt 24 h übersprungen, statt jedes Mal erneut gehämmert zu werden. (Ein gezielter Admin-Re-Import erzwingt weiterhin einen sofortigen Fetch.)" },
   ]},

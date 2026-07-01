@@ -144,6 +144,22 @@ public class AdminController : BaseApiController
         return Accepted(new { message = "PuzzleTags-Backfill gestartet (läuft im Hintergrund; Fortschritt im Log)." });
     }
 
+    /// <summary>
+    /// Stößt den Scan an, der das Theme <c>enPassantPossible</c> an Standard-Puzzles vergibt, in deren
+    /// Lösung ein En-passant-Schlag möglich war, aber nicht gespielt wurde (Hintergrund-Job). Schreibt in
+    /// den Themes-String UND die normalisierte PuzzleTags-Tabelle. Idempotent (überspringt bereits Getaggtes).
+    /// </summary>
+    [HttpPost("puzzles/tag-en-passant")]
+    public async Task<IActionResult> TagEnPassantPossible()
+    {
+        await _taskQueue.EnqueueAsync(async (sp, ct) =>
+        {
+            var svc = sp.GetRequiredService<PuzzleService>();
+            await svc.TagEnPassantPossibleAsync(ct: ct);
+        });
+        return Accepted(new { message = "En-passant-Theme-Scan gestartet (läuft im Hintergrund; Fortschritt im Log)." });
+    }
+
     // ---- Buch-Puzzles: Upload + Verwaltung -------------------------------
 
     /// <summary>Lädt eine oder mehrere PGN-Dateien als Bücher hoch (serverseitiges Parsing).</summary>
