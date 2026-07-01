@@ -87,6 +87,33 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_InPlaceRefetch_AlsoBumpsSiblingRepertoiresOfSameBid()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        var rep1 = new Repertoire { UserId = 7, Name = "R1", ImportVersion = 0, ChessableCourseId = "b1" };
+        var rep2 = new Repertoire { UserId = 7, Name = "R2", ImportVersion = 0, ChessableCourseId = "b1" };
+        _db.Repertoires.AddRange(rep1, rep2);
+        await _db.SaveChangesAsync();
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep1.Id, FileName = "chessable-b1.pgn", PgnContent = "old", FileSize = 3 });
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep2.Id, FileName = "chessable-b1.pgn", PgnContent = "old", FileSize = 3 });
+        await _db.SaveChangesAsync();
+
+        var imp = new ChessableImport
+        {
+            UserId = 7, Bid = "b1", CourseName = "C", Target = "repertoire", TargetRepertoireId = rep1.Id,
+            Status = "running", Phase = "queued", FetchedPgn = "1. e4 e5 2. Nf3 Nc6 *", LineCount = 3, CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunAsync(imp.Id);
+
+        // Ziel-Repertoire in-place aktualisiert UND das Geschwister (gleiche bid) mit-hochgezogen.
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.FindAsync(rep1.Id))!.ImportVersion);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.FindAsync(rep2.Id))!.ImportVersion);
+    }
+
+    [Fact]
     public async Task RunAsync_StampsStartedAt_AndNotifiesWithDurations()
     {
         var imp = await SeedImportAsync("repertoire");

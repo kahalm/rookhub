@@ -189,10 +189,11 @@ public partial class ImportReprocessService
 
     // ===== Repertoires =====
 
-    public async Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, CancellationToken ct = default)
+    public async Task<ReprocessStatusDto> GetRepertoireStatusAsync(int userId, bool isAdmin = false, CancellationToken ct = default)
     {
+        // Admin sieht/aktualisiert die Repertoires ALLER User (wie bei Kursen); sonst nur die eigenen.
         var reps = await _db.Repertoires
-            .Where(r => r.UserId == userId)
+            .Where(r => isAdmin || r.UserId == userId)
             .Include(r => r.Files)
             .ToListAsync(ct);
         var total = reps.Count;
@@ -215,8 +216,10 @@ public partial class ImportReprocessService
     /// frisch holen („Alle").</param>
     public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool isAdmin = false, bool localOnly = false, CancellationToken ct = default)
     {
+        // Admin: alle User; sonst nur eigene. Re-Fetch je Repertoire läuft mit dem Bearer des jeweiligen
+        // Owners (gecachte Kurse laufen ohnehin ohne Bearer durch).
         var stale = await _db.Repertoires
-            .Where(r => r.UserId == userId && r.ImportVersion < ImportPipeline.CurrentVersion)
+            .Where(r => (isAdmin || r.UserId == userId) && r.ImportVersion < ImportPipeline.CurrentVersion)
             .Include(r => r.Files)
             .ToListAsync(ct);
 
@@ -231,7 +234,8 @@ public partial class ImportReprocessService
                 if (localOnly) continue; // „Aus Cache": Chessable-Re-Fetch übers Netz bewusst auslassen
                 // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende Repertoire
                 // schreiben (Id/Trainings-Fortschritt bleiben; Version steigt erst beim Job-Abschluss).
-                refetch.Add(new RefetchCandidate(userId, bid, "repertoire", r.Name, r.Id));
+                // Owner = r.UserId (nicht der aufrufende Admin) → richtiger Bearer + richtiges Ziel-Repertoire.
+                refetch.Add(new RefetchCandidate(r.UserId, bid, "repertoire", r.Name, r.Id));
             }
             else
             {

@@ -315,6 +315,27 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
     }
 
+    [Fact]
+    public async Task ReprocessRepertoires_Admin_CoversAllUsers()
+    {
+        var a = new AppUser { Username = "a", PasswordHash = "h" };
+        var b = new AppUser { Username = "b", PasswordHash = "h" };
+        _db.AppUsers.AddRange(a, b);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(a.Id, 0, "a-own.pgn");   // stale, non-chessable
+        await SeedRepertoireAsync(b.Id, 0, "b-own.pgn");   // stale, non-chessable (anderer User)
+
+        var svc = ReprocessTestHelper.Build(_db);
+        // Nicht-Admin (User a): sieht/aktualisiert nur EIGENES.
+        Assert.Equal(1, (await svc.GetRepertoireStatusAsync(a.Id, isAdmin: false)).Stale);
+        // Admin: sieht beide User.
+        Assert.Equal(2, (await svc.GetRepertoireStatusAsync(a.Id, isAdmin: true)).Stale);
+
+        var result = await svc.ReprocessRepertoiresAsync(a.Id, isAdmin: true);
+        Assert.Equal(2, result.Reprocessed);   // beide User-Repertoires hochgezogen
+        Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
+    }
+
     private async Task<Repertoire> SeedRepertoireAsync(int userId, int version, string? fileName, string? courseId = null)
     {
         var rep = new Repertoire { UserId = userId, Name = "Rep", ImportVersion = version, ChessableCourseId = courseId };

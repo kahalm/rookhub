@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.5';
+export const APP_VERSION = '0.236.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.6", date: "2026-07-01", changes: [
+    { en: "Repertoire “Update all” now covers ALL users' repertoires for admins (like courses), not just your own. And when several repertoires are based on the same Chessable course, a single re-fetch now updates all of them — previously only one got refreshed (the per-course dedup left the duplicates stale, so the banner never cleared).", de: "„Alle aktualisieren“ bei Repertoires erfasst für Admins jetzt die Repertoires ALLER User (wie bei Kursen), nicht nur die eigenen. Und wenn mehrere Repertoires auf demselben Chessable-Kurs beruhen, aktualisiert ein einziger Re-Fetch jetzt alle — vorher wurde nur eines aufgefrischt (der Kurs-Dedup ließ die Duplikate veraltet, der Banner ging nie weg)." },
+  ]},
   { version: "0.236.5", date: "2026-07-01", changes: [
     { en: "Admin CI page: the currently-running build is no longer marked by tinting the row — it just carries its own “live” icon badge. And if the running build has scrolled out of the latest 5 runs, it's now fetched by its commit and shown as an extra row below, so you always see what's live. The server now also resolves rookhub's own running build (from the frontend's build-info) so this works uniformly across stacks.", de: "Admin-CI-Seite: der aktuell laufende Build wird nicht mehr durch Einfärben der Zeile markiert, sondern trägt nur noch ein eigenes „live“-Icon-Badge. Und wenn der laufende Build aus den letzten 5 Runs herausgefallen ist, wird er gezielt über seinen Commit nachgeladen und als zusätzliche Zeile darunter angezeigt — so sieht man immer, was läuft. Der Server ermittelt jetzt auch rookhubs eigenen laufenden Build (aus der Frontend-build-info), damit das für alle Stacks einheitlich funktioniert." },
     { en: "Groundwork for marking stacks rookhub can't reach directly (e.g. log-watcher): a service-to-service endpoint (POST /api/ci/build-report, shared-secret) lets a stack report its running commit/ref, which the CI page then shows.", de: "Grundlage, um Stacks zu markieren, die rookhub nicht direkt erreicht (z. B. log-watcher): ein Service-to-Service-Endpoint (POST /api/ci/build-report, Shared-Secret) lässt einen Stack seinen laufenden Commit/Ref melden, den die CI-Seite dann anzeigt." },

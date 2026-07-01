@@ -54,7 +54,7 @@ public class RepertoireController : BaseApiController
     /// „Repertoires aktualisieren (N)"-Knopf). Heute meist 0, da Repertoires live ausgewertet werden.</summary>
     [HttpGet("reprocess/status")]
     public async Task<ActionResult<ReprocessStatusDto>> ReprocessStatus(CancellationToken ct)
-        => Ok(await _reprocess.GetRepertoireStatusAsync(GetUserId(), ct));
+        => Ok(await _reprocess.GetRepertoireStatusAsync(GetUserId(), IsAdmin, ct));
 
     /// <summary>Bereitet veraltete eigene Repertoires auf. <paramref name="localOnly"/>=true („Aus Cache")
     /// nur lokal aufbereitbare (Nicht-Chessable, Versions-Mark); false („Alle") holt zusätzlich

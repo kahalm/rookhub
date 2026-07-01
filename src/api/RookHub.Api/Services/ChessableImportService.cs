@@ -514,6 +514,10 @@ public class ChessableImportService : ICourseReimporter
             import.Imported = import.LineCount;
             import.Skipped = 0;
             import.Invalid = 0;
+            // Mehrere Repertoires desselben Users können auf demselben Chessable-Kurs (bid) beruhen. Der
+            // (Owner,bid)-Dedup holt den Kurs aber nur EINMAL → die Geschwister blieben sonst veraltet.
+            // Darum das frische PGN auch in alle Geschwister-Repertoires desselben bid schreiben.
+            await BumpSiblingRepertoiresAsync(import, pgn, target, ct);
             return;
         }
 
@@ -548,6 +552,32 @@ public class ChessableImportService : ICourseReimporter
         import.Imported = import.LineCount;
         import.Skipped = 0;
         import.Invalid = 0;
+    }
+
+    /// <summary>Schreibt das frisch geholte PGN zusätzlich in alle WEITEREN Repertoires desselben Users, die
+    /// auf demselben Chessable-Kurs (bid) beruhen (per ChessableCourseId oder Dateiname), außer dem bereits
+    /// aktualisierten <paramref name="target"/>. In-place (Id/Fortschritt bleiben) → UploadFileAsync hebt die
+    /// ImportVersion. Ohne das blieben Kurs-Duplikate nach „Alle aktualisieren" veraltet (Dedup holt 1×).</summary>
+    private async Task BumpSiblingRepertoiresAsync(ChessableImport import, string pgn, int target, CancellationToken ct)
+    {
+        var fileName = $"chessable-{import.Bid}.pgn";
+        var siblingIds = await _db.Repertoires
+            .Where(r => r.UserId == import.UserId && r.Id != target
+                && (r.ChessableCourseId == import.Bid || r.Files.Any(f => f.FileName == fileName)))
+            .Select(r => r.Id).ToListAsync(ct);
+
+        foreach (var repId in siblingIds)
+        {
+            var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == repId).Select(f => f.Id).ToListAsync(ct);
+            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
+                await _repertoires.UploadFileAsync(repId, import.UserId, fileName, ms); // hebt ImportVersion + ChessableCourseId
+            if (oldIds.Count > 0)
+            {
+                var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
+                _db.RepertoireFiles.RemoveRange(olds);
+                await _db.SaveChangesAsync(ct);
+            }
+        }
     }
 
     private async Task ImportAsBookAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
