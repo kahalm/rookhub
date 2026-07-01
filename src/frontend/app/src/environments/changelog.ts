@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.7';
+export const APP_VERSION = '0.236.8';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.8", date: "2026-07-01", changes: [
+    { en: "Dashboard: the Courses tile now shows the number of courses (e.g. “12 courses”), just like the Repertoires tile — instead of a generic subtitle.", de: "Dashboard: die Kurse-Kachel zeigt jetzt die Anzahl der Kurse (z. B. „12 Kurse“), genau wie die Repertoires-Kachel — statt eines allgemeinen Untertitels." },
+  ]},
   { version: "0.236.7", date: "2026-07-01", changes: [
     { en: "Admin CI page: the “live” badge on the currently-running build is now clearly distinct from the green success check — it's a blue pill with a live-dot icon instead of green, so you can tell at a glance which run built the deployed image.", de: "Admin-CI-Seite: das „live“-Badge am aktuell laufenden Build hebt sich jetzt klar vom grünen Erfolgs-Häkchen ab — blaue Plakette mit „live-Punkt“-Icon statt Grün, sodass man auf einen Blick sieht, welcher Run das laufende Image gebaut hat." },
   ]},

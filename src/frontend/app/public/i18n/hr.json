@@ -220,7 +220,8 @@
     "courses": {
       "title": "Tečajevi",
       "subtitle": "Prolazi kroz svoje knjige",
-      "open": "Otvori tečajeve"
+      "open": "Otvori tečajeve",
+      "count": "{{count}} tečajeva"
     },
     "leaderboards": {
       "title": "Ljestvice",

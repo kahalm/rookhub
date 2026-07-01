@@ -17,6 +17,11 @@ export class DashboardService {
     return this.http.get<Repertoire[]>('/api/repertoires');
   }
 
+  /** Sichtbare Kurse (Bücher) des Users — nur für den Zähler auf der Dashboard-Kachel. */
+  getCourses(): Observable<unknown[]> {
+    return this.http.get<unknown[]>('/api/courses');
+  }
+
   getSubscriptions(): Observable<Subscription[]> {
     return this.http.get<Subscription[]>('/api/subscriptions');
   }

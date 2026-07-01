@@ -22,6 +22,11 @@ describe('DashboardService', () => {
     expect(httpMock.expectOne('/api/repertoires').request.method).toBe('GET');
   });
 
+  it('getCourses GETs /api/courses', () => {
+    service.getCourses().subscribe();
+    expect(httpMock.expectOne('/api/courses').request.method).toBe('GET');
+  });
+
   it('getSubscriptions GETs /api/subscriptions', () => {
     service.getSubscriptions().subscribe();
     expect(httpMock.expectOne('/api/subscriptions').request.method).toBe('GET');

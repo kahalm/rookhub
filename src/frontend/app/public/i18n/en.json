@@ -220,7 +220,8 @@
     "courses": {
       "title": "Courses",
       "subtitle": "Work through your books",
-      "open": "Open courses"
+      "open": "Open courses",
+      "count": "{{count}} courses"
     },
     "leaderboards": {
       "title": "Leaderboards",

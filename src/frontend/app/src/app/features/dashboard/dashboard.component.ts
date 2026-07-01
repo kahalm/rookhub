@@ -189,6 +189,7 @@ export class DashboardComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   repertoireCount = 0;
+  courseCount = 0;
   subscriptionCount = 0;
   friendCount = 0;
   favoriteCount = 0;
@@ -230,7 +231,7 @@ export class DashboardComponent implements OnInit {
     courses: {
       id: 'courses', icon: 'school', titleKey: 'dashboard.courses.title',
       eligible: () => this.menuKeys.has('courses'),
-      subtitle: () => ({ key: 'dashboard.courses.subtitle' }),
+      subtitle: () => ({ key: 'dashboard.courses.count', params: { count: this.courseCount } }),
       buttons: [{ labelKey: 'dashboard.courses.open', link: '/courses' }],
     },
     leaderboards: {
@@ -417,6 +418,7 @@ export class DashboardComponent implements OnInit {
 
     forkJoin({
       repertoires: this.dashboardService.getRepertoires().pipe(catchError(() => of([]))),
+      courses: this.dashboardService.getCourses().pipe(catchError(() => of([]))),
       subscriptions: this.dashboardService.getSubscriptions().pipe(catchError(() => of([]))),
       friends: this.dashboardService.getFriends().pipe(catchError(() => of([]))),
       puzzleStats: this.dashboardService.getPuzzleStats().pipe(
@@ -425,8 +427,9 @@ export class DashboardComponent implements OnInit {
       favorites: this.favorites.count().pipe(catchError(() => of(0))),
     }).pipe(
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(({ repertoires, subscriptions, friends, puzzleStats, favorites }) => {
+    ).subscribe(({ repertoires, courses, subscriptions, friends, puzzleStats, favorites }) => {
       this.repertoireCount = repertoires.length;
+      this.courseCount = courses.length;
       this.subscriptions = subscriptions;
       this.subscriptionCount = subscriptions.length;
       this.friendCount = friends.length;

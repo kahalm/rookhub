@@ -17,10 +17,11 @@ const MENU = new Set<string>([
   'courses', 'leaderboards', 'games', 'weekly', 'stats', 'analysis',
 ]);
 
-function setup(opts: { isAdmin?: boolean; friends?: unknown[]; arrived?: Subject<void> } = {}) {
+function setup(opts: { isAdmin?: boolean; friends?: unknown[]; courses?: unknown[]; arrived?: Subject<void> } = {}) {
   const arrived = opts.arrived ?? new Subject<void>();
   const dashboardService = {
     getRepertoires: () => of([]),
+    getCourses: () => of(opts.courses ?? []),
     getSubscriptions: () => of([]),
     getFriends: () => of(opts.friends ?? []),
     getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
@@ -52,6 +53,11 @@ describe('DashboardComponent friend-count reactivity', () => {
     expect(component.friendCount).toBe(2);
   });
 
+  it('loads the initial course count (shown on the courses tile like repertoires)', () => {
+    const { component } = setup({ courses: [{}, {}, {}] });
+    expect(component.courseCount).toBe(3);
+  });
+
   it('refreshes the friend count when a notification arrives', () => {
     const arrived = new Subject<void>();
     let friends: unknown[] = [{}, {}];
@@ -61,7 +67,7 @@ describe('DashboardComponent friend-count reactivity', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me' } } },
-        { provide: DashboardService, useValue: { getRepertoires: () => of([]), getSubscriptions: () => of([]), getFriends: () => of(friends), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
+        { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of(friends), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
         { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
         { provide: InAppNotificationService, useValue: { arrived$: arrived.asObservable() } },
