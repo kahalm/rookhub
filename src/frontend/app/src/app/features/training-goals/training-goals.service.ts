@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export type GoalSource = 'none' | 'group' | 'personal';
 export type GoalStatus = 'none' | 'partial' | 'full';
@@ -219,4 +220,82 @@ export class TrainingGoalService {
   clearChessableCourseTheme(courseId: string): Observable<void> {
     return this.http.delete<void>(`/api/training-goals/chessable-courses/${encodeURIComponent(courseId)}`);
   }
+
+  // ----- Aktivitäts-Vorlagen + Timer -------------------------------------
+
+  /** Eigene Timer-Vorlagen (Schnellstart auf dem Dashboard). */
+  listPresets(): Observable<ActivityPreset[]> {
+    return this.http.get<ActivityPreset[]>('/api/training-goals/presets');
+  }
+
+  addPreset(input: ActivityPresetInput): Observable<ActivityPreset> {
+    return this.http.post<ActivityPreset>('/api/training-goals/presets', input);
+  }
+
+  updatePreset(id: number, input: ActivityPresetInput): Observable<ActivityPreset> {
+    return this.http.put<ActivityPreset>(`/api/training-goals/presets/${id}`, input);
+  }
+
+  deletePreset(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/training-goals/presets/${id}`);
+  }
+
+  /** Aktueller Timer des Users; 204 (null) wenn keiner läuft. */
+  getTimer(): Observable<ActivityTimer | null> {
+    return this.http.get<ActivityTimer>('/api/training-goals/timer', { observe: 'response' }).pipe(
+      map(r => r.status === 204 ? null : r.body),
+    );
+  }
+
+  startTimer(input: StartTimerInput): Observable<ActivityTimer> {
+    return this.http.post<ActivityTimer>('/api/training-goals/timer/start', input);
+  }
+
+  /** Stoppen — erzeugt einen ManualActivity-Eintrag; endedAt optional (ISO) für Backdating. */
+  stopTimer(input: StopTimerInput = {}): Observable<ManualActivity> {
+    return this.http.post<ManualActivity>('/api/training-goals/timer/stop', input);
+  }
+
+  /** Laufenden Timer verwerfen (ohne Eintrag). */
+  discardTimer(): Observable<void> {
+    return this.http.delete<void>('/api/training-goals/timer');
+  }
+}
+
+/** Wiederverwendbare Vorlage für den Dashboard-Timer-Schnellstart. */
+export interface ActivityPreset {
+  id: number;
+  label: string;
+  /** Nur Minuten-Arten (OfflinePuzzle/OfflineStudy/Coaching) sind gültig. */
+  kind: ManualActivityKind;
+}
+
+export interface ActivityPresetInput {
+  label: string;
+  kind: ManualActivityKind;
+}
+
+/** Kind-Werte, die als Timer-Vorlage gültig sind (im Frontend + Backend übereinstimmend). */
+export const TIMER_KINDS: ManualActivityKind[] = ['OfflinePuzzle', 'OfflineStudy', 'Coaching'];
+
+/** Aktuell laufender Offline-Trainings-Timer. */
+export interface ActivityTimer {
+  label: string;
+  kind: ManualActivityKind;
+  /** UTC-ISO-String. */
+  startedAt: string;
+  /** Sekunden verstrichen laut Server im Moment des Abrufs. */
+  elapsedSeconds: number;
+}
+
+export interface StartTimerInput {
+  presetId?: number;
+  label?: string;
+  kind?: ManualActivityKind;
+}
+
+export interface StopTimerInput {
+  /** UTC-ISO-String; fehlt oder in Zukunft → jetzt. Vor Start → 400. */
+  endedAt?: string;
+  note?: string;
 }

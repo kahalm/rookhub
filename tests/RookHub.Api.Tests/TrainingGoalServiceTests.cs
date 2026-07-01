@@ -700,4 +700,176 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.True(day.HasManual);
         Assert.Equal(30 * 60, day.BySource.CourseBookSeconds);
     }
+
+    // ============ Activity Presets + Timer =============================
+
+    [Fact]
+    public async Task AddPreset_CreatesPreset_RejectsOtbGameOrEmptyLabel()
+    {
+        var u = await CreateUserAsync();
+        var ok = await _service.AddPresetAsync(u.Id, new() { Label = " Coaching Alice ", Kind = ManualActivityKind.Coaching });
+        Assert.Equal("Coaching Alice", ok.Label);
+        Assert.Equal(ManualActivityKind.Coaching, ok.Kind);
+        Assert.True(ok.Id > 0);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.AddPresetAsync(u.Id, new() { Label = "OTB", Kind = ManualActivityKind.OtbGame }));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.AddPresetAsync(u.Id, new() { Label = "   ", Kind = ManualActivityKind.OfflineStudy }));
+    }
+
+    [Fact]
+    public async Task ListPresets_ReturnsOnlyOwnPresets()
+    {
+        var a = await CreateUserAsync("a");
+        var b = await CreateUserAsync("b");
+        await _service.AddPresetAsync(a.Id, new() { Label = "A1", Kind = ManualActivityKind.OfflinePuzzle });
+        await _service.AddPresetAsync(a.Id, new() { Label = "A2", Kind = ManualActivityKind.OfflineStudy });
+        await _service.AddPresetAsync(b.Id, new() { Label = "B1", Kind = ManualActivityKind.Coaching });
+
+        var listA = await _service.ListPresetsAsync(a.Id);
+        Assert.Equal(new[] { "A1", "A2" }, listA.Select(p => p.Label).ToArray());
+    }
+
+    [Fact]
+    public async Task UpdatePreset_ChangesLabelAndKind_404ForForeign()
+    {
+        var a = await CreateUserAsync("a");
+        var b = await CreateUserAsync("b");
+        var p = await _service.AddPresetAsync(a.Id, new() { Label = "old", Kind = ManualActivityKind.OfflinePuzzle });
+
+        var updated = await _service.UpdatePresetAsync(a.Id, p.Id, new() { Label = "new", Kind = ManualActivityKind.Coaching });
+        Assert.NotNull(updated);
+        Assert.Equal("new", updated!.Label);
+        Assert.Equal(ManualActivityKind.Coaching, updated.Kind);
+
+        Assert.Null(await _service.UpdatePresetAsync(b.Id, p.Id, new() { Label = "hijack", Kind = ManualActivityKind.Coaching }));
+    }
+
+    [Fact]
+    public async Task DeletePreset_RemovesOwn_404ForForeign()
+    {
+        var a = await CreateUserAsync("a");
+        var b = await CreateUserAsync("b");
+        var p = await _service.AddPresetAsync(a.Id, new() { Label = "x", Kind = ManualActivityKind.OfflineStudy });
+
+        Assert.False(await _service.DeletePresetAsync(b.Id, p.Id));
+        Assert.True(await _service.DeletePresetAsync(a.Id, p.Id));
+        Assert.Empty(await _service.ListPresetsAsync(a.Id));
+    }
+
+    [Fact]
+    public async Task StartTimer_FromPreset_SetsLabelAndKind_AndReplacesExisting()
+    {
+        var u = await CreateUserAsync();
+        var preset = await _service.AddPresetAsync(u.Id, new() { Label = "Coaching Alice", Kind = ManualActivityKind.Coaching });
+
+        var t1 = await _service.StartTimerAsync(u.Id, new() { PresetId = preset.Id });
+        Assert.Equal("Coaching Alice", t1.Label);
+        Assert.Equal(ManualActivityKind.Coaching, t1.Kind);
+
+        // Zweites Start ersetzt still (kein Fehler, keine ManualActivity aus dem alten Timer).
+        var t2 = await _service.StartTimerAsync(u.Id, new() { Label = "Book", Kind = ManualActivityKind.OfflineStudy });
+        Assert.Equal("Book", t2.Label);
+        Assert.Equal(1, _db.ActivityTimers.Count(x => x.UserId == u.Id));
+        Assert.Empty(_db.ManualActivities.Where(m => m.UserId == u.Id));  // Ersetzung schreibt NICHTS
+    }
+
+    [Fact]
+    public async Task StartTimer_Adhoc_RejectsOtbKindAndMissingLabel()
+    {
+        var u = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.StartTimerAsync(u.Id, new() { Label = "OTB", Kind = ManualActivityKind.OtbGame }));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.StartTimerAsync(u.Id, new() { Kind = ManualActivityKind.Coaching })); // kein Label
+    }
+
+    [Fact]
+    public async Task StartTimer_UnknownPreset_Throws()
+    {
+        var u = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.StartTimerAsync(u.Id, new() { PresetId = 999 }));
+    }
+
+    [Fact]
+    public async Task StopTimer_WritesManualActivity_WithRoundedMinutes_AndRemovesTimer()
+    {
+        var u = await CreateUserAsync();
+        var start = DateTime.UtcNow.AddMinutes(-25);
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Book", Kind = ManualActivityKind.OfflineStudy, StartedAt = start });
+        await _db.SaveChangesAsync();
+
+        var saved = await _service.StopTimerAsync(u.Id, new());
+        Assert.NotNull(saved);
+        Assert.Equal(ManualActivityKind.OfflineStudy, saved!.Kind);
+        Assert.InRange(saved.Amount, 24, 26); // ~25 min, ±1 wg. Rundung
+        Assert.Contains("Book", saved.Note);
+        Assert.Empty(_db.ActivityTimers.Where(t => t.UserId == u.Id));
+        Assert.Single(_db.ManualActivities.Where(m => m.UserId == u.Id));
+    }
+
+    [Fact]
+    public async Task StopTimer_HonoursBackdatedEndedAt()
+    {
+        var u = await CreateUserAsync();
+        var start = DateTime.UtcNow.AddHours(-3);
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Coaching", Kind = ManualActivityKind.Coaching, StartedAt = start });
+        await _db.SaveChangesAsync();
+
+        // Backdate: als hätte der Timer nur 45 Minuten gelaufen.
+        var ended = start.AddMinutes(45);
+        var saved = await _service.StopTimerAsync(u.Id, new() { EndedAt = ended.ToString("o") });
+
+        Assert.NotNull(saved);
+        Assert.Equal(45, saved!.Amount);
+    }
+
+    [Fact]
+    public async Task StopTimer_EndedAtBeforeStart_Throws()
+    {
+        var u = await CreateUserAsync();
+        var start = DateTime.UtcNow;
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Book", Kind = ManualActivityKind.OfflineStudy, StartedAt = start });
+        await _db.SaveChangesAsync();
+
+        var ended = start.AddMinutes(-10);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.StopTimerAsync(u.Id, new() { EndedAt = ended.ToString("o") }));
+    }
+
+    [Fact]
+    public async Task StopTimer_EndedAtInFuture_ClampsToNow()
+    {
+        var u = await CreateUserAsync();
+        var start = DateTime.UtcNow.AddMinutes(-5);
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Book", Kind = ManualActivityKind.OfflineStudy, StartedAt = start });
+        await _db.SaveChangesAsync();
+
+        var future = DateTime.UtcNow.AddHours(1);
+        var saved = await _service.StopTimerAsync(u.Id, new() { EndedAt = future.ToString("o") });
+        // ~5 Minuten (Now), NICHT 65 Minuten.
+        Assert.InRange(saved!.Amount, 4, 6);
+    }
+
+    [Fact]
+    public async Task StopTimer_NoRunningTimer_ReturnsNull()
+    {
+        var u = await CreateUserAsync();
+        Assert.Null(await _service.StopTimerAsync(u.Id, new()));
+    }
+
+    [Fact]
+    public async Task DiscardTimer_RemovesWithoutCreatingManualActivity()
+    {
+        var u = await CreateUserAsync();
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Book", Kind = ManualActivityKind.OfflineStudy, StartedAt = DateTime.UtcNow.AddMinutes(-10) });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _service.DiscardTimerAsync(u.Id));
+        Assert.Empty(_db.ActivityTimers.Where(t => t.UserId == u.Id));
+        Assert.Empty(_db.ManualActivities.Where(m => m.UserId == u.Id));
+        Assert.False(await _service.DiscardTimerAsync(u.Id));
+    }
 }

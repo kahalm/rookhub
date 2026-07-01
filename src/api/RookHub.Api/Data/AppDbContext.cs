@@ -56,6 +56,8 @@ public class AppDbContext : DbContext
     public DbSet<ChessableActivity> ChessableActivities => Set<ChessableActivity>();
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
+    public DbSet<ActivityPreset> ActivityPresets => Set<ActivityPreset>();
+    public DbSet<ActivityTimer> ActivityTimers => Set<ActivityTimer>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
@@ -556,6 +558,27 @@ public class AppDbContext : DbContext
             e.Property(a => a.Note).HasMaxLength(200);
             // Fenster-Aggregation je User (Date >= windowStart) für den Tracker.
             e.HasIndex(a => new { a.UserId, a.Date });
+        });
+
+        modelBuilder.Entity<ActivityPreset>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(p => p.Label).HasMaxLength(100);
+            e.HasIndex(p => p.UserId);
+        });
+
+        modelBuilder.Entity<ActivityTimer>(e =>
+        {
+            // PK = UserId → höchstens 1 laufender Timer je User (kein extra Unique nötig).
+            e.HasKey(t => t.UserId);
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(t => t.Label).HasMaxLength(100);
         });
 
         modelBuilder.Entity<RememberedPosition>(e =>

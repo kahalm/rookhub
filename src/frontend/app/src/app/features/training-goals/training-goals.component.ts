@@ -17,7 +17,9 @@ import {
   ManualActivity, ManualActivityInput, ManualActivityKind,
   SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS,
   ChessableCourseSummary, ChessableTheme,
+  ActivityPreset, ActivityPresetInput, TIMER_KINDS,
 } from './training-goals.service';
+import { activityKindIcon } from './activity-timer-tile.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -370,6 +372,59 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
           </mat-card-content>
         </mat-card>
 
+        <!-- Timer-Vorlagen: wiederverwendbare Kurztexte für den Dashboard-Schnellstart-Timer. -->
+        <mat-card id="presets">
+          <mat-card-header>
+            <mat-card-title>{{ 'trainingGoals.presets.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'trainingGoals.presets.subtitle' | translate }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="preset-form">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-label-field">
+                <mat-label>{{ 'trainingGoals.presets.labelLabel' | translate }}</mat-label>
+                <input matInput maxlength="100" [(ngModel)]="presetEdit.label"
+                       [placeholder]="'trainingGoals.presets.labelPlaceholder' | translate">
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
+                <mat-label>{{ 'trainingGoals.presets.kindLabel' | translate }}</mat-label>
+                <mat-select [(ngModel)]="presetEdit.kind">
+                  @for (k of timerKinds; track k) {
+                    <mat-option [value]="k">{{ ('trainingGoals.manual.kinds.' + k) | translate }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <div class="actions">
+                <button mat-raised-button color="primary" (click)="savePreset()"
+                        [disabled]="savingPreset || !presetEdit.label.trim()">
+                  <mat-icon>{{ editingPresetId ? 'save' : 'add' }}</mat-icon>
+                  {{ (editingPresetId ? 'common.save' : 'trainingGoals.presets.add') | translate }}
+                </button>
+                @if (editingPresetId) {
+                  <button mat-button (click)="cancelPresetEdit()" [disabled]="savingPreset">{{ 'common.cancel' | translate }}</button>
+                }
+              </div>
+            </div>
+
+            @if (presets.length) {
+              <ul class="preset-list">
+                @for (p of presets; track p.id) {
+                  <li>
+                    <mat-icon class="p-icon">{{ presetIcon(p.kind) }}</mat-icon>
+                    <span class="p-label">{{ p.label }}</span>
+                    <span class="p-kind">{{ ('trainingGoals.manual.kinds.' + p.kind) | translate }}</span>
+                    <span class="p-actions">
+                      <button mat-icon-button (click)="editPreset(p)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
+                      <button mat-icon-button (click)="deletePreset(p)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
+                    </span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="preset-empty">{{ 'trainingGoals.presets.empty' | translate }}</p>
+            }
+          </mat-card-content>
+        </mat-card>
+
         <!-- Tracker -->
         @if (tracker.length) {
           <mat-card>
@@ -590,6 +645,17 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .manual-list .m-amount .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
     .manual-list .m-note { flex: 1; color: color-mix(in srgb, currentColor 60%, transparent); overflow-wrap: anywhere; }
     .manual-list .m-actions { display: flex; gap: 2px; margin-left: auto; }
+    .preset-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+    .preset-form .preset-label-field { flex: 1 1 220px; min-width: 200px; }
+    .preset-form .preset-kind-field { flex: 0 1 200px; min-width: 160px; }
+    .preset-form .actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .preset-list { list-style: none; padding: 0; margin: 12px 0 0; }
+    .preset-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); font-size: .9rem; }
+    .preset-list .p-icon { color: color-mix(in srgb, currentColor 55%, transparent); }
+    .preset-list .p-label { font-weight: 600; flex: 1; overflow-wrap: anywhere; }
+    .preset-list .p-kind { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .82rem; }
+    .preset-list .p-actions { display: flex; gap: 2px; margin-left: auto; }
+    .preset-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 12px 0 0; font-size: .9rem; }
     .legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
@@ -651,6 +717,13 @@ export class TrainingGoalsComponent implements OnInit {
   editingManualId: number | null = null;
   manualEdit: ManualActivityInput = this.emptyManual();
 
+  // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
+  readonly timerKinds: ManualActivityKind[] = TIMER_KINDS;
+  presets: ActivityPreset[] = [];
+  savingPreset = false;
+  editingPresetId: number | null = null;
+  presetEdit: ActivityPresetInput = { label: '', kind: 'OfflineStudy' };
+
   // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
   readonly chessableThemes: ChessableTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics'];
   chessableCourses: ChessableCourseSummary[] = [];
@@ -688,8 +761,9 @@ export class TrainingGoalsComponent implements OnInit {
       tracker: this.service.getTracker(),
       series: this.service.getDailySeries(),
       manual: this.service.listManual(),
+      presets: this.service.listPresets(),
     }).subscribe({
-      next: ({ goal, today, tracker, series, manual }) => {
+      next: ({ goal, today, tracker, series, manual, presets }) => {
         this.applyGoal(goal);
         this.today = today;
         this.todaySourceRows = this.sourceRows(today.bySource);
@@ -699,10 +773,62 @@ export class TrainingGoalsComponent implements OnInit {
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
+        this.presets = presets;
         this.loading = false;
         this.loadChessableCourses();
       },
       error: () => { this.loading = false; },
+    });
+  }
+
+  // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
+
+  presetIcon(kind: ManualActivityKind): string { return activityKindIcon(kind); }
+
+  editPreset(p: ActivityPreset): void {
+    this.editingPresetId = p.id;
+    this.presetEdit = { label: p.label, kind: p.kind };
+  }
+
+  cancelPresetEdit(): void {
+    this.editingPresetId = null;
+    this.presetEdit = { label: '', kind: 'OfflineStudy' };
+  }
+
+  savePreset(): void {
+    const label = (this.presetEdit.label ?? '').trim();
+    if (!label) return;
+    this.savingPreset = true;
+    const payload: ActivityPresetInput = { label, kind: this.presetEdit.kind };
+    const req = this.editingPresetId
+      ? this.service.updatePreset(this.editingPresetId, payload)
+      : this.service.addPreset(payload);
+    req.subscribe({
+      next: saved => {
+        // In-place aktualisieren / anhängen.
+        const idx = this.presets.findIndex(p => p.id === saved.id);
+        if (idx >= 0) this.presets[idx] = saved;
+        else this.presets = [...this.presets, saved];
+        this.savingPreset = false;
+        this.cancelPresetEdit();
+      },
+      error: err => {
+        this.savingPreset = false;
+        this.snackbar.info(err?.error?.error ?? this.translate.instant('trainingGoals.presets.saveFailed'),
+          { action: 'common.ok', duration: 3000 });
+      },
+    });
+  }
+
+  deletePreset(p: ActivityPreset): void {
+    if (!confirm(this.translate.instant('trainingGoals.presets.deleteConfirm', { label: p.label }))) return;
+    this.service.deletePreset(p.id).subscribe({
+      next: () => {
+        this.presets = this.presets.filter(x => x.id !== p.id);
+        if (this.editingPresetId === p.id) this.cancelPresetEdit();
+      },
+      error: () => this.snackbar.info(this.translate.instant('trainingGoals.presets.deleteFailed'),
+        { action: 'common.ok', duration: 3000 }),
     });
   }
 

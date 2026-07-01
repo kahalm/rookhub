@@ -94,6 +94,74 @@ public class TrainingGoalController : BaseApiController
     public async Task<IActionResult> DeleteManual(int id)
         => await _service.DeleteManualAsync(GetUserId(), id) ? NoContent() : NotFound();
 
+    // ----- Aktivitäts-Vorlagen (Preset) + Timer ----------------------------
+
+    /// <summary>Eigene Timer-Vorlagen (Schnellstart auf dem Dashboard).</summary>
+    [HttpGet("presets")]
+    public async Task<ActionResult<List<ActivityPresetDto>>> ListPresets()
+        => Ok(await _service.ListPresetsAsync(GetUserId()));
+
+    /// <summary>Neue Vorlage anlegen (nur Minuten-Arten: OfflinePuzzle/OfflineStudy/Coaching).</summary>
+    [HttpPost("presets")]
+    public async Task<ActionResult<ActivityPresetDto>> AddPreset([FromBody] ActivityPresetInputDto dto)
+    {
+        try { return Ok(await _service.AddPresetAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Vorlage aktualisieren (404 bei fremder/unbekannter Vorlage).</summary>
+    [HttpPut("presets/{id:int}")]
+    public async Task<ActionResult<ActivityPresetDto>> UpdatePreset(int id, [FromBody] ActivityPresetInputDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdatePresetAsync(GetUserId(), id, dto);
+            return updated == null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Vorlage löschen (404 bei fremder/unbekannter Vorlage).</summary>
+    [HttpDelete("presets/{id:int}")]
+    public async Task<IActionResult> DeletePreset(int id)
+        => await _service.DeletePresetAsync(GetUserId(), id) ? NoContent() : NotFound();
+
+    /// <summary>Aktueller Timer des Users (204, wenn keiner läuft).</summary>
+    [HttpGet("timer")]
+    public async Task<ActionResult<ActivityTimerDto>> GetTimer()
+    {
+        var t = await _service.GetTimerAsync(GetUserId());
+        return t == null ? NoContent() : Ok(t);
+    }
+
+    /// <summary>Timer starten (aus Vorlage per <c>presetId</c> oder ad-hoc mit <c>label</c>+<c>kind</c>).
+    /// Ersetzt still einen ggf. laufenden Timer — der Client sollte vorher warnen.</summary>
+    [HttpPost("timer/start")]
+    public async Task<ActionResult<ActivityTimerDto>> StartTimer([FromBody] StartActivityTimerDto dto)
+    {
+        try { return Ok(await _service.StartTimerAsync(GetUserId(), dto)); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Timer stoppen und als manuellen Aktivitätseintrag speichern. Optional
+    /// <c>endedAt</c> (ISO 8601) für Backdating — muss zwischen Start und jetzt liegen.
+    /// 404 wenn kein Timer aktiv.</summary>
+    [HttpPost("timer/stop")]
+    public async Task<ActionResult<ManualActivityDto>> StopTimer([FromBody] StopActivityTimerDto dto)
+    {
+        try
+        {
+            var saved = await _service.StopTimerAsync(GetUserId(), dto);
+            return saved == null ? NotFound() : Ok(saved);
+        }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    /// <summary>Laufenden Timer verwerfen (ohne Eintrag). 404 wenn keiner aktiv.</summary>
+    [HttpDelete("timer")]
+    public async Task<IActionResult> DiscardTimer()
+        => await _service.DiscardTimerAsync(GetUserId()) ? NoContent() : NotFound();
+
     /// <summary>Chessable-Kurs-History (nach Kurs gruppiert) inkl. ermitteltem Thema; mit
     /// <paramref name="unassignedOnly"/> nur Kurse ohne feststehendes Thema.</summary>
     [HttpGet("chessable-courses")]

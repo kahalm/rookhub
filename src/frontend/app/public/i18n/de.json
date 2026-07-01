@@ -233,6 +233,10 @@
       "subtitle": "Dein tägliches Training",
       "open": "Ziele öffnen"
     },
+    "activityTimer": {
+      "title": "Trainings-Timer",
+      "subtitle": "Vorlage starten, Offline-Zeit erfassen"
+    },
     "courses": {
       "title": "Kurse",
       "subtitle": "Arbeite deine Bücher durch",
@@ -1591,6 +1595,41 @@
         "OfflineStudy": "Offline-Studium",
         "Coaching": "Trainerstunde / Lektion"
       }
+    },
+    "presets": {
+      "title": "Aktivitäts-Vorlagen",
+      "subtitle": "Wiederverwendbare Schnellstart-Einträge für den Dashboard-Timer (Offline-Puzzletraining, Offline-Studium, Coaching).",
+      "labelLabel": "Name",
+      "labelPlaceholder": "z. B. „Coaching Alice“ oder „Buch Kramnik lesen“",
+      "kindLabel": "Kategorie",
+      "add": "Vorlage anlegen",
+      "empty": "Noch keine Vorlagen — lege eine an, um den Schnellstart-Timer im Dashboard nutzen zu können.",
+      "deleteConfirm": "Vorlage „{{label}}“ löschen?",
+      "deleteFailed": "Vorlage konnte nicht gelöscht werden.",
+      "saveFailed": "Vorlage konnte nicht gespeichert werden."
+    },
+    "timer": {
+      "stop": "Stoppen & speichern",
+      "discard": "Verwerfen",
+      "discardTooltip": "Timer wegwerfen, ohne einen Eintrag anzulegen.",
+      "discardConfirm": "Laufenden Timer verwerfen? Es wird nichts gespeichert.",
+      "discardFailed": "Timer konnte nicht verworfen werden.",
+      "noPresets": "Lege erst eine Vorlage an (Name + Kategorie), um den Schnellstart-Timer zu aktivieren.",
+      "pickPreset": "Vorlage wählen, um den Timer zu starten:",
+      "managePresets": "Vorlagen verwalten",
+      "replaceConfirm": "Es läuft bereits ein Timer. Neuen starten (der laufende wird ohne Speichern verworfen)?",
+      "started": "Timer gestartet: {{label}}",
+      "startFailed": "Timer konnte nicht gestartet werden.",
+      "stopTitle": "Timer stoppen & speichern",
+      "stopHint": "Die verstrichene Zeit wird als Offline-Aktivität gespeichert. Vergessen zu stoppen? Passe unten die Endzeit an.",
+      "duration": "Dauer",
+      "endedAt": "Ende",
+      "endedHint": "Standard ist jetzt. Für Rückdatierung eine frühere Uhrzeit setzen (muss nach dem Start liegen).",
+      "noteLabel": "Notiz (optional)",
+      "notePlaceholder": "z. B. „Stunde mit Alice, Eröffnungsdrills“",
+      "saveEntry": "Eintrag speichern",
+      "savedEntry": "Gespeichert: {{minutes}} Minuten",
+      "stopFailed": "Timer-Eintrag konnte nicht gespeichert werden."
     },
     "title": "Trainingsziele",
     "intro": "Lege Tagesziele je Kategorie fest und verfolge deinen Fortschritt.",

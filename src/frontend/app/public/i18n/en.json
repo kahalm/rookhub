@@ -233,6 +233,10 @@
       "subtitle": "Track your daily training",
       "open": "Open goals"
     },
+    "activityTimer": {
+      "title": "Training timer",
+      "subtitle": "Start a preset, log offline time"
+    },
     "courses": {
       "title": "Courses",
       "subtitle": "Work through your books",
@@ -1591,6 +1595,41 @@
         "OfflineStudy": "Offline study",
         "Coaching": "Lesson / coaching"
       }
+    },
+    "presets": {
+      "title": "Activity presets",
+      "subtitle": "Reusable quick-start entries for the dashboard timer (offline puzzle training, offline study, coaching).",
+      "labelLabel": "Name",
+      "labelPlaceholder": "e.g. \"Coaching Alice\" or \"Study Kramnik book\"",
+      "kindLabel": "Category",
+      "add": "Add preset",
+      "empty": "No presets yet — add one to unlock the dashboard timer's quick-start.",
+      "deleteConfirm": "Delete preset “{{label}}”?",
+      "deleteFailed": "Could not delete preset.",
+      "saveFailed": "Could not save preset."
+    },
+    "timer": {
+      "stop": "Stop & save",
+      "discard": "Discard",
+      "discardTooltip": "Throw the timer away without saving an entry.",
+      "discardConfirm": "Discard the running timer? No entry will be created.",
+      "discardFailed": "Could not discard the timer.",
+      "noPresets": "Add a preset first (name + category) to enable the quick-start timer.",
+      "pickPreset": "Pick a preset to start the timer:",
+      "managePresets": "Manage presets",
+      "replaceConfirm": "A timer is already running. Start a new one (the running one will be dropped without saving)?",
+      "started": "Timer started: {{label}}",
+      "startFailed": "Could not start the timer.",
+      "stopTitle": "Stop timer & save",
+      "stopHint": "The elapsed time will be saved as an offline activity. Forgot to stop earlier? Adjust the end time below.",
+      "duration": "Duration",
+      "endedAt": "Ended at",
+      "endedHint": "Default is now. Set an earlier time to backdate the entry (must be after the start time).",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "e.g. \"lesson with Alice, opening drills\"",
+      "saveEntry": "Save entry",
+      "savedEntry": "Saved: {{minutes}} minutes",
+      "stopFailed": "Could not save the timer entry."
     },
     "title": "Training Goals",
     "intro": "Set daily goals per category and track your progress.",

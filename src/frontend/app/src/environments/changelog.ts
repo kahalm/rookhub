@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.241.1';
+export const APP_VERSION = '0.241.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.241.2", date: "2026-07-01", changes: [
+    { en: "New: offline training timer with reusable presets. In Training Goals you can now create reusable activity presets (name + category — offline puzzle training, offline study, or coaching). On the dashboard a new \"Training timer\" tile lets you start one of your presets with a single click; the running timer is shown live with a big elapsed counter and a Stop button. Stopping opens a small dialog that shows the duration and lets you adjust the end time — so if you forgot to hit stop, you can backdate the entry to when you actually finished. The result is saved as a normal manual offline activity and counts toward your goals like any other tracked time. \"Discard\" throws the timer away without saving.", de: "Neu: Offline-Trainings-Timer mit wiederverwendbaren Vorlagen. In den Trainingszielen kannst du jetzt Aktivitäts-Vorlagen anlegen (Name + Kategorie — Offline-Puzzletraining, Offline-Studium oder Trainerstunde). Auf dem Dashboard gibt es eine neue Kachel „Trainings-Timer“, mit der du eine deiner Vorlagen mit einem Klick startest; der laufende Timer wird live mit großem Zähler und Stopp-Knopf angezeigt. Beim Stoppen öffnet sich ein kleiner Dialog mit der Dauer und einem Endzeit-Feld — hast du vergessen zu stoppen, kannst du den Eintrag zurückdatieren auf die Zeit, zu der du tatsächlich aufgehört hast. Das Ergebnis wird als normale manuelle Offline-Aktivität gespeichert und zählt für deine Ziele wie jede andere erfasste Zeit. „Verwerfen\" wirft den Timer weg, ohne zu speichern." },
+  ]},
   { version: "0.241.1", date: "2026-07-01", changes: [
     { en: "Fixed repertoires that stayed stuck in the \"Update\" banner and never refreshed. These belonged to users with no Chessable token stored: their re-fetch was silently skipped on every Update, so they hung forever. Now — exactly as suggested — a course whose data is already cached is re-fetched straight from the cache WITHOUT needing a token (admin update), which even restores repertoires that had lost their PGN. Ones that are neither cached nor have a token are marked current so the banner finally clears (a real re-import still needs the owner to add a token). Requires piratechess v1.0.35.", de: "Repertoires behoben, die im „Aktualisieren\"-Banner hängen blieben und nie refreshten. Sie gehörten Usern ohne hinterlegten Chessable-Token: ihr Re-Fetch wurde bei jedem „Aktualisieren\" still übersprungen und hing dadurch ewig. Jetzt — genau wie vorgeschlagen — wird ein Kurs, dessen Daten bereits gecacht sind, OHNE Token direkt aus dem Cache geholt (Admin-Aktualisierung); das stellt sogar Repertoires wieder her, die ihr PGN verloren hatten. Solche, die weder gecacht sind noch einen Token haben, werden als aktuell markiert, damit das Banner endlich leer wird (ein echter Re-Import erfordert weiterhin, dass der Besitzer einen Token hinterlegt). Erfordert piratechess v1.0.35." },
   ]},

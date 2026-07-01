@@ -102,6 +102,51 @@ public class ManualActivityInputDto
     [MaxLength(200)] public string? Note { get; set; }
 }
 
+/// <summary>Wiederverwendbare Vorlage für eine Offline-Trainings-Aktivität (Timer-Schnellstart).</summary>
+public class ActivityPresetDto
+{
+    public int Id { get; set; }
+    [Required] [MaxLength(100)] public string Label { get; set; } = string.Empty;
+    /// <summary>Nur Minuten-Arten sind sinnvoll (OfflinePuzzle/OfflineStudy/Coaching). OtbGame wird abgelehnt.</summary>
+    public ManualActivityKind Kind { get; set; }
+}
+
+/// <summary>Eingabe zum Anlegen/Ändern einer Vorlage.</summary>
+public class ActivityPresetInputDto
+{
+    [Required] [MaxLength(100)] public string Label { get; set; } = string.Empty;
+    public ManualActivityKind Kind { get; set; }
+}
+
+/// <summary>Aktuell laufender Offline-Trainings-Timer eines Users (null = kein Timer aktiv).</summary>
+public class ActivityTimerDto
+{
+    [Required] public string Label { get; set; } = string.Empty;
+    public ManualActivityKind Kind { get; set; }
+    /// <summary>UTC-Startzeitpunkt (ISO 8601).</summary>
+    public string StartedAt { get; set; } = string.Empty;
+    /// <summary>Zum Zeitpunkt des Abrufs verstrichene Sekunden (Server berechnet; Client kann weiter hochzählen).</summary>
+    public int ElapsedSeconds { get; set; }
+}
+
+/// <summary>Start-Eingabe: entweder Vorlage per <see cref="PresetId"/> oder ad-hoc via Label + Kind.</summary>
+public class StartActivityTimerDto
+{
+    /// <summary>Optionale Vorlagen-Id. Fehlt sie, müssen Label + Kind gesetzt sein.</summary>
+    public int? PresetId { get; set; }
+    [MaxLength(100)] public string? Label { get; set; }
+    public ManualActivityKind? Kind { get; set; }
+}
+
+/// <summary>Stop-Eingabe: optionales Ende-ISO für Backdating (falls Timer vergessen wurde).</summary>
+public class StopActivityTimerDto
+{
+    /// <summary>UTC-Ende als ISO 8601. Fehlt oder in Zukunft → jetzt. Vor Startzeit → 400.</summary>
+    public string? EndedAt { get; set; }
+    /// <summary>Optionale Notiz für den entstehenden <see cref="ManualActivity"/>-Eintrag.</summary>
+    [MaxLength(200)] public string? Note { get; set; }
+}
+
 /// <summary>Aufschlüsselung von Trainingssekunden nach <b>Quelle</b> (woher die Zeit stammt).</summary>
 public class SourceBreakdownDto
 {

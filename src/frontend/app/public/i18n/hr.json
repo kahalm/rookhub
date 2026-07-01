@@ -233,6 +233,10 @@
       "subtitle": "Tvoj dnevni trening",
       "open": "Otvori ciljeve"
     },
+    "activityTimer": {
+      "title": "Timer treninga",
+      "subtitle": "Pokreni predložak, zabilježi offline vrijeme"
+    },
     "courses": {
       "title": "Tečajevi",
       "subtitle": "Prolazi kroz svoje knjige",
@@ -1589,6 +1593,41 @@
         "OfflineStudy": "Offline proučavanje",
         "Coaching": "Sat s trenerom / lekcija"
       }
+    },
+    "presets": {
+      "title": "Predlošci aktivnosti",
+      "subtitle": "Predlošci za brzi start timera na nadzornoj ploči (offline trening, offline proučavanje, sat s trenerom).",
+      "labelLabel": "Naziv",
+      "labelPlaceholder": "npr. „Sat s Alicom“ ili „Knjiga Kramnik“",
+      "kindLabel": "Kategorija",
+      "add": "Dodaj predložak",
+      "empty": "Još nema predložaka — dodaj jedan da bi mogao koristiti brzi start timera.",
+      "deleteConfirm": "Izbrisati predložak „{{label}}“?",
+      "deleteFailed": "Predložak se ne može izbrisati.",
+      "saveFailed": "Predložak se ne može spremiti."
+    },
+    "timer": {
+      "stop": "Zaustavi i spremi",
+      "discard": "Odbaci",
+      "discardTooltip": "Baci timer bez spremanja unosa.",
+      "discardConfirm": "Odbaciti pokrenuti timer? Ništa se neće spremiti.",
+      "discardFailed": "Timer se ne može odbaciti.",
+      "noPresets": "Prvo dodaj predložak (naziv + kategorija) da bi aktivirao brzi start timera.",
+      "pickPreset": "Odaberi predložak za pokretanje timera:",
+      "managePresets": "Upravljaj predlošcima",
+      "replaceConfirm": "Timer već radi. Pokrenuti novi (postojeći će se odbaciti bez spremanja)?",
+      "started": "Timer pokrenut: {{label}}",
+      "startFailed": "Timer se ne može pokrenuti.",
+      "stopTitle": "Zaustavi timer i spremi",
+      "stopHint": "Proteklo vrijeme bit će spremljeno kao offline aktivnost. Zaboravio si zaustaviti? Prilagodi vrijeme završetka ispod.",
+      "duration": "Trajanje",
+      "endedAt": "Završetak",
+      "endedHint": "Zadano je „sad“. Postavi raniji datum/vrijeme za povratno bilježenje (mora biti nakon početka).",
+      "noteLabel": "Napomena (neobavezno)",
+      "notePlaceholder": "npr. „sat s Alicom, otvaranja“",
+      "saveEntry": "Spremi unos",
+      "savedEntry": "Spremljeno: {{minutes}} minuta",
+      "stopFailed": "Timer se ne može spremiti."
     },
     "title": "Trening ciljevi",
     "intro": "Postavi dnevne ciljeve po kategoriji i prati svoj napredak.",

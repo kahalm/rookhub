@@ -21,6 +21,7 @@ import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
+import { ActivityTimerTileComponent } from '../training-goals/activity-timer-tile.component';
 
 /** Ein Schnellzugriff-Button auf einer Kachel. */
 interface TileButton { labelKey: string; link: string; }
@@ -39,7 +40,7 @@ interface TileDef {
 
 /** Kuratierter Standard: diese Kacheln sind anfänglich sichtbar — in genau dieser Reihenfolge. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'leaderboards',
+  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'activityTimer', 'leaderboards',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
@@ -56,6 +57,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatListModule, MatProgressBarModule, MatTooltipModule, DragDropModule, TranslateModule,
+    ActivityTimerTileComponent,
   ],
   template: `
     <div class="dashboard">
@@ -151,6 +153,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <mat-card-actions>
                 <button mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</button>
               </mat-card-actions>
+            } @else if (tile.id === 'activityTimer') {
+              <mat-card-content>
+                <app-activity-timer-tile></app-activity-timer-tile>
+              </mat-card-content>
             } @else {
               <mat-card-actions>
                 @for (b of tile.buttons; track b.link) {
@@ -290,6 +296,12 @@ export class DashboardComponent implements OnInit {
       eligible: () => this.menuKeys.has('training-goals'),
       subtitle: () => ({ key: 'dashboard.trainingGoals.subtitle' }),
       buttons: [{ labelKey: 'dashboard.trainingGoals.open', link: '/training-goals' }],
+    },
+    activityTimer: {
+      id: 'activityTimer', icon: 'timer', titleKey: 'dashboard.activityTimer.title',
+      eligible: () => this.menuKeys.has('training-goals'),
+      subtitle: () => ({ key: 'dashboard.activityTimer.subtitle' }),
+      buttons: [],   // eigener Inhalt via <app-activity-timer-tile>
     },
     courses: {
       id: 'courses', icon: 'school', titleKey: 'dashboard.courses.title',

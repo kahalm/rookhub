@@ -659,4 +659,176 @@ public class TrainingGoalService
         Source = source,
         GroupName = groupName,
     };
+
+    // ----- Aktivitäts-Vorlagen + Timer -------------------------------------
+    //
+    // Vorlagen (ActivityPreset) sind wiederverwendbare Kurztexte („Coaching mit Trainer X", „Buch Y")
+    // mit einer <see cref="ManualActivityKind"/> — vom User selbst gepflegt, per Dashboard-„+"-Knopf
+    // schnell startbar. Der Timer (ActivityTimer, max. 1 je User) läuft solange, bis der User ihn
+    // stoppt (Backdate möglich via <see cref="StopActivityTimerDto.EndedAt"/>, falls das Ausschalten
+    // vergessen wurde) — dann entsteht ein <see cref="ManualActivity"/>-Eintrag mit gerundeten Minuten
+    // und die Vorlage bleibt für den nächsten Start bestehen. Vorlagen dürfen nur Minuten-Arten
+    // tragen (OtbGame ist als getakteter Timer nicht sinnvoll — dafür bleibt der bestehende Manual-Add).
+
+    private static bool IsTimerKind(ManualActivityKind kind) => kind switch
+    {
+        ManualActivityKind.OfflinePuzzle => true,
+        ManualActivityKind.OfflineStudy => true,
+        ManualActivityKind.Coaching => true,
+        _ => false,
+    };
+
+    public async Task<List<ActivityPresetDto>> ListPresetsAsync(int userId)
+        => await _db.ActivityPresets.AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .OrderBy(p => p.Id)
+            .Select(p => new ActivityPresetDto { Id = p.Id, Label = p.Label, Kind = p.Kind })
+            .ToListAsync();
+
+    public async Task<ActivityPresetDto> AddPresetAsync(int userId, ActivityPresetInputDto dto)
+    {
+        var label = (dto.Label ?? string.Empty).Trim();
+        if (label.Length == 0) throw new ArgumentException("Label darf nicht leer sein.");
+        if (!IsTimerKind(dto.Kind)) throw new ArgumentException("Für Timer-Vorlagen sind nur Minuten-Arten erlaubt.");
+        var entity = new ActivityPreset
+        {
+            UserId = userId, Label = label, Kind = dto.Kind,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        _db.ActivityPresets.Add(entity);
+        await _db.SaveChangesAsync();
+        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind };
+    }
+
+    public async Task<ActivityPresetDto?> UpdatePresetAsync(int userId, int id, ActivityPresetInputDto dto)
+    {
+        var entity = await _db.ActivityPresets.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (entity == null) return null;
+        var label = (dto.Label ?? string.Empty).Trim();
+        if (label.Length == 0) throw new ArgumentException("Label darf nicht leer sein.");
+        if (!IsTimerKind(dto.Kind)) throw new ArgumentException("Für Timer-Vorlagen sind nur Minuten-Arten erlaubt.");
+        entity.Label = label;
+        entity.Kind = dto.Kind;
+        entity.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind };
+    }
+
+    public async Task<bool> DeletePresetAsync(int userId, int id)
+    {
+        var entity = await _db.ActivityPresets.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (entity == null) return false;
+        _db.ActivityPresets.Remove(entity);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<ActivityTimerDto?> GetTimerAsync(int userId)
+    {
+        var t = await _db.ActivityTimers.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
+        return t == null ? null : ToTimerDto(t);
+    }
+
+    /// <summary>Startet einen neuen Timer (ersetzt einen ggf. laufenden — der laufende wird STILL
+    /// verworfen, ohne einen ManualActivity-Eintrag zu erzeugen; damit versehentlicher Verlust nicht
+    /// passiert, sollte der Client vorher warnen).</summary>
+    public async Task<ActivityTimerDto> StartTimerAsync(int userId, StartActivityTimerDto dto)
+    {
+        string label;
+        ManualActivityKind kind;
+
+        if (dto.PresetId is int pid)
+        {
+            var preset = await _db.ActivityPresets.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pid && p.UserId == userId)
+                ?? throw new ArgumentException("Vorlage nicht gefunden.");
+            label = preset.Label;
+            kind = preset.Kind;
+        }
+        else
+        {
+            label = (dto.Label ?? string.Empty).Trim();
+            if (label.Length == 0) throw new ArgumentException("Label darf nicht leer sein.");
+            if (dto.Kind is not { } k || !IsTimerKind(k)) throw new ArgumentException("Für Timer sind nur Minuten-Arten erlaubt.");
+            kind = k;
+        }
+
+        var existing = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (existing != null) _db.ActivityTimers.Remove(existing);
+        var timer = new ActivityTimer { UserId = userId, Label = label, Kind = kind, StartedAt = DateTime.UtcNow };
+        _db.ActivityTimers.Add(timer);
+        await _db.SaveChangesAsync();
+        return ToTimerDto(timer);
+    }
+
+    /// <summary>Stoppt den laufenden Timer, erzeugt einen <see cref="ManualActivity"/>-Eintrag
+    /// mit der gerechneten Dauer (in Minuten, gerundet, geklemmt) und entfernt den Timer. 404 wenn
+    /// kein Timer läuft. <see cref="StopActivityTimerDto.EndedAt"/> darf zurückdatiert werden (aber
+    /// nicht vor <see cref="ActivityTimer.StartedAt"/>).</summary>
+    public async Task<ManualActivityDto?> StopTimerAsync(int userId, StopActivityTimerDto dto)
+    {
+        var timer = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (timer == null) return null;
+
+        var now = DateTime.UtcNow;
+        var endedAt = now;
+        if (!string.IsNullOrWhiteSpace(dto.EndedAt))
+        {
+            if (!DateTime.TryParse(dto.EndedAt, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var parsed))
+                throw new ArgumentException("Ungültiges Enddatum (ISO 8601 erwartet).");
+            endedAt = parsed.ToUniversalTime();
+            if (endedAt > now) endedAt = now;
+            if (endedAt < timer.StartedAt) throw new ArgumentException("Ende darf nicht vor dem Start liegen.");
+        }
+
+        var seconds = (int)Math.Round((endedAt - timer.StartedAt).TotalSeconds);
+        var minutes = Math.Max(1, Math.Min(600, (int)Math.Round(seconds / 60.0)));
+        var date = DateOnly.FromDateTime(endedAt);
+
+        var manual = new ManualActivity
+        {
+            UserId = userId,
+            Date = date,
+            Kind = timer.Kind,
+            Amount = minutes,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? timer.Label : $"{timer.Label} — {dto.Note!.Trim()}",
+            CreatedAt = DateTime.UtcNow,
+        };
+        _db.ManualActivities.Add(manual);
+        _db.ActivityTimers.Remove(timer);
+        await _db.SaveChangesAsync();
+
+        return new ManualActivityDto
+        {
+            Id = manual.Id,
+            Date = manual.Date.ToString("yyyy-MM-dd"),
+            Kind = manual.Kind,
+            Amount = manual.Amount,
+            Note = manual.Note,
+        };
+    }
+
+    /// <summary>Wirft den laufenden Timer weg, ohne einen Eintrag zu erzeugen. true wenn etwas
+    /// entfernt wurde, sonst false (kein Timer war aktiv).</summary>
+    public async Task<bool> DiscardTimerAsync(int userId)
+    {
+        var timer = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (timer == null) return false;
+        _db.ActivityTimers.Remove(timer);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    private static ActivityTimerDto ToTimerDto(ActivityTimer t)
+    {
+        var elapsed = (int)Math.Max(0, Math.Round((DateTime.UtcNow - t.StartedAt).TotalSeconds));
+        return new ActivityTimerDto
+        {
+            Label = t.Label,
+            Kind = t.Kind,
+            StartedAt = DateTime.SpecifyKind(t.StartedAt, DateTimeKind.Utc).ToString("o"),
+            ElapsedSeconds = elapsed,
+        };
+    }
 }
