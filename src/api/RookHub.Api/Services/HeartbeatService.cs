@@ -55,8 +55,11 @@ public class HeartbeatService : BackgroundService
         }
 
         var uptimeSeconds = (int)(DateTime.UtcNow - _startedAt).TotalSeconds;
-        _logger.LogInformation(
-            "Heartbeat: {HeartbeatService} {HeartbeatStatus} db={HeartbeatDbOk} uptime={HeartbeatUptimeSeconds}s",
-            ServiceName, dbOk ? "healthy" : "degraded", dbOk, uptimeSeconds);
+        // Systemcall-Flag: der Heartbeat ist ein automatischer System-Vorgang → RequestKind="system"
+        // (konsistent mit der HTTP-Request-Markierung), damit er in Kibana zum Grundrauschen zählt.
+        using (Serilog.Context.LogContext.PushProperty("RequestKind", Logging.SystemCallClassifier.System))
+            _logger.LogInformation(
+                "Heartbeat: {HeartbeatService} {HeartbeatStatus} db={HeartbeatDbOk} uptime={HeartbeatUptimeSeconds}s",
+                ServiceName, dbOk ? "healthy" : "degraded", dbOk, uptimeSeconds);
     }
 }

@@ -477,6 +477,13 @@ try
             ctx.Request.Headers[RookHub.Api.Logging.VisitorIdResolver.HeaderName].FirstOrDefault());
         if (!string.IsNullOrEmpty(visitorId))
             scopes.Add(LogContext.PushProperty("VisitorId", visitorId));
+        // Systemcall-Flag: automatische, nicht nutzer-initiierte Requests (Health/Swagger, Client-
+        // Heartbeat/-Diagnose, Menü-Check, Badge-/Zähler-Polls, Import-Status-Polls) als
+        // RequestKind="system" markieren — echter Nutzer-Traffic bekommt "user". In Kibana filterbar,
+        // um das automatische Grundrauschen vom echten Nutzerverhalten zu trennen.
+        scopes.Add(LogContext.PushProperty(
+            "RequestKind",
+            RookHub.Api.Logging.SystemCallClassifier.Classify(ctx.Request.Path.Value)));
         try { await next(); }
         finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
     });
