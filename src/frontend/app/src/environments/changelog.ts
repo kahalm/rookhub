@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.0';
+export const APP_VERSION = '0.240.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.1", date: "2026-07-01", changes: [
+    { en: "Notifications filter bar (0.238.6) also shows when there's only ONE category present. Previously the bar was suppressed unless ≥2 categories were loaded, so a user with only Chessable-import notifications never saw a filter chip at all. Now every category with ≥1 item gets its chip, so hiding always works.", de: "Die Filterleiste der Benachrichtigungen (aus 0.238.6) erscheint jetzt auch, wenn nur EINE Kategorie vorhanden ist. Vorher war die Leiste erst ab ≥2 Kategorien sichtbar, sodass jemand mit ausschließlich Chessable-Import-Benachrichtigungen nie einen Filter-Chip sah. Jetzt bekommt jede Kategorie mit ≥1 Eintrag ihren Chip, das Ausblenden funktioniert also immer." },
+  ]},
   { version: "0.240.0", date: "2026-07-01", changes: [
     { en: "Course lines now show the Chessable board annotations while you review the solution: the coloured arrows and square highlights (the [%cal]/[%csl] marks Chessable draws to illustrate an idea) are imported and drawn on the board move by move, instead of being thrown away. Also, after you solve, the review jumps to the first annotated move so the per-move comments (e.g. \"Direct play was stronger\", \"King moves transpose at best\") are shown right away — step through with ◀/▶ for the rest. Existing courses show this after a refresh (courses update banner).", de: "Kurs-Linien zeigen jetzt die Chessable-Board-Annotationen beim Durchspielen der Lösung: die farbigen Pfeile und Feld-Markierungen (die [%cal]/[%csl]-Marken, mit denen Chessable eine Idee verdeutlicht) werden importiert und Zug für Zug aufs Brett gezeichnet, statt verworfen. Außerdem springt die Lösungsansicht nach dem Lösen zum ersten kommentierten Zug, sodass die Pro-Zug-Kommentare (z. B. „Direct play was stronger“, „King moves transpose at best“) sofort erscheinen — mit ◀/▶ blätterst du durch den Rest. Bestehende Kurse zeigen das nach einem Aktualisieren (Kurse-Update-Banner)." },
   ]},

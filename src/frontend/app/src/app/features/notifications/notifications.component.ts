@@ -29,7 +29,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
       } @else if (items.length === 0) {
         <p class="empty">{{ 'notifications.empty' | translate }}</p>
       } @else {
-        @if (availableCategories.length > 1) {
+        @if (availableCategories.length > 0) {
           <div class="filter-bar">
             <span class="filter-label">{{ 'notifications.filter.label' | translate }}</span>
             <mat-chip-set aria-label="notifications.filter.label">
