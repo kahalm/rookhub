@@ -15,7 +15,11 @@ public interface ICourseReimporter
 {
     /// <param name="knownCached">Vorab bekannter Cache-Status des Kurses (aus einem Batch-Abruf), um den
     /// teuren Einzel-Cache-Check je Kurs zu sparen. null ⇒ der Reimporter ermittelt ihn selbst.</param>
-    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, CancellationToken ct = default);
+    /// <param name="trustOwnership">true ⇒ die Eigentumsprüfung gegen die Chessable-Bibliothek überspringen.
+    /// Für den Admin-Massen-Reprocess bereits im Bestand befindlicher Kurse: Chessables getHomeData listet
+    /// nur einen Teil der Bibliothek (Home-Ansicht) → sonst würden eigene, längst importierte Kurse fälschlich
+    /// als „nicht besessen" übersprungen. Admins dürfen ohnehin jeden Kurs holen, daher unbedenklich.</param>
+    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default);
 
     /// <summary>Alle im piratechess-DB-Cache vorliegenden Kurs-Bids auf einen Schlag (1 Aufruf statt
     /// N Einzel-Cache-Checks) — für den Massen-Reprocess, um die Lane-Klassifikation vorab zu füllen.</summary>
@@ -140,8 +144,11 @@ public partial class ImportReprocessService
                 }
 
                 var ownerId = book.OwnerUserId ?? userId;
+                // Admin-Reprocess: Eigentumsprüfung überspringen — die Kurse sind bereits im Bestand,
+                // und Chessables getHomeData liefert nur einen Teil der Bibliothek (sonst würden fast
+                // alle eigenen Alt-Kurse fälschlich als „nicht besessen" übersprungen).
                 var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName,
-                    knownCached: cachedBids?.Contains(bid), ct: CancellationToken.None);
+                    knownCached: cachedBids?.Contains(bid), trustOwnership: isAdmin, ct: CancellationToken.None);
                 if (importId != null) result.Enqueued++;
                 else result.Skipped++; // kein Bearer hinterlegt
             }

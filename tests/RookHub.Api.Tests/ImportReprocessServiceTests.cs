@@ -125,6 +125,32 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReprocessCourses_Admin_PassesTrustOwnership()
+    {
+        // Admin-Reprocess soll die Eigentumsprüfung überspringen (getHomeData listet nur einen Teil).
+        await SeedBookAsync("chessable-u7-777.pgn", 0, null, "chessable");
+        var stub = new StubCourseReimporter { ReturnId = 1 };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        await svc.ReprocessCoursesAsync(UserId, isAdmin: true);
+
+        Assert.True(stub.Calls.Single().TrustOwnership);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_NonAdmin_DoesNotTrustOwnership()
+    {
+        // Nicht-Admin: Eigentumsprüfung bleibt aktiv (Schutz vor Cached-Content-Diebstahl).
+        await SeedBookAsync("chessable-u7-777.pgn", 0, null, "chessable");
+        var stub = new StubCourseReimporter { ReturnId = 1 };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.False(stub.Calls.Single().TrustOwnership);
+    }
+
+    [Fact]
     public async Task ReprocessCourses_NonCachedRecentlyFetched_SkippedByBackoff()
     {
         // Kurs ist nicht im Cache (truncated → piratechess cachet ihn nicht) UND wurde gerade eben

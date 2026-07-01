@@ -10,16 +10,16 @@ namespace RookHub.Api.Tests;
 /// </summary>
 public class StubCourseReimporter : ICourseReimporter
 {
-    public List<(int OwnerUserId, string Bid, string Target, string CourseName, int? TargetRepertoireId, bool? KnownCached)> Calls { get; } = new();
+    public List<(int OwnerUserId, string Bid, string Target, string CourseName, int? TargetRepertoireId, bool? KnownCached, bool TrustOwnership)> Calls { get; } = new();
     public int? ReturnId { get; set; }
     /// <summary>Batch-Cache-Menge, die <see cref="GetCachedBidsAsync"/> liefert (leer = nichts gecacht).</summary>
     public HashSet<string> CachedBids { get; set; } = new();
     /// <summary>Wie oft der Batch-Cache-Abruf aufgerufen wurde (soll 1× je Reprocess-Lauf sein).</summary>
     public int GetCachedBidsCalls { get; private set; }
 
-    public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, CancellationToken ct = default)
+    public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
     {
-        Calls.Add((ownerUserId, bid, target, courseName, targetRepertoireId, knownCached));
+        Calls.Add((ownerUserId, bid, target, courseName, targetRepertoireId, knownCached, trustOwnership));
         return Task.FromResult(ReturnId);
     }
 

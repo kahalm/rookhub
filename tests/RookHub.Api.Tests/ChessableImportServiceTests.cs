@@ -642,6 +642,30 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EnqueueReimport_TrustOwnership_BypassesLibraryCheck()
+    {
+        // Kurs ist NICHT in der (Home-)Bibliothek des Users — mit trustOwnership (Admin-Reprocess)
+        // wird er trotzdem eingereiht, sonst würde er fälschlich als „nicht besessen" abgewiesen.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[]", // leere Bibliothek → Eigentumsprüfung würde scheitern
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "book", "Fremd", trustOwnership: true);
+
+        Assert.NotNull(id);
+        Assert.True(await _db.ChessableImports.AnyAsync(i => i.Bid == "999" && i.UserId == user.Id));
+    }
+
+    [Fact]
     public async Task EnqueueReimport_ImportAlreadyRunning_SkipsSecond()
     {
         var user = new AppUser { Username = "u", PasswordHash = "h" };

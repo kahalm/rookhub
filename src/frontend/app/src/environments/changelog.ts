@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.225.0';
+export const APP_VERSION = '0.226.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.226.0", date: "2026-07-01", changes: [
+    { en: "Fixed “Update all” for courses doing nothing for admins. The ownership check verified each course against Chessable's home data, which only lists part of the library — so an admin's own, long-imported courses were wrongly treated as “not owned” and all skipped. Admin re-processing now trusts ownership (admins may fetch any course anyway), so all stale courses are enqueued again; cached ones update instantly from the cache.", de: "„Alle aktualisieren“ für Kurse tat bei Admins nichts — behoben. Die Eigentumsprüfung glich jeden Kurs gegen Chessables Home-Daten ab, die nur einen Teil der Bibliothek listen → eigene, längst importierte Kurse eines Admins wurden fälschlich als „nicht besessen“ gewertet und alle übersprungen. Der Admin-Reprocess vertraut dem Eigentum jetzt (Admins dürfen ohnehin jeden Kurs holen) → alle veralteten Kurse werden wieder eingereiht; gecachte aktualisieren sofort aus dem Cache." },
+  ]},
   { version: "0.225.0", date: "2026-07-01", changes: [
     { en: "Endless mode now supports deep-link query parameters: ?start=1 (or ?autostart=1) starts a run immediately without the config screen; ?themes=fork,pin (or ?tags=…) preselects the theme filter (comma or space separated, OR); ?elo=1500 sets the start rating; and ?anarchy=max / max+1 now works here too (crazy board + forced en passant; max+1 also makes the square decide the piece style).", de: "Der Endless-Modus versteht jetzt Deep-Link-Query-Parameter: ?start=1 (oder ?autostart=1) startet einen Lauf sofort ohne Config-Screen; ?themes=fork,pin (oder ?tags=…) belegt den Themenfilter vor (Komma- oder Leerzeichen-getrennt, ODER); ?elo=1500 setzt das Start-Elo; und ?anarchy=max / max+1 funktioniert jetzt auch hier (Crazy-Brett + erzwungenes en passant; max+1 lässt zusätzlich das Feld den Figurenstil bestimmen)." },
   ]},

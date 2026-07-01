@@ -97,7 +97,7 @@ public class ChessableImportService : ICourseReimporter
     public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
         => _proxy.GetCachedBidsAsync(ct);
 
-    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, CancellationToken ct = default)
+    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
     {
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == ownerUserId, ct);
         if (cred is null) return null;
@@ -106,7 +106,10 @@ public class ChessableImportService : ICourseReimporter
         // Repertoire mit beliebigem ChessableCourseId bzw. Dateinamen `chessable-{bid}.pgn` anlegen
         // (ImportVersion 0 = sofort „stale") und es per /reprocess re-fetchen; für gecachte Kurse liefert
         // piratechess den Inhalt ohne Eigentumsprüfung. Der Check hier schließt diese zweite Tür.
-        if (!await OwnerHasCourseAsync(cred, bid, ct)) return null;
+        // Ausnahme: trustOwnership (Admin-Massen-Reprocess) — Chessables getHomeData listet nur einen Teil
+        // der Bibliothek, daher würde der Check eigene, längst importierte Kurse fälschlich abweisen; Admins
+        // dürfen ohnehin jeden Kurs holen.
+        if (!trustOwnership && !await OwnerHasCourseAsync(cred, bid, ct)) return null;
         // Dedup: läuft/pausiert für diesen (Owner, bid) bereits ein Import, KEINEN zweiten anlegen.
         // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
         // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
