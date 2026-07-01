@@ -36,7 +36,7 @@ describe('AppComponent lifecycle', () => {
       imports: [AppComponent],
       providers: [
         { provide: Router, useValue: { events: routerEvents } },
-        { provide: SwUpdate, useValue: { isEnabled: true, versionUpdates, unrecoverable } },
+        { provide: SwUpdate, useValue: { isEnabled: true, versionUpdates, unrecoverable, checkForUpdate: () => Promise.resolve(false) } },
         { provide: LocaleService, useValue: { init: () => {} } },
         { provide: AuthService, useValue: { isLoggedIn: false, isAdmin: false, isImpersonating: false } },
         { provide: MenuService, useValue: {} },

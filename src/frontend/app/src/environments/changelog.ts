@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.1';
+export const APP_VERSION = '0.236.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.2", date: "2026-07-01", changes: [
+    { en: "New app versions now show up much faster: the app actively checks for a new version on startup, every 15 minutes, and whenever the tab comes back into focus — a long-open tab or installed PWA no longer keeps running an old build until a manual reload. When a new version is ready the existing “reload” banner appears. (The service worker previously only checked on (re)start.)", de: "Neue App-Versionen erscheinen jetzt deutlich schneller: die App sucht aktiv beim Start, alle 15 Minuten und immer wenn der Tab wieder in den Vordergrund kommt nach einer neuen Version — ein lange offener Tab bzw. eine installierte PWA fährt nicht mehr bis zum manuellen Neuladen eine alte Version. Ist eine neue Version bereit, erscheint der vorhandene „Neu laden“-Hinweis. (Der Service Worker prüfte vorher nur beim (Neu-)Start.)" },
+    { en: "Bot: the monthly daily-puzzle leaderboard final standings are now posted together with the daily puzzle on the 1st, inside that puzzle's thread, instead of as a separate standalone post.", de: "Bot: die Monats-Endabrechnung der Tagespuzzle-Bestenliste wird am 1. jetzt zusammen mit dem Tagespuzzle in dessen Thread gepostet, statt als eigenständiger Einzelpost." },
+  ]},
   { version: "0.236.1", date: "2026-07-01", changes: [
     { en: "Fewer false log-watcher alerts: the anonymous endless-progress upsert races on its unique index under concurrent saves — the race was already handled (caught + retried), but EF Core still logged the failed save at Error, which tripped the watcher. That EF “SaveChangesFailed” event is now logged at Information (genuine, unhandled DB failures still surface via the HTTP 500 request log).", de: "Weniger Fehlalarme vom Log-Watcher: der anonyme Endless-Fortschritt-Upsert läuft bei gleichzeitigen Speichern in eine Unique-Index-Race — die war schon abgefangen (Retry), aber EF Core loggte den fehlgeschlagenen Speicherversuch trotzdem auf Error, was den Watcher auslöste. Dieser EF-„SaveChangesFailed“-Event wird jetzt auf Information geloggt (echte, nicht abgefangene DB-Fehler bleiben über das HTTP-500-Request-Log sichtbar)." },
     { en: "“Update all” for courses/repertoires no longer times out with a 500: with many Chessable courses the reprocess ran past the ~60 s request timeout (client/proxy aborted → “operation was canceled”). It now runs in the background and the endpoint returns immediately; progress shows via the update banner and the Chessable import display.", de: "„Alle aktualisieren“ für Kurse/Repertoires läuft nicht mehr in einen 500-Timeout: bei vielen Chessable-Kursen dauerte der Reprocess über das ~60-s-Request-Timeout hinaus (Client/Proxy brach ab → „operation was canceled“). Er läuft jetzt im Hintergrund und der Endpoint antwortet sofort; der Fortschritt erscheint über das Aktualisieren-Banner und die Chessable-Import-Anzeige." },

@@ -6,7 +6,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { filter } from 'rxjs';
+import { filter, interval } from 'rxjs';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { DISCORD_INVITE_URL } from './core/community';
 import { LocaleService } from './core/locale.service';
@@ -257,6 +257,16 @@ export class AppComponent implements OnInit {
       // Kaputter SW-Zustand (z.B. Hash-Mismatch nach Teil-Deploy) → einmal hart neu laden,
       // sonst lädt die App veraltete/fehlende Chunks bis zu einem manuellen Reload.
       this.swUpdate.unrecoverable.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => document.location.reload());
+
+      // Aktiv nach neuen Versionen suchen — sonst merkt ein lange offener Tab / eine installierte PWA
+      // ein Deploy nie (der SW prüft von sich aus nur beim (Neu-)Start). checkForUpdate() lädt ngsw.json
+      // neu → bei neuer Version feuert oben VERSION_READY und der „Neu laden"-Hinweis erscheint.
+      // Auslöser: gleich beim Start, alle 15 min, und wann immer der Tab wieder in den Vordergrund kommt.
+      this.checkForAppUpdate();
+      interval(15 * 60 * 1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.checkForAppUpdate());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.checkForAppUpdate();
+      });
     }
 
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -268,6 +278,12 @@ export class AppComponent implements OnInit {
       }
       this.handleDiscordLinkParam(params);
     });
+  }
+
+  /** Nach einer neuen App-Version suchen (fehlertolerant; SW evtl. noch nicht registriert). */
+  private checkForAppUpdate(): void {
+    if (!this.swUpdate.isEnabled) return;
+    this.swUpdate.checkForUpdate().catch(() => { /* SW noch nicht bereit / offline → ignorieren */ });
   }
 
   /**
