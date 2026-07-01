@@ -199,6 +199,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   protected override onOffPathWarning(): void {
     this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
   }
+  protected override get epForcedHints(): string[] {
+    return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
+  }
 
   protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';

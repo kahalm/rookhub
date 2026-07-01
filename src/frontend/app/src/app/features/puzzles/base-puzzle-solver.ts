@@ -105,9 +105,16 @@ export abstract class BasePuzzleSolver {
    * Buch/Kurs liefert vorberechnete Tipps aus dem DTO, Standard berechnet sie on-the-fly.
    */
   get availableHints(): string[] { return []; }
-  get hasHints(): boolean { return this.availableHints.length > 0; }
-  get shownHints(): string[] { return this.availableHints.slice(0, this.hintLevel); }
-  get canShowMoreHints(): boolean { return this.hintLevel < this.availableHints.length; }
+  /** Anarchy-Modus (e.p. forciert): 3 (unterschiedlich formulierte) „En passant ist Pflicht"-Hinweise
+   *  ersetzen die normalen Tipps. Komponenten überschreiben mit ihren übersetzten Strings. */
+  protected get epForcedHints(): string[] { return []; }
+  /** Effektive Tipp-Liste: im e.p.-Zwang die Anarchy-Hinweise, sonst die normalen Tipps. */
+  private get effectiveHints(): string[] {
+    return this.enPassantForced && this.epForcedHints.length ? this.epForcedHints : this.availableHints;
+  }
+  get hasHints(): boolean { return this.effectiveHints.length > 0; }
+  get shownHints(): string[] { return this.effectiveHints.slice(0, this.hintLevel); }
+  get canShowMoreHints(): boolean { return this.hintLevel < this.effectiveHints.length; }
   /** Nächste Tipp-Stufe aufdecken. */
   showNextHint(): void { if (this.canShowMoreHints) this.hintLevel++; }
 

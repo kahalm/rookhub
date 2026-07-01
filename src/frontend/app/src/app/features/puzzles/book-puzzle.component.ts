@@ -380,6 +380,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override onOffPathWarning(): void {
     this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
   }
+  protected override get epForcedHints(): string[] {
+    return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
+  }
 
   toggleEval(): void {
     this.showEval = !this.showEval;

@@ -171,6 +171,33 @@ describe('BasePuzzleSolver Off-Path-Warnung', () => {
   }));
 });
 
+class HintSolver extends TestSolver {
+  override get availableHints(): string[] { return ['normal-1', 'normal-2']; }
+  protected override get epForcedHints(): string[] { return ['ep-1', 'ep-2', 'ep-3']; }
+}
+
+describe('BasePuzzleSolver Anarchy-Tipps (e.p. forciert)', () => {
+  const noStock = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+
+  it('zeigt normalerweise die echten Tipps', () => {
+    const s = new HintSolver(noStock);
+    s.enPassantForced = false;
+    s.hintLevel = 2;
+    expect(s.hasHints).toBeTrue();
+    expect(s.shownHints).toEqual(['normal-1', 'normal-2']);
+    expect(s.canShowMoreHints).toBeFalse();
+  });
+
+  it('ersetzt im e.p.-Zwang alle Tipps durch die 3 Anarchy-Hinweise', () => {
+    const s = new HintSolver(noStock);
+    s.enPassantForced = true;
+    expect(s.canShowMoreHints).toBeTrue();     // 3 verfügbar
+    s.hintLevel = 3;
+    expect(s.shownHints).toEqual(['ep-1', 'ep-2', 'ep-3']);
+    expect(s.canShowMoreHints).toBeFalse();
+  });
+});
+
 describe('BasePuzzleSolver playSolutionFromStart (geteiltes Aufgeben)', () => {
   it('spielt die Lösung ab Zug 0 selbsttätig durch und stoppt am Ende', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
