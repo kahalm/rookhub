@@ -1981,7 +1981,8 @@
       "courses": "{{count}} manuell hochgeladene(r) Kurs(e) können nicht automatisch aktualisiert werden — PGN neu importieren, um die neueste Aufbereitung zu erhalten.",
       "repertoires": "{{count}} Repertoire(s) brauchen einen manuellen Re-Import zur Aktualisierung."
     },
-    "update": "Aktualisieren",
+    "update": "Aktualisieren ({{count}})",
+    "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
     "updateAll": "Alle aktualisieren ({{count}})",
     "updateAllTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu herunterladen (braucht Internet).",
     "updateCached": "Aus Cache ({{count}})",

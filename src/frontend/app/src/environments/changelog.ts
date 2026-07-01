@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.1';
+export const APP_VERSION = '0.240.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.2", date: "2026-07-01", changes: [
+    { en: "The courses/repertoires update banner now has a single \"Update\" button instead of two (\"Update all\" + \"From cache\"). It reprocesses everything — locally where possible, re-fetching Chessable courses (already-cached ones update instantly, no download). The confusing \"From cache\" button (which only ever covered a handful of non-Chessable items) is gone.", de: "Das Aktualisieren-Banner bei Kursen/Repertoires hat jetzt EINEN „Aktualisieren\"-Knopf statt zwei („Alle aktualisieren\" + „Aus Cache\"). Er bereitet alles auf — lokal wo möglich, Chessable-Kurse per Re-Fetch (bereits gecachte gehen sofort, ohne Download). Der verwirrende „Aus Cache\"-Knopf (der ohnehin nur eine Handvoll Nicht-Chessable-Einträge abdeckte) entfällt." },
+  ]},
   { version: "0.240.1", date: "2026-07-01", changes: [
     { en: "Notifications filter bar (0.238.6) also shows when there's only ONE category present. Previously the bar was suppressed unless ≥2 categories were loaded, so a user with only Chessable-import notifications never saw a filter chip at all. Now every category with ≥1 item gets its chip, so hiding always works.", de: "Die Filterleiste der Benachrichtigungen (aus 0.238.6) erscheint jetzt auch, wenn nur EINE Kategorie vorhanden ist. Vorher war die Leiste erst ab ≥2 Kategorien sichtbar, sodass jemand mit ausschließlich Chessable-Import-Benachrichtigungen nie einen Filter-Chip sah. Jetzt bekommt jede Kategorie mit ≥1 Eintrag ihren Chip, das Ausblenden funktioniert also immer." },
   ]},

@@ -1979,7 +1979,8 @@
       "courses": "{{count}} ručno učitan(ih) tečaj(eva) ne može se automatski ažurirati — ponovno uvezite PGN za najnoviju obradu.",
       "repertoires": "{{count}} repertoar(a) treba ručni ponovni uvoz za ažuriranje."
     },
-    "update": "Ažuriraj",
+    "update": "Ažuriraj ({{count}})",
+    "updateTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (predmemorirane idu odmah, bez preuzimanja).",
     "updateAll": "Ažuriraj sve ({{count}})",
     "updateAllTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (potreban internet).",
     "updateCached": "Iz predmemorije ({{count}})",

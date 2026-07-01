@@ -36,24 +36,14 @@ interface ReprocessStatus {
           }
         </span>
         @if (allCount > 0) {
-          <!-- „Alle": lokal aufbereiten + Chessable-Re-Fetch übers Netz. -->
-          <button mat-stroked-button (click)="run(false)" [disabled]="!!working"
-                  [matTooltip]="'reprocess.updateAllTip' | translate">
-            @if (working === 'all') {
+          <!-- EIN Aktualisieren-Knopf: bereitet lokal aus der gespeicherten Quelle auf und holt
+               Chessable-Kurse per Re-Fetch (gecachte laufen dabei netzfrei über die Fast-Lane). -->
+          <button mat-stroked-button (click)="run()" [disabled]="working"
+                  [matTooltip]="'reprocess.updateTip' | translate">
+            @if (working) {
               <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
             } @else {
-              <mat-icon>refresh</mat-icon> {{ 'reprocess.updateAll' | translate: { count: allCount } }}
-            }
-          </button>
-        }
-        @if (cachedCount > 0 && cachedCount < allCount) {
-          <!-- „Aus Cache": nur Einträge mit serverseitig gespeicherter Quelle, KEIN Download. -->
-          <button mat-stroked-button (click)="run(true)" [disabled]="!!working"
-                  [matTooltip]="'reprocess.updateCachedTip' | translate">
-            @if (working === 'cached') {
-              <mat-spinner diameter="16" class="rb-spin"></mat-spinner> {{ 'reprocess.working' | translate }}
-            } @else {
-              <mat-icon>offline_pin</mat-icon> {{ 'reprocess.updateCached' | translate: { count: cachedCount } }}
+              <mat-icon>refresh</mat-icon> {{ 'reprocess.update' | translate: { count: allCount } }}
             }
           </button>
         }
@@ -88,18 +78,14 @@ export class ReprocessBannerComponent implements OnInit {
   @Output() done = new EventEmitter<void>();
 
   status: ReprocessStatus | null = null;
-  /** Welcher Knopf gerade läuft ('all'|'cached') bzw. null = nichts läuft (beide Knöpfe sperren). */
-  working: 'all' | 'cached' | null = null;
+  /** Läuft gerade eine Aktualisierung? (sperrt den Knopf). */
+  working = false;
   /** Zuletzt bestätigter Re-Import-Hinweis (Anzahl bei der Bestätigung) — aus localStorage. */
   private reimportDismissedAt = 0;
 
-  /** „Alle": lokal aufbereitbare + per Chessable-Re-Fetch holbare Datensätze. */
+  /** Aktualisierbare Datensätze: lokal aufbereitbare + per Chessable-Re-Fetch holbare. */
   get allCount(): number {
     return this.status ? this.status.reprocessableLocally + this.status.refetchable : 0;
-  }
-  /** „Aus Cache": nur die aus serverseitig gespeicherter Quelle aufbereitbaren (kein Netz-Re-Fetch). */
-  get cachedCount(): number {
-    return this.status ? this.status.reprocessableLocally : 0;
   }
   /** Irgendetwas aktualisierbar? (steuert das Banner zusammen mit dem Re-Import-Hinweis). */
   get actionableCount(): number { return this.allCount; }
@@ -134,23 +120,23 @@ export class ReprocessBannerComponent implements OnInit {
     });
   }
 
-  /** @param localOnly true = „Aus Cache" (nur lokale Quelle, kein Chessable-Re-Fetch), false = „Alle". */
-  run(localOnly: boolean): void {
+  /** Stößt die vollständige Aktualisierung an (lokal aufbereiten + Chessable-Re-Fetch; gecachte laufen
+   *  netzfrei über die Fast-Lane). */
+  run(): void {
     if (this.working) return;
-    this.working = localOnly ? 'cached' : 'all';
-    const params = localOnly ? '?localOnly=true' : '';
+    this.working = true;
     // Server startet die Aufbereitung im Hintergrund und antwortet sofort (202) — sonst lief der
     // Aufruf bei vielen Chessable-Kursen in den ~60-s-Request-Timeout (500).
-    this.http.post(`/api/${this.section}/reprocess${params}`, {}).subscribe({
+    this.http.post(`/api/${this.section}/reprocess`, {}).subscribe({
       next: () => {
-        this.working = null;
+        this.working = false;
         this.snackbar.info(this.translate.instant('reprocess.started'));
         // Läuft asynchron: den Status etwas später neu holen (die „veraltet"-Zahl sinkt nach und nach)
         // und die Eltern-Liste aktualisieren.
         setTimeout(() => this.refresh(), 2500);
         this.done.emit();
       },
-      error: () => { this.working = null; this.snackbar.info(this.translate.instant('reprocess.failed')); },
+      error: () => { this.working = false; this.snackbar.info(this.translate.instant('reprocess.failed')); },
     });
   }
 }
