@@ -13,7 +13,13 @@ namespace RookHub.Api.Services;
 /// </summary>
 public interface ICourseReimporter
 {
-    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, CancellationToken ct = default);
+    /// <param name="knownCached">Vorab bekannter Cache-Status des Kurses (aus einem Batch-Abruf), um den
+    /// teuren Einzel-Cache-Check je Kurs zu sparen. null ⇒ der Reimporter ermittelt ihn selbst.</param>
+    Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, CancellationToken ct = default);
+
+    /// <summary>Alle im piratechess-DB-Cache vorliegenden Kurs-Bids auf einen Schlag (1 Aufruf statt
+    /// N Einzel-Cache-Checks) — für den Massen-Reprocess, um die Lane-Klassifikation vorab zu füllen.</summary>
+    Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -88,10 +94,20 @@ public partial class ImportReprocessService
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .ToListAsync(ct);
 
+        // Cache-Status ALLER Kurse EINMAL vorab holen (1 piratechess-Aufruf) statt pro Kurs — der
+        // Einzel-Check (IsCourseCachedAsync) lädt+entpackt den ganzen Cache-Blob und machte das
+        // Einreihen von N Kursen quälend langsam. Nur nötig, wenn überhaupt Chessable re-fetcht wird.
+        HashSet<string>? cachedBids = null;
+        if (!localOnly && stale.Any(b => CanRefetch(b.Tags, b.FileName)))
+            cachedBids = await _chessableImport.GetCachedBidsAsync(ct);
+
         var result = new ReprocessResultDto();
+        // Ab hier NICHT mehr am Request-Cancellation-Token abbrechen: dieser Aufruf kommt aus einem
+        // HTTP-Request, dessen Verbindung der Browser beim Wegnavigieren schließt (→ ct cancelled).
+        // Das Einreihen ALLER Jobs muss trotzdem vollständig durchlaufen, sonst landen nur die ersten
+        // paar Kurse in der Queue (beobachtet: Klick → Tab-Wechsel → Einreihen brach nach ~20 ab).
         foreach (var book in stale)
         {
-            ct.ThrowIfCancellationRequested();
             if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
             {
                 // Chessable: vollständiger Re-Fetch. Das gecachte Alt-PGN enthält marker­basierte
@@ -99,14 +115,15 @@ public partial class ImportReprocessService
                 // setzen, aber die Version hochmarkieren (still falsch) — daher VOR dem SourcePgn-Pfad.
                 if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
                 var ownerId = book.OwnerUserId ?? userId;
-                var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName, ct: ct);
+                var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName,
+                    knownCached: cachedBids?.Contains(bid), ct: CancellationToken.None);
                 if (importId != null) result.Enqueued++;
                 else result.Skipped++; // kein Bearer hinterlegt
             }
             else if (!string.IsNullOrEmpty(book.SourcePgn))
             {
                 // Nicht-Chessable, lokal verlustfrei + in-place (ImportFileAsync erkennt das veraltete Buch).
-                var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, ct);
+                var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
                 result.Reprocessed++;
                 result.UpdatedLines += res.Updated;
             }

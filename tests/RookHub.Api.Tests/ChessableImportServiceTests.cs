@@ -356,6 +356,32 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_BearerBreakerOpen_ButFullyCached_ProceedsFromCache()
+    {
+        // Bearer von User 7 gesperrt, ABER der Kurs liegt voll im piratechess-Cache (FullyCached) →
+        // der Abruf kommt netzfrei aus dem Cache, der tote Bearer darf ihn NICHT blockieren.
+        await SeedCredentialAsync(7, blocked: true);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        imp.FullyCached = true;
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1,
+                chapterCount = 1, lineCount = 1, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("completed", reloaded!.Status);
+        Assert.NotEqual("bearer-blocked", reloaded.Phase);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+    }
+
+    [Fact]
     public async Task RunAsync_FetchFailsBanned_TripsBreaker()
     {
         await SeedCredentialAsync(7, blocked: false);

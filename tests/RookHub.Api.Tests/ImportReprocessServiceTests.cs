@@ -105,6 +105,40 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReprocessCourses_ManyChessable_FetchesCacheSetOnce_AndPassesKnownCachedPerBid()
+    {
+        // Drei Chessable-Kurse; zwei davon liegen im piratechess-Cache. Der Massen-Reprocess soll die
+        // Cache-Menge EINMAL en bloc holen (nicht je Kurs) und pro Kurs das Ergebnis durchreichen.
+        await SeedBookAsync("chessable-u7-111.pgn", 0, null, "chessable");
+        await SeedBookAsync("chessable-u7-222.pgn", 0, null, "chessable");
+        await SeedBookAsync("chessable-u7-333.pgn", 0, null, "chessable");
+        var stub = new StubCourseReimporter { ReturnId = 1, CachedBids = new HashSet<string> { "111", "333" } };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(3, result.Enqueued);
+        Assert.Equal(1, stub.GetCachedBidsCalls); // genau EIN Batch-Abruf für alle Kurse
+        Assert.Equal(true, stub.Calls.Single(c => c.Bid == "111").KnownCached);
+        Assert.Equal(false, stub.Calls.Single(c => c.Bid == "222").KnownCached);
+        Assert.Equal(true, stub.Calls.Single(c => c.Bid == "333").KnownCached);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_LocalOnly_SkipsBatchCacheFetch()
+    {
+        // „Aus Cache"-Knopf (localOnly) reiht keine Chessable-Re-Fetches ein → kein Batch-Cache-Abruf nötig.
+        await SeedBookAsync("chessable-u7-111.pgn", 0, null, "chessable");
+        var stub = new StubCourseReimporter { ReturnId = 1 };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        await svc.ReprocessCoursesAsync(UserId, isAdmin: false, localOnly: true);
+
+        Assert.Equal(0, stub.GetCachedBidsCalls);
+        Assert.Empty(stub.Calls);
+    }
+
+    [Fact]
     public async Task ReprocessCourses_ChessableWithSource_RefetchesInsteadOfLocalReprocess()
     {
         // Bestehender Chessable-Kurs MIT gecachtem Alt-PGN, dem markerbasierte Daten ([%info]) fehlen.

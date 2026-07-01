@@ -92,7 +92,12 @@ public class ChessableImportService : ICourseReimporter
     /// veraltete Bücher dabei in-place. Liefert die Import-Id, oder <c>null</c>, wenn für
     /// <paramref name="ownerUserId"/> kein Chessable-Bearer hinterlegt ist (kein Re-Fetch möglich).
     /// </summary>
-    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, CancellationToken ct = default)
+    /// <summary>Alle im piratechess-DB-Cache vorliegenden Kurs-Bids (Batch, 1 Aufruf) — für den
+    /// Massen-Reprocess, damit nicht je Kurs der teure Einzel-Cache-Check laufen muss.</summary>
+    public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
+        => _proxy.GetCachedBidsAsync(ct);
+
+    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, CancellationToken ct = default)
     {
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == ownerUserId, ct);
         if (cred is null) return null;
@@ -115,7 +120,9 @@ public class ChessableImportService : ICourseReimporter
             CreatedAt = DateTime.UtcNow,
             // Lane-Klassifikation: voll-gecachte Kurse → schnelle, netzfreie Lane (kein Warten hinter
             // den seriellen Downloads). Cache-Check ist piratechess-DB-lokal (kein Chessable-Abruf).
-            FullyCached = await _proxy.IsCourseCachedAsync(bid, ct),
+            // Beim Massen-Reprocess kommt der Status vorab aus einem Batch-Abruf (knownCached) → spart
+            // je Kurs einen teuren Einzel-Check, der den ganzen Cache-Blob lädt.
+            FullyCached = knownCached ?? await _proxy.IsCourseCachedAsync(bid, ct),
         };
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync(ct);
@@ -299,7 +306,9 @@ public class ChessableImportService : ICourseReimporter
                 // bzw. Token tot), KEINE weitere Chessable-Anfrage damit machen. Statt zu scheitern
                 // pausieren (Phase "bearer-blocked") — ein erfolgreicher „Testen“-Klick nimmt den
                 // Import via ChessableBearerBreaker.ClearAndResumeAsync automatisch wieder auf.
-                if (cred.BlockedAt is not null)
+                // AUSNAHME: voll-gecachte Kurse (FullyCached) kommen ohne Chessable-Abruf aus dem
+                // piratechess-DB-Cache → ein toter Bearer blockt sie nicht, der Import läuft durch.
+                if (cred.BlockedAt is not null && import.FullyCached != true)
                 {
                     import.Status = "paused";
                     import.Phase = "bearer-blocked";
