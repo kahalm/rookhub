@@ -26,7 +26,7 @@ public class RepertoireControllerTests : IDisposable
         _db = new AppDbContext(options);
         var cache = new MemoryCache(new MemoryCacheOptions());
         _service = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
-        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RepertoireTrainingService(_db));
+        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db));
     }
 
     public void Dispose() => _db.Dispose();

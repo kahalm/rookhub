@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.0';
+export const APP_VERSION = '0.236.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.1", date: "2026-07-01", changes: [
+    { en: "Fewer false log-watcher alerts: the anonymous endless-progress upsert races on its unique index under concurrent saves — the race was already handled (caught + retried), but EF Core still logged the failed save at Error, which tripped the watcher. That EF “SaveChangesFailed” event is now logged at Information (genuine, unhandled DB failures still surface via the HTTP 500 request log).", de: "Weniger Fehlalarme vom Log-Watcher: der anonyme Endless-Fortschritt-Upsert läuft bei gleichzeitigen Speichern in eine Unique-Index-Race — die war schon abgefangen (Retry), aber EF Core loggte den fehlgeschlagenen Speicherversuch trotzdem auf Error, was den Watcher auslöste. Dieser EF-„SaveChangesFailed“-Event wird jetzt auf Information geloggt (echte, nicht abgefangene DB-Fehler bleiben über das HTTP-500-Request-Log sichtbar)." },
+    { en: "“Update all” for courses/repertoires no longer times out with a 500: with many Chessable courses the reprocess ran past the ~60 s request timeout (client/proxy aborted → “operation was canceled”). It now runs in the background and the endpoint returns immediately; progress shows via the update banner and the Chessable import display.", de: "„Alle aktualisieren“ für Kurse/Repertoires läuft nicht mehr in einen 500-Timeout: bei vielen Chessable-Kursen dauerte der Reprocess über das ~60-s-Request-Timeout hinaus (Client/Proxy brach ab → „operation was canceled“). Er läuft jetzt im Hintergrund und der Endpoint antwortet sofort; der Fortschritt erscheint über das Aktualisieren-Banner und die Chessable-Import-Anzeige." },
+  ]},
   { version: "0.236.0", date: "2026-07-01", changes: [
     { en: "Admin CI page now also marks the running build of the OTHER stacks (crawler, piratechess, bot), not just rookhub's frontend. Each service now exposes a build-info endpoint reporting its running image's commit SHA + ref (crawler GET /api/health/build-info, piratechess GET /api/chessable/direct/build-info, bot GET /webhook/build-info; all fed by CI build-args GIT_SHA/GIT_REF). The rookhub API polls those (best-effort, short timeout, cached) and the CI page highlights the matching run per stack by SHA+ref (so :dev marks the master run, :prod the tag run). Stacks that are unreachable or run an older image simply show no marker.", de: "Die Admin-CI-Seite markiert jetzt auch den laufenden Build der ANDEREN Stacks (Crawler, piratechess, Bot), nicht nur des rookhub-Frontends. Jeder Dienst hat jetzt einen build-info-Endpoint, der Commit-SHA + Ref seines laufenden Images meldet (Crawler GET /api/health/build-info, piratechess GET /api/chessable/direct/build-info, Bot GET /webhook/build-info; gespeist aus den CI-Build-Args GIT_SHA/GIT_REF). Die rookhub-API fragt die ab (best-effort, kurzer Timeout, gecacht) und die CI-Seite hebt je Stack den passenden Run per SHA+Ref hervor (:dev markiert den master-Run, :prod den Tag-Run). Nicht erreichbare Stacks oder alte Images zeigen einfach keinen Marker." },
   ]},

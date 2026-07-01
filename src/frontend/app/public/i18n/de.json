@@ -1941,6 +1941,7 @@
     "updateCached": "Aus Cache ({{count}})",
     "updateCachedTip": "Nur Einträge mit gespeicherter Quelle aufbereiten — kein Download.",
     "working": "Wird aktualisiert…",
+    "started": "Aktualisierung gestartet — läuft im Hintergrund.",
     "doneLocal": "{{count}} aktualisiert.",
     "doneQueued": "{{count}} werden im Hintergrund neu geladen.",
     "doneEmpty": "Alles ist bereits aktuell.",

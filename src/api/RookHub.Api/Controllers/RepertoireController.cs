@@ -12,12 +12,14 @@ public class RepertoireController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
     private readonly ImportReprocessService _reprocess;
+    private readonly IReprocessLauncher _reprocessLauncher;
     private readonly RepertoireTrainingService _training;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, RepertoireTrainingService training)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
+        _reprocessLauncher = reprocessLauncher;
         _training = training;
     }
 
@@ -56,10 +58,14 @@ public class RepertoireController : BaseApiController
 
     /// <summary>Bereitet veraltete eigene Repertoires auf. <paramref name="localOnly"/>=true („Aus Cache")
     /// nur lokal aufbereitbare (Nicht-Chessable, Versions-Mark); false („Alle") holt zusätzlich
-    /// Chessable-Repertoires frisch.</summary>
+    /// Chessable-Repertoires frisch. Läuft im HINTERGRUND → antwortet sofort 202 (kein Request-Timeout
+    /// bei vielen Chessable-Re-Fetches); Fortschritt über das Status-Banner / die Import-Anzeige.</summary>
     [HttpPost("reprocess")]
-    public async Task<ActionResult<ReprocessResultDto>> Reprocess([FromQuery] bool localOnly, CancellationToken ct)
-        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), IsAdmin, localOnly, ct));
+    public IActionResult Reprocess([FromQuery] bool localOnly)
+    {
+        _reprocessLauncher.LaunchRepertoires(GetUserId(), IsAdmin, localOnly);
+        return Accepted(new { started = true });
+    }
 
     [HttpPost]
     public async Task<ActionResult<RepertoireDto>> Create([FromBody] CreateRepertoireDto dto)

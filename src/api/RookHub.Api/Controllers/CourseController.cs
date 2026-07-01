@@ -20,11 +20,13 @@ public class CourseController : BaseApiController
 {
     private readonly CourseService _service;
     private readonly ImportReprocessService _reprocess;
+    private readonly IReprocessLauncher _reprocessLauncher;
 
-    public CourseController(CourseService service, ImportReprocessService reprocess)
+    public CourseController(CourseService service, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher)
     {
         _service = service;
         _reprocess = reprocess;
+        _reprocessLauncher = reprocessLauncher;
     }
 
     /// <summary>Status der Aufbereitungs-Versionierung: wie viele (verwaltbare) Kurse sind veraltet
@@ -35,10 +37,15 @@ public class CourseController : BaseApiController
 
     /// <summary>Bereitet veraltete, verwaltbare Kurse neu auf. <paramref name="localOnly"/>=true
     /// („Aus Cache") nur lokal aus gespeichertem PGN; false („Alle") reiht zusätzlich Chessable-Altbestand
-    /// ohne Quelle als Re-Fetch-Hintergrund-Job ein.</summary>
+    /// ohne Quelle als Re-Fetch-Hintergrund-Job ein. Läuft im HINTERGRUND (kann bei vielen Kursen
+    /// über das Request-Timeout hinaus dauern) → antwortet sofort 202; der Fortschritt erscheint über
+    /// das Reprocess-Status-Banner bzw. die Chessable-Import-Anzeige.</summary>
     [HttpPost("reprocess")]
-    public async Task<ActionResult<ReprocessResultDto>> Reprocess([FromQuery] bool localOnly, CancellationToken ct)
-        => Ok(await _reprocess.ReprocessCoursesAsync(GetUserId(), IsAdmin, localOnly, ct));
+    public IActionResult Reprocess([FromQuery] bool localOnly)
+    {
+        _reprocessLauncher.LaunchCourses(GetUserId(), IsAdmin, localOnly);
+        return Accepted(new { started = true });
+    }
 
     /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
     [HttpGet("{bookId}/puzzles")]

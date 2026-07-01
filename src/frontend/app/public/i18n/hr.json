@@ -1939,6 +1939,7 @@
     "updateCached": "Iz predmemorije ({{count}})",
     "updateCachedTip": "Obradi samo stavke sa spremljenim izvorom — bez preuzimanja.",
     "working": "Ažuriranje…",
+    "started": "Ažuriranje pokrenuto — radi u pozadini.",
     "doneLocal": "{{count}} ažurirano.",
     "doneQueued": "{{count}} se osvježava u pozadini.",
     "doneEmpty": "Sve je već ažurno.",

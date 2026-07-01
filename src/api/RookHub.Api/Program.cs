@@ -66,7 +66,15 @@ try
             mySql => mySql.EnableRetryOnFailure(
                 maxRetryCount: 5,
                 maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null)));
+                errorNumbersToAdd: null))
+        // Der Code fängt DbUpdateException an vielen Stellen bewusst ab, um idempotente Races auf
+        // Unique-Indizes aufzulösen (z. B. paralleler Erstinsert von anonymem Endless-Progress,
+        // CoursePuzzleResult, CourseInfoView, CourseProgress …). EF Core loggt den fehlgeschlagenen
+        // SaveChanges-Versuch trotzdem auf Error → das trippt den Log-Watcher grundlos. Genuine,
+        // NICHT abgefangene Fehler bleiben über das HTTP-500-Request-Log sichtbar; daher hier nur den
+        // erwarteten SaveChanges-Fehl-Event auf Information herabstufen (kein Rauschen mehr).
+        .ConfigureWarnings(w => w.Log(
+            (Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.SaveChangesFailed, LogLevel.Information))));
 
     // JWT Authentication
     var jwtKey = builder.Configuration["Jwt:Key"]
@@ -156,6 +164,9 @@ try
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
     builder.Services.AddScoped<ImportReprocessService>();
+    // Stößt Massen-Reprocess im Hintergrund an (eigener Scope) → Endpoint antwortet sofort statt in
+    // den ~60-s-Request-Timeout zu laufen. Singleton, da es nur die ScopeFactory kapselt.
+    builder.Services.AddSingleton<IReprocessLauncher, ReprocessLauncher>();
     builder.Services.AddScoped<TrainingGoalService>();
     builder.Services.AddScoped<RememberedPositionService>();
     builder.Services.AddScoped<SavedGameService>();

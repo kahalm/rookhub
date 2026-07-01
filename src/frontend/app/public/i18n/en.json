@@ -1941,6 +1941,7 @@
     "updateCached": "From cache ({{count}})",
     "updateCachedTip": "Only reprocess items with a stored source — no download.",
     "working": "Updating…",
+    "started": "Update started — running in the background.",
     "doneLocal": "{{count}} updated.",
     "doneQueued": "{{count}} being refreshed in the background.",
     "doneEmpty": "Everything is already up to date.",

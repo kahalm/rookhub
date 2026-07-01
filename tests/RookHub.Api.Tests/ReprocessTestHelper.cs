@@ -37,3 +37,15 @@ public static class ReprocessTestHelper
         => new(db, new PgnImportService(db), reimporter ?? new StubCourseReimporter(),
                NullLogger<ImportReprocessService>.Instance);
 }
+
+/// <summary>Test-Doppel für <see cref="IReprocessLauncher"/>: merkt sich die aufgerufenen Läufe,
+/// ohne einen echten Hintergrund-Task/Scope zu starten.</summary>
+public sealed class RecordingReprocessLauncher : IReprocessLauncher
+{
+    public int CoursesCalls { get; private set; }
+    public int RepertoiresCalls { get; private set; }
+    public bool? LastLocalOnly { get; private set; }
+
+    public void LaunchCourses(int userId, bool isAdmin, bool localOnly) { CoursesCalls++; LastLocalOnly = localOnly; }
+    public void LaunchRepertoires(int userId, bool isAdmin, bool localOnly) { RepertoiresCalls++; LastLocalOnly = localOnly; }
+}

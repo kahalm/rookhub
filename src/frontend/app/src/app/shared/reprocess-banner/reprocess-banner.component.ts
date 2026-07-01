@@ -12,8 +12,6 @@ interface ReprocessStatus {
   currentVersion: number; total: number; stale: number;
   reprocessableLocally: number; refetchable: number; needsReimport: number;
 }
-interface ReprocessResult { reprocessed: number; updatedLines: number; enqueued: number; skipped: number; }
-
 /**
  * Wiederverwendbares Banner „N … können aktualisiert werden", wenn die Import-/Aufbereitungs-Pipeline
  * weiterentwickelt wurde (z. B. um nachträglich Zug-Kommentare zu extrahieren). Zeigt sich nur, wenn
@@ -141,14 +139,15 @@ export class ReprocessBannerComponent implements OnInit {
     if (this.working) return;
     this.working = localOnly ? 'cached' : 'all';
     const params = localOnly ? '?localOnly=true' : '';
-    this.http.post<ReprocessResult>(`/api/${this.section}/reprocess${params}`, {}).subscribe({
-      next: res => {
+    // Server startet die Aufbereitung im Hintergrund und antwortet sofort (202) — sonst lief der
+    // Aufruf bei vielen Chessable-Kursen in den ~60-s-Request-Timeout (500).
+    this.http.post(`/api/${this.section}/reprocess${params}`, {}).subscribe({
+      next: () => {
         this.working = null;
-        const parts: string[] = [];
-        if (res.reprocessed > 0) parts.push(this.translate.instant('reprocess.doneLocal', { count: res.reprocessed }));
-        if (res.enqueued > 0) parts.push(this.translate.instant('reprocess.doneQueued', { count: res.enqueued }));
-        this.snackbar.info(parts.length ? parts.join(' ') : this.translate.instant('reprocess.doneEmpty'));
-        this.refresh();
+        this.snackbar.info(this.translate.instant('reprocess.started'));
+        // Läuft asynchron: den Status etwas später neu holen (die „veraltet"-Zahl sinkt nach und nach)
+        // und die Eltern-Liste aktualisieren.
+        setTimeout(() => this.refresh(), 2500);
         this.done.emit();
       },
       error: () => { this.working = null; this.snackbar.info(this.translate.instant('reprocess.failed')); },
