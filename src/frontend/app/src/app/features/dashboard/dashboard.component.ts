@@ -203,12 +203,21 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .tile-controls .tc-drag:active { cursor: grabbing; }
     .cdk-drag-preview .tc-drag { cursor: grabbing; }
     .tile-shield { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
-    .tile-controls { position: absolute; top: 4px; right: 4px; z-index: 2; display: flex; gap: 2px;
-      background: color-mix(in srgb, var(--mat-sys-surface-container-high, #fff) 88%, transparent);
-      border-radius: 999px; padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
-    .tile-controls .tc-btn { width: 30px; height: 30px; line-height: 30px; }
-    .tile-controls .tc-btn mat-icon { font-size: 19px; width: 19px; height: 19px; }
-    .tile-controls .tc-eye { color: var(--mat-sys-primary, #3f51b5); }
+    .tile-controls { position: absolute; top: 6px; right: 6px; z-index: 2; display: flex; align-items: center; gap: 0;
+      background: color-mix(in srgb, var(--mat-sys-surface-container-high, #2a2a2a) 92%, transparent);
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+      border-radius: 999px; padding: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.22); }
+    /* Material 3: NICHT die äußere Größe klemmen, sondern die MDC-Tokens setzen — sonst bleibt
+       der 48px-State-Layer/Touch-Target darunter und überlappt die Nachbarbuttons. */
+    .tile-controls .tc-btn {
+      --mdc-icon-button-state-layer-size: 32px;
+      --mdc-icon-button-icon-size: 18px;
+      width: 32px; height: 32px; padding: 0;
+    }
+    .tile-controls .tc-btn mat-icon { font-size: 18px; width: 18px; height: 18px; line-height: 18px; }
+    .tile-controls .tc-btn[disabled] { opacity: 0.35; }
+    .tile-controls .tc-drag mat-icon { opacity: 0.7; }
+    .tile-controls .tc-eye { color: var(--mat-sys-primary, #82b1ff); }
     .cdk-drag-preview { box-shadow: 0 5px 16px rgba(0,0,0,0.3); border-radius: 8px; }
     .cdk-drag-placeholder { opacity: 0.3; }
     .cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
