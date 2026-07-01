@@ -48,10 +48,15 @@ namespace RookHub.Api.Services;
 ///   Linien auch bei NULL-Zug als Info-Linie behalten (Text = erster NICHT-leerer Kommentar). Diese
 ///   Linien stehen bereits im gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher
 ///   laufen (wie bisher) über einen Re-Fetch.</item>
+/// <item><c>8</c> — Pro-Zug-Board-Annotationen (Chessable <c>[%cal]</c>-Pfeile / <c>[%csl]</c>-Feld-
+///   Markierungen) werden beim Import je Halbzug extrahiert und in <c>BookPuzzle.MoveShapes</c> (JSON)
+///   gespeichert, statt beim Kommentar-Cleanup verworfen zu werden → das Frontend zeichnet sie im
+///   Review aufs Brett. Die Annotationen stehen bereits im <c>Book.SourcePgn</c> → lokal aufbereitbar;
+///   Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
 }

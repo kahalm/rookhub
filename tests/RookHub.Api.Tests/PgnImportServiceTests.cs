@@ -650,4 +650,41 @@ public class PgnImportServiceTests : IDisposable
         Assert.Empty(puzzles);
         Assert.Equal(1, invalid);
     }
+
+    [Fact]
+    public void ParsePgn_ExtractsMoveShapes_ArrowsAndSquares_PerPly()
+    {
+        // Chessable [%cal] (Pfeile) / [%csl] (Feld-Markierungen) je Halbzug extrahieren (Puzzle 103064).
+        const string pgn = @"
+[Event ""Book""]
+[Round ""2.4""]
+[White ""Gumularz - Wadsworth""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""2r3k1/4Qp2/2q4p/4PPp1/8/6P1/b5PK/1q1R1R2 w - - 0 35""]
+
+{[%tqu ""En"",""find the move"","""","""",""d1d8"","""",10]} 35. Rd8+ {[%cal Gd8g8][%csl Rg8]Direct play was stronger.} Rxd8 {King moves transpose at best,} 36. Qxd8+ Kg7 37. Rxb1 Bxb1 38. f6+ {[%cal Gf6g7][%csl Rg7]} Kg6 {[%cal Rg6f5,Rg6h5]} 39. g4 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-x.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.MoveShapes);
+
+        // Zug 0 (35.Rd8+): grüner Pfeil d8→g8 + rotes Feld g8.
+        var s0 = p.MoveShapes![0];
+        Assert.Contains(s0, s => s.O == "d8" && s.D == "g8" && s.B == "green");
+        Assert.Contains(s0, s => s.O == "g8" && s.D == null && s.B == "red");
+
+        // Zug 6 (38.f6+): grüner Pfeil f6→g7 + rotes Feld g7.
+        var s6 = p.MoveShapes![6];
+        Assert.Contains(s6, s => s.O == "f6" && s.D == "g7" && s.B == "green");
+        Assert.Contains(s6, s => s.O == "g7" && s.D == null && s.B == "red");
+
+        // Zug 7 (…Kg6): zwei rote Pfeile g6→f5 und g6→h5.
+        var s7 = p.MoveShapes![7];
+        Assert.Contains(s7, s => s.O == "g6" && s.D == "f5" && s.B == "red");
+        Assert.Contains(s7, s => s.O == "g6" && s.D == "h5" && s.B == "red");
+
+        // Zwischenzüge ohne Annotation haben keine Shapes.
+        Assert.False(p.MoveShapes!.ContainsKey(2));
+    }
 }

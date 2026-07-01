@@ -136,6 +136,12 @@ public class BookPuzzleDto
     /// Das Frontend zeigt sie beim Durchspielen/Review passend zum aktuellen Zug an.
     /// </summary>
     public Dictionary<int, string>? MoveComments { get; set; }
+    /// <summary>
+    /// Pro-Zug-Board-Annotationen (Chessable-Pfeile/Feld-Markierungen) als ROHER JSON-String
+    /// <c>{ "ply": [{ "o": "d8", "d": "g8", "b": "green" }, …] }</c> (Schlüssel wie <see cref="MoveComments"/>).
+    /// Wird 1:1 aus <c>BookPuzzle.MoveShapes</c> durchgereicht; das Frontend parst und zeichnet ihn im Review.
+    /// </summary>
+    public string? MoveShapes { get; set; }
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }
     public string? Tags { get; set; }

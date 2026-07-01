@@ -80,6 +80,10 @@ export interface BookPuzzleDto {
    *  Kommentar steht ("-1" = Einleitung vor dem ersten Zug). Wird beim Durchspielen/Review
    *  passend zum aktuellen Zug angezeigt. JSON-Objektschlüssel sind Strings. */
   moveComments?: { [ply: string]: string };
+  /** Pro-Zug-Board-Annotationen (Chessable-Pfeile/Feld-Markierungen) als ROHER JSON-String
+   *  `{ "ply": [{ "o":"d8", "d":"g8", "b":"green" }, …] }` (Schlüssel wie moveComments; `d` fehlt bei
+   *  Feld-Markierungen). Vom Solver geparst und im Review aufs Brett gezeichnet. */
+  moveShapes?: string | null;
   difficulty?: string;
   bookRating?: number;
   tags?: string;

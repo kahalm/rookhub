@@ -19,6 +19,7 @@
             [visualization]="(!reviewMode && state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             [vizOpponentArrow]="vizOpponentLastMove"
             [vizOpponentArrowBrush]="themeMode === 'crazy' ? 'green' : 'red'"
+            [reviewShapes]="reviewMode ? reviewShapes : []"
             (moveMade)="onMoveMade($event)"
           />
           @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.239.0';
+export const APP_VERSION = '0.240.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.0", date: "2026-07-01", changes: [
+    { en: "Course lines now show the Chessable board annotations while you review the solution: the coloured arrows and square highlights (the [%cal]/[%csl] marks Chessable draws to illustrate an idea) are imported and drawn on the board move by move, instead of being thrown away. Also, after you solve, the review jumps to the first annotated move so the per-move comments (e.g. \"Direct play was stronger\", \"King moves transpose at best\") are shown right away — step through with ◀/▶ for the rest. Existing courses show this after a refresh (courses update banner).", de: "Kurs-Linien zeigen jetzt die Chessable-Board-Annotationen beim Durchspielen der Lösung: die farbigen Pfeile und Feld-Markierungen (die [%cal]/[%csl]-Marken, mit denen Chessable eine Idee verdeutlicht) werden importiert und Zug für Zug aufs Brett gezeichnet, statt verworfen. Außerdem springt die Lösungsansicht nach dem Lösen zum ersten kommentierten Zug, sodass die Pro-Zug-Kommentare (z. B. „Direct play was stronger“, „King moves transpose at best“) sofort erscheinen — mit ◀/▶ blätterst du durch den Rest. Bestehende Kurse zeigen das nach einem Aktualisieren (Kurse-Update-Banner)." },
+  ]},
   { version: "0.239.0", date: "2026-07-01", changes: [
     { en: "Faster bulk course imports: fully-cached Chessable courses (no network/VPN needed) now import several at a time instead of strictly one after another. When you update the whole library at once, the cached-import lane runs up to 3 in parallel (configurable via Chessable:FastLaneParallelism), each safely claiming a different job — so a big re-process drains in a fraction of the time. Downloads that still need Chessable stay paced as before.", de: "Schnellere Massen-Kursimporte: voll-gecachte Chessable-Kurse (kein Netz/VPN nötig) werden jetzt mehrere gleichzeitig importiert statt strikt nacheinander. Wenn du die ganze Bibliothek auf einmal aktualisierst, laufen in der Cache-Lane bis zu 3 parallel (über Chessable:FastLaneParallelism einstellbar), jeder greift sicher einen anderen Job — ein großer Reprocess ist so in einem Bruchteil der Zeit durch. Downloads, die noch Chessable brauchen, bleiben wie gehabt gedrosselt." },
   ]},

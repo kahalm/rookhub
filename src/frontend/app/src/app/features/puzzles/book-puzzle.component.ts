@@ -24,6 +24,8 @@ import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
+import { DrawShape } from 'chessground/draw';
+import { parseMoveShapes } from './move-shapes.util';
 import { applyUci } from './puzzle-move.util';
 import { classifyFirstSolverMove, FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
@@ -182,6 +184,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Kommentar des zuletzt durchgespielten Zugs (Bücher kommentieren oft jeden Zug). Wird im
    *  Review/Durchspielen passend zur aktuellen Stellung gesetzt; null = kein Kommentar hier. */
   moveComment: string | null = null;
+  /** Board-Annotationen (Chessable-Pfeile/Feld-Markierungen) zum aktuellen Review-Zug — ans Brett gebunden. */
+  reviewShapes: DrawShape[] = [];
+  /** Ply → Shapes des aktuellen Puzzles (aus `puzzle.moveShapes` geparst; -1 = Einleitung). */
+  private moveShapesByPly: Record<number, DrawShape[]> = {};
 
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
@@ -1024,6 +1030,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;
+    this.reviewShapes = [];
+    this.moveShapesByPly = parseMoveShapes(puzzle.moveShapes);
     this.showEval = false;
     this.initialEval = '';
     this.currentEval = '';
@@ -1130,6 +1138,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dests = new Map();
     // Lösungs-Review: index = Anzahl Lösungszüge ab Trainingsstart; absoluter Halbzug = start + index.
     this.moveComment = this.commentForPlyPlayed(start + index - 1);
+    this.reviewShapes = this.shapesForPlyPlayed(start + index - 1);
   }
 
   /** Kommentar, der zum zuletzt gespielten Halbzug gehört. <paramref> ist der 0-basierte Index
@@ -1140,14 +1149,32 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return mc[String(plyPlayed)] ?? null;
   }
 
+  /** Board-Annotationen (Pfeile/Feld-Markierungen) zum zuletzt gespielten Halbzug (gleiche Ply-Konvention). */
+  private shapesForPlyPlayed(plyPlayed: number): DrawShape[] {
+    return this.moveShapesByPly[plyPlayed] ?? [];
+  }
+
   protected override enterSolutionReview(): void {
     this.solutionReview = true;
     this.reviewMode = true;
-    // Ans Ende der Lösung springen UND den Kommentar des LETZTEN Zugs setzen — der Abschlusstext
-    // nach der Lösung (z. B. „…did I realize what was going on…") soll nach dem Lösen/Aufgeben
-    // sichtbar sein. Vorher setzte super() nur reviewIndex, aber nicht moveComment → displayComment
-    // fiel auf die Einleitung des Puzzles zurück und der Schlusstext blieb verborgen.
-    this.solutionReviewGoTo(this.reviewTotal);
+    // Beim ersten annotierten Lösungszug landen (Kommentar ODER Board-Pfeile), damit die frühen
+    // Erklärungen — z. B. „Direct play was stronger" / „King moves transpose at best," — sofort sichtbar
+    // sind und der Nutzer mit ▶ weiterblättert. Gibt es keine Zug-Annotationen, ans Ende springen
+    // (zeigt den Abschlusstext nach dem letzten Zug). Vorher immer ans Ende → frühe Kommentare/Pfeile
+    // blieben verborgen, bis man zurückblätterte.
+    this.solutionReviewGoTo(this.firstAnnotatedSolutionIndex());
+  }
+
+  /** Kleinster Lösungs-Review-Index (1…reviewTotal), dessen Zug einen Kommentar ODER Pfeile hat;
+   *  sonst reviewTotal (Ende). */
+  private firstAnnotatedSolutionIndex(): number {
+    const start = Math.max(0, this.startPly);
+    const total = this.reviewTotal;   // solutionReview ist bereits gesetzt → Lösungs-Umfang
+    for (let r = 1; r <= total; r++) {
+      const ply = start + r - 1;
+      if (this.commentForPlyPlayed(ply) || this.shapesForPlyPlayed(ply).length > 0) return r;
+    }
+    return total;
   }
 
   // ---- „Ganze Partie" Review ---------------------------------------------
@@ -1201,12 +1228,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dests = new Map();
     // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
     this.moveComment = this.commentForPlyPlayed(index - 1);
+    this.reviewShapes = this.shapesForPlyPlayed(index - 1);
   }
 
   exitReview(): void {
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;
+    this.reviewShapes = [];
     if (this.puzzle) this.setupPuzzle(this.puzzle);
   }
 

@@ -114,6 +114,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() vizOpponentArrow?: [Key, Key];
   /** Pfeilfarbe für den Gegnerzug (chessground-Brush). Crazy-Modus nutzt 'green', Viz-Modus 'red'. */
   @Input() vizOpponentArrowBrush = 'red';
+  /** Board-Annotationen zum aktuellen Review-Zug (Chessable [%cal]/[%csl] → Pfeile/Feld-Markierungen).
+   *  Nur im Review/Info-Modus gesetzt; via setAutoShapes zusammen mit dem Gegnerzug-Pfeil gerendert. */
+  @Input() reviewShapes: DrawShape[] = [];
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -318,16 +321,16 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     try { this.ground.selectSquare(null); } catch { /* alte chessground-Version */ }
   }
 
-  private applyVizOpponentArrow(): void {
+  private applyAutoShapes(): void {
     if (!this.ground) return;
-    // Gegnerzug-Pfeil: im Viz-Modus (Board eingefroren) UND im Crazy-Modus (Zug schlecht erkennbar).
-    // Der Solver setzt vizOpponentArrow ohnehin nur dann → hier kein visualization>0-Guard mehr nötig.
+    // Alle Auto-Shapes in EINEM setAutoShapes-Aufruf zusammenführen:
+    //  • Review-Annotationen (Chessable-Pfeile/Feld-Markierungen zum aktuellen Zug),
+    //  • Gegnerzug-Pfeil (Viz-Modus: Board eingefroren; Crazy-Modus: Zug schlecht erkennbar).
+    const shapes: DrawShape[] = this.reviewShapes ? [...this.reviewShapes] : [];
     if (this.vizOpponentArrow) {
-      const shape: DrawShape = { orig: this.vizOpponentArrow[0], dest: this.vizOpponentArrow[1], brush: this.vizOpponentArrowBrush };
-      this.ground.setAutoShapes([shape]);
-    } else {
-      this.ground.setAutoShapes([]);
+      shapes.push({ orig: this.vizOpponentArrow[0], dest: this.vizOpponentArrow[1], brush: this.vizOpponentArrowBrush });
     }
+    this.ground.setAutoShapes(shapes);
   }
 
   /** Linker Offset (in %) des Overlay-Rings — abhängig von Orientation und Feldkoordinate. */
@@ -542,8 +545,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
-    if ('vizOpponentArrow' in changes || 'visualization' in changes || 'vizOpponentArrowBrush' in changes) {
-      this.applyVizOpponentArrow();
+    if ('vizOpponentArrow' in changes || 'visualization' in changes || 'vizOpponentArrowBrush' in changes || 'reviewShapes' in changes) {
+      this.applyAutoShapes();
     }
 
     // Figuren nach jedem Render neu einfärben (Crazy = pro Stück eigenes Set; sonst Inline-Reset).
