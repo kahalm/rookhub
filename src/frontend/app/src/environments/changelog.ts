@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.224.0';
+export const APP_VERSION = '0.224.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.224.1", date: "2026-07-01", changes: [
+    { en: "Fixed a Content-Security-Policy violation: the app's own inline script in index.html (the PWA install-prompt hook) was blocked by the strict CSP (script-src 'self'), which could break the native install button on /install. Moved it to an external file (pwa-install-hook.js) covered by 'self' — no CSP relaxation. (Note: CSP warnings originating from content.js are browser extensions injecting into the page and are correctly blocked; not a RookHub issue.)", de: "Content-Security-Policy-Verstoß behoben: Das eigene Inline-Script in index.html (der PWA-Install-Hook) wurde von der strikten CSP (script-src 'self') blockiert, was den nativen Installieren-Button auf /install lahmlegen konnte. Es ist jetzt in eine externe Datei (pwa-install-hook.js) ausgelagert, die von 'self' gedeckt ist — ohne die CSP aufzuweichen. (Hinweis: CSP-Warnungen aus content.js stammen von Browser-Erweiterungen, die in die Seite injizieren, und werden korrekt blockiert — kein RookHub-Problem.)" },
+  ]},
   { version: "0.224.0", date: "2026-07-01", changes: [
     { en: "New admin tab “CI / Actions”: shows the last 5 GitHub Actions runs for each of the involved repos (rookhub, crawler, bot, piratechess, log-watcher), auto-refreshing every 5 seconds, with a status badge and a link to each run. Requires a GitHub token on the API (set GitHub__Token, a PAT with actions:read); without it the tab shows a hint. The server caches the GitHub calls briefly so the 5s polling stays well under rate limits.", de: "Neuer Admin-Tab „CI / Actions“: zeigt die letzten 5 GitHub-Actions-Läufe für jedes der beteiligten Repos (rookhub, Crawler, Bot, piratechess, log-watcher), aktualisiert sich alle 5 Sekunden, mit Status-Badge und Link zu jedem Lauf. Braucht ein GitHub-Token an der API (GitHub__Token setzen, ein PAT mit actions:read); ohne Token zeigt der Tab einen Hinweis. Der Server cacht die GitHub-Abrufe kurz, damit das 5-s-Polling weit unter dem Rate-Limit bleibt." },
   ]},
