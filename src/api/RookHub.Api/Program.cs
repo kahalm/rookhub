@@ -150,6 +150,7 @@ try
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<ChessableImportService>();
     builder.Services.AddScoped<ChessableBearerBreaker>();
+    builder.Services.AddScoped<ChessableCourseRefreshService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<CourseService>();
@@ -189,6 +190,9 @@ try
     builder.Services.AddHostedService<HeartbeatService>();
     // Taegliche Tagespuzzle-Zuordnung um 00:00 UTC (siehe DailyPuzzles-Tabelle).
     builder.Services.AddHostedService<DailyPuzzleScheduler>();
+    // Taeglicher Chessable-Kurslisten-Refresh (04:00 UTC): aktualisiert alle hinterlegten Bearer,
+    // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen.
+    builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
 
     // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.
     // chess.com verlangt einen aussagekraeftigen User-Agent, sonst 403.

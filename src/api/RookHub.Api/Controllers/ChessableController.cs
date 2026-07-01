@@ -31,6 +31,7 @@ public class ChessableController : BaseApiController
     private readonly ChessableProxyService _chessable;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ChessableBearerBreaker _breaker;
+    private readonly NotificationService _notifications;
     private readonly ILogger<ChessableController> _logger;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -40,6 +41,7 @@ public class ChessableController : BaseApiController
         ChessableProxyService chessable,
         IBackgroundTaskQueue taskQueue,
         ChessableBearerBreaker breaker,
+        NotificationService notifications,
         ILogger<ChessableController> logger)
     {
         _db = db;
@@ -47,6 +49,7 @@ public class ChessableController : BaseApiController
         _chessable = chessable;
         _taskQueue = taskQueue;
         _breaker = breaker;
+        _notifications = notifications;
         _logger = logger;
     }
 
@@ -99,6 +102,7 @@ public class ChessableController : BaseApiController
         var userId = GetUserId();
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
         var now = DateTime.UtcNow;
+        var isNewCredential = cred is null;
 
         if (cred is null)
         {
@@ -126,6 +130,20 @@ public class ChessableController : BaseApiController
         }
 
         await _db.SaveChangesAsync();
+
+        // Erstmalig hinterlegter Bearer → Admins informieren (Glocke). Best-effort, blockiert das Speichern nicht.
+        if (isNewCredential)
+        {
+            try
+            {
+                var username = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
+                var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+                await _notifications.CreateManyAsync(adminIds, NotificationType.ChessableTokenAdded,
+                    new Dictionary<string, string> { ["username"] = username }, "/admin");
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Admin-Benachrichtigung für neuen Chessable-Bearer fehlgeschlagen"); }
+        }
+
         return Ok(new ChessableCredentialResponse(true, Mask(request.Bearer.Trim())));
     }
 

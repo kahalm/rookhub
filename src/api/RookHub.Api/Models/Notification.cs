@@ -49,4 +49,10 @@ public static class NotificationType
     /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller Admins, Link „/admin").
     /// Daten: username.</summary>
     public const string NewUserRegistered = "new_user_registered";
+    /// <summary>Ein User hat (erstmals) einen Chessable-Bearer hinterlegt (→ Glocke aller Admins,
+    /// Link „/admin"). Daten: username.</summary>
+    public const string ChessableTokenAdded = "chessable_token_added";
+    /// <summary>Beim täglichen Kurslisten-Refresh wurde bei einem User ein neuer Chessable-Kurs
+    /// entdeckt (→ Glocke aller Admins, Link „/admin"). Daten: username, courseName.</summary>
+    public const string ChessableNewCourse = "chessable_new_course";
 }

@@ -46,7 +46,7 @@ public class ChessableControllerTests : IDisposable
         var queue = new BackgroundTaskQueue();
         var breaker = new ChessableBearerBreaker(_db, queue, NullLogger<ChessableBearerBreaker>.Instance);
         _controller = new ChessableController(_db, _encryption, _proxy, queue, breaker,
-            NullLogger<ChessableController>.Instance);
+            new NotificationService(_db), NullLogger<ChessableController>.Instance);
         SetUser(42);
     }
 
@@ -112,6 +112,34 @@ public class ChessableControllerTests : IDisposable
 
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
         Assert.Equal("second-token-zzzzzzzz", _encryption.Decrypt(cred.EncryptedBearer));
+    }
+
+    [Fact]
+    public async Task SaveCredentials_NewBearer_NotifiesAdmins()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "admin", PasswordHash = "x", IsAdmin = true });
+        await _db.SaveChangesAsync();
+
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("brand-new-token-123456"));
+
+        var notif = await _db.Notifications.SingleAsync(n => n.UserId == 1);
+        Assert.Equal(NotificationType.ChessableTokenAdded, notif.Type);
+        Assert.Contains("u42", notif.DataJson!);
+    }
+
+    [Fact]
+    public async Task SaveCredentials_OverwriteBearer_DoesNotNotifyAgain()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "admin", PasswordHash = "x", IsAdmin = true });
+        await _db.SaveChangesAsync();
+
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("first-token-abcdefgh"));
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("second-token-zzzzzzzz"));
+
+        // Nur beim Erstanlegen benachrichtigen, nicht beim Überschreiben.
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.Type == NotificationType.ChessableTokenAdded));
     }
 
     [Fact]

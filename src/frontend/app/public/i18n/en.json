@@ -61,7 +61,9 @@
       "admin_message_received": "The admin team sent you a message",
       "user_message_received": "{{username}} sent the admin team a message",
       "tournament_new_round": "New round in {{tournamentName}} (round {{round}})",
-      "new_user_registered": "New user {{username}} registered"
+      "new_user_registered": "New user {{username}} registered",
+      "chessable_token_added": "{{username}} added a Chessable token",
+      "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",

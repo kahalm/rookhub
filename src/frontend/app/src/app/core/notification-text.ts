@@ -33,6 +33,8 @@ export function notificationIcon(n: AppNotification): string {
     case 'user_message_received': return 'mark_email_unread';
     case 'tournament_new_round': return 'emoji_events';
     case 'new_user_registered': return 'group_add';
+    case 'chessable_token_added': return 'vpn_key';
+    case 'chessable_new_course': return 'library_add';
     default: return 'notifications';
   }
 }
