@@ -28,6 +28,16 @@ public class ImportReprocessServiceTests : IDisposable
 2. Nf3 {Develops.} Nc6 3. Bb5 {The pin.} a6 *
 ";
 
+    // Wie SamplePgn, aber mit einem [%alt]-Marker → gilt als „modern" gefetchte Quelle
+    // (SourceHasModernMarkers), also lokal vollständig aufbereitbar statt Re-Fetch.
+    private const string ModernPgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 {[%alt g1e2] Develops.} Nc6 3. Bb5 {The pin.} a6 *
+";
+
     private async Task<Book> SeedBookAsync(string fileName, int version, string? sourcePgn, string? tags, int? owner = UserId)
     {
         var book = new Book
@@ -59,6 +69,32 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(1, status.ReprocessableLocally); // nur das nicht-Chessable-Buch mit Quelle
         Assert.Equal(2, status.Refetchable);          // beide Chessable-Kurse, auch der mit gecachter Quelle
         Assert.Equal(1, status.NeedsReimport);
+    }
+
+    [Fact]
+    public async Task GetCourseStatus_ChessableWithModernSource_CountsAsLocalNotRefetch()
+    {
+        // Chessable-Buch, dessen gespeicherte Quelle bereits [%alt]/[%info] enthält → lokal aufbereitbar.
+        await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+
+        var status = await ReprocessTestHelper.Build(_db).GetCourseStatusAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, status.Stale);
+        Assert.Equal(1, status.ReprocessableLocally);
+        Assert.Equal(0, status.Refetchable);          // kein Re-Fetch, obwohl Chessable
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_ChessableWithModernSource_ReprocessesLocally_NoRefetch()
+    {
+        var book = await SeedBookAsync("chessable-u7-modern.pgn", 0, ModernPgn, "chessable");
+        var stub = new StubCourseReimporter();
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Empty(stub.Calls);                     // kein Chessable-Re-Fetch
+        Assert.Equal(1, result.Reprocessed);          // lokal aus dem gespeicherten PGN
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.Id == book.Id)).ImportVersion);
     }
 
     [Fact]
@@ -336,14 +372,14 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.True(await _db.Repertoires.AllAsync(r => r.ImportVersion == ImportPipeline.CurrentVersion));
     }
 
-    private async Task<Repertoire> SeedRepertoireAsync(int userId, int version, string? fileName, string? courseId = null)
+    private async Task<Repertoire> SeedRepertoireAsync(int userId, int version, string? fileName, string? courseId = null, string pgn = "x")
     {
         var rep = new Repertoire { UserId = userId, Name = "Rep", ImportVersion = version, ChessableCourseId = courseId };
         _db.Repertoires.Add(rep);
         await _db.SaveChangesAsync();
         if (fileName != null)
         {
-            _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep.Id, FileName = fileName, PgnContent = "x", FileSize = 1 });
+            _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep.Id, FileName = fileName, PgnContent = pgn, FileSize = 1 });
             await _db.SaveChangesAsync();
         }
         return rep;
@@ -363,6 +399,23 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(2, status.Stale);
         Assert.Equal(1, status.Refetchable);          // nur das Chessable-Repertoire
         Assert.Equal(1, status.ReprocessableLocally); // das manuelle
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_ChessableWithModernSource_MarksLocally_NoRefetch()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        // Chessable-Repertoire, dessen gespeichertes PGN bereits [%alt] enthält → kein Re-Fetch, nur Versions-Mark.
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
+        var stub = new StubCourseReimporter();
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Empty(stub.Calls);                     // kein Re-Fetch
+        Assert.Equal(1, result.Reprocessed);
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
     }
 
     [Fact]

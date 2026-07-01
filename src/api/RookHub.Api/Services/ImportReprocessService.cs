@@ -77,21 +77,27 @@ public partial class ImportReprocessService
         // Nur die nötigen Felder der veralteten Bücher laden.
         var stale = await books
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
-            .Select(b => new { HasSource = b.SourcePgn != null, b.Tags, b.FileName })
+            .Select(b => new
+            {
+                HasSource = b.SourcePgn != null,
+                // „Modern": Quelle enthält bereits [%info]/[%alt] → lokal vollständig aufbereitbar (SQL-LIKE,
+                // lädt das große PGN NICHT). Sonst (alte marker-lose Quelle) weiter Re-Fetch.
+                SourceModern = b.SourcePgn != null && (b.SourcePgn.Contains("[%info") || b.SourcePgn.Contains("[%alt")),
+                b.Tags, b.FileName,
+            })
             .ToListAsync(ct);
 
-        // Chessable-Kurse werden IMMER per Re-Fetch aufbereitet (auch wenn ein Alt-PGN als
-        // Quelle vorliegt): markerbasierte Pipeline-Schritte wie [%info]/[%alt] stehen NICHT im
-        // gecachten PGN, ein lokales Reprocess würde sie also nicht setzen, aber die Version
-        // dennoch hochmarkieren. Lokal aufbereitet wird nur Nicht-Chessable mit Quelle.
+        // Re-Fetch nur noch für Chessable-Kurse, deren gespeicherte Quelle die Marker NOCH NICHT enthält
+        // (alte Abrufe). Chessable-Kurse mit „moderner" Quelle + alle Nicht-Chessable mit Quelle werden
+        // LOKAL aus dem gespeicherten PGN aufbereitet (kein Netz, umgeht Crash/Dedup/Bearer).
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
             Total = total,
             Stale = stale.Count,
-            Refetchable = stale.Count(b => CanRefetch(b.Tags, b.FileName)),
-            ReprocessableLocally = stale.Count(b => !CanRefetch(b.Tags, b.FileName) && b.HasSource),
-            NeedsReimport = stale.Count(b => !CanRefetch(b.Tags, b.FileName) && !b.HasSource),
+            Refetchable = stale.Count(b => CanRefetch(b.Tags, b.FileName) && !b.SourceModern),
+            ReprocessableLocally = stale.Count(b => b.HasSource && (!CanRefetch(b.Tags, b.FileName) || b.SourceModern)),
+            NeedsReimport = stale.Count(b => !b.HasSource && !CanRefetch(b.Tags, b.FileName)),
         };
     }
 
@@ -108,16 +114,19 @@ public partial class ImportReprocessService
         var refetch = new List<RefetchCandidate>();
         foreach (var book in stale)
         {
-            if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
+            if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid)
+                && !SourceHasModernMarkers(book.SourcePgn))
             {
-                // Chessable: vollständiger Re-Fetch. Das gecachte Alt-PGN enthält marker­basierte
-                // Pipeline-Daten ([%info]/[%alt] …) NICHT → lokales Reprocess würde sie nicht setzen.
-                if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
+                // Chessable OHNE moderne Quelle: vollständiger Re-Fetch (die Marker [%info]/[%alt] stehen
+                // nicht im alten gecachten PGN → lokales Reprocess würde sie nicht setzen).
+                if (localOnly) continue; // Netz-Re-Fetch bewusst auslassen
                 refetch.Add(new RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
             }
             else if (!string.IsNullOrEmpty(book.SourcePgn))
             {
-                // Nicht-Chessable, lokal verlustfrei + in-place (ImportFileAsync erkennt das veraltete Buch).
+                // Lokal verlustfrei + in-place aus dem gespeicherten PGN (ImportFileAsync erkennt das
+                // veraltete Buch). Gilt für Nicht-Chessable UND Chessable mit „moderner" Quelle
+                // ([%info]/[%alt] bereits vorhanden) → kein Chessable-Kontakt, kein Crash/Dedup/Bearer.
                 var res = await _pgnImport.ImportFileAsync(book.FileName, book.SourcePgn, CancellationToken.None);
                 result.Reprocessed++;
                 result.UpdatedLines += res.Updated;
@@ -198,9 +207,9 @@ public partial class ImportReprocessService
             .ToListAsync(ct);
         var total = reps.Count;
         var stale = reps.Where(r => r.ImportVersion < ImportPipeline.CurrentVersion).ToList();
-        // Chessable-Repertoires bekommen [%alt] nur per frischem Re-Fetch (Refetchable); alle anderen
-        // haben keine Quelle für geduldete Züge → reiner Versions-Mark (lokal „aufbereitbar", inhaltl. No-op).
-        var refetchable = stale.Count(r => ResolveRepertoireBid(r) != null);
+        // Re-Fetch nur für Chessable-Repertoires, deren gespeichertes PGN die [%alt]/[%info]-Marker NOCH
+        // NICHT enthält. Ist es „modern" (bereits enthalten) bzw. Nicht-Chessable → reiner Versions-Mark.
+        var refetchable = stale.Count(r => ResolveRepertoireBid(r) != null && !RepertoireSourceModern(r));
         return new ReprocessStatusDto
         {
             CurrentVersion = ImportPipeline.CurrentVersion,
@@ -229,17 +238,18 @@ public partial class ImportReprocessService
         foreach (var r in stale)
         {
             var bid = ResolveRepertoireBid(r);
-            if (bid != null)
+            if (bid != null && !RepertoireSourceModern(r))
             {
-                if (localOnly) continue; // „Aus Cache": Chessable-Re-Fetch übers Netz bewusst auslassen
-                // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende Repertoire
-                // schreiben (Id/Trainings-Fortschritt bleiben; Version steigt erst beim Job-Abschluss).
-                // Owner = r.UserId (nicht der aufrufende Admin) → richtiger Bearer + richtiges Ziel-Repertoire.
+                if (localOnly) continue; // Chessable-Re-Fetch übers Netz bewusst auslassen
+                // Chessable-Repertoire OHNE moderne Quelle: frisch holen (inkl. [%alt]) und IN-PLACE ins
+                // bestehende Repertoire schreiben (Id/Trainings-Fortschritt bleiben; Version steigt beim
+                // Job-Abschluss). Owner = r.UserId → richtiger Bearer + richtiges Ziel-Repertoire.
                 refetch.Add(new RefetchCandidate(r.UserId, bid, "repertoire", r.Name, r.Id));
             }
             else
             {
-                // Nicht-Chessable: keine Quelle für geduldete Züge → nur auf aktuelle Version markieren.
+                // Nicht-Chessable ODER Chessable mit „moderner" Quelle ([%alt]/[%info] bereits im PGN) →
+                // reiner Versions-Mark (der Trainer liest das PGN live; kein Re-Fetch nötig).
                 r.ImportVersion = ImportPipeline.CurrentVersion;
                 r.UpdatedAt = now;
                 result.Reprocessed++;
@@ -260,6 +270,20 @@ public partial class ImportReprocessService
     /// <see cref="ReprocessCoursesAsync"/> passen, damit Status-Zählung und Ausführung übereinstimmen.</summary>
     private static bool CanRefetch(string? tags, string fileName) =>
         IsChessable(tags, fileName) && TryParseBid(fileName, out _);
+
+    /// <summary>Enthält die gespeicherte Quelle bereits die Marker, die früher NUR ein Re-Fetch brachte
+    /// (<c>[%info]</c> Info-/Erklärlinien, <c>[%alt]</c> geduldete Züge)? Dann ist sie „modern" gefetcht
+    /// und ein LOKALES Reprocess ist vollständig — kein Chessable-Re-Fetch nötig (umgeht Parser-Crashes,
+    /// (Owner,bid)-Dedup und Besitz-/Bearer-Probleme). Alle Pipeline-Schritte ab v5 (Info-Durchklick,
+    /// Kommentar-Länge, NULL-Zug-Intros, [%cal]/[%csl]-Pfeile) sind ohnehin reine lokale Parse-Schritte.</summary>
+    private static bool SourceHasModernMarkers(string? pgn) =>
+        pgn != null && (pgn.Contains("[%info", StringComparison.Ordinal) || pgn.Contains("[%alt", StringComparison.Ordinal));
+
+    /// <summary>Wie <see cref="SourceHasModernMarkers"/>, aber für ein Repertoire (Quelle = seine
+    /// gespeicherten PGN-Dateien). Trifft es zu, reicht ein reiner Versions-Mark statt Re-Fetch —
+    /// der Trainer liest das PGN [%alt] ohnehin live.</summary>
+    private static bool RepertoireSourceModern(Repertoire r) =>
+        r.Files.Any(f => SourceHasModernMarkers(f.PgnContent));
 
     private static bool IsChessable(string? tags, string fileName) =>
         (tags ?? string.Empty).Contains("chessable", StringComparison.OrdinalIgnoreCase)

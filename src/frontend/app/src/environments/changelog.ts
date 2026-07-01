@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.3';
+export const APP_VERSION = '0.240.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.4", date: "2026-07-01", changes: [
+    { en: "Courses/repertoires that got stuck on \"Update\" now refresh. Two fixes: (1) Chessable courses whose stored source already contains the needed data are now reprocessed locally instead of re-fetched from Chessable — this avoids the cases that never completed (a parser crash on certain courses, courses sharing a Chessable id where only one got updated, and not-owned/expired-token courses). (2) The underlying parser crash (\"Index was outside the bounds of the array\") no longer aborts the whole course — a single corrupt line is skipped. Net effect: clicking Update now clears the last stuck courses too, and the board arrows/comments land for them.", de: "Kurse/Repertoires, die beim „Aktualisieren\" hängen blieben, laufen jetzt durch. Zwei Fixes: (1) Chessable-Kurse, deren gespeicherte Quelle die nötigen Daten bereits enthält, werden lokal aufbereitet statt von Chessable neu geholt — das umgeht die Fälle, die nie durchliefen (ein Parser-Absturz bei bestimmten Kursen, Kurse mit gemeinsamer Chessable-Id, bei denen nur eines aktualisiert wurde, sowie nicht-besessene/abgelaufene-Token-Kurse). (2) Der zugrundeliegende Parser-Absturz („Index was outside the bounds of the array\") reißt nicht mehr den ganzen Kurs ab — eine einzelne kaputte Linie wird übersprungen. Ergebnis: „Aktualisieren\" räumt jetzt auch die letzten Hänger ab, und die Brett-Pfeile/-Kommentare kommen dort an." },
+  ]},
   { version: "0.240.3", date: "2026-07-01", changes: [
     { en: "Course/book puzzles now show move comments WHILE you solve, not only afterwards: as you play each correct move (and the opponent's reply), that move's comment appears in the context box above the board. Previously the per-move comments only showed in the review after finishing. Falls back to the puzzle intro for moves without a comment.", de: "Kurs-/Buch-Puzzles zeigen die Zug-Kommentare jetzt schon WÄHREND des Lösens, nicht erst danach: sobald du einen richtigen Zug (und der Gegner seine Antwort) spielst, erscheint der Kommentar zu diesem Zug im Kontext-Kasten über dem Brett. Vorher gab es die Zug-Kommentare nur im Review nach dem Lösen. Züge ohne Kommentar fallen auf die Puzzle-Einleitung zurück." },
   ]},
