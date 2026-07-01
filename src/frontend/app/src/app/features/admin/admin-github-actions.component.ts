@@ -1,0 +1,142 @@
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule } from '@ngx-translate/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { timer, switchMap, catchError, of } from 'rxjs';
+
+export interface CiRun {
+  id: number; name: string; title: string; branch: string; event: string;
+  status: string; conclusion: string | null; runNumber: number;
+  createdAt: string; updatedAt: string; htmlUrl: string; actor: string | null;
+}
+export interface CiRepo { repo: string; error: string | null; runs: CiRun[]; }
+export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: string; }
+
+/**
+ * Admin-CI-Übersicht: die letzten 5 GitHub-Actions-Läufe je beteiligtem Repo, alle 5 s aktualisiert.
+ * Läuft nur, solange der Tab offen ist (via `*matTabContent` lazy instanziiert). Server cacht die
+ * GitHub-Abrufe kurz, daher ist das 5-s-Polling rate-limit-schonend.
+ */
+@Component({
+  selector: 'app-admin-github-actions',
+  standalone: true,
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslateModule],
+  template: `
+    <div class="ci">
+      <div class="ci-head">
+        <h3>{{ 'admin.ci.title' | translate }}</h3>
+        <span class="ci-sub">
+          {{ 'admin.ci.subtitle' | translate }}
+          @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }} }
+        </span>
+      </div>
+
+      @if (loading && !overview) {
+        <mat-spinner diameter="28"></mat-spinner>
+      } @else if (overview && !overview.configured) {
+        <p class="ci-hint">
+          <mat-icon>key_off</mat-icon>
+          {{ 'admin.ci.notConfigured' | translate }}
+        </p>
+      } @else if (overview) {
+        <div class="repo-grid">
+          @for (repo of overview.repos; track repo.repo) {
+            <section class="repo-card">
+              <div class="repo-title">
+                <mat-icon>folder_open</mat-icon>{{ repo.repo }}
+                @if (repo.error) { <span class="repo-error">{{ repo.error }}</span> }
+              </div>
+              @if (repo.runs.length === 0 && !repo.error) {
+                <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
+              }
+              @for (run of repo.runs; track run.id) {
+                <a class="run" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                  <span class="run-badge" [ngClass]="badgeClass(run)"
+                        [matTooltip]="run.conclusion || run.status">
+                    <mat-icon>{{ badgeIcon(run) }}</mat-icon>
+                  </span>
+                  <span class="run-main">
+                    <span class="run-title">{{ run.title || run.name }}</span>
+                    <span class="run-meta">
+                      {{ run.name }} · #{{ run.runNumber }} ·
+                      <span class="run-branch">{{ run.branch }}</span>
+                      @if (run.actor) { · {{ run.actor }} }
+                      · {{ run.updatedAt | date:'dd.MM. HH:mm' }}
+                    </span>
+                  </span>
+                </a>
+              }
+            </section>
+          }
+        </div>
+      }
+    </div>
+  `,
+  styles: [`
+    .ci { padding: 4px 2px 16px; }
+    .ci-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .ci-head h3 { margin: 0; font-size: 1.05rem; }
+    .ci-sub { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.82rem; }
+    .ci-hint { display: flex; align-items: center; gap: 8px; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .repo-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+    .repo-card { border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 8px; padding: 10px 12px; }
+    .repo-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; }
+    .repo-title mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; }
+    .repo-error { color: #e53935; font-size: 0.78rem; font-weight: 400; }
+    .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
+    .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
+    .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+    .run-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
+    .run-badge mat-icon { font-size: 17px; width: 17px; height: 17px; color: #fff; }
+    .run-badge.ok { background: #2e7d32; }
+    .run-badge.fail { background: #c62828; }
+    .run-badge.run { background: #1565c0; }
+    .run-badge.neutral { background: #757575; }
+    .run-main { display: flex; flex-direction: column; min-width: 0; }
+    .run-title { font-size: 0.86rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .run-meta { font-size: 0.74rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .run-branch { font-family: monospace; }
+  `]
+})
+export class AdminGithubActionsComponent implements OnInit {
+  private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
+
+  overview: CiOverview | null = null;
+  loading = true;
+  lastUpdated: Date | null = null;
+
+  ngOnInit(): void {
+    // Sofort + danach alle 5 s neu laden, solange der Tab (und damit diese Komponente) lebt.
+    timer(0, 5000).pipe(
+      switchMap(() => this.http.get<CiOverview>('/api/admin/ci/runs').pipe(catchError(() => of(null)))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(data => {
+      this.loading = false;
+      if (data) { this.overview = data; this.lastUpdated = new Date(); }
+    });
+  }
+
+  badgeClass(run: CiRun): string {
+    if (run.status !== 'completed') return 'run';
+    switch (run.conclusion) {
+      case 'success': return 'ok';
+      case 'failure': case 'timed_out': case 'startup_failure': return 'fail';
+      default: return 'neutral';   // cancelled/skipped/neutral/action_required
+    }
+  }
+
+  badgeIcon(run: CiRun): string {
+    if (run.status !== 'completed') return 'sync';
+    switch (run.conclusion) {
+      case 'success': return 'check';
+      case 'failure': case 'timed_out': case 'startup_failure': return 'close';
+      case 'cancelled': return 'block';
+      default: return 'remove';
+    }
+  }
+}

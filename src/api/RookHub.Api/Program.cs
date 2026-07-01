@@ -194,6 +194,16 @@ try
     // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen.
     builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
 
+    // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
+    builder.Services.AddHttpClient<GithubActionsService>(client =>
+    {
+        client.BaseAddress = new Uri("https://api.github.com/");
+        client.Timeout = TimeSpan.FromSeconds(15);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-CI/1.0");
+        client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+        client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+    });
+
     // Externe Spielzeit (Lichess/chess.com) → Kategorie „Spielen" im Trainingsziele-Tracker.
     // chess.com verlangt einen aussagekraeftigen User-Agent, sonst 403.
     builder.Services.AddHttpClient<PlayTimeService>(client =>

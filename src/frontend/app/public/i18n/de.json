@@ -1226,7 +1226,16 @@
       "puzzles": "Puzzles",
       "menu": "Menü",
       "messages": "Nachrichten",
-      "courseDl": "Kurse holen"
+      "courseDl": "Kurse holen",
+      "ci": "CI / Actions"
+    },
+    "ci": {
+      "title": "GitHub Actions",
+      "subtitle": "Letzte 5 Läufe je Repo · aktualisiert alle 5 s",
+      "updated": "Stand",
+      "notConfigured": "Kein GitHub-Token hinterlegt. Setze GitHub__Token (ein PAT mit actions:read) an der API, um diese Ansicht zu aktivieren.",
+      "noRuns": "Noch keine Läufe.",
+      "loadFailed": "CI-Status konnte nicht geladen werden"
     },
     "users": {
       "searchLabel": "User suchen",

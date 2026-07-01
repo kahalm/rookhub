@@ -643,5 +643,11 @@
           </div>
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.ci' | translate">
+          <ng-template matTabContent>
+            <app-admin-github-actions />
+          </ng-template>
+        </mat-tab>
+
       </mat-tab-group>
     </div>

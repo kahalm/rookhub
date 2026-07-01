@@ -1224,7 +1224,16 @@
       "puzzles": "Zagonetke",
       "menu": "Izbornik",
       "messages": "Poruke",
-      "courseDl": "Preuzimanje tečajeva"
+      "courseDl": "Preuzimanje tečajeva",
+      "ci": "CI / Actions"
+    },
+    "ci": {
+      "title": "GitHub Actions",
+      "subtitle": "Zadnjih 5 izvođenja po repozitoriju · osvježava se svakih 5 s",
+      "updated": "stanje",
+      "notConfigured": "Nije postavljen GitHub token. Postavi GitHub__Token (PAT s actions:read) na API-ju da omogućiš ovaj prikaz.",
+      "noRuns": "Još nema izvođenja.",
+      "loadFailed": "CI status se ne može učitati"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",

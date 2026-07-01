@@ -27,6 +27,7 @@ import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 
 @Component({
@@ -35,7 +36,8 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent
+    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
+    AdminGithubActionsComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
