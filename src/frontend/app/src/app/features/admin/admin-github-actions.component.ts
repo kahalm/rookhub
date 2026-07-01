@@ -70,7 +70,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                       {{ run.title || run.name }}
                       @if (isRunningBuild(run, repo)) {
                         <span class="run-live-tag" [matTooltip]="'admin.ci.runningBuildTooltip' | translate">
-                          <mat-icon>play_circle</mat-icon>{{ 'admin.ci.live' | translate }}
+                          <mat-icon>fiber_manual_record</mat-icon>{{ 'admin.ci.live' | translate }}
                         </span>
                       }
                     </span>
@@ -105,8 +105,10 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    /* Der laufende Build wird NICHT durch eine Zeilenfarbe markiert, sondern durch das „live"-Icon-Badge (run-live-tag). */
-    .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #2e7d32; color: #fff; font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
+    /* Der laufende Build wird NICHT durch eine Zeilenfarbe markiert, sondern durch das „live"-Icon-Badge
+       (run-live-tag). Bewusst BLAU + „live-Punkt"-Icon, damit es sich klar vom grünen Erfolgs-Badge
+       (grüner Kreis + Häkchen) abhebt. */
+    .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #1565c0; color: #fff; font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
     .run-live-tag mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .run-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
     .run-badge mat-icon { font-size: 17px; width: 17px; height: 17px; color: #fff; }

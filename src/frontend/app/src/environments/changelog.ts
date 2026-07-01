@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.6';
+export const APP_VERSION = '0.236.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.7", date: "2026-07-01", changes: [
+    { en: "Admin CI page: the “live” badge on the currently-running build is now clearly distinct from the green success check — it's a blue pill with a live-dot icon instead of green, so you can tell at a glance which run built the deployed image.", de: "Admin-CI-Seite: das „live“-Badge am aktuell laufenden Build hebt sich jetzt klar vom grünen Erfolgs-Häkchen ab — blaue Plakette mit „live-Punkt“-Icon statt Grün, sodass man auf einen Blick sieht, welcher Run das laufende Image gebaut hat." },
+  ]},
   { version: "0.236.6", date: "2026-07-01", changes: [
     { en: "Repertoire “Update all” now covers ALL users' repertoires for admins (like courses), not just your own. And when several repertoires are based on the same Chessable course, a single re-fetch now updates all of them — previously only one got refreshed (the per-course dedup left the duplicates stale, so the banner never cleared).", de: "„Alle aktualisieren“ bei Repertoires erfasst für Admins jetzt die Repertoires ALLER User (wie bei Kursen), nicht nur die eigenen. Und wenn mehrere Repertoires auf demselben Chessable-Kurs beruhen, aktualisiert ein einziger Re-Fetch jetzt alle — vorher wurde nur eines aufgefrischt (der Kurs-Dedup ließ die Duplikate veraltet, der Banner ging nie weg)." },
   ]},
