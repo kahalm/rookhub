@@ -556,3 +556,52 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     expect(c.displayComment).toBeNull();
   });
 });
+
+describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
+  it('enterSolutionReview zeigt den Kommentar NACH dem letzten Zug (statt der Einleitung)', () => {
+    const c = makeComponent();
+    c.puzzle = {
+      id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', startPly: 0,
+      comment: 'Only after...', moveComments: { '-1': 'Only after...', '0': 'Abschlusstext' },
+    };
+    (c as any).enterSolutionReview();
+    expect(c.reviewMode).toBeTrue();
+    expect(c.displayComment).toBe('Abschlusstext');   // Schlusstext, nicht die Einleitung
+  });
+
+  it('erkennt einen Abschlusskommentar nach dem letzten Zug', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '0': 'Ende' } };
+    expect((c as any).hasTrailingSolutionComment).toBeTrue();
+  });
+
+  it('ohne Kommentar nach dem letzten Zug ist es kein Trailing-Kommentar (nur Einleitung zählt nicht)', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 2, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '-1': 'nur intro' } };
+    expect((c as any).hasTrailingSolutionComment).toBeFalse();
+  });
+
+  it('finalizeSolve springt bei Abschlusstext NICHT automatisch weiter (kein Countdown)', () => {
+    const c = makeComponent();
+    const countdown = spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordTrack');
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '0': 'Abschlusstext' } };
+    (c as any).finalizeSolve();
+    expect(countdown).not.toHaveBeenCalled();
+  });
+
+  it('finalizeSolve springt ohne Abschlusstext wie bisher automatisch weiter (Countdown)', () => {
+    const c = makeComponent();
+    const countdown = spyOn(c as any, 'startSolvedCountdown');
+    spyOn(c as any, 'recordCourseAttempt');
+    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c as any, 'recordBookAttempt');
+    spyOn(c as any, 'recordTrack');
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b' };   // keine moveComments
+    (c as any).finalizeSolve();
+    expect(countdown).toHaveBeenCalled();
+  });
+});

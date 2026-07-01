@@ -443,9 +443,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.solveAlternative) return;
     // Direkt geteiltes Einzel-Puzzle: am Ende stehen bleiben, kein Auto-Advance.
     if (this.singlePuzzle) return;
+    // Steht nach dem letzten Lösungszug noch ein Abschlusstext (Kommentar NACH dem Zug), NICHT
+    // automatisch weiterspringen — der Spieler soll ihn lesen und selbst „Weiter" klicken. Der
+    // Kommentar wird über displayComment angezeigt (enterSolutionReview springt ans Ende + setzt ihn).
+    if (this.hasTrailingSolutionComment) return;
     // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
     // Kurs/Wochenpost/Standalone); per „Weiter"-Klick sofort überspringbar.
     this.startSolvedCountdown(() => this.solvedAutoNext());
+  }
+
+  /** Gibt es nach dem letzten Zug der Linie noch einen (Abschluss-)Kommentar? (0-basierter Schlüssel
+   *  des letzten Halbzugs in `moveComments`). Steuert, dass am Ende nicht auto-weitergesprungen wird. */
+  private get hasTrailingSolutionComment(): boolean {
+    const allMoves = (this.puzzle?.moves ?? '').split(' ').filter(m => m);
+    return allMoves.length > 0 && !!this.commentForPlyPlayed(allMoves.length - 1);
   }
 
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
@@ -1131,7 +1142,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   protected override enterSolutionReview(): void {
     this.solutionReview = true;
-    super.enterSolutionReview();
+    this.reviewMode = true;
+    // Ans Ende der Lösung springen UND den Kommentar des LETZTEN Zugs setzen — der Abschlusstext
+    // nach der Lösung (z. B. „…did I realize what was going on…") soll nach dem Lösen/Aufgeben
+    // sichtbar sein. Vorher setzte super() nur reviewIndex, aber nicht moveComment → displayComment
+    // fiel auf die Einleitung des Puzzles zurück und der Schlusstext blieb verborgen.
+    this.solutionReviewGoTo(this.reviewTotal);
   }
 
   // ---- „Ganze Partie" Review ---------------------------------------------

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.4';
+export const APP_VERSION = '0.237.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.5", date: "2026-07-01", changes: [
+    { en: "Course/book puzzles now show the text that comes AFTER the solution. Some lines have a closing note after the last move (e.g. the long story on the Dziuba–Erwich line in \"100 Tactical Patterns\") — it was hidden because the app jumped straight to the next puzzle. Now, when a line ends with such a note, it's displayed after you solve and the auto-advance is paused so you can read it; hit \"Next\" to continue.", de: "Kurs-/Buch-Puzzles zeigen jetzt den Text, der NACH der Lösung kommt. Manche Linien haben nach dem letzten Zug einen Abschlusstext (z. B. die lange Geschichte in der Dziuba–Erwich-Linie in „100 Tactical Patterns“) — der blieb verborgen, weil die App sofort zum nächsten Puzzle sprang. Endet eine Linie mit so einem Text, wird er nach dem Lösen angezeigt und das automatische Weiterspringen pausiert, damit du ihn lesen kannst; mit „Weiter“ geht's dann weiter." },
+  ]},
   { version: "0.237.4", date: "2026-07-01", changes: [
     { en: "Admin CI page: a stack's reported running version (e.g. log-watcher, which pushes its build via /api/ci/build-report) is now stored in the database instead of only in memory. Previously every rookhub API restart/deploy wiped it, so log-watcher's version vanished from the CI overview until its next push (up to 10 min). It now survives restarts and shows immediately.", de: "Admin-CI-Seite: die von einem Stack gemeldete laufende Version (z. B. log-watcher, der seinen Build via /api/ci/build-report pusht) wird jetzt in der Datenbank statt nur im Arbeitsspeicher gehalten. Vorher löschte jeder rookhub-API-Neustart/Deploy sie, sodass log-watchers Version bis zum nächsten Push (bis zu 10 min) aus der CI-Übersicht verschwand. Sie übersteht jetzt Neustarts und wird sofort angezeigt." },
   ]},
