@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Chess;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,8 @@ public partial class PgnImportService
     private static partial Regex HeaderLineRegex();
     [GeneratedRegex(@"\[%\w+[^\]]*\]")]            // [%tqu ...], [%cal ...], [%csl ...]
     private static partial Regex AnnotationRegex();
+    [GeneratedRegex(@"\[%(cal|csl)\s+([^\]]*)\]")] // farbige Pfeile / Feld-Markierungen (Chessable)
+    private static partial Regex CalCslRegex();
     [GeneratedRegex(@"\{[^}]*\}")]                 // Kommentare
     private static partial Regex CommentRegex();
     [GeneratedRegex(@"\$\d+")]                     // NAGs
@@ -48,7 +51,8 @@ public partial class PgnImportService
     public record ParsedPuzzle(
         string LineId, string Round, string Fen, string Moves, int StartPly,
         string? Title, string? Chapter, string? Comment,
-        Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false);
+        Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false,
+        Dictionary<int, List<MoveShape>>? MoveShapes = null);
 
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
@@ -93,6 +97,7 @@ public partial class PgnImportService
 
             var comment = ExtractFirstComment(moveText);
             var moveComments = ExtractMoveComments(moveText);
+            var moveShapes = ExtractMoveShapes(moveText);
             // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
             // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren.
             var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
@@ -121,7 +126,8 @@ public partial class PgnImportService
                         Chapter: ib.Length == 0 ? null : Truncate(ib, 200),
                         Comment: infoText,
                         MoveComments: moveComments,
-                        IsInfoOnly: true));
+                        IsInfoOnly: true,
+                        MoveShapes: moveShapes));
                     continue;
                 }
                 invalid++; continue;
@@ -161,7 +167,8 @@ public partial class PgnImportService
                 Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
                 Comment: comment,
                 MoveComments: moveComments,
-                IsInfoOnly: isInfoOnly));
+                IsInfoOnly: isInfoOnly,
+                MoveShapes: moveShapes));
         }
         return new ParseResult(result, invalid);
     }
@@ -283,6 +290,74 @@ public partial class PgnImportService
                         map[key] = map.TryGetValue(key, out var prev)
                             ? Truncate($"{prev} {cleaned}", MaxCommentLength)
                             : Truncate(cleaned, MaxCommentLength);
+                    }
+                }
+                i = (j < n) ? j + 1 : n;
+            }
+            else if (c == '(') { Flush(); depth++; i++; }
+            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
+            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
+            else { if (depth == 0) cur.Append(c); i++; }
+        }
+        Flush();
+        return map.Count == 0 ? null : map;
+    }
+
+    /// <summary>Eine Board-Annotation aus <c>[%cal]</c>/<c>[%csl]</c>: Pfeil (o→d) bzw. Feld-Markierung
+    /// (nur o). <c>b</c> = chessground-Brush (green/red/blue/yellow). Kompakte JSON-Feldnamen o/d/b.</summary>
+    public record MoveShape(
+        [property: JsonPropertyName("o")] string O,
+        [property: JsonPropertyName("d")] string? D,
+        [property: JsonPropertyName("b")] string B);
+
+    private static readonly Dictionary<char, string> BrushByColor = new()
+    { ['G'] = "green", ['R'] = "red", ['B'] = "blue", ['Y'] = "yellow" };
+
+    /// <summary>Parst die <c>[%cal …]</c>-Pfeile und <c>[%csl …]</c>-Feld-Markierungen eines Kommentars
+    /// (kommagetrennte Tokens „Farbe+Feld[+Feld]", z. B. <c>Gd8g8</c> = grüner Pfeil d8→g8, <c>Rg8</c> =
+    /// rotes Feld g8).</summary>
+    private static List<MoveShape> ParseShapes(string inner)
+    {
+        var list = new List<MoveShape>();
+        foreach (Match m in CalCslRegex().Matches(inner))
+        {
+            bool arrow = m.Groups[1].Value.Equals("cal", StringComparison.OrdinalIgnoreCase);
+            foreach (var tok in m.Groups[2].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (tok.Length < 3) continue;
+                var brush = BrushByColor.TryGetValue(char.ToUpperInvariant(tok[0]), out var b) ? b : "green";
+                var coords = tok[1..];
+                if (arrow && coords.Length >= 4) list.Add(new MoveShape(coords[..2], coords.Substring(2, 2), brush));
+                else if (!arrow && coords.Length >= 2) list.Add(new MoveShape(coords[..2], null, brush));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>Sammelt je Halbzug die Board-Annotationen (Pfeile/Feld-Markierungen) — Schlüssel-Konvention
+    /// identisch zu <see cref="ExtractMoveComments"/> (<c>-1</c> = vor dem ersten Zug). <c>null</c> = keine.</summary>
+    private static Dictionary<int, List<MoveShape>>? ExtractMoveShapes(string moveText)
+    {
+        var map = new Dictionary<int, List<MoveShape>>();
+        int depth = 0, sanCount = 0, i = 0, n = moveText.Length;
+        var cur = new StringBuilder();
+        void Flush() { if (cur.Length == 0) return; if (IsSanMove(cur.ToString())) sanCount++; cur.Clear(); }
+        while (i < n)
+        {
+            char c = moveText[i];
+            if (c == '{')
+            {
+                Flush();
+                int j = moveText.IndexOf('}', i + 1);
+                if (j < 0) j = n;
+                if (depth == 0)
+                {
+                    var shapes = ParseShapes(moveText.Substring(i + 1, Math.Min(j, n) - (i + 1)));
+                    if (shapes.Count > 0)
+                    {
+                        int key = sanCount - 1;
+                        if (map.TryGetValue(key, out var existing)) existing.AddRange(shapes);
+                        else map[key] = shapes;
                     }
                 }
                 i = (j < n) ? j + 1 : n;
@@ -512,6 +587,7 @@ public partial class PgnImportService
                     bp.Chapter = ChapterForBook(book.Kind, p.Chapter);
                     bp.Comment = p.Comment;
                     bp.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
+                    bp.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
                     bp.IsInfoOnly = p.IsInfoOnly;
                     updated++;
                 }
@@ -531,6 +607,7 @@ public partial class PgnImportService
                 Chapter = ChapterForBook(book.Kind, p.Chapter),
                 Comment = p.Comment,
                 MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments),
+                MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes),
                 IsInfoOnly = p.IsInfoOnly,
             });
         }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.6';
+export const APP_VERSION = '0.239.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.239.0", date: "2026-07-01", changes: [
+    { en: "Faster bulk course imports: fully-cached Chessable courses (no network/VPN needed) now import several at a time instead of strictly one after another. When you update the whole library at once, the cached-import lane runs up to 3 in parallel (configurable via Chessable:FastLaneParallelism), each safely claiming a different job — so a big re-process drains in a fraction of the time. Downloads that still need Chessable stay paced as before.", de: "Schnellere Massen-Kursimporte: voll-gecachte Chessable-Kurse (kein Netz/VPN nötig) werden jetzt mehrere gleichzeitig importiert statt strikt nacheinander. Wenn du die ganze Bibliothek auf einmal aktualisierst, laufen in der Cache-Lane bis zu 3 parallel (über Chessable:FastLaneParallelism einstellbar), jeder greift sicher einen anderen Job — ein großer Reprocess ist so in einem Bruchteil der Zeit durch. Downloads, die noch Chessable brauchen, bleiben wie gehabt gedrosselt." },
+  ]},
   { version: "0.238.6", date: "2026-07-01", changes: [
     { en: "Notifications page now groups notifications into categories (Courses / Friends / Puzzles / Messages / Tournaments / Admin / Other) and shows a filter bar of chips above the list — each chip has a count. Click a chip to hide that category from the list; click again to show it. \"Show all\" resets the filter. Hidden categories are remembered per device (localStorage) so the next visit stays filtered the same way.", de: "Die Benachrichtigungsseite gruppiert Benachrichtigungen jetzt in Kategorien (Kurse / Freunde / Puzzles / Nachrichten / Turniere / Admin / Sonstiges) und zeigt oben eine Filterleiste mit Chips — jeder Chip trägt einen Zähler. Klick auf einen Chip blendet die Kategorie aus, nochmal klicken blendet sie wieder ein. „Alle einblenden“ setzt den Filter zurück. Ausgeblendete Kategorien werden pro Gerät gemerkt (localStorage), der nächste Besuch bleibt also gleich gefiltert." },
   ]},

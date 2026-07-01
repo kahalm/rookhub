@@ -856,6 +856,7 @@ public class BookPuzzleService
         Chapter = bp.Chapter,
         Comment = bp.Comment,
         MoveComments = ParseMoveComments(bp.MoveComments),
+        MoveShapes = bp.MoveShapes,   // roher JSON-String; das Frontend parst ihn selbst
         // Metadaten bevorzugt vom Buch (admin-gepflegt), sonst vom Puzzle.
         Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
         BookRating = bp.Book?.Rating ?? bp.BookRating,

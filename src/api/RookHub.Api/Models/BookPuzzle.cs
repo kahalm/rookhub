@@ -52,6 +52,14 @@ public class BookPuzzle
     /// </summary>
     public string? MoveComments { get; set; }
 
+    /// <summary>
+    /// Pro-Zug-Board-Annotationen (Chessable <c>[%cal]</c>-Pfeile / <c>[%csl]</c>-Feld-Markierungen)
+    /// als JSON-Objekt <c>{ "plyIndex": [{ "o": "d8", "d": "g8", "b": "green" }, …] }</c>. Schlüssel-
+    /// Konvention wie <see cref="MoveComments"/> (0-basierter Halbzug, -1 = Einleitung); <c>d</c> fehlt bei
+    /// reinen Feld-Markierungen. Beim Durchspielen/Review aufs Brett gezeichnet. LONGTEXT, null = keine.
+    /// </summary>
+    public string? MoveShapes { get; set; }
+
     [MaxLength(50)]
     public string? Difficulty { get; set; }
 
