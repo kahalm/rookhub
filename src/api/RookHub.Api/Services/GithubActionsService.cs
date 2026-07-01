@@ -86,7 +86,7 @@ public class GithubActionsService
                 .Select(r => new CiRunDto(
                     r.Id, r.Name ?? "", string.IsNullOrWhiteSpace(r.DisplayTitle) ? (r.Name ?? "") : r.DisplayTitle,
                     r.HeadBranch ?? "", r.Event ?? "", r.Status ?? "", r.Conclusion,
-                    r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login))
+                    r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login, r.HeadSha))
                 .ToList();
             return new CiRepoDto(repo, null, runs);
         }
@@ -102,6 +102,6 @@ public class GithubActionsService
     private record RunItem(
         long Id, string? Name, string? DisplayTitle, string? HeadBranch, string? Event,
         string? Status, string? Conclusion, int RunNumber, DateTime CreatedAt, DateTime UpdatedAt,
-        string? HtmlUrl, ActorObj? Actor);
+        string? HtmlUrl, ActorObj? Actor, string? HeadSha);
     private record ActorObj(string Login);
 }

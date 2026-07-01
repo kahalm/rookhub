@@ -12,6 +12,7 @@ export interface CiRun {
   id: number; name: string; title: string; branch: string; event: string;
   status: string; conclusion: string | null; runNumber: number;
   createdAt: string; updatedAt: string; htmlUrl: string; actor: string | null;
+  headSha: string | null;
 }
 export interface CiRepo { repo: string; error: string | null; runs: CiRun[]; }
 export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: string; }
@@ -32,6 +33,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
         <span class="ci-sub">
           {{ 'admin.ci.subtitle' | translate }}
           @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }} }
+          @if (buildSha) { · {{ 'admin.ci.runningBuild' | translate }} {{ buildSha.slice(0, 7) }} }
         </span>
       </div>
 
@@ -54,13 +56,20 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                 <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
               }
               @for (run of repo.runs; track run.id) {
-                <a class="run" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                <a class="run" [class.run-live]="isRunningBuild(run)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
                   <span class="run-badge" [ngClass]="badgeClass(run)"
                         [matTooltip]="run.conclusion || run.status">
                     <mat-icon>{{ badgeIcon(run) }}</mat-icon>
                   </span>
                   <span class="run-main">
-                    <span class="run-title">{{ run.title || run.name }}</span>
+                    <span class="run-title">
+                      {{ run.title || run.name }}
+                      @if (isRunningBuild(run)) {
+                        <span class="run-live-tag" [matTooltip]="'admin.ci.runningBuildTooltip' | translate">
+                          <mat-icon>play_circle</mat-icon>{{ 'admin.ci.live' | translate }}
+                        </span>
+                      }
+                    </span>
                     <span class="run-meta">
                       {{ run.name }} · #{{ run.runNumber }} ·
                       <span class="run-branch">{{ run.branch }}</span>
@@ -90,6 +99,9 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+    .run-live { background: color-mix(in srgb, #2e7d32 14%, transparent); outline: 1px solid color-mix(in srgb, #2e7d32 45%, transparent); }
+    .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #2e7d32; color: #fff; font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
+    .run-live-tag mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .run-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
     .run-badge mat-icon { font-size: 17px; width: 17px; height: 17px; color: #fff; }
     .run-badge.ok { background: #2e7d32; }
@@ -109,8 +121,16 @@ export class AdminGithubActionsComponent implements OnInit {
   overview: CiOverview | null = null;
   loading = true;
   lastUpdated: Date | null = null;
+  /** Commit-SHA des LAUFENDEN Frontend-Builds (aus /build-info.json, vom Docker-Build gesetzt). */
+  buildSha: string | null = null;
 
   ngOnInit(): void {
+    // Commit-SHA des laufenden Builds einmalig laden (fehlt bei alten Images/dev → kein Marker).
+    this.http.get<{ sha: string }>('/build-info.json').pipe(catchError(() => of(null))).subscribe(info => {
+      const sha = info?.sha;
+      this.buildSha = sha && sha !== 'unknown' ? sha : null;
+    });
+
     // Sofort + danach alle 5 s neu laden, solange der Tab (und damit diese Komponente) lebt.
     timer(0, 5000).pipe(
       switchMap(() => this.http.get<CiOverview>('/api/admin/ci/runs').pipe(catchError(() => of(null)))),
@@ -119,6 +139,13 @@ export class AdminGithubActionsComponent implements OnInit {
       this.loading = false;
       if (data) { this.overview = data; this.lastUpdated = new Date(); }
     });
+  }
+
+  /** Hat dieser Run den aktuell laufenden Frontend-Build erzeugt? (head_sha == build-SHA, Prefix-tolerant) */
+  isRunningBuild(run: CiRun): boolean {
+    if (!this.buildSha || !run.headSha) return false;
+    const a = this.buildSha, b = run.headSha;
+    return a === b || a.startsWith(b) || b.startsWith(a);
   }
 
   badgeClass(run: CiRun): string {

@@ -1239,6 +1239,9 @@
       "title": "GitHub Actions",
       "subtitle": "Zadnjih 5 izvođenja po repozitoriju · osvježava se svakih 5 s",
       "updated": "stanje",
+      "runningBuild": "aktivni build",
+      "live": "aktivno",
+      "runningBuildTooltip": "Ovo izvođenje je izgradilo trenutno pokrenuti frontend.",
       "notConfigured": "Nije postavljen GitHub token. Postavi GitHub__Token (PAT s actions:read) na API-ju da omogućiš ovaj prikaz.",
       "noRuns": "Još nema izvođenja.",
       "loadFailed": "CI status se ne može učitati"

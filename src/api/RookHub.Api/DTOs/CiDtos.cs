@@ -13,7 +13,8 @@ public record CiRunDto(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     string HtmlUrl,
-    string? Actor);
+    string? Actor,
+    string? HeadSha);
 
 /// <summary>Die letzten Läufe eines Repos (oder ein Fehler, wenn der Abruf scheiterte).</summary>
 public record CiRepoDto(string Repo, string? Error, List<CiRunDto> Runs);

@@ -1241,6 +1241,9 @@
       "title": "GitHub Actions",
       "subtitle": "Last 5 runs per repo · auto-refresh every 5s",
       "updated": "updated",
+      "runningBuild": "running build",
+      "live": "live",
+      "runningBuildTooltip": "This run built the currently running frontend.",
       "notConfigured": "No GitHub token configured. Set GitHub__Token (a PAT with actions:read) on the API to enable this view.",
       "noRuns": "No runs yet.",
       "loadFailed": "Could not load CI status"

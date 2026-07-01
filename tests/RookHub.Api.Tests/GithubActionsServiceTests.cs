@@ -14,7 +14,7 @@ public class GithubActionsServiceTests
         "id": 1, "name": "CI", "display_title": "fix things", "head_branch": "master",
         "event": "push", "status": "completed", "conclusion": "success", "run_number": 42,
         "created_at": "2026-07-01T10:00:00Z", "updated_at": "2026-07-01T10:05:00Z",
-        "html_url": "https://github.com/kahalm/rookhub/actions/runs/1", "actor": { "login": "kahalm" } } ] }
+        "head_sha": "abc1234def5678", "html_url": "https://github.com/kahalm/rookhub/actions/runs/1", "actor": { "login": "kahalm" } } ] }
     """;
 
     private static GithubActionsService Build(StubHandler handler, bool withToken = true)
@@ -63,6 +63,7 @@ public class GithubActionsServiceTests
         Assert.Equal("success", run.Conclusion);
         Assert.Equal(42, run.RunNumber);
         Assert.Equal("kahalm", run.Actor);
+        Assert.Equal("abc1234def5678", run.HeadSha);
     }
 
     [Fact]

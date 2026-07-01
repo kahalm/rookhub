@@ -67,4 +67,6 @@ jobs:
         with:
           context: src/frontend
           push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
