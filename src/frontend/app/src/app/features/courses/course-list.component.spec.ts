@@ -100,4 +100,83 @@ describe('CourseListComponent sorting', () => {
       expect(comp.filtered.length).toBe(2);
     });
   });
+
+  describe('upload/delete des eigenen Kurses', () => {
+    function item3(over: Partial<CourseListItem>): CourseListItem {
+      return {
+        bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
+        tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
+        lastMode: null, lastActivityAt: null, isOwned: false, ...over,
+      };
+    }
+    const snackbar = { info: () => {} } as any;
+    const translate = { instant: (k: string) => k } as any;
+
+    it('hängt einen hochgeladenen Kurs an die Liste und meldet Zugriffsänderung', () => {
+      const uploaded = item3({ bookId: 42, displayName: 'My Course', isOwned: true });
+      const notify = jasmine.createSpy('notifyAccessChanged');
+      const courseService = {
+        getCourses: () => of([]),
+        uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
+        notifyAccessChanged: notify,
+      } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate);
+      comp.loadCourses();
+      comp.uploadName = 'My Course';
+
+      const file = new File(['pgn'], 'my.pgn');
+      const input = { files: [file], value: 'my.pgn' } as any;
+      comp.onFileSelected({ target: input } as any);
+
+      expect(courseService.uploadCourse).toHaveBeenCalledWith(file, 'My Course');
+      expect(comp.courses.map(c => c.bookId)).toEqual([42]);
+      expect(comp.uploading).toBeFalse();
+      expect(comp.uploadName).toBe('');   // Feld nach Upload geleert
+      expect(input.value).toBe('');       // gleiche Datei erneut wählbar
+      expect(notify).toHaveBeenCalled();
+    });
+
+    it('ignoriert einen Change ohne Datei', () => {
+      const courseService = {
+        getCourses: () => of([]),
+        uploadCourse: jasmine.createSpy('uploadCourse'),
+        notifyAccessChanged: () => {},
+      } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate);
+      comp.loadCourses();
+      comp.onFileSelected({ target: { files: [] } } as any);
+      expect(courseService.uploadCourse).not.toHaveBeenCalled();
+    });
+
+    it('löscht einen eigenen Kurs nach Bestätigung aus der Liste', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      const notify = jasmine.createSpy('notifyAccessChanged');
+      const courseService = {
+        getCourses: () => of([ item3({ bookId: 7, isOwned: true }) ]),
+        deleteCourse: jasmine.createSpy('deleteCourse').and.returnValue(of(void 0)),
+        notifyAccessChanged: notify,
+      } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate);
+      comp.loadCourses();
+      comp.deleteCourse(comp.courses[0]);
+
+      expect(courseService.deleteCourse).toHaveBeenCalledWith(7);
+      expect(comp.courses.length).toBe(0);
+      expect(notify).toHaveBeenCalled();
+    });
+
+    it('löscht nichts, wenn die Rückfrage abgelehnt wird', () => {
+      spyOn(window, 'confirm').and.returnValue(false);
+      const courseService = {
+        getCourses: () => of([ item3({ bookId: 7, isOwned: true }) ]),
+        deleteCourse: jasmine.createSpy('deleteCourse'),
+        notifyAccessChanged: () => {},
+      } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate);
+      comp.loadCourses();
+      comp.deleteCourse(comp.courses[0]);
+      expect(courseService.deleteCourse).not.toHaveBeenCalled();
+      expect(comp.courses.length).toBe(1);
+    });
+  });
 });

@@ -20,7 +20,7 @@ public class CourseServiceOwnerTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _svc = new CourseService(_db, NullLogger<CourseService>.Instance);
+        _svc = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db));
     }
 
     public void Dispose() => _db.Dispose();
@@ -182,5 +182,72 @@ public class CourseServiceOwnerTests : IDisposable
         var (pgn, _) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
 
         Assert.Contains("1. e4 {Bester Zug} e5", pgn); // rekonstruiert inkl. Zug-Kommentar
+    }
+
+    // --- Persönlicher Kurs-Upload (PGN → eigenes Buch) ---
+
+    // Puzzle-PGN im Chessable-Stil (FEN + Round + [%tqu]-Trainingsmarker) — nur solche PGNs
+    // erzeugt die Import-Pipeline zu Kurs-Puzzles.
+    private const string SamplePgn =
+        "[Event \"T\"]\n[Round \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\"]\n\n" +
+        "1. e4 e5 2. Nf3 Nc6 {[%tqu \"En\",\"find\",\"\",\"\",\"f1b5\",\"\",10]} 3. Bb5 a6 *\n";
+
+    [Fact]
+    public async Task UploadPersonalCourse_CreatesOwnedStudyBook_WithPuzzles()
+    {
+        var dto = await _svc.UploadPersonalCourseAsync(userId: 7, "ruy-lopez.pgn", SamplePgn, null);
+
+        Assert.True(dto.IsOwned);
+        Assert.True(dto.PuzzleCount > 0);
+        Assert.Equal(0, dto.SolvedCount);
+
+        var book = await _db.Books.SingleAsync(b => b.Id == dto.BookId);
+        Assert.Equal(7, book.OwnerUserId);
+        Assert.Equal(BookKind.Study, book.Kind);
+        Assert.StartsWith("user-u7-", book.FileName);        // interner, pro-User-eindeutiger Name
+        Assert.Equal("ruy-lopez", book.DisplayName);          // aus Dateiname abgeleitet (ohne .pgn)
+        // Der Besitzer sieht den Kurs sofort; ein anderer User nicht.
+        Assert.True(await _svc.HasAnyAccessAsync(userId: 7, isAdmin: false));
+        Assert.False(await _svc.HasAnyAccessAsync(userId: 8, isAdmin: false));
+    }
+
+    [Fact]
+    public async Task UploadPersonalCourse_UsesProvidedDisplayName()
+    {
+        var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "ignored.pgn", SamplePgn, "  Mein Eröffnungsrepertoire  ");
+        Assert.Equal("Mein Eröffnungsrepertoire", dto.DisplayName);
+    }
+
+    [Fact]
+    public async Task UploadPersonalCourse_InvalidPgn_ThrowsAndCreatesNoBook()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _svc.UploadPersonalCourseAsync(userId: 1, "notpgn.pgn", "this is not a pgn at all", null));
+        Assert.Empty(_db.Books);
+    }
+
+    [Fact]
+    public async Task DeletePersonalCourse_Owner_RemovesBook()
+    {
+        var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "line.pgn", SamplePgn, null);
+        await _svc.DeletePersonalCourseAsync(userId: 1, dto.BookId);
+        Assert.False(await _db.Books.AnyAsync(b => b.Id == dto.BookId));
+    }
+
+    [Fact]
+    public async Task DeletePersonalCourse_NonOwner_Throws()
+    {
+        var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "line.pgn", SamplePgn, null);
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _svc.DeletePersonalCourseAsync(userId: 2, dto.BookId));
+        Assert.True(await _db.Books.AnyAsync(b => b.Id == dto.BookId)); // unangetastet
+    }
+
+    [Fact]
+    public async Task DeletePersonalCourse_GroupBook_Throws_NotOwned()
+    {
+        var book = await SeedGroupBookAsync(groupId: 3, memberUserId: 1);
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _svc.DeletePersonalCourseAsync(userId: 1, book.Id));
     }
 }

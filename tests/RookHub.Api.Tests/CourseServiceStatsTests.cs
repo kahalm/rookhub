@@ -23,7 +23,7 @@ public class CourseServiceStatsTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new CourseService(_db, NullLogger<CourseService>.Instance);
+        _service = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db));
     }
 
     public void Dispose() => _db.Dispose();

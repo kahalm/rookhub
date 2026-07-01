@@ -856,7 +856,20 @@
   "courses": {
     "title": "Courses",
     "intro": "Work through an imported book puzzle by puzzle — sequentially or randomly. Your progress is saved.",
-    "emptyHint": "No books imported yet. Import books in the admin area under \"Books\".",
+    "emptyHint": "No courses yet. Upload a PGN above to create your own course.",
+    "upload": {
+      "title": "Upload your own course",
+      "hint": "Add a puzzle PGN (Chessable style: with FEN and training markers) as a personal course.",
+      "nameLabel": "Course name",
+      "namePlaceholder": "Optional — derived from the file name",
+      "button": "Upload PGN",
+      "uploading": "Uploading…",
+      "success": "\"{{name}}\" created ({{count}} puzzles)",
+      "failed": "Upload failed. Please check the PGN."
+    },
+    "deleteTooltip": "Delete course",
+    "deleteConfirm": "Delete the course \"{{name}}\"? Your progress will be lost.",
+    "deleteFailed": "Could not delete course",
     "searchPlaceholder": "Search courses…",
     "noMatch": "No courses match “{{query}}”.",
     "sectionPublic": "Public courses",

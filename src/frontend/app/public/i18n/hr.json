@@ -854,7 +854,20 @@
   "courses": {
     "title": "Tečajevi",
     "intro": "Prorađuj uvezenu knjigu zagonetku po zagonetku — slijedno ili nasumično. Tvoj napredak se sprema.",
-    "emptyHint": "Još nema uvezenih knjiga. Uvezi knjige u administratorskom području pod „Knjige\".",
+    "emptyHint": "Još nema tečajeva. Učitaj PGN gore da stvoriš vlastiti tečaj.",
+    "upload": {
+      "title": "Učitaj vlastiti tečaj",
+      "hint": "Dodaj PGN sa zagonetkama (Chessable stil: s FEN-om i oznakama treninga) kao osobni tečaj.",
+      "nameLabel": "Naziv tečaja",
+      "namePlaceholder": "Neobavezno — inače iz naziva datoteke",
+      "button": "Učitaj PGN",
+      "uploading": "Učitavanje…",
+      "success": "„{{name}}\" stvoren ({{count}} zagonetki)",
+      "failed": "Učitavanje nije uspjelo. Provjeri PGN."
+    },
+    "deleteTooltip": "Izbriši tečaj",
+    "deleteConfirm": "Izbrisati tečaj „{{name}}\"? Napredak će biti izgubljen.",
+    "deleteFailed": "Tečaj se ne može izbrisati",
     "searchPlaceholder": "Pretraži tečajeve…",
     "noMatch": "Nijedan tečaj ne odgovara „{{query}}“.",
     "sectionPublic": "Javni tečajevi",

@@ -72,6 +72,36 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> HasAnyAccess()
         => Ok(new { hasAccess = await _service.HasAnyAccessAsync(GetUserId(), IsAdmin) });
 
+    /// <summary>Lädt ein PGN als persönlichen Kurs des Users hoch (eigenes Buch, nur für ihn sichtbar).</summary>
+    [HttpPost("upload")]
+    [RequestSizeLimit(11 * 1024 * 1024)]  // 10-MB-PGN-Limit + Multipart-Overhead
+    public async Task<ActionResult<CourseListItemDto>> Upload(IFormFile file, [FromForm] string? name)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "No file provided." });
+        if (!Path.GetExtension(file.FileName).Equals(".pgn", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Only .pgn files are allowed." });
+        if (file.Length > RepertoireService.MaxFileSize)
+            return BadRequest(new { message = $"File size exceeds maximum of {RepertoireService.MaxFileSize / 1024 / 1024} MB." });
+
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream());
+            var pgn = await reader.ReadToEndAsync();
+            var course = await _service.UploadPersonalCourseAsync(GetUserId(), file.FileName, pgn, name);
+            return Ok(course);
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Löscht einen eigenen Kurs des Users (nur der Besitzer; sonst 404).</summary>
+    [HttpDelete("{bookId}")]
+    public async Task<IActionResult> Delete(int bookId)
+    {
+        try { await _service.DeletePersonalCourseAsync(GetUserId(), bookId); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     // --- Kurs-Statistik (für die /stats-Seite, Umschalter „Kurse"). Literale Routen MÜSSEN vor
     //     den `{bookId}`-Routen stehen, sonst matcht der Router „stats"/„history" als bookId. ---
 

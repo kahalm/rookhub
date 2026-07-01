@@ -31,6 +31,25 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
 
       <app-reprocess-banner section="courses" (done)="loadCourses()" />
 
+      <!-- Eigenes PGN als persönlichen Kurs hochladen — immer verfügbar (auch bei leerer Liste). -->
+      <section class="upload-panel" [class.upload-empty]="!loading && courses.length === 0">
+        <mat-icon class="upload-icon">upload_file</mat-icon>
+        <div class="upload-text">
+          <div class="upload-title">{{ 'courses.upload.title' | translate }}</div>
+          <div class="upload-hint">{{ 'courses.upload.hint' | translate }}</div>
+        </div>
+        <mat-form-field appearance="outline" class="upload-name" subscriptSizing="dynamic">
+          <mat-label>{{ 'courses.upload.nameLabel' | translate }}</mat-label>
+          <input matInput [(ngModel)]="uploadName" [disabled]="uploading"
+                 [placeholder]="'courses.upload.namePlaceholder' | translate">
+        </mat-form-field>
+        <input #fileInput type="file" accept=".pgn" hidden (change)="onFileSelected($event)">
+        <button mat-flat-button color="primary" [disabled]="uploading" (click)="fileInput.click()">
+          <mat-icon>{{ uploading ? 'hourglass_empty' : 'upload' }}</mat-icon>
+          {{ (uploading ? 'courses.upload.uploading' : 'courses.upload.button') | translate }}
+        </button>
+      </section>
+
       @if (loading) {
         <app-loading-spinner />
       } @else if (courses.length === 0) {
@@ -132,6 +151,12 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
                       [disabled]="c.solvedCount === 0" (click)="reset(c)">
                 <mat-icon>restart_alt</mat-icon>
               </button>
+              @if (c.isOwned) {
+                <button mat-icon-button class="delete-btn" [matTooltip]="'courses.deleteTooltip' | translate"
+                        [disabled]="deleting === c.bookId" (click)="deleteCourse(c)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
             </div>
           </div>
 
@@ -184,6 +209,22 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+
+    .upload-panel {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+      background: color-mix(in srgb, currentColor 4%, transparent);
+    }
+    .upload-panel.upload-empty {
+      border-style: dashed; border-color: color-mix(in srgb, var(--mdc-theme-primary, #3f51b5) 50%, transparent);
+    }
+    .upload-icon { color: color-mix(in srgb, currentColor 55%, transparent); flex-shrink: 0; }
+    .upload-text { flex: 1; min-width: 180px; }
+    .upload-title { font-weight: 600; font-size: 0.95rem; }
+    .upload-hint { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .upload-name { width: 200px; }
+    .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
     .course-section { margin-bottom: 28px; }
     .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
     .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
@@ -246,6 +287,12 @@ export class CourseListComponent implements OnInit {
   loading = false;
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
+  /** Läuft gerade ein Upload eines eigenen Kurs-PGN? */
+  uploading = false;
+  /** Optionaler Anzeigename für den hochzuladenden Kurs (leer = aus Dateiname ableiten). */
+  uploadName = '';
+  /** bookId, der gerade gelöscht wird (Button-Sperre). */
+  deleting: number | null = null;
   private offlineFiles = new Set<string>();
 
   /** Aufgeklapptes Buch (Kapitelübersicht) bzw. null. */
@@ -372,6 +419,49 @@ export class CourseListComponent implements OnInit {
         delete this.chaptersByBook[course.bookId]; // Kapitel-Fortschritt neu laden beim nächsten Öffnen
       },
       error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
+    });
+  }
+
+  /** Datei ausgewählt → als persönlichen Kurs hochladen. */
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploading = true;
+    this.courseService.uploadCourse(file, this.uploadName).subscribe({
+      next: course => {
+        this.uploading = false;
+        input.value = ''; // gleiche Datei erneut wählbar
+        this.uploadName = '';
+        // Neuen Kurs einsortieren (statt kompletten Reload) + Menü/Navbar-Zugriff neu prüfen lassen.
+        this.courses = this.sortCourses([...this.courses.filter(c => c.bookId !== course.bookId), course]);
+        this.courseService.notifyAccessChanged();
+        this.snackbar.info(this.translate.instant('courses.upload.success', { name: course.displayName, count: course.puzzleCount }), { action: 'common.ok', duration: 3000 });
+      },
+      error: err => {
+        this.uploading = false;
+        input.value = '';
+        const msg = err?.error?.message || this.translate.instant('courses.upload.failed');
+        this.snackbar.info(msg, { action: 'common.ok', duration: 4000 });
+      }
+    });
+  }
+
+  /** Eigenen Kurs löschen (mit Rückfrage). */
+  deleteCourse(course: CourseListItem): void {
+    if (!confirm(this.translate.instant('courses.deleteConfirm', { name: course.displayName }))) return;
+    this.deleting = course.bookId;
+    this.courseService.deleteCourse(course.bookId).subscribe({
+      next: () => {
+        this.deleting = null;
+        this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+        delete this.chaptersByBook[course.bookId];
+        this.courseService.notifyAccessChanged();
+      },
+      error: () => {
+        this.deleting = null;
+        this.snackbar.info(this.translate.instant('courses.deleteFailed'), { action: 'common.ok', duration: 3000 });
+      }
     });
   }
 

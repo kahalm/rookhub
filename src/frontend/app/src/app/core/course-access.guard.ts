@@ -1,28 +1,17 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { map, catchError, of } from 'rxjs';
 import { AuthService } from './auth.service';
-import { CourseService } from '../features/courses/course.service';
 
 /**
- * Zugriff auf die „Kurse": eingeloggt UND (Admin ODER mind. ein Kurs per Gruppe freigegeben).
- * Admins werden ohne Server-Roundtrip durchgelassen; sonst entscheidet /api/courses/access.
+ * Zugriff auf die „Kurse"-Seite: jeder eingeloggte Nutzer. Die Seite ist auch dann erreichbar,
+ * wenn (noch) kein Kurs sichtbar ist — dort kann jeder Nutzer ein eigenes PGN als persönlichen
+ * Kurs hochladen. Die einzelnen Lese-/Schreib-Endpoints sichern den Zugriff je Buch ohnehin
+ * serverseitig ab (kein Zugriff → 404). Die Navbar zeigt „Kurse" weiterhin nur, wenn tatsächlich
+ * mindestens ein Kurs zugänglich ist (content-gated) — der Einstieg für den ersten Upload läuft
+ * über die Dashboard-Kachel.
  */
 export const courseAccessGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const courses = inject(CourseService);
-
-  if (!auth.isLoggedIn) return router.createUrlTree(['/login']);
-  if (auth.isAdmin) return true;
-
-  // Offline: Zugriff nicht prüfbar → durchlassen, damit offline gespeicherte Kurse erreichbar
-  // bleiben (die Lese-/Schreib-Endpoints sichern sich serverseitig ohnehin selbst ab).
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
-
-  return courses.checkAccess().pipe(
-    map(res => res.hasAccess ? true : router.createUrlTree(['/dashboard'])),
-    // Netzfehler → fail-open (kein Lockout bei Netzproblemen; konsistent mit menuGuard).
-    catchError(() => of(true))
-  );
+  return auth.isLoggedIn ? true : router.createUrlTree(['/login']);
 };

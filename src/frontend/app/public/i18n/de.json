@@ -856,7 +856,20 @@
   "courses": {
     "title": "Kurse",
     "intro": "Arbeite ein importiertes Buch puzzleweise durch — sequenziell oder zufällig. Dein Fortschritt wird gespeichert.",
-    "emptyHint": "Noch keine Bücher importiert. Importiere Bücher im Admin-Bereich unter „Bücher\".",
+    "emptyHint": "Noch keine Kurse. Lade oben ein PGN hoch, um einen eigenen Kurs anzulegen.",
+    "upload": {
+      "title": "Eigenen Kurs hochladen",
+      "hint": "Füge ein Puzzle-PGN (Chessable-Stil: mit FEN und Trainingsmarkern) als persönlichen Kurs hinzu.",
+      "nameLabel": "Kursname",
+      "namePlaceholder": "Optional — sonst aus dem Dateinamen",
+      "button": "PGN hochladen",
+      "uploading": "Wird hochgeladen…",
+      "success": "„{{name}}\" angelegt ({{count}} Puzzles)",
+      "failed": "Upload fehlgeschlagen. Bitte PGN prüfen."
+    },
+    "deleteTooltip": "Kurs löschen",
+    "deleteConfirm": "Kurs „{{name}}\" löschen? Dein Fortschritt geht verloren.",
+    "deleteFailed": "Kurs konnte nicht gelöscht werden",
     "searchPlaceholder": "Kurse durchsuchen…",
     "noMatch": "Keine Kurse passen zu „{{query}}“.",
     "sectionPublic": "Öffentliche Kurse",

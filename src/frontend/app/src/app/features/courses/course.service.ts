@@ -104,6 +104,19 @@ export class CourseService {
     return this.http.get<CourseListItem[]>('/api/courses');
   }
 
+  /** Lädt ein PGN als persönlichen Kurs hoch (nur für den Nutzer sichtbar). */
+  uploadCourse(file: File, name?: string): Observable<CourseListItem> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    if (name && name.trim()) form.append('name', name.trim());
+    return this.http.post<CourseListItem>('/api/courses/upload', form);
+  }
+
+  /** Löscht einen eigenen Kurs des Nutzers. */
+  deleteCourse(bookId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}`);
+  }
+
   /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */
   getBookPuzzles(bookId: number): Observable<BookPuzzleDto[]> {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
