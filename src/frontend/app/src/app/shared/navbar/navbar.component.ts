@@ -183,7 +183,11 @@ import { DISCORD_INVITE_URL } from '../../core/community';
   styles: [`
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
     .spacer { flex: 1 1 auto; }
-    .mobile-menu-btn { display: none; }
+    /* Die Navigation läuft immer über das Hamburger-Menü — auf ALLEN Auflösungen, nicht nur
+       mobil. Bei den vielen Menüpunkten liefe die Toolbar sonst auch auf mittleren/großen
+       Bildschirmen über. Die horizontalen Text-Links (.nav-links) entfallen daher generell. */
+    .nav-links { display: none; }
+    .mobile-menu-btn { display: inline-flex; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
@@ -211,10 +215,9 @@ import { DISCORD_INVITE_URL } from '../../core/community';
       .notif-bell.has-unseen ::ng-deep .mat-badge-content { animation: none; }
     }
     @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .mobile-menu-btn { display: inline-flex; }
       /* Sekundäraktionen (Discord/Theme/Sprache) wandern auf Mobil ins Hamburger-Menü,
-         damit die Toolbar nicht überläuft und das Profil-Icon nicht aus dem Bild geschoben wird. */
+         damit die Toolbar nicht überläuft und das Profil-Icon nicht aus dem Bild geschoben wird.
+         (Die Haupt-Navigation liegt ohnehin auf allen Auflösungen im Hamburger-Menü.) */
       .nav-extra { display: none; }
     }
   `]

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.233.2';
+export const APP_VERSION = '0.234.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.234.0", date: "2026-07-01", changes: [
+    { en: "The navigation now always uses the hamburger menu — on every screen size, not just mobile. With the growing number of menu items the toolbar could overflow on medium and larger screens too; moving all nav links into the hamburger keeps it tidy at any resolution.", de: "Die Navigation läuft jetzt immer über das Hamburger-Menü — auf allen Bildschirmgrößen, nicht nur mobil. Bei den vielen Menüpunkten konnte die Toolbar sonst auch auf mittleren und größeren Bildschirmen überlaufen; mit allen Links im Hamburger-Menü bleibt sie bei jeder Auflösung aufgeräumt." },
+  ]},
   { version: "0.233.2", date: "2026-07-01", changes: [
     { en: "Crazy/anarchy board: the opponent's very first move (the one that sets up the puzzle) is now marked with the arrow too — previously only the opponent's replies after your own moves got it, so the move that creates the position was left unmarked right when you most want to see it. Applies to all puzzle modes.", de: "Crazy-/Anarchy-Brett: Auch der allererste Gegnerzug (der die Puzzle-Stellung aufbaut) wird jetzt mit dem Pfeil markiert — vorher bekamen nur die Antwortzüge nach deinen eigenen Zügen einen Pfeil, sodass genau der Zug, der die Stellung erzeugt, unmarkiert blieb. Gilt für alle Puzzle-Modi." },
     { en: "Anarchy hints, now with extra r/anarchychess flavour. 🇫🇷 Holy hell.", de: "Die Anarchy-Tipps sind jetzt ordentlich memefiziert. 🇫🇷 Holy hell." },
