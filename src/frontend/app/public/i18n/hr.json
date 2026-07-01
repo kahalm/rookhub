@@ -778,9 +778,9 @@
       "offPathWarnHint": "Nakon toliko poteza izvan rješenja (protiv Stockfisha) upozori ako više ne dobivaš jasno (+2). 0 = nikad."
     },
     "offPathWarning": "Možda si ovdje krivo skrenuo — pozicija više nije jasno za tebe. Razmisli o resetu ili predaji.",
-    "anarchyHint1": "En passant je obavezan — ako je en passant moguć, moraš ga odigrati.",
-    "anarchyHint2": "Sjeti se anarchy pravila: dostupan en passant je ovaj potez obavezan.",
-    "anarchyHint3": "Pazi na en passant: ako tvoj pješak može uzeti en passant, to je jedini legalan potez.",
+    "anarchyHint1": "Holy hell! 🇫🇷 En passant je obavezan — ako je en passant na ploči, MORAŠ ga odigrati. Bez iznimke.",
+    "anarchyHint2": "Google en passant. 📖 Tvoj pješak može uzeti en passant, a po svetom anarchy pravilu to je jedini legalan potez.",
+    "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Zgrabi tog pješaka — sve ostalo je ovaj potez ilegalno. Actual zap.",
     "filters": {
       "title": "Filtri",
       "visualization": "Vizualizacija: razina {{level}}",

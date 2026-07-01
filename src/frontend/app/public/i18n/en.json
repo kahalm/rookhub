@@ -780,9 +780,9 @@
       "offPathWarnHint": "After this many moves off the solution (vs. Stockfish), warn if you're no longer clearly winning (+2). 0 = never."
     },
     "offPathWarning": "You may have gone wrong here — the position isn't clearly winning for you anymore. Consider resetting or giving up.",
-    "anarchyHint1": "En passant is forced — if an en passant capture is available, you must play it.",
-    "anarchyHint2": "Remember the anarchy rule: an available en passant capture is mandatory this move.",
-    "anarchyHint3": "Look for en passant: if your pawn can take en passant, that's the only legal move.",
+    "anarchyHint1": "Holy hell! 🇫🇷 En passant is forced — if an en passant capture is on the board, you MUST play it. No exceptions.",
+    "anarchyHint2": "Google en passant. 📖 Your pawn can take en passant, and under the sacred anarchy rule that's the only legal move.",
+    "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Grab that pawn — everything else is illegal this move. Actual zap.",
     "filters": {
       "title": "Filters",
       "visualization": "Visualization: Level {{level}}",

@@ -220,6 +220,15 @@ describe('BasePuzzleSolver Gegnerzug-Pfeil (Crazy = bleibend)', () => {
     discardPeriodicTasks();
   }));
 
+  it('markiert schon den ersten (automatischen) Gegnerzug nach dem Setup', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const s = new ArrowSolver(stockfish);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // Setup e2e4 → soll direkt einen Pfeil setzen
+    tick(600);
+    expect(s.vizOpponentLastMove).toEqual(['e2' as Key, 'e4' as Key]);
+    discardPeriodicTasks();
+  }));
+
   it('setzt im off-Modus (kein Viz/Crazy) keinen Pfeil', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
     const s = new TestSolver(stockfish);   // opponentArrowMode = 'off' (visualizationMode 0)

@@ -267,6 +267,10 @@ export abstract class BasePuzzleSolver {
       this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
       this.onSolvingBegins();
+      // Auch der ERSTE (automatische) Gegnerzug bekommt den Pfeil — genau der Zug, der die
+      // Puzzle-Stellung erzeugt und den der Löser sehen will (v.a. auf dem Crazy-Brett, wo der
+      // Zug kaum erkennbar ist). Vorher nur die Antwortzüge (advanceAfterCorrectMove/opponentRespond).
+      this.showVizOpponentArrow();
       this.moveStartTime = Date.now();
       this.updateBoard();
     }, 600);

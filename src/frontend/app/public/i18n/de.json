@@ -780,9 +780,9 @@
       "offPathWarnHint": "Nach so vielen Zügen abseits der Lösung (gegen Stockfish) warnen, wenn du nicht mehr klar gewinnst (+2). 0 = nie."
     },
     "offPathWarning": "Du bist hier vielleicht falsch abgebogen — die Stellung ist nicht mehr klar für dich. Vielleicht besser zurücksetzen oder aufgeben.",
-    "anarchyHint1": "En passant ist Pflicht — wenn ein En-passant-Schlag möglich ist, musst du ihn spielen.",
-    "anarchyHint2": "Denk an die Anarchy-Regel: Ein verfügbarer En-passant-Schlag ist diesen Zug verpflichtend.",
-    "anarchyHint3": "Achte auf En passant: Kann dein Bauer en passant schlagen, ist das der einzige legale Zug.",
+    "anarchyHint1": "Holy hell! 🇫🇷 En passant ist Pflicht — liegt ein En-passant-Schlag auf dem Brett, MUSST du ihn spielen. Keine Ausnahmen.",
+    "anarchyHint2": "Google en passant. 📖 Dein Bauer kann en passant schlagen, und nach der heiligen Anarchy-Regel ist das der einzige legale Zug.",
+    "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Schnapp dir den Bauern — alles andere ist diesen Zug illegal. Actual zap.",
     "filters": {
       "title": "Filter",
       "visualization": "Visualisierung: Level {{level}}",
