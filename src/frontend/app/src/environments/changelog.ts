@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.13';
+export const APP_VERSION = '0.236.14';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.14", date: "2026-07-01", changes: [
+    { en: "Admin CI page: removed the “Deployed: …” summary line in the header (the yellow per-stack chips). The per-run yellow row highlight for the currently-running build stays.", de: "Admin-CI-Seite: die „Deployt: …“-Zusammenfassungszeile im Kopf (die gelben Chips je Stack) entfernt. Die gelbe Zeilen-Hervorhebung des aktuell laufenden Builds bleibt." },
+  ]},
   { version: "0.236.13", date: "2026-07-01", changes: [
     { en: "CI fix: flaky GithubActionsService test (LogWatcher_FiltersOutTestRuns) that failed the whole build depending on test order. The process-wide static reported-builds cache leaked across test classes (CiBuildReportController test reported a “log-watcher” build → the overview test then appended a duplicate “running” run row → Assert.Single saw 2). Added an internal reset hook cleared before each GithubActionsService test. Product code unchanged.", de: "CI-Fix: flakiger GithubActionsService-Test (LogWatcher_FiltersOutTestRuns), der je nach Testreihenfolge den ganzen Build rot machte. Der prozessweite statische Reported-Builds-Cache leckte über Testklassen hinweg (CiBuildReportController-Test meldete einen „log-watcher“-Build → der Overview-Test hängte dann eine doppelte „laufende“ Run-Zeile an → Assert.Single sah 2). Interner Reset-Hook ergänzt, der vor jedem GithubActionsService-Test geleert wird. Produktcode unverändert." },
   ]},
