@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.233.0';
+export const APP_VERSION = '0.233.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.233.1", date: "2026-07-01", changes: [
+    { en: "Mobile fix: you can scroll the dashboard again while customizing it. In edit mode the whole tile used to be the drag surface, so on a touchscreen every touch started a drag and the page wouldn't scroll. Dragging now only works from a dedicated handle (the ⠿ grip icon on each tile); the rest of the tile scrolls normally, and you can still reorder with the ↑/↓ arrows.", de: "Mobil-Fix: Beim Anpassen des Dashboards lässt sich die Seite wieder scrollen. Im Bearbeitungsmodus war bisher die ganze Kachel die Drag-Fläche, sodass auf dem Touchscreen jede Berührung einen Drag auslöste und die Seite nicht scrollte. Gezogen wird jetzt nur noch am eigenen Griff (das ⠿-Symbol auf jeder Kachel); der Rest der Kachel scrollt normal, und sortieren geht weiterhin auch über die ↑/↓-Pfeile." },
+  ]},
   { version: "0.233.0", date: "2026-07-01", changes: [
     { en: "Admin CI/Actions page shows more per run: the ref (branch like master, or the tag name for tag builds, with a branch/tag icon), the start time, and the run duration (live for in-progress runs). The run title stays a clickable link to the GitHub run.", de: "Admin-CI/Actions-Seite zeigt je Lauf mehr: den Ref (Branch wie master, oder den Tag-Namen bei Tag-Builds, mit Branch-/Tag-Icon), die Startzeit und die Laufzeit (bei laufenden Läufen live). Der Titel bleibt ein klickbarer Link zum GitHub-Lauf." },
   ]},

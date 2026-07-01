@@ -86,10 +86,16 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
           <mat-card cdkDrag [cdkDragDisabled]="!editing"
                     [class.tile-off]="editing && !isEnabled(tile)" [class.tile-editing]="editing">
             @if (editing) {
-              <!-- Transparentes Schild: fängt Klicks auf den Kachel-Buttons ab (keine versehentliche
-                   Navigation) UND ist die Drag-Fläche; die Steuerelemente liegen darüber. -->
-              <div class="tile-shield" cdkDragHandle></div>
+              <!-- Transparentes Schild: fängt NUR Klicks auf den Kachel-Buttons ab (keine
+                   versehentliche Navigation). Bewusst KEIN cdkDragHandle mehr — sonst fängt es
+                   auf dem Handy jede Berührung als Drag ab und die Seite lässt sich nicht scrollen.
+                   Gezogen wird ausschließlich am dedizierten Griff in den Steuerelementen. -->
+              <div class="tile-shield"></div>
               <div class="tile-controls">
+                <button mat-icon-button class="tc-btn tc-drag" cdkDragHandle
+                        [matTooltip]="'dashboard.edit.dragAria' | translate" [attr.aria-label]="'dashboard.edit.dragAria' | translate">
+                  <mat-icon>drag_indicator</mat-icon>
+                </button>
                 <button mat-icon-button class="tc-btn" [disabled]="first" (click)="moveUp(tile)"
                         [matTooltip]="'dashboard.edit.moveUp' | translate" [attr.aria-label]="'dashboard.edit.moveUp' | translate">
                   <mat-icon>arrow_upward</mat-icon>
@@ -156,8 +162,10 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     mat-icon[mat-card-avatar] { font-size: 40px; width: 40px; height: 40px; }
     /* Bearbeitungsmodus: gleiche Rasteransicht, nur Schild + Steuerelemente als Overlay. */
     mat-card.tile-editing { position: relative; }
-    mat-card.tile-editing.cdk-drag { cursor: grab; }
     mat-card.tile-off { opacity: 0.45; }
+    .tile-controls .tc-drag { cursor: grab; }
+    .tile-controls .tc-drag:active { cursor: grabbing; }
+    .cdk-drag-preview .tc-drag { cursor: grabbing; }
     .tile-shield { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
     .tile-controls { position: absolute; top: 4px; right: 4px; z-index: 2; display: flex; gap: 2px;
       background: color-mix(in srgb, var(--mat-sys-surface-container-high, #fff) 88%, transparent);
