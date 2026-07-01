@@ -125,6 +125,48 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReprocessCourses_NonCachedRecentlyFetched_SkippedByBackoff()
+    {
+        // Kurs ist nicht im Cache (truncated → piratechess cachet ihn nicht) UND wurde gerade eben
+        // schon geholt → im Backoff-Fenster überspringen, damit er Chessable nicht erneut flutet.
+        await SeedBookAsync("chessable-u7-999.pgn", 0, null, "chessable");
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = UserId, Bid = "999", CourseName = "X", Target = "book",
+            Status = "completed", CompletedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        var stub = new StubCourseReimporter { ReturnId = 1 }; // CachedBids leer → 999 nicht gecacht
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Empty(stub.Calls);           // NICHT erneut eingereiht
+        Assert.Equal(0, result.Enqueued);
+        Assert.Equal(1, result.Skipped);
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_NonCachedFetchedLongAgo_RetriedAfterBackoff()
+    {
+        // Letzter (erfolgloser) Fetch liegt außerhalb des Backoff-Fensters → erneut versuchen.
+        await SeedBookAsync("chessable-u7-888.pgn", 0, null, "chessable");
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = UserId, Bid = "888", CourseName = "X", Target = "book",
+            Status = "completed", CompletedAt = DateTime.UtcNow.AddHours(-48), CreatedAt = DateTime.UtcNow.AddHours(-48),
+        });
+        await _db.SaveChangesAsync();
+        var stub = new StubCourseReimporter { ReturnId = 1 };
+        var svc = ReprocessTestHelper.Build(_db, stub);
+
+        var result = await svc.ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Enqueued);   // Backoff abgelaufen → wieder versucht
+        Assert.Single(stub.Calls);
+    }
+
+    [Fact]
     public async Task ReprocessCourses_LocalOnly_SkipsBatchCacheFetch()
     {
         // „Aus Cache"-Knopf (localOnly) reiht keine Chessable-Re-Fetches ein → kein Batch-Cache-Abruf nötig.

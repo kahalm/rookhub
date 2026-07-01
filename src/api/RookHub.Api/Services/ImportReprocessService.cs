@@ -42,6 +42,12 @@ public partial class ImportReprocessService
     private readonly ICourseReimporter _chessableImport;
     private readonly ILogger<ImportReprocessService> _logger;
 
+    /// <summary>Wie lange ein nicht-cachebarer (truncated) Kurs nach einem erfolglosen Re-Fetch im
+    /// automatischen Massen-Reprocess übersprungen wird, bevor er erneut versucht wird. Ein solcher
+    /// Kurs wird von piratechess nicht gecacht und würde sonst bei JEDEM „Update all" komplett neu von
+    /// Chessable geholt (Hunderte Line-Fetches → Block-Risiko). Ein gezielter Admin-Re-Import umgeht das.</summary>
+    private static readonly TimeSpan IncompleteRefetchBackoff = TimeSpan.FromHours(24);
+
     public ImportReprocessService(
         AppDbContext db,
         PgnImportService pgnImport,
@@ -114,6 +120,25 @@ public partial class ImportReprocessService
                 // Pipeline-Daten ([%info]/[%alt] …) NICHT, ein lokales Reprocess würde sie nicht
                 // setzen, aber die Version hochmarkieren (still falsch) — daher VOR dem SourcePgn-Pfad.
                 if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
+
+                // Backoff für nicht-cachebare Kurse: ist der Kurs NICHT im Cache, holt der Re-Fetch ihn
+                // komplett neu von Chessable. Kam er beim letzten Versuch truncated an (piratechess cachet
+                // ihn dann nicht → weiterhin nicht im Cache) UND liegt dieser Versuch noch im Backoff-Fenster,
+                // jetzt überspringen — sonst flutet derselbe kaputte Kurs Chessable bei jedem „Update all".
+                if (cachedBids != null && !cachedBids.Contains(bid))
+                {
+                    var lastDone = await _db.ChessableImports
+                        .Where(i => i.Bid == bid && i.Status == "completed" && i.CompletedAt != null)
+                        .OrderByDescending(i => i.CompletedAt)
+                        .Select(i => i.CompletedAt)
+                        .FirstOrDefaultAsync(CancellationToken.None);
+                    if (lastDone.HasValue && lastDone.Value > DateTime.UtcNow - IncompleteRefetchBackoff)
+                    {
+                        result.Skipped++;
+                        continue; // kürzlich erfolglos geholt → im Backoff-Fenster nicht erneut fluten
+                    }
+                }
+
                 var ownerId = book.OwnerUserId ?? userId;
                 var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName,
                     knownCached: cachedBids?.Contains(bid), ct: CancellationToken.None);

@@ -107,6 +107,12 @@ public class ChessableImportService : ICourseReimporter
         // (ImportVersion 0 = sofort „stale") und es per /reprocess re-fetchen; für gecachte Kurse liefert
         // piratechess den Inhalt ohne Eigentumsprüfung. Der Check hier schließt diese zweite Tür.
         if (!await OwnerHasCourseAsync(cred, bid, ct)) return null;
+        // Dedup: läuft/pausiert für diesen (Owner, bid) bereits ein Import, KEINEN zweiten anlegen.
+        // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
+        // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
+        if (await _db.ChessableImports.AnyAsync(
+                x => x.UserId == ownerUserId && x.Bid == bid && (x.Status == "running" || x.Status == "paused"), ct))
+            return null;
         var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == "running", ct);
         var import = new ChessableImport
         {

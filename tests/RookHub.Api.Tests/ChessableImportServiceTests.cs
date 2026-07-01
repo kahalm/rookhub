@@ -642,6 +642,34 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EnqueueReimport_ImportAlreadyRunning_SkipsSecond()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"128648\",\"name\":\"Mine\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        // Es läuft bereits ein Import für genau diesen Kurs.
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            UserId = user.Id, Bid = "128648", CourseName = "Mine", Target = "repertoire",
+            Status = "running", CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "128648", "repertoire", "Mine");
+
+        Assert.Null(id); // Dedup → kein zweiter Import
+        Assert.Equal(1, await _db.ChessableImports.CountAsync(i => i.Bid == "128648" && i.UserId == user.Id));
+    }
+
+    [Fact]
     public async Task EnqueueReimport_CourseNotInOwnerLibrary_ReturnsNull_NoImport()
     {
         var user = new AppUser { Username = "u", PasswordHash = "h" };

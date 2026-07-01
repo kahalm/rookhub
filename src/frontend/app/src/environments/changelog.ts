@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.221.0';
+export const APP_VERSION = '0.222.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.222.0", date: "2026-07-01", changes: [
+    { en: "Course re-fetches no longer flood Chessable. Two protections: (1) a course that's already being fetched won't be enqueued a second time, so clicking “Update all” again (or a retry) can't fire off duplicate downloads of the same course. (2) A course that comes back truncated can't be cached, so it would otherwise be fully re-downloaded from Chessable on every “Update all”; such a course is now skipped for 24h after an unsuccessful fetch instead of being hammered every time. (A targeted admin re-import still forces an immediate fetch.)", de: "Kurs-Re-Fetches fluten Chessable nicht mehr. Zwei Schutzmechanismen: (1) Ein Kurs, der bereits geholt wird, wird kein zweites Mal eingereiht — ein erneuter „Alle aktualisieren“-Klick (oder ein Retry) löst also keine doppelten Downloads desselben Kurses mehr aus. (2) Ein Kurs, der truncated ankommt, lässt sich nicht cachen und würde sonst bei jedem „Alle aktualisieren“ komplett neu von Chessable geladen; ein solcher Kurs wird nach einem erfolglosen Fetch jetzt 24 h übersprungen, statt jedes Mal erneut gehämmert zu werden. (Ein gezielter Admin-Re-Import erzwingt weiterhin einen sofortigen Fetch.)" },
+  ]},
   { version: "0.221.0", date: "2026-07-01", changes: [
     { en: "“Update all” for courses is now robust and fast. Previously, enqueueing the re-fetch jobs ran synchronously inside the request and did one expensive per-course cache lookup — so it was slow, and if you clicked Update and then switched pages, the browser closed the connection and enqueueing stopped after only ~20 courses. Now the cached-course set is fetched once in a single batch call, and enqueueing no longer aborts when you navigate away, so all stale courses reliably land in the queue.", de: "„Alle aktualisieren“ für Kurse ist jetzt robust und schnell. Vorher lief das Einreihen der Re-Fetch-Jobs synchron im Request und machte pro Kurs einen teuren Einzel-Cache-Check — also langsam, und wenn man nach dem Klick die Seite wechselte, schloss der Browser die Verbindung und das Einreihen brach nach ~20 Kursen ab. Jetzt wird die Menge der gecachten Kurse einmal per Batch-Abruf geholt, und das Einreihen bricht beim Wegnavigieren nicht mehr ab — alle veralteten Kurse landen zuverlässig in der Warteschlange." },
     { en: "Fully-cached courses now update even when the Chessable bearer is blocked. A dead/banned bearer previously paused every re-fetch for that user; but a fully-cached course is served from the local cache with no Chessable request, so it no longer needs a live bearer and updates normally.", de: "Voll-gecachte Kurse aktualisieren jetzt auch bei gesperrtem Chessable-Bearer. Ein toter/gesperrter Bearer pausierte bisher jeden Re-Fetch dieses Users; ein voll-gecachter Kurs kommt aber ohne Chessable-Abruf aus dem lokalen Cache und braucht daher keinen lebenden Bearer mehr — er aktualisiert normal." },
