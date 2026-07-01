@@ -72,28 +72,21 @@ describe('RepertoireTrainerComponent auto-advance', () => {
     expect(c.index).toBe(1);
   }));
 
-  it('wrong move stays visible briefly, then reverts but keeps manual continue', fakeAsync(() => {
+  it('wrong move reverts immediately and stays retryable without mouseslip', () => {
     const c = make();
     const startFen = c.fen;
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
     expect(c.outcome).toBe('wrong');
     expect(c.phase).toBe('FEEDBACK');
-    expect(c.lastMove).toEqual(['g1', 'f3'] as any);   // Zug zunächst sichtbar
-    expect(c.fen).not.toBe(startFen);
-    expect(c.wrongRevealed).toBeFalse();    // erst nach „Lösung zeigen" enthüllt
-    expect(c.wrong).toBe(0);                 // wrong-Zähler erst beim Show
-    tick(1000);                              // WRONG_HOLD_MS → Zug zurückgenommen
-    expect(c.fen).toBe(startFen);
-    expect(c.lastMove).toBeUndefined();
-    expect(c.phase).toBe('FEEDBACK');        // Buttons bleiben
-    tick(3000);
-    expect(c.index).toBe(0);   // bleibt stehen bis „Weiter"
-    expect(c.phase).toBe('FEEDBACK');
-    c.onPlayClick();           // Klick darf bei „falsch" NICHT überspringen
-    expect(c.index).toBe(0);
-    c.next();
-    expect(c.index).toBe(1);
-  }));
+    expect(c.lastMove).toEqual(['g1', 'f3'] as any);   // Versuch markiert
+    expect(c.fen).toBe(startFen);                        // Zug SOFORT zurückgenommen (kein Warten)
+    expect(c.wrongRevealed).toBeFalse();
+    expect(c.wrong).toBe(0);                             // Fehler erst beim „Lösung zeigen"
+    // Direkt erneut ziehen (ohne „Mausrutscher"): richtiger Zug wird normal gewertet, kein Fehler.
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.wrong).toBe(0);
+  });
 
   it('mouseslip after wrong move: no penalty, return to PLAYING', () => {
     const c = make();
@@ -106,13 +99,17 @@ describe('RepertoireTrainerComponent auto-advance', () => {
     expect(c.queue.length).toBe(queueLenBefore);   // KEIN Re-Queue der Karte
   });
 
-  it('showSolution after wrong move: counts as wrong + reveal + re-queue', () => {
+  it('showSolution after wrong move: counts as wrong + reveal + re-queue + plays the move on the board', () => {
     const c = make();
+    const startFen = c.fen;
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
     const queueLenBefore = c.queue.length;
     c.showSolution();
     expect(c.wrongRevealed).toBeTrue();
     expect(c.wrong).toBe(1);
     expect(c.queue.length).toBe(queueLenBefore + 1);
+    // Der korrekte Zug (e4) wird auf dem Brett gespielt + markiert.
+    expect(c.fen).not.toBe(startFen);
+    expect(c.lastMove).toEqual(['e2', 'e4'] as any);
   });
 });

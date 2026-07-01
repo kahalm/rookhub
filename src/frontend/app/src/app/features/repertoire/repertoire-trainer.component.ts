@@ -68,7 +68,7 @@ const WRONG_HOLD_MS = 1000;
       <app-puzzle-board
         [fen]="fen" [orientation]="color === 'w' ? 'white' : 'black'"
         [turnColor]="color === 'w' ? 'white' : 'black'"
-        [dests]="dests" [lastMove]="lastMove" [viewOnly]="phase === 'FEEDBACK'"
+        [dests]="dests" [lastMove]="lastMove" [viewOnly]="phase === 'FEEDBACK' && !(outcome === 'wrong' && !wrongRevealed)"
         [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
         (moveMade)="onMove($event)">
       </app-puzzle-board>
@@ -101,9 +101,6 @@ const WRONG_HOLD_MS = 1000;
               <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
             </p>
             <div class="wrong-actions" *ngIf="!wrongRevealed">
-              <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
-                <mat-icon>undo</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
-              </button>
               <button mat-raised-button color="primary" (click)="showSolution(); $event.stopPropagation()">
                 <mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.showSolution' | translate }}
               </button>
@@ -285,7 +282,18 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     const card = this.current;
-    if (!card || this.phase !== 'PLAYING') return;
+    if (!card) return;
+    // Nach einem falschen Zug (noch nicht „Lösung zeigen") bleibt das Brett spielbar → der Spieler
+    // kann SOFORT erneut ziehen, ohne vorher „Mausrutscher" klicken zu müssen. Dann den alten
+    // wrong-Zustand verwerfen und den neuen Zug als frischen Versuch derselben Karte werten.
+    const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
+    if (this.phase !== 'PLAYING' && !wrongRetry) return;
+    if (wrongRetry) {
+      this.clearWrongRevert();
+      this.pendingWrongReview = null;
+      this.wrongMove = null;
+      this.evalLoading = false; this.evalDeltaPawns = null; this.evalMateNote = null; this.evalEpoch++;
+    }
 
     this.startFen = this.fen;   // Ausgangsstellung der Karte (für späteres Zurücknehmen)
     let san = '';
@@ -314,9 +322,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.fen = fenAfterPlayerMove;
     } else {
       this.outcome = 'wrong'; grade = 0;   // wrong-Counter erst beim „Lösung zeigen"
-      // Falschen Zug ebenfalls erst sichtbar stehen lassen (statt sofort zurückspringen);
-      // wird nach WRONG_HOLD_MS zurückgenommen, Buttons bleiben.
-      this.fen = fenAfterPlayerMove;
+      // Falschen Zug SOFORT zurücknehmen (Brett zurück auf die Ausgangsstellung), damit der Spieler
+      // ohne Umweg direkt erneut ziehen kann; der Versuch bleibt als lastMove-Markierung sichtbar.
+      this.fen = this.startFen;
+      this.lastMove = [ev.orig, ev.dest];
     }
 
     this.expectedDisplay = card.expected;
@@ -325,13 +334,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
     if (this.outcome === 'wrong') {
       // Falsche Karte: noch KEIN Review senden, noch KEIN Re-Queue — erst wenn der Spieler
-      // „Lösung zeigen" wählt. Bei „Mouseslip" wird nichts gewertet (Tippfehler-Toleranz).
+      // „Lösung zeigen" wählt. Ein sofortiger neuer Zug (Retry) zählt nicht als Fehler.
       this.wrongMove = { orig: ev.orig, dest: ev.dest, promotion: ev.promotion };
       this.pendingWrongReview = () =>
         this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade: 0 })
           .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
       this.kickOffEvalCompare(card, fenAfterPlayerMove);
-      this.scheduleWrongRevert();
+      // Brett bleibt spielbar (Retry ohne „Mausrutscher"): Zugmöglichkeiten aus der Ausgangsstellung.
+      try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
     } else {
       this.training.review(this.repertoireId, { cardKey: card.cardKey, expectedMove: card.expected, grade })
         .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
@@ -366,14 +376,27 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** „Lösung zeigen": wertet die Karte jetzt als falsch (Server-Review + Re-Queue) und enthüllt den Zug. */
+  /** „Lösung zeigen": wertet die Karte jetzt als falsch (Server-Review + Re-Queue), SPIELT den
+   *  richtigen Zug auf dem Brett (sichtbar + markiert) und enthüllt ihn im Text. */
   showSolution(): void {
     if (this.wrongRevealed) return;
     this.clearWrongRevert();
     this.wrongRevealed = true;
     this.wrong++;
     const card = this.current;
-    if (card) this.queue.push(card);
+    if (card) {
+      // Erwarteten Zug ab der Ausgangsstellung spielen → Brett zeigt den korrekten Zug + Markierung.
+      try {
+        const c = new Chess(this.startFen);
+        const mv = c.move(card.expected);
+        if (mv) {
+          this.fen = c.fen();
+          this.lastMove = [mv.from as Key, mv.to as Key];
+          this.dests = new Map();   // Brett gesperrt bis „Weiter"
+        }
+      } catch { /* SAN nicht spielbar → nur Text-Reveal */ }
+      this.queue.push(card);
+    }
     this.pendingWrongReview?.();
     this.pendingWrongReview = null;
     this.cdr.markForCheck();

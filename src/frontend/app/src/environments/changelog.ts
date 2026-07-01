@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.3';
+export const APP_VERSION = '0.236.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.4", date: "2026-07-01", changes: [
+    { en: "Repertoire trainer, wrong move: (1) “Show solution” now actually plays the correct move on the board (highlighted), not just naming it in the text. (2) After a wrong move you can immediately try again by just making another move — the wrong move is taken back at once and the board stays playable, no “mouse-slip” click needed first.", de: "Repertoire-Trainer, falscher Zug: (1) „Lösung zeigen“ spielt den richtigen Zug jetzt tatsächlich auf dem Brett (markiert), statt ihn nur im Text zu nennen. (2) Nach einem falschen Zug kann man sofort erneut ziehen — der falsche Zug wird gleich zurückgenommen und das Brett bleibt spielbar, kein „Mausrutscher“-Klick mehr nötig." },
+  ]},
   { version: "0.236.3", date: "2026-07-01", changes: [
     { en: "Admin course download: new “Hide loaded courses” toggle that hides courses already imported as a repertoire or book, so the list only shows what's still to load.", de: "Admin-Kursdownload: neuer Schalter „Geladene Kurse ausblenden“ — versteckt Kurse, die bereits als Repertoire oder Buch importiert wurden, sodass die Liste nur noch das Offene zeigt." },
   ]},
