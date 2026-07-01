@@ -1240,7 +1240,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Letzte 5 Läufe je Repo · aktualisiert alle 5 s",
+      "subtitle": "Letzte 5 Läufe je Repo · aktualisiert alle 2 min (👁 klicken = Repo alle 10 s beobachten)",
       "updated": "Stand",
       "runningBuild": "laufender Build",
       "live": "läuft",
@@ -1255,7 +1255,9 @@
       "etaUnknown": "läuft…",
       "etaTooltip": "Geschätztes Ende — mittlere Laufzeit der letzten Läufe minus bereits verstrichene Zeit.",
       "deployed": "Deployt",
-      "deployedTooltip": "Der Build (Lauf), der das aktuell laufende Image des jeweiligen Stacks erzeugt hat."
+      "deployedTooltip": "Der Build (Lauf), der das aktuell laufende Image des jeweiligen Stacks erzeugt hat.",
+      "watchStart": "Genau beobachten: dieses Repo eine Minute lang alle 10 s prüfen (bzw. bis die laufende Aktion fertig ist)",
+      "watchStop": "Beobachtung beenden (zurück zur 2-Minuten-Prüfung)"
     },
     "users": {
       "searchLabel": "User suchen",

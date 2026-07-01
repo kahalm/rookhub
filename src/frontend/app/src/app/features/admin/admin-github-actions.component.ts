@@ -67,6 +67,11 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
             <section class="repo-card">
               <div class="repo-title">
                 <mat-icon>code</mat-icon>{{ repo.repo }}
+                <button class="watch-btn" [class.watching]="isWatching(repo.repo)"
+                        (click)="toggleWatch(repo.repo, $event)"
+                        [matTooltip]="(isWatching(repo.repo) ? 'admin.ci.watchStop' : 'admin.ci.watchStart') | translate">
+                  <mat-icon>{{ isWatching(repo.repo) ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
                 @if (repo.error) { <span class="repo-error">{{ repo.error }}</span> }
               </div>
               @if (repo.runs.length === 0 && !repo.error) {
@@ -120,6 +125,14 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .repo-title { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; }
     .repo-title mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.6; }
     .repo-error { color: #e53935; font-size: 0.78rem; font-weight: 400; }
+    /* 👁 „beobachten"-Knopf je Repo: schaltet den 10-s-Schnell-Poll für dieses eine Repo ein. */
+    .watch-btn { display: inline-flex; align-items: center; justify-content: center; border: none; background: none;
+      cursor: pointer; padding: 2px; border-radius: 6px; color: inherit; opacity: 0.55; line-height: 0; }
+    .watch-btn:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .watch-btn mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 1; }
+    .watch-btn.watching { opacity: 1; color: #1565c0; }   /* aktiv = blau (baut/schnell-poll) */
+    @keyframes watch-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .watch-btn.watching mat-icon { animation: watch-pulse 1.4s ease-in-out infinite; }
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
@@ -162,6 +175,18 @@ export class AdminGithubActionsComponent implements OnInit {
   /** Aktuell laufende CI-Builds mit geschätzter Restzeit (Mittel der letzten abgeschlossenen Läufe). */
   running: { repo: string; remaining: number | null }[] = [];
 
+  /** Normaler Voll-Abruf-Takt (alle Repos). */
+  private static readonly NORMAL_MS = 120_000;   // 2 min
+  /** „👁 beobachten"-Schnell-Takt (nur das beobachtete Repo). */
+  private static readonly WATCH_MS = 10_000;     // 10 s
+  /** Basis-Beobachtungsfenster ab Klick. */
+  private static readonly WATCH_WINDOW_MS = 60_000;   // 1 min
+  /** Läuft im beobachteten Repo eine Aktion, wird das Fenster rollend so lange verlängert. */
+  private static readonly WATCH_RUNNING_EXTEND_MS = 15_000;
+
+  /** Repo → Zeitpunkt (ms), bis zu dem es schnell beobachtet wird. Leere Map = normaler 2-min-Takt. */
+  private watchUntil: Record<string, number> = {};
+
   ngOnInit(): void {
     // Commit-SHA + Ref des laufenden Builds einmalig laden (fehlt bei alten Images/dev → kein Marker).
     this.http.get<{ sha: string; ref?: string }>('/build-info.json').pipe(catchError(() => of(null))).subscribe(info => {
@@ -171,8 +196,8 @@ export class AdminGithubActionsComponent implements OnInit {
       this.buildRef = ref ? ref : null;
     });
 
-    // Sofort + danach alle 5 s neu laden, solange der Tab (und damit diese Komponente) lebt.
-    timer(0, 5000).pipe(
+    // Normaler Voll-Abruf: sofort + danach alle 2 min (schont das GitHub-Rate-Limit).
+    timer(0, AdminGithubActionsComponent.NORMAL_MS).pipe(
       switchMap(() => this.http.get<CiOverview>('/api/admin/ci/runs').pipe(catchError(() => of(null)))),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(data => {
@@ -180,6 +205,10 @@ export class AdminGithubActionsComponent implements OnInit {
       if (data) { this.overview = data; this.lastUpdated = new Date(); }
       this.recomputeEta();
     });
+
+    // „👁 beobachten"-Schnell-Poll: alle 10 s NUR die aktiv beobachteten Repos einzeln frisch abrufen.
+    timer(AdminGithubActionsComponent.WATCH_MS, AdminGithubActionsComponent.WATCH_MS)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.watchTick());
 
     // 1-s-Takt für den Live-Countdown der ETA (Daten selbst kommen alle 5 s).
     timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -215,6 +244,55 @@ export class AdminGithubActionsComponent implements OnInit {
       }
     }
     this.running = eta;
+  }
+
+  /** Läuft in diesem Repo gerade eine Aktion (nicht abgeschlossener Run)? */
+  private repoRunning(repo: string): boolean {
+    return this.overview?.repos.find(r => r.repo === repo)?.runs.some(run => run.status !== 'completed') ?? false;
+  }
+
+  /** Wird dieses Repo aktuell schnell beobachtet? (steuert das 👁-Icon) */
+  isWatching(repo: string): boolean {
+    const until = this.watchUntil[repo];
+    return until != null && (until > Date.now() || this.repoRunning(repo));
+  }
+
+  /** 👁 klicken: Beobachtung für dieses Repo starten (10 s, 1 min lang; bei laufender Aktion bis zu deren
+   *  Ende) bzw. wieder ausschalten. Beim Einschalten sofort einmal frisch abrufen. */
+  toggleWatch(repo: string, ev: Event): void {
+    ev.preventDefault(); ev.stopPropagation();
+    if (this.isWatching(repo)) { delete this.watchUntil[repo]; return; }
+    this.watchUntil[repo] = Date.now() + AdminGithubActionsComponent.WATCH_WINDOW_MS;
+    this.loadRepo(repo);
+  }
+
+  /** 10-s-Takt: jedes aktiv beobachtete Repo einzeln frisch abrufen; Fenster bei laufender Aktion
+   *  rollend verlängern (= „bis zum Ende der Aktion"), sonst nach Ablauf beenden. */
+  private watchTick(): void {
+    const now = Date.now();
+    for (const repo of Object.keys(this.watchUntil)) {
+      const inWindow = this.watchUntil[repo] > now;
+      const running = this.repoRunning(repo);
+      if (inWindow || running) {
+        this.loadRepo(repo);
+        if (running) this.watchUntil[repo] = now + AdminGithubActionsComponent.WATCH_RUNNING_EXTEND_MS;
+      } else {
+        delete this.watchUntil[repo];   // Fenster abgelaufen + keine Aktion → Beobachtung stoppen
+      }
+    }
+  }
+
+  /** Ein einzelnes Repo frisch abrufen (ungecacht) und in die Übersicht einmergen. */
+  private loadRepo(repo: string): void {
+    this.http.get<CiRepo>(`/api/admin/ci/runs/${encodeURIComponent(repo)}`)
+      .pipe(catchError(() => of(null)))
+      .subscribe(dto => {
+        if (!dto || !this.overview) return;
+        const i = this.overview.repos.findIndex(r => r.repo === dto.repo);
+        if (i >= 0) this.overview.repos[i] = dto;
+        this.lastUpdated = new Date();
+        this.recomputeEta();
+      });
   }
 
   /** Kompakte Dauer „2m 5s" / „45s" für die ETA-Anzeige. */

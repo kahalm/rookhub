@@ -106,24 +106,43 @@ public class GithubActionsService
         var running = buildInfoTask.Result;
         var results = new List<CiRepoDto>();
         foreach (var r in runsTask.Result)
-        {
-            var repoDto = r;
-            if (running.TryGetValue(r.Repo, out var bi) && (bi.Sha is { Length: > 0 } || bi.Ref is { Length: > 0 }))
-            {
-                repoDto = r with { RunningSha = bi.Sha, RunningRef = bi.Ref };
-                // Läuft der Build, ist aber NICHT unter den (Top-5-)Runs → gezielt per head_sha nachladen
-                // und als zusätzliche (6.) Zeile anhängen, damit man immer sieht, was gerade läuft.
-                if (repoDto.Error is null && bi.Sha is { Length: > 0 }
-                    && !repoDto.Runs.Any(run => RunMatchesBuild(run, bi)))
-                {
-                    var extra = await FetchRunByShaAsync(owner, r.Repo, token, bi, ct);
-                    if (extra != null)
-                        repoDto = repoDto with { Runs = repoDto.Runs.Append(extra).ToList() };
-                }
-            }
-            results.Add(repoDto);
-        }
+            results.Add(await MergeRunningAsync(r, running, owner, token, ct));
         return new CiOverviewDto(true, results, DateTime.UtcNow);
+    }
+
+    /// <summary>Reichert einen Repo-DTO um die laufende Build-SHA/Ref an und lädt — falls der laufende
+    /// Build aus den Top-5 herausgefallen ist — den Run gezielt per head_sha als 6. Zeile nach.</summary>
+    private async Task<CiRepoDto> MergeRunningAsync(CiRepoDto r, IReadOnlyDictionary<string, BuildInfo> running,
+        string owner, string token, CancellationToken ct)
+    {
+        if (!running.TryGetValue(r.Repo, out var bi) || (bi.Sha is not { Length: > 0 } && bi.Ref is not { Length: > 0 }))
+            return r;
+        var repoDto = r with { RunningSha = bi.Sha, RunningRef = bi.Ref };
+        if (repoDto.Error is null && bi.Sha is { Length: > 0 }
+            && !repoDto.Runs.Any(run => RunMatchesBuild(run, bi)))
+        {
+            var extra = await FetchRunByShaAsync(owner, r.Repo, token, bi, ct);
+            if (extra != null)
+                repoDto = repoDto with { Runs = repoDto.Runs.Append(extra).ToList() };
+        }
+        return repoDto;
+    }
+
+    /// <summary>Läuft/deploy-Status EINES Repos frisch abrufen (für den „👁 beobachten"-Schnell-Poll der
+    /// Admin-CI-Seite — 10 s statt 2 min, nur für dieses Repo, ungecacht). null = kein Token oder Repo
+    /// nicht in der konfigurierten Liste (kein beliebiger Abruf).</summary>
+    public async Task<CiRepoDto?> GetRepoAsync(string repo, CancellationToken ct = default)
+    {
+        var token = _config["GitHub:Token"];
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var owner = _config["GitHub:Owner"];
+        if (string.IsNullOrWhiteSpace(owner)) owner = "kahalm";
+        var repos = _config.GetSection("GitHub:Repos").Get<string[]>() is { Length: > 0 } cfg ? cfg : DefaultRepos;
+        if (!repos.Contains(repo, StringComparer.OrdinalIgnoreCase)) return null;
+
+        var running = await ResolveRunningBuildsAsync(ct);
+        var r = await FetchRepoAsync(owner, repo, token, ct);
+        return await MergeRunningAsync(r, running, owner, token, ct);
     }
 
     /// <summary>Passt ein Run zur laufenden Build-Info? SHA-Präfix-tolerant + Ref (falls gemeldet).</summary>

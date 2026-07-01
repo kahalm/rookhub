@@ -18,6 +18,16 @@ public class CiController : BaseApiController
     [HttpGet("runs")]
     public async Task<ActionResult<CiOverviewDto>> Runs(CancellationToken ct)
         => Ok(await _github.GetOverviewAsync(ct));
+
+    /// <summary>Ein einzelnes Repo frisch (ungecacht) — für den „👁 beobachten"-Schnell-Poll (10 s) der
+    /// CI-Seite, damit nur DIESES Repo häufig abgefragt wird statt der ganzen Übersicht. 404 bei
+    /// unbekanntem Repo / fehlendem Token.</summary>
+    [HttpGet("runs/{repo}")]
+    public async Task<ActionResult<CiRepoDto>> Repo(string repo, CancellationToken ct)
+    {
+        var dto = await _github.GetRepoAsync(repo, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
 }
 
 /// <summary>Service-to-service-Endpoint (kein Admin): ein Stack, den rookhub nicht per HTTP erreichen

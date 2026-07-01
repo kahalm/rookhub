@@ -1238,7 +1238,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Zadnjih 5 izvođenja po repozitoriju · osvježava se svakih 5 s",
+      "subtitle": "Zadnjih 5 izvođenja po repozitoriju · osvježava se svake 2 min (👁 = prati repo svakih 10 s)",
       "updated": "stanje",
       "runningBuild": "aktivni build",
       "live": "aktivno",
@@ -1251,7 +1251,11 @@
       "etaIn": "gotovo za ~{{time}}",
       "etaSoon": "samo što nije…",
       "etaUnknown": "u tijeku…",
-      "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme."
+      "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme.",
+      "deployed": "Deployano",
+      "deployedTooltip": "Build (izvođenje) koji je izgradio trenutno pokrenutu sliku svakog stacka.",
+      "watchStart": "Pomno prati: provjeravaj ovaj repozitorij svakih 10 s jednu minutu (ili dok tekuća akcija ne završi)",
+      "watchStop": "Prekini praćenje (natrag na provjeru svake 2 minute)"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",

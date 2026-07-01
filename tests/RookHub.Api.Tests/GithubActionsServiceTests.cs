@@ -184,6 +184,28 @@ public class GithubActionsServiceTests
         Assert.Equal("Build & Push Docker Image", run.Name);
     }
 
+    [Fact]
+    public async Task GetRepoAsync_UnknownRepo_ReturnsNull()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));
+        var svc = Build(handler);   // nur "rookhub" konfiguriert
+        Assert.Null(await svc.GetRepoAsync("some-other-repo"));   // kein beliebiger Abruf
+    }
+
+    [Fact]
+    public async Task GetRepoAsync_ConfiguredRepo_ReturnsFreshSingleRepo()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));
+        var svc = Build(handler);
+
+        var repo = await svc.GetRepoAsync("rookhub");
+
+        Assert.NotNull(repo);
+        Assert.Equal("rookhub", repo!.Repo);
+        Assert.Null(repo.Error);
+        Assert.Equal("CI", Assert.Single(repo.Runs).Name);
+    }
+
     private static HttpResponseMessage Json(string body)
         => new(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
 

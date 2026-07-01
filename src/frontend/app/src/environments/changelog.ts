@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.14';
+export const APP_VERSION = '0.236.15';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.15", date: "2026-07-01", changes: [
+    { en: "Admin CI page: the normal auto-refresh is now every 2 minutes (was 5s) to stay well under GitHub's API rate limit. Each repo has an 👁 eye button — click it to watch that one repo closely (every 10s for a minute, and until the running action finishes if one is in progress); only that repo is polled, not the whole overview.", de: "Admin-CI-Seite: die normale Aktualisierung läuft jetzt alle 2 Minuten (vorher 5 s), damit das GitHub-API-Rate-Limit nicht mehr reißt. Jedes Repo hat einen 👁-Knopf — Klick beobachtet dieses eine Repo engmaschig (alle 10 s, eine Minute lang, und bei laufender Aktion bis zu deren Ende); dabei wird nur dieses Repo abgefragt, nicht die ganze Übersicht." },
+  ]},
   { version: "0.236.14", date: "2026-07-01", changes: [
     { en: "Admin CI page: removed the “Deployed: …” summary line in the header (the yellow per-stack chips). The per-run yellow row highlight for the currently-running build stays.", de: "Admin-CI-Seite: die „Deployt: …“-Zusammenfassungszeile im Kopf (die gelben Chips je Stack) entfernt. Die gelbe Zeilen-Hervorhebung des aktuell laufenden Builds bleibt." },
   ]},

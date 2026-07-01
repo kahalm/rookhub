@@ -1240,7 +1240,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Last 5 runs per repo · auto-refresh every 5s",
+      "subtitle": "Last 5 runs per repo · auto-refresh every 2 min (click 👁 to watch a repo every 10s)",
       "updated": "updated",
       "runningBuild": "running build",
       "live": "live",
@@ -1255,7 +1255,9 @@
       "etaUnknown": "running…",
       "etaTooltip": "Estimated completion — the average duration of the recent runs minus the time already elapsed.",
       "deployed": "Deployed",
-      "deployedTooltip": "The build (run) that produced each stack's currently running image."
+      "deployedTooltip": "The build (run) that produced each stack's currently running image.",
+      "watchStart": "Watch closely: check this repo every 10s for a minute (or until the running action finishes)",
+      "watchStop": "Stop watching (back to the 2-minute check)"
     },
     "users": {
       "searchLabel": "Search users",
