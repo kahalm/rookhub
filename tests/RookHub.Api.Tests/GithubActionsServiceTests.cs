@@ -1,7 +1,9 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -17,7 +19,8 @@ public class GithubActionsServiceTests
     // nicht in den Overview-Tests eine 2. („nachgeladene") Run-Zeile erzeugt.
     public GithubActionsServiceTests()
     {
-        GithubActionsService.ResetReportedBuildsForTests();
+        // Reported-Builds sind jetzt persistent (DB, je Test frische InMemory-DB) → kein statischer
+        // Reset mehr nötig. Der Push-Runs-Cache (_pushedRuns) bleibt statisch → weiterhin leeren.
         GithubActionsService.ResetPushedRunsForTests();
     }
 
@@ -30,7 +33,8 @@ public class GithubActionsServiceTests
     """;
 
     private static GithubActionsService Build(StubHandler handler, bool withToken = true,
-        IDictionary<string, string?>? extraSettings = null, HttpMessageHandler? buildInfoHandler = null)
+        IDictionary<string, string?>? extraSettings = null, HttpMessageHandler? buildInfoHandler = null,
+        AppDbContext? db = null)
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.github.com/") };
         var settings = new Dictionary<string, string?>
@@ -42,8 +46,10 @@ public class GithubActionsServiceTests
         if (extraSettings != null) foreach (var kv in extraSettings) settings[kv.Key] = kv.Value;
         var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
         var factory = new StubHttpClientFactory(buildInfoHandler ?? new StubHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound)));
+        db ??= new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         return new GithubActionsService(http, factory, config, new MemoryCache(new MemoryCacheOptions()),
-            NullLogger<GithubActionsService>.Instance);
+            NullLogger<GithubActionsService>.Instance, db);
     }
 
     [Fact]
@@ -142,11 +148,32 @@ public class GithubActionsServiceTests
             ["GitHub:Repos:0"] = "chessresults_crawler",
         });
         // Stack meldet seine laufende SHA/Ref per Push (rookhub kann ihn nicht pollen).
-        svc.ReportBuild("chessresults_crawler", "abc1234def5678", "master");
+        await svc.ReportBuildAsync("chessresults_crawler", "abc1234def5678", "master");
 
         var res = await svc.GetOverviewAsync();
 
         var repo = Assert.Single(res.Repos);
+        Assert.Equal("abc1234def5678", repo.RunningSha);
+        Assert.Equal("master", repo.RunningRef);
+    }
+
+    [Fact]
+    public async Task ReportedBuild_PersistsAcrossServiceInstances()
+    {
+        // Persistenz-Kern: ein gemeldeter Build überlebt einen rookhub-api-Neustart. Simuliert über eine
+        // GETEILTE (Name-gleiche) InMemory-DB: Instanz 1 meldet, eine FRISCHE Instanz 2 (neuer Prozess/
+        // Restart) liest ihn aus der DB — ohne dass der Stack erneut pushen muss.
+        var dbName = Guid.NewGuid().ToString();
+        AppDbContext NewDb() => new(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName).Options);
+        var settings = new Dictionary<string, string?> { ["GitHub:Repos:0"] = "chessresults_crawler" };
+
+        var svc1 = Build(new StubHandler((_, _) => Json(RunsJson)), extraSettings: settings, db: NewDb());
+        await svc1.ReportBuildAsync("chessresults_crawler", "abc1234def5678", "master");
+
+        // „Neustart": komplett neue Service- + DbContext-Instanz auf derselben persistenten DB.
+        var svc2 = Build(new StubHandler((_, _) => Json(RunsJson)), extraSettings: settings, db: NewDb());
+        var repo = Assert.Single((await svc2.GetOverviewAsync()).Repos);
         Assert.Equal("abc1234def5678", repo.RunningSha);
         Assert.Equal("master", repo.RunningRef);
     }

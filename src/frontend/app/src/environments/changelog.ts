@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.3';
+export const APP_VERSION = '0.237.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.4", date: "2026-07-01", changes: [
+    { en: "Admin CI page: a stack's reported running version (e.g. log-watcher, which pushes its build via /api/ci/build-report) is now stored in the database instead of only in memory. Previously every rookhub API restart/deploy wiped it, so log-watcher's version vanished from the CI overview until its next push (up to 10 min). It now survives restarts and shows immediately.", de: "Admin-CI-Seite: die von einem Stack gemeldete laufende Version (z. B. log-watcher, der seinen Build via /api/ci/build-report pusht) wird jetzt in der Datenbank statt nur im Arbeitsspeicher gehalten. Vorher löschte jeder rookhub-API-Neustart/Deploy sie, sodass log-watchers Version bis zum nächsten Push (bis zu 10 min) aus der CI-Übersicht verschwand. Sie übersteht jetzt Neustarts und wird sofort angezeigt." },
+  ]},
   { version: "0.237.3", date: "2026-07-01", changes: [
     { en: "Dashboard edit-mode control pill (drag / up / down / eye) sized correctly. Previously the visible buttons were shrunk to 30px but Angular Material 19's internal state-layer/touch target stayed at 48px underneath, so hit areas bled past the icons and looked cramped. Now uses the proper Material 3 MDC size tokens (icon-button-state-layer-size + icon-size), a slightly bigger 32px pill, a subtle border, and dimmed disabled arrows.", de: "Bearbeitungs-Steuerpille (Ziehen / Hoch / Runter / Auge) auf dem Dashboard richtig dimensioniert. Vorher war der sichtbare Knopf auf 30 px geschrumpft, aber Angular Material 19's interner State-Layer/Touch-Target blieb darunter bei 48 px — die Klick-Flächen lagen über den Icons hinaus und wirkten gequetscht. Jetzt über die richtigen Material-3-MDC-Größen-Tokens (icon-button-state-layer-size + icon-size), etwas größere 32-px-Pille, dezenter Rand, gedimmte deaktivierte Pfeile." },
   ]},

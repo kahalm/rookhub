@@ -57,6 +57,7 @@ public class AppDbContext : DbContext
     public DbSet<ChessableCourseTheme> ChessableCourseThemes => Set<ChessableCourseTheme>();
     public DbSet<ManualActivity> ManualActivities => Set<ManualActivity>();
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
+    public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
 
@@ -568,6 +569,14 @@ public class AppDbContext : DbContext
             e.Property(p => p.CourseName).HasMaxLength(200);
             e.Property(p => p.SourceUrl).HasMaxLength(1000);
             e.HasIndex(p => new { p.UserId, p.CreatedAt });
+        });
+
+        modelBuilder.Entity<CiBuildReport>(e =>
+        {
+            e.HasKey(x => x.Repo);
+            e.Property(x => x.Repo).HasMaxLength(100);
+            e.Property(x => x.Sha).HasMaxLength(64);
+            e.Property(x => x.Ref).HasMaxLength(200);
         });
 
         modelBuilder.Entity<SavedGame>(e =>

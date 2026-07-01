@@ -47,14 +47,14 @@ public class CiBuildReportController : ControllerBase
 
     [HttpPost("build-report")]
     [AllowAnonymous]
-    public IActionResult Report([FromBody] CiBuildReportDto dto, [FromHeader(Name = "X-Build-Report-Key")] string? key)
+    public async Task<IActionResult> Report([FromBody] CiBuildReportDto dto, [FromHeader(Name = "X-Build-Report-Key")] string? key)
     {
         var secret = _config["CI:BuildReportSecret"];
         if (string.IsNullOrEmpty(secret) || !FixedTimeEquals(key, secret))
             return Unauthorized();
         if (dto is null || string.IsNullOrWhiteSpace(dto.Repo))
             return BadRequest();
-        _github.ReportBuild(dto.Repo.Trim(), dto.Sha, dto.Ref);
+        await _github.ReportBuildAsync(dto.Repo.Trim(), dto.Sha, dto.Ref);
         return NoContent();
     }
 

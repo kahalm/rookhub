@@ -3,8 +3,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -23,6 +26,7 @@ public class GithubActionsService
     private readonly IConfiguration _config;
     private readonly IMemoryCache _cache;
     private readonly ILogger<GithubActionsService> _logger;
+    private readonly AppDbContext _db;
 
     private static readonly string[] DefaultRepos =
         { "rookhub", "chessresults_crawler", "schach-bot", "piratechess_docker", "log-watcher" };
@@ -48,23 +52,19 @@ public class GithubActionsService
 
     private const string CacheKey = "ci_actions_overview";
 
-    /// <summary>Per Push gemeldete laufende Build-Infos je Repo (für Stacks, die rookhub nicht per HTTP
-    /// erreichen kann — z. B. log-watcher in eigenem Docker-Netz). Prozessweit; ein neuer Report überschreibt.</summary>
-    private static readonly ConcurrentDictionary<string, BuildInfo> _reportedBuilds = new();
-
-    /// <summary>Meldet die laufende Build-SHA/Ref eines Repos (aufgerufen vom Build-Report-Endpoint).</summary>
-    public void ReportBuild(string repo, string? sha, string? refName)
-        => _reportedBuilds[repo] = new BuildInfo(sha, refName);
-
-    /// <summary>Nur für Tests: der Reported-Builds-Cache ist prozessweit statisch (in Produktion
-    /// gewollt) — Tests müssen ihn zwischen Fällen leeren, sonst leckt eine gemeldete Build-SHA
-    /// über Testklassen hinweg (z. B. CiBuildReportController-Test → GithubActions-Overview-Test).</summary>
-    internal static void ResetReportedBuildsForTests() => _reportedBuilds.Clear();
-
-    private static BuildInfo? GetReportedBuild(string repo)
-        => _reportedBuilds.TryGetValue(repo, out var b) ? b : null;
-
-    private static IEnumerable<string> GetReportedRepos() => _reportedBuilds.Keys;
+    /// <summary>Meldet die laufende Build-SHA/Ref eines Repos (aufgerufen vom Build-Report-Endpoint).
+    /// PERSISTENT in der DB (Tabelle <c>CiBuildReports</c>, Upsert je Repo) — damit die Admin-CI die
+    /// laufende Version eines Stacks (z. B. log-watcher, der rookhub nicht per HTTP erreichen kann) auch
+    /// nach einem rookhub-api-Neustart/Deploy SOFORT kennt, ohne auf den nächsten Push des Stacks (bis zu
+    /// 10 min) zu warten. Früher nur ein prozessweiter In-Memory-Cache → nach jedem Restart weg.</summary>
+    public async Task ReportBuildAsync(string repo, string? sha, string? refName, CancellationToken ct = default)
+    {
+        var existing = await _db.CiBuildReports.FirstOrDefaultAsync(x => x.Repo == repo, ct);
+        if (existing is null)
+            _db.CiBuildReports.Add(new CiBuildReport { Repo = repo, Sha = sha, Ref = refName, ReportedAt = DateTime.UtcNow });
+        else { existing.Sha = sha; existing.Ref = refName; existing.ReportedAt = DateTime.UtcNow; }
+        await _db.SaveChangesAsync(ct);
+    }
 
     /// <summary>Per GitHub-<c>workflow_run</c>-Webhook gemeldete Läufe je Repo (Run-Id → Run). Damit
     /// zeigt die CI-Seite Start/Ende SOFORT, ohne die GitHub-API abzufragen (Push statt Pull). Prozessweit;
@@ -112,13 +112,14 @@ public class GithubActionsService
         return r with { Runs = merged };
     }
 
-    public GithubActionsService(HttpClient http, IHttpClientFactory httpFactory, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger)
+    public GithubActionsService(HttpClient http, IHttpClientFactory httpFactory, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger, AppDbContext db)
     {
         _http = http;
         _httpFactory = httpFactory;
         _config = config;
         _cache = cache;
         _logger = logger;
+        _db = db;
     }
 
     public async Task<CiOverviewDto> GetOverviewAsync(CancellationToken ct = default)
@@ -287,10 +288,10 @@ public class GithubActionsService
             (t.Repo, Info: await FetchBuildInfoAsync(t.Url, t.HeaderName, t.HeaderValue, ct))));
 
         var map = new Dictionary<string, BuildInfo>();
-        // Zuerst per Push gemeldete Build-Infos (z. B. log-watcher, das rookhub nicht erreichen kann) —
-        // ein direkt abgefragter Wert (unten) hat Vorrang und überschreibt.
-        foreach (var repo in GetReportedRepos())
-            if (GetReportedBuild(repo) is { } rep) map[repo] = rep;
+        // Zuerst per Push gemeldete Build-Infos aus der DB (z. B. log-watcher, das rookhub nicht erreichen
+        // kann) — überlebt rookhub-api-Neustarts. Ein direkt abgefragter Wert (unten) hat Vorrang.
+        foreach (var rep in await _db.CiBuildReports.AsNoTracking().ToListAsync(ct))
+            map[rep.Repo] = new BuildInfo(rep.Sha, rep.Ref);
         foreach (var (repo, info) in pairs)
             if (info is not null) map[repo] = info;
         return map;
