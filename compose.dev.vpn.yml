@@ -157,6 +157,7 @@ services:
       SchachBot__WebhookUrl: ${SCHACH_BOT_WEBHOOK_URL:-}
       SchachBot__WebhookSecret: ${SCHACH_BOT_WEBHOOK_SECRET:-}
       SchachBot__StatsSecret: ${SCHACH_BOT_STATS_SECRET:-}
+      GitHub__Token: ${GITHUB_TOKEN:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

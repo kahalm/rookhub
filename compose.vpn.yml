@@ -141,6 +141,8 @@ services:
       Encryption__Key: ${ENCRYPTION_KEY:-}
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Optional: GitHub-PAT (actions:read) für den Admin-Tab „CI / Actions". Leer -> Tab zeigt Hinweis.
+      GitHub__Token: ${GITHUB_TOKEN:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

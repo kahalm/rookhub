@@ -116,6 +116,7 @@ services:
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       # Ohne Key bleibt das Feature inaktiv; stockfish ist im API-Image enthalten.
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      GitHub__Token: ${GITHUB_TOKEN:-}
     volumes:
       - dataprotection-keys:/keys
     networks:
