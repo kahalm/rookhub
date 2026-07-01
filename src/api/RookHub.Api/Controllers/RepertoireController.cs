@@ -59,7 +59,7 @@ public class RepertoireController : BaseApiController
     /// Chessable-Repertoires frisch.</summary>
     [HttpPost("reprocess")]
     public async Task<ActionResult<ReprocessResultDto>> Reprocess([FromQuery] bool localOnly, CancellationToken ct)
-        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), localOnly, ct));
+        => Ok(await _reprocess.ReprocessRepertoiresAsync(GetUserId(), IsAdmin, localOnly, ct));
 
     [HttpPost]
     public async Task<ActionResult<RepertoireDto>> Create([FromBody] CreateRepertoireDto dto)

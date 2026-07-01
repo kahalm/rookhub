@@ -380,4 +380,21 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(0, result.Enqueued);
         Assert.Equal(1, result.Skipped);
     }
+
+    [Fact]
+    public async Task ReprocessRepertoires_Admin_PassesTrustOwnership_AndBatchesCacheOnce()
+    {
+        // Repertoire-Reprocess nutzt jetzt denselben zentralen Pfad wie Kurse: Admin-Trust + 1 Batch-Cache-Abruf.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "111");
+        await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "222");
+        var stub = new StubCourseReimporter { ReturnId = 1 };
+
+        await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id, isAdmin: true);
+
+        Assert.Equal(1, stub.GetCachedBidsCalls);              // genau EIN Batch-Abruf für beide
+        Assert.All(stub.Calls, c => Assert.True(c.TrustOwnership));
+    }
 }

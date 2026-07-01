@@ -27,8 +27,6 @@ public class CourseController : BaseApiController
         _reprocess = reprocess;
     }
 
-    private bool IsAdmin => User.IsInRole("Admin");
-
     /// <summary>Status der Aufbereitungs-Versionierung: wie viele (verwaltbare) Kurse sind veraltet
     /// und wie aufbereitbar — Basis für den „Kurse aktualisieren (N)"-Knopf.</summary>
     [HttpGet("reprocess/status")]

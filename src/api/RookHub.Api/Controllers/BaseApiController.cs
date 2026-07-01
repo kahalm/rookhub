@@ -28,4 +28,8 @@ public abstract class BaseApiController : ControllerBase
     /// dauerhaft verändern oder dauerhafte Zugangstoken in fremdem Namen erzeugen können.
     /// </summary>
     protected bool IsImpersonating() => User.FindFirst("imp") is not null;
+
+    /// <summary>Ob der aktuelle Nutzer die Admin-Rolle trägt. Zentral hier, damit alle Controller
+    /// dieselbe Prüfung nutzen (statt sie je Controller zu duplizieren).</summary>
+    protected bool IsAdmin => User.IsInRole("Admin");
 }

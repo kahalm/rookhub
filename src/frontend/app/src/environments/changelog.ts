@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.230.0';
+export const APP_VERSION = '0.231.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.231.0", date: "2026-07-01", changes: [
+    { en: "“Update all” for repertoires now works like courses (previously the click hung / did nothing for larger sets): the batch cache-check, no-abort-on-navigation, backoff for un-cacheable courses and the admin ownership bypass now apply to repertoires too. The shared re-fetch logic was moved into a single central method used by both courses and repertoires, so a fix to one can't diverge from the other again.", de: "„Alle aktualisieren“ für Repertoires funktioniert jetzt wie bei Kursen (vorher hing der Klick / tat bei größeren Mengen nichts): Batch-Cache-Abruf, kein Abbruch beim Wegnavigieren, Backoff für nicht-cachebare Kurse und der Admin-Eigentums-Bypass gelten jetzt auch für Repertoires. Die gemeinsame Re-Fetch-Logik liegt jetzt in EINER zentralen Methode, die Kurse UND Repertoires nutzen — so kann ein Fix nicht mehr nur an einer Stelle landen." },
+  ]},
   { version: "0.230.0", date: "2026-07-01", changes: [
     { en: "Crazy/anarchy mode: the opponent's move is hard to see on the random-coloured board, so it's now marked with a green arrow that stays on the board until you make your move. (In visualization mode the opponent arrow keeps its old red, 1-second behaviour.)", de: "Crazy-/Anarchy-Modus: Der Gegnerzug ist auf dem zufällig gefärbten Brett schlecht erkennbar — er wird jetzt mit einem grünen Pfeil markiert, der stehen bleibt, bis du deinen Zug machst. (Im Visualisierungs-Modus behält der Gegnerzug-Pfeil sein bisheriges Rot mit 1-Sekunden-Ausblenden.)" },
   ]},

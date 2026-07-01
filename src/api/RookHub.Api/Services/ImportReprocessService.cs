@@ -104,53 +104,16 @@ public partial class ImportReprocessService
             .Where(b => b.ImportVersion < ImportPipeline.CurrentVersion)
             .ToListAsync(ct);
 
-        // Cache-Status ALLER Kurse EINMAL vorab holen (1 piratechess-Aufruf) statt pro Kurs — der
-        // Einzel-Check (IsCourseCachedAsync) lädt+entpackt den ganzen Cache-Blob und machte das
-        // Einreihen von N Kursen quälend langsam. Nur nötig, wenn überhaupt Chessable re-fetcht wird.
-        HashSet<string>? cachedBids = null;
-        if (!localOnly && stale.Any(b => CanRefetch(b.Tags, b.FileName)))
-            cachedBids = await _chessableImport.GetCachedBidsAsync(ct);
-
         var result = new ReprocessResultDto();
-        // Ab hier NICHT mehr am Request-Cancellation-Token abbrechen: dieser Aufruf kommt aus einem
-        // HTTP-Request, dessen Verbindung der Browser beim Wegnavigieren schließt (→ ct cancelled).
-        // Das Einreihen ALLER Jobs muss trotzdem vollständig durchlaufen, sonst landen nur die ersten
-        // paar Kurse in der Queue (beobachtet: Klick → Tab-Wechsel → Einreihen brach nach ~20 ab).
+        var refetch = new List<RefetchCandidate>();
         foreach (var book in stale)
         {
             if (IsChessable(book.Tags, book.FileName) && TryParseBid(book.FileName, out var bid))
             {
                 // Chessable: vollständiger Re-Fetch. Das gecachte Alt-PGN enthält marker­basierte
-                // Pipeline-Daten ([%info]/[%alt] …) NICHT, ein lokales Reprocess würde sie nicht
-                // setzen, aber die Version hochmarkieren (still falsch) — daher VOR dem SourcePgn-Pfad.
+                // Pipeline-Daten ([%info]/[%alt] …) NICHT → lokales Reprocess würde sie nicht setzen.
                 if (localOnly) continue; // „Aus Cache": Netz-Re-Fetch bewusst auslassen
-
-                // Backoff für nicht-cachebare Kurse: ist der Kurs NICHT im Cache, holt der Re-Fetch ihn
-                // komplett neu von Chessable. Kam er beim letzten Versuch truncated an (piratechess cachet
-                // ihn dann nicht → weiterhin nicht im Cache) UND liegt dieser Versuch noch im Backoff-Fenster,
-                // jetzt überspringen — sonst flutet derselbe kaputte Kurs Chessable bei jedem „Update all".
-                if (cachedBids != null && !cachedBids.Contains(bid))
-                {
-                    var lastDone = await _db.ChessableImports
-                        .Where(i => i.Bid == bid && i.Status == "completed" && i.CompletedAt != null)
-                        .OrderByDescending(i => i.CompletedAt)
-                        .Select(i => i.CompletedAt)
-                        .FirstOrDefaultAsync(CancellationToken.None);
-                    if (lastDone.HasValue && lastDone.Value > DateTime.UtcNow - IncompleteRefetchBackoff)
-                    {
-                        result.Skipped++;
-                        continue; // kürzlich erfolglos geholt → im Backoff-Fenster nicht erneut fluten
-                    }
-                }
-
-                var ownerId = book.OwnerUserId ?? userId;
-                // Admin-Reprocess: Eigentumsprüfung überspringen — die Kurse sind bereits im Bestand,
-                // und Chessables getHomeData liefert nur einen Teil der Bibliothek (sonst würden fast
-                // alle eigenen Alt-Kurse fälschlich als „nicht besessen" übersprungen).
-                var importId = await _chessableImport.EnqueueReimportAsync(ownerId, bid, "book", book.DisplayName,
-                    knownCached: cachedBids?.Contains(bid), trustOwnership: isAdmin, ct: CancellationToken.None);
-                if (importId != null) result.Enqueued++;
-                else result.Skipped++; // kein Bearer hinterlegt
+                refetch.Add(new RefetchCandidate(book.OwnerUserId ?? userId, bid, "book", book.DisplayName, null));
             }
             else if (!string.IsNullOrEmpty(book.SourcePgn))
             {
@@ -165,10 +128,63 @@ public partial class ImportReprocessService
             }
         }
 
+        // Zentrales Einreihen (Batch-Cache, Backoff, Dedup, Admin-Bypass, kein Abbruch) — geteilt mit Repertoiren.
+        await EnqueueRefetchesAsync(refetch, isAdmin, result);
+
         _logger.LogInformation(
             "Course-Reprocess für User {UserId} (admin={IsAdmin}, localOnly={LocalOnly}): {Reprocessed} lokal ({UpdatedLines} Linien), {Enqueued} eingereiht, {Skipped} übersprungen",
             userId, isAdmin, localOnly, result.Reprocessed, result.UpdatedLines, result.Enqueued, result.Skipped);
         return result;
+    }
+
+    /// <summary>Kandidat für einen Chessable-Re-Fetch — Kurs ODER Repertoire.</summary>
+    private readonly record struct RefetchCandidate(int OwnerId, string Bid, string Target, string Name, int? TargetRepertoireId);
+
+    /// <summary>
+    /// ZENTRALES Einreihen von Chessable-Re-Fetch-Jobs für Kurse UND Repertoires. Hier liegen — an EINER
+    /// Stelle statt je Pfad dupliziert — alle Vorsichtsmaßnahmen: EINMALIGER Batch-Cache-Abruf statt teurem
+    /// Einzel-Check je Kurs; kein Abbruch am Request-Token (Wegnavigieren darf das Einreihen nicht killen →
+    /// <see cref="CancellationToken.None"/>); Backoff für nicht-cachebare (truncated) Kurse, damit sie
+    /// Chessable nicht bei jedem Lauf neu fluten; Admin-Eigentums-Bypass (getHomeData listet nur einen Teil
+    /// der Bibliothek). Dedup gegen bereits laufende Importe steckt in <c>EnqueueReimportAsync</c>.
+    /// Zählt Enqueued/Skipped in <paramref name="result"/>.
+    /// </summary>
+    private async Task EnqueueRefetchesAsync(IReadOnlyList<RefetchCandidate> candidates, bool isAdmin, ReprocessResultDto result)
+    {
+        if (candidates.Count == 0) return;
+
+        // Cache-Status ALLER Kandidaten EINMAL en bloc (1 piratechess-Aufruf) statt je Kurs ein teurer
+        // Einzel-Check, der den ganzen Cache-Blob lädt+entpackt.
+        var cachedBids = await _chessableImport.GetCachedBidsAsync(CancellationToken.None);
+
+        foreach (var c in candidates)
+        {
+            var cached = cachedBids.Contains(c.Bid);
+            // Backoff: ein nicht-cachebarer (truncated) Kurs würde bei jedem Lauf komplett neu von Chessable
+            // geholt. Wurde er kürzlich schon (erfolglos = weiterhin nicht gecacht) geholt, jetzt überspringen.
+            if (!cached)
+            {
+                var lastDone = await _db.ChessableImports
+                    .Where(i => i.Bid == c.Bid && i.Status == "completed" && i.CompletedAt != null)
+                    .OrderByDescending(i => i.CompletedAt)
+                    .Select(i => i.CompletedAt)
+                    .FirstOrDefaultAsync(CancellationToken.None);
+                if (lastDone.HasValue && lastDone.Value > DateTime.UtcNow - IncompleteRefetchBackoff)
+                {
+                    result.Skipped++;
+                    continue;
+                }
+            }
+
+            // trustOwnership=isAdmin: getHomeData listet nur einen Teil der Bibliothek → sonst würden eigene,
+            // längst importierte Kurse fälschlich als „nicht besessen" abgewiesen; Admins dürfen ohnehin jeden
+            // Kurs holen (Nicht-Admin bleibt geprüft = v0.203.9-Schutz gegen Cached-Content-Diebstahl).
+            var importId = await _chessableImport.EnqueueReimportAsync(
+                c.OwnerId, c.Bid, c.Target, c.Name, targetRepertoireId: c.TargetRepertoireId,
+                knownCached: cached, trustOwnership: isAdmin, ct: CancellationToken.None);
+            if (importId != null) result.Enqueued++;
+            else result.Skipped++;
+        }
     }
 
     // ===== Repertoires =====
@@ -197,27 +213,25 @@ public partial class ImportReprocessService
     /// <param name="localOnly">true = nur lokal aufbereitbare Repertoires („Aus Cache": Nicht-Chessable
     /// → reiner Versions-Mark), KEIN Chessable-Re-Fetch übers Netz. false = zusätzlich Chessable-Repertoires
     /// frisch holen („Alle").</param>
-    public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool localOnly = false, CancellationToken ct = default)
+    public async Task<ReprocessResultDto> ReprocessRepertoiresAsync(int userId, bool isAdmin = false, bool localOnly = false, CancellationToken ct = default)
     {
         var stale = await _db.Repertoires
             .Where(r => r.UserId == userId && r.ImportVersion < ImportPipeline.CurrentVersion)
             .Include(r => r.Files)
             .ToListAsync(ct);
+
         var result = new ReprocessResultDto();
         var now = DateTime.UtcNow;
+        var refetch = new List<RefetchCandidate>();
         foreach (var r in stale)
         {
             var bid = ResolveRepertoireBid(r);
             if (bid != null)
             {
                 if (localOnly) continue; // „Aus Cache": Chessable-Re-Fetch übers Netz bewusst auslassen
-                // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende
-                // Repertoire schreiben (Id bleibt → Trainings-Fortschritt bleibt). ImportVersion wird
-                // erst beim Abschluss des Hintergrund-Jobs hochgesetzt (Datei-Upload).
-                var importId = await _chessableImport.EnqueueReimportAsync(
-                    userId, bid, "repertoire", r.Name, targetRepertoireId: r.Id, ct: ct);
-                if (importId != null) result.Enqueued++;
-                else result.Skipped++; // z. B. kein hinterlegter Chessable-Bearer
+                // Chessable-Repertoire: frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende Repertoire
+                // schreiben (Id/Trainings-Fortschritt bleiben; Version steigt erst beim Job-Abschluss).
+                refetch.Add(new RefetchCandidate(userId, bid, "repertoire", r.Name, r.Id));
             }
             else
             {
@@ -227,7 +241,10 @@ public partial class ImportReprocessService
                 result.Reprocessed++;
             }
         }
-        await _db.SaveChangesAsync(ct);
+
+        // Zentrales Einreihen (Batch-Cache, Backoff, Dedup, Admin-Bypass, kein Abbruch) — geteilt mit Kursen.
+        await EnqueueRefetchesAsync(refetch, isAdmin, result);
+        await _db.SaveChangesAsync(CancellationToken.None);
         return result;
     }
 
