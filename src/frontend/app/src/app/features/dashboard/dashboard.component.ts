@@ -15,6 +15,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription } from '../../core/models';
 import { DashboardService, DashboardCourse } from '../../core/dashboard.service';
+import { DashboardCacheService } from '../../core/dashboard-cache.service';
 import { DashboardLayoutService } from '../../core/dashboard-layout.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
@@ -375,6 +376,7 @@ export class DashboardComponent implements OnInit {
   constructor(
     public auth: AuthService,
     private dashboardService: DashboardService,
+    private cache: DashboardCacheService,
     private layout: DashboardLayoutService,
     private menu: MenuService,
     private chessable: ChessableService,
@@ -468,6 +470,23 @@ export class DashboardComponent implements OnInit {
       this.hidden = new Set(saved.hidden.filter(id => known.has(id)));
     }
 
+    // Zwischenstand aus dem letzten Aufruf sofort anzeigen (Repertoire-/Kurs-Zähler,
+    // angepinnte Kurse, Elo/Solved). Ist rein optional; die forkJoin-Antwort überschreibt
+    // gleich mit den frischen Werten.
+    const cached = this.cache.load();
+    if (cached) {
+      this.repertoireCount = cached.repertoireCount;
+      this.courseCount = cached.courseCount;
+      this.pinnedCourses = cached.pinnedCourses ?? [];
+      this.subscriptions = cached.subscriptions ?? [];
+      this.subscriptionCount = cached.subscriptionCount;
+      this.friendCount = cached.friendCount;
+      this.favoriteCount = cached.favoriteCount;
+      this.puzzleSolved = cached.puzzleSolved;
+      this.puzzleAccuracy = cached.puzzleAccuracy;
+      this.puzzleElo = cached.puzzleElo;
+    }
+
     // Menü-Sichtbarkeit live nachziehen (steuert, welche Kacheln überhaupt erscheinen).
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(set => this.menuKeys = set);
@@ -509,6 +528,19 @@ export class DashboardComponent implements OnInit {
       this.puzzleSolved = puzzleStats.solved || 0;
       this.puzzleAccuracy = puzzleStats.accuracy || 0;
       this.puzzleElo = puzzleStats.puzzleElo || 1500;
+      // Frischen Snapshot fürs nächste Öffnen ablegen (per User in localStorage).
+      this.cache.save({
+        repertoireCount: this.repertoireCount,
+        courseCount: this.courseCount,
+        pinnedCourses: this.pinnedCourses,
+        subscriptions: this.subscriptions,
+        subscriptionCount: this.subscriptionCount,
+        friendCount: this.friendCount,
+        favoriteCount: this.favoriteCount,
+        puzzleSolved: this.puzzleSolved,
+        puzzleAccuracy: this.puzzleAccuracy,
+        puzzleElo: this.puzzleElo,
+      });
     });
   }
 

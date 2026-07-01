@@ -83,6 +83,79 @@ describe('DashboardComponent friend-count reactivity', () => {
   });
 });
 
+describe('DashboardComponent cached snapshot', () => {
+  const CACHE_KEY = 'rookhub_dashboard_cache_v1_u7';
+  beforeEach(() => { localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it('paints cached values immediately before the network responds', () => {
+    // Snapshot des letzten Aufrufs vorseeden.
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      repertoireCount: 12, courseCount: 42, pinnedCourses: [], subscriptions: [],
+      subscriptionCount: 3, friendCount: 5, favoriteCount: 8,
+      puzzleSolved: 1234, puzzleAccuracy: 87, puzzleElo: 2100,
+    }));
+    // Alle Netz-Calls „hängen" (nie-emittierende Subjects) → forkJoin emittiert NIE →
+    // die Komponente muss die Zahlen aus dem Cache anzeigen.
+    const never = new Subject<never>().asObservable();
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => never, getCourses: () => never, getSubscriptions: () => never,
+          getFriends: () => never, getPuzzleStats: () => never,
+        } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => never } },
+      ],
+    });
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.repertoireCount).toBe(12);
+    expect(c.courseCount).toBe(42);
+    expect(c.puzzleElo).toBe(2100);
+    expect(c.puzzleSolved).toBe(1234);
+    expect(c.friendCount).toBe(5);
+  });
+
+  it('writes the fresh snapshot back to cache after a successful fetch', () => {
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: {
+          getRepertoires: () => of([{}, {}]),
+          getCourses: () => of([{ isPinned: false }, { isPinned: false }, { isPinned: false }]),
+          getSubscriptions: () => of([]),
+          getFriends: () => of([{}]),
+          getPuzzleStats: () => of({ solved: 55, accuracy: 91, puzzleElo: 1900 }),
+        } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(4) } },
+      ],
+    });
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!);
+    expect(cached.repertoireCount).toBe(2);
+    expect(cached.courseCount).toBe(3);
+    expect(cached.puzzleElo).toBe(1900);
+    expect(cached.favoriteCount).toBe(4);
+  });
+});
+
 describe('DashboardComponent tiles', () => {
   beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
   afterEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));

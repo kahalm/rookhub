@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.5';
+export const APP_VERSION = '0.237.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.6", date: "2026-07-01", changes: [
+    { en: "Dashboard no longer shows empty tiles while it loads. Repertoire and course counts, pinned courses, subscriptions, friend count, favourites, puzzle Elo and solved count are now cached locally after each fetch and shown instantly on the next visit — the network fetch happens in the background and just refreshes the numbers. Cache is per account (won't leak between users on shared devices).", de: "Auf dem Dashboard bleiben die Kacheln beim Laden nicht mehr leer. Repertoire- und Kurs-Anzahl, angepinnte Kurse, Turnier-Abos, Freundeszahl, Favoriten, Puzzle-Elo und Gelöst-Zähler werden nach jedem Abruf lokal gemerkt und beim nächsten Öffnen sofort angezeigt — der eigentliche Abruf läuft im Hintergrund und aktualisiert die Zahlen. Der Zwischenstand liegt pro Konto (auf einem geteilten Gerät bleiben die Nutzer sauber getrennt)." },
+  ]},
   { version: "0.237.5", date: "2026-07-01", changes: [
     { en: "Course/book puzzles now show the text that comes AFTER the solution. Some lines have a closing note after the last move (e.g. the long story on the Dziuba–Erwich line in \"100 Tactical Patterns\") — it was hidden because the app jumped straight to the next puzzle. Now, when a line ends with such a note, it's displayed after you solve and the auto-advance is paused so you can read it; hit \"Next\" to continue.", de: "Kurs-/Buch-Puzzles zeigen jetzt den Text, der NACH der Lösung kommt. Manche Linien haben nach dem letzten Zug einen Abschlusstext (z. B. die lange Geschichte in der Dziuba–Erwich-Linie in „100 Tactical Patterns“) — der blieb verborgen, weil die App sofort zum nächsten Puzzle sprang. Endet eine Linie mit so einem Text, wird er nach dem Lösen angezeigt und das automatische Weiterspringen pausiert, damit du ihn lesen kannst; mit „Weiter“ geht's dann weiter." },
   ]},
