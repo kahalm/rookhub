@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.235.0';
+export const APP_VERSION = '0.235.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.235.1", date: "2026-07-01", changes: [
+    { en: "Admin CI page marks exactly the ONE run that built the running image: build-info.json now also carries the build ref (branch for :dev images, tag name for :prod). A master push and its identically-named tag share the same commit SHA, so matching by SHA alone marked both runs — now the running-build marker requires SHA and ref to match, so a :dev deploy highlights the master run and a :prod deploy highlights the tag run. Older images without a ref fall back to SHA-only matching.", de: "Die Admin-CI-Seite markiert jetzt genau den EINEN Run, der das laufende Image gebaut hat: build-info.json trägt zusätzlich den Build-Ref (Branch bei :dev-Images, Tag-Name bei :prod). Ein master-Push und sein gleichnamiger Tag teilen dieselbe Commit-SHA, sodass ein reiner SHA-Abgleich beide Runs markierte — der Laufender-Build-Marker verlangt jetzt SHA UND Ref, sodass ein :dev-Deploy den master-Run und ein :prod-Deploy den Tag-Run hervorhebt. Ältere Images ohne Ref fallen auf reines SHA-Matching zurück." },
+  ]},
   { version: "0.235.0", date: "2026-07-01", changes: [
     { en: "Course info/explanation lines: once you've clicked through one in sequential mode it's now remembered — next time you resume the course it continues after it instead of showing the same intro line from the top again. (Cleared when you reset the course.)", de: "Kurs-Info-/Erklärlinien: Hast du eine im sequenziellen Modus einmal durchgeklickt, wird sie jetzt gemerkt — beim nächsten Wiedereinstieg setzt der Kurs dahinter fort, statt dieselbe Einleitungslinie wieder von vorne zu zeigen. (Wird beim Zurücksetzen des Kurses vergessen.)" },
     { en: "Puzzle comment display cleaned up (courses & books, all modes — not just info lines): the line's comment/explanation was shown twice (once as a header, once as a separate card below). It now appears only once, as a single block right above the progress bar.", de: "Kommentar-Anzeige aufgeräumt (Kurse & Bücher, alle Modi — nicht nur Info-Linien): Der Kommentar/Erklärtext einer Linie wurde doppelt gezeigt (einmal als Kopfzeile, einmal als eigene Karte darunter). Er erscheint jetzt nur noch einmal, als ein Block direkt über der Fortschrittsanzeige." },

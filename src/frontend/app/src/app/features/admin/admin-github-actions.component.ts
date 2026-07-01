@@ -127,12 +127,16 @@ export class AdminGithubActionsComponent implements OnInit {
   lastUpdated: Date | null = null;
   /** Commit-SHA des LAUFENDEN Frontend-Builds (aus /build-info.json, vom Docker-Build gesetzt). */
   buildSha: string | null = null;
+  /** Ref des laufenden Builds: "master" bei :dev, Tag-Name (z. B. "v0.234.0") bei :prod. */
+  buildRef: string | null = null;
 
   ngOnInit(): void {
-    // Commit-SHA des laufenden Builds einmalig laden (fehlt bei alten Images/dev → kein Marker).
-    this.http.get<{ sha: string }>('/build-info.json').pipe(catchError(() => of(null))).subscribe(info => {
+    // Commit-SHA + Ref des laufenden Builds einmalig laden (fehlt bei alten Images/dev → kein Marker).
+    this.http.get<{ sha: string; ref?: string }>('/build-info.json').pipe(catchError(() => of(null))).subscribe(info => {
       const sha = info?.sha;
       this.buildSha = sha && sha !== 'unknown' ? sha : null;
+      const ref = info?.ref;
+      this.buildRef = ref ? ref : null;
     });
 
     // Sofort + danach alle 5 s neu laden, solange der Tab (und damit diese Komponente) lebt.
@@ -162,11 +166,19 @@ export class AdminGithubActionsComponent implements OnInit {
     return `${Math.floor(m / 60)}h ${m % 60}m`;
   }
 
-  /** Hat dieser Run den aktuell laufenden Frontend-Build erzeugt? (head_sha == build-SHA, Prefix-tolerant) */
+  /**
+   * Hat dieser Run den aktuell laufenden Frontend-Build erzeugt?
+   * SHA muss passen (Prefix-tolerant) UND — sofern das Image seinen Ref meldet — auch der Ref:
+   * ein master-Push und sein gleichnamiger Tag teilen dieselbe SHA, aber nur EINER baute das
+   * laufende Image (:dev = master-Run, :prod = Tag-Run). Ältere Images ohne Ref matchen wie bisher nur per SHA.
+   */
   isRunningBuild(run: CiRun): boolean {
     if (!this.buildSha || !run.headSha) return false;
     const a = this.buildSha, b = run.headSha;
-    return a === b || a.startsWith(b) || b.startsWith(a);
+    const shaMatch = a === b || a.startsWith(b) || b.startsWith(a);
+    if (!shaMatch) return false;
+    if (!this.buildRef) return true;
+    return run.ref === this.buildRef;
   }
 
   badgeClass(run: CiRun): string {
