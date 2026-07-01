@@ -535,7 +535,9 @@ public class ChessableImportService : ICourseReimporter
                 Name = Trunc(courseName, 200),
                 Description = $"Aus Chessable importiert (bid {import.Bid})",
                 Kind = RepertoireKind.Opening,
-                IsPublic = false
+                IsPublic = false,
+                // Importierte Kurse standardmäßig NICHT von der RepCheck-Extension verwenden.
+                UseForExtension = false
             });
             repId = rep.Id;
             import.ResultId = repId;

@@ -82,6 +82,8 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(3, reloaded.Imported); // LineCount
         Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
         Assert.Equal(1, await _db.RepertoireFiles.CountAsync());
+        // Importierte Kurse sind standardmäßig NICHT von der RepCheck-Extension nutzbar.
+        Assert.False((await _db.Repertoires.FirstAsync(r => r.UserId == 7)).UseForExtension);
         // Glocke: User wird über den fertigen Import benachrichtigt.
         Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == 7 && n.Type == NotificationType.ChessableImportCompleted));
     }
