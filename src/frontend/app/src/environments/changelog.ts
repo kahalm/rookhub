@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.5';
+export const APP_VERSION = '0.240.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.6", date: "2026-07-01", changes: [
+    { en: "Live move comments while solving now STACK instead of replacing: when a move has a comment it stays, and the next move's comment appears below it. Moves without a comment add nothing — and no longer fall back to the puzzle intro (so once you're playing, you only see the actual move comments, or nothing).", de: "Die Live-Zug-Kommentare beim Lösen STAPELN sich jetzt, statt sich zu ersetzen: Hat ein Zug einen Kommentar, bleibt er stehen, und der Kommentar des nächsten Zugs erscheint darunter. Züge ohne Kommentar fügen nichts hinzu — und fallen nicht mehr auf die Puzzle-Einleitung zurück (sobald du spielst, siehst du also nur die echten Zug-Kommentare oder nichts)." },
+  ]},
   { version: "0.240.5", date: "2026-07-01", changes: [
     { en: "Diagnostics/tracing for Chessable imports: when a course line or chapter is skipped during import (corrupt/truncated data, or the parser crash that 0.240.4 now swallows), the full stack trace + context is captured and logged to our monitoring (Elasticsearch/Kibana) instead of vanishing — previously only a short message reached the database. On the rookhub side, import failures coming from the piratechess proxy (e.g. \"PGN generation failed\", \"course has no chapters\", bearer/IP block) are now logged with HTTP status + course id + import id, where before nothing showed up in monitoring at all. Purely observability; no user-facing behaviour change.", de: "Diagnose/Tracing für Chessable-Importe: Wird beim Import eine Kurs-Linie oder ein Kapitel übersprungen (korrupte/abgeschnittene Daten oder der Parser-Absturz, den 0.240.4 jetzt schluckt), werden Kontext + voller Stacktrace erfasst und in unser Monitoring (Elasticsearch/Kibana) geloggt, statt spurlos zu verschwinden — vorher kam nur eine kurze Meldung in die Datenbank. Auf der rookhub-Seite werden Import-Fehler aus dem piratechess-Proxy (z. B. „PGN generation failed\", „course has no chapters\", Bearer-/IP-Block) jetzt mit HTTP-Status + Kurs-Id + Import-Id geloggt, wo vorher im Monitoring gar nichts auftauchte. Reine Observability, keine sichtbare Verhaltensänderung. (piratechess v1.0.34)" },
   ]},

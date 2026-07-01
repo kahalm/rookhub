@@ -648,23 +648,37 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return Math.max(0, this.courseTotal - this.courseSolved);
   }
 
-  /** Der EINE Kommentar-Block über der Fortschrittsanzeige (ersetzt die frühere doppelte Anzeige:
-   *  Kopf-Kommentar + separate Zug-Kommentar-Card). Im Review-/Info-Modus der Kommentar zum aktuell
-   *  durchgespielten Zug (fällt auf die Einleitung des Puzzles zurück, wenn der Zug keinen hat),
-   *  sonst die Einleitung/den Kommentar des Puzzles. Gilt für alle Modi, nicht nur Info-Linien. */
+  /** Einzel-Kommentar für Review-/Info-Modus (Kommentar zum aktuell durchgespielten Zug, Fallback
+   *  Einleitung) — Basis der Ply-Navigation; die Anzeige läuft über {@link commentLines}. */
   get displayComment(): string | null {
     if (!this.puzzle) return null;
     if (this.reviewMode) return this.moveComment ?? this.puzzle.comment ?? null;
-    // WÄHREND des Lösens: den Kommentar zum zuletzt gespielten Lösungszug live einblenden (nicht erst
-    // im Review). Nur auf dem Lösungspfad und sobald mind. ein Lösungszug gespielt wurde; gleiche
-    // Ply-Konvention wie der Review (absoluter Halbzug = startPly + moveIndex − 1). Ohne Zug-Kommentar
-    // (oder vor dem ersten Zug / off-path) fällt es auf die Einleitung des Puzzles zurück.
+    return this.puzzle.comment ?? null;
+  }
+
+  /** Die im Kontext-Block angezeigten Kommentar-Absätze (gestapelt).
+   *  - Review/Info: EIN Absatz (der zum durchgespielten Zug bzw. die Einleitung).
+   *  - WÄHREND des Lösens: die Kommentare ALLER bereits gespielten Lösungszüge in Reihenfolge
+   *    (jeder neue darunter). Züge ohne Kommentar fügen NICHTS hinzu; es gibt KEINEN Rückfall auf
+   *    die Einleitung, sobald gespielt wird (leere Liste → Block ausgeblendet).
+   *  - Vor dem ersten Zug: die Einleitung des Puzzles. */
+  get commentLines(): string[] {
+    if (!this.puzzle) return [];
+    if (this.reviewMode) {
+      const c = this.moveComment ?? this.puzzle.comment ?? null;
+      return c ? [c] : [];
+    }
     if (this.onSolutionPath && this.moveIndex > 0
         && (this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING')) {
-      const live = this.commentForPlyPlayed(Math.max(0, this.startPly) + this.moveIndex - 1);
-      if (live) return live;
+      const start = Math.max(0, this.startPly);
+      const lines: string[] = [];
+      for (let ply = start; ply <= start + this.moveIndex - 1; ply++) {
+        const c = this.commentForPlyPlayed(ply);   // gleiche Ply-Konvention wie der Review
+        if (c) lines.push(c);
+      }
+      return lines;   // ggf. leer → kein Kommentar-Block (kein Intro-Rückfall)
     }
-    return this.puzzle.comment ?? null;
+    return this.puzzle.comment ? [this.puzzle.comment] : [];   // vor dem ersten Zug: Einleitung
   }
 
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */

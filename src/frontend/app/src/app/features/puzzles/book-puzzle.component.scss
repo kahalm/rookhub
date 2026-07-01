@@ -128,13 +128,15 @@
       flex-shrink: 0; font-size: 20px; width: 20px; height: 20px;
       color: color-mix(in srgb, currentColor 45%, transparent); margin-top: 1px;
     }
-    .context-card .ctx-comment p {
-      margin: 0; font-size: 0.92em; line-height: 1.4; white-space: pre-wrap;
-      /* Lange Erklär-/Intro-Texte (mehrere Tausend Zeichen) dürfen die Seite nicht sprengen:
-         in der Breite umbrechen (min-width:0 lässt das Flex-Kind schrumpfen) und in der Höhe
-         auf einen Ausschnitt begrenzen + scrollbar machen. */
-      flex: 1; min-width: 0; overflow-wrap: break-word;
+    /* Kommentar-Absätze gestapelt (mehrere Zug-Kommentare untereinander). Der Wrapper ist das
+       Flex-Kind neben dem Icon; lange Texte umbrechen (min-width:0) + in der Höhe begrenzt/scrollbar. */
+    .context-card .ctx-comment .ctx-comment-body {
+      flex: 1; min-width: 0;
       max-height: 40vh; overflow-y: auto; padding-right: 0.25rem;
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .context-card .ctx-comment p {
+      margin: 0; font-size: 0.92em; line-height: 1.4; white-space: pre-wrap; overflow-wrap: break-word;
     }
 
     /* Einstellungen */

@@ -94,10 +94,12 @@
                      Fortschrittsanzeige (für alle Modi, nicht nur Info-Linien) — nur EINMAL, nicht
                      zusätzlich als Kopfzeile. Im Review/Info-Modus der Kommentar zum durchgespielten
                      Zug, sonst die Einleitung des Puzzles. -->
-                @if (displayComment) {
+                @if (commentLines.length) {
                   <div class="ctx-comment">
                     <mat-icon>chat_bubble_outline</mat-icon>
-                    <p>{{ displayComment }}</p>
+                    <div class="ctx-comment-body">
+                      @for (co of commentLines; track $index) { <p>{{ co }}</p> }
+                    </div>
                   </div>
                 }
 

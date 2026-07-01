@@ -556,25 +556,38 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     expect(c.displayComment).toBeNull();
   });
 
-  it('während des Lösens zeigt sie live den Kommentar zum zuletzt gespielten Zug', () => {
+  it('während des Lösens STAPELT commentLines die Zug-Kommentare (kein Intro-Rückfall)', () => {
     const c = makeComponent();
-    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3', bookFileName: 'b', startPly: 0,
-      comment: 'Einleitung', moveComments: { '0': 'Guter erster Zug', '1': 'Gegnerantwort' } };
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3 b8c6', bookFileName: 'b', startPly: 0,
+      comment: 'Einleitung', moveComments: { '0': 'Guter erster Zug', '2': 'Springer raus' } };
     c.reviewMode = false;
     (c as any).onSolutionPath = true;
     (c as any).startPly = 0;
     (c as any).state = 'AWAITING_USER_MOVE';
 
-    (c as any).moveIndex = 1;                                  // 1. Lösungszug gespielt → ply 0
-    expect(c.displayComment).toBe('Guter erster Zug');
-    (c as any).moveIndex = 2;                                  // Gegnerantwort → ply 1
-    expect(c.displayComment).toBe('Gegnerantwort');
-    (c as any).moveIndex = 3;                                  // ply 2 hat keinen Kommentar → Einleitung
-    expect(c.displayComment).toBe('Einleitung');
     (c as any).moveIndex = 0;                                  // vor dem ersten Zug → Einleitung
-    expect(c.displayComment).toBe('Einleitung');
-    (c as any).moveIndex = 1; (c as any).onSolutionPath = false; // off-path → kein Live-Kommentar
-    expect(c.displayComment).toBe('Einleitung');
+    expect(c.commentLines).toEqual(['Einleitung']);
+    (c as any).moveIndex = 1;                                  // ply 0 hat Kommentar
+    expect(c.commentLines).toEqual(['Guter erster Zug']);
+    (c as any).moveIndex = 2;                                  // ply 1 KEIN Kommentar → bleibt beim einen
+    expect(c.commentLines).toEqual(['Guter erster Zug']);
+    (c as any).moveIndex = 3;                                  // ply 2 hat Kommentar → darunter gestapelt
+    expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
+    (c as any).moveIndex = 4;                                  // ply 3 KEIN Kommentar → KEIN Intro-Rückfall
+    expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
+    (c as any).onSolutionPath = false;                         // off-path → Intro (vor/außerhalb Lösung)
+    expect(c.commentLines).toEqual(['Einleitung']);
+  });
+
+  it('commentLines: leer ohne jeden Kommentar während des Lösens (kein Intro)', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b', startPly: 0, comment: 'Einleitung' };
+    c.reviewMode = false;
+    (c as any).onSolutionPath = true;
+    (c as any).startPly = 0;
+    (c as any).state = 'AWAITING_USER_MOVE';
+    (c as any).moveIndex = 2;                                  // gespielt, aber keine moveComments
+    expect(c.commentLines).toEqual([]);                        // → Block ausgeblendet, KEIN Intro
   });
 });
 
