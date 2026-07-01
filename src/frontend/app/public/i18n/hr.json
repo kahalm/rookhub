@@ -858,6 +858,7 @@
     "upload": {
       "title": "Učitaj vlastiti tečaj",
       "hint": "Dodaj PGN sa zagonetkama (Chessable stil: s FEN-om i oznakama treninga) kao osobni tečaj.",
+      "restriction": "Ovo radi samo s PGN-ovima sa zagonetkama u tom stilu. Imaš drugačiji PGN? Zamoli admina da ga uveze ili pitaj na našem",
       "nameLabel": "Naziv tečaja",
       "namePlaceholder": "Neobavezno — inače iz naziva datoteke",
       "button": "Učitaj PGN",

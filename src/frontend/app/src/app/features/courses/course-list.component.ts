@@ -15,6 +15,7 @@ import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
+import { DISCORD_INVITE_URL } from '../../core/community';
 
 @Component({
   selector: 'app-course-list',
@@ -37,6 +38,10 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
         <div class="upload-text">
           <div class="upload-title">{{ 'courses.upload.title' | translate }}</div>
           <div class="upload-hint">{{ 'courses.upload.hint' | translate }}</div>
+          <div class="upload-note">
+            {{ 'courses.upload.restriction' | translate }}
+            <a [href]="discordUrl" target="_blank" rel="noopener noreferrer">Discord</a>.
+          </div>
         </div>
         <mat-form-field appearance="outline" class="upload-name" subscriptSizing="dynamic">
           <mat-label>{{ 'courses.upload.nameLabel' | translate }}</mat-label>
@@ -223,6 +228,9 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
     .upload-text { flex: 1; min-width: 180px; }
     .upload-title { font-weight: 600; font-size: 0.95rem; }
     .upload-hint { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .upload-note { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); margin-top: 3px; }
+    .upload-note a { color: #5865F2; font-weight: 500; text-decoration: none; }
+    .upload-note a:hover { text-decoration: underline; }
     .upload-name { width: 200px; }
     .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
     .course-section { margin-bottom: 28px; }
@@ -293,6 +301,8 @@ export class CourseListComponent implements OnInit {
   uploadName = '';
   /** bookId, der gerade gelöscht wird (Button-Sperre). */
   deleting: number | null = null;
+  /** Einladungslink zum Community-Discord (für „anderes PGN → Admin/Discord"-Hinweis). */
+  readonly discordUrl = DISCORD_INVITE_URL;
   private offlineFiles = new Set<string>();
 
   /** Aufgeklapptes Buch (Kapitelübersicht) bzw. null. */

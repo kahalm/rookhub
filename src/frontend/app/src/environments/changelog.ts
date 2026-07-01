@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.220.0';
+export const APP_VERSION = '0.220.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.220.1", date: "2026-07-01", changes: [
+    { en: "Course upload: added a note that it only works with puzzle PGNs in Chessable style (FEN + training markers) — if you have a different PGN, ask an admin to import it or ask in our Discord (with a link).", de: "Kurs-Upload: Hinweis ergänzt, dass es nur mit Puzzle-PGNs im Chessable-Stil (FEN + Trainingsmarker) funktioniert — bei einem anderen PGN wende dich an einen Admin zum Importieren oder frag in unserem Discord (mit Link)." },
+  ]},
   { version: "0.220.0", date: "2026-07-01", changes: [
     { en: "You can now upload your own PGN as a personal course. The Courses page is reachable for everyone (via the dashboard tile) even when you have no courses yet, and offers a PGN upload right at the top — the uploaded course is private to you. (The PGN must be a puzzle PGN in Chessable style: each game with a FEN and a training marker.) Your own courses can also be deleted from the list.", de: "Du kannst jetzt ein eigenes PGN als persönlichen Kurs hochladen. Die Kurse-Seite ist für jeden erreichbar (über die Dashboard-Kachel), auch wenn du noch keine Kurse hast, und bietet oben einen PGN-Upload — der hochgeladene Kurs ist nur für dich sichtbar. (Das PGN muss ein Puzzle-PGN im Chessable-Stil sein: jede Partie mit FEN und Trainingsmarker.) Eigene Kurse lassen sich aus der Liste auch löschen." },
   ]},

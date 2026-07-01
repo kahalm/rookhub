@@ -860,6 +860,7 @@
     "upload": {
       "title": "Eigenen Kurs hochladen",
       "hint": "Füge ein Puzzle-PGN (Chessable-Stil: mit FEN und Trainingsmarkern) als persönlichen Kurs hinzu.",
+      "restriction": "Das funktioniert nur mit Puzzle-PGNs in diesem Stil. Hast du ein anderes PGN? Wende dich an einen Admin zum Importieren oder frag in unserem",
       "nameLabel": "Kursname",
       "namePlaceholder": "Optional — sonst aus dem Dateinamen",
       "button": "PGN hochladen",
