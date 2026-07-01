@@ -1240,7 +1240,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Last 5 runs per repo · auto-refresh every 2 min (click 👁 to watch a repo every 10s)",
+      "subtitle": "Last 5 runs per repo · live via webhook, refresh every 20s (click 👁 to watch a repo every 10s)",
       "updated": "updated",
       "runningBuild": "running build",
       "live": "live",

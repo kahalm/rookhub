@@ -66,6 +66,52 @@ public class GithubActionsService
 
     private static IEnumerable<string> GetReportedRepos() => _reportedBuilds.Keys;
 
+    /// <summary>Per GitHub-<c>workflow_run</c>-Webhook gemeldete Läufe je Repo (Run-Id → Run). Damit
+    /// zeigt die CI-Seite Start/Ende SOFORT, ohne die GitHub-API abzufragen (Push statt Pull). Prozessweit;
+    /// beim Overview-Abruf über die (seltener gepollten) GitHub-Daten gelegt. Bei Neustart leer → der
+    /// 2-min-Poll füllt die Historie nach.</summary>
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<long, CiRunDto>> _pushedRuns = new();
+
+    /// <summary>Nimmt einen per Webhook gemeldeten Workflow-Lauf auf (Start/Ende). Hält je Repo die
+    /// jüngsten ~20 Läufe vor (ältere werden verworfen).</summary>
+    public void ReportRun(string repo, CiRunDto run)
+    {
+        var perRepo = _pushedRuns.GetOrAdd(repo, _ => new());
+        perRepo[run.Id] = run;
+        if (perRepo.Count > 40)
+            foreach (var stale in perRepo.Values.OrderByDescending(r => r.CreatedAt).Skip(20).ToList())
+                perRepo.TryRemove(stale.Id, out _);
+    }
+
+    internal static void ResetPushedRunsForTests() => _pushedRuns.Clear();
+
+    internal static IReadOnlyList<CiRunDto> PushedRunsForTests(string repo)
+        => _pushedRuns.TryGetValue(repo, out var m) ? m.Values.ToList() : new List<CiRunDto>();
+
+    /// <summary>Legt die per Webhook gemeldeten Läufe über die (ggf. gecachten) GitHub-Daten: Merge je
+    /// Repo per Run-Id (Push gewinnt = frischerer Status/Conclusion), Workflow-Filter, neueste 5.</summary>
+    private CiOverviewDto OverlayPushedRuns(CiOverviewDto ov)
+    {
+        if (_pushedRuns.IsEmpty) return ov;
+        return ov with { Repos = ov.Repos.Select(OverlayPushedRepo).ToList() };
+    }
+
+    /// <summary>Merge der Webhook-Läufe EINES Repos über dessen GitHub-Läufe (Push gewinnt per Run-Id,
+    /// Workflow-Filter, neueste 5). Genutzt vom Voll-Overlay und vom Einzel-Repo-Abruf (👁-Beobachten).</summary>
+    private CiRepoDto OverlayPushedRepo(CiRepoDto r)
+    {
+        if (!_pushedRuns.TryGetValue(r.Repo, out var pushed) || pushed.IsEmpty) return r;
+        var byId = r.Runs.ToDictionary(run => run.Id);
+        foreach (var p in pushed.Values) byId[p.Id] = p;   // Push-Event gewinnt (frischer Status/Conclusion)
+        var filter = WorkflowFilterFor(r.Repo);
+        var merged = byId.Values
+            .Where(run => MatchesWorkflowFilter(run.Name, filter))
+            .OrderByDescending(run => run.CreatedAt)
+            .Take(5)
+            .ToList();
+        return r with { Runs = merged };
+    }
+
     public GithubActionsService(HttpClient http, IHttpClientFactory httpFactory, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger)
     {
         _http = http;
@@ -77,14 +123,15 @@ public class GithubActionsService
 
     public async Task<CiOverviewDto> GetOverviewAsync(CancellationToken ct = default)
     {
-        if (_cache.TryGetValue(CacheKey, out CiOverviewDto? cached) && cached is not null)
-            return cached;
-
-        var overview = await FetchAsync(ct);
-
-        var ttl = TimeSpan.FromSeconds(Math.Clamp(_config.GetValue("GitHub:CacheSeconds", 4), 1, 60));
-        _cache.Set(CacheKey, overview, ttl);
-        return overview;
+        if (!_cache.TryGetValue(CacheKey, out CiOverviewDto? cached) || cached is null)
+        {
+            cached = await FetchAsync(ct);
+            var ttl = TimeSpan.FromSeconds(Math.Clamp(_config.GetValue("GitHub:CacheSeconds", 4), 1, 60));
+            _cache.Set(CacheKey, cached, ttl);
+        }
+        // Push-Events (Webhook) IMMER live drüberlegen — nicht mitcachen, damit Start/Ende sofort erscheint,
+        // während die GitHub-Daten selbst nur selten (Cache-TTL) frisch geholt werden.
+        return OverlayPushedRuns(cached);
     }
 
     private async Task<CiOverviewDto> FetchAsync(CancellationToken ct)
@@ -142,7 +189,7 @@ public class GithubActionsService
 
         var running = await ResolveRunningBuildsAsync(ct);
         var r = await FetchRepoAsync(owner, repo, token, ct);
-        return await MergeRunningAsync(r, running, owner, token, ct);
+        return OverlayPushedRepo(await MergeRunningAsync(r, running, owner, token, ct));
     }
 
     /// <summary>Passt ein Run zur laufenden Build-Info? SHA-Präfix-tolerant + Ref (falls gemeldet).</summary>

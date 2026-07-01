@@ -175,8 +175,10 @@ export class AdminGithubActionsComponent implements OnInit {
   /** Aktuell laufende CI-Builds mit geschätzter Restzeit (Mittel der letzten abgeschlossenen Läufe). */
   running: { repo: string; remaining: number | null }[] = [];
 
-  /** Normaler Voll-Abruf-Takt (alle Repos). */
-  private static readonly NORMAL_MS = 120_000;   // 2 min
+  /** Normaler Voll-Abruf-Takt (alle Repos). Kurz, weil rookhub die Läufe jetzt per GitHub-Webhook
+   *  gepusht bekommt (Start/Ende live) und die GitHub-API selbst nur selten [Server-Cache] anfragt —
+   *  der FE-Poll trifft also überwiegend rookhubs eigenen Cache, nicht die GitHub-API. */
+  private static readonly NORMAL_MS = 20_000;   // 20 s
   /** „👁 beobachten"-Schnell-Takt (nur das beobachtete Repo). */
   private static readonly WATCH_MS = 10_000;     // 10 s
   /** Basis-Beobachtungsfenster ab Klick. */

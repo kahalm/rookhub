@@ -1238,7 +1238,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Zadnjih 5 izvođenja po repozitoriju · osvježava se svake 2 min (👁 = prati repo svakih 10 s)",
+      "subtitle": "Zadnjih 5 izvođenja po repozitoriju · uživo preko webhooka, osvježavanje svakih 20 s (👁 = prati repo svakih 10 s)",
       "updated": "stanje",
       "runningBuild": "aktivni build",
       "live": "aktivno",

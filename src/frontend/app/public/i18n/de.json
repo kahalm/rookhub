@@ -1240,7 +1240,7 @@
     },
     "ci": {
       "title": "GitHub Actions",
-      "subtitle": "Letzte 5 Läufe je Repo · aktualisiert alle 2 min (👁 klicken = Repo alle 10 s beobachten)",
+      "subtitle": "Letzte 5 Läufe je Repo · live per Webhook, Aktualisierung alle 20 s (👁 klicken = Repo alle 10 s beobachten)",
       "updated": "Stand",
       "runningBuild": "laufender Build",
       "live": "läuft",

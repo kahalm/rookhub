@@ -7,12 +7,19 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Tests;
 
 /// <summary>GitHub-Actions-Übersicht: Token-Gate, Parsing, Fehlerbehandlung, Cache.</summary>
+// Teilt sich prozessweite statische Caches (_reportedBuilds/_pushedRuns) mit CiBuildReportControllerTests
+// → gleiche Collection, damit die beiden Klassen NICHT parallel laufen und sich die Statics nicht leeren.
+[Collection("CiStaticState")]
 public class GithubActionsServiceTests
 {
     // Der Reported-Builds-Cache ist prozessweit statisch → vor jedem Test leeren, damit eine in
     // einer anderen Testklasse gemeldete Build-SHA (z. B. CiBuildReportControllerTests „log-watcher")
     // nicht in den Overview-Tests eine 2. („nachgeladene") Run-Zeile erzeugt.
-    public GithubActionsServiceTests() => GithubActionsService.ResetReportedBuildsForTests();
+    public GithubActionsServiceTests()
+    {
+        GithubActionsService.ResetReportedBuildsForTests();
+        GithubActionsService.ResetPushedRunsForTests();
+    }
 
     private const string RunsJson = """
     { "total_count": 1, "workflow_runs": [ {
@@ -204,6 +211,38 @@ public class GithubActionsServiceTests
         Assert.Equal("rookhub", repo!.Repo);
         Assert.Null(repo.Error);
         Assert.Equal("CI", Assert.Single(repo.Runs).Name);
+    }
+
+    [Fact]
+    public async Task PushedRun_OverridesGithubRun_BySameRunId()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));   // GitHub: Run-Id 1, completed/success
+        var svc = Build(handler);
+        // Webhook meldet denselben Run (Id 1), aber als laufend → Push gewinnt (frischer).
+        svc.ReportRun("rookhub", new RookHub.Api.DTOs.CiRunDto(1, "CI", "building", "master", "push",
+            "in_progress", null, 42, DateTime.UtcNow, DateTime.UtcNow, "u", "kahalm", "abc1234def5678", "master", false));
+
+        var res = await svc.GetOverviewAsync();
+
+        var run = Assert.Single(Assert.Single(res.Repos).Runs);
+        Assert.Equal(1, run.Id);
+        Assert.Equal("in_progress", run.Status);   // Push-Status überschreibt den GitHub-Stand
+    }
+
+    [Fact]
+    public async Task PushedRun_NewRun_AppearsNewestFirst()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));   // GitHub-Run createdAt 10:00
+        var svc = Build(handler);
+        svc.ReportRun("rookhub", new RookHub.Api.DTOs.CiRunDto(999, "CI", "fresh", "master", "push",
+            "in_progress", null, 43, new DateTime(2026, 7, 1, 11, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 1, 11, 0, 0, DateTimeKind.Utc), "u", "kahalm", "def", "master", false));
+
+        var res = await svc.GetOverviewAsync();
+
+        var runs = Assert.Single(res.Repos).Runs;
+        Assert.Equal(999, runs[0].Id);   // neuester (11:00) zuerst
+        Assert.Contains(runs, r => r.Id == 1);   // GitHub-Run bleibt erhalten
     }
 
     private static HttpResponseMessage Json(string body)
