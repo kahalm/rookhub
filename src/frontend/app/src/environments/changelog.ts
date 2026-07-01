@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.4';
+export const APP_VERSION = '0.240.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.5", date: "2026-07-01", changes: [
+    { en: "Diagnostics/tracing for Chessable imports: when a course line or chapter is skipped during import (corrupt/truncated data, or the parser crash that 0.240.4 now swallows), the full stack trace + context is captured and logged to our monitoring (Elasticsearch/Kibana) instead of vanishing — previously only a short message reached the database. On the rookhub side, import failures coming from the piratechess proxy (e.g. \"PGN generation failed\", \"course has no chapters\", bearer/IP block) are now logged with HTTP status + course id + import id, where before nothing showed up in monitoring at all. Purely observability; no user-facing behaviour change.", de: "Diagnose/Tracing für Chessable-Importe: Wird beim Import eine Kurs-Linie oder ein Kapitel übersprungen (korrupte/abgeschnittene Daten oder der Parser-Absturz, den 0.240.4 jetzt schluckt), werden Kontext + voller Stacktrace erfasst und in unser Monitoring (Elasticsearch/Kibana) geloggt, statt spurlos zu verschwinden — vorher kam nur eine kurze Meldung in die Datenbank. Auf der rookhub-Seite werden Import-Fehler aus dem piratechess-Proxy (z. B. „PGN generation failed\", „course has no chapters\", Bearer-/IP-Block) jetzt mit HTTP-Status + Kurs-Id + Import-Id geloggt, wo vorher im Monitoring gar nichts auftauchte. Reine Observability, keine sichtbare Verhaltensänderung. (piratechess v1.0.34)" },
+  ]},
   { version: "0.240.4", date: "2026-07-01", changes: [
     { en: "Courses/repertoires that got stuck on \"Update\" now refresh. Two fixes: (1) Chessable courses whose stored source already contains the needed data are now reprocessed locally instead of re-fetched from Chessable — this avoids the cases that never completed (a parser crash on certain courses, courses sharing a Chessable id where only one got updated, and not-owned/expired-token courses). (2) The underlying parser crash (\"Index was outside the bounds of the array\") no longer aborts the whole course — a single corrupt line is skipped. Net effect: clicking Update now clears the last stuck courses too, and the board arrows/comments land for them.", de: "Kurse/Repertoires, die beim „Aktualisieren\" hängen blieben, laufen jetzt durch. Zwei Fixes: (1) Chessable-Kurse, deren gespeicherte Quelle die nötigen Daten bereits enthält, werden lokal aufbereitet statt von Chessable neu geholt — das umgeht die Fälle, die nie durchliefen (ein Parser-Absturz bei bestimmten Kursen, Kurse mit gemeinsamer Chessable-Id, bei denen nur eines aktualisiert wurde, sowie nicht-besessene/abgelaufene-Token-Kurse). (2) Der zugrundeliegende Parser-Absturz („Index was outside the bounds of the array\") reißt nicht mehr den ganzen Kurs ab — eine einzelne kaputte Linie wird übersprungen. Ergebnis: „Aktualisieren\" räumt jetzt auch die letzten Hänger ab, und die Brett-Pfeile/-Kommentare kommen dort an." },
   ]},

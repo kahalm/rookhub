@@ -483,6 +483,15 @@ public class ChessableImportService : ICourseReimporter
         }
         catch (ChessableProxyException ex)
         {
+            // Fehler aus dem piratechess-Proxy (z. B. „PGN generation failed …", „Course has no
+            // chapters", Bearer/IP-Block). Bisher landete nur die knappe Message im DB-Error-Feld —
+            // in Kibana war NICHTS sichtbar. Jetzt strukturiert mit Status + Kontext nach ES loggen,
+            // damit Import-Ausfälle nachvollziehbar sind (der volle Parser-Stacktrace liegt auf der
+            // piratechess-Seite, hier die rookhub-seitige Zuordnung bid/Import/Status).
+            using (LogContext.PushProperty("LogTags", "import,chessable"))
+                _logger.LogWarning(ex,
+                    "Chessable-Import {Id} (bid {Bid}, Ziel {Target}) via Proxy fehlgeschlagen: HTTP {Status} — {Message}",
+                    import.Id, import.Bid, import.Target, (int)ex.Status, ex.Message);
             await FailAsync(import, ex.Message);
         }
         catch (Exception ex)
