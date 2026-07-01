@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.234.0';
+export const APP_VERSION = '0.234.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.234.1", date: "2026-07-01", changes: [
+    { en: "Chessable import [piratechess]: courses your account doesn't own now fail with the honest reason “You do not own this course.” instead of the misleading “Course has no chapters”. (Chessable returns BOOK_NOT_OWNED with an empty message field and the real text in userFriendlyErrorMessage, which the error extractor now reads.)", de: "Chessable-Import [piratechess]: Kurse, die dein Account nicht besitzt, scheitern jetzt mit dem ehrlichen Grund „You do not own this course.“ statt dem irreführenden „Course has no chapters“. (Chessable liefert BOOK_NOT_OWNED mit leerem message-Feld und dem echten Text in userFriendlyErrorMessage, das der Fehler-Extraktor jetzt ausliest.)" },
+  ]},
   { version: "0.234.0", date: "2026-07-01", changes: [
     { en: "The navigation now always uses the hamburger menu — on every screen size, not just mobile. With the growing number of menu items the toolbar could overflow on medium and larger screens too; moving all nav links into the hamburger keeps it tidy at any resolution.", de: "Die Navigation läuft jetzt immer über das Hamburger-Menü — auf allen Bildschirmgrößen, nicht nur mobil. Bei den vielen Menüpunkten konnte die Toolbar sonst auch auf mittleren und größeren Bildschirmen überlaufen; mit allen Links im Hamburger-Menü bleibt sie bei jeder Auflösung aufgeräumt." },
   ]},
