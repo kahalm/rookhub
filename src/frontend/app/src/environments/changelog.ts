@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.16';
+export const APP_VERSION = '0.236.17';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.17", date: "2026-07-01", changes: [
+    { en: "Courses page loads much faster: the per-course puzzle count was computed with one correlated subquery per book (slow with hundreds of books, e.g. for admins) — now it's a single grouped query. Same numbers, far less waiting.", de: "Die Kurse-Seite lädt deutlich schneller: die Puzzle-Anzahl je Kurs wurde mit einer korrelierten Unterabfrage pro Buch berechnet (bei hunderten Büchern, z. B. als Admin, langsam) — jetzt eine einzige gruppierte Query. Gleiche Zahlen, viel weniger Wartezeit." },
+  ]},
   { version: "0.236.16", date: "2026-07-01", changes: [
     { en: "Chessable imports now default to NOT being used by the RepCheck extension (repertoire check on chess.com/lichess): a newly imported course sets UseForExtension=false. You can still enable it per repertoire in the edit dialog. Manually created repertoires are unaffected.", de: "Aus Chessable importierte Kurse werden jetzt standardmäßig NICHT von der RepCheck-Extension verwendet (Repertoire-Abgleich auf chess.com/lichess): ein frisch importierter Kurs setzt UseForExtension=false. Pro Repertoire im Bearbeiten-Dialog weiterhin aktivierbar. Manuell angelegte Repertoires bleiben unberührt." },
   ]},
