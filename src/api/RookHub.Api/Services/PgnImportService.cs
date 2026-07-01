@@ -204,6 +204,11 @@ public partial class PgnImportService
             yield return (headers, moves.ToString());
     }
 
+    /// <summary>Obergrenze für gespeicherte Kommentar-Texte (Einleitung + Pro-Zug-Kommentare). Großzügig,
+    /// da Chessable-Erklär-/Intro-Linien mehrere Tausend Zeichen lang sein können (früher hart bei 5000
+    /// gekappt → lange Intros abgeschnitten); nur als Missbrauchs-/Sanity-Schranke, Spalte ist LONGTEXT.</summary>
+    private const int MaxCommentLength = 100_000;
+
     // ---- erster (nicht-leerer) Mainline-Kommentar -------------------------
     private static string? ExtractFirstComment(string moveText)
     {
@@ -212,7 +217,7 @@ public partial class PgnImportService
             var inner = m.Value.Trim('{', '}');
             var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
             // import_books.py bricht beim ersten Kommentar ab, auch wenn er leer wird
-            return string.IsNullOrEmpty(cleaned) ? null : Truncate(cleaned, 5000);
+            return string.IsNullOrEmpty(cleaned) ? null : Truncate(cleaned, MaxCommentLength);
         }
         return null;
     }
@@ -257,8 +262,8 @@ public partial class PgnImportService
                     {
                         int key = sanCount - 1; // Kommentar gehört zum zuletzt gezählten Zug (-1 = Einleitung)
                         map[key] = map.TryGetValue(key, out var prev)
-                            ? Truncate($"{prev} {cleaned}", 5000)
-                            : Truncate(cleaned, 5000);
+                            ? Truncate($"{prev} {cleaned}", MaxCommentLength)
+                            : Truncate(cleaned, MaxCommentLength);
                     }
                 }
                 i = (j < n) ? j + 1 : n;

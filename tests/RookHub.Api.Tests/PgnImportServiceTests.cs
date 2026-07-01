@@ -589,4 +589,26 @@ public class PgnImportServiceTests : IDisposable
         var bp = await _db.BookPuzzles.SingleAsync();
         Assert.Equal("Chapter 2: Back-Rank Mates", bp.Chapter);
     }
+
+    [Fact]
+    public void ParsePgn_KeepsLongComment_NotTruncatedAt5000()
+    {
+        // Lange Chessable-Erklär-/Intro-Texte (> 5000 Zeichen) dürfen nicht mehr gekappt werden.
+        var longText = new string('x', 7000);
+        var pgn = $@"
+[Event ""Long""]
+[Round ""1.1""]
+[White ""Intro""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{{ [%tqu ""En"",""Finde den Zug""] {longText} }} 2.Nf3 Nc6 3. Bb5 a6 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("book.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.Comment);
+        Assert.True(p.Comment!.Length > 5000, $"Comment wurde gekappt (len={p.Comment.Length})");
+        Assert.Contains(longText, p.Comment);
+    }
 }

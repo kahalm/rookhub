@@ -36,10 +36,15 @@ namespace RookHub.Api.Services;
 ///   <c>IsInfoOnly</c>) → erscheinen beim sequenziellen Durcharbeiten als Durchklick-Text. Diese Seiten
 ///   stehen bereits im gespeicherten <c>Book.SourcePgn</c> (Kommentar-only-Spiel) → der Reprocess ist
 ///   hier ein reiner LOKALER Re-Import aus der Quelle, KEIN Chessable-Re-Fetch nötig.</item>
+/// <item><c>6</c> — Kommentar-Kappung von 5000 auf 100.000 Zeichen angehoben (<c>BookPuzzle.Comment</c>
+///   jetzt LONGTEXT statt varchar(5000)): lange Chessable-Erklär-/Intro-Texte (z. B. „Introduction …
+///   #2" in „100 Tactical Patterns") wurden bei 5000 Zeichen abgeschnitten. Der volle Text steht im
+///   gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbare Bücher brauchen nur einen LOKALEN
+///   Re-Import; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 }

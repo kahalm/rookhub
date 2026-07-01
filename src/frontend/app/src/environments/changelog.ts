@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.0';
+export const APP_VERSION = '0.238.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.1", date: "2026-07-01", changes: [
+    { en: "Long explanation/intro texts in courses are no longer cut off. They were truncated at 5000 characters (so e.g. \"Introduction … #2\" in \"100 Tactical Patterns\" ended mid-sentence); the limit is now 100,000 and the comment column holds the full text. To pull the full text into an already-imported course, refresh it (courses update banner). Also: the comment box no longer runs off the page — long texts are capped in height and scroll inside their own box.", de: "Lange Erklär-/Intro-Texte in Kursen werden nicht mehr abgeschnitten. Sie wurden bei 5000 Zeichen gekappt (z. B. endete „Introduction … #2“ in „100 Tactical Patterns“ mitten im Satz); die Grenze liegt jetzt bei 100.000 und die Kommentar-Spalte fasst den vollen Text. Um den vollen Text in einen bereits importierten Kurs zu holen, den Kurs aktualisieren (Kurse-Update-Banner). Außerdem: Der Kommentar-Kasten läuft nicht mehr über die Seite — lange Texte sind in der Höhe begrenzt und im Kasten scrollbar." },
+  ]},
   { version: "0.238.0", date: "2026-07-01", changes: [
     { en: "Convert between courses and repertoires. On the courses page each course has a “Convert to repertoire” button (📚) that creates a new repertoire from the course PGN (variations + comments preserved; the original course stays). On the repertoires page each repertoire has a “To course” button — this only works for puzzle-style PGN (Chessable format: FEN + training markers per move); a plain opening repertoire can't become a course and shows a clear message. Converted repertoires default to NOT being used by the RepCheck extension (toggle in the edit dialog).", de: "Kurse und Repertoires ineinander umwandeln. Auf der Kurse-Seite hat jeder Kurs einen „In Repertoire umwandeln“-Knopf (📚), der aus dem Kurs-PGN ein neues Repertoire anlegt (Varianten + Kommentare bleiben erhalten; der Original-Kurs bleibt). Auf der Repertoires-Seite hat jedes Repertoire einen „In Kurs“-Knopf — das klappt nur mit Puzzle-PGN (Chessable-Format: FEN + Trainingsmarker je Zug); ein reines Eröffnungs-Repertoire kann kein Kurs werden und zeigt einen klaren Hinweis. Umgewandelte Repertoires werden standardmäßig NICHT von der RepCheck-Extension verwendet (im Bearbeiten-Dialog umschaltbar)." },
   ]},

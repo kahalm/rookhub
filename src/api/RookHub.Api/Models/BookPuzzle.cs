@@ -39,7 +39,8 @@ public class BookPuzzle
     [MaxLength(200)]
     public string? Chapter { get; set; }
 
-    [MaxLength(5000)]
+    /// <summary>Einleitungs-/Erklärkommentar der Linie. LONGTEXT (keine Längenbegrenzung mehr — Chessable-
+    /// Intro-/Erklärlinien können mehrere Tausend Zeichen lang sein; früher varchar(5000) → abgeschnitten).</summary>
     public string? Comment { get; set; }
 
     /// <summary>
