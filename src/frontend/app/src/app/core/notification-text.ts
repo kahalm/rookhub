@@ -19,6 +19,43 @@ export function notificationText(translate: TranslateService, n: AppNotification
   return text;
 }
 
+/**
+ * Grobe Kategorie einer Benachrichtigung — steuert den Filter auf der History-Seite.
+ * Neue Typen dazu-mappen; `other` fängt alles ab, wofür (noch) keine Kategorie definiert ist.
+ */
+export type NotificationCategory = 'courses' | 'friends' | 'puzzles' | 'messages' | 'tournaments' | 'admin' | 'other';
+
+/** Alle Kategorien in fester Anzeigereihenfolge (auch für stabile Chip-Reihenfolge in der UI). */
+export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+  'courses', 'friends', 'puzzles', 'messages', 'tournaments', 'admin', 'other',
+];
+
+export function notificationCategory(type: string): NotificationCategory {
+  switch (type) {
+    case 'chessable_import_completed':
+    case 'chessable_import_failed':
+    case 'chessable_new_course':
+    case 'chessable_token_added':
+      return 'courses';
+    case 'friend_request_received':
+    case 'friend_request_accepted':
+      return 'friends';
+    case 'challenge_received':
+    case 'challenge_resolved':
+    case 'revenge_performed':
+      return 'puzzles';
+    case 'admin_message_received':
+    case 'user_message_received':
+      return 'messages';
+    case 'tournament_new_round':
+      return 'tournaments';
+    case 'new_user_registered':
+      return 'admin';
+    default:
+      return 'other';
+  }
+}
+
 /** Material-Icon je Benachrichtigungstyp (geteilt von Glocke + History-Seite). */
 export function notificationIcon(n: AppNotification): string {
   switch (n.type) {

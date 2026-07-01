@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.5';
+export const APP_VERSION = '0.238.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.6", date: "2026-07-01", changes: [
+    { en: "Notifications page now groups notifications into categories (Courses / Friends / Puzzles / Messages / Tournaments / Admin / Other) and shows a filter bar of chips above the list — each chip has a count. Click a chip to hide that category from the list; click again to show it. \"Show all\" resets the filter. Hidden categories are remembered per device (localStorage) so the next visit stays filtered the same way.", de: "Die Benachrichtigungsseite gruppiert Benachrichtigungen jetzt in Kategorien (Kurse / Freunde / Puzzles / Nachrichten / Turniere / Admin / Sonstiges) und zeigt oben eine Filterleiste mit Chips — jeder Chip trägt einen Zähler. Klick auf einen Chip blendet die Kategorie aus, nochmal klicken blendet sie wieder ein. „Alle einblenden“ setzt den Filter zurück. Ausgeblendete Kategorien werden pro Gerät gemerkt (localStorage), der nächste Besuch bleibt also gleich gefiltert." },
+  ]},
   { version: "0.238.5", date: "2026-07-01", changes: [
     { en: "Converting a course to a repertoire (or vice versa) now MOVES it instead of copying: the original disappears once the conversion succeeds. A shared/group course you don't own stays (it isn't yours to remove); your own courses and your repertoires are removed after conversion. If the conversion fails (e.g. a plain opening repertoire with no puzzle markers), nothing is deleted.", de: "Ein Kurs in ein Repertoire (oder umgekehrt) umzuwandeln VERSCHIEBT ihn jetzt, statt zu kopieren: das Original verschwindet nach erfolgreicher Umwandlung. Ein geteilter Gruppen-Kurs, der dir nicht gehört, bleibt (den darfst du nicht entfernen); eigene Kurse und deine Repertoires werden nach der Umwandlung entfernt. Schlägt die Umwandlung fehl (z. B. reines Eröffnungs-Repertoire ohne Puzzle-Marker), wird nichts gelöscht." },
   ]},

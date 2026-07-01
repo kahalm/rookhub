@@ -4,16 +4,22 @@ import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
-import { notificationText, notificationIcon } from '../../core/notification-text';
+import {
+  notificationText, notificationIcon, notificationCategory,
+  NotificationCategory, NOTIFICATION_CATEGORIES,
+} from '../../core/notification-text';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+
+const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 
 /** Vollständige, paginierte Benachrichtigungs-History (von der Glocke aus „Alle anzeigen"). */
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="notif-container">
       <h1>{{ 'notifications.historyTitle' | translate }}</h1>
@@ -23,17 +29,43 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
       } @else if (items.length === 0) {
         <p class="empty">{{ 'notifications.empty' | translate }}</p>
       } @else {
-        <mat-card>
-          <mat-card-content class="list">
-            @for (n of items; track n.id) {
-              <button class="row" [class.unseen]="!n.seen" [class.clickable]="!!n.link" (click)="open(n)">
-                <mat-icon class="row-icon">{{ icon(n) }}</mat-icon>
-                <span class="row-text">{{ text(n) }}</span>
-                <span class="row-date">{{ n.createdAt | date:'short' }}</span>
+        @if (availableCategories.length > 1) {
+          <div class="filter-bar">
+            <span class="filter-label">{{ 'notifications.filter.label' | translate }}</span>
+            <mat-chip-set aria-label="notifications.filter.label">
+              @for (cat of availableCategories; track cat) {
+                <mat-chip class="filter-chip" [class.chip-off]="isHidden(cat)"
+                          (click)="toggleCategory(cat)"
+                          [attr.aria-pressed]="!isHidden(cat)"
+                          [attr.title]="(isHidden(cat) ? 'notifications.filter.showTooltip' : 'notifications.filter.hideTooltip') | translate">
+                  <mat-icon matChipAvatar>{{ isHidden(cat) ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  {{ ('notifications.category.' + cat) | translate }} ({{ counts[cat] || 0 }})
+                </mat-chip>
+              }
+            </mat-chip-set>
+            @if (hidden.size > 0) {
+              <button mat-button class="filter-reset" (click)="showAll()">
+                {{ 'notifications.filter.showAll' | translate }}
               </button>
             }
-          </mat-card-content>
-        </mat-card>
+          </div>
+        }
+
+        @if (visibleItems.length === 0) {
+          <p class="empty">{{ 'notifications.filter.allHidden' | translate }}</p>
+        } @else {
+          <mat-card>
+            <mat-card-content class="list">
+              @for (n of visibleItems; track n.id) {
+                <button class="row" [class.unseen]="!n.seen" [class.clickable]="!!n.link" (click)="open(n)">
+                  <mat-icon class="row-icon">{{ icon(n) }}</mat-icon>
+                  <span class="row-text">{{ text(n) }}</span>
+                  <span class="row-date">{{ n.createdAt | date:'short' }}</span>
+                </button>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
 
         @if (items.length < total) {
           <div class="more">
@@ -42,13 +74,18 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
             </button>
           </div>
         }
-        <p class="count">{{ 'notifications.shownOf' | translate:{ shown: items.length, total: total } }}</p>
+        <p class="count">{{ 'notifications.shownOf' | translate:{ shown: visibleItems.length, total: total } }}</p>
       }
     </div>
   `,
   styles: [`
     .notif-container { max-width: 760px; margin: 24px auto; padding: 0 16px; }
     .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+    .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 12px; }
+    .filter-label { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .filter-chip { cursor: pointer; user-select: none; }
+    .filter-chip.chip-off { opacity: 0.45; text-decoration: line-through; }
+    .filter-reset { min-width: 0; padding: 0 8px; font-size: 0.8rem; }
     .list { display: flex; flex-direction: column; padding: 4px 0; }
     .row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
            background: none; border: none; color: inherit; font: inherit; padding: 10px 12px;
@@ -69,6 +106,8 @@ export class NotificationsComponent implements OnInit {
   items: AppNotification[] = [];
   total = 0;
   loading = false;
+  /** Ausgeblendete Kategorien (persistiert in localStorage). */
+  hidden = new Set<NotificationCategory>();
   private page = 0;
   private readonly pageSize = 30;
 
@@ -76,9 +115,45 @@ export class NotificationsComponent implements OnInit {
     private notif: InAppNotificationService,
     private translate: TranslateService,
     private router: Router,
-  ) {}
+  ) {
+    this.hidden = readHiddenCategories();
+  }
 
   ngOnInit(): void { this.loadMore(); }
+
+  /** Nur Kategorien anzeigen, für die wir tatsächlich Einträge geladen haben. */
+  get availableCategories(): NotificationCategory[] {
+    const seen = new Set<NotificationCategory>();
+    for (const n of this.items) seen.add(notificationCategory(n.type));
+    return NOTIFICATION_CATEGORIES.filter(c => seen.has(c));
+  }
+
+  /** Aktuell sichtbare Einträge (nach Kategoriefilter). */
+  get visibleItems(): AppNotification[] {
+    if (this.hidden.size === 0) return this.items;
+    return this.items.filter(n => !this.hidden.has(notificationCategory(n.type)));
+  }
+
+  /** Zähler je Kategorie über die geladenen Einträge (für die Chip-Klammer). */
+  get counts(): Record<NotificationCategory, number> {
+    const c: Record<NotificationCategory, number> = {
+      courses: 0, friends: 0, puzzles: 0, messages: 0, tournaments: 0, admin: 0, other: 0,
+    };
+    for (const n of this.items) c[notificationCategory(n.type)]++;
+    return c;
+  }
+
+  isHidden(cat: NotificationCategory): boolean { return this.hidden.has(cat); }
+
+  toggleCategory(cat: NotificationCategory): void {
+    if (this.hidden.has(cat)) this.hidden.delete(cat); else this.hidden.add(cat);
+    persistHiddenCategories(this.hidden);
+  }
+
+  showAll(): void {
+    this.hidden.clear();
+    persistHiddenCategories(this.hidden);
+  }
 
   loadMore(): void {
     this.loading = true;
@@ -100,4 +175,21 @@ export class NotificationsComponent implements OnInit {
 
   text(n: AppNotification): string { return notificationText(this.translate, n); }
   icon(n: AppNotification): string { return notificationIcon(n); }
+}
+
+/** Liest die zuletzt ausgeblendeten Kategorien aus localStorage (still, wenn kaputt/nicht vorhanden). */
+export function readHiddenCategories(): Set<NotificationCategory> {
+  try {
+    const raw = localStorage.getItem(HIDDEN_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return new Set();
+    const valid = new Set<NotificationCategory>(NOTIFICATION_CATEGORIES);
+    return new Set(arr.filter((x): x is NotificationCategory => typeof x === 'string' && valid.has(x as NotificationCategory)));
+  } catch { return new Set(); }
+}
+
+/** Schreibt den ausgeblendeten Zustand zurück; Fehler still schlucken (Storage voll / Safari-Private-Mode). */
+export function persistHiddenCategories(hidden: Set<NotificationCategory>): void {
+  try { localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify([...hidden])); } catch { /* ignore */ }
 }

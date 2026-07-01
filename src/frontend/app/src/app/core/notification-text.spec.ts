@@ -1,6 +1,6 @@
 import { TranslateService } from '@ngx-translate/core';
 import { AppNotification } from './in-app-notification.service';
-import { notificationText, notificationIcon } from './notification-text';
+import { notificationText, notificationIcon, notificationCategory, NOTIFICATION_CATEGORIES } from './notification-text';
 
 /** Fake TranslateService: gibt den (aufgelösten) Key zurück, damit Tests die Key-Wahl prüfen können. */
 function fakeTranslate(): TranslateService {
@@ -52,5 +52,44 @@ describe('notificationIcon', () => {
 
   it('falls back to the generic bell icon for unknown types', () => {
     expect(notificationIcon(notif('something_new'))).toBe('notifications');
+  });
+});
+
+describe('notificationCategory', () => {
+  it('maps Chessable/import events to the courses bucket', () => {
+    expect(notificationCategory('chessable_import_completed')).toBe('courses');
+    expect(notificationCategory('chessable_import_failed')).toBe('courses');
+    expect(notificationCategory('chessable_new_course')).toBe('courses');
+    expect(notificationCategory('chessable_token_added')).toBe('courses');
+  });
+
+  it('maps friend events to the friends bucket', () => {
+    expect(notificationCategory('friend_request_received')).toBe('friends');
+    expect(notificationCategory('friend_request_accepted')).toBe('friends');
+  });
+
+  it('maps challenge & revenge events to the puzzles bucket', () => {
+    expect(notificationCategory('challenge_received')).toBe('puzzles');
+    expect(notificationCategory('challenge_resolved')).toBe('puzzles');
+    expect(notificationCategory('revenge_performed')).toBe('puzzles');
+  });
+
+  it('maps admin-message and user-message events to the messages bucket', () => {
+    expect(notificationCategory('admin_message_received')).toBe('messages');
+    expect(notificationCategory('user_message_received')).toBe('messages');
+  });
+
+  it('maps tournament rounds to tournaments and new-user registration to admin', () => {
+    expect(notificationCategory('tournament_new_round')).toBe('tournaments');
+    expect(notificationCategory('new_user_registered')).toBe('admin');
+  });
+
+  it('falls back to "other" for unknown types', () => {
+    expect(notificationCategory('something_new')).toBe('other');
+    expect(notificationCategory('')).toBe('other');
+  });
+
+  it('exposes categories in a stable display order', () => {
+    expect(NOTIFICATION_CATEGORIES).toEqual(['courses', 'friends', 'puzzles', 'messages', 'tournaments', 'admin', 'other']);
   });
 });

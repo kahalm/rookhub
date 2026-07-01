@@ -70,7 +70,23 @@
     "historyTitle": "Obavijesti",
     "loadMore": "Učitaj još",
     "shownOf": "{{shown}} od {{total}}",
-    "markAllRead": "Označi sve kao pročitano"
+    "markAllRead": "Označi sve kao pročitano",
+    "filter": {
+      "label": "Filter:",
+      "hideTooltip": "Sakrij ovu kategoriju",
+      "showTooltip": "Ponovo prikaži ovu kategoriju",
+      "showAll": "Prikaži sve",
+      "allHidden": "Sve kategorije su sakrivene — ponovo uključi barem jednu iznad."
+    },
+    "category": {
+      "courses": "Tečajevi",
+      "friends": "Prijatelji",
+      "puzzles": "Zagonetke",
+      "messages": "Poruke",
+      "tournaments": "Turniri",
+      "admin": "Administracija",
+      "other": "Ostalo"
+    }
   },
   "nav": {
     "discord": "Discord zajednica",

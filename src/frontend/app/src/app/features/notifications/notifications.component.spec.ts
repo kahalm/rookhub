@@ -5,8 +5,8 @@ import { AppNotification } from '../../core/in-app-notification.service';
 /** Direkt instanziiert (ohne TestBed/Template) — testet die Komponenten-Logik. */
 const translate: any = { instant: (k: string) => k };
 
-function notif(id: number, seen = false, link: string | null = null): AppNotification {
-  return { id, type: 'friend_request_received', data: null, link, createdAt: '2026-06-17T00:00:00Z', seen };
+function notif(id: number, seen = false, link: string | null = null, type = 'friend_request_received'): AppNotification {
+  return { id, type, data: null, link, createdAt: '2026-06-17T00:00:00Z', seen };
 }
 
 function makeService(overrides: any = {}): any {
@@ -68,5 +68,69 @@ describe('NotificationsComponent', () => {
 
     expect(c.loading).toBeFalse();
     expect(c.items).toEqual([]);
+  });
+
+  describe('category filter', () => {
+    beforeEach(() => localStorage.removeItem('rookhub_notifications_hidden_categories'));
+    afterEach(() => localStorage.removeItem('rookhub_notifications_hidden_categories'));
+
+    function withItems(items: AppNotification[]): NotificationsComponent {
+      const svc = makeService();
+      svc.history.and.returnValue(of({ items, total: items.length }));
+      const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any);
+      c.loadMore();
+      return c;
+    }
+
+    it('lists only categories present in the loaded items, in canonical order', () => {
+      const c = withItems([
+        notif(1, false, null, 'friend_request_received'),           // friends
+        notif(2, false, null, 'challenge_received'),                 // puzzles
+        notif(3, false, null, 'chessable_import_completed'),         // courses
+        notif(4, false, null, 'admin_message_received'),             // messages
+      ]);
+      // Canonical order: courses, friends, puzzles, messages, …
+      expect(c.availableCategories).toEqual(['courses', 'friends', 'puzzles', 'messages']);
+      expect(c.counts.courses).toBe(1);
+      expect(c.counts.friends).toBe(1);
+      expect(c.counts.puzzles).toBe(1);
+      expect(c.counts.messages).toBe(1);
+      expect(c.counts.other).toBe(0);
+    });
+
+    it('hides items whose category is toggled off; showAll restores everything', () => {
+      const c = withItems([
+        notif(1, false, null, 'friend_request_received'),
+        notif(2, false, null, 'challenge_received'),
+        notif(3, false, null, 'chessable_import_completed'),
+      ]);
+      expect(c.visibleItems.map(n => n.id)).toEqual([1, 2, 3]);
+
+      c.toggleCategory('friends');
+      expect(c.isHidden('friends')).toBeTrue();
+      expect(c.visibleItems.map(n => n.id)).toEqual([2, 3]);
+
+      c.toggleCategory('puzzles');
+      expect(c.visibleItems.map(n => n.id)).toEqual([3]);
+
+      c.toggleCategory('friends');   // Toggle wieder an
+      expect(c.visibleItems.map(n => n.id)).toEqual([1, 3]);
+
+      c.showAll();
+      expect(c.hidden.size).toBe(0);
+      expect(c.visibleItems.map(n => n.id)).toEqual([1, 2, 3]);
+    });
+
+    it('persists hidden categories in localStorage and restores them on the next instance', () => {
+      const c = withItems([notif(1, false, null, 'friend_request_received')]);
+      c.toggleCategory('friends');
+      expect(localStorage.getItem('rookhub_notifications_hidden_categories')).toContain('friends');
+
+      // Frischer Component-Instanz-Aufbau → liest Storage im Constructor
+      const svc = makeService();
+      svc.history.and.returnValue(of({ items: [], total: 0 }));
+      const c2 = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any);
+      expect(c2.isHidden('friends')).toBeTrue();
+    });
   });
 });

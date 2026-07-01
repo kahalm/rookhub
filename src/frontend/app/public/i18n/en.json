@@ -70,7 +70,23 @@
     "historyTitle": "Notifications",
     "loadMore": "Load more",
     "shownOf": "{{shown}} of {{total}}",
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "filter": {
+      "label": "Filter:",
+      "hideTooltip": "Hide this category",
+      "showTooltip": "Show this category again",
+      "showAll": "Show all",
+      "allHidden": "All categories hidden — turn at least one back on above."
+    },
+    "category": {
+      "courses": "Courses",
+      "friends": "Friends",
+      "puzzles": "Puzzles",
+      "messages": "Messages",
+      "tournaments": "Tournaments",
+      "admin": "Admin",
+      "other": "Other"
+    }
   },
   "nav": {
     "discord": "Discord community",
