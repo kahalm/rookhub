@@ -56,6 +56,11 @@ public class GithubActionsService
     public void ReportBuild(string repo, string? sha, string? refName)
         => _reportedBuilds[repo] = new BuildInfo(sha, refName);
 
+    /// <summary>Nur für Tests: der Reported-Builds-Cache ist prozessweit statisch (in Produktion
+    /// gewollt) — Tests müssen ihn zwischen Fällen leeren, sonst leckt eine gemeldete Build-SHA
+    /// über Testklassen hinweg (z. B. CiBuildReportController-Test → GithubActions-Overview-Test).</summary>
+    internal static void ResetReportedBuildsForTests() => _reportedBuilds.Clear();
+
     private static BuildInfo? GetReportedBuild(string repo)
         => _reportedBuilds.TryGetValue(repo, out var b) ? b : null;
 

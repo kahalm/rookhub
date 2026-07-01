@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.12';
+export const APP_VERSION = '0.236.13';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.13", date: "2026-07-01", changes: [
+    { en: "CI fix: flaky GithubActionsService test (LogWatcher_FiltersOutTestRuns) that failed the whole build depending on test order. The process-wide static reported-builds cache leaked across test classes (CiBuildReportController test reported a “log-watcher” build → the overview test then appended a duplicate “running” run row → Assert.Single saw 2). Added an internal reset hook cleared before each GithubActionsService test. Product code unchanged.", de: "CI-Fix: flakiger GithubActionsService-Test (LogWatcher_FiltersOutTestRuns), der je nach Testreihenfolge den ganzen Build rot machte. Der prozessweite statische Reported-Builds-Cache leckte über Testklassen hinweg (CiBuildReportController-Test meldete einen „log-watcher“-Build → der Overview-Test hängte dann eine doppelte „laufende“ Run-Zeile an → Assert.Single sah 2). Interner Reset-Hook ergänzt, der vor jedem GithubActionsService-Test geleert wird. Produktcode unverändert." },
+  ]},
   { version: "0.236.12", date: "2026-07-01", changes: [
     { en: "“Remember line” (RepCheck on chessable.com) now stores a real course name. New RememberedPosition.CourseName (+migration): the extension resolves the authoritative Chessable course title via the captured bearer token and sends it along; if it is missing, the server resolves it from the user's stored Chessable bearer — cache-first from the nightly-refreshed course list, live fallback otherwise. Old entries without a name are backfilled from the cached course list on read. No course name is no longer a hard failure.", de: "„Remember line“ (RepCheck auf chessable.com) speichert jetzt einen echten Kursnamen. Neues RememberedPosition.CourseName (+Migration): die Extension löst den autoritativen Chessable-Kurstitel über den erfassten Bearer-Token auf und sendet ihn mit; fehlt er, löst der Server ihn aus dem gespeicherten Chessable-Bearer des Users auf — cache-first aus der nächtlich aktualisierten Kursliste, sonst per Live-Abruf. Alt-Einträge ohne Namen werden beim Lesen aus der gecachten Kursliste nachgetragen. Kein Kursname ist kein harter Fehler mehr." },
   ]},

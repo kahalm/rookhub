@@ -9,6 +9,11 @@ namespace RookHub.Api.Tests;
 /// <summary>GitHub-Actions-Übersicht: Token-Gate, Parsing, Fehlerbehandlung, Cache.</summary>
 public class GithubActionsServiceTests
 {
+    // Der Reported-Builds-Cache ist prozessweit statisch → vor jedem Test leeren, damit eine in
+    // einer anderen Testklasse gemeldete Build-SHA (z. B. CiBuildReportControllerTests „log-watcher")
+    // nicht in den Overview-Tests eine 2. („nachgeladene") Run-Zeile erzeugt.
+    public GithubActionsServiceTests() => GithubActionsService.ResetReportedBuildsForTests();
+
     private const string RunsJson = """
     { "total_count": 1, "workflow_runs": [ {
         "id": 1, "name": "CI", "display_title": "fix things", "head_branch": "master",
