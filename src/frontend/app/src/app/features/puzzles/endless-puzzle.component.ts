@@ -38,7 +38,6 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
 import { LongSolveService } from './long-solve.service';
-import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -991,14 +990,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   // --- Puzzle setup ---
 
   /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps (wie Standard-Modus). */
-  private firstMoveHint: FirstMoveHint | null = null;
-
   /**
-   * On-the-fly-Tipps für die Standard-Puzzles des Endless-Modus (identisch zum Standard-Solver):
-   * Stufe 1 = Check-Capture-Threat-Hinweis je Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
+   * On-the-fly-Tipps für die Standard-Puzzles des Endless-Modus (identisch zum Standard-Solver) — zum
+   * AKTUELL erwarteten Zug (jeder Zug, nicht nur der erste): Stufe 1 = Check-Capture-Threat-Hinweis je
+   * Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
    */
   override get availableHints(): string[] {
-    const h = this.firstMoveHint;
+    const h = this.currentMoveHint;
     if (!h) return [];
     const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
     const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
@@ -1034,7 +1032,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.gaveUp = false;
     this.reviewMode = false;
     this.hintLevel = 0;
-    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
+    // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint).
     // Lös-Automat (Setup, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, 0);
   }

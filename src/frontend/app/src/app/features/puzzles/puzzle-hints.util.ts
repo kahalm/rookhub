@@ -24,21 +24,41 @@ export function classifyFirstSolverMove(fen: string, movesStr: string, startPly 
   const toks = (movesStr || '').trim().split(/\s+/);
   // Index des ersten Löserzugs: bei startPly<0 ist es moves[0], sonst nach Setup/Vorspiel moves[startPly+1].
   const solverIdx = startPly < 0 ? 0 : startPly + 1;
-  if (!toks[solverIdx]) return null;
+  return classifyMoveAt(fen, toks, solverIdx);
+}
+
+/**
+ * Klassifiziert den Zug an absolutem Index `index` (0-basiert in `moves`) — spielt `moves[0..index-1]`
+ * ab `fen` nach und klassifiziert `moves[index]`. Damit gibt es gestufte Tipps zu JEDEM Löserzug,
+ * nicht nur dem ersten (der Solver ruft es mit dem aktuell erwarteten Zug-Index auf). `null` bei
+ * ungültigem Index oder nicht spielbarem Zug.
+ */
+export function classifyMoveAt(fen: string, moves: string[], index: number): FirstMoveHint | null {
+  if (index < 0 || index >= moves.length || !moves[index]) return null;
   try {
     const chess = new Chess(fen);
-    for (let i = 0; i < solverIdx; i++) applyUci(chess, toks[i]);   // Vorspiel/Setup
-    const solverUci = toks[solverIdx];
-    const piece = chess.get(solverUci.substring(0, 2) as never);
-    const mv = applyUci(chess, solverUci);                          // erster Löserzug
+    for (let i = 0; i < index; i++) applyUci(chess, moves[i]);   // Vorspiel bis zum Zug
+    return classifyMoveFromFen(chess.fen(), moves[index]);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Klassifiziert EINEN Zug (`uci`) aus einer Stellung (`fen`) für die gestuften Tipps — für Tipps zu
+ * JEDEM Löserzug (nicht nur dem ersten): der Solver ruft das mit der AKTUELLEN Brettstellung und dem
+ * aktuell erwarteten Zug auf. `null`, wenn der Zug in der Stellung nicht spielbar ist (z. B. off-path).
+ */
+export function classifyMoveFromFen(fen: string, uci: string): FirstMoveHint | null {
+  if (!uci) return null;
+  try {
+    const chess = new Chess(fen);
+    const piece = chess.get(uci.substring(0, 2) as never);
+    const mv = applyUci(chess, uci);
     if (!mv || !piece) return null;
     const check = mv.san.includes('+') || mv.san.includes('#');
     const capture = mv.san.includes('x');
-    return {
-      type: check ? 'check' : capture ? 'capture' : 'quiet',
-      pieceType: piece.type,
-      san: mv.san
-    };
+    return { type: check ? 'check' : capture ? 'capture' : 'quiet', pieceType: piece.type, san: mv.san };
   } catch {
     return null;
   }

@@ -20,7 +20,6 @@ import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './p
 import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { DIFFICULTY_OFFSET, puzzleWindow } from './puzzle-window.util';
-import { classifyStandardFirstMove, FirstMoveHint } from './puzzle-hints.util';
 import { takeFromPool, takeNearestFromPool } from './endless-prefetch.util';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -458,14 +457,13 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps. */
-  private firstMoveHint: FirstMoveHint | null = null;
-
   /**
-   * On-the-fly-Tipps für Standard-Puzzles (kein vorberechneter Speicher): Stufe 1 = Check-Capture-
-   * Threat-Hinweis je nach Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
+   * On-the-fly-Tipps für Standard-Puzzles (kein vorberechneter Speicher) — zum AKTUELL erwarteten Zug
+   * (jeder Zug, nicht nur der erste): Stufe 1 = Check-Capture-Threat-Hinweis je nach Zugtyp, Stufe 2 =
+   * welche Figur zieht, Stufe 3 = der Zug (SAN).
    */
   override get availableHints(): string[] {
-    const h = this.firstMoveHint;
+    const h = this.currentMoveHint;
     if (!h) return [];
     const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
     const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
@@ -500,7 +498,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.reviewMode = false;
     this.reviewIndex = 0;
     this.hintLevel = 0;
-    this.firstMoveHint = classifyStandardFirstMove(puzzle.fen, puzzle.moves);
+    // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint).
     // Lös-Automat (Setup, Zug-Handling, Stockfish, Viz) kommt aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, 0);
   }
@@ -600,7 +598,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       solved, timeSpentSeconds: seconds, moveLog: log ?? null,
       visualizationLevel: this.visualizationMode,
       evalShown: this.evalShown, vizShowCount: this.vizShowCount,
-      hintsUsed: this.hintLevel,
+      hintsUsed: this.maxHintLevel,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
@@ -610,7 +608,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       return;
     }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.hintLevel).subscribe({
+      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel).subscribe({
         next: res => {
           if (res.eloChange != null) this.lastEloChange = res.eloChange;
           this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
@@ -620,7 +618,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.resolveChallengeIfNeeded(solved, seconds);
       this.notifyRevengeIfNeeded(solved);
     } else {
-      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.hintLevel).subscribe({
+      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });

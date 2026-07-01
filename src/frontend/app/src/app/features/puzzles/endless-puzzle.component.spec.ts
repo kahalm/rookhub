@@ -175,23 +175,28 @@ describe('EndlessPuzzleComponent deep-link params', () => {
 });
 
 describe('EndlessPuzzleComponent on-the-fly Tipps', () => {
-  it('setupPuzzle klassifiziert den ersten Löserzug und setzt hintLevel zurück', () => {
+  it('setupPuzzle setzt hintLevel zurück (Tipps gelten pro Zug)', () => {
     const c = makeComponent();
     spyOn(c as any, 'setupSolver');   // echten Solver (Stockfish/Brett) neutralisieren
     c.hintLevel = 2;
-
-    // moves[0] = Setup-Zug (e2e4), moves[1] = erster Löserzug (e7e5 = ruhiger Bauernzug).
     (c as any).setupPuzzle({ ...PUZZLE });
-
     expect(c.hintLevel).toBe(0);
-    expect((c as any).firstMoveHint).toEqual({ type: 'quiet', pieceType: 'p', san: 'e5' });
+  });
+
+  it('availableHints klassifiziert den AKTUELL erwarteten Zug on-the-fly', () => {
+    const c = makeComponent();
+    // Basis-chess = Grundstellung → solutionMoves[moveIndex]=e2e4 (ruhiger Bauernzug).
+    (c as any).solutionMoves = ['e2e4', 'e7e5', 'g1f3'];
+    (c as any).moveIndex = 0;
     expect(c.hasHints).toBeTrue();
     expect(c.availableHints.length).toBe(3);
+    expect(c.availableHints[0]).toBe('puzzles.hints.t1Quiet');
   });
 
   it('showNextHint deckt die Tipps gestuft auf', () => {
     const c = makeComponent();
-    (c as any).firstMoveHint = { type: 'capture', pieceType: 'r', san: 'Rxe4' };
+    (c as any).solutionMoves = ['e2e4', 'e7e5', 'g1f3'];
+    (c as any).moveIndex = 0;
 
     expect(c.shownHints.length).toBe(0);
     c.showNextHint();
@@ -203,9 +208,10 @@ describe('EndlessPuzzleComponent on-the-fly Tipps', () => {
     expect(c.shownHints.length).toBe(3);
   });
 
-  it('ohne firstMoveHint gibt es keine Tipps', () => {
+  it('ohne spielbaren erwarteten Zug gibt es keine Tipps', () => {
     const c = makeComponent();
-    (c as any).firstMoveHint = null;
+    (c as any).solutionMoves = [];
+    (c as any).moveIndex = 0;
     expect(c.hasHints).toBeFalse();
     expect(c.availableHints).toEqual([]);
   });

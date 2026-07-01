@@ -27,7 +27,7 @@ import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { parseMoveShapes } from './move-shapes.util';
 import { applyUci } from './puzzle-move.util';
-import { classifyFirstSolverMove, FirstMoveHint } from './puzzle-hints.util';
+import { FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
@@ -117,9 +117,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   initialEval = '';
   private initialFen = '';
 
-  /** On-the-fly klassifizierter erster Löserzug — Fallback-Basis, wenn keine vorberechneten Tipps da sind
-   *  (z. B. Wochenpost-Puzzles, die on-the-fly aus dem PGN geparst werden). */
-  private firstMoveHint: FirstMoveHint | null = null;
 
   /** True, wenn dieses Puzzle vorberechnete (sprach-keyed) Tipps mitbringt (echtes Buch-Puzzle). */
   get hasPrecomputedHints(): boolean { return !!this.puzzle?.hints; }
@@ -137,12 +134,19 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  (Wochenpost u. a.), werden on-the-fly gestufte Tipps erzeugt wie im Standard-/Endless-Solver.
    *  Mechanik (hintLevel/shownHints/showNextHint) in BasePuzzleSolver. */
   override get availableHints(): string[] {
+    // Vorberechnete LLM-Tipps gelten NUR für den ersten/Schlüssel-Löserzug (dafür erzeugt) — bei den
+    // Folgezügen würden sie den falschen Zug beschreiben. Für JEDEN Zug greifen sonst die on-the-fly
+    // gestuften Tipps zum AKTUELL erwarteten Zug (currentMoveHint), sodass Tipps überall funktionieren.
     const h = this.puzzle?.hints;
-    if (h) {
+    if (h && this.atFirstSolverMove) {
       const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
       return h[lang] ?? h['en'] ?? h['de'] ?? [];
     }
-    const f = this.firstMoveHint;
+    return this.hintsForMove(this.currentMoveHint);
+  }
+
+  /** Baut die 3 gestuften Tipp-Strings (Typ → Figur → SAN) aus einer Zug-Klassifikation. */
+  private hintsForMove(f: FirstMoveHint | null): string[] {
     if (!f) return [];
     const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
     const tier1 = f.type === 'check' ? t('puzzles.hints.t1Check')
@@ -519,9 +523,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.resolveChallengeIfNeeded(solved);
     if (this.auth.isLoggedIn) {
       const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.hintLevel };
+      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.hintLevel)
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.maxHintLevel)
         .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
     } else if (solved) {
       // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos).
@@ -541,7 +545,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.trackRecorded = true;
     // Genutzte Tipp-Stufe (0–3) mitschicken; serverseitig geklemmt. So zeigt der Zähler künftig auch,
     // wie viele Löser ohne/mit 1/2/3 Tipps gelöst haben.
-    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved, this.hintLevel).subscribe({
+    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved, this.maxHintLevel).subscribe({
       next: c => this.sharedCounts = c,
       error: () => { this.trackRecorded = false; }   // bei Fehler erneut versuchbar
     });
@@ -913,7 +917,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.weeklyAttemptRecorded = true;
     const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
     const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.hintLevel };
+    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
     if (!navigator.onLine) {
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
@@ -921,7 +925,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.weeklySeconds += this.solveSeconds;
       return;
     }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.hintLevel).subscribe({
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel).subscribe({
       next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -942,7 +946,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
     const url = `/api/courses/${this.courseBookId}/results`;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.hintLevel };
+    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.maxHintLevel };
     if (!navigator.onLine) {
       // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
       this.offlineQueue.enqueue('POST', url, body);
@@ -952,7 +956,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       }
       return;
     }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.hintLevel).subscribe({
+    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.maxHintLevel).subscribe({
       next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });
@@ -1047,9 +1051,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.bookAttemptRecorded = false;
     this.courseAttemptRecorded = false;
     this.hintLevel = 0;
-    // startPly-bewusst: Buch/Daily/Course haben oft startPly=-1 (FEN = Trainingsstellung, Löserzug =
-    // moves[0]); Weekly nutzt die Lichess-Konvention (startPly=0). Muss zum Solver-Setup passen.
-    this.firstMoveHint = classifyFirstSolverMove(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
+    // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
+    // kein vorab-klassifizierter erster Zug mehr nötig.
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;

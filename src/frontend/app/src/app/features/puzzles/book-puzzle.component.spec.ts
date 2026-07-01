@@ -15,7 +15,8 @@ function makeComponent(): any {
   const courseService: any = {};
   const weeklyService: any = {};
   const router: any = { navigate: jasmine.createSpy('navigate'), url: '/puzzles/book/1' };
-  const translate: any = { instant: (k: string) => k };
+  // gibt den Key zurück; Params werden angehängt (damit Tipp-Stufe 2/3 mit {piece}/{move} prüfbar sind).
+  const translate: any = { instant: (k: string, p?: object) => (p ? k + ' ' + JSON.stringify(p) : k) };
   const auth: any = { isLoggedIn: false };
   const snackbar: any = { info: () => {} };
   const offlineQueue: any = { enqueue: () => {} };
@@ -251,6 +252,7 @@ describe('BookPuzzleComponent Tipps (gestuft 1→3)', () => {
   it('wählt die aktive Sprache (Fallback en, da Mock kein currentLang hat)', () => {
     const c = makeComponent();
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: HINTS };
+    (c as any).startPly = -1;   // FEN ist Trainingsstellung → moveIndex 0 = erster Löserzug (LLM-Tipps greifen)
     expect(c.hasHints).toBeTrue();
     expect(c.availableHints).toEqual(HINTS.en);
   });
@@ -258,12 +260,14 @@ describe('BookPuzzleComponent Tipps (gestuft 1→3)', () => {
   it('fällt auf de zurück, wenn nur de vorhanden ist', () => {
     const c = makeComponent();
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: { de: HINTS.de } };
+    (c as any).startPly = -1;
     expect(c.availableHints).toEqual(HINTS.de);
   });
 
   it('deckt mit jedem Tipp eine Stufe mehr auf und stoppt bei 3', () => {
     const c = makeComponent();
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', hints: HINTS };
+    (c as any).startPly = -1;
     expect(c.hintLevel).toBe(0);
     expect(c.shownHints).toEqual([]);
 
@@ -282,12 +286,19 @@ describe('BookPuzzleComponent Tipps (gestuft 1→3)', () => {
 });
 
 describe('BookPuzzleComponent on-the-fly Tipps (Fallback ohne vorberechnete, z. B. Wochenpost)', () => {
-  it('setupPuzzle klassifiziert den ersten Löserzug, wenn keine vorberechneten Tipps da sind', () => {
+  // Solver-Zustand direkt setzen (Basis-`chess` ist die Grundstellung = FEN); der erste erwartete
+  // Löserzug ist solutionMoves[moveIndex]. FEN ist die Trainingsstellung → startPly -1, moveIndex 0.
+  function atMove(c: any, moves: string[], moveIndex: number): void {
+    (c as any).startPly = -1;
+    (c as any).solutionMoves = moves;
+    (c as any).moveIndex = moveIndex;
+  }
+
+  it('klassifiziert den aktuell erwarteten Löserzug, wenn keine vorberechneten Tipps da sind', () => {
     const c = makeComponent();
-    spyOn(c as any, 'setupSolver');   // echten Solver neutralisieren
-    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };  // moves[1]=e7e5 (ruhiger Bauernzug)
-    (c as any).setupPuzzle(puzzle);
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.puzzle = puzzle;
+    atMove(c, ['e2e4', 'e7e5'], 0);   // erster Löserzug e2e4 (ruhiger Bauernzug)
 
     expect(c.hasPrecomputedHints).toBeFalse();
     expect(c.hasHints).toBeTrue();                    // on-the-fly Fallback greift
@@ -295,16 +306,31 @@ describe('BookPuzzleComponent on-the-fly Tipps (Fallback ohne vorberechnete, z. 
     expect(c.availableHints[0]).toBe('puzzles.hints.t1Quiet');   // translate-Mock gibt den Key zurück
   });
 
-  it('vorberechnete Tipps haben Vorrang vor dem on-the-fly Fallback', () => {
+  it('liefert on-the-fly Tipps auch für einen SPÄTEREN Zug (nicht nur den ersten)', () => {
     const c = makeComponent();
-    spyOn(c as any, 'setupSolver');
+    const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3 b8c6', bookFileName: 'b' };
+    c.puzzle = puzzle;
+    atMove(c, ['e2e4', 'e7e5', 'g1f3', 'b8c6'], 2);   // dritter Zug g1f3 (Springer, ruhig)
+
+    expect(c.availableHints.length).toBe(3);
+    expect(c.availableHints[0]).toBe('puzzles.hints.t1Quiet');
+    // Figur-Tipp (Stufe 2) nennt den Springer, nicht den Bauern vom ersten Zug
+    expect(c.availableHints[1]).toContain('knight');
+  });
+
+  it('vorberechnete Tipps haben Vorrang vor dem on-the-fly Fallback — aber nur am ersten Löserzug', () => {
+    const c = makeComponent();
     const HINTS = { en: ['Motif', 'Piece', 'Move'] };
     const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b', hints: HINTS };
-    (c as any).setupPuzzle(puzzle);
     c.puzzle = puzzle;
+    atMove(c, ['e2e4', 'e7e5'], 0);
 
     expect(c.hasPrecomputedHints).toBeTrue();
     expect(c.availableHints).toEqual(HINTS.en);
+
+    // an einem späteren Zug greifen die (nur für den Schlüsselzug erzeugten) LLM-Tipps NICHT mehr
+    (c as any).moveIndex = 1;
+    expect(c.availableHints).not.toEqual(HINTS.en);
   });
 });
 
@@ -344,6 +370,10 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     const puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     (c as any).setupPuzzle(puzzle);
     c.puzzle = puzzle;
+    // setupSolver ist gespiegelt → Solver-Zustand für die on-the-fly Tipps von Hand setzen
+    (c as any).solutionMoves = ['e2e4', 'e7e5'];
+    (c as any).moveIndex = 0;
+    (c as any).startPly = -1;
     c.hintLevel = 1;                       // ein Tipp aufgedeckt
 
     expect(c.hasPrecomputedHints).toBeFalse();
@@ -370,6 +400,9 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     const puzzle = { id: 0, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     (c as any).setupPuzzle(puzzle);
     c.puzzle = puzzle;
+    (c as any).solutionMoves = ['e2e4', 'e7e5'];
+    (c as any).moveIndex = 0;
+    (c as any).startPly = -1;
     c.hintLevel = 1;
 
     expect(c.hasHints).toBeTrue();

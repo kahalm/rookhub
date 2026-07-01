@@ -5,6 +5,7 @@ import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } fr
 import { applyVisualizationHide, clearVisualizationHide } from './board-theme.util';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { formatPuzzleTime } from './puzzle-format.util';
+import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
@@ -100,6 +101,9 @@ export abstract class BasePuzzleSolver {
 
   // ---- Tipps (gestuft 1→3). Wie viele Stufen aktuell aufgedeckt sind. ----
   hintLevel = 0;
+  /** Höchste je aufgedeckte Tipp-Stufe im GESAMTEN Solve (über alle Züge). Da `hintLevel` je Zug
+   *  zurückgesetzt wird (Tipps gelten pro erwartetem Zug), ist DIES der Wert fürs `hintsUsed`-Statistikfeld. */
+  protected maxHintLevel = 0;
   /**
    * Tipps in der aktiven Sprache (0–3). Default keine; die Modi überschreiben das:
    * Buch/Kurs liefert vorberechnete Tipps aus dem DTO, Standard berechnet sie on-the-fly.
@@ -116,7 +120,26 @@ export abstract class BasePuzzleSolver {
   get shownHints(): string[] { return this.effectiveHints.slice(0, this.hintLevel); }
   get canShowMoreHints(): boolean { return this.hintLevel < this.effectiveHints.length; }
   /** Nächste Tipp-Stufe aufdecken. */
-  showNextHint(): void { if (this.canShowMoreHints) this.hintLevel++; }
+  showNextHint(): void {
+    if (!this.canShowMoreHints) return;
+    this.hintLevel++;
+    if (this.hintLevel > this.maxHintLevel) this.maxHintLevel = this.hintLevel;
+  }
+
+  /** Klassifikation des AKTUELL erwarteten Löserzugs (`solutionMoves[moveIndex]` aus der aktuellen
+   *  Stellung) — Basis für die on-the-fly-Tipps zu JEDEM Zug, nicht nur dem ersten. `null` außerhalb
+   *  des Lösungspfads / am Ende / bei nicht spielbarem Zug. */
+  protected get currentMoveHint(): FirstMoveHint | null {
+    const uci = this.solutionMoves[this.moveIndex];
+    if (!uci) return null;
+    return classifyMoveFromFen(this.chess.fen(), uci);
+  }
+
+  /** Ist der aktuell erwartete Zug der ERSTE Löserzug? (Für Buch: nur dann passen die vorberechneten
+   *  LLM-Tipps, die für den Schlüsselzug erzeugt wurden.) */
+  protected get atFirstSolverMove(): boolean {
+    return this.moveIndex === (this.startPly < 0 ? 0 : this.startPly + 1);
+  }
 
   // ---- intern ----
   protected chess = new Chess();
@@ -225,6 +248,7 @@ export abstract class BasePuzzleSolver {
     if (this.startPly > this.solutionMoves.length - 2) this.startPly = 0;
     if (this.startPly < -1) this.startPly = -1;
     this.moveIndex = 0;
+    this.maxHintLevel = 0;   // Tipp-Nutzung fürs neue Puzzle zurücksetzen (hintLevel setzen die Modi)
     this.chess = new Chess(fen);
     this.onSolutionPath = true;
     this.aborted = false;
@@ -337,6 +361,7 @@ export abstract class BasePuzzleSolver {
       // PLAYING ist reserviert für off-path/freies Spiel; in onMoveMade wird PLAYING
       // direkt als off-path interpretiert und der Lösungsvergleich übersprungen.
       this.state = 'AWAITING_USER_MOVE';
+      this.hintLevel = 0;   // Tipps gelten PRO Zug → für den neuen erwarteten Zug wieder verdeckt (maxHintLevel bleibt)
       this.moveStartTime = Date.now();
       this.updateBoard();
       this.refreshEvalIfShown();   // Eval auf die neue Stellung nachziehen (auch im Lösungspfad)

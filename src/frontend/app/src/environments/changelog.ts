@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.7';
+export const APP_VERSION = '0.241.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.241.0", date: "2026-07-01", changes: [
+    { en: "Hints now work on EVERY move of a puzzle, not just the first. Previously the graded 1→3 hints only described the opening key move; on later moves the hint button showed nothing. Now each expected move gets its own on-the-fly hint (tier 1 = check/capture/quiet, tier 2 = which piece, tier 3 = the move), and the hint level resets per move. Book/course puzzles still show their pre-computed rich hints on the first move; from there on they fall back to the per-move hints. The recorded \"hints used\" statistic is now the highest tier revealed across the whole solve.", de: "Tipps funktionieren jetzt für JEDEN Zug eines Puzzles, nicht nur den ersten. Vorher beschrieben die gestuften Tipps 1→3 nur den ersten Schlüsselzug; bei späteren Zügen zeigte der Tipp-Knopf nichts. Jetzt bekommt jeder erwartete Zug seinen eigenen on-the-fly Tipp (Stufe 1 = Schach/Schlag/ruhig, Stufe 2 = welche Figur, Stufe 3 = der Zug), und die Tipp-Stufe wird pro Zug zurückgesetzt. Buch-/Kurs-Puzzles zeigen ihre vorberechneten ausführlichen Tipps weiterhin am ersten Zug; ab dann greifen die Pro-Zug-Tipps. Der gespeicherte „Tipps genutzt\"-Wert ist jetzt die höchste über den ganzen Lösungsweg aufgedeckte Stufe." },
+  ]},
   { version: "0.240.7", date: "2026-07-01", changes: [
     { en: "In courses and weekly posts, once a puzzle is finished the button reads \"Next puzzle\" instead of \"Skip\". Previously a solved puzzle already showed \"Next puzzle\", but a failed one still showed \"Skip\" — now both finished states show the same prominent Next button. The \"Skip\" button only appears while a puzzle is still unsolved (where skipping actually makes sense).", de: "In Kursen und Wochenposts steht nach dem Abschluss eines Puzzles „Nächstes Puzzle\" statt „Überspringen\". Vorher zeigte ein gelöstes Puzzle bereits „Nächstes Puzzle\", ein gescheitertes aber weiterhin „Überspringen\" — jetzt zeigen beide abgeschlossenen Zustände denselben hervorgehobenen Weiter-Knopf. „Überspringen\" erscheint nur noch, solange ein Puzzle ungelöst ist (wo Überspringen auch Sinn ergibt)." },
   ]},

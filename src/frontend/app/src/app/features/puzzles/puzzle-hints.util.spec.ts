@@ -1,4 +1,4 @@
-import { classifyStandardFirstMove, classifyFirstSolverMove } from './puzzle-hints.util';
+import { classifyStandardFirstMove, classifyFirstSolverMove, classifyMoveAt } from './puzzle-hints.util';
 
 describe('classifyStandardFirstMove', () => {
   it('erkennt einen ruhigen Zug', () => {
@@ -53,5 +53,24 @@ describe('classifyFirstSolverMove (startPly-bewusst, Buch/Daily)', () => {
 
   it('startPly=-1: liefert null bei leerer Zugliste', () => {
     expect(classifyFirstSolverMove('8/8/6Q1/7p/2p4P/5q2/1k6/4K3 w - - 0 1', '', -1)).toBeNull();
+  });
+});
+
+describe('classifyMoveAt (Tipps zu JEDEM Zug, nicht nur dem ersten)', () => {
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const moves = ['e2e4', 'e7e5', 'g1f3', 'b8c6'];
+
+  it('klassifiziert den ersten Zug (Index 0) aus der Grundstellung', () => {
+    expect(classifyMoveAt(START, moves, 0)).toEqual({ type: 'quiet', pieceType: 'p', san: 'e4' });
+  });
+
+  it('klassifiziert einen SPÄTEREN Zug (Index 2) nach Nachspielen der Vorgänger', () => {
+    // nach 1.e4 e5 zieht Weiß Sf3 → ruhiger Springerzug
+    expect(classifyMoveAt(START, moves, 2)).toEqual({ type: 'quiet', pieceType: 'n', san: 'Nf3' });
+  });
+
+  it('liefert null bei Index außerhalb der Zugliste', () => {
+    expect(classifyMoveAt(START, moves, 4)).toBeNull();
+    expect(classifyMoveAt(START, moves, -1)).toBeNull();
   });
 });

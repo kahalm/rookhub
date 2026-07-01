@@ -198,6 +198,22 @@ describe('BasePuzzleSolver Anarchy-Tipps (e.p. forciert)', () => {
   });
 });
 
+describe('BasePuzzleSolver maxHintLevel (Tipp-Nutzung über alle Züge)', () => {
+  const noStock = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+
+  it('showNextHint hebt maxHintLevel, das einen hintLevel-Reset (Zug-Wechsel) überlebt', () => {
+    const s = new HintSolver(noStock);
+    s.showNextHint();            // hintLevel 1
+    s.showNextHint();            // hintLevel 2 (Maximum von 2 verfügbaren)
+    expect(s.hintLevel).toBe(2);
+    expect((s as any).maxHintLevel).toBe(2);
+    s.hintLevel = 0;             // advanceAfterCorrectMove setzt hintLevel pro Zug zurück
+    s.showNextHint();            // wieder 1
+    expect(s.hintLevel).toBe(1);
+    expect((s as any).maxHintLevel).toBe(2);   // Höchstwert übers ganze Solve bleibt
+  });
+});
+
 class ArrowSolver extends TestSolver {
   protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' { return 'persist'; }
 }
