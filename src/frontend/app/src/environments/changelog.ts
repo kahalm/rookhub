@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.224.1';
+export const APP_VERSION = '0.225.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.225.0", date: "2026-07-01", changes: [
+    { en: "Endless mode now supports deep-link query parameters: ?start=1 (or ?autostart=1) starts a run immediately without the config screen; ?themes=fork,pin (or ?tags=…) preselects the theme filter (comma or space separated, OR); ?elo=1500 sets the start rating; and ?anarchy=max / max+1 now works here too (crazy board + forced en passant; max+1 also makes the square decide the piece style).", de: "Der Endless-Modus versteht jetzt Deep-Link-Query-Parameter: ?start=1 (oder ?autostart=1) startet einen Lauf sofort ohne Config-Screen; ?themes=fork,pin (oder ?tags=…) belegt den Themenfilter vor (Komma- oder Leerzeichen-getrennt, ODER); ?elo=1500 setzt das Start-Elo; und ?anarchy=max / max+1 funktioniert jetzt auch hier (Crazy-Brett + erzwungenes en passant; max+1 lässt zusätzlich das Feld den Figurenstil bestimmen)." },
+  ]},
   { version: "0.224.1", date: "2026-07-01", changes: [
     { en: "Fixed a Content-Security-Policy violation: the app's own inline script in index.html (the PWA install-prompt hook) was blocked by the strict CSP (script-src 'self'), which could break the native install button on /install. Moved it to an external file (pwa-install-hook.js) covered by 'self' — no CSP relaxation. (Note: CSP warnings originating from content.js are browser extensions injecting into the page and are correctly blocked; not a RookHub issue.)", de: "Content-Security-Policy-Verstoß behoben: Das eigene Inline-Script in index.html (der PWA-Install-Hook) wurde von der strikten CSP (script-src 'self') blockiert, was den nativen Installieren-Button auf /install lahmlegen konnte. Es ist jetzt in eine externe Datei (pwa-install-hook.js) ausgelagert, die von 'self' gedeckt ist — ohne die CSP aufzuweichen. (Hinweis: CSP-Warnungen aus content.js stammen von Browser-Erweiterungen, die in die Seite injizieren, und werden korrekt blockiert — kein RookHub-Problem.)" },
   ]},

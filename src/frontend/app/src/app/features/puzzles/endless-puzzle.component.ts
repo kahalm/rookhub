@@ -32,7 +32,7 @@ import { FavoritesService } from '../../core/favorites.service';
 import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { applyUci } from './puzzle-move.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
@@ -209,6 +209,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
+  /** `?start=1`/`?autostart=1`: Endless-Lauf direkt starten (sobald die Rating-Range geladen ist),
+   *  ohne den Config-Screen. Wird in ngOnInit aus der URL gesetzt, ausgelöst in maybeAutoStart(). */
+  private autoStartRequested = false;
+
   // Help
   showHelp = false;
 
@@ -384,6 +388,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         // Schon beim Öffnen der Config einen Run vorab laden, damit Endless später
         // auch offline gestartet werden kann (nur online + wenn noch kein Cache da ist).
         if (navigator.onLine && this.offlinePool.length === 0) this.prefetchRun();
+        this.maybeAutoStart();   // ?start=1: jetzt (Range geladen, startElo geklemmt) direkt loslegen
       },
       error: () => {}
     });
@@ -432,12 +437,42 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.state = 'GAME_OVER';
       return;
     }
+    // Direkt-Start-/Ansichts-Parameter (Deep-Link, z. B. geteilter Endless-Link):
+    //  ?themes=fork,pin (oder ?tags=…) → Themenfilter vorbelegen (Komma/Leerzeichen, ODER-Filter)
+    //  ?elo=1500                       → Start-Elo
+    //  ?anarchy=max | max+1            → Crazy-Brett + erzwungenes en passant (max+1: Feld bestimmt Figurenstil)
+    //  ?start=1 / ?autostart=1         → Lauf sofort starten (sobald Rating-Range geladen), ohne Config-Screen
+    const qp = this.route.snapshot.queryParamMap;
+    const themesParam = qp.get('themes') ?? qp.get('tags');
+    if (themesParam) {
+      const themes = themesParam.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
+      if (themes.length) { this.config.worstTags = false; this.config.themes = [...new Set(themes)].join(' '); }
+    }
+    const eloParam = parseInt(qp.get('elo') ?? '', 10);
+    if (Number.isFinite(eloParam) && eloParam > 0) this.config.startElo = eloParam;
+
+    const ov = parseShareViewParams(qp);
+    if (ov.themeMode) this.themeMode = ov.themeMode;
+    if (ov.visualization != null) this.visualizationMode = ov.visualization;
+    if (ov.enPassantForced) this.enPassantForced = true;      // Anarchy: en passant is forced
+    if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;  // ?anarchy=max+1 → Feld bestimmt Stil
+
+    this.autoStartRequested = qp.get('start') === '1' || qp.get('autostart') === '1';
+
     // Rückkehr aus dem Analysemodus (?resume=1): laufenden Run direkt fortsetzen statt in der
     // Übersicht zu landen. Bei normalem Einstieg (kein resume-Param) bleibt der Resume-Banner,
     // damit man Fortsetzen/Archivieren wählen kann. Der Konstruktor hat 0-Leben-Zombies bereits
     // bereinigt → activeGameState != null bedeutet: noch Leben übrig.
     if (this.route.snapshot.queryParamMap.get('resume') === '1' && this.activeGameState && this.state === 'CONFIG') {
       this.resumeGame();
+    }
+  }
+
+  /** Startet den Lauf, wenn per ?start=1 angefordert und wir noch im Config-Screen sind (idempotent). */
+  private maybeAutoStart(): void {
+    if (this.autoStartRequested && this.state === 'CONFIG') {
+      this.autoStartRequested = false;
+      this.startGame();
     }
   }
 

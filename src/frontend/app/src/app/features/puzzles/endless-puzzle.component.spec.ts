@@ -28,7 +28,7 @@ const CHAIN = [
   { id: 102, lichessId: 'c', fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 1100 },
 ];
 
-function makeComponent(): any {
+function makeComponent(params: Record<string, string> = {}): any {
   const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
@@ -59,7 +59,7 @@ function makeComponent(): any {
     loadFromServer: () => ({ subscribe: () => {} }),   // async Merge: im Test no-op
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
-  const route: any = { snapshot: { queryParamMap: { get: () => null } } };
+  const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const dialog: any = {};
   const translate: any = { instant: (k: string) => k };
   const offline: any = { puzzleCount: 0, endlessRuns: 0 };
@@ -122,6 +122,51 @@ describe('EndlessPuzzleComponent analyse', () => {
 
     expect(c.state).toBe('CONFIG');
     expect(c.activeGameState).toBeNull();
+  });
+});
+
+describe('EndlessPuzzleComponent deep-link params', () => {
+  it('themes/tags param preselects the theme filter (OR, space-joined)', () => {
+    const c = makeComponent({ themes: 'fork,pin' });
+    c.ngOnInit();
+    expect(c.config.themes).toBe('fork pin');
+    expect(c.config.worstTags).toBeFalsy();
+  });
+
+  it('anarchy=max forces en passant + crazy board', () => {
+    const c = makeComponent({ anarchy: 'max' });
+    c.ngOnInit();
+    expect(c.enPassantForced).toBeTrue();
+    expect(c.themeMode).toBe('crazy');
+  });
+
+  it('anarchy=max+1 additionally sets square crazy-piece mode', () => {
+    const c = makeComponent({ anarchy: 'max+1' });
+    c.ngOnInit();
+    expect(c.enPassantForced).toBeTrue();
+    expect(c.crazyPieceMode).toBe('square');
+  });
+
+  it('elo param sets the start rating', () => {
+    const c = makeComponent({ elo: '1500' });
+    c.ngOnInit();
+    expect(c.config.startElo).toBe(1500);
+  });
+
+  it('start=1 requests autostart, and maybeAutoStart begins the game from CONFIG', () => {
+    const c = makeComponent({ start: '1' });
+    c.ngOnInit();
+    const spy = spyOn(c, 'startGame');
+    c.maybeAutoStart();
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('no start param → maybeAutoStart does nothing', () => {
+    const c = makeComponent();
+    c.ngOnInit();
+    const spy = spyOn(c, 'startGame');
+    c.maybeAutoStart();
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
