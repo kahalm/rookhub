@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.2';
+export const APP_VERSION = '0.240.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.3", date: "2026-07-01", changes: [
+    { en: "Course/book puzzles now show move comments WHILE you solve, not only afterwards: as you play each correct move (and the opponent's reply), that move's comment appears in the context box above the board. Previously the per-move comments only showed in the review after finishing. Falls back to the puzzle intro for moves without a comment.", de: "Kurs-/Buch-Puzzles zeigen die Zug-Kommentare jetzt schon WÄHREND des Lösens, nicht erst danach: sobald du einen richtigen Zug (und der Gegner seine Antwort) spielst, erscheint der Kommentar zu diesem Zug im Kontext-Kasten über dem Brett. Vorher gab es die Zug-Kommentare nur im Review nach dem Lösen. Züge ohne Kommentar fallen auf die Puzzle-Einleitung zurück." },
+  ]},
   { version: "0.240.2", date: "2026-07-01", changes: [
     { en: "The courses/repertoires update banner now has a single \"Update\" button instead of two (\"Update all\" + \"From cache\"). It reprocesses everything — locally where possible, re-fetching Chessable courses (already-cached ones update instantly, no download). The confusing \"From cache\" button (which only ever covered a handful of non-Chessable items) is gone.", de: "Das Aktualisieren-Banner bei Kursen/Repertoires hat jetzt EINEN „Aktualisieren\"-Knopf statt zwei („Alle aktualisieren\" + „Aus Cache\"). Er bereitet alles auf — lokal wo möglich, Chessable-Kurse per Re-Fetch (bereits gecachte gehen sofort, ohne Download). Der verwirrende „Aus Cache\"-Knopf (der ohnehin nur eine Handvoll Nicht-Chessable-Einträge abdeckte) entfällt." },
   ]},

@@ -655,6 +655,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   get displayComment(): string | null {
     if (!this.puzzle) return null;
     if (this.reviewMode) return this.moveComment ?? this.puzzle.comment ?? null;
+    // WÄHREND des Lösens: den Kommentar zum zuletzt gespielten Lösungszug live einblenden (nicht erst
+    // im Review). Nur auf dem Lösungspfad und sobald mind. ein Lösungszug gespielt wurde; gleiche
+    // Ply-Konvention wie der Review (absoluter Halbzug = startPly + moveIndex − 1). Ohne Zug-Kommentar
+    // (oder vor dem ersten Zug / off-path) fällt es auf die Einleitung des Puzzles zurück.
+    if (this.onSolutionPath && this.moveIndex > 0
+        && (this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING')) {
+      const live = this.commentForPlyPlayed(Math.max(0, this.startPly) + this.moveIndex - 1);
+      if (live) return live;
+    }
     return this.puzzle.comment ?? null;
   }
 

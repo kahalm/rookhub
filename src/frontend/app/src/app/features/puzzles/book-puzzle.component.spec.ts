@@ -555,6 +555,27 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     c.puzzle = null;
     expect(c.displayComment).toBeNull();
   });
+
+  it('während des Lösens zeigt sie live den Kommentar zum zuletzt gespielten Zug', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3', bookFileName: 'b', startPly: 0,
+      comment: 'Einleitung', moveComments: { '0': 'Guter erster Zug', '1': 'Gegnerantwort' } };
+    c.reviewMode = false;
+    (c as any).onSolutionPath = true;
+    (c as any).startPly = 0;
+    (c as any).state = 'AWAITING_USER_MOVE';
+
+    (c as any).moveIndex = 1;                                  // 1. Lösungszug gespielt → ply 0
+    expect(c.displayComment).toBe('Guter erster Zug');
+    (c as any).moveIndex = 2;                                  // Gegnerantwort → ply 1
+    expect(c.displayComment).toBe('Gegnerantwort');
+    (c as any).moveIndex = 3;                                  // ply 2 hat keinen Kommentar → Einleitung
+    expect(c.displayComment).toBe('Einleitung');
+    (c as any).moveIndex = 0;                                  // vor dem ersten Zug → Einleitung
+    expect(c.displayComment).toBe('Einleitung');
+    (c as any).moveIndex = 1; (c as any).onSolutionPath = false; // off-path → kein Live-Kommentar
+    expect(c.displayComment).toBe('Einleitung');
+  });
 });
 
 describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
