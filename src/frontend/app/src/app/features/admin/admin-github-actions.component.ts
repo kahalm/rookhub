@@ -60,7 +60,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                 <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
               }
               @for (run of repo.runs; track run.id) {
-                <a class="run" [class.run-live]="isRunningBuild(run, repo)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                <a class="run" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
                   <span class="run-badge" [ngClass]="badgeClass(run)"
                         [matTooltip]="run.conclusion || run.status">
                     <mat-icon>{{ badgeIcon(run) }}</mat-icon>
@@ -105,7 +105,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    .run-live { background: color-mix(in srgb, #2e7d32 14%, transparent); outline: 1px solid color-mix(in srgb, #2e7d32 45%, transparent); }
+    /* Der laufende Build wird NICHT durch eine Zeilenfarbe markiert, sondern durch das „live"-Icon-Badge (run-live-tag). */
     .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #2e7d32; color: #fff; font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
     .run-live-tag mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .run-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
@@ -179,9 +179,11 @@ export class AdminGithubActionsComponent implements OnInit {
    * (:dev = master-Run, :prod = Tag-Run). Ältere Images ohne Ref matchen wie bisher nur per SHA.
    */
   isRunningBuild(run: CiRun, repo: CiRepo): boolean {
+    // Bevorzugt die vom Server ermittelte laufende SHA/Ref des Stacks; für rookhub fällt es auf die
+    // im Browser gelesene /build-info.json zurück, falls der Server sie (noch) nicht kennt.
     const isRookhub = repo.repo === 'rookhub';
-    const sha = isRookhub ? this.buildSha : (repo.runningSha ?? null);
-    const ref = isRookhub ? this.buildRef : (repo.runningRef ?? null);
+    const sha = repo.runningSha ?? (isRookhub ? this.buildSha : null);
+    const ref = repo.runningSha ? (repo.runningRef ?? null) : (isRookhub ? this.buildRef : null);
     if (!sha || !run.headSha) return false;
     const shaMatch = sha === run.headSha || sha.startsWith(run.headSha) || run.headSha.startsWith(sha);
     if (!shaMatch) return false;

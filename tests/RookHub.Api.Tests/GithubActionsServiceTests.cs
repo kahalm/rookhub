@@ -122,6 +122,24 @@ public class GithubActionsServiceTests
     }
 
     [Fact]
+    public async Task PushedBuildReport_SetsRunningBuild()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));   // head_sha abc1234def5678, branch master
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?>
+        {
+            ["GitHub:Repos:0"] = "chessresults_crawler",
+        });
+        // Stack meldet seine laufende SHA/Ref per Push (rookhub kann ihn nicht pollen).
+        svc.ReportBuild("chessresults_crawler", "abc1234def5678", "master");
+
+        var res = await svc.GetOverviewAsync();
+
+        var repo = Assert.Single(res.Repos);
+        Assert.Equal("abc1234def5678", repo.RunningSha);
+        Assert.Equal("master", repo.RunningRef);
+    }
+
+    [Fact]
     public async Task NoStackConfigured_LeavesRunningBuildNull()
     {
         var handler = new StubHandler((_, _) => Json(RunsJson));

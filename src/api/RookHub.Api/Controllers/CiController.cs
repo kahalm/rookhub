@@ -19,3 +19,40 @@ public class CiController : BaseApiController
     public async Task<ActionResult<CiOverviewDto>> Runs(CancellationToken ct)
         => Ok(await _github.GetOverviewAsync(ct));
 }
+
+/// <summary>Service-to-service-Endpoint (kein Admin): ein Stack, den rookhub nicht per HTTP erreichen
+/// kann (z. B. log-watcher in eigenem Docker-Netz), meldet hier beim Start seine laufende Build-SHA/Ref.
+/// Auth via Shared-Secret-Header <c>X-Build-Report-Key</c> (== <c>CI:BuildReportSecret</c>).</summary>
+[ApiController]
+[Route("api/ci")]
+public class CiBuildReportController : ControllerBase
+{
+    private readonly GithubActionsService _github;
+    private readonly IConfiguration _config;
+    public CiBuildReportController(GithubActionsService github, IConfiguration config)
+    {
+        _github = github;
+        _config = config;
+    }
+
+    [HttpPost("build-report")]
+    [AllowAnonymous]
+    public IActionResult Report([FromBody] CiBuildReportDto dto, [FromHeader(Name = "X-Build-Report-Key")] string? key)
+    {
+        var secret = _config["CI:BuildReportSecret"];
+        if (string.IsNullOrEmpty(secret) || !FixedTimeEquals(key, secret))
+            return Unauthorized();
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Repo))
+            return BadRequest();
+        _github.ReportBuild(dto.Repo.Trim(), dto.Sha, dto.Ref);
+        return NoContent();
+    }
+
+    private static bool FixedTimeEquals(string? a, string? b)
+    {
+        if (a is null || b is null) return false;
+        var ba = System.Text.Encoding.UTF8.GetBytes(a);
+        var bb = System.Text.Encoding.UTF8.GetBytes(b);
+        return ba.Length == bb.Length && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(ba, bb);
+    }
+}

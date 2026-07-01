@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -33,6 +34,19 @@ public class GithubActionsService
     };
 
     private const string CacheKey = "ci_actions_overview";
+
+    /// <summary>Per Push gemeldete laufende Build-Infos je Repo (für Stacks, die rookhub nicht per HTTP
+    /// erreichen kann — z. B. log-watcher in eigenem Docker-Netz). Prozessweit; ein neuer Report überschreibt.</summary>
+    private static readonly ConcurrentDictionary<string, BuildInfo> _reportedBuilds = new();
+
+    /// <summary>Meldet die laufende Build-SHA/Ref eines Repos (aufgerufen vom Build-Report-Endpoint).</summary>
+    public void ReportBuild(string repo, string? sha, string? refName)
+        => _reportedBuilds[repo] = new BuildInfo(sha, refName);
+
+    private static BuildInfo? GetReportedBuild(string repo)
+        => _reportedBuilds.TryGetValue(repo, out var b) ? b : null;
+
+    private static IEnumerable<string> GetReportedRepos() => _reportedBuilds.Keys;
 
     public GithubActionsService(HttpClient http, IHttpClientFactory httpFactory, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger)
     {
@@ -72,11 +86,74 @@ public class GithubActionsService
         await Task.WhenAll(runsTask, buildInfoTask);
 
         var running = buildInfoTask.Result;
-        var results = runsTask.Result.Select(r =>
-            running.TryGetValue(r.Repo, out var bi) && (bi.Sha is { Length: > 0 } || bi.Ref is { Length: > 0 })
-                ? r with { RunningSha = bi.Sha, RunningRef = bi.Ref }
-                : r).ToList();
+        var results = new List<CiRepoDto>();
+        foreach (var r in runsTask.Result)
+        {
+            var repoDto = r;
+            if (running.TryGetValue(r.Repo, out var bi) && (bi.Sha is { Length: > 0 } || bi.Ref is { Length: > 0 }))
+            {
+                repoDto = r with { RunningSha = bi.Sha, RunningRef = bi.Ref };
+                // Läuft der Build, ist aber NICHT unter den (Top-5-)Runs → gezielt per head_sha nachladen
+                // und als zusätzliche (6.) Zeile anhängen, damit man immer sieht, was gerade läuft.
+                if (repoDto.Error is null && bi.Sha is { Length: > 0 }
+                    && !repoDto.Runs.Any(run => RunMatchesBuild(run, bi)))
+                {
+                    var extra = await FetchRunByShaAsync(owner, r.Repo, token, bi, ct);
+                    if (extra != null)
+                        repoDto = repoDto with { Runs = repoDto.Runs.Append(extra).ToList() };
+                }
+            }
+            results.Add(repoDto);
+        }
         return new CiOverviewDto(true, results, DateTime.UtcNow);
+    }
+
+    /// <summary>Passt ein Run zur laufenden Build-Info? SHA-Präfix-tolerant + Ref (falls gemeldet).</summary>
+    private static bool RunMatchesBuild(CiRunDto run, BuildInfo bi)
+    {
+        if (bi.Sha is not { Length: > 0 } sha || run.HeadSha is not { Length: > 0 } head) return false;
+        var shaMatch = sha == head || sha.StartsWith(head) || head.StartsWith(sha);
+        if (!shaMatch) return false;
+        return string.IsNullOrEmpty(bi.Ref) || run.Ref == bi.Ref;
+    }
+
+    /// <summary>Lädt den (einen) Workflow-Run zur laufenden SHA gezielt nach (für die „6. Zeile", wenn er
+    /// aus den letzten 5 herausgefallen ist). Wählt bei mehreren den ref-passenden. Best-effort → null.</summary>
+    private async Task<CiRunDto?> FetchRunByShaAsync(string owner, string repo, string token, BuildInfo bi, CancellationToken ct)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                $"/repos/{owner}/{repo}/actions/runs?head_sha={bi.Sha}&per_page=10&exclude_pull_requests=true");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var payload = await resp.Content.ReadFromJsonAsync<RunsResponse>(GithubJson, ct);
+            var items = payload?.WorkflowRuns ?? new List<RunItem>();
+            if (items.Count == 0) return null;
+            var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
+            var mapped = items.Select(i => MapRun(i, tagBySha)).ToList();
+            // Ref-passenden bevorzugen (master-Push vs. gleichnamiger Tag teilen die SHA).
+            return mapped.FirstOrDefault(m => string.IsNullOrEmpty(bi.Ref) || m.Ref == bi.Ref) ?? mapped[0];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Nachladen des laufenden Runs für {Owner}/{Repo} fehlgeschlagen", owner, repo);
+            return null;
+        }
+    }
+
+    private static CiRunDto MapRun(RunItem r, Dictionary<string, string> tagBySha)
+    {
+        var branch = r.HeadBranch ?? "";
+        var isTag = string.IsNullOrEmpty(branch);
+        var refName = !isTag ? branch
+            : (r.HeadSha != null && tagBySha.TryGetValue(r.HeadSha, out var tag) ? tag : null);
+        return new CiRunDto(
+            r.Id, r.Name ?? "", string.IsNullOrWhiteSpace(r.DisplayTitle) ? (r.Name ?? "") : r.DisplayTitle,
+            branch, r.Event ?? "", r.Status ?? "", r.Conclusion,
+            r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login, r.HeadSha,
+            refName, isTag && refName != null);
     }
 
     /// <summary>Fragt bei den erreichbaren Stacks (crawler/piratechess/bot) deren build-info-Endpoint ab
@@ -98,10 +175,20 @@ public class GithubActionsService
         if (!string.IsNullOrWhiteSpace(botWebhook) && Uri.TryCreate(botWebhook, UriKind.Absolute, out var botUri))
             targets.Add(("schach-bot", $"{botUri.Scheme}://{botUri.Authority}/webhook/build-info", null, null));
 
+        // rookhub selbst: das Frontend liefert /build-info.json (im internen Netz erreichbar) → so kennt
+        // der Server auch die laufende rookhub-SHA und kann den Run ggf. als 6. Zeile nachladen.
+        var selfUrl = _config["Frontend:BuildInfoUrl"];
+        if (string.IsNullOrWhiteSpace(selfUrl)) selfUrl = "http://rookhub:8080/build-info.json";
+        targets.Add(("rookhub", selfUrl, null, null));
+
         var pairs = await Task.WhenAll(targets.Select(async t =>
             (t.Repo, Info: await FetchBuildInfoAsync(t.Url, t.HeaderName, t.HeaderValue, ct))));
 
         var map = new Dictionary<string, BuildInfo>();
+        // Zuerst per Push gemeldete Build-Infos (z. B. log-watcher, das rookhub nicht erreichen kann) —
+        // ein direkt abgefragter Wert (unten) hat Vorrang und überschreibt.
+        foreach (var repo in GetReportedRepos())
+            if (GetReportedBuild(repo) is { } rep) map[repo] = rep;
         foreach (var (repo, info) in pairs)
             if (info is not null) map[repo] = info;
         return map;
@@ -149,18 +236,7 @@ public class GithubActionsService
 
             var runs = (payload?.WorkflowRuns ?? new List<RunItem>())
                 .Take(5)
-                .Select(r =>
-                {
-                    var branch = r.HeadBranch ?? "";
-                    var isTag = string.IsNullOrEmpty(branch);
-                    var refName = !isTag ? branch
-                        : (r.HeadSha != null && tagBySha.TryGetValue(r.HeadSha, out var tag) ? tag : null);
-                    return new CiRunDto(
-                        r.Id, r.Name ?? "", string.IsNullOrWhiteSpace(r.DisplayTitle) ? (r.Name ?? "") : r.DisplayTitle,
-                        branch, r.Event ?? "", r.Status ?? "", r.Conclusion,
-                        r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login, r.HeadSha,
-                        refName, isTag && refName != null);
-                })
+                .Select(r => MapRun(r, tagBySha))
                 .ToList();
             return new CiRepoDto(repo, null, runs);
         }

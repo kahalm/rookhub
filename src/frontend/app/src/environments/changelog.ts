@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.4';
+export const APP_VERSION = '0.236.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.5", date: "2026-07-01", changes: [
+    { en: "Admin CI page: the currently-running build is no longer marked by tinting the row — it just carries its own “live” icon badge. And if the running build has scrolled out of the latest 5 runs, it's now fetched by its commit and shown as an extra row below, so you always see what's live. The server now also resolves rookhub's own running build (from the frontend's build-info) so this works uniformly across stacks.", de: "Admin-CI-Seite: der aktuell laufende Build wird nicht mehr durch Einfärben der Zeile markiert, sondern trägt nur noch ein eigenes „live“-Icon-Badge. Und wenn der laufende Build aus den letzten 5 Runs herausgefallen ist, wird er gezielt über seinen Commit nachgeladen und als zusätzliche Zeile darunter angezeigt — so sieht man immer, was läuft. Der Server ermittelt jetzt auch rookhubs eigenen laufenden Build (aus der Frontend-build-info), damit das für alle Stacks einheitlich funktioniert." },
+    { en: "Groundwork for marking stacks rookhub can't reach directly (e.g. log-watcher): a service-to-service endpoint (POST /api/ci/build-report, shared-secret) lets a stack report its running commit/ref, which the CI page then shows.", de: "Grundlage, um Stacks zu markieren, die rookhub nicht direkt erreicht (z. B. log-watcher): ein Service-to-Service-Endpoint (POST /api/ci/build-report, Shared-Secret) lässt einen Stack seinen laufenden Commit/Ref melden, den die CI-Seite dann anzeigt." },
+  ]},
   { version: "0.236.4", date: "2026-07-01", changes: [
     { en: "Repertoire trainer, wrong move: (1) “Show solution” now actually plays the correct move on the board (highlighted), not just naming it in the text. (2) After a wrong move you can immediately try again by just making another move — the wrong move is taken back at once and the board stays playable, no “mouse-slip” click needed first.", de: "Repertoire-Trainer, falscher Zug: (1) „Lösung zeigen“ spielt den richtigen Zug jetzt tatsächlich auf dem Brett (markiert), statt ihn nur im Text zu nennen. (2) Nach einem falschen Zug kann man sofort erneut ziehen — der falsche Zug wird gleich zurückgenommen und das Brett bleibt spielbar, kein „Mausrutscher“-Klick mehr nötig." },
   ]},

@@ -32,3 +32,7 @@ public record CiRepoDto(string Repo, string? Error, List<CiRunDto> Runs,
 /// <summary>Gesamtübersicht über alle beteiligten Repos. <see cref="Configured"/>=false, wenn kein
 /// GitHub-Token hinterlegt ist (dann bleibt <see cref="Repos"/> leer und die UI zeigt einen Hinweis).</summary>
 public record CiOverviewDto(bool Configured, List<CiRepoDto> Repos, DateTime FetchedAt);
+
+/// <summary>Push-Meldung eines Stacks, den rookhub nicht per HTTP erreicht (z. B. log-watcher):
+/// welche Commit-SHA/Ref läuft dort gerade. Wird per Shared-Secret-Header authentifiziert.</summary>
+public record CiBuildReportDto(string Repo, string? Sha, string? Ref);
