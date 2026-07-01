@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.11';
+export const APP_VERSION = '0.236.12';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.12", date: "2026-07-01", changes: [
+    { en: "“Remember line” (RepCheck on chessable.com) now stores a real course name. New RememberedPosition.CourseName (+migration): the extension resolves the authoritative Chessable course title via the captured bearer token and sends it along; if it is missing, the server resolves it from the user's stored Chessable bearer — cache-first from the nightly-refreshed course list, live fallback otherwise. Old entries without a name are backfilled from the cached course list on read. No course name is no longer a hard failure.", de: "„Remember line“ (RepCheck auf chessable.com) speichert jetzt einen echten Kursnamen. Neues RememberedPosition.CourseName (+Migration): die Extension löst den autoritativen Chessable-Kurstitel über den erfassten Bearer-Token auf und sendet ihn mit; fehlt er, löst der Server ihn aus dem gespeicherten Chessable-Bearer des Users auf — cache-first aus der nächtlich aktualisierten Kursliste, sonst per Live-Abruf. Alt-Einträge ohne Namen werden beim Lesen aus der gecachten Kursliste nachgetragen. Kein Kursname ist kein harter Fehler mehr." },
+  ]},
   { version: "0.236.11", date: "2026-07-01", changes: [
     { en: "Admin CI page: per-repo workflow filter — log-watcher now only shows its “Build & Push” runs, not the “Tests” runs that were cluttering the list (configurable per repo via GitHub:WorkflowFilter:<repo>).", de: "Admin-CI-Seite: Workflow-Filter je Repo — log-watcher zeigt jetzt nur noch seine „Build & Push“-Läufe, nicht mehr die „Tests“-Läufe, die die Liste zugemüllt haben (pro Repo konfigurierbar über GitHub:WorkflowFilter:<repo>)." },
   ]},

@@ -547,6 +547,7 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(p => p.Fen).HasMaxLength(120);
             e.Property(p => p.CourseId).HasMaxLength(32);
+            e.Property(p => p.CourseName).HasMaxLength(200);
             e.Property(p => p.SourceUrl).HasMaxLength(1000);
             e.HasIndex(p => new { p.UserId, p.CreatedAt });
         });

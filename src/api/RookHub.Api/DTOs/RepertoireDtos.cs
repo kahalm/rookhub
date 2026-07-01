@@ -122,6 +122,11 @@ public class RememberLineInputDto
     [MaxLength(32)]
     public string? CourseId { get; set; }
 
+    /// <summary>Optionaler, von der Extension über den Chessable-Bearer aufgelöster Kursname.
+    /// Fehlt er, löst der Server ihn (falls möglich) aus dem gespeicherten Bearer des Users auf.</summary>
+    [MaxLength(200)]
+    public string? CourseName { get; set; }
+
     [MaxLength(1000)]
     public string? SourceUrl { get; set; }
 }
@@ -132,6 +137,7 @@ public class RememberedPositionDto
     public int Id { get; set; }
     public string Fen { get; set; } = string.Empty;
     public string? CourseId { get; set; }
+    public string? CourseName { get; set; }
     public string? SourceUrl { get; set; }
     public DateTime CreatedAt { get; set; }
 }

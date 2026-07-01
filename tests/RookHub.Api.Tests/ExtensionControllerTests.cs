@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -27,7 +29,12 @@ public class ExtensionControllerTests : IDisposable
         var analyzeService = new RepertoireAnalyzeService(_db, cache);
         _service = new RepertoireService(_db, analyzeService);
         var trainingGoalService = new TrainingGoalService(_db);
-        var rememberedService = new RememberedPositionService(_db);
+        var encryption = new EncryptionService(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" })
+            .Build());
+        var chessableProxy = new ChessableProxyService(new HttpClient { BaseAddress = new Uri("http://pc:8080") });
+        var rememberedService = new RememberedPositionService(_db, encryption, chessableProxy,
+            NullLogger<RememberedPositionService>.Instance);
         var savedGameService = new SavedGameService(_db);
         _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService, savedGameService);
     }

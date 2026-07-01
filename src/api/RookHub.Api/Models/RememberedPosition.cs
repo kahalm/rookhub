@@ -19,6 +19,11 @@ public class RememberedPosition
     /// <summary>Chessable-Kurs-ID (aus der URL/React-State), falls erkannt.</summary>
     public string? CourseId { get; set; }
 
+    /// <summary>Lesbarer Kursname. Bevorzugt über den Chessable-Bearer aufgelöst (autoritativ:
+    /// Extension via Chessable-API bzw. serverseitig aus der gecachten Kursliste des Users);
+    /// sonst der von der Extension best-effort aus dem Seiten-DOM gelesene Titel.</summary>
+    public string? CourseName { get; set; }
+
     /// <summary>Seiten-URL, von der gemerkt wurde (Kontext).</summary>
     public string? SourceUrl { get; set; }
 
