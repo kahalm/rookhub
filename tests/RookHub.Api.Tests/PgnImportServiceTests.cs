@@ -611,4 +611,43 @@ public class PgnImportServiceTests : IDisposable
         Assert.True(p.Comment!.Length > 5000, $"Comment wurde gekappt (len={p.Comment.Length})");
         Assert.Contains(longText, p.Comment);
     }
+
+    [Fact]
+    public void ParsePgn_NullMoveInfoLine_KeptAsInfoWithText()
+    {
+        // Chessable-Kapitel-Einleitung: [%info] + NULL-Zug "1. --", Erklärtext erst im Zug-Kommentar.
+        // Früher verworfen (kein UCI-Zug + erster Kommentar = leerer [%info]-Marker) → jetzt als Info-Linie.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""3.2""]
+[White ""Introduction to Double Attack""]
+[Black ""1. Double Attack""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[Result ""*""]
+
+{[%info]} 1. -- {Prepare to explore double attacks.}
+";
+        var (puzzles, invalid) = PgnImportService.ParsePgn("nm.pgn", pgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal("Prepare to explore double attacks.", p.Comment);
+        Assert.Equal(0, invalid);
+    }
+
+    [Fact]
+    public void ParsePgn_NullMoveInfoLine_DroppedWhenNotKeepingInfo()
+    {
+        // Ohne keepCommentOnlyAsInfo (z. B. Wochenpost-Pfad) bleibt der NULL-Zug ein Skip.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""3.2""]
+[FEN ""rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1""]
+[Result ""*""]
+
+{[%info]} 1. -- {Intro.}
+";
+        var (puzzles, invalid) = PgnImportService.ParsePgn("nm.pgn", pgn, keepCommentOnlyAsInfo: false);
+        Assert.Empty(puzzles);
+        Assert.Equal(1, invalid);
+    }
 }

@@ -93,13 +93,21 @@ public partial class PgnImportService
 
             var comment = ExtractFirstComment(moveText);
             var moveComments = ExtractMoveComments(moveText);
+            // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
+            // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren.
+            var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
             var uci = TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0)
             {
                 // Zug-lose Linie mit Erklärtext (Chessable-Intro-/Info-Seite): nicht verwerfen, sondern
                 // als Info-Linie behalten — Fake-Zug e4 ab Grundstellung, IsInfoOnly, nur sequenziell
-                // zum Durchklicken (zeigt den Text). Ohne Text (leer) bleibt es ein Skip.
-                if (keepCommentOnlyAsInfo && !string.IsNullOrEmpty(comment))
+                // zum Durchklicken (zeigt den Text). Zwei Ausprägungen kommen vor:
+                //  • reiner Kommentar ohne Zug-Token → `comment` (erster Kommentar) trägt den Text;
+                //  • Chessable-Kapitel-Intro `{[%info]} 1. -- {Text}` → NULL-Zug `--`, der erste
+                //    Kommentar ist nur der leere [%info]-Marker, der Text steht im ZWEITEN (Zug-)
+                //    Kommentar. Daher robust den ersten NICHT-leeren Kommentar nehmen.
+                var infoText = !string.IsNullOrEmpty(comment) ? comment : FirstNonEmptyComment(moveText);
+                if (keepCommentOnlyAsInfo && (isInfoOnly || !string.IsNullOrEmpty(infoText)))
                 {
                     var iw = headers.GetValueOrDefault("White", "").Trim();
                     var ib = headers.GetValueOrDefault("Black", "").Trim();
@@ -111,18 +119,13 @@ public partial class PgnImportService
                         StartPly: -1,
                         Title: iw.Length == 0 ? null : Truncate(iw, 300),
                         Chapter: ib.Length == 0 ? null : Truncate(ib, 200),
-                        Comment: comment,
+                        Comment: infoText,
                         MoveComments: moveComments,
                         IsInfoOnly: true));
                     continue;
                 }
                 invalid++; continue;
             }
-
-            // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
-            // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren
-            // und (anders als normale marker-lose Linien) auch aus der Grundstellung NICHT verwerfen.
-            var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
 
             // Trainingsstart bestimmen. Zwei Buch-Typen kommen vor:
             //  (a) Mid-line-[%tqu]: ganze Partie ab Grundstellung, der Marker hängt an Zug k
@@ -218,6 +221,22 @@ public partial class PgnImportService
             var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
             // import_books.py bricht beim ersten Kommentar ab, auch wenn er leer wird
             return string.IsNullOrEmpty(cleaned) ? null : Truncate(cleaned, MaxCommentLength);
+        }
+        return null;
+    }
+
+    // ---- erster NICHT-leerer Kommentar (über alle Kommentare hinweg) ------
+    /// <summary>Wie <see cref="ExtractFirstComment"/>, bricht aber NICHT beim ersten (evtl. leeren)
+    /// Kommentar ab, sondern liefert den ersten Kommentar mit echtem Text. Nur für Info-Linien:
+    /// Chessable-Kapitel-Intros haben als ersten Kommentar bloß den leeren <c>{[%info]}</c>-Marker,
+    /// der Erklärtext folgt erst im Zug-Kommentar nach dem NULL-Zug <c>1. --</c>.</summary>
+    private static string? FirstNonEmptyComment(string moveText)
+    {
+        foreach (Match m in CommentRegex().Matches(moveText))
+        {
+            var inner = m.Value.Trim('{', '}');
+            var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
+            if (!string.IsNullOrEmpty(cleaned)) return Truncate(cleaned, MaxCommentLength);
         }
         return null;
     }

@@ -41,10 +41,17 @@ namespace RookHub.Api.Services;
 ///   #2" in „100 Tactical Patterns") wurden bei 5000 Zeichen abgeschnitten. Der volle Text steht im
 ///   gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbare Bücher brauchen nur einen LOKALEN
 ///   Re-Import; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
+/// <item><c>7</c> — Chessable-Kapitel-Einleitungen als NULL-Zug (<c>{[%info]} 1. -- {Text}</c>) wurden
+///   fälschlich verworfen: der NULL-Zug <c>--</c> ergibt keine UCI-Züge, und die Info-Behalten-Logik
+///   verlangte einen nicht-leeren ERSTEN Kommentar — hier ist der erste Kommentar aber nur der leere
+///   <c>[%info]</c>-Marker, der Erklärtext folgt erst im Zug-Kommentar. Jetzt werden <c>[%info]</c>-
+///   Linien auch bei NULL-Zug als Info-Linie behalten (Text = erster NICHT-leerer Kommentar). Diese
+///   Linien stehen bereits im gespeicherten <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher
+///   laufen (wie bisher) über einen Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
 }

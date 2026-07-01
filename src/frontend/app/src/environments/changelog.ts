@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.1';
+export const APP_VERSION = '0.238.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.2", date: "2026-07-01", changes: [
+    { en: "Fixed missing course lines: Chessable chapter intro pages that use a null move (“1. --” with the explanation as a move comment) were silently dropped on import — so a course showed fewer lines than on Chessable (e.g. chapter 1 of “100 Tactical Patterns”). These info pages are now kept as click-through info lines. The data is already in the stored PGN, so refreshing the course (update banner) restores the lines; no re-import from scratch needed.", de: "Fehlende Kurs-Linien behoben: Chessable-Kapitel-Einleitungen mit NULL-Zug („1. --“ und dem Erklärtext als Zug-Kommentar) wurden beim Import stillschweigend verworfen — dadurch zeigte ein Kurs weniger Linien als auf Chessable (z. B. Kapitel 1 von „100 Tactical Patterns“). Diese Info-Seiten bleiben jetzt als Durchklick-Linien erhalten. Die Daten stehen bereits im gespeicherten PGN, daher stellt ein Aktualisieren des Kurses (Update-Banner) die Linien wieder her; kein Neu-Import nötig." },
+  ]},
   { version: "0.238.1", date: "2026-07-01", changes: [
     { en: "Long explanation/intro texts in courses are no longer cut off. They were truncated at 5000 characters (so e.g. \"Introduction … #2\" in \"100 Tactical Patterns\" ended mid-sentence); the limit is now 100,000 and the comment column holds the full text. To pull the full text into an already-imported course, refresh it (courses update banner). Also: the comment box no longer runs off the page — long texts are capped in height and scroll inside their own box.", de: "Lange Erklär-/Intro-Texte in Kursen werden nicht mehr abgeschnitten. Sie wurden bei 5000 Zeichen gekappt (z. B. endete „Introduction … #2“ in „100 Tactical Patterns“ mitten im Satz); die Grenze liegt jetzt bei 100.000 und die Kommentar-Spalte fasst den vollen Text. Um den vollen Text in einen bereits importierten Kurs zu holen, den Kurs aktualisieren (Kurse-Update-Banner). Außerdem: Der Kommentar-Kasten läuft nicht mehr über die Seite — lange Texte sind in der Höhe begrenzt und im Kasten scrollbar." },
   ]},
