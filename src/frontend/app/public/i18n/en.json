@@ -1246,7 +1246,9 @@
       "runningBuildTooltip": "This run built the currently running frontend.",
       "notConfigured": "No GitHub token configured. Set GitHub__Token (a PAT with actions:read) on the API to enable this view.",
       "noRuns": "No runs yet.",
-      "loadFailed": "Could not load CI status"
+      "loadFailed": "Could not load CI status",
+      "started": "started",
+      "duration": "took"
     },
     "users": {
       "searchLabel": "Search users",

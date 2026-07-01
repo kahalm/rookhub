@@ -12,7 +12,7 @@ export interface CiRun {
   id: number; name: string; title: string; branch: string; event: string;
   status: string; conclusion: string | null; runNumber: number;
   createdAt: string; updatedAt: string; htmlUrl: string; actor: string | null;
-  headSha: string | null;
+  headSha: string | null; ref: string | null; isTag: boolean;
 }
 export interface CiRepo { repo: string; error: string | null; runs: CiRun[]; }
 export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: string; }
@@ -71,10 +71,12 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                       }
                     </span>
                     <span class="run-meta">
-                      {{ run.name }} · #{{ run.runNumber }} ·
-                      <span class="run-branch">{{ run.branch }}</span>
+                      <mat-icon class="ref-icon">{{ run.isTag ? 'sell' : 'call_split' }}</mat-icon>
+                      <span class="run-ref" [class.is-tag]="run.isTag">{{ refLabel(run) }}</span>
+                      · {{ run.name }} · #{{ run.runNumber }}
+                      · {{ 'admin.ci.started' | translate }} {{ run.createdAt | date:'dd.MM. HH:mm' }}
+                      · {{ 'admin.ci.duration' | translate }} {{ durationLabel(run) }}
                       @if (run.actor) { · {{ run.actor }} }
-                      · {{ run.updatedAt | date:'dd.MM. HH:mm' }}
                     </span>
                   </span>
                 </a>
@@ -111,7 +113,9 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .run-main { display: flex; flex-direction: column; min-width: 0; }
     .run-title { font-size: 0.86rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .run-meta { font-size: 0.74rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .run-branch { font-family: monospace; }
+    .run-ref { font-family: monospace; }
+    .run-ref.is-tag { color: #6a1b9a; font-weight: 600; }
+    .ref-icon { font-size: 12px; width: 12px; height: 12px; vertical-align: -1px; opacity: 0.6; }
   `]
 })
 export class AdminGithubActionsComponent implements OnInit {
@@ -139,6 +143,23 @@ export class AdminGithubActionsComponent implements OnInit {
       this.loading = false;
       if (data) { this.overview = data; this.lastUpdated = new Date(); }
     });
+  }
+
+  /** Anzeige-Ref: Branch/Tag-Name, sonst Kurz-SHA. */
+  refLabel(run: CiRun): string {
+    return run.ref || run.branch || (run.headSha ? run.headSha.slice(0, 7) : '?');
+  }
+
+  /** Laufzeit: bei abgeschlossenen Runs created→updated, bei laufenden created→jetzt (live). */
+  durationLabel(run: CiRun): string {
+    const start = Date.parse(run.createdAt);
+    if (isNaN(start)) return '–';
+    const end = run.status === 'completed' ? Date.parse(run.updatedAt) : Date.now();
+    const s = Math.max(0, Math.round((end - start) / 1000));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ${s % 60}s`;
+    return `${Math.floor(m / 60)}h ${m % 60}m`;
   }
 
   /** Hat dieser Run den aktuell laufenden Frontend-Build erzeugt? (head_sha == build-SHA, Prefix-tolerant) */

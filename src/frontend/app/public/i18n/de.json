@@ -1246,7 +1246,9 @@
       "runningBuildTooltip": "Dieser Lauf hat das aktuell laufende Frontend gebaut.",
       "notConfigured": "Kein GitHub-Token hinterlegt. Setze GitHub__Token (ein PAT mit actions:read) an der API, um diese Ansicht zu aktivieren.",
       "noRuns": "Noch keine Läufe.",
-      "loadFailed": "CI-Status konnte nicht geladen werden"
+      "loadFailed": "CI-Status konnte nicht geladen werden",
+      "started": "gestartet",
+      "duration": "Dauer"
     },
     "users": {
       "searchLabel": "User suchen",

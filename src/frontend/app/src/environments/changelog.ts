@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.232.0';
+export const APP_VERSION = '0.233.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.233.0", date: "2026-07-01", changes: [
+    { en: "Admin CI/Actions page shows more per run: the ref (branch like master, or the tag name for tag builds, with a branch/tag icon), the start time, and the run duration (live for in-progress runs). The run title stays a clickable link to the GitHub run.", de: "Admin-CI/Actions-Seite zeigt je Lauf mehr: den Ref (Branch wie master, oder den Tag-Namen bei Tag-Builds, mit Branch-/Tag-Icon), die Startzeit und die Laufzeit (bei laufenden Läufen live). Der Titel bleibt ein klickbarer Link zum GitHub-Lauf." },
+  ]},
   { version: "0.232.0", date: "2026-07-01", changes: [
     { en: "Admin CI/Actions page now marks which GitHub Actions run built the currently running frontend: the build's commit SHA is baked into the image (/build-info.json) and the run with the matching head_sha gets a green “live” tag. Lets you see at a glance whether the deployed stack is on the newest build. (Takes effect once an image built with this change is deployed; only the rookhub frontend reports its build SHA.)", de: "Die Admin-CI/Actions-Seite markiert jetzt, welcher GitHub-Actions-Lauf das aktuell laufende Frontend gebaut hat: der Commit-SHA des Builds steckt im Image (/build-info.json), und der Lauf mit passendem head_sha bekommt ein grünes „live“-Etikett. So sieht man auf einen Blick, ob der deployte Stack auf dem neuesten Build ist. (Greift, sobald ein mit dieser Änderung gebautes Image deployt ist; nur das rookhub-Frontend meldet seinen Build-SHA.)" },
   ]},

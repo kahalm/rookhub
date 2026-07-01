@@ -14,7 +14,11 @@ public record CiRunDto(
     DateTime UpdatedAt,
     string HtmlUrl,
     string? Actor,
-    string? HeadSha);
+    string? HeadSha,
+    /// <summary>Anzeige-Ref: Branch-Name (z. B. "master") oder Tag-Name (z. B. "v0.232.0") bei Tag-Läufen.</summary>
+    string? Ref,
+    /// <summary>true = durch einen Tag ausgelöst (Ref ist ein Tag-Name), false = Branch-Push.</summary>
+    bool IsTag);
 
 /// <summary>Die letzten Läufe eines Repos (oder ein Fehler, wenn der Abruf scheiterte).</summary>
 public record CiRepoDto(string Repo, string? Error, List<CiRunDto> Runs);

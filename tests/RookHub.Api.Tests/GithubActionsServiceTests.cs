@@ -64,6 +64,8 @@ public class GithubActionsServiceTests
         Assert.Equal(42, run.RunNumber);
         Assert.Equal("kahalm", run.Actor);
         Assert.Equal("abc1234def5678", run.HeadSha);
+        Assert.Equal("master", run.Ref);
+        Assert.False(run.IsTag);
     }
 
     [Fact]
@@ -88,7 +90,8 @@ public class GithubActionsServiceTests
         await svc.GetOverviewAsync();
         await svc.GetOverviewAsync();
 
-        Assert.Equal(1, handler.Calls);   // 2. Poll trifft den Cache, nicht GitHub
+        // 1 Repo × (runs + tags) = 2 Calls beim 1. Mal; der 2. Poll trifft den Cache → keine weiteren.
+        Assert.Equal(2, handler.Calls);
     }
 
     private static HttpResponseMessage Json(string body)

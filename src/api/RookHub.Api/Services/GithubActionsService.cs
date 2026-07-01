@@ -81,12 +81,24 @@ public class GithubActionsService
                 return new CiRepoDto(repo, $"HTTP {(int)resp.StatusCode}", new List<CiRunDto>());
 
             var payload = await resp.Content.ReadFromJsonAsync<RunsResponse>(GithubJson, ct);
+
+            // Tags auflösen (Tag-Läufe haben kein head_branch → Ref = Tag-Name via sha-Map).
+            var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
+
             var runs = (payload?.WorkflowRuns ?? new List<RunItem>())
                 .Take(5)
-                .Select(r => new CiRunDto(
-                    r.Id, r.Name ?? "", string.IsNullOrWhiteSpace(r.DisplayTitle) ? (r.Name ?? "") : r.DisplayTitle,
-                    r.HeadBranch ?? "", r.Event ?? "", r.Status ?? "", r.Conclusion,
-                    r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login, r.HeadSha))
+                .Select(r =>
+                {
+                    var branch = r.HeadBranch ?? "";
+                    var isTag = string.IsNullOrEmpty(branch);
+                    var refName = !isTag ? branch
+                        : (r.HeadSha != null && tagBySha.TryGetValue(r.HeadSha, out var tag) ? tag : null);
+                    return new CiRunDto(
+                        r.Id, r.Name ?? "", string.IsNullOrWhiteSpace(r.DisplayTitle) ? (r.Name ?? "") : r.DisplayTitle,
+                        branch, r.Event ?? "", r.Status ?? "", r.Conclusion,
+                        r.RunNumber, r.CreatedAt, r.UpdatedAt, r.HtmlUrl ?? "", r.Actor?.Login, r.HeadSha,
+                        refName, isTag && refName != null);
+                })
                 .ToList();
             return new CiRepoDto(repo, null, runs);
         }
@@ -97,6 +109,26 @@ public class GithubActionsService
         }
     }
 
+    /// <summary>Neueste Tags des Repos als sha→Name-Map (für die Ref-Anzeige der Tag-Läufe).
+    /// Fehler → leere Map (dann fällt die Anzeige auf den Branch/Short-SHA zurück).</summary>
+    private async Task<Dictionary<string, string>> GetTagsByShaAsync(string owner, string repo, string token, CancellationToken ct)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, $"/repos/{owner}/{repo}/tags?per_page=50");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return new();
+            var tags = await resp.Content.ReadFromJsonAsync<List<TagItem>>(GithubJson, ct) ?? new();
+            var map = new Dictionary<string, string>();
+            foreach (var t in tags)
+                if (t.Commit?.Sha is { Length: > 0 } sha && !map.ContainsKey(sha))
+                    map[sha] = t.Name;   // erster (neuester) Tag je Commit gewinnt
+            return map;
+        }
+        catch { return new(); }
+    }
+
     // --- GitHub-Rohschema (snake_case via NamingPolicy) ---
     private record RunsResponse(List<RunItem> WorkflowRuns);
     private record RunItem(
@@ -104,4 +136,6 @@ public class GithubActionsService
         string? Status, string? Conclusion, int RunNumber, DateTime CreatedAt, DateTime UpdatedAt,
         string? HtmlUrl, ActorObj? Actor, string? HeadSha);
     private record ActorObj(string Login);
+    private record TagItem(string Name, TagCommit? Commit);
+    private record TagCommit(string Sha);
 }

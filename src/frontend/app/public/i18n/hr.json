@@ -1244,7 +1244,9 @@
       "runningBuildTooltip": "Ovo izvođenje je izgradilo trenutno pokrenuti frontend.",
       "notConfigured": "Nije postavljen GitHub token. Postavi GitHub__Token (PAT s actions:read) na API-ju da omogućiš ovaj prikaz.",
       "noRuns": "Još nema izvođenja.",
-      "loadFailed": "CI status se ne može učitati"
+      "loadFailed": "CI status se ne može učitati",
+      "started": "pokrenuto",
+      "duration": "trajanje"
     },
     "users": {
       "searchLabel": "Pretraži korisnike",
