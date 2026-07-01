@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -53,7 +54,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatListModule, MatTooltipModule, DragDropModule, TranslateModule,
+    MatListModule, MatProgressBarModule, MatTooltipModule, DragDropModule, TranslateModule,
   ],
   template: `
     <div class="dashboard">
@@ -122,16 +123,23 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
                   <p class="pinned-empty">{{ 'dashboard.pinnedCourses.empty' | translate }}</p>
                 } @else {
                   @for (c of pinnedCourses; track c.bookId) {
+                    @let done = c.puzzleCount > 0 && c.solvedCount >= c.puzzleCount;
                     <div class="pinned-course">
-                      <div class="pc-info">
+                      <div class="pc-header">
                         <span class="pc-name" [title]="c.displayName">{{ c.displayName }}</span>
-                        <span class="pc-prog">{{ c.solvedCount }}/{{ c.puzzleCount }}</span>
+                        <span class="pc-prog" [class.pc-prog-done]="done">
+                          @if (done) { <mat-icon class="pc-done-icon">emoji_events</mat-icon> }
+                          {{ c.solvedCount }}/{{ c.puzzleCount }}
+                        </span>
                       </div>
+                      <mat-progress-bar class="pc-bar" mode="determinate" [value]="c.progressPercent"></mat-progress-bar>
                       <div class="pc-actions">
-                        <button mat-stroked-button [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
+                        <button mat-flat-button color="primary" class="pc-btn pc-btn-primary"
+                                [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
                           <mat-icon>format_list_numbered</mat-icon>{{ 'courses.sequential' | translate }}
                         </button>
-                        <button mat-stroked-button [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
+                        <button mat-stroked-button class="pc-btn"
+                                [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
                           <mat-icon>shuffle</mat-icon>{{ 'courses.random' | translate }}
                         </button>
                       </div>
@@ -207,17 +215,21 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid.cdk-drop-list-dragging mat-card:not(.cdk-drag-placeholder) { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
     .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
     .tournament-link:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
-    /* Angepinnte-Kurse-Kachel: kompakte Liste, je Kurs Name + Fortschritt + zwei Start-Buttons. */
-    .pinned-courses { display: flex; flex-direction: column; gap: 0.6rem; padding-top: 0.25rem; }
+    /* Angepinnte-Kurse-Kachel: je Kurs Titel + Fortschrittsbalken + zwei Start-Buttons. */
+    .pinned-courses { display: flex; flex-direction: column; gap: 0.9rem; padding-top: 0.25rem; }
     .pinned-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 0; font-size: 0.9rem; }
-    .pinned-course { display: flex; flex-direction: column; gap: 0.25rem; }
-    .pinned-course + .pinned-course { border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); padding-top: 0.5rem; }
-    .pc-info { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-    .pc-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pc-prog { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
-    .pc-actions { display: flex; gap: 0.4rem; }
-    .pc-actions button { font-size: 0.8rem; height: 30px; line-height: 30px; padding: 0 8px; }
-    .pc-actions mat-icon { font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle; }
+    .pinned-course { display: flex; flex-direction: column; gap: 0.5rem; }
+    .pinned-course + .pinned-course { border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); padding-top: 0.75rem; }
+    .pc-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .pc-name { font-weight: 600; font-size: 0.92rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pc-prog { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; display: inline-flex; align-items: center; gap: 0.25rem; }
+    .pc-prog-done { color: color-mix(in srgb, #f9a825 85%, currentColor); font-weight: 600; }
+    .pc-done-icon { font-size: 16px; width: 16px; height: 16px; }
+    .pc-bar { border-radius: 999px; overflow: hidden; height: 6px; }
+    .pc-bar ::ng-deep .mdc-linear-progress__buffer { border-radius: 999px; }
+    .pc-actions { display: flex; gap: 0.5rem; margin-top: 0.15rem; }
+    .pc-btn { flex: 1; min-width: 0; }
+    .pc-btn mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; vertical-align: middle; }
     @media (max-width: 768px) {
       .dashboard { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }

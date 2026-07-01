@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.0';
+export const APP_VERSION = '0.237.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.1", date: "2026-07-01", changes: [
+    { en: "Pinned courses dashboard tile polished: each pinned course now shows a progress bar (like the courses page), the Sequential button is the visual primary and Random the outlined secondary, both stretch full width, and a trophy 🏆 appears next to the progress when a course is fully solved. Old version looked cramped with two identical tiny pill buttons.", de: "Kachel „Angepinnte Kurse“ auf dem Dashboard aufgehübscht: je Kurs gibt es jetzt einen Fortschrittsbalken (wie auf der Kurse-Seite), der Sequenziell-Knopf ist optisch primär und Zufällig sekundär mit Rahmen, beide füllen die Breite; ist ein Kurs komplett gelöst, erscheint eine 🏆 neben dem Fortschritt. Vorher wirkten die zwei gleich aussehenden Mini-Pill-Buttons gequetscht." },
+  ]},
   { version: "0.237.0", date: "2026-07-01", changes: [
     { en: "You can now pin courses to your dashboard and start them straight from there. Hit the 📌 icon on any course in the courses list; pinned courses appear in a new \"Pinned courses\" dashboard tile, each with a Sequential and a Random start button. Pins are saved per account, so they follow you across devices.", de: "Du kannst jetzt Kurse ans Dashboard anpinnen und direkt von dort starten. Klick auf das 📌-Symbol bei einem Kurs in der Kursliste; angepinnte Kurse erscheinen in einer neuen Dashboard-Kachel „Angepinnte Kurse“, jeweils mit einem Sequenziell- und einem Zufällig-Startknopf. Die Pins werden pro Konto gespeichert und sind so auf allen Geräten gleich." },
   ]},
