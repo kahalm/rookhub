@@ -29,6 +29,12 @@ public class CourseListItemDto
     /// freigegeben (bzw. globales Admin-Buch). Steuert die Aufteilung in der Übersicht.
     /// </summary>
     public bool IsOwned { get; set; }
+
+    /// <summary>
+    /// <c>true</c> = der User hat diesen Kurs fürs Dashboard angepinnt (persönlich, per User).
+    /// Steuert das Pin-Symbol in der Kursliste und die Dashboard-Kachel „Angepinnte Kurse".
+    /// </summary>
+    public bool IsPinned { get; set; }
 }
 
 /// <summary>

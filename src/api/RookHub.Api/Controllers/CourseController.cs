@@ -172,4 +172,20 @@ public class CourseController : BaseApiController
         try { return Ok(await _service.ResetAsync(GetUserId(), bookId, IsAdmin)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
+
+    /// <summary>Pinnt den Kurs fürs Dashboard an (persönlich, idempotent). 404 wenn nicht zugänglich.</summary>
+    [HttpPost("{bookId}/pin")]
+    public async Task<IActionResult> Pin(int bookId)
+    {
+        try { await _service.PinCourseAsync(GetUserId(), bookId, IsAdmin); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Löst den Kurs wieder vom Dashboard (idempotent).</summary>
+    [HttpDelete("{bookId}/pin")]
+    public async Task<IActionResult> Unpin(int bookId)
+    {
+        await _service.UnpinCourseAsync(GetUserId(), bookId);
+        return NoContent();
+    }
 }

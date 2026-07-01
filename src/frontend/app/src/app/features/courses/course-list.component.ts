@@ -142,6 +142,11 @@ import { DISCORD_INVITE_URL } from '../../core/community';
               </button>
             </div>
             <div class="util-actions">
+              <button mat-icon-button class="pin-btn" [class.pinned]="c.isPinned"
+                      [matTooltip]="(c.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate"
+                      [disabled]="pinning === c.bookId" (click)="togglePin(c)">
+                <mat-icon>push_pin</mat-icon>
+              </button>
               <button mat-icon-button
                       [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
                       [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
@@ -233,6 +238,9 @@ import { DISCORD_INVITE_URL } from '../../core/community';
     .upload-note a:hover { text-decoration: underline; }
     .upload-name { width: 200px; }
     .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
+    /* Pin-Symbol: gedämpft wenn nicht angepinnt, in Primärfarbe + leicht gekippt wenn angepinnt. */
+    .pin-btn mat-icon { opacity: 0.55; transition: opacity .15s, color .15s; }
+    .pin-btn.pinned mat-icon { opacity: 1; color: var(--mdc-theme-primary, #3f51b5); transform: rotate(0); }
     .course-section { margin-bottom: 28px; }
     .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
     .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
@@ -301,6 +309,8 @@ export class CourseListComponent implements OnInit {
   uploadName = '';
   /** bookId, der gerade gelöscht wird (Button-Sperre). */
   deleting: number | null = null;
+  /** bookId, dessen Pin gerade umgeschaltet wird (Button-Sperre). */
+  pinning: number | null = null;
   /** Einladungslink zum Community-Discord (für „anderes PGN → Admin/Discord"-Hinweis). */
   readonly discordUrl = DISCORD_INVITE_URL;
   private offlineFiles = new Set<string>();
@@ -342,6 +352,25 @@ export class CourseListComponent implements OnInit {
 
   isOffline(c: CourseListItem): boolean {
     return this.offlineFiles.has(c.fileName);
+  }
+
+  /** Kurs fürs Dashboard an-/abpinnen (optimistisch, Rollback bei Fehler). */
+  togglePin(c: CourseListItem): void {
+    const target = !c.isPinned;
+    this.pinning = c.bookId;
+    c.isPinned = target; // optimistisch
+    const req = target ? this.courseService.pinCourse(c.bookId) : this.courseService.unpinCourse(c.bookId);
+    req.subscribe({
+      next: () => {
+        this.pinning = null;
+        this.snackbar.info(this.translate.instant(target ? 'courses.pinned' : 'courses.unpinned', { name: c.displayName }), { action: 'common.ok', duration: 2000 });
+      },
+      error: () => {
+        c.isPinned = !target; // Rollback
+        this.pinning = null;
+        this.snackbar.info(this.translate.instant('courses.pinFailed'), { action: 'common.ok', duration: 3000 });
+      }
+    });
   }
 
   /** Kapitelübersicht eines Buchs auf-/zuklappen; Kapitel werden beim ersten Öffnen lazy geladen. */

@@ -223,6 +223,12 @@
       "open": "Otvori tečajeve",
       "count": "{{count}} tečajeva"
     },
+    "pinnedCourses": {
+      "title": "Prikvačeni tečajevi",
+      "subtitle": "{{count}} prikvačeno",
+      "empty": "Prikvači tečaj (📌 na stranici tečajeva) da ga pokreneš odavde.",
+      "viewAll": "Svi tečajevi"
+    },
     "leaderboards": {
       "title": "Ljestvice",
       "subtitle": "Pogledaj svoj poredak",
@@ -891,6 +897,11 @@
     "sequential": "Slijedno",
     "random": "Nasumično",
     "resetTooltip": "Poništi napredak",
+    "pinTooltip": "Prikvači na nadzornu ploču",
+    "unpinTooltip": "Otkvači s nadzorne ploče",
+    "pinned": "„{{name}}\" prikvačeno na nadzornu ploču",
+    "unpinned": "„{{name}}\" otkvačeno",
+    "pinFailed": "Prikvačivanje nije uspjelo",
     "resetConfirm": "Poništiti napredak za „{{name}}\"?",
     "loadFailed": "Tečajeve nije moguće učitati",
     "resetFailed": "Poništavanje nije uspjelo",

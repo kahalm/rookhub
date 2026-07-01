@@ -13,7 +13,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription } from '../../core/models';
-import { DashboardService } from '../../core/dashboard.service';
+import { DashboardService, DashboardCourse } from '../../core/dashboard.service';
 import { DashboardLayoutService } from '../../core/dashboard-layout.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
@@ -37,7 +37,7 @@ interface TileDef {
 
 /** Kuratierter Standard: diese Kacheln sind anfänglich sichtbar — in genau dieser Reihenfolge. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'weekly', 'repertoires', 'courses', 'trainingGoals', 'leaderboards',
+  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'leaderboards',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
@@ -116,11 +116,39 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <mat-card-title>{{ tile.titleKey | translate }}</mat-card-title>
               <mat-card-subtitle>{{ sub.key | translate:sub.params }}</mat-card-subtitle>
             </mat-card-header>
-            <mat-card-actions>
-              @for (b of tile.buttons; track b.link) {
-                <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
-              }
-            </mat-card-actions>
+            @if (tile.id === 'pinnedCourses') {
+              <mat-card-content class="pinned-courses">
+                @if (pinnedCourses.length === 0) {
+                  <p class="pinned-empty">{{ 'dashboard.pinnedCourses.empty' | translate }}</p>
+                } @else {
+                  @for (c of pinnedCourses; track c.bookId) {
+                    <div class="pinned-course">
+                      <div class="pc-info">
+                        <span class="pc-name" [title]="c.displayName">{{ c.displayName }}</span>
+                        <span class="pc-prog">{{ c.solvedCount }}/{{ c.puzzleCount }}</span>
+                      </div>
+                      <div class="pc-actions">
+                        <button mat-stroked-button [routerLink]="['/courses', c.bookId, 'sequential']" [disabled]="c.puzzleCount === 0">
+                          <mat-icon>format_list_numbered</mat-icon>{{ 'courses.sequential' | translate }}
+                        </button>
+                        <button mat-stroked-button [routerLink]="['/courses', c.bookId, 'random']" [disabled]="c.puzzleCount === 0">
+                          <mat-icon>shuffle</mat-icon>{{ 'courses.random' | translate }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                }
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-button routerLink="/courses">{{ 'dashboard.pinnedCourses.viewAll' | translate }}</button>
+              </mat-card-actions>
+            } @else {
+              <mat-card-actions>
+                @for (b of tile.buttons; track b.link) {
+                  <button mat-button [routerLink]="b.link">{{ b.labelKey | translate }}</button>
+                }
+              </mat-card-actions>
+            }
           </mat-card>
         }
       </div>
@@ -179,6 +207,17 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
     .dashboard-grid.cdk-drop-list-dragging mat-card:not(.cdk-drag-placeholder) { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
     .tournament-link { cursor: pointer; text-decoration: none; color: inherit; }
     .tournament-link:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
+    /* Angepinnte-Kurse-Kachel: kompakte Liste, je Kurs Name + Fortschritt + zwei Start-Buttons. */
+    .pinned-courses { display: flex; flex-direction: column; gap: 0.6rem; padding-top: 0.25rem; }
+    .pinned-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 0; font-size: 0.9rem; }
+    .pinned-course { display: flex; flex-direction: column; gap: 0.25rem; }
+    .pinned-course + .pinned-course { border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); padding-top: 0.5rem; }
+    .pc-info { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+    .pc-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pc-prog { font-variant-numeric: tabular-nums; font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
+    .pc-actions { display: flex; gap: 0.4rem; }
+    .pc-actions button { font-size: 0.8rem; height: 30px; line-height: 30px; padding: 0 8px; }
+    .pc-actions mat-icon { font-size: 15px; width: 15px; height: 15px; margin-right: 3px; vertical-align: middle; }
     @media (max-width: 768px) {
       .dashboard { padding: 0.75rem; }
       h1 { font-size: 1.4rem; }
@@ -190,6 +229,8 @@ export class DashboardComponent implements OnInit {
 
   repertoireCount = 0;
   courseCount = 0;
+  /** Vom Nutzer angepinnte Kurse (Schnellstart-Kachel). */
+  pinnedCourses: DashboardCourse[] = [];
   subscriptionCount = 0;
   friendCount = 0;
   favoriteCount = 0;
@@ -233,6 +274,14 @@ export class DashboardComponent implements OnInit {
       eligible: () => this.menuKeys.has('courses'),
       subtitle: () => ({ key: 'dashboard.courses.count', params: { count: this.courseCount } }),
       buttons: [{ labelKey: 'dashboard.courses.open', link: '/courses' }],
+    },
+    pinnedCourses: {
+      id: 'pinnedCourses', icon: 'push_pin', titleKey: 'dashboard.pinnedCourses.title',
+      // Zeigt sich normal nur, wenn ≥1 Kurs angepinnt ist; im Bearbeitungsmodus immer (positionierbar),
+      // dann mit Leer-Hinweis. Inhalt wird im Template gesondert gerendert (Liste + je 2 Start-Buttons).
+      eligible: () => this.menuKeys.has('courses') && (this.editing || this.pinnedCourses.length > 0),
+      subtitle: () => ({ key: 'dashboard.pinnedCourses.subtitle', params: { count: this.pinnedCourses.length } }),
+      buttons: [],
     },
     leaderboards: {
       id: 'leaderboards', icon: 'leaderboard', titleKey: 'dashboard.leaderboards.title',
@@ -430,6 +479,8 @@ export class DashboardComponent implements OnInit {
     ).subscribe(({ repertoires, courses, subscriptions, friends, puzzleStats, favorites }) => {
       this.repertoireCount = repertoires.length;
       this.courseCount = courses.length;
+      this.pinnedCourses = courses.filter(c => c.isPinned)
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
       this.subscriptions = subscriptions;
       this.subscriptionCount = subscriptions.length;
       this.friendCount = friends.length;

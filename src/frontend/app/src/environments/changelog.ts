@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.18';
+export const APP_VERSION = '0.237.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.237.0", date: "2026-07-01", changes: [
+    { en: "You can now pin courses to your dashboard and start them straight from there. Hit the 📌 icon on any course in the courses list; pinned courses appear in a new \"Pinned courses\" dashboard tile, each with a Sequential and a Random start button. Pins are saved per account, so they follow you across devices.", de: "Du kannst jetzt Kurse ans Dashboard anpinnen und direkt von dort starten. Klick auf das 📌-Symbol bei einem Kurs in der Kursliste; angepinnte Kurse erscheinen in einer neuen Dashboard-Kachel „Angepinnte Kurse“, jeweils mit einem Sequenziell- und einem Zufällig-Startknopf. Die Pins werden pro Konto gespeichert und sind so auf allen Geräten gleich." },
+  ]},
   { version: "0.236.18", date: "2026-07-01", changes: [
     { en: "Admin CI page now updates via push instead of polling GitHub: a new webhook endpoint (POST /api/ci/gh-webhook, GitHub-HMAC-verified) receives workflow_run start/finish events, which are overlaid live onto the (rarely fetched) GitHub data — so runs appear/complete in near real-time without burning the GitHub API rate limit. Configure a “Workflow runs” webhook per repo (see below). The normal refresh dropped from 2 min back to 20s (cheap now, since it mostly hits RookHub's own cache).", de: "Die Admin-CI-Seite aktualisiert jetzt per Push statt GitHub zu pollen: ein neuer Webhook-Endpoint (POST /api/ci/gh-webhook, GitHub-HMAC-verifiziert) empfängt workflow_run-Start/Ende-Events, die live über die (nur noch selten geholten) GitHub-Daten gelegt werden — Läufe erscheinen/enden nahezu in Echtzeit, ohne das GitHub-Rate-Limit zu belasten. Je Repo einen „Workflow runs“-Webhook einrichten. Die normale Aktualisierung ging von 2 min zurück auf 20 s (jetzt günstig, da meist rookhubs eigener Cache getroffen wird)." },
   ]},

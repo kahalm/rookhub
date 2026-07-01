@@ -250,4 +250,87 @@ public class CourseServiceOwnerTests : IDisposable
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => _svc.DeletePersonalCourseAsync(userId: 1, book.Id));
     }
+
+    // --- Dashboard-Pinning ---
+
+    [Fact]
+    public async Task GetCourses_IsPinned_FalseByDefault()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.False(courses.Single(c => c.BookId == book.Id).IsPinned);
+    }
+
+    [Fact]
+    public async Task PinCourse_MarksIsPinned_InCourseList()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        await _svc.PinCourseAsync(userId: 1, book.Id, isAdmin: false);
+
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.True(courses.Single(c => c.BookId == book.Id).IsPinned);
+        Assert.Single(_db.CoursePins);
+    }
+
+    [Fact]
+    public async Task PinCourse_IsIdempotent()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        await _svc.PinCourseAsync(userId: 1, book.Id, isAdmin: false);
+        await _svc.PinCourseAsync(userId: 1, book.Id, isAdmin: false);
+        Assert.Single(_db.CoursePins);
+    }
+
+    [Fact]
+    public async Task UnpinCourse_RemovesPin()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        await _svc.PinCourseAsync(userId: 1, book.Id, isAdmin: false);
+        await _svc.UnpinCourseAsync(userId: 1, book.Id);
+
+        Assert.Empty(_db.CoursePins);
+        var courses = await _svc.GetCoursesAsync(userId: 1, isAdmin: false);
+        Assert.False(courses.Single(c => c.BookId == book.Id).IsPinned);
+    }
+
+    [Fact]
+    public async Task UnpinCourse_WhenNotPinned_IsNoOp()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1);
+        await _svc.UnpinCourseAsync(userId: 1, book.Id); // kein Pin vorhanden
+        Assert.Empty(_db.CoursePins);
+    }
+
+    [Fact]
+    public async Task PinCourse_InaccessibleBook_Throws_AndPinsNothing()
+    {
+        var book = await SeedPersonalBookAsync(ownerUserId: 1); // gehört User 1
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _svc.PinCourseAsync(userId: 2, book.Id, isAdmin: false));
+        Assert.Empty(_db.CoursePins);
+    }
+
+    [Fact]
+    public async Task Pin_IsPerUser_NotVisibleToOtherUser()
+    {
+        var book = await SeedGroupBookAsync(groupId: 4, memberUserId: 1);
+        _db.UserGroups.Add(new UserGroup { UserId = 2, GroupId = 4 });
+        await _db.SaveChangesAsync();
+
+        await _svc.PinCourseAsync(userId: 1, book.Id, isAdmin: false);
+
+        Assert.True((await _svc.GetCoursesAsync(1, false)).Single(c => c.BookId == book.Id).IsPinned);
+        Assert.False((await _svc.GetCoursesAsync(2, false)).Single(c => c.BookId == book.Id).IsPinned);
+    }
+
+    [Fact]
+    public async Task DeletePersonalCourse_AlsoRemovesPins()
+    {
+        var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "line.pgn", SamplePgn, null);
+        await _svc.PinCourseAsync(userId: 1, dto.BookId, isAdmin: false);
+        Assert.Single(_db.CoursePins);
+
+        await _svc.DeletePersonalCourseAsync(userId: 1, dto.BookId);
+        Assert.Empty(_db.CoursePins);
+    }
 }

@@ -21,6 +21,8 @@ export interface CourseListItem {
   lastActivityAt: string | null;
   /** true = eigener (selbst importierter) Chessable-Kurs; false = über eine Gruppe freigegebener öffentlicher Kurs. */
   isOwned: boolean;
+  /** true = vom Nutzer fürs Dashboard angepinnt (persönlich). */
+  isPinned: boolean;
 }
 
 export interface CourseChapter {
@@ -115,6 +117,16 @@ export class CourseService {
   /** Löscht einen eigenen Kurs des Nutzers. */
   deleteCourse(bookId: number): Observable<void> {
     return this.http.delete<void>(`/api/courses/${bookId}`);
+  }
+
+  /** Pinnt einen Kurs fürs Dashboard an (persönlich, idempotent). */
+  pinCourse(bookId: number): Observable<void> {
+    return this.http.post<void>(`/api/courses/${bookId}/pin`, {});
+  }
+
+  /** Löst einen angepinnten Kurs wieder vom Dashboard. */
+  unpinCourse(bookId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}/pin`);
   }
 
   /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */

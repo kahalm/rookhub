@@ -139,6 +139,7 @@ public class BookAdminService
         _db.CourseInfoViews.RemoveRange(_db.CourseInfoViews.Where(iv => iv.BookId == id));
         _db.CourseAttempts.RemoveRange(_db.CourseAttempts.Where(a => a.BookId == id));
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
+        _db.CoursePins.RemoveRange(_db.CoursePins.Where(p => p.BookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
         // BookPuzzleAttempt hat (wie CoursePuzzleResult) eine Restrict-FK auf BookPuzzle →
         // die Versuche (Tagespuzzle-/Buch-Solves) explizit vor den Puzzles entfernen, sonst

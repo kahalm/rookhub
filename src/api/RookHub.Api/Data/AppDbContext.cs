@@ -33,6 +33,7 @@ public class AppDbContext : DbContext
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
+    public DbSet<CoursePin> CoursePins => Set<CoursePin>();
     public DbSet<CourseInfoView> CourseInfoViews => Set<CourseInfoView>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
@@ -455,6 +456,23 @@ public class AppDbContext : DbContext
 
             e.HasIndex(cr => new { cr.UserId, cr.BookPuzzleId }).IsUnique();
             e.HasIndex(cr => new { cr.UserId, cr.BookId });
+        });
+
+        modelBuilder.Entity<CoursePin>(e =>
+        {
+            e.HasOne(p => p.User)
+             .WithMany(u => u.CoursePins)
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(p => p.Book)
+             .WithMany()
+             .HasForeignKey(p => p.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Ein Pin pro (User, Buch); Sortier-/Ladeindex nach Anpin-Zeitpunkt.
+            e.HasIndex(p => new { p.UserId, p.BookId }).IsUnique();
+            e.HasIndex(p => new { p.UserId, p.PinnedAt });
         });
 
         modelBuilder.Entity<CourseInfoView>(e =>

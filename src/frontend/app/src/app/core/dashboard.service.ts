@@ -3,6 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Subscription, Repertoire, Friend, PuzzleStatsDto } from './models';
 
+/** Minimal-Sicht auf einen Kurs fürs Dashboard (Zähler + angepinnte Kurse mit Schnellstart). */
+export interface DashboardCourse {
+  bookId: number;
+  displayName: string;
+  puzzleCount: number;
+  solvedCount: number;
+  progressPercent: number;
+  isPinned: boolean;
+}
+
 /**
  * Kapselt die Lese-Calls des Dashboards (Repertoires/Abos/Freunde/Puzzle-Stats), damit
  * `dashboard.component` nicht direkt den `HttpClient` anspricht (Service-Layer, Audit-Fund).
@@ -17,9 +27,9 @@ export class DashboardService {
     return this.http.get<Repertoire[]>('/api/repertoires');
   }
 
-  /** Sichtbare Kurse (Bücher) des Users — nur für den Zähler auf der Dashboard-Kachel. */
-  getCourses(): Observable<unknown[]> {
-    return this.http.get<unknown[]>('/api/courses');
+  /** Sichtbare Kurse (Bücher) des Users — für den Zähler + die angepinnten Kurse (Schnellstart). */
+  getCourses(): Observable<DashboardCourse[]> {
+    return this.http.get<DashboardCourse[]>('/api/courses');
   }
 
   getSubscriptions(): Observable<Subscription[]> {

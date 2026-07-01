@@ -223,6 +223,12 @@
       "open": "Kurse öffnen",
       "count": "{{count}} Kurse"
     },
+    "pinnedCourses": {
+      "title": "Angepinnte Kurse",
+      "subtitle": "{{count}} angepinnt",
+      "empty": "Pinne einen Kurs an (📌 auf der Kurse-Seite), um ihn direkt hier zu starten.",
+      "viewAll": "Alle Kurse"
+    },
     "leaderboards": {
       "title": "Bestenlisten",
       "subtitle": "Sieh, wo du stehst",
@@ -893,6 +899,11 @@
     "sequential": "Sequenziell",
     "random": "Zufällig",
     "resetTooltip": "Fortschritt zurücksetzen",
+    "pinTooltip": "Ans Dashboard anpinnen",
+    "unpinTooltip": "Vom Dashboard lösen",
+    "pinned": "„{{name}}“ ans Dashboard angepinnt",
+    "unpinned": "„{{name}}“ gelöst",
+    "pinFailed": "Anpinnen fehlgeschlagen",
     "downloadPgnTooltip": "Als PGN herunterladen",
     "downloadFailed": "PGN-Download fehlgeschlagen.",
     "resetConfirm": "Fortschritt für „{{name}}\" zurücksetzen?",

@@ -11,7 +11,7 @@ describe('CourseListComponent sorting', () => {
     return {
       bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
       tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
-      lastMode: null, lastActivityAt: null, isOwned: false, ...over,
+      lastMode: null, lastActivityAt: null, isOwned: false, isPinned: false, ...over,
     };
   }
 
@@ -59,7 +59,7 @@ describe('CourseListComponent sorting', () => {
       return {
         bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
         tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
-        lastMode: null, lastActivityAt: null, isOwned: false, ...over,
+        lastMode: null, lastActivityAt: null, isOwned: false, isPinned: false, ...over,
       };
     }
 
@@ -106,7 +106,7 @@ describe('CourseListComponent sorting', () => {
       return {
         bookId: 0, fileName: 'x.pgn', displayName: 'X', difficulty: null, rating: null,
         tags: null, description: null, puzzleCount: 10, solvedCount: 0, progressPercent: 0,
-        lastMode: null, lastActivityAt: null, isOwned: false, ...over,
+        lastMode: null, lastActivityAt: null, isOwned: false, isPinned: false, ...over,
       };
     }
     const snackbar = { info: () => {} } as any;

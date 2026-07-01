@@ -49,4 +49,5 @@ public class AppUser
     public ICollection<UserGroup> Groups { get; set; } = new List<UserGroup>();
     public ICollection<CourseProgress> CourseProgresses { get; set; } = new List<CourseProgress>();
     public ICollection<CoursePuzzleResult> CoursePuzzleResults { get; set; } = new List<CoursePuzzleResult>();
+    public ICollection<CoursePin> CoursePins { get; set; } = new List<CoursePin>();
 }

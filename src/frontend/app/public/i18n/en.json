@@ -223,6 +223,12 @@
       "open": "Open courses",
       "count": "{{count}} courses"
     },
+    "pinnedCourses": {
+      "title": "Pinned courses",
+      "subtitle": "{{count}} pinned",
+      "empty": "Pin a course (📌 on the courses page) to start it right here.",
+      "viewAll": "All courses"
+    },
     "leaderboards": {
       "title": "Leaderboards",
       "subtitle": "See how you rank",
@@ -893,6 +899,11 @@
     "sequential": "Sequential",
     "random": "Random",
     "resetTooltip": "Reset progress",
+    "pinTooltip": "Pin to dashboard",
+    "unpinTooltip": "Unpin from dashboard",
+    "pinned": "\"{{name}}\" pinned to your dashboard",
+    "unpinned": "\"{{name}}\" unpinned",
+    "pinFailed": "Could not update the pin",
     "downloadPgnTooltip": "Download as PGN",
     "downloadFailed": "PGN download failed.",
     "resetConfirm": "Reset progress for \"{{name}}\"?",
