@@ -81,7 +81,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                 <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
               }
               @for (run of repo.runs; track run.id) {
-                <a class="run" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                <a class="run" [class.run-deployed]="isRunningBuild(run, repo)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
                   <span class="run-badge" [ngClass]="badgeClass(run)"
                         [matTooltip]="run.conclusion || run.status">
                     <mat-icon>{{ badgeIcon(run) }}</mat-icon>
@@ -136,6 +136,9 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+    /* Deployter Build zusätzlich mit GELBEM Zeilen-Hintergrund markiert (nicht nur das Icon-Badge). */
+    .run.run-deployed { background: color-mix(in srgb, #f9a825 22%, transparent); border-left: 3px solid #f9a825; padding-left: 6px; }
+    .run.run-deployed:hover { background: color-mix(in srgb, #f9a825 32%, transparent); }
     /* Farbschema: BLAU = baut (läuft), GRÜN = fertig gebaut (Erfolg), GELB = deployed (läuft im Stack).
        Der deployte Build wird durch das GELBE „live"-Badge markiert (run-live-tag) — klar unterscheidbar
        vom grünen Erfolgs-Badge und vom blauen „baut"-Zustand. */

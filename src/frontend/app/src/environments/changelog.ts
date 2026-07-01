@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.9';
+export const APP_VERSION = '0.236.10';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.10", date: "2026-07-01", changes: [
+    { en: "Admin CI page: the deployed build's run is now highlighted with a yellow row background again (not just the small “live” icon badge), so the currently-running build is obvious in the list at a glance.", de: "Admin-CI-Seite: der Lauf des deployten Builds ist jetzt wieder mit gelbem Zeilen-Hintergrund hervorgehoben (nicht nur dem kleinen „live“-Icon-Badge), sodass der aktuell laufende Build in der Liste sofort ins Auge fällt." },
+  ]},
   { version: "0.236.9", date: "2026-07-01", changes: [
     { en: "Admin CI page: a running build now shows a prominent live countdown in the panel header (e.g. “schach-bot · done in ~2m 10s”), estimated from the average duration of that repo's recent runs minus the time already elapsed.", de: "Admin-CI-Seite: ein laufender Build zeigt jetzt einen prominenten Live-Countdown im Panel-Kopf (z. B. „schach-bot · fertig in ~2m 10s“), geschätzt aus der mittleren Laufzeit der letzten Läufe dieses Repos minus der bereits verstrichenen Zeit." },
     { en: "Admin CI page: a prominent “Deployed” summary in the header shows which build is currently live per stack (repo + ref), plus a consistent colour scheme — blue = building, green = built, yellow = deployed.", de: "Admin-CI-Seite: eine prominente „Deployt“-Übersicht im Kopf zeigt je Stack, welcher Build gerade läuft (Repo + Ref), dazu ein einheitliches Farbschema — Blau = baut, Grün = fertig gebaut, Gelb = deployed." },
