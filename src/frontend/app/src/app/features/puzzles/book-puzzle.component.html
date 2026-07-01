@@ -237,10 +237,10 @@
                 } @else if (state === 'FAILED') {
                   <div class="ctx-nav">
                     @if (inWeekly) {
-                      <button mat-stroked-button (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
+                      <button mat-raised-button color="primary" (click)="weeklyNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
                     }
                     @if (inCourse) {
-                      <button mat-stroked-button (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}</button>
+                      <button mat-raised-button color="primary" (click)="courseNext()"><mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}</button>
                     }
                     @if (isDaily) {
                       <button mat-stroked-button (click)="prevDaily()">

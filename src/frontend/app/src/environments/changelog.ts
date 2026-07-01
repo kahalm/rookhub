@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.240.6';
+export const APP_VERSION = '0.240.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.240.7", date: "2026-07-01", changes: [
+    { en: "In courses and weekly posts, once a puzzle is finished the button reads \"Next puzzle\" instead of \"Skip\". Previously a solved puzzle already showed \"Next puzzle\", but a failed one still showed \"Skip\" — now both finished states show the same prominent Next button. The \"Skip\" button only appears while a puzzle is still unsolved (where skipping actually makes sense).", de: "In Kursen und Wochenposts steht nach dem Abschluss eines Puzzles „Nächstes Puzzle\" statt „Überspringen\". Vorher zeigte ein gelöstes Puzzle bereits „Nächstes Puzzle\", ein gescheitertes aber weiterhin „Überspringen\" — jetzt zeigen beide abgeschlossenen Zustände denselben hervorgehobenen Weiter-Knopf. „Überspringen\" erscheint nur noch, solange ein Puzzle ungelöst ist (wo Überspringen auch Sinn ergibt)." },
+  ]},
   { version: "0.240.6", date: "2026-07-01", changes: [
     { en: "Live move comments while solving now STACK instead of replacing: when a move has a comment it stays, and the next move's comment appears below it. Moves without a comment add nothing — and no longer fall back to the puzzle intro (so once you're playing, you only see the actual move comments, or nothing).", de: "Die Live-Zug-Kommentare beim Lösen STAPELN sich jetzt, statt sich zu ersetzen: Hat ein Zug einen Kommentar, bleibt er stehen, und der Kommentar des nächsten Zugs erscheint darunter. Züge ohne Kommentar fügen nichts hinzu — und fallen nicht mehr auf die Puzzle-Einleitung zurück (sobald du spielst, siehst du also nur die echten Zug-Kommentare oder nichts)." },
   ]},
