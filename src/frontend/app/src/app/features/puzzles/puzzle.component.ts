@@ -185,12 +185,19 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
     this.boardTheme = applied.boardTheme;
     this.pieceSet = applied.pieceSet;
+    // e.p.-Zwang: per URL erzwungen ODER (Crazy-Brett + Einstellung an).
+    this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && this.prefs.enPassantForced);
   }
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
     this.startTimer();
     this.moveStartTime = Date.now();
+  }
+
+  protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
+  protected override onOffPathWarning(): void {
+    this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
   }
 
   protected override handleSolved(alternative: boolean): void {
@@ -273,7 +280,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const ov = parseShareViewParams(this.route.snapshot.queryParamMap);
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
-    if (ov.enPassantForced) this.enPassantForced = true;   // Anarchy: en passant is forced
+    this.anarchyForcedByUrl = !!ov.enPassantForced;   // Anarchy per URL: e.p. immer forciert (sonst folgt es der Einstellung)
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
 
     // Direkt geteiltes Einzel-Puzzle: nach dem Lösen nicht automatisch weiterspringen.
@@ -796,6 +803,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         worstTags: this.worstTagsEnabled,
         isLoggedIn: this.isLoggedIn,
         puzzleElo: this.stats?.puzzleElo,
+        offPathWarnMoves: this.prefs.offPathWarnMoves,
+        enPassantForced: this.prefs.enPassantForced,
       } as PuzzleSettingsDialogData,
       width: '360px',
       maxWidth: '95vw',
@@ -828,6 +837,11 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         this.offlinePuzzlePool = [];
         this.saveOfflinePool();
         this.ensureWorstThemes(() => { this.prefetchOfflinePool(); this.loadNext(); });
+      }
+      if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
+      if (result.enPassantForced !== undefined) {
+        this.prefs.setEnPassantForced(result.enPassantForced);
+        this.enPassantForced = this.themeMode === 'crazy' && result.enPassantForced;
       }
     });
   }

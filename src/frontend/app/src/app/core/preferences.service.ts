@@ -12,6 +12,8 @@ const BOOK_PUZZLE_CONFIG_KEY = 'rookhub_book_puzzle_config';
 const THEME_MODE_KEY = 'rookhub_theme_mode';
 const VISUALIZATION_KEY = 'rookhub_visualization';
 const VIZ_ARROW_KEY = 'rookhub_viz_arrow';
+const OFFPATH_WARN_KEY = 'rookhub_offpath_warn_moves';
+const EN_PASSANT_FORCED_KEY = 'rookhub_en_passant_forced';
 
 interface ProfilePreferences {
   boardTheme: string | null;
@@ -35,6 +37,12 @@ export class PreferencesService {
   puzzleWorstTags = false;
   /** Gegnerzug-Pfeil im Viz-Modus anzeigen (nur lokal). */
   vizArrow = true;
+  /** Nach wie vielen off-path-Zügen (gegen Stockfish) gewarnt wird, wenn die Eval nicht mind. +2
+   *  für den Spieler ist. 0 = nie warnen. Default 3. Nur lokal (geräteabhängig). */
+  offPathWarnMoves = 3;
+  /** Anarchy/Crazy-Brett: „en passant forciert" (wenn möglich, ist e.p. Pflicht). Default an;
+   *  in den Einstellungen abwählbar. Nur lokal (geräteabhängig). */
+  enPassantForced = true;
 
   constructor(private http: HttpClient, private authService: AuthService) {
     this.loadFromLocalStorage();
@@ -76,6 +84,24 @@ export class PreferencesService {
       const arrow = localStorage.getItem(VIZ_ARROW_KEY);
       if (arrow !== null) this.vizArrow = arrow !== 'false';
     } catch {}
+    try {
+      const w = localStorage.getItem(OFFPATH_WARN_KEY);
+      if (w !== null) { const n = parseInt(w, 10); if (!isNaN(n)) this.offPathWarnMoves = Math.max(0, Math.min(20, n)); }
+    } catch {}
+    try {
+      const ep = localStorage.getItem(EN_PASSANT_FORCED_KEY);
+      if (ep !== null) this.enPassantForced = ep !== 'false';
+    } catch {}
+  }
+
+  setOffPathWarnMoves(n: number): void {
+    this.offPathWarnMoves = Math.max(0, Math.min(20, Math.round(n) || 0));
+    try { localStorage.setItem(OFFPATH_WARN_KEY, String(this.offPathWarnMoves)); } catch {}
+  }
+
+  setEnPassantForced(val: boolean): void {
+    this.enPassantForced = val;
+    try { localStorage.setItem(EN_PASSANT_FORCED_KEY, String(val)); } catch {}
   }
 
   setVisualization(level: number): void {

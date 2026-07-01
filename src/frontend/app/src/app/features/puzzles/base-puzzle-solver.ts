@@ -46,6 +46,21 @@ export abstract class BasePuzzleSolver {
   mouseslipUsed = false;
   currentEval = '';
 
+  // ---- Off-Path-Warnung: Weicht der User von der Lösung ab und spielt gegen Stockfish weiter,
+  //      wird — sobald die Eval nicht mehr mind. +2 für den Spieler ist — ab dem N-ten off-path-Zug
+  //      einmalig gewarnt (evtl. falsch abgebogen → besser zurücksetzen/aufgeben). N kommt aus den
+  //      Einstellungen (0 = nie); der Hinweis selbst zeigt die überschriebene onOffPathWarning(). ----
+  /** Anzahl der bisher off-path gespielten Züge des Users (seit dem Abweichen). */
+  protected offPathUserPlies = 0;
+  /** In dieser Off-Path-Episode bereits gewarnt (einmalig). */
+  protected offPathWarned = false;
+  /** True, sobald gewarnt wurde (für eine optionale Dauer-Anzeige im Template). */
+  offPathWarning = false;
+
+  /** Anarchy per URL erzwungen (`?anarchy=max`): e.p.-Zwang gilt dann unabhängig von der Einstellung.
+   *  Ohne URL-Zwang folgt der e.p.-Zwang im Crazy-Brett der Einstellung `prefs.enPassantForced`. */
+  protected anarchyForcedByUrl = false;
+
   // ---- Lösungs-Durchsicht (Review) — von allen Modi geteilt ----
   reviewMode = false;
   reviewIndex = 0;
@@ -208,6 +223,7 @@ export abstract class BasePuzzleSolver {
     this.aborted = false;
     this.mouseslipUsed = false;
     this.alternativeSolve = false;
+    this.resetOffPathTracking();
     this.moveLog = [];
     this.evalShown = false;
     this.vizShowCount = 0;
@@ -277,6 +293,7 @@ export abstract class BasePuzzleSolver {
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
+        this.offPathUserPlies++;   // erster Abweich-Zug
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
       }
@@ -287,6 +304,7 @@ export abstract class BasePuzzleSolver {
 
   protected handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
+    this.offPathUserPlies++;   // weiterer off-path-Zug des Users
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
@@ -321,6 +339,9 @@ export abstract class BasePuzzleSolver {
       const result = await this.stockfish.getBestMove(this.chess.fen(), this.depth);
       if (this.aborted || epoch !== this.solverEpoch) return;
       this.currentEval = result.eval;
+      // Eval ist hier die der Stellung NACH dem (evtl. off-path) Spielerzug → jetzt prüfen,
+      // ob der Spieler eine mögliche falsche Abbiegung merken sollte.
+      if (!this.onSolutionPath) this.maybeWarnOffPath();
       this.playMove(result.move);
       this.lastOpponentReplied = true;
       if (this.visualizationMode) this.showVizOpponentArrow();
@@ -402,6 +423,7 @@ export abstract class BasePuzzleSolver {
     if (this.moveLog.length > 0 && !this.moveLog[this.moveLog.length - 1].ok) this.moveLog.pop();
     // Zurück auf den Lösungspfad — sonst ginge der nächste User-Zug wieder in handleOffPathMove.
     this.onSolutionPath = true;
+    this.resetOffPathTracking();
     this.aborted = false;
     this.state = 'AWAITING_USER_MOVE';
     this.moveStartTime = Date.now();
@@ -495,6 +517,51 @@ export abstract class BasePuzzleSolver {
    *  aufgerufen, damit die Komponente die eingeblendete Eval auf die aktuelle Stellung nachzieht.
    *  Default no-op; Komponenten überschreiben: `if (this.showEval) this.refreshEval();`. */
   protected refreshEvalIfShown(): void { /* von der Komponente überschrieben */ }
+
+  // ===== Off-Path-Warnung =====
+
+  /** Ab dem wievielten off-path-Zug gewarnt wird (0 = nie). Komponenten überschreiben mit dem
+   *  Einstellungswert (`prefs.offPathWarnMoves`). Default 0 (aus), damit Tests/Basis nicht warnen. */
+  protected get offPathWarnThreshold(): number { return 0; }
+
+  /** Hook: wird EINMAL je Off-Path-Episode aufgerufen, sobald die Warn-Bedingung greift.
+   *  Default no-op; Komponenten zeigen z. B. einen Snackbar-Hinweis. */
+  protected onOffPathWarning(): void { /* von der Komponente überschrieben */ }
+
+  private resetOffPathTracking(): void {
+    this.offPathUserPlies = 0;
+    this.offPathWarned = false;
+    this.offPathWarning = false;
+  }
+
+  /** Prüft nach einem off-path-Zug (Eval steht in currentEval, Weiß-Sicht): ab dem
+   *  Schwellwert-Zug und wenn die Eval nicht mind. +2 für den Spieler ist → einmalig warnen. */
+  protected maybeWarnOffPath(): void {
+    const threshold = this.offPathWarnThreshold;
+    if (threshold <= 0 || this.offPathWarned || this.offPathUserPlies < threshold) return;
+    const pawns = this.playerEvalPawns();
+    if (pawns == null || pawns >= 2) return;   // noch klar für den Spieler → keine Warnung
+    this.offPathWarned = true;
+    this.offPathWarning = true;
+    this.onOffPathWarning();
+  }
+
+  /** currentEval (String, Weiß-Sicht, z. B. "+1.5"/"#3"/"#-2") → Bauerneinheiten aus Spieler-Sicht;
+   *  Matt = ±100. null, wenn (noch) keine Eval vorliegt. */
+  protected playerEvalPawns(): number | null {
+    const s = this.currentEval;
+    if (!s) return null;
+    let white: number;
+    if (s.includes('#')) {
+      const m = parseInt(s.replace(/[#+]/g, ''), 10);   // "#3"→3, "#-2"→-2
+      if (isNaN(m)) return null;
+      white = (m >= 0 ? 1 : -1) * 100;
+    } else {
+      white = parseFloat(s);
+      if (isNaN(white)) return null;
+    }
+    return this.orientation === 'white' ? white : -white;
+  }
 
   protected endVisualizationHide(): void {
     this.clearVizCountdown();

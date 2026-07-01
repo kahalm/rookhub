@@ -454,7 +454,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const ov = parseShareViewParams(qp);
     if (ov.themeMode) this.themeMode = ov.themeMode;
     if (ov.visualization != null) this.visualizationMode = ov.visualization;
-    if (ov.enPassantForced) this.enPassantForced = true;      // Anarchy: en passant is forced
+    this.anarchyForcedByUrl = !!ov.enPassantForced;   // Anarchy per URL: e.p. immer forciert (sonst folgt es der Einstellung)
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;  // ?anarchy=max+1 → Feld bestimmt Stil
 
     this.autoStartRequested = qp.get('start') === '1' || qp.get('autostart') === '1';
@@ -580,6 +580,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         themeMode: this.themeMode,
         visualizationMode: this.visualizationMode,
         vizArrowEnabled: this.vizArrowEnabled,
+        offPathWarnMoves: this.prefs.offPathWarnMoves,
+        enPassantForced: this.prefs.enPassantForced,
       } as PuzzleSettingsDialogData,
       width: '360px',
       maxWidth: '95vw',
@@ -591,6 +593,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.setThemeMode(result.themeMode);
       this.setVisualizationLevel(result.visualizationMode);
       this.setVizArrowEnabled(result.vizArrowEnabled);
+      if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
+      if (result.enPassantForced !== undefined) {
+        this.prefs.setEnPassantForced(result.enPassantForced);
+        this.enPassantForced = this.themeMode === 'crazy' && result.enPassantForced;
+      }
     });
   }
 
@@ -601,6 +608,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
     this.boardTheme = applied.boardTheme;
     this.pieceSet = applied.pieceSet;
+    this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && this.prefs.enPassantForced);
+  }
+
+  protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
+  protected override onOffPathWarning(): void {
+    this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
   }
 
   protected override onSolvingBegins(): void {

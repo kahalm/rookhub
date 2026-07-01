@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.227.0';
+export const APP_VERSION = '0.228.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.228.0", date: "2026-07-01", changes: [
+    { en: "Wrong-turn warning in all puzzle modes: if you leave the given solution and play on against Stockfish, once you're no longer clearly winning (eval below +2 for you) you get a one-time hint that you may have gone wrong and might want to reset or give up. Fires by default after 3 off-path moves (or later, the moment the eval drops below the mark). Configurable in the puzzle settings (0 = never; default 3).", de: "Warnung bei falscher Abbiegung in allen Puzzle-Modi: Weichst du von der vorgegebenen Lösung ab und spielst gegen Stockfish weiter, bekommst du — sobald du nicht mehr klar gewinnst (Eval unter +2 für dich) — einen einmaligen Hinweis, dass du evtl. falsch abgebogen bist und besser zurücksetzt oder aufgibst. Standardmäßig nach 3 Zügen abseits der Lösung (oder später, sobald die Eval unter die Marke fällt). In den Puzzle-Einstellungen konfigurierbar (0 = nie; Standard 3)." },
+    { en: "Anarchy mode: the settings now have an “En passant forced” toggle you can turn off. When you play on a crazy/anarchy board it follows this setting (default on); the ?anarchy=max link keeps forcing it regardless.", de: "Anarchy-Modus: In den Einstellungen gibt es jetzt einen abwählbaren Schalter „En passant forciert“. Auf dem Crazy-/Anarchy-Brett folgt der e.p.-Zwang dieser Einstellung (Standard an); der ?anarchy=max-Link erzwingt ihn weiterhin unabhängig davon." },
+  ]},
   { version: "0.227.0", date: "2026-07-01", changes: [
     { en: "Logging: automatic, non-user requests are now flagged as RequestKind=\"system\" (vs \"user\") so they can be filtered out in Kibana. Covers health/infra checks, the client heartbeat/diagnostics, the menu-visibility check, badge/counter polls (bell etc.), and the Chessable import-status polls — plus the server-side heartbeat. Purely observability, no behaviour change.", de: "Logging: automatische, nicht vom Nutzer ausgelöste Requests werden jetzt als RequestKind=\"system\" markiert (statt \"user\"), damit man sie in Kibana herausfiltern kann. Erfasst Health-/Infra-Checks, den Client-Heartbeat/-Diagnose, den Menü-Sichtbarkeits-Check, Badge-/Zähler-Polls (Glocke etc.) und die Chessable-Import-Status-Polls — plus den serverseitigen Heartbeat. Reine Observability, kein Verhaltensänderung." },
   ]},

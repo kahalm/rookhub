@@ -21,6 +21,10 @@ export interface PuzzleSettingsDialogData {
   excludeSolved?: boolean;
   worstTags?: boolean;
   isLoggedIn?: boolean;
+  /** Off-Path-Warnung: ab N Zügen gegen Stockfish warnen, wenn nicht mind. +2 (0 = nie). */
+  offPathWarnMoves?: number;
+  /** Anarchy/Crazy: „en passant forciert" (nur relevant/angezeigt bei themeMode='crazy'). */
+  enPassantForced?: boolean;
 }
 
 export interface PuzzleSettingsDialogResult {
@@ -33,6 +37,8 @@ export interface PuzzleSettingsDialogResult {
   difficulty?: string;
   excludeSolved?: boolean;
   worstTags?: boolean;
+  offPathWarnMoves?: number;
+  enPassantForced?: boolean;
 }
 
 @Component({
@@ -87,6 +93,16 @@ export interface PuzzleSettingsDialogResult {
           </mat-select>
         </div>
 
+        @if (themeModeEdit === 'crazy') {
+          <div class="psd-row psd-toggle-row">
+            <span class="psd-label">
+              {{ 'puzzles.settings.enPassantForced' | translate }}
+              <span class="psd-sublabel">{{ 'puzzles.settings.enPassantForcedHint' | translate }}</span>
+            </span>
+            <mat-slide-toggle [(ngModel)]="enPassantForcedEdit"></mat-slide-toggle>
+          </div>
+        }
+
         <div class="psd-row">
           <span class="psd-label">
             {{ 'puzzles.settings.visualization' | translate }}
@@ -124,6 +140,14 @@ export interface PuzzleSettingsDialogResult {
             <input class="psd-number-input" type="number" [(ngModel)]="stockfishDepthEdit" min="1" max="24" step="1">
           </div>
         }
+
+        <div class="psd-row">
+          <span class="psd-label">
+            {{ 'puzzles.settings.offPathWarn' | translate }}
+            <span class="psd-sublabel">{{ 'puzzles.settings.offPathWarnHint' | translate }}</span>
+          </span>
+          <input class="psd-number-input" type="number" [(ngModel)]="offPathWarnMovesEdit" min="0" max="20" step="1">
+        </div>
 
         @if (data.mode === 'standard') {
           <div class="psd-row">
@@ -251,6 +275,8 @@ export class PuzzleSettingsDialogComponent {
   difficultyEdit: string;
   excludeSolvedEdit: boolean;
   worstTagsEdit: boolean;
+  offPathWarnMovesEdit: number;
+  enPassantForcedEdit: boolean;
   showVizInfo = false;
   showDifficultyInfo = false;
 
@@ -274,6 +300,8 @@ export class PuzzleSettingsDialogComponent {
     this.difficultyEdit = data.difficulty ?? 'normal';
     this.excludeSolvedEdit = data.excludeSolved ?? false;
     this.worstTagsEdit = data.worstTags ?? false;
+    this.offPathWarnMovesEdit = data.offPathWarnMoves ?? 3;
+    this.enPassantForcedEdit = data.enPassantForced ?? true;
   }
 
   get effectivePieceSet(): string {
@@ -319,6 +347,8 @@ export class PuzzleSettingsDialogComponent {
       difficulty: this.difficultyEdit,
       excludeSolved: this.excludeSolvedEdit,
       worstTags: this.worstTagsEdit,
+      offPathWarnMoves: this.offPathWarnMovesEdit,
+      enPassantForced: this.enPassantForcedEdit,
     } as PuzzleSettingsDialogResult);
   }
 }

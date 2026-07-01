@@ -773,8 +773,13 @@
       "modeCrazy": "Crazy",
       "visualization": "Visualization",
       "vizArrow": "Opponent Move Arrow",
-      "stockfishDepth": "Stockfish Depth"
+      "stockfishDepth": "Stockfish Depth",
+      "enPassantForced": "En passant forced",
+      "enPassantForcedHint": "Anarchy board: when an en passant capture is available, it's mandatory.",
+      "offPathWarn": "Wrong-turn warning",
+      "offPathWarnHint": "After this many moves off the solution (vs. Stockfish), warn if you're no longer clearly winning (+2). 0 = never."
     },
+    "offPathWarning": "You may have gone wrong here — the position isn't clearly winning for you anymore. Consider resetting or giving up.",
     "filters": {
       "title": "Filters",
       "visualization": "Visualization: Level {{level}}",

@@ -100,6 +100,77 @@ describe('BasePuzzleSolver Eval-Nachziehen (Lösungspfad + Mouseslip)', () => {
   }));
 });
 
+class WarnSolver extends TestSolver {
+  warnThreshold = 0;
+  warned = 0;
+  protected override get offPathWarnThreshold(): number { return this.warnThreshold; }
+  protected override onOffPathWarning(): void { this.warned++; }
+  // Test-Helfer für die interne Logik.
+  setEval(e: string): void { (this as any).currentEval = e; }
+  setOffPath(plies: number): void { (this as any).offPathUserPlies = plies; (this as any).onSolutionPath = false; }
+  callWarn(): void { (this as any).maybeWarnOffPath(); }
+}
+
+describe('BasePuzzleSolver Off-Path-Warnung', () => {
+  const noStock = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+
+  it('warnt einmalig ab dem Schwellwert-Zug, wenn Eval < +2 (Spieler Weiß)', () => {
+    const s = new WarnSolver(noStock);
+    s.warnThreshold = 3; s.orientation = 'white'; s.setEval('+0.5'); s.setOffPath(3);
+    s.callWarn();
+    expect(s.warned).toBe(1);
+    s.callWarn();               // idempotent je Episode
+    expect(s.warned).toBe(1);
+  });
+
+  it('warnt NICHT vor dem Schwellwert', () => {
+    const s = new WarnSolver(noStock);
+    s.warnThreshold = 3; s.orientation = 'white'; s.setEval('-1.0'); s.setOffPath(2);
+    s.callWarn();
+    expect(s.warned).toBe(0);
+  });
+
+  it('warnt NICHT, wenn der Spieler noch klar (>= +2) steht', () => {
+    const s = new WarnSolver(noStock);
+    s.warnThreshold = 3; s.orientation = 'white'; s.setEval('+2.5'); s.setOffPath(4);
+    s.callWarn();
+    expect(s.warned).toBe(0);
+  });
+
+  it('Schwelle 0 = nie warnen', () => {
+    const s = new WarnSolver(noStock);
+    s.warnThreshold = 0; s.orientation = 'white'; s.setEval('-5.0'); s.setOffPath(9);
+    s.callWarn();
+    expect(s.warned).toBe(0);
+  });
+
+  it('rechnet die Eval aus Spieler-Sicht (Schwarz) + Matt-Sonderfälle', () => {
+    const black = new WarnSolver(noStock);
+    black.warnThreshold = 1; black.orientation = 'black'; black.setOffPath(1);
+    black.setEval('-3.0');            // Weiß -3 → Schwarz +3 → klar → keine Warnung
+    black.callWarn();
+    expect(black.warned).toBe(0);
+
+    const mate = new WarnSolver(noStock);
+    mate.warnThreshold = 1; mate.orientation = 'white'; mate.setOffPath(1);
+    mate.setEval('#-2');             // Schwarz mattt → Weiß-Sicht -100 → Warnung
+    mate.callWarn();
+    expect(mate.warned).toBe(1);
+  });
+
+  it('zählt off-path-Züge im echten Zugfluss und warnt (Integration)', fakeAsync(() => {
+    const stock = { getBestMove: () => Promise.resolve({ move: 'g1f3', eval: '+0.1' }) } as unknown as StockfishService;
+    const s = new WarnSolver(stock);
+    s.warnThreshold = 1; s.orientation = 'black';
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // e4 Setup; Schwarz am Zug
+    tick(600);
+    s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });   // off-path #1 (statt e7e5)
+    tick();                                                    // opponentRespond → Eval → maybeWarnOffPath
+    expect(s.warned).toBe(1);
+    discardPeriodicTasks();
+  }));
+});
+
 describe('BasePuzzleSolver playSolutionFromStart (geteiltes Aufgeben)', () => {
   it('spielt die Lösung ab Zug 0 selbsttätig durch und stoppt am Ende', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;

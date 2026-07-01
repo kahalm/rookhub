@@ -29,7 +29,7 @@ const CHAIN = [
 ];
 
 function makeComponent(params: Record<string, string> = {}): any {
-  const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
+  const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0, offPathWarnMoves: 3, enPassantForced: true };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
   const puzzleService: any = {
@@ -133,18 +133,22 @@ describe('EndlessPuzzleComponent deep-link params', () => {
     expect(c.config.worstTags).toBeFalsy();
   });
 
-  it('anarchy=max forces en passant + crazy board', () => {
+  it('anarchy=max forces en passant + crazy board (applied at setup)', () => {
     const c = makeComponent({ anarchy: 'max' });
     c.ngOnInit();
-    expect(c.enPassantForced).toBeTrue();
+    expect(c.anarchyForcedByUrl).toBeTrue();
     expect(c.themeMode).toBe('crazy');
+    c.onSetupStart();                 // e.p.-Zwang wird beim Puzzle-Setup gesetzt
+    expect(c.enPassantForced).toBeTrue();
   });
 
   it('anarchy=max+1 additionally sets square crazy-piece mode', () => {
     const c = makeComponent({ anarchy: 'max+1' });
     c.ngOnInit();
-    expect(c.enPassantForced).toBeTrue();
+    expect(c.anarchyForcedByUrl).toBeTrue();
     expect(c.crazyPieceMode).toBe('square');
+    c.onSetupStart();
+    expect(c.enPassantForced).toBeTrue();
   });
 
   it('elo param sets the start rating', () => {

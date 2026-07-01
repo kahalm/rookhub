@@ -773,8 +773,13 @@
       "modeCrazy": "Verrückt",
       "visualization": "Visualisierung",
       "vizArrow": "Gegnerzug-Pfeil",
-      "stockfishDepth": "Stockfish-Tiefe"
+      "stockfishDepth": "Stockfish-Tiefe",
+      "enPassantForced": "En passant forciert",
+      "enPassantForcedHint": "Anarchy-Brett: Wenn ein En-passant-Schlag möglich ist, ist er Pflicht.",
+      "offPathWarn": "Warnung bei falscher Abbiegung",
+      "offPathWarnHint": "Nach so vielen Zügen abseits der Lösung (gegen Stockfish) warnen, wenn du nicht mehr klar gewinnst (+2). 0 = nie."
     },
+    "offPathWarning": "Du bist hier vielleicht falsch abgebogen — die Stellung ist nicht mehr klar für dich. Vielleicht besser zurücksetzen oder aufgeben.",
     "filters": {
       "title": "Filter",
       "visualization": "Visualisierung: Level {{level}}",

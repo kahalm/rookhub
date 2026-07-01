@@ -771,8 +771,13 @@
       "modeCrazy": "Ludo",
       "visualization": "Vizualizacija",
       "vizArrow": "Strelica protivnika",
-      "stockfishDepth": "Stockfish dubina"
+      "stockfishDepth": "Stockfish dubina",
+      "enPassantForced": "En passant obavezan",
+      "enPassantForcedHint": "Anarchy ploča: kad je en passant moguć, obavezan je.",
+      "offPathWarn": "Upozorenje na krivi skretaj",
+      "offPathWarnHint": "Nakon toliko poteza izvan rješenja (protiv Stockfisha) upozori ako više ne dobivaš jasno (+2). 0 = nikad."
     },
+    "offPathWarning": "Možda si ovdje krivo skrenuo — pozicija više nije jasno za tebe. Razmisli o resetu ili predaji.",
     "filters": {
       "title": "Filtri",
       "visualization": "Vizualizacija: razina {{level}}",
