@@ -550,6 +550,10 @@
       "createFailed": "Failed to create repertoire",
       "deleteConfirm": "Delete this repertoire?",
       "deleteFailed": "Failed to delete repertoire",
+      "convertToCourse": "To course",
+      "convertedToCourse": "Repertoire converted to course: {{name}}",
+      "convertToCourseNoPuzzles": "This repertoire has no puzzle lines (Chessable-style FEN + training markers), so it can't become a course.",
+      "convertToCourseFailed": "Could not convert the repertoire to a course",
       "updateFailed": "Repertoire could not be updated",
       "extHint": "Tip: with the matching browser extension (for Chrome and Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
       "extHintLink": "Learn more in the help"
@@ -886,6 +890,9 @@
       "failed": "Upload failed. Please check the PGN."
     },
     "deleteTooltip": "Delete course",
+    "convertToRepertoireTooltip": "Convert to repertoire",
+    "convertedToRepertoire": "Course converted to repertoire: {{name}}",
+    "convertToRepertoireFailed": "Could not convert the course to a repertoire",
     "deleteConfirm": "Delete the course \"{{name}}\"? Your progress will be lost.",
     "deleteFailed": "Could not delete course",
     "searchPlaceholder": "Search courses…",

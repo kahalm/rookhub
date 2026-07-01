@@ -25,7 +25,7 @@ public class CourseControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new CourseController(new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db)), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher());
+        _controller = new CourseController(new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db), new RepertoireService(_db, new RepertoireAnalyzeService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())))), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher());
         SetUser(_controller, UserId);
     }
 
@@ -447,7 +447,7 @@ public class CourseControllerTests : IDisposable
         await CreateUserAsync();
         var (book, ids) = await SeedBookAsync("Log", 1);
         var logger = new TestLogger<CourseService>();
-        var controller = new CourseController(new CourseService(_db, logger, new PgnImportService(_db), new BookAdminService(_db)), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher()) { ControllerContext = _controller.ControllerContext };
+        var controller = new CourseController(new CourseService(_db, logger, new PgnImportService(_db), new BookAdminService(_db), new RepertoireService(_db, new RepertoireAnalyzeService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())))), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher()) { ControllerContext = _controller.ControllerContext };
 
         await controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 20 });
 

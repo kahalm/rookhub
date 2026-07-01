@@ -161,6 +161,10 @@ import { DISCORD_INVITE_URL } from '../../core/community';
                       [disabled]="c.solvedCount === 0" (click)="reset(c)">
                 <mat-icon>restart_alt</mat-icon>
               </button>
+              <button mat-icon-button [matTooltip]="'courses.convertToRepertoireTooltip' | translate"
+                      [disabled]="converting === c.bookId" (click)="convertToRepertoire(c)">
+                <mat-icon>library_books</mat-icon>
+              </button>
               @if (c.isOwned) {
                 <button mat-icon-button class="delete-btn" [matTooltip]="'courses.deleteTooltip' | translate"
                         [disabled]="deleting === c.bookId" (click)="deleteCourse(c)">
@@ -311,6 +315,8 @@ export class CourseListComponent implements OnInit {
   deleting: number | null = null;
   /** bookId, dessen Pin gerade umgeschaltet wird (Button-Sperre). */
   pinning: number | null = null;
+  /** bookId, der gerade in ein Repertoire umgewandelt wird (Button-Sperre). */
+  converting: number | null = null;
   /** Einladungslink zum Community-Discord (für „anderes PGN → Admin/Discord"-Hinweis). */
   readonly discordUrl = DISCORD_INVITE_URL;
   private offlineFiles = new Set<string>();
@@ -500,6 +506,21 @@ export class CourseListComponent implements OnInit {
       error: () => {
         this.deleting = null;
         this.snackbar.info(this.translate.instant('courses.deleteFailed'), { action: 'common.ok', duration: 3000 });
+      }
+    });
+  }
+
+  /** Kurs in ein neues Repertoire umwandeln (Original bleibt). */
+  convertToRepertoire(course: CourseListItem): void {
+    this.converting = course.bookId;
+    this.courseService.convertToRepertoire(course.bookId).subscribe({
+      next: rep => {
+        this.converting = null;
+        this.snackbar.info(this.translate.instant('courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
+      },
+      error: () => {
+        this.converting = null;
+        this.snackbar.info(this.translate.instant('courses.convertToRepertoireFailed'), { action: 'common.ok', duration: 3000 });
       }
     });
   }

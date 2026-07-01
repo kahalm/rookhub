@@ -550,6 +550,10 @@
       "createFailed": "Repertoire konnte nicht erstellt werden",
       "deleteConfirm": "Dieses Repertoire löschen?",
       "deleteFailed": "Repertoire konnte nicht gelöscht werden",
+      "convertToCourse": "In Kurs",
+      "convertedToCourse": "Repertoire als Kurs angelegt: {{name}}",
+      "convertToCourseNoPuzzles": "Dieses Repertoire enthält keine Puzzle-Linien (Chessable-Stil: FEN + Trainingsmarker) und kann daher nicht in einen Kurs umgewandelt werden.",
+      "convertToCourseFailed": "Repertoire konnte nicht in einen Kurs umgewandelt werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
       "extHint": "Tipp: Mit der passenden Browser-Erweiterung (für Chrome und Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
       "extHintLink": "Mehr dazu in der Hilfe"
@@ -886,6 +890,9 @@
       "failed": "Upload fehlgeschlagen. Bitte PGN prüfen."
     },
     "deleteTooltip": "Kurs löschen",
+    "convertToRepertoireTooltip": "In Repertoire umwandeln",
+    "convertedToRepertoire": "Kurs als Repertoire angelegt: {{name}}",
+    "convertToRepertoireFailed": "Kurs konnte nicht in ein Repertoire umgewandelt werden",
     "deleteConfirm": "Kurs „{{name}}\" löschen? Dein Fortschritt geht verloren.",
     "deleteFailed": "Kurs konnte nicht gelöscht werden",
     "searchPlaceholder": "Kurse durchsuchen…",

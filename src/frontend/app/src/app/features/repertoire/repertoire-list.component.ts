@@ -76,6 +76,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
               <mat-card-actions>
                 <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
                 <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
+                <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
                 <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
                 <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
               </mat-card-actions>
@@ -120,6 +121,8 @@ export class RepertoireListComponent implements OnInit {
   }
   /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
   readonly Kind = RepertoireKind;
+  /** id des Repertoires, das gerade in einen Kurs umgewandelt wird (Button-Sperre). */
+  converting: number | null = null;
 
   constructor(private repertoireService: RepertoireService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
 
@@ -170,6 +173,23 @@ export class RepertoireListComponent implements OnInit {
         error: () => this.snackbar.info(this.translate.instant('repertoire.list.deleteFailed'))
       });
     }
+  }
+
+  /** Repertoire in einen persönlichen Kurs umwandeln (nur bei Puzzle-PGN im Chessable-Stil). */
+  convertToCourse(rep: Repertoire): void {
+    this.converting = rep.id;
+    this.repertoireService.convertToCourse(rep.id).subscribe({
+      next: course => {
+        this.converting = null;
+        this.snackbar.info(this.translate.instant('repertoire.list.convertedToCourse', { name: course.displayName }), { action: 'common.ok', duration: 3000 });
+      },
+      error: (e) => {
+        this.converting = null;
+        // 400 = kein quiz-barer Inhalt (reines Eröffnungs-PGN) → klaren Hinweis zeigen.
+        const key = e?.status === 400 ? 'repertoire.list.convertToCourseNoPuzzles' : 'repertoire.list.convertToCourseFailed';
+        this.snackbar.info(this.translate.instant(key), { action: 'common.ok', duration: 4000 });
+      }
+    });
   }
 
   downloadPgn(rep: Repertoire): void {

@@ -550,6 +550,10 @@
       "createFailed": "Stvaranje repertoara nije uspjelo",
       "deleteConfirm": "Izbrisati ovaj repertoar?",
       "deleteFailed": "Brisanje repertoara nije uspjelo",
+      "convertToCourse": "U tečaj",
+      "convertedToCourse": "Repertoar pretvoren u tečaj: {{name}}",
+      "convertToCourseNoPuzzles": "Ovaj repertoar nema zagonetke (Chessable-stil: FEN + oznake treninga) pa se ne može pretvoriti u tečaj.",
+      "convertToCourseFailed": "Pretvaranje repertoara u tečaj nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
       "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (za Chrome i Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
       "extHintLink": "Saznaj više u pomoći"
@@ -884,6 +888,9 @@
       "failed": "Učitavanje nije uspjelo. Provjeri PGN."
     },
     "deleteTooltip": "Izbriši tečaj",
+    "convertToRepertoireTooltip": "Pretvori u repertoar",
+    "convertedToRepertoire": "Tečaj pretvoren u repertoar: {{name}}",
+    "convertToRepertoireFailed": "Pretvaranje tečaja u repertoar nije uspjelo",
     "deleteConfirm": "Izbrisati tečaj „{{name}}\"? Napredak će biti izgubljen.",
     "deleteFailed": "Tečaj se ne može izbrisati",
     "searchPlaceholder": "Pretraži tečajeve…",

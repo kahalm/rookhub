@@ -67,6 +67,16 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>„Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN ein neues Repertoire des Users an
+    /// (Original-Kurs bleibt). Antwort = das neue Repertoire.</summary>
+    [HttpPost("{bookId}/convert-to-repertoire")]
+    public async Task<IActionResult> ConvertToRepertoire(int bookId)
+    {
+        try { return Ok(await _service.ConvertToRepertoireAsync(GetUserId(), bookId, IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
     [HttpGet]
     public async Task<IActionResult> GetCourses()

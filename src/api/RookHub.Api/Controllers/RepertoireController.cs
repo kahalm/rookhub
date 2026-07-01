@@ -14,13 +14,15 @@ public class RepertoireController : BaseApiController
     private readonly ImportReprocessService _reprocess;
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly RepertoireTrainingService _training;
+    private readonly CourseService _courseService;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
         _training = training;
+        _courseService = courseService;
     }
 
     // ===== Repertoire-Trainer (Spaced Repetition) =====
@@ -177,5 +179,23 @@ public class RepertoireController : BaseApiController
         {
             return NotFound(new { message = ex.Message });
         }
+    }
+
+    /// <summary>„Repertoire → Kurs umwandeln": legt aus dem Repertoire-PGN einen persönlichen Kurs an.
+    /// Funktioniert nur mit Puzzle-PGN im Chessable-Stil (FEN + Round + Trainingsmarker je Zug);
+    /// ein reines Eröffnungs-Repertoire ohne Puzzle-Marker liefert 400 (kein quiz-barer Inhalt).</summary>
+    [HttpPost("{id}/convert-to-course")]
+    public async Task<IActionResult> ConvertToCourse(int id)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var detail = await _repertoireService.GetByIdAsync(id, userId);
+            var pgn = await _repertoireService.GetCombinedPgnAsync(id, userId);
+            var course = await _courseService.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
+            return Ok(course);
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 }

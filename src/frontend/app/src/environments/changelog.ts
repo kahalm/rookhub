@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.237.6';
+export const APP_VERSION = '0.238.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.0", date: "2026-07-01", changes: [
+    { en: "Convert between courses and repertoires. On the courses page each course has a “Convert to repertoire” button (📚) that creates a new repertoire from the course PGN (variations + comments preserved; the original course stays). On the repertoires page each repertoire has a “To course” button — this only works for puzzle-style PGN (Chessable format: FEN + training markers per move); a plain opening repertoire can't become a course and shows a clear message. Converted repertoires default to NOT being used by the RepCheck extension (toggle in the edit dialog).", de: "Kurse und Repertoires ineinander umwandeln. Auf der Kurse-Seite hat jeder Kurs einen „In Repertoire umwandeln“-Knopf (📚), der aus dem Kurs-PGN ein neues Repertoire anlegt (Varianten + Kommentare bleiben erhalten; der Original-Kurs bleibt). Auf der Repertoires-Seite hat jedes Repertoire einen „In Kurs“-Knopf — das klappt nur mit Puzzle-PGN (Chessable-Format: FEN + Trainingsmarker je Zug); ein reines Eröffnungs-Repertoire kann kein Kurs werden und zeigt einen klaren Hinweis. Umgewandelte Repertoires werden standardmäßig NICHT von der RepCheck-Extension verwendet (im Bearbeiten-Dialog umschaltbar)." },
+  ]},
   { version: "0.237.6", date: "2026-07-01", changes: [
     { en: "Dashboard no longer shows empty tiles while it loads. Repertoire and course counts, pinned courses, subscriptions, friend count, favourites, puzzle Elo and solved count are now cached locally after each fetch and shown instantly on the next visit — the network fetch happens in the background and just refreshes the numbers. Cache is per account (won't leak between users on shared devices).", de: "Auf dem Dashboard bleiben die Kacheln beim Laden nicht mehr leer. Repertoire- und Kurs-Anzahl, angepinnte Kurse, Turnier-Abos, Freundeszahl, Favoriten, Puzzle-Elo und Gelöst-Zähler werden nach jedem Abruf lokal gemerkt und beim nächsten Öffnen sofort angezeigt — der eigentliche Abruf läuft im Hintergrund und aktualisiert die Zahlen. Der Zwischenstand liegt pro Konto (auf einem geteilten Gerät bleiben die Nutzer sauber getrennt)." },
   ]},

@@ -119,6 +119,11 @@ export class CourseService {
     return this.http.delete<void>(`/api/courses/${bookId}`);
   }
 
+  /** Wandelt einen Kurs in ein neues Repertoire um (Original bleibt); liefert das neue Repertoire. */
+  convertToRepertoire(bookId: number): Observable<{ id: number; name: string }> {
+    return this.http.post<{ id: number; name: string }>(`/api/courses/${bookId}/convert-to-repertoire`, {});
+  }
+
   /** Pinnt einen Kurs fürs Dashboard an (persönlich, idempotent). */
   pinCourse(bookId: number): Observable<void> {
     return this.http.post<void>(`/api/courses/${bookId}/pin`, {});

@@ -116,6 +116,24 @@ public class RepertoireService
         };
     }
 
+    /// <summary>Legt ein Repertoire aus fertigem PGN an (eine Datei) — für „Kurs → Repertoire umwandeln".
+    /// <see cref="Repertoire.UseForExtension"/> standardmäßig aus (wie bei importierten Chessable-Kursen);
+    /// im Bearbeiten-Dialog aktivierbar. Wirft <see cref="InvalidOperationException"/> bei Nicht-PGN.</summary>
+    public async Task<RepertoireDto> CreateFromPgnAsync(int userId, string name, string fileName, string pgn,
+        RepertoireKind kind = RepertoireKind.None)
+    {
+        if (string.IsNullOrWhiteSpace(pgn) || !LooksLikePgn(pgn))
+            throw new InvalidOperationException("The content does not look like a valid PGN.");
+        var trimmed = string.IsNullOrWhiteSpace(name) ? "Repertoire" : name.Trim();
+        if (trimmed.Length > 200) trimmed = trimmed[..200];
+
+        var dto = await CreateAsync(userId, new CreateRepertoireDto { Name = trimmed, Kind = kind, UseForExtension = false });
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(pgn));
+        await UploadFileAsync(dto.Id, userId, fileName, stream);
+        dto.FileCount = 1;
+        return dto;
+    }
+
     public async Task<RepertoireDto> UpdateAsync(int id, int userId, UpdateRepertoireDto dto)
     {
         var rep = await _db.Repertoires

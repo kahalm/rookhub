@@ -34,6 +34,11 @@ export class RepertoireService {
     return this.http.get(`${this.apiUrl}/${id}/pgn`, { responseType: 'blob' });
   }
 
+  /** Wandelt ein Repertoire in einen persönlichen Kurs um (nur Puzzle-PGN im Chessable-Stil). */
+  convertToCourse(id: number): Observable<{ bookId: number; displayName: string }> {
+    return this.http.post<{ bookId: number; displayName: string }>(`${this.apiUrl}/${id}/convert-to-course`, {});
+  }
+
   /** Repertoire-Detail (inkl. Dateien); Form feature-lokal → generisch. */
   getDetail<T>(id: number): Observable<T> {
     return this.http.get<T>(`${this.apiUrl}/${id}`);
