@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.236.10';
+export const APP_VERSION = '0.236.11';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.11", date: "2026-07-01", changes: [
+    { en: "Admin CI page: per-repo workflow filter — log-watcher now only shows its “Build & Push” runs, not the “Tests” runs that were cluttering the list (configurable per repo via GitHub:WorkflowFilter:<repo>).", de: "Admin-CI-Seite: Workflow-Filter je Repo — log-watcher zeigt jetzt nur noch seine „Build & Push“-Läufe, nicht mehr die „Tests“-Läufe, die die Liste zugemüllt haben (pro Repo konfigurierbar über GitHub:WorkflowFilter:<repo>)." },
+  ]},
   { version: "0.236.10", date: "2026-07-01", changes: [
     { en: "Admin CI page: the deployed build's run is now highlighted with a yellow row background again (not just the small “live” icon badge), so the currently-running build is obvious in the list at a glance.", de: "Admin-CI-Seite: der Lauf des deployten Builds ist jetzt wieder mit gelbem Zeilen-Hintergrund hervorgehoben (nicht nur dem kleinen „live“-Icon-Badge), sodass der aktuell laufende Build in der Liste sofort ins Auge fällt." },
   ]},

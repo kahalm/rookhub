@@ -152,6 +152,33 @@ public class GithubActionsServiceTests
         Assert.Null(repo.RunningRef);
     }
 
+    [Fact]
+    public async Task LogWatcher_FiltersOutTestRuns_KeepsOnlyBuildAndPush()
+    {
+        const string mixed = """
+        { "total_count": 2, "workflow_runs": [
+          { "id": 1, "name": "Tests", "display_title": "t", "head_branch": "main", "event": "push",
+            "status": "completed", "conclusion": "success", "run_number": 9,
+            "created_at": "2026-07-01T10:00:00Z", "updated_at": "2026-07-01T10:02:00Z",
+            "head_sha": "aaa", "html_url": "u", "actor": { "login": "kahalm" } },
+          { "id": 2, "name": "Build & Push Docker Image", "display_title": "b", "head_branch": "main", "event": "push",
+            "status": "completed", "conclusion": "success", "run_number": 10,
+            "created_at": "2026-07-01T10:00:00Z", "updated_at": "2026-07-01T10:03:00Z",
+            "head_sha": "bbb", "html_url": "u", "actor": { "login": "kahalm" } }
+        ] }
+        """;
+        var handler = new StubHandler((req, _) =>
+            req.RequestUri!.AbsoluteUri.Contains("/actions/runs") ? Json(mixed) : Json("[]"));
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?> { ["GitHub:Repos:0"] = "log-watcher" });
+
+        var res = await svc.GetOverviewAsync();
+
+        var repo = Assert.Single(res.Repos);
+        Assert.Equal("log-watcher", repo.Repo);
+        var run = Assert.Single(repo.Runs);   // „Tests" raus, nur der Build-&-Push-Lauf bleibt
+        Assert.Equal("Build & Push Docker Image", run.Name);
+    }
+
     private static HttpResponseMessage Json(string body)
         => new(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
 

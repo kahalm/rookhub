@@ -27,6 +27,19 @@ public class GithubActionsService
     private static readonly string[] DefaultRepos =
         { "rookhub", "chessresults_crawler", "schach-bot", "piratechess_docker", "log-watcher" };
 
+    /// <summary>Optionaler Workflow-Filter je Repo: nur Runs, deren Workflow-Name diesen Text enthält,
+    /// werden gezeigt. Manche Repos haben mehrere Workflows (log-watcher: „Tests" + „Build &amp; Push
+    /// Docker Image") — für die CI-Übersicht interessiert nur der Build/Deploy-Lauf. Pro Repo per Config
+    /// überschreibbar (<c>GitHub:WorkflowFilter:&lt;repo&gt;</c>).</summary>
+    private static readonly Dictionary<string, string> DefaultWorkflowFilter = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["log-watcher"] = "Build & Push",
+    };
+
+    /// <summary>Anzahl roh geladener Runs je Repo — größer als die angezeigten 5, damit nach dem
+    /// Workflow-Filter (Test-Runs raus) noch genug Build-Läufe übrig bleiben.</summary>
+    private const int RawRunsPerRepo = 20;
+
     private static readonly JsonSerializerOptions GithubJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -132,7 +145,11 @@ public class GithubActionsService
             var items = payload?.WorkflowRuns ?? new List<RunItem>();
             if (items.Count == 0) return null;
             var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
-            var mapped = items.Select(i => MapRun(i, tagBySha)).ToList();
+            // Nur passende Workflows (z. B. log-watcher: „Build & Push", nicht „Tests" — dieselbe SHA
+            // löst beide aus). Bleibt nichts übrig, nicht künstlich einen Test-Run zeigen.
+            var filter = WorkflowFilterFor(repo);
+            var mapped = items.Where(i => MatchesWorkflowFilter(i.Name, filter)).Select(i => MapRun(i, tagBySha)).ToList();
+            if (mapped.Count == 0) return null;
             // Ref-passenden bevorzugen (master-Push vs. gleichnamiger Tag teilen die SHA).
             return mapped.FirstOrDefault(m => string.IsNullOrEmpty(bi.Ref) || m.Ref == bi.Ref) ?? mapped[0];
         }
@@ -142,6 +159,20 @@ public class GithubActionsService
             return null;
         }
     }
+
+    /// <summary>Workflow-Filter für ein Repo: Config <c>GitHub:WorkflowFilter:&lt;repo&gt;</c> hat Vorrang,
+    /// sonst der eingebaute Default (<see cref="DefaultWorkflowFilter"/>); null = kein Filter (alle Runs).</summary>
+    private string? WorkflowFilterFor(string repo)
+    {
+        var cfg = _config[$"GitHub:WorkflowFilter:{repo}"];
+        if (!string.IsNullOrWhiteSpace(cfg)) return cfg.Trim();
+        return DefaultWorkflowFilter.TryGetValue(repo, out var d) ? d : null;
+    }
+
+    /// <summary>Passt der Workflow-Name zum (optionalen) Filter? Kein Filter → immer true; Match =
+    /// Substring, case-insensitiv (z. B. Filter „Build & Push" trifft „Build & Push Docker Image").</summary>
+    private static bool MatchesWorkflowFilter(string? workflowName, string? filter) =>
+        string.IsNullOrEmpty(filter) || (workflowName?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
 
     private static CiRunDto MapRun(RunItem r, Dictionary<string, string> tagBySha)
     {
@@ -223,7 +254,7 @@ public class GithubActionsService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"/repos/{owner}/{repo}/actions/runs?per_page=5&exclude_pull_requests=true");
+                $"/repos/{owner}/{repo}/actions/runs?per_page={RawRunsPerRepo}&exclude_pull_requests=true");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using var resp = await _http.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
@@ -234,7 +265,9 @@ public class GithubActionsService
             // Tags auflösen (Tag-Läufe haben kein head_branch → Ref = Tag-Name via sha-Map).
             var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
 
+            var filter = WorkflowFilterFor(repo);
             var runs = (payload?.WorkflowRuns ?? new List<RunItem>())
+                .Where(r => MatchesWorkflowFilter(r.Name, filter))
                 .Take(5)
                 .Select(r => MapRun(r, tagBySha))
                 .ToList();
