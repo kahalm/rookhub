@@ -283,6 +283,8 @@ export abstract class BasePuzzleSolver {
 
   // ===== Zug-Handling =====
   onMoveMade(event: { orig: Key; dest: Key; promotion?: string }): void {
+    // User zieht → einen noch stehenden Gegnerzug-Pfeil (Crazy-„persist") entfernen.
+    if (this.vizOpponentLastMove) this.clearVizOpponentArrow();
     if (this.state === 'PLAYING') { this.handleOffPathMove(event); return; }
     if (this.state !== 'AWAITING_USER_MOVE') return;
 
@@ -324,7 +326,7 @@ export abstract class BasePuzzleSolver {
       if (this.aborted) return;
       this.playMove(this.solutionMoves[this.moveIndex]);
       this.moveIndex++;
-      if (this.visualizationMode) this.showVizOpponentArrow();
+      this.showVizOpponentArrow();
       this.updateBoard();
       if (this.moveIndex >= this.solutionMoves.length) { this.solvedInternal(false); return; }
       // Solver-Antwort im Lösungspfad → User soll seinen nächsten Lösungszug machen.
@@ -351,7 +353,7 @@ export abstract class BasePuzzleSolver {
       if (!this.onSolutionPath) this.maybeWarnOffPath();
       this.playMove(result.move);
       this.lastOpponentReplied = true;
-      if (this.visualizationMode) this.showVizOpponentArrow();
+      this.showVizOpponentArrow();
       this.updateBoard();
       if (this.chess.isGameOver()) { this.handleGameOver(); return; }
       this.autoAdvanceTimer = setTimeout(() => {
@@ -577,15 +579,29 @@ export abstract class BasePuzzleSolver {
     clearVisualizationHide();
   }
 
-  /** Zeigt den letzten Gegnerzug als Pfeil und blendet ihn nach 1s automatisch aus. */
+  /** Wann der Gegnerzug-Pfeil gezeigt wird und wie lange:
+   *  'off' = gar nicht, 'timed' = 1s einblenden (Viz-Modus), 'persist' = stehen lassen bis zum
+   *  nächsten User-Zug (Crazy-Modus, da der Gegnerzug auf dem Crazy-Brett schlecht erkennbar ist).
+   *  Default richtet sich nach dem Viz-Modus; Komponenten überschreiben für Crazy. */
+  protected get opponentArrowMode(): 'off' | 'timed' | 'persist' {
+    return this.visualizationMode > 0 ? 'timed' : 'off';
+  }
+
+  /** Zeigt den letzten Gegnerzug als Pfeil — je nach {@link opponentArrowMode} zeitlich begrenzt
+   *  (Viz) oder bleibend bis zum nächsten User-Zug (Crazy). */
   private showVizOpponentArrow(): void {
-    if (!this.vizArrowEnabled) return;
+    const mode = this.opponentArrowMode;
+    if (mode === 'off') return;
+    if (mode === 'timed' && !this.vizArrowEnabled) return;   // Viz-Pfeil respektiert die Einstellung
     if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
     this.vizOpponentLastMove = this.lastMove;
-    this.vizOpponentArrowTimer = setTimeout(() => {
-      this.vizOpponentLastMove = undefined;
-      this.vizOpponentArrowTimer = undefined;
-    }, 1000);
+    if (mode === 'timed') {
+      this.vizOpponentArrowTimer = setTimeout(() => {
+        this.vizOpponentLastMove = undefined;
+        this.vizOpponentArrowTimer = undefined;
+      }, 1000);
+    }
+    // 'persist': kein Timer → der Pfeil bleibt, bis der User zieht (clear in onMoveMade).
   }
 
   protected clearVizOpponentArrow(): void {

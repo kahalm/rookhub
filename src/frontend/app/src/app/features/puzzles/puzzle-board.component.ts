@@ -112,6 +112,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() actualFen?: string;
   /** Letzter Gegnerzug als Pfeil (nur im Viz-Modus 1-4 gesetzt; via setAutoShapes gerendert). */
   @Input() vizOpponentArrow?: [Key, Key];
+  /** Pfeilfarbe für den Gegnerzug (chessground-Brush). Crazy-Modus nutzt 'green', Viz-Modus 'red'. */
+  @Input() vizOpponentArrowBrush = 'red';
 
   @Output() moveMade = new EventEmitter<{ orig: Key; dest: Key; promotion?: string }>();
 
@@ -318,8 +320,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private applyVizOpponentArrow(): void {
     if (!this.ground) return;
-    if (this.visualization > 0 && this.vizOpponentArrow) {
-      const shape: DrawShape = { orig: this.vizOpponentArrow[0], dest: this.vizOpponentArrow[1], brush: 'red' };
+    // Gegnerzug-Pfeil: im Viz-Modus (Board eingefroren) UND im Crazy-Modus (Zug schlecht erkennbar).
+    // Der Solver setzt vizOpponentArrow ohnehin nur dann → hier kein visualization>0-Guard mehr nötig.
+    if (this.vizOpponentArrow) {
+      const shape: DrawShape = { orig: this.vizOpponentArrow[0], dest: this.vizOpponentArrow[1], brush: this.vizOpponentArrowBrush };
       this.ground.setAutoShapes([shape]);
     } else {
       this.ground.setAutoShapes([]);
@@ -538,7 +542,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
     });
 
-    if ('vizOpponentArrow' in changes || 'visualization' in changes) {
+    if ('vizOpponentArrow' in changes || 'visualization' in changes || 'vizOpponentArrowBrush' in changes) {
       this.applyVizOpponentArrow();
     }
 

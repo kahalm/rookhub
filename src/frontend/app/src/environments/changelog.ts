@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.229.0';
+export const APP_VERSION = '0.230.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.230.0", date: "2026-07-01", changes: [
+    { en: "Crazy/anarchy mode: the opponent's move is hard to see on the random-coloured board, so it's now marked with a green arrow that stays on the board until you make your move. (In visualization mode the opponent arrow keeps its old red, 1-second behaviour.)", de: "Crazy-/Anarchy-Modus: Der Gegnerzug ist auf dem zufällig gefärbten Brett schlecht erkennbar — er wird jetzt mit einem grünen Pfeil markiert, der stehen bleibt, bis du deinen Zug machst. (Im Visualisierungs-Modus behält der Gegnerzug-Pfeil sein bisheriges Rot mit 1-Sekunden-Ausblenden.)" },
+  ]},
   { version: "0.229.0", date: "2026-07-01", changes: [
     { en: "In anarchy mode (en passant forced), the three puzzle hints are all just “en passant is forced” — worded three different ways — instead of the normal hints, across all puzzle modes.", de: "Im Anarchy-Modus (En passant forciert) sind die drei Puzzle-Tipps alle „En passant ist Pflicht“ — dreimal unterschiedlich formuliert — statt der normalen Tipps, in allen Puzzle-Modi." },
   ]},

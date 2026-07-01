@@ -383,6 +383,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
   }
+  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' {
+    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
+  }
 
   toggleEval(): void {
     this.showEval = !this.showEval;

@@ -618,6 +618,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
   }
+  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' {
+    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
+  }
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();

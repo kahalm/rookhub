@@ -198,6 +198,40 @@ describe('BasePuzzleSolver Anarchy-Tipps (e.p. forciert)', () => {
   });
 });
 
+class ArrowSolver extends TestSolver {
+  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' { return 'persist'; }
+}
+
+describe('BasePuzzleSolver Gegnerzug-Pfeil (Crazy = bleibend)', () => {
+  it('lässt den Gegnerzug-Pfeil im persist-Modus stehen, bis der User zieht', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const s = new ArrowSolver(stockfish);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // Setup e4; Schwarz am Zug
+    tick(600);
+
+    s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });   // korrekt → THINKING
+    tick(400);                                                 // Solver spielt g1f3 → Pfeil gesetzt
+    expect(s.vizOpponentLastMove).toBeDefined();
+    tick(3000);                                                // persist: kein Auto-Ausblenden
+    expect(s.vizOpponentLastMove).toBeDefined();
+
+    s.onMoveMade({ orig: 'b8' as Key, dest: 'c6' as Key });   // User zieht → Pfeil weg
+    expect(s.vizOpponentLastMove).toBeUndefined();
+    discardPeriodicTasks();
+  }));
+
+  it('setzt im off-Modus (kein Viz/Crazy) keinen Pfeil', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const s = new TestSolver(stockfish);   // opponentArrowMode = 'off' (visualizationMode 0)
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
+    tick(400);
+    expect(s.vizOpponentLastMove).toBeUndefined();
+    discardPeriodicTasks();
+  }));
+});
+
 describe('BasePuzzleSolver playSolutionFromStart (geteiltes Aufgeben)', () => {
   it('spielt die Lösung ab Zug 0 selbsttätig durch und stoppt am Ende', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
