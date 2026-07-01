@@ -9,51 +9,35 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
-import { DISCORD_INVITE_URL } from '../../core/community';
+import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
 
 @Component({
   selector: 'app-course-list',
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     LoadingSpinnerComponent, TranslateModule, ReprocessBannerComponent
   ],
   template: `
     <div class="courses-container">
-      <h1>{{ 'courses.title' | translate }}</h1>
+      <div class="header">
+        <h1>{{ 'courses.title' | translate }}</h1>
+        <button mat-raised-button color="primary" [disabled]="uploading" (click)="openUploadDialog()">
+          <mat-icon>{{ uploading ? 'hourglass_empty' : 'upload_file' }}</mat-icon>
+          {{ (uploading ? 'courses.upload.uploading' : 'courses.upload.button') | translate }}
+        </button>
+      </div>
       <p class="intro">{{ 'courses.intro' | translate }}</p>
 
       <app-reprocess-banner section="courses" (done)="loadCourses()" />
-
-      <!-- Eigenes PGN als persönlichen Kurs hochladen — immer verfügbar (auch bei leerer Liste). -->
-      <section class="upload-panel" [class.upload-empty]="!loading && courses.length === 0">
-        <mat-icon class="upload-icon">upload_file</mat-icon>
-        <div class="upload-text">
-          <div class="upload-title">{{ 'courses.upload.title' | translate }}</div>
-          <div class="upload-hint">{{ 'courses.upload.hint' | translate }}</div>
-          <div class="upload-note">
-            {{ 'courses.upload.restriction' | translate }}
-            <a [href]="discordUrl" target="_blank" rel="noopener noreferrer">Discord</a>.
-          </div>
-        </div>
-        <mat-form-field appearance="outline" class="upload-name" subscriptSizing="dynamic">
-          <mat-label>{{ 'courses.upload.nameLabel' | translate }}</mat-label>
-          <input matInput [(ngModel)]="uploadName" [disabled]="uploading"
-                 [placeholder]="'courses.upload.namePlaceholder' | translate">
-        </mat-form-field>
-        <input #fileInput type="file" accept=".pgn" hidden (change)="onFileSelected($event)">
-        <button mat-flat-button color="primary" [disabled]="uploading" (click)="fileInput.click()">
-          <mat-icon>{{ uploading ? 'hourglass_empty' : 'upload' }}</mat-icon>
-          {{ (uploading ? 'courses.upload.uploading' : 'courses.upload.button') | translate }}
-        </button>
-      </section>
 
       @if (loading) {
         <app-loading-spinner />
@@ -220,27 +204,12 @@ import { DISCORD_INVITE_URL } from '../../core/community';
   `,
   styles: [`
     .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 16px; }
+    .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .header h1 { margin: 0; }
+    .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
-    .upload-panel {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-      padding: 12px 16px; margin-bottom: 16px; border-radius: 8px;
-      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-      background: color-mix(in srgb, currentColor 4%, transparent);
-    }
-    .upload-panel.upload-empty {
-      border-style: dashed; border-color: color-mix(in srgb, var(--mdc-theme-primary, #3f51b5) 50%, transparent);
-    }
-    .upload-icon { color: color-mix(in srgb, currentColor 55%, transparent); flex-shrink: 0; }
-    .upload-text { flex: 1; min-width: 180px; }
-    .upload-title { font-weight: 600; font-size: 0.95rem; }
-    .upload-hint { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .upload-note { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); margin-top: 3px; }
-    .upload-note a { color: #5865F2; font-weight: 500; text-decoration: none; }
-    .upload-note a:hover { text-decoration: underline; }
-    .upload-name { width: 200px; }
     .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
     /* Pin-Symbol: gedämpft wenn nicht angepinnt, in Primärfarbe + leicht gekippt wenn angepinnt. */
     .pin-btn mat-icon { opacity: 0.55; transition: opacity .15s, color .15s; }
@@ -309,16 +278,12 @@ export class CourseListComponent implements OnInit {
   downloadingPgn: number | null = null;
   /** Läuft gerade ein Upload eines eigenen Kurs-PGN? */
   uploading = false;
-  /** Optionaler Anzeigename für den hochzuladenden Kurs (leer = aus Dateiname ableiten). */
-  uploadName = '';
   /** bookId, der gerade gelöscht wird (Button-Sperre). */
   deleting: number | null = null;
   /** bookId, dessen Pin gerade umgeschaltet wird (Button-Sperre). */
   pinning: number | null = null;
   /** bookId, der gerade in ein Repertoire umgewandelt wird (Button-Sperre). */
   converting: number | null = null;
-  /** Einladungslink zum Community-Discord (für „anderes PGN → Admin/Discord"-Hinweis). */
-  readonly discordUrl = DISCORD_INVITE_URL;
   private offlineFiles = new Set<string>();
 
   /** Aufgeklapptes Buch (Kapitelübersicht) bzw. null. */
@@ -328,7 +293,7 @@ export class CourseListComponent implements OnInit {
   /** Buch, dessen Kapitel gerade geladen werden. */
   loadingChapters: number | null = null;
 
-  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog) {}
 
   /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
    *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
@@ -467,17 +432,23 @@ export class CourseListComponent implements OnInit {
     });
   }
 
-  /** Datei ausgewählt → als persönlichen Kurs hochladen. */
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+  /** Öffnet den Upload-Dialog; startet nach Bestätigung den Upload. */
+  openUploadDialog(): void {
+    if (this.uploading) return;
+    const ref = this.dialog.open<UploadCourseDialogComponent, void, UploadCourseDialogResult>(
+      UploadCourseDialogComponent, { width: '440px', maxWidth: '95vw' });
+    ref.afterClosed().subscribe(result => {
+      if (!result) return;
+      this.uploadCourseFile(result.file, result.name);
+    });
+  }
+
+  /** Lädt eine PGN-Datei als persönlichen Kurs hoch und sortiert das Ergebnis in die Liste ein. */
+  uploadCourseFile(file: File, name: string): void {
     this.uploading = true;
-    this.courseService.uploadCourse(file, this.uploadName).subscribe({
+    this.courseService.uploadCourse(file, name).subscribe({
       next: course => {
         this.uploading = false;
-        input.value = ''; // gleiche Datei erneut wählbar
-        this.uploadName = '';
         // Neuen Kurs einsortieren (statt kompletten Reload) + Menü/Navbar-Zugriff neu prüfen lassen.
         this.courses = this.sortCourses([...this.courses.filter(c => c.bookId !== course.bookId), course]);
         this.courseService.notifyAccessChanged();
@@ -485,7 +456,6 @@ export class CourseListComponent implements OnInit {
       },
       error: err => {
         this.uploading = false;
-        input.value = '';
         const msg = err?.error?.message || this.translate.instant('courses.upload.failed');
         this.snackbar.info(msg, { action: 'common.ok', duration: 4000 });
       }

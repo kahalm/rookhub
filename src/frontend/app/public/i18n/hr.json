@@ -884,6 +884,7 @@
       "namePlaceholder": "Neobavezno — inače iz naziva datoteke",
       "button": "Učitaj PGN",
       "uploading": "Učitavanje…",
+      "choosePgn": "Odaberi PGN…",
       "success": "„{{name}}\" stvoren ({{count}} zagonetki)",
       "failed": "Učitavanje nije uspjelo. Provjeri PGN."
     },

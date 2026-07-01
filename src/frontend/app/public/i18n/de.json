@@ -886,6 +886,7 @@
       "namePlaceholder": "Optional — sonst aus dem Dateinamen",
       "button": "PGN hochladen",
       "uploading": "Wird hochgeladen…",
+      "choosePgn": "PGN wählen…",
       "success": "„{{name}}\" angelegt ({{count}} Puzzles)",
       "failed": "Upload fehlgeschlagen. Bitte PGN prüfen."
     },

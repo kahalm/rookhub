@@ -193,7 +193,7 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
 
             <div class="actions">
               <button mat-raised-button color="primary"
-                      [disabled]="!bearerInput.trim() || saving"
+                      [disabled]="!hasBearerInput || saving"
                       (click)="save()">
                 <mat-icon>save</mat-icon>
                 {{ (saving ? 'chessable.saving' : 'chessable.save') | translate }}
@@ -566,7 +566,7 @@ export class ChessableComponent implements OnInit, OnDestroy {
   }
 
   save(): void {
-    const value = this.bearerInput.trim();
+    const value = stripBearerPrefix(this.bearerInput);
     if (!value) return;
     this.saving = true;
     this.chessable.saveCredentials(value).subscribe({
@@ -761,6 +761,22 @@ export class ChessableComponent implements OnInit, OnDestroy {
     const message = err?.error?.message ?? err?.message ?? String(err);
     this.snackbar.info(this.translate.instant('chessable.error', { message }));
   }
+
+  /** Ist im Eingabefeld nach `Bearer `-Strip noch etwas übrig? Steuert den Speichern-Knopf. */
+  get hasBearerInput(): boolean {
+    return stripBearerPrefix(this.bearerInput).length > 0;
+  }
+}
+
+/**
+ * Strippt ein optionales `Bearer `-Präfix (case-insensitiv, beliebige Whitespace-Menge)
+ * und trimmt den Rest. Benutzer paste-en oft den ganzen Authorization-Header inkl. `Bearer …`.
+ */
+export function stripBearerPrefix(input: string | null | undefined): string {
+  const s = (input ?? '').trim();
+  // `\b` verhindert einen Match mitten im Token (z. B. „Bearereyj…" bleibt unangetastet).
+  const m = /^bearer\b\s*/i.exec(s);
+  return (m ? s.slice(m[0].length) : s).trim();
 }
 
 /**

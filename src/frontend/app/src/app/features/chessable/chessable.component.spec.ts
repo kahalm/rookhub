@@ -1,8 +1,34 @@
 import {
   ChessableComponent,
-  buildChessableBookmarklet, parseChessbearerFragment,
+  buildChessableBookmarklet, parseChessbearerFragment, stripBearerPrefix,
   effectiveTotalLines, estimateRemainingMinutes, CHESSABLE_LINES_PER_MIN, formatDuration,
 } from './chessable.component';
+
+describe('stripBearerPrefix', () => {
+  it('removes a leading "Bearer " prefix (case-insensitive)', () => {
+    expect(stripBearerPrefix('Bearer eyJabc.def.ghi')).toBe('eyJabc.def.ghi');
+    expect(stripBearerPrefix('bearer eyJabc.def.ghi')).toBe('eyJabc.def.ghi');
+    expect(stripBearerPrefix('BEARER eyJabc.def.ghi')).toBe('eyJabc.def.ghi');
+  });
+
+  it('tolerates extra whitespace around and after the prefix', () => {
+    expect(stripBearerPrefix('  Bearer   eyJabc.def.ghi  ')).toBe('eyJabc.def.ghi');
+    expect(stripBearerPrefix('Bearer\teyJabc.def.ghi')).toBe('eyJabc.def.ghi');
+  });
+
+  it('returns bare tokens unchanged (aside from trimming)', () => {
+    expect(stripBearerPrefix('eyJabc.def.ghi')).toBe('eyJabc.def.ghi');
+    expect(stripBearerPrefix('  eyJabc.def.ghi  ')).toBe('eyJabc.def.ghi');
+  });
+
+  it('handles null/undefined/empty input', () => {
+    expect(stripBearerPrefix(null)).toBe('');
+    expect(stripBearerPrefix(undefined)).toBe('');
+    expect(stripBearerPrefix('')).toBe('');
+    expect(stripBearerPrefix('   ')).toBe('');
+    expect(stripBearerPrefix('Bearer ')).toBe('');
+  });
+});
 
 describe('parseChessbearerFragment', () => {
   it('extracts and url-decodes the bearer from the fragment', () => {

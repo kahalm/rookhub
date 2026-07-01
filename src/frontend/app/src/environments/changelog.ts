@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.2';
+export const APP_VERSION = '0.238.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.4", date: "2026-07-01", changes: [
+    { en: "Chessable bearer input now accepts the whole \"Bearer eyJ…\" string, not just the raw JWT. When you paste the full Authorization header value, the leading \"Bearer \" prefix is stripped automatically before saving (case-insensitive, tolerates extra whitespace).", de: "Das Chessable-Bearer-Feld akzeptiert jetzt auch den kompletten „Bearer eyJ…“-String, nicht nur den reinen JWT. Wird der ganze Authorization-Header-Wert eingefügt, wird das führende „Bearer “-Präfix vor dem Speichern automatisch entfernt (Groß-/Kleinschreibung egal, zusätzliche Leerzeichen erlaubt)." },
+  ]},
+  { version: "0.238.3", date: "2026-07-01", changes: [
+    { en: "Uploading your own PGN as a personal course now works the same way as creating a repertoire: a small \"Upload PGN\" button in the top-right of the courses page opens a modal with the file picker, an optional course name and the Discord hint. The old inline upload panel is gone, so the courses list stays clean whether it's empty or full.", de: "Eigenes PGN als persönlichen Kurs hochladen läuft jetzt genauso wie das Anlegen eines Repertoires: ein kleiner „PGN hochladen“-Knopf oben rechts auf der Kurse-Seite öffnet einen Dialog mit Datei-Auswahl, optionalem Kursnamen und Discord-Hinweis. Das alte Inline-Upload-Panel ist raus, die Kursliste bleibt sowohl leer als auch gefüllt aufgeräumt." },
+  ]},
   { version: "0.238.2", date: "2026-07-01", changes: [
     { en: "Fixed missing course lines: Chessable chapter intro pages that use a null move (“1. --” with the explanation as a move comment) were silently dropped on import — so a course showed fewer lines than on Chessable (e.g. chapter 1 of “100 Tactical Patterns”). These info pages are now kept as click-through info lines. The data is already in the stored PGN, so refreshing the course (update banner) restores the lines; no re-import from scratch needed.", de: "Fehlende Kurs-Linien behoben: Chessable-Kapitel-Einleitungen mit NULL-Zug („1. --“ und dem Erklärtext als Zug-Kommentar) wurden beim Import stillschweigend verworfen — dadurch zeigte ein Kurs weniger Linien als auf Chessable (z. B. Kapitel 1 von „100 Tactical Patterns“). Diese Info-Seiten bleiben jetzt als Durchklick-Linien erhalten. Die Daten stehen bereits im gespeicherten PGN, daher stellt ein Aktualisieren des Kurses (Update-Banner) die Linien wieder her; kein Neu-Import nötig." },
   ]},

@@ -886,6 +886,7 @@
       "namePlaceholder": "Optional — derived from the file name",
       "button": "Upload PGN",
       "uploading": "Uploading…",
+      "choosePgn": "Choose PGN…",
       "success": "\"{{name}}\" created ({{count}} puzzles)",
       "failed": "Upload failed. Please check the PGN."
     },

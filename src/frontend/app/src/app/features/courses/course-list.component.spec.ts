@@ -17,7 +17,7 @@ describe('CourseListComponent sorting', () => {
 
   function buildWith(items: CourseListItem[]): CourseListComponent {
     const courseService = { getCourses: () => of(items) } as any;
-    const comp = new CourseListComponent(courseService, {} as any, {} as any);
+    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
     comp.loadCourses();
     return comp;
   }
@@ -69,7 +69,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 2, solvedCount: 0, lastActivityAt: null }),                    // nie begonnen
         item2({ bookId: 3, solvedCount: 10, lastActivityAt: '2026-06-02T10:00:00Z' }), // fertig
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
     });
@@ -78,7 +78,7 @@ describe('CourseListComponent sorting', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.length).toBe(1);
 
@@ -91,7 +91,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 1, displayName: 'Sicilian Defense', isOwned: true }),
         item2({ bookId: 2, displayName: 'French Defense', isOwned: true }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
       comp.loadCourses();
       comp.search = 'SICIL';
       expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
@@ -120,31 +120,49 @@ describe('CourseListComponent sorting', () => {
         uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
       comp.loadCourses();
-      comp.uploadName = 'My Course';
 
       const file = new File(['pgn'], 'my.pgn');
-      const input = { files: [file], value: 'my.pgn' } as any;
-      comp.onFileSelected({ target: input } as any);
+      comp.uploadCourseFile(file, 'My Course');
 
       expect(courseService.uploadCourse).toHaveBeenCalledWith(file, 'My Course');
       expect(comp.courses.map(c => c.bookId)).toEqual([42]);
       expect(comp.uploading).toBeFalse();
-      expect(comp.uploadName).toBe('');   // Feld nach Upload geleert
-      expect(input.value).toBe('');       // gleiche Datei erneut wählbar
       expect(notify).toHaveBeenCalled();
     });
 
-    it('ignoriert einen Change ohne Datei', () => {
+    it('öffnet den Upload-Dialog und lädt bei Bestätigung hoch', () => {
+      const uploaded = item3({ bookId: 99, displayName: 'From Dialog', isOwned: true });
+      const courseService = {
+        getCourses: () => of([]),
+        uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
+        notifyAccessChanged: () => {},
+      } as any;
+      const file = new File(['pgn'], 'd.pgn');
+      const dialogRef = { afterClosed: () => of({ file, name: 'From Dialog' }) } as any;
+      const dialog = { open: jasmine.createSpy('open').and.returnValue(dialogRef) } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog);
+      comp.loadCourses();
+      comp.openUploadDialog();
+
+      expect(dialog.open).toHaveBeenCalled();
+      expect(courseService.uploadCourse).toHaveBeenCalledWith(file, 'From Dialog');
+      expect(comp.courses.map(c => c.bookId)).toEqual([99]);
+    });
+
+    it('ignoriert einen abgebrochenen Upload-Dialog', () => {
       const courseService = {
         getCourses: () => of([]),
         uploadCourse: jasmine.createSpy('uploadCourse'),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate);
+      const dialogRef = { afterClosed: () => of(undefined) } as any;
+      const dialog = { open: () => dialogRef } as any;
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog);
       comp.loadCourses();
-      comp.onFileSelected({ target: { files: [] } } as any);
+      comp.openUploadDialog();
+
       expect(courseService.uploadCourse).not.toHaveBeenCalled();
     });
 
@@ -156,7 +174,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse').and.returnValue(of(void 0)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
 
@@ -172,7 +190,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse'),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
       expect(courseService.deleteCourse).not.toHaveBeenCalled();
