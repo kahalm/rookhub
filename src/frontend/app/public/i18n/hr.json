@@ -1247,7 +1247,11 @@
       "noRuns": "Još nema izvođenja.",
       "loadFailed": "CI status se ne može učitati",
       "started": "pokrenuto",
-      "duration": "trajanje"
+      "duration": "trajanje",
+      "etaIn": "gotovo za ~{{time}}",
+      "etaSoon": "samo što nije…",
+      "etaUnknown": "u tijeku…",
+      "etaTooltip": "Procijenjeni završetak — prosječno trajanje zadnjih izvođenja minus već proteklo vrijeme."
     },
     "users": {
       "searchLabel": "Pretraži korisnike",

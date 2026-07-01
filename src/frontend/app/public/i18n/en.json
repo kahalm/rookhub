@@ -1249,7 +1249,13 @@
       "noRuns": "No runs yet.",
       "loadFailed": "Could not load CI status",
       "started": "started",
-      "duration": "took"
+      "duration": "took",
+      "etaIn": "done in ~{{time}}",
+      "etaSoon": "finishing…",
+      "etaUnknown": "running…",
+      "etaTooltip": "Estimated completion — the average duration of the recent runs minus the time already elapsed.",
+      "deployed": "Deployed",
+      "deployedTooltip": "The build (run) that produced each stack's currently running image."
     },
     "users": {
       "searchLabel": "Search users",

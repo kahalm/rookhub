@@ -1249,7 +1249,13 @@
       "noRuns": "Noch keine Läufe.",
       "loadFailed": "CI-Status konnte nicht geladen werden",
       "started": "gestartet",
-      "duration": "Dauer"
+      "duration": "Dauer",
+      "etaIn": "fertig in ~{{time}}",
+      "etaSoon": "gleich fertig…",
+      "etaUnknown": "läuft…",
+      "etaTooltip": "Geschätztes Ende — mittlere Laufzeit der letzten Läufe minus bereits verstrichene Zeit.",
+      "deployed": "Deployt",
+      "deployedTooltip": "Der Build (Lauf), der das aktuell laufende Image des jeweiligen Stacks erzeugt hat."
     },
     "users": {
       "searchLabel": "User suchen",

@@ -34,11 +34,32 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     <div class="ci">
       <div class="ci-head">
         <h3>{{ 'admin.ci.title' | translate }}</h3>
+        @if (deployed.length) {
+          <span class="ci-deployed" [matTooltip]="'admin.ci.deployedTooltip' | translate">
+            <mat-icon>cloud_done</mat-icon>{{ 'admin.ci.deployed' | translate }}:
+            @for (d of deployed; track d.repo) {
+              <span class="ci-deployed-chip"><span class="ci-dep-repo">{{ d.repo }}</span> {{ d.ref }}</span>
+            }
+          </span>
+        }
         <span class="ci-sub">
           {{ 'admin.ci.subtitle' | translate }}
           @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }} }
           @if (buildSha) { · {{ 'admin.ci.runningBuild' | translate }} {{ buildSha.slice(0, 7) }} }
         </span>
+        @for (b of running; track b.repo) {
+          <span class="ci-eta" [matTooltip]="'admin.ci.etaTooltip' | translate">
+            <mat-icon>timer</mat-icon>
+            <span class="ci-eta-repo">{{ b.repo }}</span>
+            @if (b.remaining == null) {
+              {{ 'admin.ci.etaUnknown' | translate }}
+            } @else if (b.remaining <= 0) {
+              {{ 'admin.ci.etaSoon' | translate }}
+            } @else {
+              {{ 'admin.ci.etaIn' | translate:{ time: fmtDur(b.remaining) } }}
+            }
+          </span>
+        }
       </div>
 
       @if (loading && !overview) {
@@ -53,7 +74,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
           @for (repo of overview.repos; track repo.repo) {
             <section class="repo-card">
               <div class="repo-title">
-                <mat-icon>folder_open</mat-icon>{{ repo.repo }}
+                <mat-icon>code</mat-icon>{{ repo.repo }}
                 @if (repo.error) { <span class="repo-error">{{ repo.error }}</span> }
               </div>
               @if (repo.runs.length === 0 && !repo.error) {
@@ -96,6 +117,16 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .ci-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
     .ci-head h3 { margin: 0; font-size: 1.05rem; }
     .ci-sub { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.82rem; }
+    /* Prominente ETA für laufende Builds (Countdown aus dem Mittel der letzten Läufe). */
+    .ci-eta { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 14px;
+      background: #1565c0; color: #fff; font-size: 0.82rem; font-weight: 600; }
+    .ci-eta mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .ci-eta-repo { font-weight: 700; }
+    /* Prominente „Deployed"-Zusammenfassung: welcher Build läuft je Stack (GELB = deployed). */
+    .ci-deployed { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.82rem; font-weight: 600; color: color-mix(in srgb, currentColor 75%, transparent); }
+    .ci-deployed > mat-icon { font-size: 17px; width: 17px; height: 17px; color: #f57f17; }
+    .ci-deployed-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 12px; background: #f9a825; color: #1a1a1a; font-size: 0.78rem; }
+    .ci-dep-repo { font-weight: 700; }
     .ci-hint { display: flex; align-items: center; gap: 8px; color: color-mix(in srgb, currentColor 65%, transparent); }
     .repo-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
     .repo-card { border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 8px; padding: 10px 12px; }
@@ -105,10 +136,10 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
     .empty { color: color-mix(in srgb, currentColor 50%, transparent); font-style: italic; font-size: 0.82rem; margin: 2px 0; }
     .run { display: flex; align-items: center; gap: 10px; padding: 5px 4px; border-radius: 6px; text-decoration: none; color: inherit; }
     .run:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    /* Der laufende Build wird NICHT durch eine Zeilenfarbe markiert, sondern durch das „live"-Icon-Badge
-       (run-live-tag). Bewusst BLAU + „live-Punkt"-Icon, damit es sich klar vom grünen Erfolgs-Badge
-       (grüner Kreis + Häkchen) abhebt. */
-    .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #1565c0; color: #fff; font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
+    /* Farbschema: BLAU = baut (läuft), GRÜN = fertig gebaut (Erfolg), GELB = deployed (läuft im Stack).
+       Der deployte Build wird durch das GELBE „live"-Badge markiert (run-live-tag) — klar unterscheidbar
+       vom grünen Erfolgs-Badge und vom blauen „baut"-Zustand. */
+    .run-live-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 6px; border-radius: 10px; background: #f9a825; color: #1a1a1a; font-size: 0.68rem; font-weight: 700; vertical-align: middle; }
     .run-live-tag mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .run-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; }
     .run-badge mat-icon { font-size: 17px; width: 17px; height: 17px; color: #fff; }
@@ -136,6 +167,13 @@ export class AdminGithubActionsComponent implements OnInit {
   /** Ref des laufenden Builds: "master" bei :dev, Tag-Name (z. B. "v0.234.0") bei :prod. */
   buildRef: string | null = null;
 
+  /** „Jetzt" in ms, im 1-s-Takt aktualisiert → treibt den Live-Countdown der ETA. */
+  private nowMs = Date.now();
+  /** Aktuell laufende CI-Builds mit geschätzter Restzeit (Mittel der letzten abgeschlossenen Läufe). */
+  running: { repo: string; remaining: number | null }[] = [];
+  /** Je Stack der aktuell DEPLOYTE Build (der Run, der das laufende Image erzeugt hat) — prominent im Kopf. */
+  deployed: { repo: string; ref: string }[] = [];
+
   ngOnInit(): void {
     // Commit-SHA + Ref des laufenden Builds einmalig laden (fehlt bei alten Images/dev → kein Marker).
     this.http.get<{ sha: string; ref?: string }>('/build-info.json').pipe(catchError(() => of(null))).subscribe(info => {
@@ -152,7 +190,56 @@ export class AdminGithubActionsComponent implements OnInit {
     ).subscribe(data => {
       this.loading = false;
       if (data) { this.overview = data; this.lastUpdated = new Date(); }
+      this.recomputeEta();
     });
+
+    // 1-s-Takt für den Live-Countdown der ETA (Daten selbst kommen alle 5 s).
+    timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.nowMs = Date.now();
+      this.recomputeEta();
+    });
+  }
+
+  /** Mittlere Laufzeit der ABGESCHLOSSENEN Läufe eines Repos (aus den letzten 5), in Sekunden;
+   *  null wenn es keinen abgeschlossenen Referenzlauf gibt. */
+  private avgDurationSec(repo: CiRepo): number | null {
+    const durs = repo.runs
+      .filter(r => r.status === 'completed')
+      .map(r => (Date.parse(r.updatedAt) - Date.parse(r.createdAt)) / 1000)
+      .filter(d => !isNaN(d) && d > 0);
+    if (!durs.length) return null;
+    return Math.round(durs.reduce((a, b) => a + b, 0) / durs.length);
+  }
+
+  /** Aktualisiert (a) die ETA laufender Builds und (b) den je Stack deployten Build. */
+  private recomputeEta(): void {
+    const eta: { repo: string; remaining: number | null }[] = [];
+    const dep: { repo: string; ref: string }[] = [];
+    for (const repo of this.overview?.repos ?? []) {
+      // (a) laufender Build → Restzeit-Schätzung
+      const run = repo.runs.find(r => r.status !== 'completed');
+      if (run) {
+        const started = Date.parse(run.createdAt);
+        if (!isNaN(started)) {
+          const elapsed = Math.max(0, Math.round((this.nowMs - started) / 1000));
+          const avg = this.avgDurationSec(repo);
+          eta.push({ repo: repo.repo, remaining: avg == null ? null : avg - elapsed });
+        }
+      }
+      // (b) deployter Build = der Run, der das laufende Image erzeugt hat (isRunningBuild)
+      const live = repo.runs.find(r => this.isRunningBuild(r, repo));
+      if (live) dep.push({ repo: repo.repo, ref: this.refLabel(live) });
+    }
+    this.running = eta;
+    this.deployed = dep;
+  }
+
+  /** Kompakte Dauer „2m 5s" / „45s" für die ETA-Anzeige. */
+  fmtDur(sec: number): string {
+    const s = Math.max(0, Math.round(sec));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
   }
 
   /** Anzeige-Ref: Branch/Tag-Name, sonst Kurz-SHA. */
