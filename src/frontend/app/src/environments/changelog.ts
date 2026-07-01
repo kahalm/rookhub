@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.241.0';
+export const APP_VERSION = '0.241.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.241.1", date: "2026-07-01", changes: [
+    { en: "Fixed repertoires that stayed stuck in the \"Update\" banner and never refreshed. These belonged to users with no Chessable token stored: their re-fetch was silently skipped on every Update, so they hung forever. Now — exactly as suggested — a course whose data is already cached is re-fetched straight from the cache WITHOUT needing a token (admin update), which even restores repertoires that had lost their PGN. Ones that are neither cached nor have a token are marked current so the banner finally clears (a real re-import still needs the owner to add a token). Requires piratechess v1.0.35.", de: "Repertoires behoben, die im „Aktualisieren\"-Banner hängen blieben und nie refreshten. Sie gehörten Usern ohne hinterlegten Chessable-Token: ihr Re-Fetch wurde bei jedem „Aktualisieren\" still übersprungen und hing dadurch ewig. Jetzt — genau wie vorgeschlagen — wird ein Kurs, dessen Daten bereits gecacht sind, OHNE Token direkt aus dem Cache geholt (Admin-Aktualisierung); das stellt sogar Repertoires wieder her, die ihr PGN verloren hatten. Solche, die weder gecacht sind noch einen Token haben, werden als aktuell markiert, damit das Banner endlich leer wird (ein echter Re-Import erfordert weiterhin, dass der Besitzer einen Token hinterlegt). Erfordert piratechess v1.0.35." },
+  ]},
   { version: "0.241.0", date: "2026-07-01", changes: [
     { en: "Hints now work on EVERY move of a puzzle, not just the first. Previously the graded 1→3 hints only described the opening key move; on later moves the hint button showed nothing. Now each expected move gets its own on-the-fly hint (tier 1 = check/capture/quiet, tier 2 = which piece, tier 3 = the move), and the hint level resets per move. Book/course puzzles still show their pre-computed rich hints on the first move; from there on they fall back to the per-move hints. The recorded \"hints used\" statistic is now the highest tier revealed across the whole solve.", de: "Tipps funktionieren jetzt für JEDEN Zug eines Puzzles, nicht nur den ersten. Vorher beschrieben die gestuften Tipps 1→3 nur den ersten Schlüsselzug; bei späteren Zügen zeigte der Tipp-Knopf nichts. Jetzt bekommt jeder erwartete Zug seinen eigenen on-the-fly Tipp (Stufe 1 = Schach/Schlag/ruhig, Stufe 2 = welche Figur, Stufe 3 = der Zug), und die Tipp-Stufe wird pro Zug zurückgesetzt. Buch-/Kurs-Puzzles zeigen ihre vorberechneten ausführlichen Tipps weiterhin am ersten Zug; ab dann greifen die Pro-Zug-Tipps. Der gespeicherte „Tipps genutzt\"-Wert ist jetzt die höchste über den ganzen Lösungsweg aufgedeckte Stufe." },
   ]},

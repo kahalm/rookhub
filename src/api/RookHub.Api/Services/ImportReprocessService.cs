@@ -158,13 +158,14 @@ public partial class ImportReprocessService
     /// der Bibliothek). Dedup gegen bereits laufende Importe steckt in <c>EnqueueReimportAsync</c>.
     /// Zählt Enqueued/Skipped in <paramref name="result"/>.
     /// </summary>
-    private async Task EnqueueRefetchesAsync(IReadOnlyList<RefetchCandidate> candidates, bool isAdmin, ReprocessResultDto result)
+    private async Task EnqueueRefetchesAsync(IReadOnlyList<RefetchCandidate> candidates, bool isAdmin, ReprocessResultDto result, IReadOnlySet<string>? knownCachedBids = null)
     {
         if (candidates.Count == 0) return;
 
         // Cache-Status ALLER Kandidaten EINMAL en bloc (1 piratechess-Aufruf) statt je Kurs ein teurer
-        // Einzel-Check, der den ganzen Cache-Blob lädt+entpackt.
-        var cachedBids = await _chessableImport.GetCachedBidsAsync(CancellationToken.None);
+        // Einzel-Check, der den ganzen Cache-Blob lädt+entpackt. Der Aufrufer kann die Menge bereits
+        // ermittelt haben (Repertoire-Reprocess braucht sie schon für die Bearer-lose Cache-Entscheidung).
+        var cachedBids = knownCachedBids ?? await _chessableImport.GetCachedBidsAsync(CancellationToken.None);
 
         foreach (var c in candidates)
         {
@@ -209,6 +210,8 @@ public partial class ImportReprocessService
         var stale = reps.Where(r => r.ImportVersion < ImportPipeline.CurrentVersion).ToList();
         // Re-Fetch nur für Chessable-Repertoires, deren gespeichertes PGN die [%alt]/[%info]-Marker NOCH
         // NICHT enthält. Ist es „modern" (bereits enthalten) bzw. Nicht-Chessable → reiner Versions-Mark.
+        // Hinweis: „Aktualisieren" löst inzwischen JEDEN stale-Fall auf (Bearer-Re-Fetch, Cache-Re-Fetch
+        // ohne Bearer, oder Versions-Mark), sodass das Banner danach immer leer wird.
         var refetchable = stale.Count(r => ResolveRepertoireBid(r) != null && !RepertoireSourceModern(r));
         return new ReprocessStatusDto
         {
@@ -235,29 +238,44 @@ public partial class ImportReprocessService
         var result = new ReprocessResultDto();
         var now = DateTime.UtcNow;
         var refetch = new List<RefetchCandidate>();
+        var bearerUsers = await _db.ChessableCredentials.Select(c => c.UserId).ToHashSetAsync(ct);
+        // Ein gecachter Kurs ist AUCH ohne Bearer holbar (piratechess liefert ihn aus dem Rohdaten-Cache) —
+        // aber nur im Admin-Reprocess (trustOwnership; sonst wäre es ein Eigentums-Bypass, [[0.203.9]]).
+        // Cache-Status daher NUR abrufen, wenn es überhaupt einen bearer-losen Chessable-Kandidaten gibt.
+        var needCache = !localOnly && isAdmin && stale.Any(r =>
+            ResolveRepertoireBid(r) is { } b && !RepertoireSourceModern(r) && !bearerUsers.Contains(r.UserId));
+        var cachedBids = needCache
+            ? await _chessableImport.GetCachedBidsAsync(CancellationToken.None)
+            : new HashSet<string>();
         foreach (var r in stale)
         {
             var bid = ResolveRepertoireBid(r);
             if (bid != null && !RepertoireSourceModern(r))
             {
-                if (localOnly) continue; // Chessable-Re-Fetch übers Netz bewusst auslassen
-                // Chessable-Repertoire OHNE moderne Quelle: frisch holen (inkl. [%alt]) und IN-PLACE ins
-                // bestehende Repertoire schreiben (Id/Trainings-Fortschritt bleiben; Version steigt beim
-                // Job-Abschluss). Owner = r.UserId → richtiger Bearer + richtiges Ziel-Repertoire.
-                refetch.Add(new RefetchCandidate(r.UserId, bid, "repertoire", r.Name, r.Id));
+                // Chessable-Repertoire OHNE moderne Quelle = Re-Fetch-Kandidat.
+                if (localOnly) continue; // „Aus Cache"-Modus: Netz-Re-Fetch bewusst auslassen (bleibt stale)
+                if (bearerUsers.Contains(r.UserId) || (isAdmin && cachedBids.Contains(bid)))
+                {
+                    // Frisch holen (inkl. [%alt]) und IN-PLACE ins bestehende Repertoire schreiben (Id/
+                    // Trainings-Fortschritt bleiben; Version steigt beim Job-Abschluss). Owner = r.UserId →
+                    // richtiger Bearer bzw. — falls keiner — Cache-Re-Fetch (Admin, gecacht).
+                    refetch.Add(new RefetchCandidate(r.UserId, bid, "repertoire", r.Name, r.Id));
+                    continue;
+                }
+                // Chessable, aber weder Bearer noch (admin-)gecacht → nie automatisch holbar. Statt es ewig
+                // im Banner hängen zu lassen, als aktuell markieren (ein echter Re-Import erfordert erst,
+                // dass der Besitzer einen Bearer hinterlegt). Fällt in den Versions-Mark unten.
             }
-            else
-            {
-                // Nicht-Chessable ODER Chessable mit „moderner" Quelle ([%alt]/[%info] bereits im PGN) →
-                // reiner Versions-Mark (der Trainer liest das PGN live; kein Re-Fetch nötig).
-                r.ImportVersion = ImportPipeline.CurrentVersion;
-                r.UpdatedAt = now;
-                result.Reprocessed++;
-            }
+            // Nicht-Chessable / „moderne" Quelle / Chessable-ohne-Bearer-und-nicht-gecacht → Versions-Mark.
+            r.ImportVersion = ImportPipeline.CurrentVersion;
+            r.UpdatedAt = now;
+            result.Reprocessed++;
         }
 
         // Zentrales Einreihen (Batch-Cache, Backoff, Dedup, Admin-Bypass, kein Abbruch) — geteilt mit Kursen.
-        await EnqueueRefetchesAsync(refetch, isAdmin, result);
+        // Die bereits ermittelte Cache-Menge weiterreichen (spart einen zweiten Abruf); sonst holt sie der
+        // zentrale Pfad selbst (z. B. reine Bearer-Kandidaten, für die needCache nicht griff).
+        await EnqueueRefetchesAsync(refetch, isAdmin, result, needCache ? cachedBids : null);
         await _db.SaveChangesAsync(CancellationToken.None);
         return result;
     }

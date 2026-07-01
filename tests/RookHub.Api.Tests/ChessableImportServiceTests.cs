@@ -695,6 +695,38 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EnqueueReimport_NoBearerButCached_AdminTrust_EnqueuesFromCache()
+    {
+        // Owner OHNE Bearer, Kurs aber gecacht → im Admin-Reprocess (trustOwnership) trotzdem einreihbar;
+        // der Import läuft dann ohne Bearer aus dem piratechess-Cache (FullyCached).
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync(); // KEIN ChessableCredential
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = true }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "320357", "repertoire", "Cached", trustOwnership: true);
+
+        Assert.NotNull(id);
+        var imp = await _db.ChessableImports.SingleAsync(i => i.Bid == "320357" && i.UserId == user.Id);
+        Assert.True(imp.FullyCached);
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_NoBearerNotCached_ReturnsNull()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync(); // KEIN ChessableCredential
+        var svc = BuildSvc(new ScriptedHandler(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/cached") ? JsonOk(new { cached = false }) : JsonOk(new { })));
+
+        var id = await svc.EnqueueReimportAsync(user.Id, "999", "repertoire", "X", trustOwnership: true);
+
+        Assert.Null(id); // ohne Bearer und ohne Cache kein Weg → nicht eingereiht
+    }
+
+    [Fact]
     public async Task EnqueueReimport_ImportAlreadyRunning_SkipsSecond()
     {
         var user = new AppUser { Username = "u", PasswordHash = "h" };

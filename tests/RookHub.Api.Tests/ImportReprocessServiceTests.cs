@@ -424,6 +424,8 @@ public class ImportReprocessServiceTests : IDisposable
         var user = new AppUser { Username = "u", PasswordHash = "h" };
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = user.Id, EncryptedBearer = "x" });
+        await _db.SaveChangesAsync();
         var rep = await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "128648"); // CourseId-Weg
         var stub = new StubCourseReimporter { ReturnId = 555 };
 
@@ -441,18 +443,46 @@ public class ImportReprocessServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ReprocessRepertoires_Chessable_NoBearer_CountsAsSkipped()
+    public async Task ReprocessRepertoires_Chessable_NoBearerNotCached_MarksLocally_ClearsBanner()
     {
+        // Kein Bearer des Owners UND nicht gecacht → nie automatisch holbar. Statt es (wie früher) bei
+        // jedem „Aktualisieren" still zu überspringen und ewig im Banner hängen zu lassen, wird es als
+        // aktuell markiert (Banner klärt; echter Re-Import erst nach Bearer-Hinterlegung).
         var user = new AppUser { Username = "u", PasswordHash = "h" };
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
-        await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn");
-        var stub = new StubCourseReimporter { ReturnId = null }; // kein Bearer → Enqueue scheitert
+        var rep = await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn");
+        var stub = new StubCourseReimporter { ReturnId = null }; // egal — es wird gar nicht erst eingereiht
 
         var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id);
 
         Assert.Equal(0, result.Enqueued);
-        Assert.Equal(1, result.Skipped);
+        Assert.Empty(stub.Calls);                    // kein Enqueue-Versuch
+        Assert.Equal(1, result.Reprocessed);         // stattdessen Versions-Mark
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_Admin_NoBearerButCached_RefetchesFromCache()
+    {
+        // Genau der gemeldete Fall: ein Repertoire eines Users OHNE Bearer, dessen Kurs aber (von jemand
+        // anderem) gecacht ist → Admin-Reprocess holt es OHNE Bearer aus dem Cache in-place.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        var rep = await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "320357");
+        var stub = new StubCourseReimporter { ReturnId = 777, CachedBids = new HashSet<string> { "320357" } };
+
+        var result = await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id, isAdmin: true);
+
+        Assert.Equal(1, result.Enqueued);
+        var call = Assert.Single(stub.Calls);
+        Assert.Equal("320357", call.Bid);
+        Assert.Equal(rep.Id, call.TargetRepertoireId);
+        Assert.True(call.TrustOwnership);
+        Assert.Equal(1, stub.GetCachedBidsCalls);            // genau EIN Batch-Abruf
+        // Version bleibt veraltet, bis der Hintergrund-Job das frische PGN eingespielt hat.
+        Assert.Equal(0, (await _db.Repertoires.SingleAsync(r => r.Id == rep.Id)).ImportVersion);
     }
 
     [Fact]
@@ -464,11 +494,13 @@ public class ImportReprocessServiceTests : IDisposable
         await _db.SaveChangesAsync();
         await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "111");
         await SeedRepertoireAsync(user.Id, 0, fileName: null, courseId: "222");
-        var stub = new StubCourseReimporter { ReturnId = 1 };
+        // gecacht → im Admin-Reprocess auch ohne Bearer holbar (sonst würden beide nur versions-markiert)
+        var stub = new StubCourseReimporter { ReturnId = 1, CachedBids = new HashSet<string> { "111", "222" } };
 
         await ReprocessTestHelper.Build(_db, stub).ReprocessRepertoiresAsync(user.Id, isAdmin: true);
 
         Assert.Equal(1, stub.GetCachedBidsCalls);              // genau EIN Batch-Abruf für beide
+        Assert.Equal(2, stub.Calls.Count);
         Assert.All(stub.Calls, c => Assert.True(c.TrustOwnership));
     }
 }

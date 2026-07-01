@@ -100,7 +100,14 @@ public class ChessableImportService : ICourseReimporter
     public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
     {
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == ownerUserId, ct);
-        if (cred is null) return null;
+        // Cache-Status vorab (Batch-Wert bevorzugt) — bestimmt auch, ob ein Owner OHNE Bearer bedient
+        // werden kann: ein voll-gecachter Kurs kommt aus dem piratechess-Rohdaten-Cache, ganz ohne
+        // Chessable-Kontakt/Bearer.
+        var fullyCached = knownCached ?? await _proxy.IsCourseCachedAsync(bid, ct);
+        // Kein Bearer des Owners: nur zulässig, wenn der Kurs gecacht ist (Re-Fetch aus dem Cache
+        // ohne Bearer) UND der Aufrufer vertrauenswürdig ist (Admin-Massen-Reprocess). Sonst kein
+        // Weg, den Kurs zu holen → null (der Reprocess markiert das Repertoire dann nur als aktuell).
+        if (cred is null && !(trustOwnership && fullyCached)) return null;
         // SICHERHEIT: nur Kurse re-fetchen, die WIRKLICH in der Chessable-Bibliothek des Owners liegen.
         // Sonst ließe sich der Eigentums-Check von StartImport umgehen — ein User kann ein eigenes
         // Repertoire mit beliebigem ChessableCourseId bzw. Dateinamen `chessable-{bid}.pgn` anlegen
@@ -109,7 +116,7 @@ public class ChessableImportService : ICourseReimporter
         // Ausnahme: trustOwnership (Admin-Massen-Reprocess) — Chessables getHomeData listet nur einen Teil
         // der Bibliothek, daher würde der Check eigene, längst importierte Kurse fälschlich abweisen; Admins
         // dürfen ohnehin jeden Kurs holen.
-        if (!trustOwnership && !await OwnerHasCourseAsync(cred, bid, ct)) return null;
+        if (!trustOwnership && !await OwnerHasCourseAsync(cred!, bid, ct)) return null;
         // Dedup: läuft/pausiert für diesen (Owner, bid) bereits ein Import, KEINEN zweiten anlegen.
         // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
         // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
@@ -130,8 +137,8 @@ public class ChessableImportService : ICourseReimporter
             // Lane-Klassifikation: voll-gecachte Kurse → schnelle, netzfreie Lane (kein Warten hinter
             // den seriellen Downloads). Cache-Check ist piratechess-DB-lokal (kein Chessable-Abruf).
             // Beim Massen-Reprocess kommt der Status vorab aus einem Batch-Abruf (knownCached) → spart
-            // je Kurs einen teuren Einzel-Check, der den ganzen Cache-Blob lädt.
-            FullyCached = knownCached ?? await _proxy.IsCourseCachedAsync(bid, ct),
+            // je Kurs einen teuren Einzel-Check, der den ganzen Cache-Blob lädt. (Oben bereits ermittelt.)
+            FullyCached = fullyCached,
         };
         _db.ChessableImports.Add(import);
         await _db.SaveChangesAsync(ct);
@@ -306,34 +313,46 @@ public class ChessableImportService : ICourseReimporter
                 // Bearer-Quelle: i.d.R. der Besitzer; beim Admin-Download „im Namen eines Users" der Ziel-User.
                 var bearerUserId = import.BearerUserId ?? import.UserId;
                 var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == bearerUserId, ct);
+                string bearer;
                 if (cred is null)
                 {
-                    await FailAsync(import, "Kein Chessable-Bearer gespeichert");
-                    return;
+                    // Kein Bearer: NUR möglich, wenn der Kurs voll gecacht ist — dann liefert piratechess
+                    // den Kurs ohne Chessable-Kontakt/Bearer aus dem Rohdaten-Cache (leerer Bearer-String).
+                    // Sonst gibt es keinen Weg, den Kurs zu holen → echter Fehler.
+                    if (import.FullyCached != true)
+                    {
+                        await FailAsync(import, "Kein Chessable-Bearer gespeichert");
+                        return;
+                    }
+                    bearer = string.Empty;
                 }
-                // Circuit-Breaker: ist der Bearer als unbrauchbar markiert (Account gesperrt/gelöscht
-                // bzw. Token tot), KEINE weitere Chessable-Anfrage damit machen. Statt zu scheitern
-                // pausieren (Phase "bearer-blocked") — ein erfolgreicher „Testen“-Klick nimmt den
-                // Import via ChessableBearerBreaker.ClearAndResumeAsync automatisch wieder auf.
-                // AUSNAHME: voll-gecachte Kurse (FullyCached) kommen ohne Chessable-Abruf aus dem
-                // piratechess-DB-Cache → ein toter Bearer blockt sie nicht, der Import läuft durch.
-                if (cred.BlockedAt is not null && import.FullyCached != true)
+                else
                 {
-                    import.Status = "paused";
-                    import.Phase = "bearer-blocked";
-                    import.Attempts = 0;
-                    await _db.SaveChangesAsync(ct);
-                    _logger.LogInformation(
-                        "Chessable-Import {Id} pausiert: Bearer von User {UserId} gesperrt (Circuit-Breaker) — wartet auf „Testen“",
-                        import.Id, bearerUserId);
-                    return;
-                }
+                    // Circuit-Breaker: ist der Bearer als unbrauchbar markiert (Account gesperrt/gelöscht
+                    // bzw. Token tot), KEINE weitere Chessable-Anfrage damit machen. Statt zu scheitern
+                    // pausieren (Phase "bearer-blocked") — ein erfolgreicher „Testen“-Klick nimmt den
+                    // Import via ChessableBearerBreaker.ClearAndResumeAsync automatisch wieder auf.
+                    // AUSNAHME: voll-gecachte Kurse (FullyCached) kommen ohne Chessable-Abruf aus dem
+                    // piratechess-DB-Cache → ein toter Bearer blockt sie nicht, der Import läuft durch.
+                    if (cred.BlockedAt is not null && import.FullyCached != true)
+                    {
+                        import.Status = "paused";
+                        import.Phase = "bearer-blocked";
+                        import.Attempts = 0;
+                        await _db.SaveChangesAsync(ct);
+                        _logger.LogInformation(
+                            "Chessable-Import {Id} pausiert: Bearer von User {UserId} gesperrt (Circuit-Breaker) — wartet auf „Testen“",
+                            import.Id, bearerUserId);
+                        return;
+                    }
 
-                var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
-                if (bearer is null)
-                {
-                    await FailAsync(import, "Chessable-Bearer konnte nicht entschlüsselt werden (bitte neu hinterlegen)");
-                    return;
+                    var decrypted = _encryption.TryDecrypt(cred.EncryptedBearer);
+                    if (decrypted is null)
+                    {
+                        await FailAsync(import, "Chessable-Bearer konnte nicht entschlüsselt werden (bitte neu hinterlegen)");
+                        return;
+                    }
+                    bearer = decrypted;
                 }
                 var mode = import.Target == "book" ? "FirstKeyMove" : "None";
 
