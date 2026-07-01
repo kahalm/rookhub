@@ -60,7 +60,25 @@ public class CourseConversionTests : IDisposable
         Assert.False(saved.UseForExtension);              // wie importierte Kurse: Extension-Nutzung aus
         var file = Assert.Single(saved.Files);
         Assert.Contains("1. e4 e5", file.PgnContent);      // Kurs-PGN im Repertoire gelandet
-        // Original-Buch bleibt bestehen.
+        // Verschieben: der EIGENE Original-Kurs ist nach der Umwandlung entfernt.
+        Assert.False(await _db.Books.AnyAsync(b => b.Id == book.Id));
+    }
+
+    [Fact]
+    public async Task ConvertCourseToRepertoire_SharedCourse_KeepsOriginal()
+    {
+        // Geteiltes Gruppen-Buch (kein OwnerUserId), für User 1 über eine Gruppe freigegeben.
+        var book = new Book { FileName = "group.pgn", DisplayName = "Group Course", OwnerUserId = null, SourcePgn = PlainPgn, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        _db.UserGroups.Add(new UserGroup { UserId = 1, GroupId = 7 });
+        await _db.SaveChangesAsync();
+        _db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = 7 });
+        await _db.SaveChangesAsync();
+
+        var rep = await _courses.ConvertToRepertoireAsync(userId: 1, bookId: book.Id, isAdmin: false);
+
+        Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));
+        // Geteilter Kurs gehört dem User nicht → bleibt bestehen (nicht gelöscht).
         Assert.True(await _db.Books.AnyAsync(b => b.Id == book.Id));
     }
 

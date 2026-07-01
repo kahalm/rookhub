@@ -486,6 +486,13 @@ export class CourseListComponent implements OnInit {
     this.courseService.convertToRepertoire(course.bookId).subscribe({
       next: rep => {
         this.converting = null;
+        // Verschieben: ein EIGENER Kurs wurde serverseitig entfernt → auch aus der Liste nehmen.
+        // Geteilte Gruppen-/Admin-Kurse bleiben bestehen (gehören dem User nicht).
+        if (course.isOwned) {
+          this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+          delete this.chaptersByBook[course.bookId];
+          this.courseService.notifyAccessChanged();
+        }
         this.snackbar.info(this.translate.instant('courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
       },
       error: () => {

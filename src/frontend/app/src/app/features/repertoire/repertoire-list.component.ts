@@ -181,6 +181,8 @@ export class RepertoireListComponent implements OnInit {
     this.repertoireService.convertToCourse(rep.id).subscribe({
       next: course => {
         this.converting = null;
+        // Verschieben: das Original-Repertoire wurde serverseitig entfernt → aus der Liste nehmen.
+        this.repertoires = this.repertoires.filter(r => r.id !== rep.id);
         this.snackbar.info(this.translate.instant('repertoire.list.convertedToCourse', { name: course.displayName }), { action: 'common.ok', duration: 3000 });
       },
       error: (e) => {

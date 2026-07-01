@@ -181,9 +181,11 @@ public class RepertoireController : BaseApiController
         }
     }
 
-    /// <summary>„Repertoire → Kurs umwandeln": legt aus dem Repertoire-PGN einen persönlichen Kurs an.
-    /// Funktioniert nur mit Puzzle-PGN im Chessable-Stil (FEN + Round + Trainingsmarker je Zug);
-    /// ein reines Eröffnungs-Repertoire ohne Puzzle-Marker liefert 400 (kein quiz-barer Inhalt).</summary>
+    /// <summary>„Repertoire → Kurs umwandeln" (Verschieben): legt aus dem Repertoire-PGN einen
+    /// persönlichen Kurs an und ENTFERNT anschließend das Original-Repertoire. Funktioniert nur mit
+    /// Puzzle-PGN im Chessable-Stil (FEN + Round + Trainingsmarker je Zug); ein reines Eröffnungs-
+    /// Repertoire ohne Puzzle-Marker liefert 400 (kein quiz-barer Inhalt) — dann bleibt das Repertoire
+    /// erhalten (Löschung passiert erst NACH erfolgreicher Kurs-Erstellung).</summary>
     [HttpPost("{id}/convert-to-course")]
     public async Task<IActionResult> ConvertToCourse(int id)
     {
@@ -193,6 +195,8 @@ public class RepertoireController : BaseApiController
             var detail = await _repertoireService.GetByIdAsync(id, userId);
             var pgn = await _repertoireService.GetCombinedPgnAsync(id, userId);
             var course = await _courseService.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
+            // Verschieben statt Kopieren: das Original-Repertoire nach erfolgreicher Umwandlung entfernen.
+            await _repertoireService.DeleteAsync(id, userId);
             return Ok(course);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.238.4';
+export const APP_VERSION = '0.238.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.238.5", date: "2026-07-01", changes: [
+    { en: "Converting a course to a repertoire (or vice versa) now MOVES it instead of copying: the original disappears once the conversion succeeds. A shared/group course you don't own stays (it isn't yours to remove); your own courses and your repertoires are removed after conversion. If the conversion fails (e.g. a plain opening repertoire with no puzzle markers), nothing is deleted.", de: "Ein Kurs in ein Repertoire (oder umgekehrt) umzuwandeln VERSCHIEBT ihn jetzt, statt zu kopieren: das Original verschwindet nach erfolgreicher Umwandlung. Ein geteilter Gruppen-Kurs, der dir nicht gehört, bleibt (den darfst du nicht entfernen); eigene Kurse und deine Repertoires werden nach der Umwandlung entfernt. Schlägt die Umwandlung fehl (z. B. reines Eröffnungs-Repertoire ohne Puzzle-Marker), wird nichts gelöscht." },
+  ]},
   { version: "0.238.4", date: "2026-07-01", changes: [
     { en: "Chessable bearer input now accepts the whole \"Bearer eyJ…\" string, not just the raw JWT. When you paste the full Authorization header value, the leading \"Bearer \" prefix is stripped automatically before saving (case-insensitive, tolerates extra whitespace).", de: "Das Chessable-Bearer-Feld akzeptiert jetzt auch den kompletten „Bearer eyJ…“-String, nicht nur den reinen JWT. Wird der ganze Authorization-Header-Wert eingefügt, wird das führende „Bearer “-Präfix vor dem Speichern automatisch entfernt (Groß-/Kleinschreibung egal, zusätzliche Leerzeichen erlaubt)." },
   ]},

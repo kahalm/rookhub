@@ -352,4 +352,45 @@ public class RepertoireControllerTests : IDisposable
             ContentType = "application/octet-stream"
         };
     }
+
+    // ---- ConvertToCourse (Verschieben: Original-Repertoire wird nach Erfolg entfernt) ----
+
+    private const string PuzzlePgn = @"
+[Event ""Book""]
+[Round ""1.1""]
+[White ""Idea""]
+[Result ""*""]
+[SetUp ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+{ [%tqu ""En"",""Finde den Zug""] Pointe. } 2.Nf3 Nc6 3. Bb5 a6 *
+";
+    private const string PlainConvertPgn = "[Event \"Opening\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *";
+
+    [Fact]
+    public async Task ConvertToCourse_WithPuzzlePgn_CreatesCourse_AndDeletesRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await _service.CreateFromPgnAsync(user.Id, "Puzzles", "p.pgn", PuzzlePgn);
+
+        var result = await _controller.ConvertToCourse(rep.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.True(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));   // neuer Kurs da
+        Assert.False(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));      // Original entfernt
+    }
+
+    [Fact]
+    public async Task ConvertToCourse_PlainPgn_BadRequest_KeepsRepertoire()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var rep = await _service.CreateFromPgnAsync(user.Id, "Opening", "o.pgn", PlainConvertPgn);
+
+        var result = await _controller.ConvertToCourse(rep.Id);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt bei Fehlschlag
+    }
 }
