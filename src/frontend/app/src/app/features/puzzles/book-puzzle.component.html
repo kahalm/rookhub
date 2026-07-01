@@ -85,10 +85,20 @@
                   <div class="ctx-text">
                     @if (puzzle.title) { <p class="meta-title">{{ puzzle.title }}</p> }
                     @if (puzzle.chapter) { <p class="meta-chapter">{{ puzzle.chapter }}</p> }
-                    @if (puzzle.comment) { <p class="meta-comment">({{ puzzle.comment }})</p> }
                     <span class="book-name">{{ displayBookName }}</span>
                   </div>
                 </div>
+
+                <!-- Info-/Kommentar-Block: der Erklär-/Zug-Kommentar zur Linie steht über der
+                     Fortschrittsanzeige (für alle Modi, nicht nur Info-Linien) — nur EINMAL, nicht
+                     zusätzlich als Kopfzeile. Im Review/Info-Modus der Kommentar zum durchgespielten
+                     Zug, sonst die Einleitung des Puzzles. -->
+                @if (displayComment) {
+                  <div class="ctx-comment">
+                    <mat-icon>chat_bubble_outline</mat-icon>
+                    <p>{{ displayComment }}</p>
+                  </div>
+                }
 
                 @if (puzzle.difficulty || puzzle.bookRating || puzzle.tags) {
                   <div class="ctx-badges">
@@ -376,15 +386,7 @@
             </div>
           }
 
-          <!-- Zug-Kommentar (Buch-Kommentar zum aktuell durchgespielten Zug) -->
-          @if (reviewMode && moveComment) {
-            <mat-card class="move-comment-card" appearance="outlined">
-              <mat-card-content>
-                <mat-icon>chat_bubble_outline</mat-icon>
-                <p>{{ moveComment }}</p>
-              </mat-card-content>
-            </mat-card>
-          }
+          <!-- (Zug-/Info-Kommentar wandert nach oben in die Kontext-Card, über die Fortschrittsanzeige.) -->
 
           <!-- Untere Aktionen: Letztes analysieren + Share (immer) + Ganze Partie (nach Lösen) -->
           @if (puzzle) {

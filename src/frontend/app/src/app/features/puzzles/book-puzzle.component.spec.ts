@@ -499,4 +499,60 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
     expect(setup).toHaveBeenCalled();
     expect(c.state).not.toBe('INFO');
   });
+
+  it('courseNext auf einer Info-Linie merkt sie serverseitig + offline (überspringen beim Wiedereinstieg)', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'loadCourseNext');   // eigentliches Nachladen unterbinden
+    const seen = jasmine.createSpy('markInfoSeen').and.returnValue(of(undefined));
+    c.courseService.markInfoSeen = seen;
+    c.inCourse = true;
+    c.courseBookId = 5;
+    c.courseModeKind = 'sequential';
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4', bookFileName: 'b', isInfoOnly: true };
+
+    c.courseNext();
+
+    expect(seen).toHaveBeenCalledWith(5, 7);
+    expect((c as any).offlineCourseSolvedIds.has(7)).toBeTrue();
+  });
+
+  it('courseNext auf einer Quiz-Linie merkt NICHT als Info-View', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'loadCourseNext');
+    const seen = jasmine.createSpy('markInfoSeen').and.returnValue(of(undefined));
+    c.courseService.markInfoSeen = seen;
+    c.inCourse = true;
+    c.courseBookId = 5;
+    c.courseModeKind = 'sequential';
+    c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };   // kein isInfoOnly
+
+    c.courseNext();
+    expect(seen).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
+  it('außerhalb des Reviews zeigt sie den Puzzle-Kommentar', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', comment: 'Einleitung' };
+    c.reviewMode = false;
+    c.moveComment = 'sollte-ignoriert-werden';
+    expect(c.displayComment).toBe('Einleitung');
+  });
+
+  it('im Review bevorzugt sie den Zug-Kommentar, fällt sonst auf den Puzzle-Kommentar zurück', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', comment: 'Einleitung' };
+    c.reviewMode = true;
+    c.moveComment = 'Zug-Kommentar';
+    expect(c.displayComment).toBe('Zug-Kommentar');
+    c.moveComment = null;
+    expect(c.displayComment).toBe('Einleitung');
+  });
+
+  it('ohne Puzzle ist sie null', () => {
+    const c = makeComponent();
+    c.puzzle = null;
+    expect(c.displayComment).toBeNull();
+  });
 });

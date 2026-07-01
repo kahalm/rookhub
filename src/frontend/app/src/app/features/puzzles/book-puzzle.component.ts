@@ -631,6 +631,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return Math.max(0, this.courseTotal - this.courseSolved);
   }
 
+  /** Der EINE Kommentar-Block über der Fortschrittsanzeige (ersetzt die frühere doppelte Anzeige:
+   *  Kopf-Kommentar + separate Zug-Kommentar-Card). Im Review-/Info-Modus der Kommentar zum aktuell
+   *  durchgespielten Zug (fällt auf die Einleitung des Puzzles zurück, wenn der Zug keinen hat),
+   *  sonst die Einleitung/den Kommentar des Puzzles. Gilt für alle Modi, nicht nur Info-Linien. */
+  get displayComment(): string | null {
+    if (!this.puzzle) return null;
+    if (this.reviewMode) return this.moveComment ?? this.puzzle.comment ?? null;
+    return this.puzzle.comment ?? null;
+  }
+
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
   private loadCourseNext(after?: number, exclude?: number): void {
     if (this.courseBookId == null) return;
@@ -740,6 +750,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** „Nächstes Puzzle" / „Überspringen": eins weiter im jeweiligen Modus. */
   courseNext(): void {
     const cur = this.puzzle?.id;
+    // Sequenziell durchgeklickte Info-/Erklärlinie merken → beim nächsten Wiedereinstieg wird sie
+    // übersprungen (der Kurs setzt dahinter fort statt sie erneut zu zeigen).
+    if (cur != null && this.puzzle?.isInfoOnly && this.inCourse && this.courseBookId != null) {
+      this.offlineCourseSolvedIds.add(cur);   // offline dieselbe Info-Linie in dieser Sitzung überspringen
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        this.courseService.markInfoSeen(this.courseBookId, cur).subscribe({ next: () => {}, error: () => {} });
+      }
+    }
     if (this.courseModeKind === 'random') this.loadCourseNext(undefined, cur);
     else this.loadCourseNext(cur, undefined);
   }

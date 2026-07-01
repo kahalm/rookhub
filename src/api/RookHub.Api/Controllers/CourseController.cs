@@ -148,6 +148,16 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Merkt eine sequenziell durchgeklickte Info-/Erklärlinie — beim nächsten Wiedereinstieg
+    /// startet der Kurs dahinter statt sie erneut zu zeigen. 404 wenn die Linie nicht zum (zugänglichen)
+    /// Buch gehört oder keine Info-Linie ist.</summary>
+    [HttpPost("{bookId}/info-seen")]
+    public async Task<IActionResult> MarkInfoSeen(int bookId, [FromBody] MarkInfoSeenDto dto)
+    {
+        try { await _service.MarkInfoSeenAsync(GetUserId(), bookId, dto.BookPuzzleId, IsAdmin); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>Setzt den Fortschritt eines Kurses zurück (löscht alle gelösten Markierungen).</summary>
     [HttpPost("{bookId}/reset")]
     public async Task<IActionResult> Reset(int bookId)

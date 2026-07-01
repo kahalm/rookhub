@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.234.1';
+export const APP_VERSION = '0.235.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,10 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.235.0", date: "2026-07-01", changes: [
+    { en: "Course info/explanation lines: once you've clicked through one in sequential mode it's now remembered — next time you resume the course it continues after it instead of showing the same intro line from the top again. (Cleared when you reset the course.)", de: "Kurs-Info-/Erklärlinien: Hast du eine im sequenziellen Modus einmal durchgeklickt, wird sie jetzt gemerkt — beim nächsten Wiedereinstieg setzt der Kurs dahinter fort, statt dieselbe Einleitungslinie wieder von vorne zu zeigen. (Wird beim Zurücksetzen des Kurses vergessen.)" },
+    { en: "Puzzle comment display cleaned up (courses & books, all modes — not just info lines): the line's comment/explanation was shown twice (once as a header, once as a separate card below). It now appears only once, as a single block right above the progress bar.", de: "Kommentar-Anzeige aufgeräumt (Kurse & Bücher, alle Modi — nicht nur Info-Linien): Der Kommentar/Erklärtext einer Linie wurde doppelt gezeigt (einmal als Kopfzeile, einmal als eigene Karte darunter). Er erscheint jetzt nur noch einmal, als ein Block direkt über der Fortschrittsanzeige." },
+  ]},
   { version: "0.234.1", date: "2026-07-01", changes: [
     { en: "Chessable import [piratechess]: courses your account doesn't own now fail with the honest reason “You do not own this course.” instead of the misleading “Course has no chapters”. (Chessable returns BOOK_NOT_OWNED with an empty message field and the real text in userFriendlyErrorMessage, which the error extractor now reads.)", de: "Chessable-Import [piratechess]: Kurse, die dein Account nicht besitzt, scheitern jetzt mit dem ehrlichen Grund „You do not own this course.“ statt dem irreführenden „Course has no chapters“. (Chessable liefert BOOK_NOT_OWNED mit leerem message-Feld und dem echten Text in userFriendlyErrorMessage, das der Fehler-Extraktor jetzt ausliest.)" },
   ]},

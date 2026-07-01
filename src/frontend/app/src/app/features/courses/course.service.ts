@@ -153,6 +153,12 @@ export class CourseService {
     return this.http.post<CourseProgress>(`/api/courses/${bookId}/reset`, {});
   }
 
+  /** Merkt eine sequenziell durchgeklickte Info-/Erklärlinie — beim nächsten Wiedereinstieg
+   *  startet der Kurs dahinter statt sie erneut zu zeigen. */
+  markInfoSeen(bookId: number, bookPuzzleId: number): Observable<void> {
+    return this.http.post<void>(`/api/courses/${bookId}/info-seen`, { bookPuzzleId });
+  }
+
   /** Wie viele (verwaltbare) Kurse müssen wegen einer neueren Aufbereitungs-Pipeline neu aufbereitet werden? */
   reprocessStatus(): Observable<ReprocessStatus> {
     return this.http.get<ReprocessStatus>('/api/courses/reprocess/status');

@@ -136,6 +136,7 @@ public class BookAdminService
         // auf BookPuzzle — EF löscht beim SaveChanges die Dependents (CoursePuzzleResult) vor
         // den Principals (BookPuzzle), sodass die Reihenfolge auch real korrekt ist.
         _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
+        _db.CourseInfoViews.RemoveRange(_db.CourseInfoViews.Where(iv => iv.BookId == id));
         _db.CourseAttempts.RemoveRange(_db.CourseAttempts.Where(a => a.BookId == id));
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));

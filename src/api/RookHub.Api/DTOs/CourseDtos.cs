@@ -102,6 +102,13 @@ public class RecordCourseResultDto
     public int HintsUsed { get; set; }
 }
 
+/// <summary>Meldet eine sequenziell durchgeklickte Info-/Erklärlinie (damit sie beim nächsten
+/// Wiedereinstieg übersprungen wird).</summary>
+public class MarkInfoSeenDto
+{
+    public int BookPuzzleId { get; set; }
+}
+
 /// <summary>Fortschritt eines Kurses (Buch) für den aktuellen User.</summary>
 public class CourseProgressDto
 {

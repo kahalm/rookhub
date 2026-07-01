@@ -328,6 +328,64 @@ public class CourseControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkInfoSeen_ThenSequentialResume_SkipsSeenInfoLine()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixSeen", true, false);  // info, quiz
+
+        // Frischer Wiedereinstieg (kein after) zeigt zuerst die Info-Linie.
+        var first = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.Equal(ids[0], first.Puzzle!.Id);
+        Assert.True(first.Puzzle.IsInfoOnly);
+
+        // Info-Linie durchgeklickt → merken.
+        Assert.IsType<NoContentResult>(await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] }));
+
+        // Nächster Wiedereinstieg (wieder kein after) überspringt die gesehene Info-Linie.
+        var resumed = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.Equal(ids[1], resumed.Puzzle!.Id);
+        Assert.False(resumed.Puzzle.IsInfoOnly);
+    }
+
+    [Fact]
+    public async Task MarkInfoSeen_NonInfoPuzzle_Returns404()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixQuiz", false, true);  // quiz, info
+
+        // Quiz-Linien werden über CoursePuzzleResult gemerkt, nicht als Info-View.
+        Assert.IsType<NotFoundObjectResult>(await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] }));
+        Assert.Empty(_db.CourseInfoViews);
+    }
+
+    [Fact]
+    public async Task MarkInfoSeen_Idempotent_OneRow()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixIdem", true);  // info only
+
+        Assert.IsType<NoContentResult>(await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] }));
+        Assert.IsType<NoContentResult>(await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] }));
+        Assert.Single(_db.CourseInfoViews);
+    }
+
+    [Fact]
+    public async Task Reset_ClearsSeenInfoLines()
+    {
+        await CreateUserAsync();
+        var (book, ids) = await SeedMixedBookAsync("MixReset", true, false);  // info, quiz
+        await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] });
+
+        await _controller.Reset(book.Id);
+
+        Assert.Empty(_db.CourseInfoViews);
+        // Nach dem Reset wird die Info-Linie wieder von vorn gezeigt.
+        var next = Unwrap<CourseNextPuzzleDto>(await _controller.GetNext(book.Id, "sequential"));
+        Assert.Equal(ids[0], next.Puzzle!.Id);
+        Assert.True(next.Puzzle.IsInfoOnly);
+    }
+
+    [Fact]
     public async Task GetNext_BookNotFound_Returns404()
     {
         await CreateUserAsync();

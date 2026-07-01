@@ -99,7 +99,6 @@
     /* Puzzle-Metadaten */
     .meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
     .meta-chapter { color: color-mix(in srgb, currentColor 70%, transparent); margin: 0; font-size: 0.95em; }
-    .meta-comment { font-style: italic; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0; font-size: 0.88em; }
     .book-name { font-size: 0.82em; color: color-mix(in srgb, currentColor 45%, transparent); }
     .difficulty-badge {
       font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;
@@ -117,15 +116,19 @@
     .share-full { width: 100%; }
     .love-last.loved { color: #e91e63; }
 
-    /* Zug-Kommentar beim Durchspielen */
-    .move-comment-card mat-card-content {
-      display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.75rem 1rem;
+    /* Info-/Zug-Kommentar-Block in der Kontext-Card, über der Fortschrittsanzeige */
+    .context-card .ctx-comment {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      margin-top: 0.6rem; padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      background: color-mix(in srgb, currentColor 6%, transparent);
+      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
     }
-    .move-comment-card mat-icon {
+    .context-card .ctx-comment mat-icon {
       flex-shrink: 0; font-size: 20px; width: 20px; height: 20px;
       color: color-mix(in srgb, currentColor 45%, transparent); margin-top: 1px;
     }
-    .move-comment-card p {
+    .context-card .ctx-comment p {
       margin: 0; font-size: 0.92em; line-height: 1.4; white-space: pre-wrap;
     }
 
