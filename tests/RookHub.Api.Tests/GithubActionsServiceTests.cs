@@ -17,7 +17,8 @@ public class GithubActionsServiceTests
         "head_sha": "abc1234def5678", "html_url": "https://github.com/kahalm/rookhub/actions/runs/1", "actor": { "login": "kahalm" } } ] }
     """;
 
-    private static GithubActionsService Build(StubHandler handler, bool withToken = true)
+    private static GithubActionsService Build(StubHandler handler, bool withToken = true,
+        IDictionary<string, string?>? extraSettings = null, HttpMessageHandler? buildInfoHandler = null)
     {
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.github.com/") };
         var settings = new Dictionary<string, string?>
@@ -26,8 +27,10 @@ public class GithubActionsServiceTests
             ["GitHub:CacheSeconds"] = "60",
         };
         if (withToken) settings["GitHub:Token"] = "ghp_test";
+        if (extraSettings != null) foreach (var kv in extraSettings) settings[kv.Key] = kv.Value;
         var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
-        return new GithubActionsService(http, config, new MemoryCache(new MemoryCacheOptions()),
+        var factory = new StubHttpClientFactory(buildInfoHandler ?? new StubHandler((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound)));
+        return new GithubActionsService(http, factory, config, new MemoryCache(new MemoryCacheOptions()),
             NullLogger<GithubActionsService>.Instance);
     }
 
@@ -94,8 +97,52 @@ public class GithubActionsServiceTests
         Assert.Equal(2, handler.Calls);
     }
 
+    [Fact]
+    public async Task MergesRunningBuild_FromStackBuildInfo()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));   // GitHub-Runs (head_sha abc1234def5678)
+        // Crawler-build-info liefert dieselbe SHA + master → der Crawler-Run soll als „laufend" markierbar sein.
+        var biHandler = new StubHandler((req, _) =>
+            req.RequestUri!.AbsoluteUri.Contains("/api/health/build-info")
+                ? Json("""{ "sha": "abc1234def5678", "ref": "master" }""")
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?>
+        {
+            ["GitHub:Repos:0"] = "chessresults_crawler",
+            ["Crawler:BaseUrl"] = "http://crawler:8080",
+            ["Crawler:ApiKey"] = "k",
+        }, buildInfoHandler: biHandler);
+
+        var res = await svc.GetOverviewAsync();
+
+        var repo = Assert.Single(res.Repos);
+        Assert.Equal("chessresults_crawler", repo.Repo);
+        Assert.Equal("abc1234def5678", repo.RunningSha);
+        Assert.Equal("master", repo.RunningRef);
+    }
+
+    [Fact]
+    public async Task NoStackConfigured_LeavesRunningBuildNull()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));
+        var svc = Build(handler);   // nur rookhub, keine Stack-URLs
+
+        var res = await svc.GetOverviewAsync();
+
+        var repo = Assert.Single(res.Repos);
+        Assert.Null(repo.RunningSha);
+        Assert.Null(repo.RunningRef);
+    }
+
     private static HttpResponseMessage Json(string body)
         => new(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") };
+
+    private sealed class StubHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpMessageHandler _handler;
+        public StubHttpClientFactory(HttpMessageHandler handler) => _handler = handler;
+        public HttpClient CreateClient(string name) => new(_handler, disposeHandler: false);
+    }
 
     private class StubHandler : HttpMessageHandler
     {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.235.1';
+export const APP_VERSION = '0.236.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.236.0", date: "2026-07-01", changes: [
+    { en: "Admin CI page now also marks the running build of the OTHER stacks (crawler, piratechess, bot), not just rookhub's frontend. Each service now exposes a build-info endpoint reporting its running image's commit SHA + ref (crawler GET /api/health/build-info, piratechess GET /api/chessable/direct/build-info, bot GET /webhook/build-info; all fed by CI build-args GIT_SHA/GIT_REF). The rookhub API polls those (best-effort, short timeout, cached) and the CI page highlights the matching run per stack by SHA+ref (so :dev marks the master run, :prod the tag run). Stacks that are unreachable or run an older image simply show no marker.", de: "Die Admin-CI-Seite markiert jetzt auch den laufenden Build der ANDEREN Stacks (Crawler, piratechess, Bot), nicht nur des rookhub-Frontends. Jeder Dienst hat jetzt einen build-info-Endpoint, der Commit-SHA + Ref seines laufenden Images meldet (Crawler GET /api/health/build-info, piratechess GET /api/chessable/direct/build-info, Bot GET /webhook/build-info; gespeist aus den CI-Build-Args GIT_SHA/GIT_REF). Die rookhub-API fragt die ab (best-effort, kurzer Timeout, gecacht) und die CI-Seite hebt je Stack den passenden Run per SHA+Ref hervor (:dev markiert den master-Run, :prod den Tag-Run). Nicht erreichbare Stacks oder alte Images zeigen einfach keinen Marker." },
+  ]},
   { version: "0.235.1", date: "2026-07-01", changes: [
     { en: "Admin CI page marks exactly the ONE run that built the running image: build-info.json now also carries the build ref (branch for :dev images, tag name for :prod). A master push and its identically-named tag share the same commit SHA, so matching by SHA alone marked both runs — now the running-build marker requires SHA and ref to match, so a :dev deploy highlights the master run and a :prod deploy highlights the tag run. Older images without a ref fall back to SHA-only matching.", de: "Die Admin-CI-Seite markiert jetzt genau den EINEN Run, der das laufende Image gebaut hat: build-info.json trägt zusätzlich den Build-Ref (Branch bei :dev-Images, Tag-Name bei :prod). Ein master-Push und sein gleichnamiger Tag teilen dieselbe Commit-SHA, sodass ein reiner SHA-Abgleich beide Runs markierte — der Laufender-Build-Marker verlangt jetzt SHA UND Ref, sodass ein :dev-Deploy den master-Run und ein :prod-Deploy den Tag-Run hervorhebt. Ältere Images ohne Ref fallen auf reines SHA-Matching zurück." },
   ]},

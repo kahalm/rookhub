@@ -14,7 +14,11 @@ export interface CiRun {
   createdAt: string; updatedAt: string; htmlUrl: string; actor: string | null;
   headSha: string | null; ref: string | null; isTag: boolean;
 }
-export interface CiRepo { repo: string; error: string | null; runs: CiRun[]; }
+export interface CiRepo {
+  repo: string; error: string | null; runs: CiRun[];
+  /** SHA/Ref des in DIESEM Stack laufenden Images (vom Server abgefragt). Für rookhub null → Browser liefert es selbst. */
+  runningSha?: string | null; runningRef?: string | null;
+}
 export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: string; }
 
 /**
@@ -56,7 +60,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                 <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
               }
               @for (run of repo.runs; track run.id) {
-                <a class="run" [class.run-live]="isRunningBuild(run)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                <a class="run" [class.run-live]="isRunningBuild(run, repo)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
                   <span class="run-badge" [ngClass]="badgeClass(run)"
                         [matTooltip]="run.conclusion || run.status">
                     <mat-icon>{{ badgeIcon(run) }}</mat-icon>
@@ -64,7 +68,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                   <span class="run-main">
                     <span class="run-title">
                       {{ run.title || run.name }}
-                      @if (isRunningBuild(run)) {
+                      @if (isRunningBuild(run, repo)) {
                         <span class="run-live-tag" [matTooltip]="'admin.ci.runningBuildTooltip' | translate">
                           <mat-icon>play_circle</mat-icon>{{ 'admin.ci.live' | translate }}
                         </span>
@@ -167,18 +171,22 @@ export class AdminGithubActionsComponent implements OnInit {
   }
 
   /**
-   * Hat dieser Run den aktuell laufenden Frontend-Build erzeugt?
-   * SHA muss passen (Prefix-tolerant) UND — sofern das Image seinen Ref meldet — auch der Ref:
-   * ein master-Push und sein gleichnamiger Tag teilen dieselbe SHA, aber nur EINER baute das
-   * laufende Image (:dev = master-Run, :prod = Tag-Run). Ältere Images ohne Ref matchen wie bisher nur per SHA.
+   * Hat dieser Run das aktuell in `repo` laufende Image erzeugt?
+   * Quelle der laufenden SHA/Ref: für rookhub der Browser (/build-info.json → buildSha/buildRef),
+   * für die anderen Stacks der Server (repo.runningSha/runningRef aus deren build-info-Endpoint).
+   * SHA muss passen (Prefix-tolerant) UND — sofern ein Ref gemeldet wird — auch der Ref: ein master-Push
+   * und sein gleichnamiger Tag teilen dieselbe SHA, aber nur EINER baute das laufende Image
+   * (:dev = master-Run, :prod = Tag-Run). Ältere Images ohne Ref matchen wie bisher nur per SHA.
    */
-  isRunningBuild(run: CiRun): boolean {
-    if (!this.buildSha || !run.headSha) return false;
-    const a = this.buildSha, b = run.headSha;
-    const shaMatch = a === b || a.startsWith(b) || b.startsWith(a);
+  isRunningBuild(run: CiRun, repo: CiRepo): boolean {
+    const isRookhub = repo.repo === 'rookhub';
+    const sha = isRookhub ? this.buildSha : (repo.runningSha ?? null);
+    const ref = isRookhub ? this.buildRef : (repo.runningRef ?? null);
+    if (!sha || !run.headSha) return false;
+    const shaMatch = sha === run.headSha || sha.startsWith(run.headSha) || run.headSha.startsWith(sha);
     if (!shaMatch) return false;
-    if (!this.buildRef) return true;
-    return run.ref === this.buildRef;
+    if (!ref) return true;
+    return run.ref === ref;
   }
 
   badgeClass(run: CiRun): string {

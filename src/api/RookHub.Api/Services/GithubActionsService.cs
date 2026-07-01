@@ -18,6 +18,7 @@ namespace RookHub.Api.Services;
 public class GithubActionsService
 {
     private readonly HttpClient _http;
+    private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _config;
     private readonly IMemoryCache _cache;
     private readonly ILogger<GithubActionsService> _logger;
@@ -33,9 +34,10 @@ public class GithubActionsService
 
     private const string CacheKey = "ci_actions_overview";
 
-    public GithubActionsService(HttpClient http, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger)
+    public GithubActionsService(HttpClient http, IHttpClientFactory httpFactory, IConfiguration config, IMemoryCache cache, ILogger<GithubActionsService> logger)
     {
         _http = http;
+        _httpFactory = httpFactory;
         _config = config;
         _cache = cache;
         _logger = logger;
@@ -64,9 +66,69 @@ public class GithubActionsService
         var repos = _config.GetSection("GitHub:Repos").Get<string[]>() is { Length: > 0 } cfg ? cfg : DefaultRepos;
 
         // Alle Repos parallel abrufen; ein Repo-Fehler kippt nicht die ganze Übersicht.
-        var tasks = repos.Select(r => FetchRepoAsync(owner, r, token, ct)).ToList();
-        var results = await Task.WhenAll(tasks);
-        return new CiOverviewDto(true, results.ToList(), DateTime.UtcNow);
+        var runsTask = Task.WhenAll(repos.Select(r => FetchRepoAsync(owner, r, token, ct)));
+        // Parallel dazu: welche Build-SHA/Ref läuft aktuell je Stack? (crawler/piratechess/bot; best-effort)
+        var buildInfoTask = ResolveRunningBuildsAsync(ct);
+        await Task.WhenAll(runsTask, buildInfoTask);
+
+        var running = buildInfoTask.Result;
+        var results = runsTask.Result.Select(r =>
+            running.TryGetValue(r.Repo, out var bi) && (bi.Sha is { Length: > 0 } || bi.Ref is { Length: > 0 })
+                ? r with { RunningSha = bi.Sha, RunningRef = bi.Ref }
+                : r).ToList();
+        return new CiOverviewDto(true, results, DateTime.UtcNow);
+    }
+
+    /// <summary>Fragt bei den erreichbaren Stacks (crawler/piratechess/bot) deren build-info-Endpoint ab
+    /// → welche Commit-SHA/Ref läuft dort GERADE. Rein best-effort: jeder Fehler/Timeout → kein Eintrag
+    /// (die UI markiert dann nichts für dieses Repo). Das rookhub-Frontend meldet seine SHA selbst im Browser.</summary>
+    private async Task<Dictionary<string, BuildInfo>> ResolveRunningBuildsAsync(CancellationToken ct)
+    {
+        var targets = new List<(string Repo, string? Url, string? HeaderName, string? HeaderValue)>();
+
+        var crawlerBase = _config["Crawler:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(crawlerBase))
+            targets.Add(("chessresults_crawler", Combine(crawlerBase, "api/health/build-info"), "X-Api-Key", _config["Crawler:ApiKey"]));
+
+        var pirateBase = _config["Chessable:ApiUrl"];
+        if (!string.IsNullOrWhiteSpace(pirateBase))
+            targets.Add(("piratechess_docker", Combine(pirateBase, "api/chessable/direct/build-info"), "X-Service-Key", _config["Chessable:ServiceKey"]));
+
+        var botWebhook = _config["SchachBot:WebhookUrl"];
+        if (!string.IsNullOrWhiteSpace(botWebhook) && Uri.TryCreate(botWebhook, UriKind.Absolute, out var botUri))
+            targets.Add(("schach-bot", $"{botUri.Scheme}://{botUri.Authority}/webhook/build-info", null, null));
+
+        var pairs = await Task.WhenAll(targets.Select(async t =>
+            (t.Repo, Info: await FetchBuildInfoAsync(t.Url, t.HeaderName, t.HeaderValue, ct))));
+
+        var map = new Dictionary<string, BuildInfo>();
+        foreach (var (repo, info) in pairs)
+            if (info is not null) map[repo] = info;
+        return map;
+    }
+
+    private static string Combine(string baseUrl, string path) => $"{baseUrl.TrimEnd('/')}/{path}";
+
+    private async Task<BuildInfo?> FetchBuildInfoAsync(string? url, string? headerName, string? headerValue, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        try
+        {
+            using var client = _httpFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(4);   // Stack-Ausfall darf die CI-Übersicht nicht hängen lassen
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            if (!string.IsNullOrEmpty(headerName) && !string.IsNullOrEmpty(headerValue))
+                req.Headers.TryAddWithoutValidation(headerName, headerValue);
+            using var resp = await client.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var bi = await resp.Content.ReadFromJsonAsync<BuildInfo>(GithubJson, ct);
+            return bi;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "build-info-Abruf von {Url} fehlgeschlagen (Stack evtl. nicht erreichbar/altes Image)", url);
+            return null;
+        }
     }
 
     private async Task<CiRepoDto> FetchRepoAsync(string owner, string repo, string token, CancellationToken ct)
@@ -138,4 +200,7 @@ public class GithubActionsService
     private record ActorObj(string Login);
     private record TagItem(string Name, TagCommit? Commit);
     private record TagCommit(string Sha);
+
+    /// <summary>Antwort der stack-eigenen build-info-Endpoints: <c>{ "sha": …, "ref": … }</c>.</summary>
+    private record BuildInfo(string? Sha, string? Ref);
 }
