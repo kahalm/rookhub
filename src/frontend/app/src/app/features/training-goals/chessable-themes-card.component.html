@@ -1,0 +1,48 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>{{ 'trainingGoals.chessable.title' | translate }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p class="intro small">{{ 'trainingGoals.chessable.intro' | translate }}</p>
+    <label class="filter-toggle">
+      <input type="checkbox" [ngModel]="chessableUnassignedOnly"
+             (ngModelChange)="toggleUnassignedFilter($event)" />
+      {{ 'trainingGoals.chessable.unassignedOnly' | translate }}
+    </label>
+
+    @if (loadingCourses) {
+      <app-loading-spinner />
+    } @else if (!chessableCourses.length) {
+      <p class="muted">{{ (chessableUnassignedOnly ? 'trainingGoals.chessable.noneUnassigned' : 'trainingGoals.chessable.none') | translate }}</p>
+    } @else {
+      <ul class="course-list">
+        @for (c of chessableCourses; track c.courseId) {
+          <li>
+            <div class="c-main">
+              <span class="c-name">{{ c.courseName || ('trainingGoals.chessable.course' | translate) }}</span>
+              <span class="c-id">#{{ c.courseId }}</span>
+            </div>
+            <span class="c-time">{{ durValue(c.totalSeconds) }} <span class="unit">{{ durUnit(c.totalSeconds) | translate }}</span></span>
+            @if (!c.assignedTheme && c.autoTheme) {
+              <span class="c-auto" [matTooltip]="'trainingGoals.chessable.autoHint' | translate">
+                {{ 'trainingGoals.chessable.auto' | translate }}: {{ ('trainingGoals.theme.' + c.autoTheme) | translate }}
+              </span>
+            } @else if (!c.isAssigned) {
+              <span class="c-unassigned">{{ 'trainingGoals.chessable.unassigned' | translate }}</span>
+            }
+            <mat-form-field appearance="outline" class="c-theme" subscriptSizing="dynamic">
+              <mat-label>{{ 'trainingGoals.chessable.themeLabel' | translate }}</mat-label>
+              <mat-select [ngModel]="selectedTheme(c)" [disabled]="savingCourseId === c.courseId"
+                          (ngModelChange)="assignTheme(c, $event)">
+                <mat-option [value]="null">{{ 'trainingGoals.chessable.clear' | translate }}</mat-option>
+                @for (t of chessableThemes; track t) {
+                  <mat-option [value]="t">{{ ('trainingGoals.theme.' + t.toLowerCase()) | translate }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </li>
+        }
+      </ul>
+    }
+  </mat-card-content>
+</mat-card>

@@ -8,7 +8,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
@@ -16,12 +15,13 @@ import {
   TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
   ManualActivity, ManualActivityInput, ManualActivityKind,
   SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS,
-  ChessableCourseSummary, ChessableTheme,
   ActivityPreset, ActivityPresetInput, TIMER_KINDS,
   ActivityTheme, ACTIVITY_THEMES,
 } from './training-goals.service';
 import { ManualActivitiesCardComponent } from './manual-activities-card.component';
 import { ActivityPresetsCardComponent } from './activity-presets-card.component';
+import { ChessableThemesCardComponent } from './chessable-themes-card.component';
+import { formatDuration } from './duration.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -104,30 +104,9 @@ export function toMinutes(seconds: number): number {
   return Math.round(seconds / 60);
 }
 
-/** Schwellen für die gestufte Dauer-Anzeige. */
-const DURATION_HOURS_FROM_SECONDS = 120 * 60;   // bis 120 min → Minuten, danach Stunden
-const DURATION_DAYS_FROM_SECONDS = 48 * 3600;   // ab 48 h → Tage
-
-/**
- * Formatiert eine Dauer (Sekunden) gestuft als Zahl + i18n-Einheitenschlüssel:
- * < 120 min → Minuten (ganzzahlig), < 48 h → Stunden, sonst Tage (je 1 Nachkommastelle).
- * `lang` steuert nur das Dezimaltrennzeichen.
- */
-export function formatDuration(seconds: number, lang = 'en'): { value: string; unitKey: string } {
-  const s = Math.max(0, seconds);
-  if (s < DURATION_HOURS_FROM_SECONDS) {
-    return { value: String(Math.round(s / 60)), unitKey: 'trainingGoals.min' };
-  }
-  const isHours = s < DURATION_DAYS_FROM_SECONDS;
-  const amount = isHours ? s / 3600 : s / 86400;
-  let value: string;
-  try {
-    value = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(amount);
-  } catch {
-    value = amount.toFixed(1);
-  }
-  return { value, unitKey: isHours ? 'trainingGoals.hours' : 'trainingGoals.days' };
-}
+// Gestufte Dauer-Formatierung liegt in duration.util (Zyklus-Vermeidung mit den Kind-Karten);
+// hier re-exportiert für bestehende Importe/Specs.
+export { formatDuration };
 
 /** Tageshistory-Reihenfolge: neueste zuerst (die Tracker-Tage kommen aufsteigend sortiert). */
 export function orderHistory(days: TrackerDay[]): TrackerDay[] {
@@ -181,8 +160,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
-    MatSelectModule, MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent,
-    ManualActivitiesCardComponent, ActivityPresetsCardComponent,
+    MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent,
+    ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
   ],
   template: `
     <div class="tg-container">
@@ -420,55 +399,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
           </mat-card>
         }
 
-        <!-- Chessable-Kurse: History + manuelle Themen-Zuordnung -->
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ 'trainingGoals.chessable.title' | translate }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p class="intro small">{{ 'trainingGoals.chessable.intro' | translate }}</p>
-            <label class="filter-toggle">
-              <input type="checkbox" [ngModel]="chessableUnassignedOnly"
-                     (ngModelChange)="toggleUnassignedFilter($event)" />
-              {{ 'trainingGoals.chessable.unassignedOnly' | translate }}
-            </label>
-
-            @if (loadingCourses) {
-              <app-loading-spinner />
-            } @else if (!chessableCourses.length) {
-              <p class="muted">{{ (chessableUnassignedOnly ? 'trainingGoals.chessable.noneUnassigned' : 'trainingGoals.chessable.none') | translate }}</p>
-            } @else {
-              <ul class="course-list">
-                @for (c of chessableCourses; track c.courseId) {
-                  <li>
-                    <div class="c-main">
-                      <span class="c-name">{{ c.courseName || ('trainingGoals.chessable.course' | translate) }}</span>
-                      <span class="c-id">#{{ c.courseId }}</span>
-                    </div>
-                    <span class="c-time">{{ durValue(c.totalSeconds) }} <span class="unit">{{ durUnit(c.totalSeconds) | translate }}</span></span>
-                    @if (!c.assignedTheme && c.autoTheme) {
-                      <span class="c-auto" [matTooltip]="'trainingGoals.chessable.autoHint' | translate">
-                        {{ 'trainingGoals.chessable.auto' | translate }}: {{ ('trainingGoals.theme.' + c.autoTheme) | translate }}
-                      </span>
-                    } @else if (!c.isAssigned) {
-                      <span class="c-unassigned">{{ 'trainingGoals.chessable.unassigned' | translate }}</span>
-                    }
-                    <mat-form-field appearance="outline" class="c-theme" subscriptSizing="dynamic">
-                      <mat-label>{{ 'trainingGoals.chessable.themeLabel' | translate }}</mat-label>
-                      <mat-select [ngModel]="selectedTheme(c)" [disabled]="savingCourseId === c.courseId"
-                                  (ngModelChange)="assignTheme(c, $event)">
-                        <mat-option [value]="null">{{ 'trainingGoals.chessable.clear' | translate }}</mat-option>
-                        @for (t of chessableThemes; track t) {
-                          <mat-option [value]="t">{{ ('trainingGoals.theme.' + t.toLowerCase()) | translate }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </li>
-                }
-              </ul>
-            }
-          </mat-card-content>
-        </mat-card>
+        <!-- Chessable-Kurse: History + manuelle Themen-Zuordnung (eigene, self-loading Karte) -->
+        <app-chessable-themes-card (changed)="reload()" />
       }
     </div>
   `,
@@ -606,14 +538,6 @@ export class TrainingGoalsComponent implements OnInit {
   // ----- Manuelle Offline-Aktivitäten (Formular/Liste in ManualActivitiesCardComponent) -----
   manualList: ManualActivity[] = [];
 
-
-  // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
-  readonly chessableThemes: ChessableTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics'];
-  chessableCourses: ChessableCourseSummary[] = [];
-  chessableUnassignedOnly = false;
-  loadingCourses = false;
-  savingCourseId: string | null = null;
-
   constructor(
     private service: TrainingGoalService,
     private snackbar: SnackbarService,
@@ -656,48 +580,8 @@ export class TrainingGoalsComponent implements OnInit {
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
         this.loading = false;
-        this.loadChessableCourses();
       },
       error: () => { this.loading = false; },
-    });
-  }
-
-
-  // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
-
-  /** Lädt die Chessable-Kurs-History (respektiert den „nur unzugeordnet"-Filter). */
-  loadChessableCourses(): void {
-    this.loadingCourses = true;
-    this.service.listChessableCourses(this.chessableUnassignedOnly).subscribe({
-      next: list => { this.chessableCourses = list; this.loadingCourses = false; },
-      error: () => { this.loadingCourses = false; },
-    });
-  }
-
-  toggleUnassignedFilter(on: boolean): void {
-    this.chessableUnassignedOnly = on;
-    this.loadChessableCourses();
-  }
-
-  /** mat-select-Wert je Kurs: das manuell zugeordnete Thema (Großschreibung) oder null. */
-  selectedTheme(c: ChessableCourseSummary): ChessableTheme | null {
-    if (!c.assignedTheme) return null;
-    return (c.assignedTheme.charAt(0).toUpperCase() + c.assignedTheme.slice(1)) as ChessableTheme;
-  }
-
-  /** Thema eines Kurses setzen (null = manuelle Zuordnung entfernen). Aktualisiert danach alles. */
-  assignTheme(c: ChessableCourseSummary, theme: ChessableTheme | null): void {
-    this.savingCourseId = c.courseId;
-    const req = theme
-      ? this.service.setChessableCourseTheme(c.courseId, theme)
-      : this.service.clearChessableCourseTheme(c.courseId);
-    req.subscribe({
-      next: () => {
-        this.savingCourseId = null;
-        this.snackbar.success(this.translate.instant('trainingGoals.chessable.saved'));
-        this.reload(); // Themen-Aufschlüsselung + History neu laden
-      },
-      error: () => { this.savingCourseId = null; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
     });
   }
 

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.14';
+export const APP_VERSION = '0.242.15';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.15", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the \"Chessable courses: history + manual theme assignment\" card was extracted from the large TrainingGoalsComponent into its own self-loading ChessableThemesCardComponent (loads its course list itself, reports theme changes via a (changed) output so the parent reloads the theme breakdown). The chessable-themes state and methods left the parent; MatSelectModule dropped from it. TrainingGoalsComponent is down another ~90 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte „Chessable-Kurse: Verlauf + manuelle Themen-Zuordnung“ wurde aus der großen TrainingGoalsComponent in eine eigene, selbst ladende ChessableThemesCardComponent ausgelagert (lädt ihre Kursliste selbst, meldet Themen-Änderungen über ein (changed)-Output, sodass der Eltern-Container die Themen-Aufschlüsselung neu lädt). Der Chessable-Themen-Zustand samt Methoden verließ den Eltern-Container; MatSelectModule dort entfernt. TrainingGoalsComponent schrumpft um weitere ~90 Zeilen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.14", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the activity-timer presets card on the Training Goals page was extracted into its own ActivityPresetsCardComponent, which loads and manages the presets itself. TrainingGoalsComponent is down from ~1071 to ~820 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte mit den Aktivitäts-Timer-Vorlagen auf der Trainingsziele-Seite wurde in eine eigene ActivityPresetsCardComponent ausgelagert, die die Vorlagen selbst lädt und verwaltet. TrainingGoalsComponent schrumpft von ~1071 auf ~820 Zeilen. Keine sichtbare Änderung." },
   ]},
