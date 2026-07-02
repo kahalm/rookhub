@@ -23,6 +23,7 @@ public class ChessableControllerTests : IDisposable
     private readonly StubHttpMessageHandler _handler;
     private readonly ChessableProxyService _proxy;
     private readonly ChessableController _controller;
+    private readonly ChessableAdminController _admin;
 
     public ChessableControllerTests()
     {
@@ -45,8 +46,11 @@ public class ChessableControllerTests : IDisposable
 
         var queue = new BackgroundTaskQueue();
         var breaker = new ChessableBearerBreaker(_db, queue, NullLogger<ChessableBearerBreaker>.Instance);
-        _controller = new ChessableController(_db, _encryption, _proxy, queue, breaker,
-            new NotificationService(_db), NullLogger<ChessableController>.Instance);
+        var queueSvc = new ChessableImportQueueService(_db, _proxy, _encryption, queue);
+        _controller = new ChessableController(_db, _encryption, _proxy, breaker,
+            new NotificationService(_db), queueSvc, NullLogger<ChessableController>.Instance);
+        _admin = new ChessableAdminController(_db, _encryption, _proxy, breaker,
+            queueSvc, NullLogger<ChessableAdminController>.Instance);
         SetUser(42);
     }
 
@@ -55,13 +59,15 @@ public class ChessableControllerTests : IDisposable
     private void SetUser(int userId)
     {
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
-        _controller.ControllerContext = new ControllerContext
+        var ctx = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
             }
         };
+        _controller.ControllerContext = ctx;
+        _admin.ControllerContext = ctx;
     }
 
     private async Task SeedUserAsync(int id)
@@ -467,7 +473,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport { UserId = 7, Bid = "2", Target = "book", Status = "completed", CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
-        var result = await _controller.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
+        var result = await _admin.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
 
         var body = Assert.IsType<ChessableCoursesDto>(Assert.IsType<OkObjectResult>(result).Value);
         var a = body.Courses.Single(c => c.Bid == "1");
@@ -495,7 +501,7 @@ public class ChessableControllerTests : IDisposable
             return JsonResponse(HttpStatusCode.OK, new { bid = "128648", totalLines = 299, cached = false });
         };
 
-        var result = await _controller.EstimateCourseAdmin(7, "128648", CancellationToken.None);
+        var result = await _admin.EstimateCourseAdmin(7, "128648", CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var body = Assert.IsType<ChessableCourseInfoDto>(ok.Value);
@@ -507,7 +513,7 @@ public class ChessableControllerTests : IDisposable
     public async Task EstimateCourseAdmin_UserWithoutBearer_Returns400()
     {
         await SeedUserAsync(7);
-        var result = await _controller.EstimateCourseAdmin(7, "128648", CancellationToken.None);
+        var result = await _admin.EstimateCourseAdmin(7, "128648", CancellationToken.None);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -516,7 +522,7 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);   // nur der Admin existiert, Ziel-User 999 nicht
 
-        var result = await _controller.GetUserCoursesAdmin(999, refresh: false, CancellationToken.None);
+        var result = await _admin.GetUserCoursesAdmin(999, refresh: false, CancellationToken.None);
 
         Assert.IsType<NotFoundObjectResult>(result);   // 404 „User not found", nicht 400 „no bearer"
     }
@@ -527,7 +533,7 @@ public class ChessableControllerTests : IDisposable
         await SeedUserAsync(42);
         await SeedUserAsync(7);    // existiert, hat aber keinen Bearer
 
-        var result = await _controller.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
+        var result = await _admin.GetUserCoursesAdmin(7, refresh: false, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -684,7 +690,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.Add(new ChessableImport { UserId = 42, Bid = "b", CourseName = "Mein Kurs", Target = "repertoire", Status = "running", CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
 
-        var ok = Assert.IsType<OkObjectResult>(await _controller.GetAllImportsAdmin());
+        var ok = Assert.IsType<OkObjectResult>(await _admin.GetAllImportsAdmin());
         var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
 
         Assert.Equal(2, list.Count); // beide User
@@ -704,7 +710,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.AddRange(first, second);
         await _db.SaveChangesAsync();
 
-        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var ok = Assert.IsType<OkObjectResult>(await _admin.GetActiveImportsAdmin());
         var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
 
         Assert.Equal(2, list.Count); // nur die laufenden, nicht der abgeschlossene
@@ -731,7 +737,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.AddRange(a1, a2, a3, b1);
         await _db.SaveChangesAsync();
 
-        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var ok = Assert.IsType<OkObjectResult>(await _admin.GetActiveImportsAdmin());
         var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
 
         Assert.Equal(0, list.Single(d => d.Id == a1.Id).QueuedAhead); // A Runde 0
@@ -755,7 +761,7 @@ public class ChessableControllerTests : IDisposable
         _db.ChessableImports.AddRange(fetching, qA, qB);
         await _db.SaveChangesAsync();
 
-        var ok = Assert.IsType<OkObjectResult>(await _controller.GetActiveImportsAdmin());
+        var ok = Assert.IsType<OkObjectResult>(await _admin.GetActiveImportsAdmin());
         var list = Assert.IsAssignableFrom<IEnumerable<ChessableAdminImportDto>>(ok.Value).ToList();
 
         Assert.Equal(new[] { "fetch", "qA", "qB" }, list.Select(d => d.Bid).ToArray()); // holender oben
@@ -769,7 +775,7 @@ public class ChessableControllerTests : IDisposable
     public async Task AdminStartImport_UnknownUser_Returns404()
     {
         await SeedUserAsync(42); // Aufrufer = Admin
-        var result = await _controller.StartImportForUserAdmin(999, "bid-1", new AdminChessableImportRequest(null));
+        var result = await _admin.StartImportForUserAdmin(999, "bid-1", new AdminChessableImportRequest(null));
         Assert.IsType<NotFoundObjectResult>(result);
     }
 
@@ -778,7 +784,7 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         await SeedUserAsync(7); // Ziel-User ohne Bearer
-        var result = await _controller.StartImportForUserAdmin(7, "bid-1", new AdminChessableImportRequest(null));
+        var result = await _admin.StartImportForUserAdmin(7, "bid-1", new AdminChessableImportRequest(null));
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -795,7 +801,7 @@ public class ChessableControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var result = await _controller.StartImportForUserAdmin(7, "bid-9", new AdminChessableImportRequest("Holzkurs"));
+        var result = await _admin.StartImportForUserAdmin(7, "bid-9", new AdminChessableImportRequest("Holzkurs"));
 
         var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
         Assert.Equal("repertoire", dto.Target);           // landet als Repertoire
@@ -819,7 +825,7 @@ public class ChessableControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var result = await _controller.StartImportForUserAdmin(7, "bid-b", new AdminChessableImportRequest("Buchkurs", "book"));
+        var result = await _admin.StartImportForUserAdmin(7, "bid-b", new AdminChessableImportRequest("Buchkurs", "book"));
 
         var dto = Assert.IsType<ChessableImportDto>(Assert.IsType<AcceptedResult>(result).Value);
         Assert.Equal("book", dto.Target);                 // landet als Buch/Kurs
@@ -834,7 +840,7 @@ public class ChessableControllerTests : IDisposable
     {
         await SeedUserAsync(42);
         await SeedUserAsync(7);
-        var result = await _controller.StartImportForUserAdmin(7, "bid-x", new AdminChessableImportRequest(null, "video"));
+        var result = await _admin.StartImportForUserAdmin(7, "bid-x", new AdminChessableImportRequest(null, "video"));
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -851,7 +857,7 @@ public class ChessableControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var ok = Assert.IsType<OkObjectResult>(await _controller.GetCredentialedUsersAdmin());
+        var ok = Assert.IsType<OkObjectResult>(await _admin.GetCredentialedUsersAdmin());
         var list = Assert.IsAssignableFrom<IEnumerable<ChessableCredentialedUserDto>>(ok.Value).ToList();
         Assert.Single(list);
         Assert.Equal(7, list[0].UserId);
