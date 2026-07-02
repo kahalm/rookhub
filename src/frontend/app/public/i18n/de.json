@@ -1555,7 +1555,16 @@
     "pgn": "PGN",
     "loadPgn": "PGN laden",
     "engineCrashed": "Die Analyse-Engine ist abgestürzt und konnte nicht wiederhergestellt werden.",
-    "engineCrashedReload": "Seite neu laden"
+    "engineCrashedReload": "Seite neu laden",
+    "setup": {
+      "button": "Stellung aufbauen",
+      "apply": "Übernehmen",
+      "erase": "Radierer",
+      "clear": "Brett leeren",
+      "startpos": "Grundstellung",
+      "whiteToMove": "Weiß am Zug",
+      "blackToMove": "Schwarz am Zug"
+    }
   },
   "stats": {
     "title": "Statistik",

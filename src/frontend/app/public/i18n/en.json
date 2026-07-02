@@ -1555,7 +1555,16 @@
     "pgn": "PGN",
     "loadPgn": "Load PGN",
     "engineCrashed": "The analysis engine crashed and could not be recovered.",
-    "engineCrashedReload": "Reload page"
+    "engineCrashedReload": "Reload page",
+    "setup": {
+      "button": "Set up position",
+      "apply": "Apply",
+      "erase": "Eraser",
+      "clear": "Empty board",
+      "startpos": "Starting position",
+      "whiteToMove": "White to move",
+      "blackToMove": "Black to move"
+    }
   },
   "stats": {
     "title": "Statistics",

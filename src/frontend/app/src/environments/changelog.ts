@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.19';
+export const APP_VERSION = '0.243.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.243.0", date: "2026-07-02", changes: [
+    { en: "Analysis mode now has a “Set up position” board editor. Open it from the FEN card: place pieces from the palette above and below the board (tap a piece then tap a square, or drag it on with the mouse), erase with the eraser tool, drag existing pieces to move them or off the board to remove them, choose who is to move, flip, load the starting position or empty the board. “Apply” validates the position (e.g. both kings present, derived castling rights) and loads it into the analysis board.", de: "Der Analysemodus hat jetzt einen „Stellung aufbauen“-Brett-Editor. Aufruf über die FEN-Karte: Figuren aus der Palette über und unter dem Brett setzen (Figur antippen, dann Feld antippen — oder mit der Maus aufs Brett ziehen), mit dem Radierer löschen, vorhandene Figuren per Drag verschieben bzw. vom Brett ziehen zum Entfernen, Zugrecht wählen, drehen, Grundstellung laden oder Brett leeren. „Übernehmen“ validiert die Stellung (z. B. beide Könige vorhanden, abgeleitete Rochade-Rechte) und lädt sie ins Analysebrett." },
+  ]},
   { version: "0.242.19", date: "2026-07-02", changes: [
     { en: "Move comments that referred to a continuation line are no longer cut off mid-sentence. In Chessable-style courses a main-line comment often ends with a pointer to a follow-up (“the most energetic continuation would have been”) whose moves live in a following variation — previously that variation was dropped, so the comment stopped mid-sentence. Now the variation (its moves plus their comments) is folded compactly into the comment. Existing courses need a re-process/re-fetch to pick up the fuller text (import pipeline version 9).", de: "Zug-Kommentare, die auf eine Fortsetzung verweisen, werden nicht mehr mitten im Satz abgeschnitten. In Kursen im Chessable-Stil endet ein Hauptlinien-Kommentar oft mit einem Verweis auf eine Fortsetzung („the most energetic continuation would have been“), deren Züge in einer folgenden Variante stehen — bisher wurde diese Variante verworfen, der Kommentar brach mitten im Satz ab. Jetzt wird die Variante (Züge samt Kommentaren) kompakt in den Kommentar gefaltet. Bestehende Kurse übernehmen den vollständigen Text erst nach einem „Aktualisieren“ (Re-Import bzw. Chessable-Re-Fetch; Import-Pipeline-Version 9)." },
   ]},

@@ -1553,7 +1553,16 @@
     "pgn": "PGN",
     "loadPgn": "Učitaj PGN",
     "engineCrashed": "Motor za analizu srušio se i nije se mogao oporaviti.",
-    "engineCrashedReload": "Ponovno učitaj stranicu"
+    "engineCrashedReload": "Ponovno učitaj stranicu",
+    "setup": {
+      "button": "Postavi poziciju",
+      "apply": "Primijeni",
+      "erase": "Gumica",
+      "clear": "Isprazni ploču",
+      "startpos": "Početna pozicija",
+      "whiteToMove": "Bijeli na potezu",
+      "blackToMove": "Crni na potezu"
+    }
   },
   "stats": {
     "title": "Statistika",

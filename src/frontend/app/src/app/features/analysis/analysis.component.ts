@@ -16,6 +16,7 @@ import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription } from 'rxjs';
 import { AnalysisBoardComponent } from './analysis-board.component';
+import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -35,26 +36,32 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, TranslateModule, AnalysisBoardComponent
+    MatTooltipModule, TranslateModule, AnalysisBoardComponent, PositionSetupComponent
   ],
   template: `
     <div class="analysis-page">
       <h1>{{ 'analysis.title' | translate }}</h1>
       <div class="analysis-layout">
-        <div class="board-col">
-          <div class="eval-bar" [matTooltip]="evalText">
-            <div class="eval-white" [style.height.%]="whiteHeight"></div>
-          </div>
-          <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
-               Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
-          <div class="board-tap board-tap-prev" (click)="prev()" aria-hidden="true"></div>
-          <div class="board-wrap">
-            <app-analysis-board
-              [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
-              [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
-              (moveMade)="onMove($event)" />
-          </div>
-          <div class="board-tap board-tap-next" (click)="next()" aria-hidden="true"></div>
+        <div class="board-col" [class.editing]="editing">
+          @if (editing) {
+            <app-position-setup class="editor-full"
+              [initialFen]="currentFen" [orientation]="orientation"
+              (apply)="onSetupApply($event)" (cancel)="editing = false" />
+          } @else {
+            <div class="eval-bar" [matTooltip]="evalText">
+              <div class="eval-white" [style.height.%]="whiteHeight"></div>
+            </div>
+            <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
+                 Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
+            <div class="board-tap board-tap-prev" (click)="prev()" aria-hidden="true"></div>
+            <div class="board-wrap">
+              <app-analysis-board
+                [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
+                [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
+                (moveMade)="onMove($event)" />
+            </div>
+            <div class="board-tap board-tap-next" (click)="next()" aria-hidden="true"></div>
+          }
         </div>
 
         <div class="side-col">
@@ -143,6 +150,7 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
               <div class="io-actions">
                 <button mat-stroked-button (click)="loadFen()"><mat-icon>input</mat-icon> {{ 'analysis.loadFen' | translate }}</button>
                 <button mat-stroked-button (click)="copyFen()"><mat-icon>content_copy</mat-icon> {{ 'analysis.copyFen' | translate }}</button>
+                <button mat-stroked-button (click)="startEditing()"><mat-icon>grid_view</mat-icon> {{ 'analysis.setup.button' | translate }}</button>
               </div>
               <mat-form-field appearance="outline" class="full">
                 <mat-label>{{ 'analysis.pgn' | translate }}</mat-label>
@@ -159,6 +167,8 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
     .analysis-page { max-width: 1100px; margin: 16px auto; padding: 0 12px; }
     .analysis-layout { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
     .board-col { display: flex; gap: 8px; flex: 0 0 auto; width: min(64vw, 560px); min-width: 280px; }
+    .board-col.editing { display: block; }
+    .editor-full { display: block; width: 100%; }
     .eval-bar { width: 14px; align-self: stretch; background: #3a3a3a; border-radius: 3px; overflow: hidden; position: relative; min-height: 280px; }
     .eval-white { position: absolute; bottom: 0; left: 0; right: 0; background: #f5f5f5; transition: height .3s; }
     .board-wrap { flex: 1; min-width: 260px; }
@@ -224,6 +234,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   fenInput = '';
   pgnInput = '';
+  editing = false;
 
   private sub?: Subscription;
   private errorSub?: Subscription;
@@ -437,6 +448,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   reset(): void { this.startFen = START_FEN; this.resetToStart(); }
   private resetToStart(): void { this.line = []; this.ply = 0; this.refresh(); }
+
+  // ---- Stellung aufbauen (Brett-Editor) ----
+  startEditing(): void { this.editing = true; }
+  onSetupApply(fen: string): void {
+    this.editing = false;
+    this.startFen = fen;
+    this.fenInput = '';
+    this.resetToStart();
+  }
 
   loadFen(): void {
     const fen = this.fenInput.trim();
