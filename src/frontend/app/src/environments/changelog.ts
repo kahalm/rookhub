@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.6';
+export const APP_VERSION = '0.242.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.7", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the overall course statistics for the stats page (aggregate stats, attempt history, theme/rating/activity breakdown) were split out of the large CourseService into a dedicated CourseStatsService, mirroring the earlier puzzle-stats split. The per-course progress/next-puzzle logic stays in CourseService. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die übergreifende Kurs-Statistik für die Statistikseite (Aggregat-Stats, Versuchs-History, Themen-/Rating-/Aktivitäts-Aufschlüsselung) wurde aus dem großen CourseService in einen eigenen CourseStatsService gezogen — analog zur früheren Puzzle-Statistik-Aufteilung. Die Pro-Kurs-Fortschritts-/Nächstes-Puzzle-Logik bleibt im CourseService. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.6", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the daily-puzzle leaderboards (monthly ladder + all-time hall of fame, with their scoring/ranking helpers) were split out of the large BookPuzzleService into a dedicated DailyLeaderboardService. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Tagespuzzle-Bestenlisten (Monats-Ladder + all-time Hall of Fame samt Punkte-/Ranking-Helfern) wurden aus dem großen BookPuzzleService in einen eigenen DailyLeaderboardService gezogen. Keine sichtbare Änderung." },
   ]},

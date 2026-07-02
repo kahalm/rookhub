@@ -19,12 +19,14 @@ namespace RookHub.Api.Controllers;
 public class CourseController : BaseApiController
 {
     private readonly CourseService _service;
+    private readonly CourseStatsService _stats;
     private readonly ImportReprocessService _reprocess;
     private readonly IReprocessLauncher _reprocessLauncher;
 
-    public CourseController(CourseService service, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher)
+    public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher)
     {
         _service = service;
+        _stats = stats;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
     }
@@ -123,17 +125,17 @@ public class CourseController : BaseApiController
     /// <summary>Aggregierte Kurs-Puzzle-Statistik des Users (ohne Elo).</summary>
     [HttpGet("stats")]
     public async Task<ActionResult<CourseStatsDto>> GetStats()
-        => Ok(await _service.GetStatsAsync(GetUserId()));
+        => Ok(await _stats.GetStatsAsync(GetUserId()));
 
     /// <summary>Paginierte Kurs-Versuchs-History des Users (neueste zuerst).</summary>
     [HttpGet("history")]
     public async Task<ActionResult<List<CourseAttemptDto>>> GetHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
-        => Ok(await _service.GetHistoryAsync(GetUserId(), page, pageSize));
+        => Ok(await _stats.GetHistoryAsync(GetUserId(), page, pageSize));
 
     /// <summary>Aufschlüsselung der Kurs-Versuche nach Thema/Rating-Band/Aktivität.</summary>
     [HttpGet("stats/breakdown")]
     public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
-        => Ok(await _service.GetBreakdownAsync(GetUserId()));
+        => Ok(await _stats.GetBreakdownAsync(GetUserId()));
 
     /// <summary>Kapitel eines (zugänglichen) Buchs in Lesereihenfolge inkl. Fortschritt — Basis der Kapitelübersicht.</summary>
     [HttpGet("{bookId}/chapters")]

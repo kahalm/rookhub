@@ -14,6 +14,7 @@ public class CourseServiceStatsTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly CourseService _service;
+    private readonly CourseStatsService _stats;
     private const int UserId = 1;
     private const int OtherUserId = 2;
 
@@ -24,6 +25,7 @@ public class CourseServiceStatsTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _service = new CourseService(_db, NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db), new RepertoireService(_db, new RepertoireAnalyzeService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()))));
+        _stats = new CourseStatsService(_db);
     }
 
     public void Dispose() => _db.Dispose();
@@ -72,7 +74,7 @@ public class CourseServiceStatsTests : IDisposable
     [Fact]
     public async Task GetStatsAsync_NoAttempts_ReturnsZeroes()
     {
-        var stats = await _service.GetStatsAsync(UserId);
+        var stats = await _stats.GetStatsAsync(UserId);
 
         Assert.Equal(0, stats.TotalAttempts);
         Assert.Equal(0, stats.Solved);
@@ -97,7 +99,7 @@ public class CourseServiceStatsTests : IDisposable
         // Versuch eines anderen Users darf nicht mitzählen
         await AddAttemptAsync(OtherUserId, p, false, baseTime.AddMinutes(6));
 
-        var stats = await _service.GetStatsAsync(UserId);
+        var stats = await _stats.GetStatsAsync(UserId);
 
         Assert.Equal(5, stats.TotalAttempts);
         Assert.Equal(4, stats.Solved);
@@ -117,7 +119,7 @@ public class CourseServiceStatsTests : IDisposable
         await AddAttemptAsync(UserId, p1, true, baseTime.AddMinutes(1), timeSeconds: 11);
         await AddAttemptAsync(UserId, p2, false, baseTime.AddMinutes(2), timeSeconds: 22);
 
-        var page1 = await _service.GetHistoryAsync(UserId, page: 1, pageSize: 1);
+        var page1 = await _stats.GetHistoryAsync(UserId, page: 1, pageSize: 1);
         Assert.Single(page1);
         Assert.Equal("line-2", page1[0].LineId); // neuester zuerst
         Assert.Equal(1800, page1[0].BookRating);
@@ -126,7 +128,7 @@ public class CourseServiceStatsTests : IDisposable
         Assert.False(page1[0].Solved);
         Assert.Equal(p2.Id, page1[0].BookPuzzleId);
 
-        var page2 = await _service.GetHistoryAsync(UserId, page: 2, pageSize: 1);
+        var page2 = await _stats.GetHistoryAsync(UserId, page: 2, pageSize: 1);
         Assert.Single(page2);
         Assert.Equal("line-1", page2[0].LineId);
         Assert.True(page2[0].Solved);
@@ -145,7 +147,7 @@ public class CourseServiceStatsTests : IDisposable
         await AddAttemptAsync(UserId, pB, false, day.AddMinutes(2));
         await AddAttemptAsync(UserId, pNoMeta, true, day.AddMinutes(3));
 
-        var bd = await _service.GetBreakdownAsync(UserId);
+        var bd = await _stats.GetBreakdownAsync(UserId);
 
         // Themen: fork (2 Versuche, 1 gelöst), pin (1 Versuch, 1 gelöst)
         var fork = bd.Themes.Single(t => t.Theme == "fork");
