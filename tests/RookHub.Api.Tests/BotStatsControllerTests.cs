@@ -24,7 +24,7 @@ public class BotStatsControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        var puzzles = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
+        var puzzles = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance));
         var weekly = new WeeklyPostService(_db, NullLogger<WeeklyPostService>.Instance);
         _crawlerHandler = new RoutingHttpMessageHandler(defaultBody: "{}");
         var crawler = new CrawlerProxyService(new HttpClient(_crawlerHandler) { BaseAddress = new Uri("http://localhost:8080") });

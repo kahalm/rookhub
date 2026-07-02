@@ -17,6 +17,7 @@ public class PuzzleServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly PuzzleService _service;
+    private readonly PuzzleTaggingService _tagging;
 
     public PuzzleServiceTests()
     {
@@ -24,7 +25,8 @@ public class PuzzleServiceTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
+        _tagging = new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance);
+        _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, _tagging);
     }
 
     public void Dispose() => _db.Dispose();
@@ -127,7 +129,7 @@ public class PuzzleServiceTests : IDisposable
         await CreatePuzzleAsync(rating: 1600, themes: "fork pin", lichessId: "bf2");
         await CreatePuzzleAsync(rating: 1700, themes: "", lichessId: "bf3");   // ohne Themen → keine Links
 
-        var processed = await _service.BackfillPuzzleTagsAsync(batchSize: 2);
+        var processed = await _tagging.BackfillPuzzleTagsAsync(batchSize: 2);
 
         Assert.Equal(3, processed);
         Assert.Equal(3, await _db.Tags.CountAsync());                 // fork, endgame, pin
@@ -139,7 +141,7 @@ public class PuzzleServiceTests : IDisposable
             pt => Assert.Contains(pt.Rating, new[] { 1500, 1600 }));
 
         // Erneuter Lauf legt nichts doppelt an.
-        await _service.BackfillPuzzleTagsAsync();
+        await _tagging.BackfillPuzzleTagsAsync();
         Assert.Equal(4, await _db.PuzzleTags.CountAsync());
     }
 
@@ -148,7 +150,7 @@ public class PuzzleServiceTests : IDisposable
     {
         await CreatePuzzleAsync(rating: 1500, themes: "endgame mateIn2", lichessId: "ti1");
         await CreatePuzzleAsync(rating: 1500, themes: "middlegame fork", lichessId: "ti2");
-        await _service.BackfillPuzzleTagsAsync();   // PuzzleTags befüllen → Schnellpfad aktiv
+        await _tagging.BackfillPuzzleTagsAsync();   // PuzzleTags befüllen → Schnellpfad aktiv
 
         var result = await _service.GetRandomAsync(null, 1400, 1600, themes: null, excludeSolved: false, themesAny: "fork pin");
 
@@ -1091,7 +1093,7 @@ public class PuzzleServiceTests : IDisposable
     {
         await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "th1");
         await CreatePuzzleAsync(rating: 1600, themes: "fork pin", lichessId: "th2");
-        await _service.BackfillPuzzleTagsAsync();   // füllt die Tags-Tabelle (fork, endgame, pin)
+        await _tagging.BackfillPuzzleTagsAsync();   // füllt die Tags-Tabelle (fork, endgame, pin)
 
         var themes = await _service.GetAllThemesAsync();
 

@@ -16,14 +16,14 @@ namespace RookHub.Api.Tests;
 public class PuzzleEnPassantTagTests : IDisposable
 {
     private readonly AppDbContext _db;
-    private readonly PuzzleService _service;
+    private readonly PuzzleTaggingService _service;
 
     public PuzzleEnPassantTagTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _service = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
+        _service = new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -40,24 +40,24 @@ public class PuzzleEnPassantTagTests : IDisposable
 
     [Fact]
     public void HasUnplayedEnPassant_EpAtSolverTurn_NotPlayed_True()
-        => Assert.True(PuzzleService.HasUnplayedEnPassant(Start, EpAtSolverButOther));
+        => Assert.True(PuzzleTaggingService.HasUnplayedEnPassant(Start, EpAtSolverButOther));
 
     [Fact]
     public void HasUnplayedEnPassant_EpAtSolverTurn_Played_False()
-        => Assert.False(PuzzleService.HasUnplayedEnPassant(Start, EpAtSolverAndPlayed));
+        => Assert.False(PuzzleTaggingService.HasUnplayedEnPassant(Start, EpAtSolverAndPlayed));
 
     [Fact]
     public void HasUnplayedEnPassant_EpOnlyAtOpponentTurn_False()
         // e.p. war nur bei einem Gegnerzug verfügbar → zählt NICHT (nur Löser-Züge).
-        => Assert.False(PuzzleService.HasUnplayedEnPassant(Start, EpAtOpponentOnly));
+        => Assert.False(PuzzleTaggingService.HasUnplayedEnPassant(Start, EpAtOpponentOnly));
 
     [Fact]
     public void HasUnplayedEnPassant_NoEpAvailable_False()
-        => Assert.False(PuzzleService.HasUnplayedEnPassant(Start, "e2e4 e7e5 g1f3"));
+        => Assert.False(PuzzleTaggingService.HasUnplayedEnPassant(Start, "e2e4 e7e5 g1f3"));
 
     [Fact]
     public void HasUnplayedEnPassant_InvalidFen_False()
-        => Assert.False(PuzzleService.HasUnplayedEnPassant("not-a-fen", "e2e4 e7e5"));
+        => Assert.False(PuzzleTaggingService.HasUnplayedEnPassant("not-a-fen", "e2e4 e7e5"));
 
     [Fact]
     public async Task TagEnPassantPossible_TagsThemesAndPuzzleTags()
@@ -73,8 +73,8 @@ public class PuzzleEnPassantTagTests : IDisposable
         Assert.Equal(1, tagged);
 
         var qualifying = await _db.Puzzles.SingleAsync(p => p.LichessId == "aaaaa");
-        Assert.Contains(PuzzleService.EnPassantPossibleTheme, qualifying.Themes!);   // Themes-String
-        var tag = await _db.Tags.SingleAsync(t => t.Name == PuzzleService.EnPassantPossibleTheme);
+        Assert.Contains(PuzzleTaggingService.EnPassantPossibleTheme, qualifying.Themes!);   // Themes-String
+        var tag = await _db.Tags.SingleAsync(t => t.Name == PuzzleTaggingService.EnPassantPossibleTheme);
         Assert.True(await _db.PuzzleTags.AnyAsync(pt => pt.PuzzleId == qualifying.Id && pt.TagId == tag.Id)); // 2. Tabelle
         // Die anderen zwei bleiben ungetaggt.
         Assert.Equal(1, await _db.PuzzleTags.CountAsync(pt => pt.TagId == tag.Id));
@@ -90,9 +90,9 @@ public class PuzzleEnPassantTagTests : IDisposable
         var (_, taggedSecondRun) = await _service.TagEnPassantPossibleAsync();
 
         Assert.Equal(0, taggedSecondRun);   // beim 2. Lauf nichts Neues
-        var tag = await _db.Tags.SingleAsync(t => t.Name == PuzzleService.EnPassantPossibleTheme);
+        var tag = await _db.Tags.SingleAsync(t => t.Name == PuzzleTaggingService.EnPassantPossibleTheme);
         Assert.Equal(1, await _db.PuzzleTags.CountAsync(pt => pt.TagId == tag.Id));   // kein Duplikat
         var p = await _db.Puzzles.SingleAsync();
-        Assert.Equal(1, p.Themes!.Split(' ').Count(t => t == PuzzleService.EnPassantPossibleTheme)); // Token nicht doppelt
+        Assert.Equal(1, p.Themes!.Split(' ').Count(t => t == PuzzleTaggingService.EnPassantPossibleTheme)); // Token nicht doppelt
     }
 }

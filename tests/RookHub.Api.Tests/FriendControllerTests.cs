@@ -26,7 +26,7 @@ public class FriendControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _friendService = new FriendService(_db, new NotificationService(_db));
-        _puzzleService = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance);
+        _puzzleService = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance));
         _controller = new FriendController(_friendService, _puzzleService);
     }
 

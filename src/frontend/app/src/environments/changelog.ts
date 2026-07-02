@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.2';
+export const APP_VERSION = '0.242.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.3", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the puzzle theme-tagging logic (tag/PuzzleTag sync on import, one-off backfill, and the en-passant-possible theme scan) was split out of the large PuzzleService into a dedicated PuzzleTaggingService. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Puzzle-Themen-Tagging-Logik (Tag/PuzzleTag-Sync beim Import, einmaliger Backfill, en-passant-möglich-Theme-Scan) wurde aus dem großen PuzzleService in einen eigenen PuzzleTaggingService gezogen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.2", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change, no route change): the Chessable admin endpoints (view/estimate/import a course on behalf of a user, global import history/status) were split out of the large ChessableController into a dedicated ChessableAdminController, and the shared import-queue helpers (fair queue positions, ownership check, course import-state enrichment, enqueue, DTO mapping) moved into a reusable ChessableImportQueueService. All routes stay identical.", de: "Interner Wartbarkeits-Refactor (keine Verhaltens- und keine Routenänderung): die Chessable-Admin-Endpoints (Kurs „im Namen eines Users“ ansehen/schätzen/importieren, globaler Import-Verlauf/-Status) wurden aus dem großen ChessableController in einen eigenen ChessableAdminController ausgegliedert, und die geteilten Warteschlangen-Helfer (faire Positionen, Eigentumsprüfung, Kurs-Import-Status, Einreihen, DTO-Mapping) in einen wiederverwendbaren ChessableImportQueueService gezogen. Alle Routen bleiben identisch." },
   ]},

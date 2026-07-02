@@ -36,7 +36,7 @@ public class AdminControllerTests : IDisposable
         _controller = new AdminController(
             new AdminService(_db),
             new BookAdminService(_db),
-            new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),
             new AuthService(_db, _config, NullLogger<AuthService>.Instance),
             _config,
@@ -128,7 +128,7 @@ public class AdminControllerTests : IDisposable
         var ctrl = new AdminController(
             new AdminService(db),
             new BookAdminService(db),
-            new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(db),
             new AuthService(db, emptyConfig, NullLogger<AuthService>.Instance),
             emptyConfig,

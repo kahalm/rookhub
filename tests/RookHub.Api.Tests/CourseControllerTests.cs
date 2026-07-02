@@ -504,7 +504,7 @@ public class CourseControllerTests : IDisposable
         var admin = new AdminController(
             new AdminService(_db),
             new BookAdminService(_db),
-            new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),
             new AuthService(_db, new ConfigurationBuilder().Build(), NullLogger<AuthService>.Instance),
             new ConfigurationBuilder().Build(),
@@ -543,7 +543,7 @@ public class CourseControllerTests : IDisposable
         var admin = new AdminController(
             new AdminService(_db),
             new BookAdminService(_db),
-            new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance),
+            new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),
             new AuthService(_db, new ConfigurationBuilder().Build(), NullLogger<AuthService>.Instance),
             new ConfigurationBuilder().Build(),

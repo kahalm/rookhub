@@ -138,7 +138,7 @@ public class AdminController : BaseApiController
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
         {
-            var svc = sp.GetRequiredService<PuzzleService>();
+            var svc = sp.GetRequiredService<PuzzleTaggingService>();
             await svc.BackfillPuzzleTagsAsync(ct: ct);
         });
         return Accepted(new { message = "PuzzleTags-Backfill gestartet (läuft im Hintergrund; Fortschritt im Log)." });
@@ -154,7 +154,7 @@ public class AdminController : BaseApiController
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
         {
-            var svc = sp.GetRequiredService<PuzzleService>();
+            var svc = sp.GetRequiredService<PuzzleTaggingService>();
             await svc.TagEnPassantPossibleAsync(ct: ct);
         });
         return Accepted(new { message = "En-passant-Theme-Scan gestartet (läuft im Hintergrund; Fortschritt im Log)." });
