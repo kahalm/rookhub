@@ -67,7 +67,8 @@
       "tournament_new_round": "New round in {{tournamentName}} (round {{round}})",
       "new_user_registered": "New user {{username}} registered",
       "chessable_token_added": "{{username}} added a Chessable token",
-      "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}"
+      "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}",
+      "course_shared": "{{username}} shared the course “{{courseName}}” with you"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -959,7 +960,26 @@
     "chaptersEmpty": "No chapters",
     "chaptersLoadFailed": "Could not load chapters",
     "sectionInProgress": "In progress",
-    "sectionInProgressHint": "Courses you've started and haven't finished yet."
+    "sectionInProgressHint": "Courses you've started and haven't finished yet.",
+    "sectionSharedWithMe": "Shared with me",
+    "sectionSharedWithMeHint": "Courses other members have shared with you.",
+    "share": {
+      "title": "Share “{{name}}”",
+      "tooltip": "Share course",
+      "hint": "Choose friends to share this course with. They can work through it with their own progress, but cannot edit or re-share it.",
+      "sharedWith": "Shared with",
+      "pickFriends": "Add friends",
+      "noFriends": "You have no friends to share with yet.",
+      "shareButton": "Share ({{count}})",
+      "unshareTooltip": "Remove access",
+      "sharedBy": "shared by {{name}}",
+      "shared": "Shared with {{count}} friend(s).",
+      "sharedPartial": "Shared with {{shared}}; {{skipped}} skipped.",
+      "nothingShared": "Nobody added (already shared or not friends).",
+      "unshared": "Removed access for {{name}}.",
+      "failed": "Sharing failed.",
+      "loadFailed": "Could not load sharing information."
+    }
   },
   "weekly": {
     "title": "Weekly",
@@ -1657,13 +1677,11 @@
       "stopFailed": "Could not save the timer entry."
     },
     "theme": {
-      "label": "Theme",
-      "unset": "— none —",
-      "Opening": "Opening",
-      "Middlegame": "Middlegame",
-      "Endgame": "Endgame",
-      "Tactics": "Tactics",
-      "Other": "Other"
+      "opening": "Opening",
+      "middlegame": "Middlegame",
+      "endgame": "Endgame",
+      "tactics": "Tactics",
+      "other": "Other"
     },
     "title": "Training Goals",
     "intro": "Set daily goals per category and track your progress.",
@@ -1710,13 +1728,6 @@
       "randomPuzzle": "Puzzles",
       "courseBook": "Courses / books",
       "chessable": "Chessable"
-    },
-    "theme": {
-      "opening": "Opening",
-      "middlegame": "Middlegame",
-      "endgame": "Endgame",
-      "tactics": "Tactics",
-      "other": "Other"
     },
     "chessable": {
       "title": "Chessable courses",

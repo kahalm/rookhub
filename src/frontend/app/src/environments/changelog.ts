@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.244.3';
+export const APP_VERSION = '0.245.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.245.0", date: "2026-07-02", changes: [
+    { en: "Share a course with selected people: each of your own courses now has a “Share course” button (group icon) that opens a dialog where you pick friends to share it with. They get the course in their own course list (new “Shared with me” section, with a “shared by X” badge), can work through it with their own progress, but can’t edit, delete or re-share it. You can revoke access per person in the same dialog, and each recipient gets an in-app notification. Sharing is limited to friends (like puzzle challenges); admins can share with anyone.", de: "Kurs mit ausgewählten Personen teilen: jeder eigene Kurs hat jetzt einen „Kurs teilen“-Knopf (Gruppen-Icon), der einen Dialog öffnet, in dem du Freunde zum Teilen auswählst. Sie bekommen den Kurs in ihrer eigenen Kursliste (neue Sektion „Mit mir geteilt“ mit „geteilt von X“-Badge), können ihn mit eigenem Fortschritt durcharbeiten, aber nicht bearbeiten, löschen oder weiterteilen. Im selben Dialog kannst du den Zugriff je Person wieder entziehen; jeder Empfänger erhält eine In-App-Benachrichtigung. Teilen ist auf Freunde beschränkt (wie Puzzle-Challenges); Admins können mit allen teilen." },
+  ]},
   { version: "0.244.3", date: "2026-07-02", changes: [
     { en: "Repertoire detail: fixed the line list staying empty when you first open a repertoire — the chapter grouping only appeared after switching to the tree view and back. The grouping was a computed() reading a plain @Input, so it never recomputed when the lines finished loading asynchronously. The lines input is now signal-backed, so chapters show immediately on first open.", de: "Repertoire-Detail: behoben, dass die Linien-Liste beim ersten Öffnen eines Repertoires leer blieb — die Kapitel erschienen erst nach dem Wechsel auf die Baum-Ansicht und zurück. Die Gruppierung war ein computed(), das ein einfaches @Input las und daher nie neu berechnet wurde, wenn die Linien asynchron nachgeladen waren. Das Linien-Input ist jetzt Signal-basiert, sodass die Kapitel sofort beim ersten Öffnen erscheinen." },
   ]},

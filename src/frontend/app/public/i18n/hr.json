@@ -67,7 +67,8 @@
       "tournament_new_round": "Novo kolo u {{tournamentName}} (kolo {{round}})",
       "new_user_registered": "Novi korisnik {{username}} se registrirao",
       "chessable_token_added": "{{username}} je dodao Chessable token",
-      "chessable_new_course": "Novi Chessable tečaj „{{courseName}}“ za {{username}}"
+      "chessable_new_course": "Novi Chessable tečaj „{{courseName}}“ za {{username}}",
+      "course_shared": "{{username}} je s tobom podijelio tečaj „{{courseName}}“"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -957,7 +958,26 @@
     "chaptersEmpty": "Nema poglavlja",
     "chaptersLoadFailed": "Učitavanje poglavlja nije uspjelo",
     "sectionInProgress": "U tijeku",
-    "sectionInProgressHint": "Tečajevi koje si započeo i još nisi završio."
+    "sectionInProgressHint": "Tečajevi koje si započeo i još nisi završio.",
+    "sectionSharedWithMe": "Podijeljeno sa mnom",
+    "sectionSharedWithMeHint": "Tečajevi koje su drugi članovi podijelili s tobom.",
+    "share": {
+      "title": "Podijeli „{{name}}“",
+      "tooltip": "Podijeli tečaj",
+      "hint": "Odaberi prijatelje s kojima dijeliš ovaj tečaj. Mogu ga rješavati s vlastitim napretkom, ali ga ne mogu uređivati ni dalje dijeliti.",
+      "sharedWith": "Podijeljeno s",
+      "pickFriends": "Dodaj prijatelje",
+      "noFriends": "Još nemaš prijatelja za dijeljenje.",
+      "shareButton": "Podijeli ({{count}})",
+      "unshareTooltip": "Ukloni pristup",
+      "sharedBy": "podijelio {{name}}",
+      "shared": "Podijeljeno s {{count}} prijatelja.",
+      "sharedPartial": "Podijeljeno s {{shared}}; {{skipped}} preskočeno.",
+      "nothingShared": "Nitko nije dodan (već podijeljeno ili niste prijatelji).",
+      "unshared": "Pristup uklonjen za {{name}}.",
+      "failed": "Dijeljenje nije uspjelo.",
+      "loadFailed": "Podaci o dijeljenju nisu učitani."
+    }
   },
   "weekly": {
     "title": "Tjedna objava",
@@ -1655,13 +1675,11 @@
       "stopFailed": "Timer se ne može spremiti."
     },
     "theme": {
-      "label": "Tema",
-      "unset": "— nijedna —",
-      "Opening": "Otvaranje",
-      "Middlegame": "Sredina igre",
-      "Endgame": "Završnica",
-      "Tactics": "Taktika",
-      "Other": "Ostalo"
+      "opening": "Otvaranje",
+      "middlegame": "Sredina igre",
+      "endgame": "Završnica",
+      "tactics": "Taktika",
+      "other": "Ostalo"
     },
     "title": "Trening ciljevi",
     "intro": "Postavi dnevne ciljeve po kategoriji i prati svoj napredak.",
@@ -1708,13 +1726,6 @@
       "randomPuzzle": "Zagonetke",
       "courseBook": "Tečajevi / knjige",
       "chessable": "Chessable"
-    },
-    "theme": {
-      "opening": "Otvaranje",
-      "middlegame": "Sredina igre",
-      "endgame": "Završnica",
-      "tactics": "Taktika",
-      "other": "Ostalo"
     },
     "chessable": {
       "title": "Chessable tečajevi",

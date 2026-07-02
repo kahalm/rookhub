@@ -17,6 +17,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
 import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
+import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
 
 @Component({
   selector: 'app-course-list',
@@ -68,6 +69,17 @@ import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-
             </div>
           </section>
         }
+        @if (sharedCourses.length > 0) {
+          <section class="course-section">
+            <h2>{{ 'courses.sectionSharedWithMe' | translate }}</h2>
+            <p class="section-hint">{{ 'courses.sectionSharedWithMeHint' | translate }}</p>
+            <div class="course-grid">
+              @for (c of sharedCourses; track c.bookId) {
+                <ng-container *ngTemplateOutlet="cardTpl; context: { $implicit: c }"></ng-container>
+              }
+            </div>
+          </section>
+        }
         @if (publicCourses.length > 0) {
           <section class="course-section">
             <h2>{{ 'courses.sectionPublic' | translate }}</h2>
@@ -97,6 +109,11 @@ import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-
       <mat-card class="course-card">
         <mat-card-content>
           <div class="card-title">{{ c.displayName }}</div>
+          @if (c.isShared && c.sharedByUsername) {
+            <div class="shared-badge">
+              <mat-icon>group</mat-icon>{{ 'courses.share.sharedBy' | translate:{ name: c.sharedByUsername } }}
+            </div>
+          }
           <div class="card-meta">
             <span>{{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}</span>
             @if (c.difficulty) { <span class="meta-sep">·</span><span>{{ c.difficulty }}</span> }
@@ -150,6 +167,10 @@ import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-
                 <mat-icon>library_books</mat-icon>
               </button>
               @if (c.isOwned) {
+                <button mat-icon-button class="share-btn" [matTooltip]="'courses.share.tooltip' | translate"
+                        (click)="openShareDialog(c)">
+                  <mat-icon>group_add</mat-icon>
+                </button>
                 <button mat-icon-button class="delete-btn" [matTooltip]="'courses.deleteTooltip' | translate"
                         [disabled]="deleting === c.bookId" (click)="deleteCourse(c)">
                   <mat-icon>delete</mat-icon>
@@ -211,6 +232,11 @@ import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
     .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
+    .shared-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem;
+      color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px;
+    }
+    .shared-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
     /* Pin-Symbol: gedämpft wenn nicht angepinnt, in Primärfarbe + leicht gekippt wenn angepinnt. */
     .pin-btn mat-icon { opacity: 0.55; transition: opacity .15s, color .15s; }
     .pin-btn.pinned mat-icon { opacity: 1; color: var(--mdc-theme-primary, #3f51b5); transform: rotate(0); }
@@ -322,9 +348,15 @@ export class CourseListComponent implements OnInit {
     ];
   }
 
-  /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
+  /** Kurse, die andere Nutzer mit mir geteilt haben (eigene Sektion „Mit mir geteilt"). */
+  get sharedCourses(): CourseListItem[] {
+    return this.filtered.filter(c => c.isShared);
+  }
+
+  /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher);
+   *  von anderen Nutzern geteilte Kurse stehen in ihrer eigenen Sektion. */
   get publicCourses(): CourseListItem[] {
-    return this.filtered.filter(c => !c.isOwned);
+    return this.filtered.filter(c => !c.isOwned && !c.isShared);
   }
 
   /** Eigene, selbst importierte Chessable-Kurse. */
@@ -441,6 +473,15 @@ export class CourseListComponent implements OnInit {
       },
       error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
     });
+  }
+
+  /** Öffnet den „Kurs teilen"-Dialog (Freunde auswählen / Freigaben verwalten). */
+  openShareDialog(course: CourseListItem): void {
+    this.dialog.open<ShareCourseDialogComponent, ShareCourseDialogData>(
+      ShareCourseDialogComponent, {
+        width: '440px', maxWidth: '95vw',
+        data: { bookId: course.bookId, courseName: course.displayName }
+      });
   }
 
   /** Öffnet den Upload-Dialog; startet nach Bestätigung den Upload. */

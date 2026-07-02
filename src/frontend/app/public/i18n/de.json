@@ -67,7 +67,8 @@
       "tournament_new_round": "Neue Runde in {{tournamentName}} (Runde {{round}})",
       "new_user_registered": "Neuer Benutzer {{username}} hat sich registriert",
       "chessable_token_added": "{{username}} hat einen Chessable-Token hinterlegt",
-      "chessable_new_course": "Neuer Chessable-Kurs „{{courseName}}“ bei {{username}}"
+      "chessable_new_course": "Neuer Chessable-Kurs „{{courseName}}“ bei {{username}}",
+      "course_shared": "{{username}} hat den Kurs „{{courseName}}“ mit dir geteilt"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -959,7 +960,26 @@
     "chaptersEmpty": "Keine Kapitel",
     "chaptersLoadFailed": "Kapitel konnten nicht geladen werden",
     "sectionInProgress": "In Arbeit",
-    "sectionInProgressHint": "Kurse, die du angefangen und noch nicht abgeschlossen hast."
+    "sectionInProgressHint": "Kurse, die du angefangen und noch nicht abgeschlossen hast.",
+    "sectionSharedWithMe": "Mit mir geteilt",
+    "sectionSharedWithMeHint": "Kurse, die andere Mitglieder mit dir geteilt haben.",
+    "share": {
+      "title": "„{{name}}“ teilen",
+      "tooltip": "Kurs teilen",
+      "hint": "Wähle Freunde, mit denen du diesen Kurs teilst. Sie können ihn mit eigenem Fortschritt durcharbeiten, aber nicht bearbeiten oder weiterteilen.",
+      "sharedWith": "Geteilt mit",
+      "pickFriends": "Freunde hinzufügen",
+      "noFriends": "Du hast noch keine Freunde zum Teilen.",
+      "shareButton": "Teilen ({{count}})",
+      "unshareTooltip": "Zugriff entziehen",
+      "sharedBy": "geteilt von {{name}}",
+      "shared": "Mit {{count}} Freund(en) geteilt.",
+      "sharedPartial": "Mit {{shared}} geteilt; {{skipped}} übersprungen.",
+      "nothingShared": "Niemand hinzugefügt (bereits geteilt oder nicht befreundet).",
+      "unshared": "Zugriff für {{name}} entzogen.",
+      "failed": "Teilen fehlgeschlagen.",
+      "loadFailed": "Freigabe-Informationen konnten nicht geladen werden."
+    }
   },
   "weekly": {
     "title": "Wochenpost",
@@ -1657,13 +1677,11 @@
       "stopFailed": "Timer-Eintrag konnte nicht gespeichert werden."
     },
     "theme": {
-      "label": "Thema",
-      "unset": "— keins —",
-      "Opening": "Eröffnung",
-      "Middlegame": "Mittelspiel",
-      "Endgame": "Endspiel",
-      "Tactics": "Taktik",
-      "Other": "Sonstiges"
+      "opening": "Eröffnung",
+      "middlegame": "Mittelspiel",
+      "endgame": "Endspiel",
+      "tactics": "Taktik",
+      "other": "Sonstiges"
     },
     "title": "Trainingsziele",
     "intro": "Lege Tagesziele je Kategorie fest und verfolge deinen Fortschritt.",
@@ -1710,13 +1728,6 @@
       "randomPuzzle": "Puzzles",
       "courseBook": "Kurse / Bücher",
       "chessable": "Chessable"
-    },
-    "theme": {
-      "opening": "Eröffnung",
-      "middlegame": "Mittelspiel",
-      "endgame": "Endspiel",
-      "tactics": "Taktik",
-      "other": "Sonstiges"
     },
     "chessable": {
       "title": "Chessable-Kurse",

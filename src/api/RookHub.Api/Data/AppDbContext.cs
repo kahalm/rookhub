@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
     public DbSet<CoursePin> CoursePins => Set<CoursePin>();
+    public DbSet<CourseShare> CourseShares => Set<CourseShare>();
     public DbSet<CourseInfoView> CourseInfoViews => Set<CourseInfoView>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
@@ -476,6 +477,32 @@ public class AppDbContext : DbContext
             // Ein Pin pro (User, Buch); Sortier-/Ladeindex nach Anpin-Zeitpunkt.
             e.HasIndex(p => new { p.UserId, p.BookId }).IsUnique();
             e.HasIndex(p => new { p.UserId, p.PinnedAt });
+        });
+
+        modelBuilder.Entity<CourseShare>(e =>
+        {
+            // Cascade NUR über das Buch (ein einziger Cascade-Pfad; ein persönlicher Kurs wird beim
+            // Löschen samt seiner Freigaben entfernt). Die beiden AppUser-FKs sind Restrict, sonst
+            // erzeugt MySQL/MariaDB einen "multiple cascade paths"-Fehler (analog Friendship).
+            e.HasOne(cs => cs.Book)
+             .WithMany()
+             .HasForeignKey(cs => cs.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(cs => cs.Owner)
+             .WithMany()
+             .HasForeignKey(cs => cs.OwnerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(cs => cs.Recipient)
+             .WithMany()
+             .HasForeignKey(cs => cs.RecipientId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            // Ein Kurs wird an einen Empfänger höchstens einmal geteilt.
+            e.HasIndex(cs => new { cs.BookId, cs.RecipientId }).IsUnique();
+            // „Welche Kurse sind mit mir geteilt?" (Kursliste/Menü-Sichtbarkeit).
+            e.HasIndex(cs => cs.RecipientId);
         });
 
         modelBuilder.Entity<CourseInfoView>(e =>

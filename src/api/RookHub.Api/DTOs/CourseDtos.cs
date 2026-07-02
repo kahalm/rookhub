@@ -35,6 +35,45 @@ public class CourseListItemDto
     /// Steuert das Pin-Symbol in der Kursliste und die Dashboard-Kachel „Angepinnte Kurse".
     /// </summary>
     public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// <c>true</c> = dieser Kurs wurde von einem anderen Nutzer mit mir geteilt (ich bin nicht der
+    /// Besitzer, sehe ihn aber). Steuert die Sektion „Mit mir geteilt" + das „von X"-Badge.
+    /// </summary>
+    public bool IsShared { get; set; }
+
+    /// <summary>Benutzername des Teilenden, wenn <see cref="IsShared"/> — für das „von X"-Badge.</summary>
+    public string? SharedByUsername { get; set; }
+}
+
+/// <summary>Eingabe: mit welchen Nutzern ein Kurs geteilt werden soll (Batch, wie Puzzle-Challenges).</summary>
+public class ShareCourseInputDto
+{
+    [System.ComponentModel.DataAnnotations.MaxLength(50)]
+    public List<int> RecipientUserIds { get; set; } = new();
+}
+
+/// <summary>Ergebnis eines Teilen-Vorgangs: wie viele neu geteilt, welche Empfänger übersprungen (+Grund).</summary>
+public class CourseShareResultDto
+{
+    public int Shared { get; set; }
+    public List<CourseShareSkipDto> Skipped { get; set; } = new();
+}
+
+/// <summary>Ein übersprungener Empfänger. <see cref="Reason"/> ∈ not_found / not_friends / duplicate / self.</summary>
+public class CourseShareSkipDto
+{
+    public int UserId { get; set; }
+    public string Reason { get; set; } = string.Empty;
+}
+
+/// <summary>Ein Nutzer, mit dem ein Kurs aktuell geteilt ist (für die „geteilt mit"-Liste im Dialog).</summary>
+public class CourseShareRecipientDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+    public DateTime SharedAt { get; set; }
 }
 
 /// <summary>

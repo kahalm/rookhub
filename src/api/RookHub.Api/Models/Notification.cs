@@ -55,4 +55,7 @@ public static class NotificationType
     /// <summary>Beim täglichen Kurslisten-Refresh wurde bei einem User ein neuer Chessable-Kurs
     /// entdeckt (→ Glocke aller Admins, Link „/admin"). Daten: username, courseName.</summary>
     public const string ChessableNewCourse = "chessable_new_course";
+    /// <summary>Ein Nutzer hat einen Kurs mit dem Empfänger geteilt (→ Glocke des Empfängers,
+    /// Link „/courses"). Daten: username (Teilender), courseName.</summary>
+    public const string CourseShared = "course_shared";
 }

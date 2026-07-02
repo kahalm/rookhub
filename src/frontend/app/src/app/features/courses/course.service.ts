@@ -23,6 +23,24 @@ export interface CourseListItem {
   isOwned: boolean;
   /** true = vom Nutzer fürs Dashboard angepinnt (persönlich). */
   isPinned: boolean;
+  /** true = dieser Kurs wurde von einem anderen Nutzer mit mir geteilt (ich bin nicht der Besitzer). */
+  isShared?: boolean;
+  /** Benutzername des Teilenden (nur wenn isShared) — für das „von X"-Badge. */
+  sharedByUsername?: string | null;
+}
+
+/** Ergebnis eines Teilen-Vorgangs (Batch). */
+export interface CourseShareResult {
+  shared: number;
+  skipped: { userId: number; reason: string }[];
+}
+
+/** Ein Nutzer, mit dem ein Kurs aktuell geteilt ist. */
+export interface CourseShareRecipient {
+  userId: number;
+  username: string;
+  displayName: string | null;
+  sharedAt: string;
 }
 
 export interface CourseChapter {
@@ -117,6 +135,21 @@ export class CourseService {
   /** Löscht einen eigenen Kurs des Nutzers. */
   deleteCourse(bookId: number): Observable<void> {
     return this.http.delete<void>(`/api/courses/${bookId}`);
+  }
+
+  /** Teilt einen eigenen Kurs mit ausgewählten (befreundeten) Nutzern. */
+  shareCourse(bookId: number, recipientUserIds: number[]): Observable<CourseShareResult> {
+    return this.http.post<CourseShareResult>(`/api/courses/${bookId}/share`, { recipientUserIds });
+  }
+
+  /** Mit welchen Nutzern ist dieser eigene Kurs aktuell geteilt? */
+  getShareRecipients(bookId: number): Observable<CourseShareRecipient[]> {
+    return this.http.get<CourseShareRecipient[]>(`/api/courses/${bookId}/shares`);
+  }
+
+  /** Nimmt die Freigabe des eigenen Kurses für einen Empfänger zurück. */
+  unshareCourse(bookId: number, recipientId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}/share/${recipientId}`);
   }
 
   /** Wandelt einen Kurs in ein neues Repertoire um (Original bleibt); liefert das neue Repertoire. */

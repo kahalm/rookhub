@@ -119,6 +119,34 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Teilt einen eigenen Kurs mit ausgewählten (befreundeten) Nutzern (Batch).
+    /// Antwortet <c>{ shared, skipped[] }</c> (übersprungene Empfänger mit Grund).</summary>
+    [HttpPost("{bookId}/share")]
+    public async Task<ActionResult<CourseShareResultDto>> Share(int bookId, [FromBody] ShareCourseInputDto dto)
+    {
+        try { return Ok(await _service.ShareCourseAsync(GetUserId(), bookId, dto.RecipientUserIds ?? new List<int>(), IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Mit welchen Nutzern ist dieser eigene Kurs aktuell geteilt? (Für den Teilen-Dialog.)</summary>
+    [HttpGet("{bookId}/shares")]
+    public async Task<ActionResult<List<CourseShareRecipientDto>>> Shares(int bookId)
+    {
+        try { return Ok(await _service.GetShareRecipientsAsync(GetUserId(), bookId)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Nimmt die Freigabe des eigenen Kurses für einen Empfänger zurück (idempotent).</summary>
+    [HttpDelete("{bookId}/share/{recipientId}")]
+    public async Task<IActionResult> Unshare(int bookId, int recipientId)
+    {
+        try { await _service.UnshareCourseAsync(GetUserId(), bookId, recipientId); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
     // --- Kurs-Statistik (für die /stats-Seite, Umschalter „Kurse"). Literale Routen MÜSSEN vor
     //     den `{bookId}`-Routen stehen, sonst matcht der Router „stats"/„history" als bookId. ---
 

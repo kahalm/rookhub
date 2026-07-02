@@ -36,6 +36,7 @@ export function notificationCategory(type: string): NotificationCategory {
     case 'chessable_import_failed':
     case 'chessable_new_course':
     case 'chessable_token_added':
+    case 'course_shared':
       return 'courses';
     case 'friend_request_received':
     case 'friend_request_accepted':
@@ -72,6 +73,7 @@ export function notificationIcon(n: AppNotification): string {
     case 'new_user_registered': return 'group_add';
     case 'chessable_token_added': return 'vpn_key';
     case 'chessable_new_course': return 'library_add';
+    case 'course_shared': return 'group_add';
     default: return 'notifications';
   }
 }
