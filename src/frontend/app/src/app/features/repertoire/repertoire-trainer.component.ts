@@ -491,21 +491,24 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Nach richtigem/geduldetem Zug → im PGN weiterrücken und Gegnerzug spielen. */
   private runAdvance(): void {
     if (this.outcome === 'tolerated') {
-      // Geduldeten Zug zurücknehmen, den erwarteten Hauptzug spielen und die Linie fortsetzen —
-      // der Gegner reagiert auf die kanonische Fortsetzung, nicht auf die tolerierte Abweichung.
-      const line = this.queue[this.qIndex];
-      const expected = line?.moves[this.currentPly];
-      if (expected) {
-        try {
-          this.chess.load(this.startFen);
-          this.chess.move(expected.san);
-          this.fen = this.chess.fen();
-          this.lastMove = [expected.from as Key, expected.to as Key];
-        } catch { /* Fallback: einfach weiter */ }
-      }
+      // Geduldeten Zug NICHT für den User zu Ende spielen: zurücknehmen und dieselbe Stellung
+      // wieder spielbar machen, damit der User den erwarteten Hauptzug SELBST zieht (nicht
+      // automatisch für ihn). currentPly bleibt stehen.
+      this.retryCurrentPly();
+      return;
     }
     this.currentPly++;
     this.advanceToUserMove();
+  }
+
+  /** Geduldeten Zug zurücknehmen und die aktuelle Stellung erneut spielbar machen. */
+  private retryCurrentPly(): void {
+    // this.chess steht noch auf startFen (der geduldete Zug wurde nur auf einer Kopie geprüft).
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.phase = 'PLAYING';
+    this.cdr.markForCheck();
   }
 
   private clearAdvance(): void {

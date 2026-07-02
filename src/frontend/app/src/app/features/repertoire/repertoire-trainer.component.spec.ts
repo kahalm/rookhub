@@ -18,6 +18,16 @@ const PGN = [
   '',
 ].join('\n');
 
+/** Linie mit einer geduldeten Alternative ([%alt d4]) zum weißen Hauptzug e4. */
+const PGN_ALT = [
+  '[Event "Rep"]',
+  '[White "1.e4"]',
+  '[Black "Chapter A"]',
+  '',
+  '1. e4 {[%alt d4]} e5 2. Nf3 Nc6 *',
+  '',
+].join('\n');
+
 function make(color: 'w' | 'b' = 'w', queryChapter: string | null = null, pgn: string = PGN): RepertoireTrainerComponent {
   const route: any = {
     snapshot: {
@@ -91,6 +101,24 @@ describe('RepertoireTrainerComponent (line mode)', () => {
     expect(c.outcome).toBe('wrong');
     expect(c.phase).toBe('FEEDBACK');
   });
+
+  it('tolerated move is taken back and the same ply stays playable (no auto-play of the main move)', fakeAsync(() => {
+    const c = make('w', null, PGN_ALT);
+    const startFen = c.fen;
+    const plyBefore = (c as any).currentPly;
+    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // geduldete Alternative zu e4
+    expect(c.outcome).toBe('tolerated');
+    expect(c.fen).not.toBe(startFen);   // Zug bleibt zunächst sichtbar
+    tick(1500);   // ADVANCE_MS.tolerated
+    // Regression: der erwartete Hauptzug (e4) darf NICHT für den User gespielt werden.
+    expect(c.fen).toBe(startFen);        // geduldeter Zug zurückgenommen
+    expect(c.phase).toBe('PLAYING');     // dieselbe Stellung wieder spielbar
+    expect((c as any).currentPly).toBe(plyBefore);
+    // Der User zieht den Hauptzug jetzt selbst → korrekt.
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.correct).toBe(1);
+  }));
 
   it('resetProgress calls the backend, clears state and rebuilds the queue', () => {
     spyOn(window, 'confirm').and.returnValue(true);

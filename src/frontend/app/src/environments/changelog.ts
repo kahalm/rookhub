@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.244.1';
+export const APP_VERSION = '0.244.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.244.2", date: "2026-07-02", changes: [
+    { en: "Repertoire trainer: fixed a regression where playing a tolerated (optional) move — one accepted via a [%alt] annotation but not the main line — auto-played the expected main move for you and moved on. Now the tolerated move is briefly shown, then taken back, and the same position stays playable so you play the main move yourself (the established behaviour).", de: "Repertoire-Trainer: Regression behoben, bei der ein geduldeter (optionaler) Zug — per [%alt] akzeptiert, aber nicht der Hauptzug — den erwarteten Hauptzug automatisch für dich gespielt und weitergeschaltet hat. Jetzt wird der geduldete Zug kurz gezeigt, dann zurückgenommen, und dieselbe Stellung bleibt spielbar, sodass du den Hauptzug selbst ziehst (das etablierte Verhalten)." },
+  ]},
   { version: "0.244.1", date: "2026-07-02", changes: [
     { en: "Defensive fix for the /games replay board: the shared chess-board component now enforces a 1:1 aspect-ratio in CSS on top of the JS size calculation, so if the parent width and height ever get out of sync (e.g. during a dialog open animation) the board can't render as a stretched rectangle with the pieces squeezed to the top and bottom and rank labels missing.", de: "Defensiver Fix fürs /games-Nachspiel-Brett: die gemeinsame chess-board-Komponente erzwingt jetzt zusätzlich zur JS-Größenberechnung ein 1:1-Seitenverhältnis in CSS. Wenn Breite und Höhe des Container-Elements aus irgendeinem Grund auseinanderlaufen (z. B. während der Dialog-Öffnungs-Animation), kann das Brett nicht mehr als gestrecktes Rechteck rendern (Figuren an Ober- und Unterkante gequetscht, halbe Rang-Labels fehlten)." },
   ]},
