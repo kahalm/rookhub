@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.248.0';
+export const APP_VERSION = '0.249.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.249.0", date: "2026-07-02", changes: [
+    { en: "Repertoire trainer (Review mode): a wrong move now offers a “Mouseslip” button next to “Show solution”. Mouseslip forgives the slip — it doesn't count against the line — and lets you play the correct move; you can do this as often as you like. A wrong move only counts against the line (dropping it back to level 1) if you continue without mouseslipping or reveal the solution.", de: "Repertoire-Trainer (Abfragen): ein falscher Zug bietet jetzt neben „Lösung zeigen“ auch „Mausrutscher“. Mausrutscher verzeiht den Ausrutscher — er zählt nicht gegen die Linie — und du spielst den richtigen Zug; das geht beliebig oft. Ein Fehler zählt nur dann gegen die Linie (Rückfall auf Stufe 1), wenn du ohne Mausrutscher weitermachst oder die Lösung anzeigst." },
+  ]},
   { version: "0.248.0", date: "2026-07-02", changes: [
     { en: "Share a repertoire with selected people (same as courses): each of your own repertoires now has a “Share” button that opens a dialog where you pick friends to share it with. They get the repertoire in their own list (new “Shared with me” section, with a “shared by X” badge), can open it, download the PGN and train it with their own spaced-repetition progress, but can’t edit, delete or re-share it (edit controls are hidden for them). You can revoke access per person in the same dialog, and each recipient gets an in-app notification. Sharing is limited to friends (like puzzle challenges); admins can share with anyone.", de: "Repertoire mit ausgewählten Personen teilen (wie bei Kursen): jedes eigene Repertoire hat jetzt einen „Teilen“-Knopf, der einen Dialog öffnet, in dem du Freunde zum Teilen auswählst. Sie bekommen das Repertoire in ihrer eigenen Liste (neue Sektion „Mit mir geteilt“ mit „geteilt von X“-Badge), können es öffnen, das PGN herunterladen und mit eigenem Spaced-Repetition-Fortschritt trainieren, aber nicht bearbeiten, löschen oder weiterteilen (die Bearbeiten-Bedienelemente sind für sie ausgeblendet). Im selben Dialog kannst du den Zugriff je Person wieder entziehen; jeder Empfänger erhält eine In-App-Benachrichtigung. Teilen ist auf Freunde beschränkt (wie Puzzle-Challenges); Admins können mit allen teilen." },
   ]},

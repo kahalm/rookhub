@@ -139,6 +139,20 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(spy.calls.mostRecent().args[1].correct).toBeFalse();
   }));
 
+  it('mouseslip forgives a wrong move: the line still reports correct', fakeAsync(() => {
+    const spy = jasmine.createSpy('reviewLine').and.returnValue(of(state(KEY_A, FUTURE())));
+    const c = make('w', 'Chapter A', PGN, [state(KEY_A, PAST())], spy);
+    c.onMove({ orig: 'a2' as any, dest: 'a3' as any });   // falsch
+    expect(c.outcome).toBe('wrong');
+    c.mouseslip();                                        // verzeihen → kein Fehler
+    expect(c.phase).toBe('PLAYING');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // korrekt
+    tick(600); tick(400);
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
+    tick(600); tick(400);                                 // → finishLine
+    expect(spy.calls.mostRecent().args[1].correct).toBeTrue();
+  }));
+
   it('tolerated move is taken back and stays playable (no auto-play of the main move)', fakeAsync(() => {
     const c = make('w', null, PGN_ALT, [state(KEY_A, PAST())]);
     const startFen = c.fen;

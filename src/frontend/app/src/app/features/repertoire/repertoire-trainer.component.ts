@@ -172,6 +172,9 @@ const LEARN_SHOW_MS = 2000;      // Zug im Learn-Modus so lange zeigen, dann zur
               <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
             </p>
             <div class="wrong-actions" *ngIf="!wrongRevealed">
+              <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
+                <mat-icon>back_hand</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
+              </button>
               <button mat-raised-button color="primary" (click)="showSolution(); $event.stopPropagation()">
                 <mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.showSolution' | translate }}
               </button>
@@ -256,8 +259,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private evalEpoch = 0;
 
   private statesByKey = new Map<string, LineStateDto>();   // key = lineKey
-  /** Ergebnis der AKTUELLEN Linie: true, sobald ein Zug falsch war (geduldet zählt neutral). */
+  /** Ergebnis der AKTUELLEN Linie: true, sobald ein NICHT als Mausrutscher verziehener Fehler
+   * passiert ist (geduldet zählt neutral). */
   private lineHadWrong = false;
+  /** Ein offener Fehler an der aktuellen Stellung, der noch als Mausrutscher verziehen werden kann
+   * (zählt erst als echter Fehler, wenn der User ohne „Mausrutscher" weitermacht/„Lösung zeigen"). */
+  private pendingWrong = false;
   /** Für die EMPTY-Ansicht: wann die nächste Pool-Linie fällig wird (ISO) — null = nichts im Pool. */
   nextDueAt: string | null = null;
   private graph: RepertoireGraph | null = null;
@@ -464,6 +471,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.chess = new Chess(line.fens[0]);
     this.currentPly = 0;
     this.lineHadWrong = false;
+    this.pendingWrong = false;
     this.fen = this.chess.fen();
     this.lastMove = undefined;
     this.advanceToUserMove();
@@ -610,6 +618,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // einen Fehler hatte. Geduldete Züge zählen neutral.
     if (userSan === expectedSan) {
       this.outcome = 'correct'; this.correct++;
+      // Ein an dieser Stellung offener Fehler, den der User NICHT als Mausrutscher deklariert hat,
+      // zählt jetzt (er macht ohne „Mausrutscher" weiter).
+      if (this.pendingWrong) { this.lineHadWrong = true; this.wrong++; this.pendingWrong = false; }
       // Korrekten Zug in der maßgeblichen Partie nachführen, damit advanceToUserMove die
       // Gegnerzüge aus der richtigen Stellung spielt (sonst hängt eine Linie mit mehreren
       // eigenen Zügen).
@@ -617,10 +628,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.fen = this.chess.fen();
     } else if (accepted.has(userSan)) {
       this.outcome = 'tolerated';
+      if (this.pendingWrong) { this.lineHadWrong = true; this.wrong++; this.pendingWrong = false; }
       this.fen = fenAfterPlayer;
     } else {
-      this.outcome = 'wrong'; this.lineHadWrong = true;
-      // Falschen Zug zurücknehmen; als lastMove markiert lassen.
+      // Falscher Zug: NOCH nicht als Fehler zählen — der User kann „Mausrutscher" sagen. Erst beim
+      // Weitermachen ohne Mausrutscher bzw. „Lösung zeigen" wird daraus ein echter Fehler.
+      this.outcome = 'wrong'; this.pendingWrong = true;
       this.fen = this.startFen;
       this.lastMove = [ev.orig, ev.dest];
     }
@@ -650,6 +663,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.clearWrongRevert();
     this.wrongRevealed = true;
     this.wrong++;
+    this.lineHadWrong = true;   // Lösung zeigen = echter Fehler für die Linie
+    this.pendingWrong = false;
     const line = this.queue[this.qIndex];
     const expected = line?.moves[this.currentPly];
     if (expected) {
@@ -665,6 +680,21 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         }
       } catch { /* SAN nicht spielbar → nur Text-Reveal */ }
     }
+    this.cdr.markForCheck();
+  }
+
+  /** „Mausrutscher": den offenen Fehler NICHT zählen und dieselbe Stellung wieder spielbar machen —
+   * beliebig oft wiederholbar. */
+  mouseslip(): void {
+    if (this.phase !== 'FEEDBACK' || this.outcome !== 'wrong' || this.wrongRevealed) return;
+    this.clearWrongRevert();
+    this.pendingWrong = false;
+    this.outcome = 'correct';   // Feedback-Kasten schließen
+    this.wrongRevealed = false;
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.phase = 'PLAYING';
     this.cdr.markForCheck();
   }
 
