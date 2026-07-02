@@ -74,6 +74,20 @@ describe('CourseListComponent sorting', () => {
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
     });
 
+    it('zeigt angepinnte Kurse ganz oben in „In Arbeit" — auch wenn noch nichts gelöst wurde', () => {
+      const courseService = { getCourses: () => of([
+        item2({ bookId: 1, solvedCount: 3 }),                        // in Arbeit, nicht gepinnt
+        item2({ bookId: 2, solvedCount: 0, isPinned: true }),         // gepinnt, noch nicht angefangen
+        item2({ bookId: 3, solvedCount: 5, isPinned: true }),         // gepinnt + in Arbeit
+        item2({ bookId: 4, solvedCount: 0, isPinned: false }),        // weder gepinnt noch angefangen
+        item2({ bookId: 5, solvedCount: 10, isPinned: true }),        // gepinnt, aber schon fertig → NICHT in-progress
+      ]) } as any;
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+      comp.loadCourses();
+      // Angepinnte zuerst (2, 3), danach der begonnene Rest (1). BookId 4 (weder-noch) und 5 (fertig) draußen.
+      expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([2, 3, 1]);
+    });
+
     it('verschwindet nach Reset (solvedCount=0, lastActivityAt bleibt gesetzt)', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),

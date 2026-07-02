@@ -306,9 +306,20 @@ export class CourseListComponent implements OnInit {
   }
 
   get inProgressCourses(): CourseListItem[] {
-    // „In Arbeit" = tatsächlich begonnen (≥1 gelöst) und noch nicht fertig. Nach einem Reset
-    // ist solvedCount=0 → der Kurs verschwindet hier wieder (auch wenn lastActivityAt gesetzt bleibt).
-    return this.filtered.filter(c => c.solvedCount > 0 && c.solvedCount < c.puzzleCount);
+    // „In Arbeit" umfasst zwei Fälle:
+    //  • tatsächlich begonnen (≥1 gelöst) und noch nicht fertig → nach Reset (solvedCount=0)
+    //    verschwindet der Kurs hier wieder.
+    //  • angepinnte, noch nicht fertige Kurse — der User will die ganz oben sehen (Schnellzugriff),
+    //    auch bevor er sie zum ersten Mal angeklickt hat.
+    // Angepinnte Kurse zuerst (nach Fortschritt absteigend, Vorlagen ganz oben), danach der Rest
+    // (sortCourses hat schon nach lastActivityAt sortiert; hier bewahren wir die Ordnung).
+    const eligible = this.filtered.filter(c =>
+      c.puzzleCount > 0 && c.solvedCount < c.puzzleCount &&
+      (c.isPinned || c.solvedCount > 0));
+    return [
+      ...eligible.filter(c => c.isPinned),
+      ...eligible.filter(c => !c.isPinned),
+    ];
   }
 
   /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */

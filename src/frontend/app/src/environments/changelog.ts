@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.8';
+export const APP_VERSION = '0.242.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.9", date: "2026-07-02", changes: [
+    { en: "Three course-puzzle fixes: (1) After solving a course/book puzzle the review now stays on the FINAL position instead of jumping back to the first annotated move — the live per-move comments while solving already show all the annotations. (2) During solving, when a move has no comment (e.g. an opponent's automatic response), the previously shown comment stays; the intro comment no longer re-appears, and after the last move an unannotated end position simply shows nothing (or the last non-empty comment) instead of the intro. (3) Pinned courses now also appear at the top of the courses page under \"In progress\" — even ones you haven't started yet — so the quick-start pins are visible in both the dashboard tile and the courses list.", de: "Drei Kurs-Puzzle-Fixes: (1) Nach dem Lösen eines Kurs-/Buch-Puzzles bleibt die Review-Ansicht jetzt in der ENDstellung stehen, statt zum ersten kommentierten Zug zurückzuspringen — die Live-Zug-Kommentare während des Lösens zeigen bereits alle Annotationen. (2) Während des Lösens: hat ein Zug (z. B. eine Gegner-Antwort) keinen Kommentar, bleibt der zuletzt gezeigte stehen; die Einleitung tauchte bisher wieder auf, das passiert nicht mehr. Auch nach dem letzten Zug wird eine unkommentierte Endstellung leer angezeigt (bzw. der letzte nicht-leere Kommentar) statt der Einleitung. (3) Angepinnte Kurse erscheinen jetzt zusätzlich ganz oben auf der Kurse-Seite unter „In Arbeit" — auch wenn du sie noch nicht angefangen hast — sodass die Schnellstart-Pins sowohl in der Dashboard-Kachel als auch in der Kursliste sichtbar sind." },
+  ]},
   { version: "0.242.8", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the admin \"Download courses on behalf of a user\" tab was extracted from the large AdminComponent into its own AdminChessableDownloadComponent (lazy-loaded when the tab is opened). No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): der Admin-Tab „Kurse von Usern holen“ wurde aus der großen AdminComponent in eine eigene AdminChessableDownloadComponent ausgelagert (lädt erst beim Öffnen des Tabs). Keine sichtbare Änderung." },
   ]},

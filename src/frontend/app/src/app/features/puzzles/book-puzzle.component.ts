@@ -656,7 +656,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Einleitung) — Basis der Ply-Navigation; die Anzeige läuft über {@link commentLines}. */
   get displayComment(): string | null {
     if (!this.puzzle) return null;
-    if (this.reviewMode) return this.moveComment ?? this.puzzle.comment ?? null;
+    if (this.reviewMode) {
+      // Einleitung nur ganz am Anfang zeigen (vor dem 1. Zug). Ab reviewIndex ≥ 1 nur den zuletzt
+      // gesehenen Zug-Kommentar — sonst schlägt eine unkommentierte Endstellung auf die Einleitung
+      // zurück und wirkt wie ein Sprung nach hinten.
+      if (this.reviewIndex === 0) return this.moveComment ?? this.puzzle.comment ?? null;
+      return this.moveComment ?? null;
+    }
     return this.puzzle.comment ?? null;
   }
 
@@ -669,7 +675,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   get commentLines(): string[] {
     if (!this.puzzle) return [];
     if (this.reviewMode) {
-      const c = this.moveComment ?? this.puzzle.comment ?? null;
+      // Analog zu {@link displayComment}: nur vor dem 1. Zug auf die Einleitung zurückfallen.
+      const c = this.reviewIndex === 0
+        ? (this.moveComment ?? this.puzzle.comment ?? null)
+        : (this.moveComment ?? null);
       return c ? [c] : [];
     }
     if (this.onSolutionPath && this.moveIndex > 0
@@ -1163,8 +1172,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.isCheck = this.chess.isCheck();
     this.dests = new Map();
     // Lösungs-Review: index = Anzahl Lösungszüge ab Trainingsstart; absoluter Halbzug = start + index.
-    this.moveComment = this.commentForPlyPlayed(start + index - 1);
+    // Fällt der aktuelle Zug ohne Kommentar aus, den zuletzt vorher gesehenen behalten (statt zurück
+    // auf die Einleitung zu fallen — das wirkte für den User wie ein „Sprung nach hinten").
+    this.moveComment = this.latestCommentUpTo(start, start + index - 1);
     this.reviewShapes = this.shapesForPlyPlayed(start + index - 1);
+  }
+
+  /** Kommentar des zuletzt kommentierten Halbzugs im Bereich [start .. plyPlayed] (rückwärts).
+   *  Gibt null zurück, wenn keiner dieser Züge einen Kommentar hat. */
+  private latestCommentUpTo(start: number, plyPlayed: number): string | null {
+    for (let ply = plyPlayed; ply >= start; ply--) {
+      const c = this.commentForPlyPlayed(ply);
+      if (c) return c;
+    }
+    return null;
   }
 
   /** Kommentar, der zum zuletzt gespielten Halbzug gehört. <paramref> ist der 0-basierte Index
@@ -1183,24 +1204,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override enterSolutionReview(): void {
     this.solutionReview = true;
     this.reviewMode = true;
-    // Beim ersten annotierten Lösungszug landen (Kommentar ODER Board-Pfeile), damit die frühen
-    // Erklärungen — z. B. „Direct play was stronger" / „King moves transpose at best," — sofort sichtbar
-    // sind und der Nutzer mit ▶ weiterblättert. Gibt es keine Zug-Annotationen, ans Ende springen
-    // (zeigt den Abschlusstext nach dem letzten Zug). Vorher immer ans Ende → frühe Kommentare/Pfeile
-    // blieben verborgen, bis man zurückblätterte.
-    this.solutionReviewGoTo(this.firstAnnotatedSolutionIndex());
-  }
-
-  /** Kleinster Lösungs-Review-Index (1…reviewTotal), dessen Zug einen Kommentar ODER Pfeile hat;
-   *  sonst reviewTotal (Ende). */
-  private firstAnnotatedSolutionIndex(): number {
-    const start = Math.max(0, this.startPly);
-    const total = this.reviewTotal;   // solutionReview ist bereits gesetzt → Lösungs-Umfang
-    for (let r = 1; r <= total; r++) {
-      const ply = start + r - 1;
-      if (this.commentForPlyPlayed(ply) || this.shapesForPlyPlayed(ply).length > 0) return r;
-    }
-    return total;
+    // Nach dem Lösen in der ENDSTELLUNG stehen bleiben (zeigt einen etwaigen Abschlusstext nach dem
+    // letzten Zug). Frühe Zug-Kommentare/Pfeile werden bereits WÄHREND des Lösens live gestapelt
+    // (siehe 0.240.6) — ein Zurückspringen zum ersten annotierten Zug hier fühlte sich für den User
+    // wie ein „irgendwohin zurück"-Sprung an; siehe Feedback zu 0.240.0.
+    this.solutionReviewGoTo(this.reviewTotal);
   }
 
   // ---- „Ganze Partie" Review ---------------------------------------------
@@ -1253,7 +1261,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.isCheck = this.chess.isCheck();
     this.dests = new Map();
     // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
-    this.moveComment = this.commentForPlyPlayed(index - 1);
+    // Bei Zügen ohne Kommentar den zuletzt gesehenen behalten (statt bis zur Einleitung zurückzufallen).
+    this.moveComment = this.latestCommentUpTo(0, index - 1);
     this.reviewShapes = this.shapesForPlyPlayed(index - 1);
   }
 
