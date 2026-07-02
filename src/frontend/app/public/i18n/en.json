@@ -28,7 +28,21 @@
     "lineProgress": "Line {{done}} of {{total}}",
     "lineDone": "Line complete — next one loading…",
     "resetTooltip": "Reset training progress (delete SM-2 state).",
-    "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted."
+    "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted.",
+    "nextDue": "Nothing due right now. Next review in {{when}}.",
+    "nothingInPool": "No lines in your practice pool yet — add some to start.",
+    "addAllToPool": "Add all lines to pool",
+    "makeAllDue": "Make all due now",
+    "manageLines": "Manage lines"
+  },
+  "srConfig": {
+    "title": "Practice cycles",
+    "overrideForRepertoire": "Use custom cycles for this repertoire",
+    "hintGlobal": "Global defaults for all repertoires. Correct → next level, wrong → level 1.",
+    "hintRepertoire": "These intervals apply only to this repertoire.",
+    "level": "Level",
+    "resetDefaults": "Reset to defaults",
+    "unit": { "h": "hours", "d": "days", "w": "weeks", "mo": "months" }
   },
   "common": {
     "save": "Save",

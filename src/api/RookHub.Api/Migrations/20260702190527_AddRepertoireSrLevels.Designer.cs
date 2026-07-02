@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260702190527_AddRepertoireSrLevels")]
+    partial class AddRepertoireSrLevels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -823,38 +826,6 @@ namespace RookHub.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("CoursePuzzleResults");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.CourseShare", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RecipientId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SharedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
-
-                    b.HasIndex("RecipientId");
-
-                    b.HasIndex("BookId", "RecipientId")
-                        .IsUnique();
-
-                    b.ToTable("CourseShares");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.DailyPuzzle", b =>
@@ -2543,33 +2514,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("BookPuzzle");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.CourseShare", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.Book", "Book")
-                        .WithMany()
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("RookHub.Api.Models.AppUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("RookHub.Api.Models.AppUser", "Recipient")
-                        .WithMany()
-                        .HasForeignKey("RecipientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("Owner");
-
-                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.DailyPuzzle", b =>

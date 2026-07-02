@@ -44,6 +44,10 @@ public class Repertoire
     [MaxLength(32)]
     public string? ChessableCourseId { get; set; }
 
+    /// <summary>Optionaler Override der 9-Stufen-SR-Intervalle NUR für dieses Repertoire — JSON-Array
+    /// mit 9 `{ value, unit }`-Einträgen. Null = globale Nutzer-Defaults verwenden.</summary>
+    public string? SrIntervalsJson { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

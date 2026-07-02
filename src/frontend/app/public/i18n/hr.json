@@ -28,7 +28,21 @@
     "lineProgress": "Linija {{done}} od {{total}}",
     "lineDone": "Linija gotova — sljedeća se učitava…",
     "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
-    "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani."
+    "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani.",
+    "nextDue": "Trenutno ništa nije na redu. Sljedeće ponavljanje za {{when}}.",
+    "nothingInPool": "Još nema linija u bazenu za vježbanje — dodaj neke za početak.",
+    "addAllToPool": "Dodaj sve linije u bazen",
+    "makeAllDue": "Učini sve dospjelim sada",
+    "manageLines": "Upravljaj linijama"
+  },
+  "srConfig": {
+    "title": "Ciklusi vježbanja",
+    "overrideForRepertoire": "Vlastiti ciklusi za ovaj repertoar",
+    "hintGlobal": "Globalne zadane vrijednosti za sve repertoare. Točno → sljedeća razina, pogrešno → razina 1.",
+    "hintRepertoire": "Ovi intervali vrijede samo za ovaj repertoar.",
+    "level": "Razina",
+    "resetDefaults": "Vrati na zadano",
+    "unit": { "h": "sati", "d": "dana", "w": "tjedni", "mo": "mjeseci" }
   },
   "common": {
     "save": "Spremi",

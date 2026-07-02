@@ -38,145 +38,243 @@ public class RepertoireTrainingServiceTests : IDisposable
         return r.Id;
     }
 
-    private static ReviewCardRequest Req(string key, string move, int grade) =>
-        new() { CardKey = key, ExpectedMove = move, Grade = grade };
+    private static LineReviewRequest Rev(string key, bool correct) => new() { LineKey = key, Correct = correct };
+
+    // ===== Scheduling (pure) =====
 
     [Fact]
-    public async Task GetCards_ForeignRepertoire_ReturnsNull()
+    public void ScheduleLevel_DefaultLadder_NewCorrect_GoesToLevel1_Due4h()
+    {
+        var hours = RepertoireTrainingService.DefaultLevels.Select(RepertoireTrainingService.HoursOf).ToArray();
+        var card = new RepertoireCardState();
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        RepertoireTrainingService.ScheduleLevel(card, correct: true, hours, now);
+
+        Assert.Equal(1, card.Level);
+        Assert.Equal(now.AddHours(4), card.DueAt);   // Stufe 1 = 4h
+    }
+
+    [Fact]
+    public void ScheduleLevel_CorrectAdvancesOneLevel_AndCapsAt9()
+    {
+        var hours = RepertoireTrainingService.DefaultLevels.Select(RepertoireTrainingService.HoursOf).ToArray();
+        var card = new RepertoireCardState();
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        for (var i = 0; i < 12; i++) RepertoireTrainingService.ScheduleLevel(card, true, hours, now);
+
+        Assert.Equal(9, card.Level);
+        Assert.Equal(now.AddHours(24 * 30 * 6), card.DueAt);   // Stufe 9 = 6 Monate (30d)
+    }
+
+    [Fact]
+    public void ScheduleLevel_Wrong_FallsBackToLevel1()
+    {
+        var hours = RepertoireTrainingService.DefaultLevels.Select(RepertoireTrainingService.HoursOf).ToArray();
+        var card = new RepertoireCardState { Level = 5 };
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        RepertoireTrainingService.ScheduleLevel(card, correct: false, hours, now);
+
+        Assert.Equal(1, card.Level);
+        Assert.Equal(now.AddHours(4), card.DueAt);
+        Assert.Equal(1, card.Lapses);
+    }
+
+    [Fact]
+    public void HoursOf_ConvertsUnits()
+    {
+        Assert.Equal(4, RepertoireTrainingService.HoursOf(new(4, "h")));
+        Assert.Equal(60, RepertoireTrainingService.HoursOf(new(2.5, "d")));
+        Assert.Equal(420, RepertoireTrainingService.HoursOf(new(2.5, "w")));
+        Assert.Equal(1080, RepertoireTrainingService.HoursOf(new(1.5, "mo")));
+    }
+
+    // ===== ReviewLine =====
+
+    [Fact]
+    public async Task ReviewLine_ForeignRepertoire_ReturnsNull()
     {
         var owner = await CreateUserAsync("owner");
         var other = await CreateUserAsync("other");
         var repId = await CreateRepertoireAsync(owner);
-
-        Assert.Null(await _service.GetCardsAsync(other, repId, default));
+        Assert.Null(await _service.ReviewLineAsync(other, repId, Rev("L1", true)));
     }
 
     [Fact]
-    public async Task Review_ForeignRepertoire_ReturnsNull()
+    public async Task ReviewLine_CreatesState_Correct_Level1()
     {
-        var owner = await CreateUserAsync("owner");
-        var other = await CreateUserAsync("other");
-        var repId = await CreateRepertoireAsync(owner);
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
 
-        Assert.Null(await _service.ReviewAsync(other, repId, Req("fen1", "e6", 2), default));
-    }
-
-    [Fact]
-    public async Task Review_FirstGood_CreatesCardWithOneDayInterval()
-    {
-        var u = await CreateUserAsync();
-        var repId = await CreateRepertoireAsync(u);
-
-        var dto = await _service.ReviewAsync(u, repId, Req("fen1", "e6", 2), default);
+        var dto = await _service.ReviewLineAsync(user, repId, Rev("lineA", true));
 
         Assert.NotNull(dto);
-        Assert.Equal(1, dto!.Reps);
-        Assert.Equal(1, dto.IntervalDays);
-        Assert.Equal("e6", dto.ExpectedMove);
-        Assert.True(dto.DueAt > DateTime.UtcNow.AddHours(20));
-        Assert.Single(await _db.RepertoireCardStates.ToListAsync());
+        Assert.Equal("lineA", dto!.LineKey);
+        Assert.Equal(1, dto.Level);
+        Assert.Equal(1, dto.Reps);
     }
 
     [Fact]
-    public async Task Review_GoodProgression_FollowsSm2Steps()
+    public async Task ReviewLine_WrongAfterProgress_ResetsToLevel1()
     {
-        var u = await CreateUserAsync();
-        var repId = await CreateRepertoireAsync(u);
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
 
-        await _service.ReviewAsync(u, repId, Req("fen1", "e6", 2), default);   // rep1 → 1d
-        var r2 = await _service.ReviewAsync(u, repId, Req("fen1", "e6", 2), default);   // rep2 → 6d
+        await _service.ReviewLineAsync(user, repId, Rev("lineA", true));   // L1
+        await _service.ReviewLineAsync(user, repId, Rev("lineA", true));   // L2
+        var dto = await _service.ReviewLineAsync(user, repId, Rev("lineA", false));   // wrong -> L1
 
-        Assert.Equal(2, r2!.Reps);
-        Assert.Equal(6, r2.IntervalDays);
-        // Idempotent über die Stellung: weiterhin genau EINE Karte.
-        Assert.Single(await _db.RepertoireCardStates.ToListAsync());
+        Assert.Equal(1, dto!.Level);
     }
 
     [Fact]
-    public async Task Review_Again_ResetsRepsAndLowersEaseAndDueSoon()
+    public async Task GetLineStates_ReturnsPersistedStates()
     {
-        var u = await CreateUserAsync();
-        var repId = await CreateRepertoireAsync(u);
-        await _service.ReviewAsync(u, repId, Req("fen1", "e6", 2), default);   // good → reps 1
-        await _service.ReviewAsync(u, repId, Req("fen1", "e6", 2), default);   // good → reps 2
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        await _service.ReviewLineAsync(user, repId, Rev("a", true));
+        await _service.ReviewLineAsync(user, repId, Rev("b", false));
 
-        var again = await _service.ReviewAsync(u, repId, Req("fen1", "e6", 0), default);
+        var states = await _service.GetLineStatesAsync(user, repId);
+        Assert.NotNull(states);
+        Assert.Equal(2, states!.Count);
+    }
 
-        Assert.Equal(0, again!.Reps);
-        Assert.Equal(1, again.Lapses);
-        Assert.True(again.Ease < 2.5);
-        Assert.True(again.DueAt < DateTime.UtcNow.AddHours(1));   // Relearn in Kürze
+    // ===== Config =====
+
+    [Fact]
+    public async Task GetConfig_Default_WhenNothingSet()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+
+        var cfg = await _service.GetConfigAsync(user, repId);
+        Assert.NotNull(cfg);
+        Assert.Equal("default", cfg!.Source);
+        Assert.Equal(9, cfg.Effective.Count);
+        Assert.Null(cfg.Repertoire);
     }
 
     [Fact]
-    public async Task Review_Hard_ForTolerated_LowersEaseSmallStep()
+    public async Task SetUserConfig_ThenEffectiveSourceIsUser()
     {
-        var u = await CreateUserAsync();
-        var repId = await CreateRepertoireAsync(u);
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        var levels = RepertoireTrainingService.DefaultLevels.Select(l => new SrLevelDto(l.Value, l.Unit)).ToList();
+        levels[0] = new SrLevelDto(6, "h");
 
-        var hard = await _service.ReviewAsync(u, repId, Req("fen1", "e6", 1), default);
-
-        Assert.NotNull(hard);
-        Assert.True(hard!.Ease < 2.5);
-        Assert.True(hard.IntervalDays < 1);   // erster „hard" → kurzer Schritt
+        Assert.True(await _service.SetUserConfigAsync(user, levels));
+        var cfg = await _service.GetConfigAsync(user, repId);
+        Assert.Equal("user", cfg!.Source);
+        Assert.Equal(6, cfg.Effective[0].Value);
     }
 
     [Fact]
-    public async Task GetCards_ReturnsOwnCardsOnly()
+    public async Task SetRepertoireConfig_Overrides_ThenClearFallsBack()
     {
-        var u = await CreateUserAsync();
-        var repId = await CreateRepertoireAsync(u);
-        await _service.ReviewAsync(u, repId, Req("fenA", "e6", 2), default);
-        await _service.ReviewAsync(u, repId, Req("fenB", "d5", 2), default);
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        var levels = RepertoireTrainingService.DefaultLevels.Select(l => new SrLevelDto(l.Value, l.Unit)).ToList();
+        levels[0] = new SrLevelDto(2, "h");
 
-        var cards = await _service.GetCardsAsync(u, repId, default);
+        Assert.True((await _service.SetRepertoireConfigAsync(user, repId, levels))!.Value);
+        var cfg = await _service.GetConfigAsync(user, repId);
+        Assert.Equal("repertoire", cfg!.Source);
+        Assert.Equal(2, cfg.Effective[0].Value);
 
-        Assert.NotNull(cards);
-        Assert.Equal(2, cards!.Count);
-        Assert.Contains(cards, c => c.CardKey == "fenA" && c.ExpectedMove == "e6");
+        // Override löschen → zurück auf Default
+        Assert.True((await _service.SetRepertoireConfigAsync(user, repId, null))!.Value);
+        cfg = await _service.GetConfigAsync(user, repId);
+        Assert.Equal("default", cfg!.Source);
     }
 
     [Fact]
-    public async Task Reset_ForeignRepertoire_ReturnsNullAndKeepsData()
+    public async Task SetUserConfig_InvalidLevelCount_Rejected()
     {
-        var owner = await CreateUserAsync("owner");
-        var other = await CreateUserAsync("other");
-        var repId = await CreateRepertoireAsync(owner);
-        await _service.ReviewAsync(owner, repId, Req("fenA", "e6", 2));
-
-        var deleted = await _service.ResetAsync(other, repId);
-        Assert.Null(deleted);
-        Assert.Single(await _service.GetCardsAsync(owner, repId) ?? new());
+        var user = await CreateUserAsync();
+        var bad = new List<SrLevelDto> { new(4, "h"), new(10, "h") };   // nur 2 Stufen
+        Assert.False(await _service.SetUserConfigAsync(user, bad));
     }
 
     [Fact]
-    public async Task Reset_OwnRepertoire_RemovesAllCards()
+    public async Task RepertoireConfig_AffectsReviewDue()
     {
-        var owner = await CreateUserAsync("owner");
-        var repId = await CreateRepertoireAsync(owner);
-        await _service.ReviewAsync(owner, repId, Req("fenA", "e6", 2));
-        await _service.ReviewAsync(owner, repId, Req("fenB", "c5", 2));
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        var levels = RepertoireTrainingService.DefaultLevels.Select(l => new SrLevelDto(l.Value, l.Unit)).ToList();
+        levels[0] = new SrLevelDto(1, "h");   // Stufe 1 = 1h statt 4h
+        await _service.SetRepertoireConfigAsync(user, repId, levels);
 
-        var deleted = await _service.ResetAsync(owner, repId);
+        var before = DateTime.UtcNow;
+        var dto = await _service.ReviewLineAsync(user, repId, Rev("x", true));
+        Assert.Equal(1, dto!.Level);
+        Assert.InRange(dto.DueAt, before.AddMinutes(59), before.AddMinutes(61));
+    }
+
+    // ===== Pool / Pause / Make-due =====
+
+    [Fact]
+    public async Task Promote_CreatesInPoolState_DueNow()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+
+        var before = DateTime.UtcNow;
+        var n = await _service.PromoteAsync(user, repId, new() { "l1", "l2" });
+        Assert.Equal(2, n);
+
+        var states = (await _service.GetLineStatesAsync(user, repId))!;
+        Assert.Equal(2, states.Count);
+        Assert.All(states, s => Assert.True(s.InPool));
+        Assert.All(states, s => Assert.False(s.Paused));
+        Assert.All(states, s => Assert.InRange(s.DueAt, before.AddSeconds(-2), DateTime.UtcNow.AddSeconds(2)));
+    }
+
+    [Fact]
+    public async Task Pause_MarksPaused_WithoutPuttingInPool()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+
+        await _service.SetPausedAsync(user, repId, new() { "l1" }, paused: true);
+        var s = (await _service.GetLineStatesAsync(user, repId))!.Single();
+        Assert.True(s.Paused);
+        Assert.False(s.InPool);   // Pausieren allein nimmt nicht in den Pool auf
+
+        await _service.SetPausedAsync(user, repId, new() { "l1" }, paused: false);
+        s = (await _service.GetLineStatesAsync(user, repId))!.Single();
+        Assert.False(s.Paused);
+    }
+
+    [Fact]
+    public async Task MakeDue_OnlyAffectsInPoolLines_AndUnpauses()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        await _service.PromoteAsync(user, repId, new() { "inpool" });
+        await _service.SetPausedAsync(user, repId, new() { "inpool" }, paused: true);
+        await _service.SetPausedAsync(user, repId, new() { "onlypaused" }, paused: true);   // nie im Pool
+
+        var n = await _service.MakeDueAsync(user, repId, new());   // ganzer Kurs
+        Assert.Equal(1, n);   // nur die InPool-Linie
+
+        var states = (await _service.GetLineStatesAsync(user, repId))!;
+        Assert.False(states.Single(s => s.LineKey == "inpool").Paused);        // entpausiert
+        Assert.True(states.Single(s => s.LineKey == "onlypaused").Paused);     // unberührt
+    }
+
+    [Fact]
+    public async Task Reset_ClearsStates()
+    {
+        var user = await CreateUserAsync();
+        var repId = await CreateRepertoireAsync(user);
+        await _service.ReviewLineAsync(user, repId, Rev("a", true));
+        await _service.ReviewLineAsync(user, repId, Rev("b", true));
+
+        var deleted = await _service.ResetAsync(user, repId);
         Assert.Equal(2, deleted);
-        Assert.Empty((await _service.GetCardsAsync(owner, repId))!);
-    }
-
-    [Fact]
-    public async Task Reset_DoesNotTouchOtherRepertoiresOrUsers()
-    {
-        var owner = await CreateUserAsync("owner");
-        var other = await CreateUserAsync("other");
-        var repA = await CreateRepertoireAsync(owner);
-        var repB = await CreateRepertoireAsync(owner);
-        var repC = await CreateRepertoireAsync(other);
-        await _service.ReviewAsync(owner, repA, Req("fx", "e4", 2));
-        await _service.ReviewAsync(owner, repB, Req("fx", "d4", 2));
-        await _service.ReviewAsync(other, repC, Req("fx", "e4", 2));
-
-        Assert.Equal(1, await _service.ResetAsync(owner, repA));
-        Assert.Empty((await _service.GetCardsAsync(owner, repA))!);
-        Assert.Single((await _service.GetCardsAsync(owner, repB))!);
-        Assert.Single((await _service.GetCardsAsync(other, repC))!);
+        Assert.Empty((await _service.GetLineStatesAsync(user, repId))!);
     }
 }

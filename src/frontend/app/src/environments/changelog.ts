@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.245.0';
+export const APP_VERSION = '0.246.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.246.0", date: "2026-07-02", changes: [
+    { en: "Repertoire spaced repetition, part 1 — a fixed 9-level ladder replaces the old SM-2 scheduling. Each correct run of a whole line moves it up one level (a mistake anywhere drops it back to level 1); the level's interval decides when the line becomes due again. Default intervals: 4h · 10h · 24h · 2.5d · 1w · 2.5w · 1.5mo · 3mo · 6mo, editable per level via a new ⚙ (tune) dialog in the trainer — globally and, optionally, overridden per repertoire. The trainer now practices ONLY due lines (strict): when nothing is due it shows when the next review is due, with a \"Make all due now\" button; when nothing is in the pool yet, an \"Add all lines to pool\" button. Tolerated ([%alt]) moves stay neutral. (Backend also already supports pausing lines/chapters and per-line/chapter learn/add — the granular per-line UI + a guided Learn mode follow in part 2.)", de: "Repertoire-Spaced-Repetition, Teil 1 — eine feste 9-Stufen-Leiter ersetzt das bisherige SM-2-Scheduling. Jede fehlerfrei durchgespielte Linie steigt eine Stufe auf (ein Fehler irgendwo wirft sie zurück auf Stufe 1); das Intervall der Stufe bestimmt, wann die Linie wieder fällig wird. Standard-Intervalle: 4h · 10h · 24h · 2,5d · 1W · 2,5W · 1,5M · 3M · 6M, pro Stufe über einen neuen ⚙-Dialog im Trainer einstellbar — global und optional pro Repertoire übersteuerbar. Der Trainer übt jetzt NUR fällige Linien (strikt): ist nichts fällig, zeigt er, wann die nächste Wiederholung ansteht (+ Knopf „Alle jetzt fällig machen“); ist noch nichts im Pool, ein Knopf „Alle Linien in den Pool“. Geduldete ([%alt]) Züge bleiben neutral. (Das Backend unterstützt bereits Pausieren von Linien/Kapiteln und Learn/In-Pool je Linie/Kapitel — die granulare Pro-Linie-UI + ein geführter Learn-Modus folgen in Teil 2.)" },
+  ]},
   { version: "0.245.0", date: "2026-07-02", changes: [
     { en: "Share a course with selected people: each of your own courses now has a “Share course” button (group icon) that opens a dialog where you pick friends to share it with. They get the course in their own course list (new “Shared with me” section, with a “shared by X” badge), can work through it with their own progress, but can’t edit, delete or re-share it. You can revoke access per person in the same dialog, and each recipient gets an in-app notification. Sharing is limited to friends (like puzzle challenges); admins can share with anyone.", de: "Kurs mit ausgewählten Personen teilen: jeder eigene Kurs hat jetzt einen „Kurs teilen“-Knopf (Gruppen-Icon), der einen Dialog öffnet, in dem du Freunde zum Teilen auswählst. Sie bekommen den Kurs in ihrer eigenen Kursliste (neue Sektion „Mit mir geteilt“ mit „geteilt von X“-Badge), können ihn mit eigenem Fortschritt durcharbeiten, aber nicht bearbeiten, löschen oder weiterteilen. Im selben Dialog kannst du den Zugriff je Person wieder entziehen; jeder Empfänger erhält eine In-App-Benachrichtigung. Teilen ist auf Freunde beschränkt (wie Puzzle-Challenges); Admins können mit allen teilen." },
   ]},

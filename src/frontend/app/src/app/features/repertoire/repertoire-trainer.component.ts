@@ -7,6 +7,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { Chess } from 'chess.js';
@@ -16,8 +17,10 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { calcDests } from '../puzzles/puzzle-move.util';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { RepertoireTrainingService, RepertoireCardStateDto, ReviewCardRequest } from './repertoire-training.service';
-import { buildRepertoireGraph, normSan, normFen, sideToMove, RepertoireGraph } from './repertoire-tree.util';
+import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
+import { buildRepertoireGraph, normSan, normFen, RepertoireGraph } from './repertoire-tree.util';
+import { lineKeyFromSans } from './repertoire-line-key.util';
+import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
 type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE';
@@ -41,7 +44,7 @@ const WRONG_HOLD_MS = 1000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule,
-    MatIconModule, MatProgressBarModule, MatTooltipModule, TranslateModule, PuzzleBoardComponent,
+    MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
   ],
   template: `
 <div class="trainer">
@@ -57,6 +60,11 @@ const WRONG_HOLD_MS = 1000;
       <mat-button-toggle value="w">{{ 'repertoireTrainer.white' | translate }}</mat-button-toggle>
       <mat-button-toggle value="b">{{ 'repertoireTrainer.black' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
+    <button mat-icon-button (click)="openConfig()"
+            [matTooltip]="'srConfig.title' | translate"
+            [attr.aria-label]="'srConfig.title' | translate">
+      <mat-icon>tune</mat-icon>
+    </button>
     <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
             [matTooltip]="'repertoireTrainer.resetTooltip' | translate"
             [attr.aria-label]="'repertoireTrainer.resetTooltip' | translate">
@@ -68,8 +76,21 @@ const WRONG_HOLD_MS = 1000;
     <div *ngSwitchCase="'LOADING'" class="center">{{ 'common.loading' | translate }}</div>
 
     <mat-card *ngSwitchCase="'EMPTY'" class="msg">
-      <mat-icon>school</mat-icon>
-      <p>{{ 'repertoireTrainer.noCards' | translate }}</p>
+      <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
+      @if (nextDueAt) {
+        <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
+        <button mat-flat-button color="primary" (click)="makeAllDue()" [disabled]="poolBusy">
+          <mat-icon>bolt</mat-icon> {{ 'repertoireTrainer.makeAllDue' | translate }}
+        </button>
+      } @else {
+        <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
+        <button mat-flat-button color="primary" (click)="promoteAllToPool()" [disabled]="poolBusy">
+          <mat-icon>playlist_add</mat-icon> {{ 'repertoireTrainer.addAllToPool' | translate }}
+        </button>
+      }
+      <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+        <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+      </a>
     </mat-card>
 
     <mat-card *ngSwitchCase="'DONE'" class="msg">
@@ -171,6 +192,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   dests = new Map<Key, Key[]>();
   lastMove?: [Key, Key];
   resetting = false;
+  poolBusy = false;
 
   // Session state
   private allLines: ParsedGame[] = [];
@@ -189,9 +211,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   evalDeltaPawns: number | null = null;
   evalMateNote: 'missed' | 'allowed' | null = null;
   private evalEpoch = 0;
-  private pendingWrongReview: (() => void) | null = null;
 
-  private statesByKey = new Map<string, RepertoireCardStateDto>();
+  private statesByKey = new Map<string, LineStateDto>();   // key = lineKey
+  /** Ergebnis der AKTUELLEN Linie: true, sobald ein Zug falsch war (geduldet zählt neutral). */
+  private lineHadWrong = false;
+  /** Für die EMPTY-Ansicht: wann die nächste Pool-Linie fällig wird (ISO) — null = nichts im Pool. */
+  nextDueAt: string | null = null;
   private graph: RepertoireGraph | null = null;
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   private wrongRevertTimer: ReturnType<typeof setTimeout> | null = null;
@@ -205,6 +230,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private cdr: ChangeDetectorRef,
     private stockfish: StockfishService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -216,13 +242,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
     forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
-      states: this.training.getCards(this.repertoireId),
+      states: this.training.getLineStates(this.repertoireId),
     }).subscribe({
       next: ({ pgn, states }) => {
         this.graph = buildRepertoireGraph(pgn);
         if (!saved) this.color = this.graph.guessedColor;
         this.allLines = parsePgnText(pgn);
-        this.statesByKey = new Map(states.map(s => [s.cardKey, s]));
+        this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
         this.buildQueue();
       },
       error: () => { this.phase = 'EMPTY'; this.cdr.markForCheck(); },
@@ -239,24 +265,98 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.buildQueue();
   }
 
-  /** Baut die Session-Warteschlange aus den Linien (Chapter-gefiltert), zufällig gemischt. */
+  /** Stabiler Linien-Schlüssel (identisch zur Linienliste) aus der SAN-Zugfolge. */
+  lineKeyOf(line: ParsedGame): string {
+    return lineKeyFromSans(line.moves.map(m => m.san));
+  }
+
+  /** Fällig = im Pool, nicht pausiert und DueAt ≤ jetzt. Noch nicht gelernte Linien (kein Zustand)
+   * sind NICHT im Pool und werden nicht abgefragt. */
+  private isDue(line: ParsedGame, now: number): boolean {
+    const st = this.statesByKey.get(this.lineKeyOf(line));
+    return !!st && st.inPool && !st.paused && new Date(st.dueAt).getTime() <= now;
+  }
+
+  /** Baut die Session-Warteschlange aus den FÄLLIGEN Pool-Linien (Chapter-gefiltert), gemischt. */
   private buildQueue(): void {
     this.clearAdvance(); this.clearOppTimer();
+    const now = Date.now();
     const filtered = this.chapterFilter
       ? this.allLines.filter(l => (l.headers['Black'] || '').trim() === this.chapterFilter!.trim())
       : this.allLines;
-    // Nur Linien mit ≥1 eigenen Zug behalten.
     const usable = filtered.filter(l => this.hasUserMove(l));
-    this.queue = shuffle(usable);
+    this.queue = shuffle(usable.filter(l => this.isDue(l, now)));
     this.qIndex = 0;
     this.correct = 0;
     this.wrong = 0;
     this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
-    if (this.queue.length === 0) { this.phase = 'EMPTY'; this.cdr.markForCheck(); return; }
+    if (this.queue.length === 0) {
+      this.nextDueAt = this.computeNextDue(usable);
+      this.phase = 'EMPTY';
+      this.cdr.markForCheck();
+      return;
+    }
     this.startCurrentLine();
   }
 
+  /** Früheste künftige Fälligkeit einer Pool-Linie (für die EMPTY-Ansicht); null = nichts im Pool. */
+  private computeNextDue(lines: ParsedGame[]): string | null {
+    let min: number | null = null;
+    for (const l of lines) {
+      const st = this.statesByKey.get(this.lineKeyOf(l));
+      if (!st || !st.inPool || st.paused) continue;
+      const t = new Date(st.dueAt).getTime();
+      if (min === null || t < min) min = t;
+    }
+    return min === null ? null : new Date(min).toISOString();
+  }
+
   restart(): void { this.buildQueue(); }
+
+  /** Alle (Chapter-gefilterten) übbaren Linien mit ≥1 eigenen Zug — deren stabile Schlüssel. */
+  private usableLineKeys(): string[] {
+    const filtered = this.chapterFilter
+      ? this.allLines.filter(l => (l.headers['Black'] || '').trim() === this.chapterFilter!.trim())
+      : this.allLines;
+    return filtered.filter(l => this.hasUserMove(l)).map(l => this.lineKeyOf(l));
+  }
+
+  private reloadStatesAndRebuild(): void {
+    this.training.getLineStates(this.repertoireId).subscribe({
+      next: states => {
+        this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
+        this.poolBusy = false;
+        this.buildQueue();
+      },
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+    });
+  }
+
+  /** „Alle in den Pool aufnehmen" (Kurs bzw. gefiltertes Kapitel) → sofort fällig. */
+  promoteAllToPool(): void {
+    const keys = this.usableLineKeys();
+    if (keys.length === 0) return;
+    this.poolBusy = true; this.cdr.markForCheck();
+    this.training.promote(this.repertoireId, keys).subscribe({
+      next: () => this.reloadStatesAndRebuild(),
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+    });
+  }
+
+  /** „Alle jetzt fällig machen" (nur Pool-Linien; Kurs bzw. gefiltertes Kapitel). */
+  makeAllDue(): void {
+    const keys = this.chapterFilter ? this.usableLineKeys() : [];   // leer = ganzer Kurs
+    this.poolBusy = true; this.cdr.markForCheck();
+    this.training.makeDue(this.repertoireId, keys).subscribe({
+      next: () => this.reloadStatesAndRebuild(),
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+    });
+  }
+
+  /** Intervall-Zyklen bearbeiten (global + pro-Repertoire-Override). */
+  openConfig(): void {
+    this.dialog.open(SrConfigDialogComponent, { data: { repertoireId: this.repertoireId }, width: '420px' });
+  }
 
   /** Alle SM-2-Zustände dieses Repertoires löschen (Bestätigungs-Dialog vorher). */
   resetProgress(): void {
@@ -300,6 +400,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (!line) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
     this.chess = new Chess(line.fens[0]);
     this.currentPly = 0;
+    this.lineHadWrong = false;
     this.fen = this.chess.fen();
     this.lastMove = undefined;
     this.advanceToUserMove();
@@ -340,6 +441,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   private finishLine(): void {
+    // SR-Bewertung PRO LINIE: fehlerfrei durchgespielt → +1 Stufe, sonst zurück auf Stufe 1.
+    const line = this.queue[this.qIndex];
+    if (line) {
+      const lineKey = this.lineKeyOf(line);
+      const label = (line.headers['White'] || '').trim().slice(0, 120);
+      this.training.reviewLine(this.repertoireId, { lineKey, label, correct: !this.lineHadWrong })
+        .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
+    }
     this.phase = 'LINE_DONE';
     this.cdr.markForCheck();
     // Kurz die Endstellung stehen lassen, dann nächste Linie.
@@ -373,6 +482,20 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return (line.headers['Black'] || '').trim();
   }
 
+  /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
+  get nextDueLabel(): string {
+    if (!this.nextDueAt) return '';
+    const ms = new Date(this.nextDueAt).getTime() - Date.now();
+    const h = ms / 3_600_000;
+    if (h < 1) return '< 1 h';
+    if (h < 48) return `${Math.round(h)} h`;
+    const d = h / 24;
+    if (d < 14) return `${Math.round(d)} d`;
+    const w = d / 7;
+    if (w < 9) return `${Math.round(w)} w`;
+    return `${Math.round(d / 30)} mo`;
+  }
+
   get evalDeltaAbsDisplay(): string {
     if (this.evalDeltaPawns === null) return '';
     return Math.abs(this.evalDeltaPawns).toFixed(2).replace(/\.?0+$/, '');
@@ -385,7 +508,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (this.phase !== 'PLAYING' && !wrongRetry) return;
     if (wrongRetry) {
       this.clearWrongRevert();
-      this.pendingWrongReview = null;
       this.evalLoading = false; this.evalDeltaPawns = null; this.evalMateNote = null; this.evalEpoch++;
     }
 
@@ -413,15 +535,20 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     }
     accepted.delete(expectedSan);
 
-    let grade: ReviewCardRequest['grade'];
+    // SR wird PRO LINIE bewertet (finishLine); hier nur Feedback + Merken, ob die Linie schon
+    // einen Fehler hatte. Geduldete Züge zählen neutral.
     if (userSan === expectedSan) {
-      this.outcome = 'correct'; this.correct++; grade = 2;
-      this.fen = fenAfterPlayer;
+      this.outcome = 'correct'; this.correct++;
+      // Korrekten Zug in der maßgeblichen Partie nachführen, damit advanceToUserMove die
+      // Gegnerzüge aus der richtigen Stellung spielt (sonst hängt eine Linie mit mehreren
+      // eigenen Zügen).
+      try { this.chess.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }); } catch {}
+      this.fen = this.chess.fen();
     } else if (accepted.has(userSan)) {
-      this.outcome = 'tolerated'; grade = 1;
+      this.outcome = 'tolerated';
       this.fen = fenAfterPlayer;
     } else {
-      this.outcome = 'wrong'; grade = 0;
+      this.outcome = 'wrong'; this.lineHadWrong = true;
       // Falschen Zug zurücknehmen; als lastMove markiert lassen.
       this.fen = this.startFen;
       this.lastMove = [ev.orig, ev.dest];
@@ -432,14 +559,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.phase = 'FEEDBACK';
 
     if (this.outcome === 'wrong') {
-      this.pendingWrongReview = () =>
-        this.training.review(this.repertoireId, { cardKey, expectedMove: expectedMove.san, grade: 0 })
-          .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
       this.kickOffEvalCompare(fenAfterPlayer, cardKey, expectedMove.san);
       try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
     } else {
-      this.training.review(this.repertoireId, { cardKey, expectedMove: expectedMove.san, grade })
-        .subscribe({ next: st => this.statesByKey.set(st.cardKey, st), error: () => {} });
       this.scheduleAdvance(ADVANCE_MS[this.outcome]);
     }
 
@@ -471,8 +593,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         }
       } catch { /* SAN nicht spielbar → nur Text-Reveal */ }
     }
-    this.pendingWrongReview?.();
-    this.pendingWrongReview = null;
     this.cdr.markForCheck();
   }
 

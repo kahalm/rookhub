@@ -63,6 +63,7 @@ public class AppDbContext : DbContext
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
+    public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -421,6 +422,15 @@ public class AppDbContext : DbContext
 
             e.HasIndex(c => new { c.UserId, c.RepertoireId, c.CardKey }).IsUnique();
             e.HasIndex(c => new { c.UserId, c.RepertoireId, c.DueAt });
+        });
+
+        modelBuilder.Entity<RepertoireSrSettings>(e =>
+        {
+            e.HasOne(s => s.User)
+             .WithMany()
+             .HasForeignKey(s => s.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(s => s.UserId).IsUnique();
         });
 
         modelBuilder.Entity<CourseProgress>(e =>

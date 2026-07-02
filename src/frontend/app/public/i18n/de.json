@@ -28,7 +28,21 @@
     "lineProgress": "Linie {{done}} von {{total}}",
     "lineDone": "Linie fertig — nächste wird geladen…",
     "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
-    "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht."
+    "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht.",
+    "nextDue": "Gerade nichts fällig. Nächste Wiederholung in {{when}}.",
+    "nothingInPool": "Noch keine Linien im Übungspool — füge welche hinzu, um zu starten.",
+    "addAllToPool": "Alle Linien in den Pool",
+    "makeAllDue": "Alle jetzt fällig machen",
+    "manageLines": "Linien verwalten"
+  },
+  "srConfig": {
+    "title": "Übungszyklen",
+    "overrideForRepertoire": "Eigene Zyklen für dieses Repertoire",
+    "hintGlobal": "Globale Vorgaben für alle Repertoires. Richtig → nächste Stufe, falsch → Stufe 1.",
+    "hintRepertoire": "Diese Intervalle gelten nur für dieses Repertoire.",
+    "level": "Stufe",
+    "resetDefaults": "Auf Standard zurücksetzen",
+    "unit": { "h": "Stunden", "d": "Tage", "w": "Wochen", "mo": "Monate" }
   },
   "common": {
     "save": "Speichern",

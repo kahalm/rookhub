@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -6,114 +7,249 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Spaced-Repetition-Scheduling (SM-2-Variante) für den Repertoire-Trainer. Persistiert nur den
-/// Karten-Zustand je (User, Repertoire, Stellung); die Zug-/Baumlogik liegt im Frontend. Karten
-/// werden beim ersten Review on-demand angelegt. „Fällige"/„neue" Karten ermittelt das Frontend
-/// aus dem Repertoire-Baum + den hier gelieferten Zuständen.
+/// Spaced-Repetition-Scheduling für den Repertoire-Trainer als feste 9-Stufen-Leiter (seit v0.245,
+/// ersetzt die SM-2-Variante). SR-Einheit ist die ganze PGN-LINIE: richtig gespielt → +1 Stufe,
+/// ein Fehler irgendwo in der Linie → zurück auf Stufe 1. Jede Stufe hat ein Intervall, das
+/// bestimmt, wann die Linie wieder fällig wird; Intervalle sind pro Nutzer (global) einstellbar und
+/// pro Repertoire übersteuerbar. Das Frontend liefert einen stabilen Linien-Schlüssel und ermittelt
+/// aus den hier gelieferten Zuständen die fälligen Linien.
 /// </summary>
 public class RepertoireTrainingService
 {
     private readonly AppDbContext _db;
     public RepertoireTrainingService(AppDbContext db) => _db = db;
 
-    private const double MinEase = 1.3;
-    private const double MaxEase = 3.0;
+    /// <summary>Eingebaute Standard-Intervalle der 9 Stufen (Vorgabe des Nutzers).</summary>
+    public static readonly List<SrLevelDto> DefaultLevels = new()
+    {
+        new(4, "h"), new(10, "h"), new(24, "h"),
+        new(2.5, "d"), new(1, "w"), new(2.5, "w"),
+        new(1.5, "mo"), new(3, "mo"), new(6, "mo"),
+    };
 
-    /// <summary>Alle Kartenzustände des Users für ein eigenes Repertoire; null wenn Repertoire
-    /// nicht existiert / nicht dem User gehört.</summary>
-    public async Task<List<RepertoireCardStateDto>?> GetCardsAsync(int userId, int repertoireId, CancellationToken ct = default)
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
+    // ===== Konfiguration =====
+
+    public static double HoursOf(SrLevelDto l) => l.Unit switch
+    {
+        "h" => l.Value,
+        "d" => l.Value * 24,
+        "w" => l.Value * 24 * 7,
+        "mo" => l.Value * 24 * 30,
+        _ => l.Value,
+    };
+
+    /// <summary>Genau 9 Stufen, jeder Wert &gt; 0 und Einheit gültig.</summary>
+    public static bool ValidLevels(List<SrLevelDto>? levels) =>
+        levels is { Count: 9 } &&
+        levels.All(l => l.Value > 0 && l.Value <= 100_000 && l.Unit is "h" or "d" or "w" or "mo");
+
+    private static List<SrLevelDto>? ParseLevels(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var levels = JsonSerializer.Deserialize<List<SrLevelDto>>(json, JsonOpts);
+            return ValidLevels(levels) ? levels : null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>Effektive Konfiguration eines Repertoires (Override &gt; global &gt; Default) samt
+    /// beider Ebenen, damit das Frontend sie bearbeiten kann. Null wenn das Repertoire nicht dem
+    /// User gehört.</summary>
+    public async Task<SrConfigDto?> GetConfigAsync(int userId, int repertoireId, CancellationToken ct = default)
+    {
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+        if (rep == null) return null;
+
+        var userLevels = ParseLevels((await GetSettingsAsync(userId, ct))?.IntervalsJson);
+        var repLevels = ParseLevels(rep.SrIntervalsJson);
+
+        var effective = repLevels ?? userLevels ?? DefaultLevels;
+        var source = repLevels != null ? "repertoire" : userLevels != null ? "user" : "default";
+        return new SrConfigDto(effective, userLevels ?? DefaultLevels, repLevels, source);
+    }
+
+    /// <summary>Globale Nutzer-Intervalle der 9 Stufen (fällt auf die eingebauten Defaults zurück).</summary>
+    public async Task<List<SrLevelDto>> GetUserConfigAsync(int userId, CancellationToken ct = default)
+        => ParseLevels((await GetSettingsAsync(userId, ct))?.IntervalsJson) ?? DefaultLevels;
+
+    /// <summary>Setzt die globalen Nutzer-Intervalle (null → löscht die Einstellung = Defaults).
+    /// Gibt false zurück, wenn die Stufen ungültig sind.</summary>
+    public async Task<bool> SetUserConfigAsync(int userId, List<SrLevelDto>? levels, CancellationToken ct = default)
+    {
+        var settings = await GetSettingsAsync(userId, ct);
+        if (levels == null)
+        {
+            if (settings != null) { _db.RepertoireSrSettings.Remove(settings); await _db.SaveChangesAsync(ct); }
+            return true;
+        }
+        if (!ValidLevels(levels)) return false;
+        var json = JsonSerializer.Serialize(levels, JsonOpts);
+        if (settings == null)
+        {
+            settings = new RepertoireSrSettings { UserId = userId, IntervalsJson = json };
+            _db.RepertoireSrSettings.Add(settings);
+        }
+        else { settings.IntervalsJson = json; settings.UpdatedAt = DateTime.UtcNow; }
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    /// <summary>Setzt den pro-Repertoire-Override (null → löschen = wieder globale Defaults).
+    /// Gibt null zurück, wenn das Repertoire nicht dem User gehört, false bei ungültigen Stufen.</summary>
+    public async Task<bool?> SetRepertoireConfigAsync(int userId, int repertoireId, List<SrLevelDto>? levels, CancellationToken ct = default)
+    {
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+        if (rep == null) return null;
+        if (levels != null && !ValidLevels(levels)) return false;
+        rep.SrIntervalsJson = levels == null ? null : JsonSerializer.Serialize(levels, JsonOpts);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private Task<RepertoireSrSettings?> GetSettingsAsync(int userId, CancellationToken ct) =>
+        _db.RepertoireSrSettings.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+
+    // ===== Linien-Zustände + Review =====
+
+    /// <summary>Alle Linien-SR-Zustände des Users für ein eigenes Repertoire; null wenn das
+    /// Repertoire nicht existiert / nicht dem User gehört.</summary>
+    public async Task<List<LineStateDto>?> GetLineStatesAsync(int userId, int repertoireId, CancellationToken ct = default)
     {
         if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
         return await _db.RepertoireCardStates
             .Where(c => c.UserId == userId && c.RepertoireId == repertoireId)
-            .Select(c => new RepertoireCardStateDto(
-                c.CardKey, c.ExpectedMove, c.Reps, c.Lapses, c.IntervalDays, c.Ease, c.DueAt, c.LastReviewedAt))
+            .Select(c => new LineStateDto(c.CardKey, c.Level, c.Reps, c.Lapses, c.DueAt, c.LastReviewedAt, c.InPool, c.Paused))
             .ToListAsync(ct);
     }
 
-    /// <summary>Wendet eine Bewertung auf eine Karte an (legt sie bei Bedarf an) und plant sie neu.
+    /// <summary>Bewertet eine geübte Linie (legt den Zustand bei Bedarf an) und plant sie neu.
     /// Null wenn das Repertoire nicht dem User gehört.</summary>
-    public async Task<RepertoireCardStateDto?> ReviewAsync(int userId, int repertoireId, ReviewCardRequest req, CancellationToken ct = default)
+    public async Task<LineStateDto?> ReviewLineAsync(int userId, int repertoireId, LineReviewRequest req, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+        if (rep == null) return null;
+
+        var userLevels = ParseLevels((await GetSettingsAsync(userId, ct))?.IntervalsJson);
+        var hours = (ParseLevels(rep.SrIntervalsJson) ?? userLevels ?? DefaultLevels)
+            .Select(HoursOf).ToArray();
 
         var card = await _db.RepertoireCardStates
-            .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.CardKey, ct);
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.LineKey, ct);
         if (card == null)
         {
-            card = new RepertoireCardState
-            {
-                UserId = userId,
-                RepertoireId = repertoireId,
-                CardKey = req.CardKey,
-            };
+            card = new RepertoireCardState { UserId = userId, RepertoireId = repertoireId, CardKey = req.LineKey };
             _db.RepertoireCardStates.Add(card);
         }
+        card.InPool = true;   // eine bewertete Linie ist im Pool
+        ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow);
+        if (!string.IsNullOrEmpty(req.Label)) card.ExpectedMove = req.Label;
 
-        Schedule(card, req.Grade, DateTime.UtcNow);
-        card.ExpectedMove = req.ExpectedMove;
-        try
-        {
-            await _db.SaveChangesAsync(ct);
-        }
+        try { await _db.SaveChangesAsync(ct); }
         catch (DbUpdateException)
         {
-            // Race: zwei schnelle Reviews derselben Karte (Auto-Advance des Trainers feuert rasch) →
-            // der Unique-Index (UserId, RepertoireId, CardKey) hat den parallelen Insert abgefangen.
-            // Idempotent: getrackten Neu-Insert verwerfen, vorhandene Karte laden, Planung erneut anwenden.
+            // Race auf dem Unique-Index (UserId, RepertoireId, CardKey): parallelen Insert verwerfen,
+            // vorhandene Zeile laden und erneut planen (idempotent).
             _db.ChangeTracker.Clear();
             card = await _db.RepertoireCardStates
-                .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.CardKey, ct);
+                .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.LineKey, ct);
             if (card == null) throw;
-            Schedule(card, req.Grade, DateTime.UtcNow);
-            card.ExpectedMove = req.ExpectedMove;
+            card.InPool = true;
+            ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow);
+            if (!string.IsNullOrEmpty(req.Label)) card.ExpectedMove = req.Label;
             await _db.SaveChangesAsync(ct);
         }
 
-        return new RepertoireCardStateDto(
-            card.CardKey, card.ExpectedMove, card.Reps, card.Lapses, card.IntervalDays, card.Ease, card.DueAt, card.LastReviewedAt);
+        return new LineStateDto(card.CardKey, card.Level, card.Reps, card.Lapses, card.DueAt, card.LastReviewedAt, card.InPool, card.Paused);
     }
 
-    /// <summary>SM-2-Variante. Grade 0 again · 1 hard · 2 good · 3 easy.</summary>
-    internal static void Schedule(RepertoireCardState card, int grade, DateTime now)
+    /// <summary>Pausiert/aktiviert einen Satz Linien (Kapitel = dessen Linien-Schlüssel). Legt für
+    /// zu pausierende, noch unbekannte Linien einen Zustand an (damit die Pause erhalten bleibt).
+    /// Gibt die Anzahl betroffener Linien zurück, null wenn nicht eigenes Repertoire.</summary>
+    public async Task<int?> SetPausedAsync(int userId, int repertoireId, List<string> lineKeys, bool paused, CancellationToken ct = default)
     {
-        switch (grade)
+        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
+        if (keys.Count == 0) return 0;
+        var now = DateTime.UtcNow;
+        var existing = await _db.RepertoireCardStates
+            .Where(c => c.UserId == userId && c.RepertoireId == repertoireId && keys.Contains(c.CardKey))
+            .ToListAsync(ct);
+        var have = existing.Select(c => c.CardKey).ToHashSet();
+        foreach (var c in existing) c.Paused = paused;
+        if (paused)
         {
-            case 0: // again — falsch / relearn in Kürze
-                card.Reps = 0;
-                card.Lapses++;
-                card.Ease = Math.Max(MinEase, card.Ease - 0.2);
-                card.IntervalDays = 0;
-                card.DueAt = now.AddMinutes(10);
-                break;
-
-            case 1: // hard — geduldeter Alternativzug oder mühsam: kleiner Schritt, Ease runter
-                card.Ease = Math.Max(MinEase, card.Ease - 0.15);
-                card.IntervalDays = card.Reps == 0 ? 0.5 : Math.Max(1, card.IntervalDays * 1.2);
-                card.Reps = Math.Max(1, card.Reps);
-                card.DueAt = now.AddDays(card.IntervalDays);
-                break;
-
-            case 3: // easy
-                card.Reps++;
-                card.Ease = Math.Min(MaxEase, card.Ease + 0.15);
-                card.IntervalDays = card.Reps == 1 ? 4 : Math.Round(Math.Max(card.IntervalDays, 1) * card.Ease * 1.3);
-                card.DueAt = now.AddDays(card.IntervalDays);
-                break;
-
-            default: // 2 good
-                card.Reps++;
-                card.IntervalDays = card.Reps == 1 ? 1
-                    : card.Reps == 2 ? 6
-                    : Math.Round(Math.Max(card.IntervalDays, 1) * card.Ease);
-                card.DueAt = now.AddDays(card.IntervalDays);
-                break;
+            foreach (var k in keys.Where(k => !have.Contains(k)))
+                _db.RepertoireCardStates.Add(new RepertoireCardState
+                {
+                    UserId = userId, RepertoireId = repertoireId, CardKey = k,
+                    Level = 0, InPool = false, Paused = true, DueAt = now,
+                });
         }
+        await _db.SaveChangesAsync(ct);
+        return keys.Count;
+    }
+
+    /// <summary>Macht bereits im Pool befindliche Linien sofort fällig (DueAt = jetzt) und hebt eine
+    /// etwaige Pause auf. Leere Liste = ganzer Kurs (alle Pool-Zustände). Null wenn nicht eigenes
+    /// Repertoire.</summary>
+    public async Task<int?> MakeDueAsync(int userId, int repertoireId, List<string> lineKeys, CancellationToken ct = default)
+    {
+        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
+        var q = _db.RepertoireCardStates.Where(c => c.UserId == userId && c.RepertoireId == repertoireId && c.InPool);
+        if (keys.Count > 0) q = q.Where(c => keys.Contains(c.CardKey));
+        var rows = await q.ToListAsync(ct);
+        var now = DateTime.UtcNow;
+        foreach (var c in rows) { c.DueAt = now; c.Paused = false; }
+        await _db.SaveChangesAsync(ct);
+        return rows.Count;
+    }
+
+    /// <summary>Nimmt Linien in den Übungspool auf (Learn/„In Pool aufnehmen") — sofort fällig, Pause
+    /// aufgehoben; Stufe bleibt (neue Linie = Stufe 0). Legt fehlende Zustände an. Gibt die Anzahl
+    /// betroffener Linien zurück, null wenn nicht eigenes Repertoire.</summary>
+    public async Task<int?> PromoteAsync(int userId, int repertoireId, List<string> lineKeys, CancellationToken ct = default)
+    {
+        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
+        if (keys.Count == 0) return 0;
+        var now = DateTime.UtcNow;
+        var existing = await _db.RepertoireCardStates
+            .Where(c => c.UserId == userId && c.RepertoireId == repertoireId && keys.Contains(c.CardKey))
+            .ToListAsync(ct);
+        var have = existing.Select(c => c.CardKey).ToHashSet();
+        foreach (var c in existing) { c.InPool = true; c.Paused = false; c.DueAt = now; }
+        foreach (var k in keys.Where(k => !have.Contains(k)))
+            _db.RepertoireCardStates.Add(new RepertoireCardState
+            {
+                UserId = userId, RepertoireId = repertoireId, CardKey = k,
+                Level = 0, InPool = true, Paused = false, DueAt = now,
+            });
+        await _db.SaveChangesAsync(ct);
+        return keys.Count;
+    }
+
+    /// <summary>9-Stufen-Leiter: richtig → +1 Stufe (max 9), falsch → Stufe 1. Fälligkeit aus dem
+    /// Intervall der neuen Stufe. <paramref name="hoursByLevel"/> hat 9 Einträge (Index 0 = Stufe 1).</summary>
+    internal static void ScheduleLevel(RepertoireCardState card, bool correct, double[] hoursByLevel, DateTime now)
+    {
+        if (correct) { card.Level = Math.Min(Math.Max(card.Level, 0) + 1, 9); card.Reps++; }
+        else { card.Level = 1; card.Lapses++; }
+        var idx = Math.Clamp(card.Level - 1, 0, hoursByLevel.Length - 1);
+        card.DueAt = now.AddHours(hoursByLevel[idx]);
         card.LastReviewedAt = now;
     }
 
-    /// <summary>Löscht sämtliche SM-2-Kartenzustände des Users für dieses Repertoire. Gibt die Anzahl
-    /// gelöschter Karten zurück, oder null wenn das Repertoire nicht dem User gehört.</summary>
+    /// <summary>Löscht sämtliche Linien-SR-Zustände des Users für dieses Repertoire. Gibt die Anzahl
+    /// gelöschter Zeilen zurück, oder null wenn das Repertoire nicht dem User gehört.</summary>
     public async Task<int?> ResetAsync(int userId, int repertoireId, CancellationToken ct = default)
     {
         if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;

@@ -25,31 +25,88 @@ public class RepertoireController : BaseApiController
         _courseService = courseService;
     }
 
-    // ===== Repertoire-Trainer (Spaced Repetition) =====
-    // Brett-/Baumlogik liegt im Frontend; hier nur der SM-2-Kartenzustand je Stellung.
+    // ===== Repertoire-Trainer (Spaced Repetition, 9-Stufen-Leiter) =====
+    // Brett-/Baumlogik + Linien-Schlüssel liegen im Frontend; hier nur der Linien-SR-Zustand
+    // (Stufe/Fälligkeit) + die Intervall-Konfiguration (global + pro-Repertoire-Override).
 
-    /// <summary>SM-2-Zustände aller Trainingskarten des eigenen Repertoires (Frontend ermittelt
-    /// daraus fällige/neue Karten). 404 wenn das Repertoire nicht existiert/nicht dem User gehört.</summary>
-    [HttpGet("{id}/training/cards")]
-    public async Task<ActionResult<List<RepertoireCardStateDto>>> TrainingCards(int id, CancellationToken ct)
+    /// <summary>Globale (per-User) Standard-Intervalle der 9 Stufen — die literale Route MUSS vor
+    /// den `{id}`-Routen stehen.</summary>
+    [HttpGet("training/sr-config")]
+    public async Task<ActionResult<List<SrLevelDto>>> GetUserSrConfig(CancellationToken ct)
+        => Ok(await _training.GetUserConfigAsync(GetUserId(), ct));
+
+    /// <summary>Setzt die globalen Nutzer-Intervalle (`levels`=null → auf Defaults zurücksetzen).</summary>
+    [HttpPut("training/sr-config")]
+    public async Task<IActionResult> SetUserSrConfig([FromBody] SetSrConfigRequest req, CancellationToken ct)
+        => await _training.SetUserConfigAsync(GetUserId(), req.Levels, ct) ? NoContent() : BadRequest();
+
+    /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
+    /// ermittelt daraus die fälligen Linien. 404 wenn nicht vorhanden/nicht eigenes Repertoire.</summary>
+    [HttpGet("{id:int}/training/lines")]
+    public async Task<ActionResult<List<LineStateDto>>> TrainingLines(int id, CancellationToken ct)
     {
-        var cards = await _training.GetCardsAsync(GetUserId(), id, ct);
-        return cards is null ? NotFound() : Ok(cards);
+        var lines = await _training.GetLineStatesAsync(GetUserId(), id, ct);
+        return lines is null ? NotFound() : Ok(lines);
     }
 
-    /// <summary>Bewertet eine Karte nach einem Versuch (legt sie bei Bedarf an) und plant sie neu.</summary>
-    [HttpPost("{id}/training/review")]
-    public async Task<ActionResult<RepertoireCardStateDto>> TrainingReview(int id, [FromBody] ReviewCardRequest req, CancellationToken ct)
+    /// <summary>Bewertet eine geübte Linie (richtig → +1 Stufe, falsch → Stufe 1) und plant sie neu.</summary>
+    [HttpPost("{id:int}/training/line-review")]
+    public async Task<ActionResult<LineStateDto>> TrainingLineReview(int id, [FromBody] LineReviewRequest req, CancellationToken ct)
     {
-        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.CardKey)) return BadRequest();
-        var dto = await _training.ReviewAsync(GetUserId(), id, req, ct);
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.LineKey)) return BadRequest();
+        var dto = await _training.ReviewLineAsync(GetUserId(), id, req, ct);
         return dto is null ? NotFound() : Ok(dto);
     }
 
-    /// <summary>Löscht ALLE SM-2-Trainingszustände des eigenen Users für dieses Repertoire — der
-    /// Trainer startet danach mit einem frisch leeren Fortschritt (Karten werden beim nächsten
-    /// Review wieder on-demand angelegt). 404 wenn Repertoire nicht existiert / nicht dem User gehört.</summary>
-    [HttpDelete("{id}/training/reset")]
+    /// <summary>Effektive SR-Konfiguration dieses Repertoires (Override &gt; global &gt; Default) +
+    /// beide Ebenen für die Bearbeitung. 404 wenn nicht eigenes Repertoire.</summary>
+    [HttpGet("{id:int}/training/config")]
+    public async Task<ActionResult<SrConfigDto>> TrainingConfig(int id, CancellationToken ct)
+    {
+        var cfg = await _training.GetConfigAsync(GetUserId(), id, ct);
+        return cfg is null ? NotFound() : Ok(cfg);
+    }
+
+    /// <summary>Setzt den pro-Repertoire-Intervall-Override (`levels`=null → Override löschen =
+    /// wieder globale Defaults). 404 nicht eigenes Repertoire, 400 ungültige Stufen.</summary>
+    [HttpPut("{id:int}/training/config")]
+    public async Task<IActionResult> SetTrainingConfig(int id, [FromBody] SetSrConfigRequest req, CancellationToken ct)
+    {
+        var res = await _training.SetRepertoireConfigAsync(GetUserId(), id, req.Levels, ct);
+        return res is null ? NotFound() : res.Value ? NoContent() : BadRequest();
+    }
+
+    /// <summary>Pausiert/aktiviert Linien (Kapitel = alle seine Linien-Schlüssel) — pausierte Linien
+    /// fallen NICHT in den Übungspool. 404 nicht eigenes Repertoire.</summary>
+    [HttpPost("{id:int}/training/pause")]
+    public async Task<IActionResult> TrainingPause(int id, [FromBody] SetPausedRequest req, CancellationToken ct)
+    {
+        var n = await _training.SetPausedAsync(GetUserId(), id, req.LineKeys ?? new(), req.Paused, ct);
+        return n is null ? NotFound() : Ok(new { affected = n });
+    }
+
+    /// <summary>Nimmt Linien in den Übungspool auf (Learn/manuell; Kapitel/Kurs = deren Linien-
+    /// Schlüssel) — sofort fällig. 404 nicht eigenes Repertoire.</summary>
+    [HttpPost("{id:int}/training/promote")]
+    public async Task<IActionResult> TrainingPromote(int id, [FromBody] PromoteLinesRequest req, CancellationToken ct)
+    {
+        var n = await _training.PromoteAsync(GetUserId(), id, req.LineKeys ?? new(), ct);
+        return n is null ? NotFound() : Ok(new { affected = n });
+    }
+
+    /// <summary>Macht Pool-Linien sofort fällig + hebt Pause auf (leere Liste = ganzer Kurs). 404 nicht
+    /// eigenes Repertoire.</summary>
+    [HttpPost("{id:int}/training/make-due")]
+    public async Task<IActionResult> TrainingMakeDue(int id, [FromBody] MakeDueRequest req, CancellationToken ct)
+    {
+        var n = await _training.MakeDueAsync(GetUserId(), id, req.LineKeys ?? new(), ct);
+        return n is null ? NotFound() : Ok(new { affected = n });
+    }
+
+    /// <summary>Löscht ALLE Linien-SR-Zustände des eigenen Users für dieses Repertoire — der Trainer
+    /// startet danach mit frischem Fortschritt (alle Linien wieder fällig). 404 wenn Repertoire nicht
+    /// existiert / nicht dem User gehört.</summary>
+    [HttpDelete("{id:int}/training/reset")]
     public async Task<ActionResult<int>> TrainingReset(int id, CancellationToken ct)
     {
         var deleted = await _training.ResetAsync(GetUserId(), id, ct);
