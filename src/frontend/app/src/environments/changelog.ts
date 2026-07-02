@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.12';
+export const APP_VERSION = '0.242.13';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.13", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the \"manual offline activity\" card (form + list + create/edit/delete) on the Training Goals page was extracted from the large TrainingGoalsComponent into its own ManualActivitiesCardComponent; the shared MANUAL_KINDS/isMinutesKind moved to a small util. First step of splitting the Training Goals page into cards. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte „Manuelle Offline-Aktivität\" (Formular + Liste + Anlegen/Bearbeiten/Löschen) auf der Trainingsziele-Seite wurde aus der großen TrainingGoalsComponent in eine eigene ManualActivitiesCardComponent ausgelagert; die geteilten MANUAL_KINDS/isMinutesKind in eine kleine Util. Erster Schritt der Karten-Aufteilung der Trainingsziele-Seite. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.12", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the admin-only live feed of all Chessable imports was split out of the Chessable page into its own self-polling child component (ChessableAdminImportsFeedComponent). The user's own import flow is untouched. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): der nur für Admins sichtbare Live-Feed aller Chessable-Importe wurde aus der Chessable-Seite in eine eigene, selbst pollende Kind-Komponente (ChessableAdminImportsFeedComponent) ausgelagert. Der eigene Import-Ablauf des Nutzers bleibt unverändert. Keine sichtbare Änderung." },
   ]},

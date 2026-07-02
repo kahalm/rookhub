@@ -21,6 +21,7 @@ import {
   ActivityTheme, ACTIVITY_THEMES,
 } from './training-goals.service';
 import { activityKindIcon } from './activity-timer-tile.component';
+import { ManualActivitiesCardComponent } from './manual-activities-card.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -94,18 +95,9 @@ export function sumBreakdown(days: TrackerDay[], start: string, end: string): { 
   return { bySource, byTheme };
 }
 
-/** Alle manuellen Aktivitätsarten + ob sie in Minuten (sonst Partienzahl) gemessen werden. */
-export const MANUAL_KINDS: { kind: ManualActivityKind; minutes: boolean }[] = [
-  { kind: 'OtbGame', minutes: false },
-  { kind: 'OfflinePuzzle', minutes: true },
-  { kind: 'OfflineStudy', minutes: true },
-  { kind: 'Coaching', minutes: true },
-];
-
-/** Wird die Art in Minuten gemessen (sonst Anzahl Partien)? */
-export function isMinutesKind(kind: ManualActivityKind): boolean {
-  return kind !== 'OtbGame';
-}
+// MANUAL_KINDS + isMinutesKind liegen in manual-activity.util (geteilt mit ManualActivitiesCardComponent);
+// hier rückwärtskompatibel re-exportiert (bestehende Importe/Specs).
+export { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
 
 /** Sekunden → gerundete Minuten (Anzeige in der Tageshistory). */
 export function toMinutes(seconds: number): number {
@@ -190,6 +182,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
     MatSelectModule, MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent,
+    ManualActivitiesCardComponent,
   ],
   template: `
     <div class="tg-container">
@@ -316,76 +309,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
           </mat-card-content>
         </mat-card>
 
-        <!-- Manuelle Offline-Aktivität eintragen -->
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ 'trainingGoals.manual.title' | translate }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p class="muted small">{{ 'trainingGoals.manual.intro' | translate }}</p>
-            <div class="manual-fields">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.manual.kind' | translate }}</mat-label>
-                <mat-select [(ngModel)]="manualEdit.kind">
-                  @for (k of manualKinds; track k.kind) {
-                    <mat-option [value]="k.kind">{{ ('trainingGoals.manual.kinds.' + k.kind) | translate }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ 'trainingGoals.dateCol' | translate }}</mat-label>
-                <input matInput type="date" [max]="todayDate" [(ngModel)]="manualEdit.date" />
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>{{ (manualMinutes ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</mat-label>
-                <input matInput type="number" min="1" [max]="manualMinutes ? 600 : 50" [(ngModel)]="manualEdit.amount" />
-              </mat-form-field>
-              @if (manualMinutes) {
-                <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
-                  <mat-select [(ngModel)]="manualEdit.theme">
-                    <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
-                    @for (t of activityThemes; track t) {
-                      <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-              }
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note-field">
-                <mat-label>{{ 'trainingGoals.manual.note' | translate }}</mat-label>
-                <input matInput maxlength="200" [(ngModel)]="manualEdit.note" />
-              </mat-form-field>
-            </div>
-            <div class="actions">
-              <button mat-raised-button color="primary" (click)="saveManual()" [disabled]="savingManual">
-                {{ (editingManualId ? 'common.save' : 'trainingGoals.manual.add') | translate }}
-              </button>
-              @if (editingManualId) {
-                <button mat-button (click)="cancelManualEdit()" [disabled]="savingManual">{{ 'common.cancel' | translate }}</button>
-              }
-            </div>
-
-            @if (manualList.length) {
-              <ul class="manual-list">
-                @for (m of manualList; track m.id) {
-                  <li>
-                    <span class="m-date">{{ m.date }}</span>
-                    <span class="m-kind">{{ ('trainingGoals.manual.kinds.' + m.kind) | translate }}</span>
-                    <span class="m-amount">{{ m.amount }} <span class="unit">{{ (isMinutes(m.kind) ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</span></span>
-                    @if (m.theme) {
-                      <span class="m-theme">{{ ('trainingGoals.theme.' + m.theme) | translate }}</span>
-                    }
-                    <span class="m-note">{{ m.note }}</span>
-                    <span class="m-actions">
-                      <button mat-icon-button (click)="editManual(m)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
-                      <button mat-icon-button (click)="deleteManual(m)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
-                    </span>
-                  </li>
-                }
-              </ul>
-            }
-          </mat-card-content>
-        </mat-card>
+        <app-manual-activities-card [manualList]="manualList" (changed)="reload()" />
 
         <!-- Timer-Vorlagen: wiederverwendbare Kurztexte für den Dashboard-Schnellstart-Timer. -->
         <mat-card id="presets">
@@ -742,12 +666,8 @@ export class TrainingGoalsComponent implements OnInit {
   canPrev = false;
   canNext = false;
 
-  // ----- Manuelle Offline-Aktivitäten -----
-  readonly manualKinds = MANUAL_KINDS;
+  // ----- Manuelle Offline-Aktivitäten (Formular/Liste in ManualActivitiesCardComponent) -----
   manualList: ManualActivity[] = [];
-  savingManual = false;
-  editingManualId: number | null = null;
-  manualEdit: ManualActivityInput = this.emptyManual();
 
   // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
   readonly timerKinds: ManualActivityKind[] = TIMER_KINDS;
@@ -786,7 +706,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   ngOnInit(): void { this.reload(); }
 
-  private reload(): void {
+  reload(): void {
     this.loading = true;
     forkJoin({
       goal: this.service.getGoal(),
@@ -960,58 +880,6 @@ export class TrainingGoalsComponent implements OnInit {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
 
-  /** Wird die aktuell gewählte Art in Minuten gemessen (sonst Partienzahl)? */
-  get manualMinutes(): boolean { return isMinutesKind(this.manualEdit.kind); }
-  isMinutes(kind: ManualActivityKind): boolean { return isMinutesKind(kind); }
-
-  private emptyManual(): ManualActivityInput {
-    return { kind: 'OtbGame', date: this.todayDate, amount: 1, note: '', theme: null };
-  }
-
-  saveManual(): void {
-    const input: ManualActivityInput = {
-      kind: this.manualEdit.kind,
-      date: this.manualEdit.date || this.todayDate,
-      amount: this.clamp(this.manualEdit.amount, this.manualMinutes ? 600 : 50) || 1,
-      note: this.manualEdit.note?.trim() || null,
-      // Themen-Zuordnung ist bei OtbGame zeitunwirksam → nicht mitspeichern.
-      theme: this.manualMinutes ? (this.manualEdit.theme ?? null) : null,
-    };
-    this.savingManual = true;
-    const req = this.editingManualId
-      ? this.service.updateManual(this.editingManualId, input)
-      : this.service.addManual(input);
-    req.subscribe({
-      next: () => {
-        this.savingManual = false;
-        this.snackbar.success(this.translate.instant('trainingGoals.manual.saved'));
-        this.cancelManualEdit();
-        this.reload();
-      },
-      error: () => { this.savingManual = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
-    });
-  }
-
-  editManual(m: ManualActivity): void {
-    this.editingManualId = m.id;
-    this.manualEdit = { kind: m.kind, date: m.date, amount: m.amount, note: m.note ?? '', theme: m.theme ?? null };
-  }
-
-  cancelManualEdit(): void {
-    this.editingManualId = null;
-    this.manualEdit = this.emptyManual();
-  }
-
-  deleteManual(m: ManualActivity): void {
-    this.service.deleteManual(m.id).subscribe({
-      next: () => {
-        if (this.editingManualId === m.id) this.cancelManualEdit();
-        this.snackbar.success(this.translate.instant('trainingGoals.manual.deleted'));
-        this.reload();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('trainingGoals.error')),
-    });
-  }
 
   private applyGoal(goal: TrainingGoal): void {
     this.goal = goal;

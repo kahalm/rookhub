@@ -1,0 +1,69 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>{{ 'trainingGoals.manual.title' | translate }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p class="muted small">{{ 'trainingGoals.manual.intro' | translate }}</p>
+    <div class="manual-fields">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'trainingGoals.manual.kind' | translate }}</mat-label>
+        <mat-select [(ngModel)]="manualEdit.kind">
+          @for (k of manualKinds; track k.kind) {
+            <mat-option [value]="k.kind">{{ ('trainingGoals.manual.kinds.' + k.kind) | translate }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ 'trainingGoals.dateCol' | translate }}</mat-label>
+        <input matInput type="date" [max]="todayDate" [(ngModel)]="manualEdit.date" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ (manualMinutes ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</mat-label>
+        <input matInput type="number" min="1" [max]="manualMinutes ? 600 : 50" [(ngModel)]="manualEdit.amount" />
+      </mat-form-field>
+      @if (manualMinutes) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
+          <mat-select [(ngModel)]="manualEdit.theme">
+            <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
+            @for (t of activityThemes; track t) {
+              <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note-field">
+        <mat-label>{{ 'trainingGoals.manual.note' | translate }}</mat-label>
+        <input matInput maxlength="200" [(ngModel)]="manualEdit.note" />
+      </mat-form-field>
+    </div>
+    <div class="actions">
+      <button mat-raised-button color="primary" (click)="saveManual()" [disabled]="savingManual">
+        {{ (editingManualId ? 'common.save' : 'trainingGoals.manual.add') | translate }}
+      </button>
+      @if (editingManualId) {
+        <button mat-button (click)="cancelManualEdit()" [disabled]="savingManual">{{ 'common.cancel' | translate }}</button>
+      }
+    </div>
+
+    @if (manualList.length) {
+      <ul class="manual-list">
+        @for (m of manualList; track m.id) {
+          <li>
+            <span class="m-date">{{ m.date }}</span>
+            <span class="m-kind">{{ ('trainingGoals.manual.kinds.' + m.kind) | translate }}</span>
+            <span class="m-amount">{{ m.amount }} <span class="unit">{{ (isMinutes(m.kind) ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</span></span>
+            @if (m.theme) {
+              <span class="m-theme">{{ ('trainingGoals.theme.' + m.theme) | translate }}</span>
+            }
+            <span class="m-note">{{ m.note }}</span>
+            <span class="m-actions">
+              <button mat-icon-button (click)="editManual(m)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button (click)="deleteManual(m)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </mat-card-content>
+</mat-card>
