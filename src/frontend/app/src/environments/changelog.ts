@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.5';
+export const APP_VERSION = '0.242.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.6", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the daily-puzzle leaderboards (monthly ladder + all-time hall of fame, with their scoring/ranking helpers) were split out of the large BookPuzzleService into a dedicated DailyLeaderboardService. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Tagespuzzle-Bestenlisten (Monats-Ladder + all-time Hall of Fame samt Punkte-/Ranking-Helfern) wurden aus dem großen BookPuzzleService in einen eigenen DailyLeaderboardService gezogen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.5", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the large PuzzleService was split further — the read-only puzzle statistics (account/anonymous stats, elo history, attempt history, theme/rating/activity breakdown, weakest themes, theme list, and the Revenge-a-Friend queries + anonymous-session claim) moved into a dedicated PuzzleStatsService, and the shared elo maths (default elo, per-level elo, provisional K-factor, elo update) into a shared PuzzleElo helper. PuzzleService shrank from ~1090 to ~640 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): der große PuzzleService wurde weiter aufgeteilt — die lesende Puzzle-Statistik (Konto-/anonyme Stats, Elo-Verlauf, Versuchs-History, Themen-/Rating-/Aktivitäts-Aufschlüsselung, schwächste Themen, Themenliste sowie die Revenge-a-Friend-Abfragen + Übernahme anonymer Sessions) in einen eigenen PuzzleStatsService, und die geteilte Elo-Mathematik (Default-Elo, Level-Elo, provisorischer K-Faktor, Elo-Fortschreibung) in einen gemeinsamen PuzzleElo-Helfer. PuzzleService schrumpfte von ~1090 auf ~640 Zeilen. Keine sichtbare Änderung." },
   ]},

@@ -22,7 +22,7 @@ public class BookPuzzleControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new BookPuzzleController(new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue()), HintTestHelper.Build(_db), new NoOpTaskQueue(), _db);
+        _controller = new BookPuzzleController(new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue()), new DailyLeaderboardService(_db), HintTestHelper.Build(_db), new NoOpTaskQueue(), _db);
         SetUser(99);
     }
 
@@ -164,7 +164,7 @@ public class BookPuzzleControllerTests : IDisposable
     public async Task RecordAttempt_LogsStartAndSolveTime()
     {
         var logger = new TestLogger<BookPuzzleService>();
-        var controller = new BookPuzzleController(new BookPuzzleService(_db, logger, new NoOpTaskQueue()), HintTestHelper.Build(_db), new NoOpTaskQueue(), _db) { ControllerContext = _controller.ControllerContext };
+        var controller = new BookPuzzleController(new BookPuzzleService(_db, logger, new NoOpTaskQueue()), new DailyLeaderboardService(_db), HintTestHelper.Build(_db), new NoOpTaskQueue(), _db) { ControllerContext = _controller.ControllerContext };
         var p = await CreateBookPuzzleAsync(lineId: "log.pgn:1", bookFileName: "log.pgn");
 
         Assert.IsType<OkResult>(await controller.RecordAttempt(p.Id, new RecordBookAttemptDto { Solved = true, TimeSeconds = 15 }));

@@ -164,6 +164,7 @@ try
     builder.Services.AddScoped<ChessableCourseRefreshService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();
+    builder.Services.AddScoped<DailyLeaderboardService>();
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
     builder.Services.AddScoped<ImportReprocessService>();

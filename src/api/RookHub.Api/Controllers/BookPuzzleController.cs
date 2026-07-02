@@ -17,14 +17,16 @@ public class BookPuzzleController : BaseApiController
     private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
 
     private readonly BookPuzzleService _service;
+    private readonly DailyLeaderboardService _leaderboard;
     private readonly HintGenerationService _hints;
     private readonly IBackgroundTaskQueue _bgQueue;
     private readonly AppDbContext _db;
 
-    public BookPuzzleController(BookPuzzleService service, HintGenerationService hints,
-        IBackgroundTaskQueue bgQueue, AppDbContext db)
+    public BookPuzzleController(BookPuzzleService service, DailyLeaderboardService leaderboard,
+        HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db)
     {
         _service = service;
+        _leaderboard = leaderboard;
         _hints = hints;
         _bgQueue = bgQueue;
         _db = db;
@@ -126,7 +128,7 @@ public class BookPuzzleController : BaseApiController
             return BadRequest(new { message = "month must be yyyy-MM." });
         }
 
-        try { return Ok(await _service.GetDailyLadderAsync(year, mon)); }
+        try { return Ok(await _leaderboard.GetDailyLadderAsync(year, mon)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
@@ -137,7 +139,7 @@ public class BookPuzzleController : BaseApiController
     [AllowAnonymous]
     [HttpGet("daily/hall-of-fame")]
     public async Task<IActionResult> GetDailyHallOfFame([FromQuery] int top = 5)
-        => Ok(await _service.GetDailyHallOfFameAsync(Math.Clamp(top, 1, 25)));
+        => Ok(await _leaderboard.GetDailyHallOfFameAsync(Math.Clamp(top, 1, 25)));
 
     /// <summary>Parst <c>yyyy-MM</c> (Jahr 2000–9999, Monat 1–12).</summary>
     private static bool TryParseMonth(string s, out int year, out int month)
