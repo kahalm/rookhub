@@ -65,7 +65,10 @@ public class RepertoireTrainingService
     /// User gehört.</summary>
     public async Task<SrConfigDto?> GetConfigAsync(int userId, int repertoireId, CancellationToken ct = default)
     {
-        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+        // Trainieren erlaubt für Besitzer ODER Empfänger einer Freigabe; die pro-Repertoire-Intervalle
+        // (rep.SrIntervalsJson) sind die des Besitzers, die globalen die des trainierenden Users.
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId, ct);
         if (rep == null) return null;
 
         var userLevels = ParseLevels((await GetSettingsAsync(userId, ct))?.IntervalsJson);
@@ -123,7 +126,7 @@ public class RepertoireTrainingService
     /// Repertoire nicht existiert / nicht dem User gehört.</summary>
     public async Task<List<LineStateDto>?> GetLineStatesAsync(int userId, int repertoireId, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         return await _db.RepertoireCardStates
             .Where(c => c.UserId == userId && c.RepertoireId == repertoireId)
             .Select(c => new LineStateDto(c.CardKey, c.Level, c.Reps, c.Lapses, c.DueAt, c.LastReviewedAt, c.InPool, c.Paused))
@@ -134,7 +137,9 @@ public class RepertoireTrainingService
     /// Null wenn das Repertoire nicht dem User gehört.</summary>
     public async Task<LineStateDto?> ReviewLineAsync(int userId, int repertoireId, LineReviewRequest req, CancellationToken ct = default)
     {
-        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+        // Besitzer ODER Empfänger einer Freigabe (eigener Fortschritt); Intervalle wie in GetConfigAsync.
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId, ct);
         if (rep == null) return null;
 
         var userLevels = ParseLevels((await GetSettingsAsync(userId, ct))?.IntervalsJson);
@@ -175,7 +180,7 @@ public class RepertoireTrainingService
     /// Gibt die Anzahl betroffener Linien zurück, null wenn nicht eigenes Repertoire.</summary>
     public async Task<int?> SetPausedAsync(int userId, int repertoireId, List<string> lineKeys, bool paused, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
         if (keys.Count == 0) return 0;
         var now = DateTime.UtcNow;
@@ -202,7 +207,7 @@ public class RepertoireTrainingService
     /// Repertoire.</summary>
     public async Task<int?> MakeDueAsync(int userId, int repertoireId, List<string> lineKeys, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
         var q = _db.RepertoireCardStates.Where(c => c.UserId == userId && c.RepertoireId == repertoireId && c.InPool);
         if (keys.Count > 0) q = q.Where(c => keys.Contains(c.CardKey));
@@ -218,7 +223,7 @@ public class RepertoireTrainingService
     /// betroffener Linien zurück, null wenn nicht eigenes Repertoire.</summary>
     public async Task<int?> PromoteAsync(int userId, int repertoireId, List<string> lineKeys, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         var keys = lineKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
         if (keys.Count == 0) return 0;
         var now = DateTime.UtcNow;
@@ -252,7 +257,7 @@ public class RepertoireTrainingService
     /// gelöschter Zeilen zurück, oder null wenn das Repertoire nicht dem User gehört.</summary>
     public async Task<int?> ResetAsync(int userId, int repertoireId, CancellationToken ct = default)
     {
-        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        if (!await CanTrainAsync(userId, repertoireId, ct)) return null;
         var cards = await _db.RepertoireCardStates
             .Where(c => c.UserId == userId && c.RepertoireId == repertoireId)
             .ToListAsync(ct);
@@ -262,6 +267,13 @@ public class RepertoireTrainingService
         return cards.Count;
     }
 
-    private Task<bool> OwnsRepertoireAsync(int userId, int repertoireId, CancellationToken ct) =>
-        _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
+    /// <summary>Darf der User dieses Repertoire TRAINIEREN? Besitzer ODER Empfänger einer Freigabe.
+    /// Der SR-Fortschritt (RepertoireCardState) ist ohnehin pro User — ein geteiltes Repertoire
+    /// trainiert der Empfänger mit eigenem Fortschritt. (Das Bearbeiten der pro-Repertoire-Intervalle
+    /// bleibt in <see cref="SetRepertoireConfigAsync"/> owner-only.)</summary>
+    private async Task<bool> CanTrainAsync(int userId, int repertoireId, CancellationToken ct)
+    {
+        if (await _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId, ct)) return true;
+        return await _db.RepertoireShares.AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId, ct);
+    }
 }

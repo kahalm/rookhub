@@ -7,11 +7,40 @@ import { Repertoire } from './models';
  * Kapselt die Repertoire-CRUD-HTTP-Calls (`/api/repertoires`), damit die Komponenten nicht direkt
  * den `HttpClient` ansprechen (Service-Layer, vgl. Audit-Fund „14 Komponenten rufen HttpClient direkt").
  */
+/** Ergebnis eines Teilen-Vorgangs (Batch). */
+export interface RepertoireShareResult {
+  shared: number;
+  skipped: { userId: number; reason: string }[];
+}
+
+/** Ein Nutzer, mit dem ein Repertoire aktuell geteilt ist. */
+export interface RepertoireShareRecipient {
+  userId: number;
+  username: string;
+  displayName: string | null;
+  sharedAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RepertoireService {
   private readonly apiUrl = '/api/repertoires';
 
   constructor(private http: HttpClient) {}
+
+  /** Teilt ein eigenes Repertoire mit ausgewählten (befreundeten) Nutzern. */
+  share(id: number, recipientUserIds: number[]): Observable<RepertoireShareResult> {
+    return this.http.post<RepertoireShareResult>(`${this.apiUrl}/${id}/share`, { recipientUserIds });
+  }
+
+  /** Mit welchen Nutzern ist dieses eigene Repertoire aktuell geteilt? */
+  getShareRecipients(id: number): Observable<RepertoireShareRecipient[]> {
+    return this.http.get<RepertoireShareRecipient[]>(`${this.apiUrl}/${id}/shares`);
+  }
+
+  /** Nimmt die Freigabe des eigenen Repertoires für einen Empfänger zurück. */
+  unshare(id: number, recipientId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/share/${recipientId}`);
+  }
 
   list(): Observable<Repertoire[]> {
     return this.http.get<Repertoire[]>(this.apiUrl);

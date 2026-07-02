@@ -49,9 +49,11 @@ type ViewMode = 'lines' | 'tree' | 'edit';
             <mat-button-toggle value="tree" [attr.aria-label]="'repertoire.detail.modeTree' | translate" [attr.title]="'repertoire.detail.modeTree' | translate">
               <mat-icon>account_tree</mat-icon>
             </mat-button-toggle>
-            <mat-button-toggle value="edit" [attr.aria-label]="'repertoire.detail.modeEdit' | translate" [attr.title]="'repertoire.detail.modeEdit' | translate">
-              <mat-icon>edit</mat-icon>
-            </mat-button-toggle>
+            @if (repertoire.isOwner !== false) {
+              <mat-button-toggle value="edit" [attr.aria-label]="'repertoire.detail.modeEdit' | translate" [attr.title]="'repertoire.detail.modeEdit' | translate">
+                <mat-icon>edit</mat-icon>
+              </mat-button-toggle>
+            }
           </mat-button-toggle-group>
         </div>
 
@@ -235,6 +237,8 @@ export class RepertoireDetailComponent implements OnInit {
     this.repertoireService.getDetail<RepertoireDetail>(this.id).subscribe({
       next: (r) => {
         this.repertoire = r;
+        // Geteiltes (nicht eigenes) Repertoire: Bearbeiten-Modus ist nicht erlaubt → auf Linien zurück.
+        if (r.isOwner === false && this.mode === 'edit') this.mode = 'lines';
         this.loading = false;
         this.loadCombinedPgn();
       },

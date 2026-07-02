@@ -64,6 +64,7 @@ public class AppDbContext : DbContext
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
     public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
+    public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -513,6 +514,29 @@ public class AppDbContext : DbContext
             e.HasIndex(cs => new { cs.BookId, cs.RecipientId }).IsUnique();
             // „Welche Kurse sind mit mir geteilt?" (Kursliste/Menü-Sichtbarkeit).
             e.HasIndex(cs => cs.RecipientId);
+        });
+
+        modelBuilder.Entity<RepertoireShare>(e =>
+        {
+            // Cascade NUR über das Repertoire (ein Cascade-Pfad); Owner/Recipient Restrict (analog
+            // CourseShare/Friendship) → kein MySQL "multiple cascade paths".
+            e.HasOne(rs => rs.Repertoire)
+             .WithMany()
+             .HasForeignKey(rs => rs.RepertoireId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(rs => rs.Owner)
+             .WithMany()
+             .HasForeignKey(rs => rs.OwnerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(rs => rs.Recipient)
+             .WithMany()
+             .HasForeignKey(rs => rs.RecipientId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(rs => new { rs.RepertoireId, rs.RecipientId }).IsUnique();
+            e.HasIndex(rs => rs.RecipientId);
         });
 
         modelBuilder.Entity<CourseInfoView>(e =>

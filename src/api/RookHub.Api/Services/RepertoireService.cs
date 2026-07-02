@@ -10,6 +10,8 @@ public class RepertoireService
 {
     private readonly AppDbContext _db;
     private readonly RepertoireAnalyzeService _analyzeCache;
+    private readonly FriendService _friends;
+    private readonly NotificationService _notifications;
     public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
 
     // S-13: PGN-Heuristik. Linear (kein katastrophisches Backtracking); 2s-Timeout als Defense-in-depth.
@@ -19,10 +21,25 @@ public class RepertoireService
     public const int MaxRepertoiresPerUser = 500;
     public const int MaxFilesPerRepertoire = 1000;
 
-    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache)
+    // FriendService/NotificationService sind optional, damit bestehende Test-Konstruktionen ohne
+    // Änderung kompilieren; im DI-Container werden immer die echten Instanzen injiziert.
+    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService? friends = null, NotificationService? notifications = null)
     {
         _db = db;
         _analyzeCache = analyzeCache;
+        _notifications = notifications ?? new NotificationService(db);
+        _friends = friends ?? new FriendService(db, _notifications);
+    }
+
+    /// <summary>Gehört das Repertoire dem User? (Schreib-/Verwaltungs-Rechte — nur der Besitzer.)</summary>
+    public Task<bool> IsOwnerAsync(int repertoireId, int userId)
+        => _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId);
+
+    /// <summary>Darf der User das Repertoire LESEN/trainieren? Besitzer ODER Empfänger einer Freigabe.</summary>
+    public async Task<bool> CanAccessAsync(int repertoireId, int userId)
+    {
+        if (await _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId)) return true;
+        return await _db.RepertoireShares.AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId);
     }
 
     /// <summary>
@@ -35,7 +52,7 @@ public class RepertoireService
 
     public async Task<List<RepertoireDto>> GetAllAsync(int userId)
     {
-        return await _db.Repertoires
+        var owned = await _db.Repertoires
             .Where(r => r.UserId == userId)
             .Select(r => new RepertoireDto
             {
@@ -51,14 +68,39 @@ public class RepertoireService
                 ChessableCourseId = r.ChessableCourseId
             })
             .ToListAsync();
+
+        // Von anderen mit mir geteilte Repertoires (Sektion „Mit mir geteilt" + „von X"-Badge).
+        var shared = await _db.RepertoireShares
+            .Where(s => s.RecipientId == userId)
+            .Select(s => new RepertoireDto
+            {
+                Id = s.Repertoire.Id,
+                Name = s.Repertoire.Name,
+                Description = s.Repertoire.Description,
+                IsPublic = s.Repertoire.IsPublic,
+                Kind = s.Repertoire.Kind,
+                CreatedAt = s.Repertoire.CreatedAt,
+                UpdatedAt = s.Repertoire.UpdatedAt,
+                FileCount = s.Repertoire.Files.Count,
+                UseForExtension = false, // Geteilte Repertoires werden NICHT von MEINER Extension analysiert.
+                ChessableCourseId = s.Repertoire.ChessableCourseId,
+                IsShared = true,
+                SharedByUsername = s.Owner.Username
+            })
+            .ToListAsync();
+
+        return owned.Concat(shared).ToList();
     }
 
     public async Task<RepertoireDetailDto> GetByIdAsync(int id, int userId)
     {
+        // Lesend: Besitzer ODER Empfänger einer Freigabe (Bearbeiten bleibt in UpdateAsync owner-only).
         var rep = await _db.Repertoires
             .Include(r => r.Files)
-            .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
+            .FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new KeyNotFoundException("Repertoire not found.");
+        if (rep.UserId != userId && !await CanAccessAsync(id, userId))
+            throw new KeyNotFoundException("Repertoire not found.");
 
         return new RepertoireDetailDto
         {
@@ -77,7 +119,8 @@ public class RepertoireService
                 UploadedAt = f.UploadedAt
             }).ToList(),
             UseForExtension = rep.UseForExtension,
-            ChessableCourseId = rep.ChessableCourseId
+            ChessableCourseId = rep.ChessableCourseId,
+            IsOwner = rep.UserId == userId
         };
     }
 
@@ -177,9 +220,100 @@ public class RepertoireService
         var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
 
+        // Freigaben explizit entfernen (FK-Cascade greift bei InMemory-Tests nicht).
+        _db.RepertoireShares.RemoveRange(_db.RepertoireShares.Where(s => s.RepertoireId == id));
         _db.Repertoires.Remove(rep);
         await _db.SaveChangesAsync();
         _analyzeCache.Invalidate(userId);
+    }
+
+    // --- Repertoire mit ausgewählten Personen teilen (analog CourseService) -------------------
+
+    private async Task<Repertoire> EnsureOwnedAsync(int userId, int repertoireId)
+    {
+        var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId)
+            ?? throw new KeyNotFoundException("Repertoire not found.");
+        if (rep.UserId != userId)
+            throw new UnauthorizedAccessException("Only the owner can share this repertoire.");
+        return rep;
+    }
+
+    /// <summary>Teilt ein eigenes Repertoire mit mehreren (befreundeten) Nutzern. Idempotent:
+    /// bereits geteilte → <c>duplicate</c>, Fremde → <c>not_friends</c>, unbekannte → <c>not_found</c>,
+    /// man selbst → <c>self</c>. Legt je neuem Empfänger eine In-App-Benachrichtigung an.
+    /// Admins dürfen an Nicht-Freunde teilen.</summary>
+    public async Task<RepertoireShareResultDto> ShareAsync(int userId, int repertoireId, List<int> recipientUserIds, bool isAdmin)
+    {
+        var rep = await EnsureOwnedAsync(userId, repertoireId);
+
+        var result = new RepertoireShareResultDto();
+        var distinct = recipientUserIds.Distinct().ToList();
+        if (distinct.Count == 0) return result;
+
+        var existing = (await _db.AppUsers.Where(u => distinct.Contains(u.Id)).Select(u => u.Id).ToListAsync()).ToHashSet();
+        var friendIds = await _friends.GetAcceptedFriendIdsAsync(userId, distinct);
+        var alreadyShared = (await _db.RepertoireShares
+            .Where(s => s.RepertoireId == repertoireId && distinct.Contains(s.RecipientId))
+            .Select(s => s.RecipientId)
+            .ToListAsync()).ToHashSet();
+
+        var toNotify = new List<int>();
+        foreach (var rid in distinct)
+        {
+            if (rid == userId) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "self" }); continue; }
+            if (!existing.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "not_found" }); continue; }
+            if (!isAdmin && !friendIds.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "not_friends" }); continue; }
+            if (alreadyShared.Contains(rid)) { result.Skipped.Add(new RepertoireShareSkipDto { UserId = rid, Reason = "duplicate" }); continue; }
+
+            _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = repertoireId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow });
+            toNotify.Add(rid);
+            result.Shared++;
+        }
+
+        if (result.Shared > 0)
+        {
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException)
+            {
+                // Race: derselbe (Repertoire, Empfänger) parallel → Unique-Index. Idempotent behandeln.
+                _db.ChangeTracker.Clear();
+                return await ShareAsync(userId, repertoireId, recipientUserIds, isAdmin);
+            }
+
+            var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
+            await _notifications.CreateManyAsync(toNotify, NotificationType.RepertoireShared,
+                new Dictionary<string, string> { ["username"] = ownerName, ["repertoireName"] = rep.Name }, "/repertoires");
+        }
+
+        return result;
+    }
+
+    /// <summary>Mit welchen Nutzern ist dieses eigene Repertoire aktuell geteilt? (Für den Dialog.)</summary>
+    public async Task<List<RepertoireShareRecipientDto>> GetShareRecipientsAsync(int userId, int repertoireId)
+    {
+        await EnsureOwnedAsync(userId, repertoireId);
+        return await _db.RepertoireShares
+            .Where(s => s.RepertoireId == repertoireId && s.OwnerId == userId)
+            .OrderBy(s => s.SharedAt)
+            .Select(s => new RepertoireShareRecipientDto
+            {
+                UserId = s.RecipientId,
+                Username = s.Recipient.Username,
+                DisplayName = s.Recipient.Profile != null ? s.Recipient.Profile.DisplayName : null,
+                SharedAt = s.SharedAt,
+            })
+            .ToListAsync();
+    }
+
+    /// <summary>Nimmt die Freigabe für einen Empfänger zurück (idempotent). Nur der Besitzer.</summary>
+    public async Task UnshareAsync(int userId, int repertoireId, int recipientId)
+    {
+        await EnsureOwnedAsync(userId, repertoireId);
+        var share = await _db.RepertoireShares.FirstOrDefaultAsync(s =>
+            s.RepertoireId == repertoireId && s.OwnerId == userId && s.RecipientId == recipientId);
+        if (share == null) return;
+        _db.RepertoireShares.Remove(share);
+        await _db.SaveChangesAsync();
     }
 
     public async Task<RepertoireFileDto> UploadFileAsync(int repertoireId, int userId, string fileName, Stream fileStream)
@@ -246,9 +380,12 @@ public class RepertoireService
 
     public async Task<(string FileName, string Content)> DownloadFileAsync(int repertoireId, int fileId, int userId)
     {
+        // Lesend: Besitzer ODER Empfänger einer Freigabe.
         var file = await _db.RepertoireFiles
             .Include(f => f.Repertoire)
-            .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId && f.Repertoire.UserId == userId)
+            .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId &&
+                (f.Repertoire.UserId == userId ||
+                 _db.RepertoireShares.Any(s => s.RepertoireId == repertoireId && s.RecipientId == userId)))
             ?? throw new KeyNotFoundException("File not found.");
 
         return (file.FileName, file.PgnContent);
@@ -269,10 +406,13 @@ public class RepertoireService
 
     public async Task<string> GetCombinedPgnAsync(int repertoireId, int userId)
     {
+        // Lesend: Besitzer ODER Empfänger einer Freigabe (Recipient braucht das PGN zum Trainieren).
         var rep = await _db.Repertoires
             .Include(r => r.Files)
-            .FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId)
+            .FirstOrDefaultAsync(r => r.Id == repertoireId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
+        if (rep.UserId != userId && !await CanAccessAsync(repertoireId, userId))
+            throw new KeyNotFoundException("Repertoire not found.");
 
         return string.Join("\n\n", rep.Files.Select(f => f.PgnContent));
     }

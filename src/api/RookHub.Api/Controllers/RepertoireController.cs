@@ -259,6 +259,9 @@ public class RepertoireController : BaseApiController
         try
         {
             var userId = GetUserId();
+            // Umwandeln VERSCHIEBT (löscht das Original) → nur der Besitzer, nicht ein Freigabe-Empfänger.
+            if (!await _repertoireService.IsOwnerAsync(id, userId))
+                return NotFound(new { message = "Repertoire not found." });
             var detail = await _repertoireService.GetByIdAsync(id, userId);
             var pgn = await _repertoireService.GetCombinedPgnAsync(id, userId);
             var course = await _courseService.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
@@ -268,5 +271,33 @@ public class RepertoireController : BaseApiController
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Teilt ein eigenes Repertoire mit ausgewählten (befreundeten) Nutzern (Batch).
+    /// Antwortet <c>{ shared, skipped[] }</c> (übersprungene Empfänger mit Grund).</summary>
+    [HttpPost("{id}/share")]
+    public async Task<ActionResult<RepertoireShareResultDto>> Share(int id, [FromBody] ShareRepertoireInputDto dto)
+    {
+        try { return Ok(await _repertoireService.ShareAsync(GetUserId(), id, dto.RecipientUserIds ?? new List<int>(), IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Mit welchen Nutzern ist dieses eigene Repertoire aktuell geteilt? (Für den Teilen-Dialog.)</summary>
+    [HttpGet("{id}/shares")]
+    public async Task<ActionResult<List<RepertoireShareRecipientDto>>> Shares(int id)
+    {
+        try { return Ok(await _repertoireService.GetShareRecipientsAsync(GetUserId(), id)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+    }
+
+    /// <summary>Nimmt die Freigabe des eigenen Repertoires für einen Empfänger zurück (idempotent).</summary>
+    [HttpDelete("{id}/share/{recipientId}")]
+    public async Task<IActionResult> Unshare(int id, int recipientId)
+    {
+        try { await _repertoireService.UnshareAsync(GetUserId(), id, recipientId); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
     }
 }

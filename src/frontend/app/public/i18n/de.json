@@ -49,7 +49,12 @@
     "hintRepertoire": "Diese Intervalle gelten nur für dieses Repertoire.",
     "level": "Stufe",
     "resetDefaults": "Auf Standard zurücksetzen",
-    "unit": { "h": "Stunden", "d": "Tage", "w": "Wochen", "mo": "Monate" }
+    "unit": {
+      "h": "Stunden",
+      "d": "Tage",
+      "w": "Wochen",
+      "mo": "Monate"
+    }
   },
   "common": {
     "save": "Speichern",
@@ -89,7 +94,8 @@
       "new_user_registered": "Neuer Benutzer {{username}} hat sich registriert",
       "chessable_token_added": "{{username}} hat einen Chessable-Token hinterlegt",
       "chessable_new_course": "Neuer Chessable-Kurs „{{courseName}}“ bei {{username}}",
-      "course_shared": "{{username}} hat den Kurs „{{courseName}}“ mit dir geteilt"
+      "course_shared": "{{username}} hat den Kurs „{{courseName}}“ mit dir geteilt",
+      "repertoire_shared": "{{username}} hat das Repertoire „{{repertoireName}}“ mit dir geteilt"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -607,7 +613,9 @@
       "sectionExtensionHint": "Repertoires, die die RepCheck-Extension auf chess.com / lichess abgleicht.",
       "sectionOther": "Weitere Repertoires",
       "sectionOtherHint": "Nicht von RepCheck genutzt. Über „Für Extension nutzen“ im Bearbeiten kannst du ein Repertoire nach oben schieben.",
-      "extensionBadge": "Wird von der RepCheck-Extension genutzt"
+      "extensionBadge": "Wird von der RepCheck-Extension genutzt",
+      "sectionSharedWithMe": "Mit mir geteilt",
+      "sectionSharedWithMeHint": "Repertoires, die andere Mitglieder mit dir geteilt haben."
     },
     "detail": {
       "noDescription": "Keine Beschreibung",
@@ -680,6 +688,23 @@
       "uploadPartial": "{{ok}} hochgeladen, {{failed}} fehlgeschlagen",
       "downloadFailed": "Download fehlgeschlagen",
       "deleteConfirm": "Diese Datei löschen?"
+    },
+    "share": {
+      "action": "Teilen",
+      "title": "„{{name}}“ teilen",
+      "hint": "Wähle Freunde, mit denen du dieses Repertoire teilst. Sie können es ansehen, herunterladen und mit eigenem Fortschritt trainieren, aber nicht bearbeiten oder weiterteilen.",
+      "sharedWith": "Geteilt mit",
+      "pickFriends": "Freunde hinzufügen",
+      "noFriends": "Du hast noch keine Freunde zum Teilen.",
+      "shareButton": "Teilen ({{count}})",
+      "unshareTooltip": "Zugriff entziehen",
+      "sharedBy": "geteilt von {{name}}",
+      "shared": "Mit {{count}} Freund(en) geteilt.",
+      "sharedPartial": "Mit {{shared}} geteilt; {{skipped}} übersprungen.",
+      "nothingShared": "Niemand hinzugefügt (bereits geteilt oder nicht befreundet).",
+      "unshared": "Zugriff für {{name}} entzogen.",
+      "failed": "Teilen fehlgeschlagen.",
+      "loadFailed": "Freigabe-Informationen konnten nicht geladen werden."
     }
   },
   "tournaments": {

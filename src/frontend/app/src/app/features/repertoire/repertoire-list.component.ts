@@ -14,6 +14,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
+import { ShareRepertoireDialogComponent, ShareRepertoireDialogData } from './share-repertoire-dialog.component';
 import { Repertoire } from '../../core/models';
 import { RepertoireService } from '../../core/repertoire.service';
 import { RepertoireKind, REPERTOIRE_KIND_LABELS } from '../../core/repertoire.types';
@@ -86,6 +87,21 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
           </section>
         }
 
+        @if (sharedRepertoires.length > 0) {
+          <section class="repertoire-section">
+            <h2 class="section-title">
+              <mat-icon class="section-icon">group</mat-icon>
+              {{ 'repertoire.list.sectionSharedWithMe' | translate }}
+            </h2>
+            <p class="section-hint">{{ 'repertoire.list.sectionSharedWithMeHint' | translate }}</p>
+            <div class="repertoire-grid">
+              @for (rep of sharedRepertoires; track rep.id) {
+                <ng-container *ngTemplateOutlet="repCard; context: { $implicit: rep }"></ng-container>
+              }
+            </div>
+          </section>
+        }
+
         @if (filteredRepertoires.length === 0) {
           <p>{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
         }
@@ -102,12 +118,17 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
                 <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
               </mat-chip-set>
             }
-            @if (rep.useForExtension) {
+            @if (rep.useForExtension && !rep.isShared) {
               <mat-icon class="ext-badge"
                         [matTooltip]="'repertoire.list.extensionBadge' | translate">extension</mat-icon>
             }
           </mat-card-title>
-          <mat-card-subtitle>{{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}</mat-card-subtitle>
+          <mat-card-subtitle>
+            {{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}
+            @if (rep.isShared && rep.sharedByUsername) {
+              · <mat-icon class="shared-badge-icon">group</mat-icon>{{ 'repertoire.share.sharedBy' | translate:{ name: rep.sharedByUsername } }}
+            }
+          </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
@@ -115,9 +136,12 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
         <mat-card-actions>
           <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
           <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
-          <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
-          <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
-          <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
+          @if (!rep.isShared) {
+            <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
+            <button mat-button (click)="openShareDialog(rep)">{{ 'repertoire.share.action' | translate }}</button>
+            <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
+            <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
+          }
         </mat-card-actions>
       </mat-card>
     </ng-template>
@@ -144,6 +168,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
     .kind-chip.kind-endgame { background-color: #c62828; color: #fff; }
     /* Kleiner „RepCheck ok"-Marker im Karten-Titel, in Primärfarbe. */
     .ext-badge { color: var(--mat-sys-primary, #3f51b5); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; opacity: 0.9; }
+    .shared-badge-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: middle; opacity: 0.7; }
   `]
 })
 export class RepertoireListComponent implements OnInit {
@@ -160,14 +185,19 @@ export class RepertoireListComponent implements OnInit {
       (r.name || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
   }
 
-  /** Für die RepCheck-Extension aktive Repertoires — als eigener Block oben. */
+  /** Für die RepCheck-Extension aktive Repertoires — als eigener Block oben (nur eigene). */
   get extensionRepertoires(): Repertoire[] {
-    return this.filteredRepertoires.filter(r => r.useForExtension);
+    return this.filteredRepertoires.filter(r => r.useForExtension && !r.isShared);
   }
 
-  /** Alle übrigen Repertoires (Archiv / nicht für die Extension aktiv). */
+  /** Alle übrigen eigenen Repertoires (Archiv / nicht für die Extension aktiv). */
   get otherRepertoires(): Repertoire[] {
-    return this.filteredRepertoires.filter(r => !r.useForExtension);
+    return this.filteredRepertoires.filter(r => !r.useForExtension && !r.isShared);
+  }
+
+  /** Von anderen Nutzern mit mir geteilte Repertoires (eigene Sektion „Mit mir geteilt"). */
+  get sharedRepertoires(): Repertoire[] {
+    return this.filteredRepertoires.filter(r => r.isShared);
   }
   /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
   readonly Kind = RepertoireKind;
@@ -202,6 +232,15 @@ export class RepertoireListComponent implements OnInit {
         });
       }
     });
+  }
+
+  /** Öffnet den „Repertoire teilen"-Dialog (Freunde auswählen / Freigaben verwalten). */
+  openShareDialog(rep: Repertoire): void {
+    this.dialog.open<ShareRepertoireDialogComponent, ShareRepertoireDialogData>(
+      ShareRepertoireDialogComponent, {
+        width: '440px', maxWidth: '95vw',
+        data: { repertoireId: rep.id, repertoireName: rep.name }
+      });
   }
 
   openEditDialog(rep: Repertoire): void {

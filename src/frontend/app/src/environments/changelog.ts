@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.247.0';
+export const APP_VERSION = '0.248.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.248.0", date: "2026-07-02", changes: [
+    { en: "Share a repertoire with selected people (same as courses): each of your own repertoires now has a “Share” button that opens a dialog where you pick friends to share it with. They get the repertoire in their own list (new “Shared with me” section, with a “shared by X” badge), can open it, download the PGN and train it with their own spaced-repetition progress, but can’t edit, delete or re-share it (edit controls are hidden for them). You can revoke access per person in the same dialog, and each recipient gets an in-app notification. Sharing is limited to friends (like puzzle challenges); admins can share with anyone.", de: "Repertoire mit ausgewählten Personen teilen (wie bei Kursen): jedes eigene Repertoire hat jetzt einen „Teilen“-Knopf, der einen Dialog öffnet, in dem du Freunde zum Teilen auswählst. Sie bekommen das Repertoire in ihrer eigenen Liste (neue Sektion „Mit mir geteilt“ mit „geteilt von X“-Badge), können es öffnen, das PGN herunterladen und mit eigenem Spaced-Repetition-Fortschritt trainieren, aber nicht bearbeiten, löschen oder weiterteilen (die Bearbeiten-Bedienelemente sind für sie ausgeblendet). Im selben Dialog kannst du den Zugriff je Person wieder entziehen; jeder Empfänger erhält eine In-App-Benachrichtigung. Teilen ist auf Freunde beschränkt (wie Puzzle-Challenges); Admins können mit allen teilen." },
+  ]},
   { version: "0.247.0", date: "2026-07-02", changes: [
     { en: "Repertoire spaced repetition, part 2 — a Learn mode and per-line/chapter pool management. The trainer now has a Review/Learn toggle: Learn plays not-yet-learned lines from the start, in order (course-wide or per chapter/line) — it shows the expected move, holds ~2s, takes it back and you replay it; if the move has a comment it stays up until you tap on (so you can read it), then you play it. Finishing a line adds it to your practice pool. In the repertoire's line list every line now shows its status (in pool / due / scheduled / paused) and has a menu to Learn, Add to pool, Make due now, or Pause/Resume it — with the same actions per chapter and for the whole course (plus quick Review/Learn buttons at the top). Paused lines never appear in the practice pool until you resume them.", de: "Repertoire-Spaced-Repetition, Teil 2 — ein Lern-Modus und Pool-Verwaltung je Linie/Kapitel. Der Trainer hat jetzt einen Abfragen/Lernen-Umschalter: Lernen spielt noch nicht gelernte Linien von vorn durch, der Reihe nach (ganzer Kurs oder je Kapitel/Linie) — der erwartete Zug wird gezeigt, ~2s gehalten, zurückgenommen und du spielst ihn nach; hat der Zug einen Kommentar, bleibt er stehen, bis du weitertippst (zum Lesen), dann spielst du ihn. Eine fertig gespielte Linie wandert in den Übungspool. In der Linienliste des Repertoires zeigt jede Linie ihren Status (im Pool / fällig / geplant / pausiert) und hat ein Menü zum Lernen, In-den-Pool-Aufnehmen, Jetzt-fällig-machen oder Pausieren/Fortsetzen — dieselben Aktionen je Kapitel und für den ganzen Kurs (plus schnelle Abfragen/Lernen-Knöpfe oben). Pausierte Linien tauchen im Übungspool erst wieder auf, wenn du sie fortsetzt." },
   ]},

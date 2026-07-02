@@ -49,7 +49,12 @@
     "hintRepertoire": "These intervals apply only to this repertoire.",
     "level": "Level",
     "resetDefaults": "Reset to defaults",
-    "unit": { "h": "hours", "d": "days", "w": "weeks", "mo": "months" }
+    "unit": {
+      "h": "hours",
+      "d": "days",
+      "w": "weeks",
+      "mo": "months"
+    }
   },
   "common": {
     "save": "Save",
@@ -89,7 +94,8 @@
       "new_user_registered": "New user {{username}} registered",
       "chessable_token_added": "{{username}} added a Chessable token",
       "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}",
-      "course_shared": "{{username}} shared the course “{{courseName}}” with you"
+      "course_shared": "{{username}} shared the course “{{courseName}}” with you",
+      "repertoire_shared": "{{username}} shared the repertoire “{{repertoireName}}” with you"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -607,7 +613,9 @@
       "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess.",
       "sectionOther": "Other repertoires",
       "sectionOtherHint": "Not used by RepCheck. Toggle \"Use for extension\" in edit to move a repertoire up.",
-      "extensionBadge": "Used by the RepCheck extension"
+      "extensionBadge": "Used by the RepCheck extension",
+      "sectionSharedWithMe": "Shared with me",
+      "sectionSharedWithMeHint": "Repertoires other members have shared with you."
     },
     "detail": {
       "noDescription": "No description",
@@ -680,6 +688,23 @@
       "uploadPartial": "{{ok}} uploaded, {{failed}} failed",
       "downloadFailed": "Download failed",
       "deleteConfirm": "Delete this file?"
+    },
+    "share": {
+      "action": "Share",
+      "title": "Share “{{name}}”",
+      "hint": "Choose friends to share this repertoire with. They can view, download and train it with their own progress, but cannot edit or re-share it.",
+      "sharedWith": "Shared with",
+      "pickFriends": "Add friends",
+      "noFriends": "You have no friends to share with yet.",
+      "shareButton": "Share ({{count}})",
+      "unshareTooltip": "Remove access",
+      "sharedBy": "shared by {{name}}",
+      "shared": "Shared with {{count}} friend(s).",
+      "sharedPartial": "Shared with {{shared}}; {{skipped}} skipped.",
+      "nothingShared": "Nobody added (already shared or not friends).",
+      "unshared": "Removed access for {{name}}.",
+      "failed": "Sharing failed.",
+      "loadFailed": "Could not load sharing information."
     }
   },
   "tournaments": {

@@ -49,7 +49,12 @@
     "hintRepertoire": "Ovi intervali vrijede samo za ovaj repertoar.",
     "level": "Razina",
     "resetDefaults": "Vrati na zadano",
-    "unit": { "h": "sati", "d": "dana", "w": "tjedni", "mo": "mjeseci" }
+    "unit": {
+      "h": "sati",
+      "d": "dana",
+      "w": "tjedni",
+      "mo": "mjeseci"
+    }
   },
   "common": {
     "save": "Spremi",
@@ -89,7 +94,8 @@
       "new_user_registered": "Novi korisnik {{username}} se registrirao",
       "chessable_token_added": "{{username}} je dodao Chessable token",
       "chessable_new_course": "Novi Chessable tečaj „{{courseName}}“ za {{username}}",
-      "course_shared": "{{username}} je s tobom podijelio tečaj „{{courseName}}“"
+      "course_shared": "{{username}} je s tobom podijelio tečaj „{{courseName}}“",
+      "repertoire_shared": "{{username}} je s tobom podijelio repertoar „{{repertoireName}}“"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -607,7 +613,9 @@
       "sectionExtensionHint": "Repertoari koje RepCheck ekstenzija provjerava na chess.com / lichess.",
       "sectionOther": "Ostali repertoari",
       "sectionOtherHint": "RepCheck ih ne koristi. Uključi „Koristi za ekstenziju“ u uređivanju da bi repertoar premjestio gore.",
-      "extensionBadge": "Koristi ga RepCheck ekstenzija"
+      "extensionBadge": "Koristi ga RepCheck ekstenzija",
+      "sectionSharedWithMe": "Podijeljeno sa mnom",
+      "sectionSharedWithMeHint": "Repertoari koje su drugi članovi podijelili s tobom."
     },
     "detail": {
       "noDescription": "Nema opisa",
@@ -678,6 +686,23 @@
       "uploadPartial": "{{ok}} preneseno, {{failed}} neuspjelo",
       "downloadFailed": "Preuzimanje nije uspjelo",
       "deleteConfirm": "Izbrisati ovu datoteku?"
+    },
+    "share": {
+      "action": "Podijeli",
+      "title": "Podijeli „{{name}}“",
+      "hint": "Odaberi prijatelje s kojima dijeliš ovaj repertoar. Mogu ga gledati, preuzeti i uvježbavati s vlastitim napretkom, ali ga ne mogu uređivati ni dalje dijeliti.",
+      "sharedWith": "Podijeljeno s",
+      "pickFriends": "Dodaj prijatelje",
+      "noFriends": "Još nemaš prijatelja za dijeljenje.",
+      "shareButton": "Podijeli ({{count}})",
+      "unshareTooltip": "Ukloni pristup",
+      "sharedBy": "podijelio {{name}}",
+      "shared": "Podijeljeno s {{count}} prijatelja.",
+      "sharedPartial": "Podijeljeno s {{shared}}; {{skipped}} preskočeno.",
+      "nothingShared": "Nitko nije dodan (već podijeljeno ili niste prijatelji).",
+      "unshared": "Pristup uklonjen za {{name}}.",
+      "failed": "Dijeljenje nije uspjelo.",
+      "loadFailed": "Podaci o dijeljenju nisu učitani."
     }
   },
   "tournaments": {

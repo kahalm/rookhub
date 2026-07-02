@@ -58,4 +58,7 @@ public static class NotificationType
     /// <summary>Ein Nutzer hat einen Kurs mit dem Empfänger geteilt (→ Glocke des Empfängers,
     /// Link „/courses"). Daten: username (Teilender), courseName.</summary>
     public const string CourseShared = "course_shared";
+    /// <summary>Ein Nutzer hat ein Repertoire mit dem Empfänger geteilt (→ Glocke des Empfängers,
+    /// Link „/repertoires"). Daten: username (Teilender), repertoireName.</summary>
+    public const string RepertoireShared = "repertoire_shared";
 }

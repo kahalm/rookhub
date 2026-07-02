@@ -128,6 +128,10 @@ export interface Repertoire {
   createdAt: string;
   updatedAt: string;
   chessableCourseId: string | null;
+  /** true = von einem anderen Nutzer mit mir geteilt (ich bin nicht der Besitzer). */
+  isShared?: boolean;
+  /** Benutzername des Teilenden (nur wenn isShared) — für das „von X"-Badge. */
+  sharedByUsername?: string | null;
 }
 
 export interface RepertoireDetail {
@@ -141,6 +145,8 @@ export interface RepertoireDetail {
   createdAt: string;
   updatedAt: string;
   chessableCourseId: string | null;
+  /** true = Aufrufer ist Besitzer (darf bearbeiten); false = nur geteilt (nur ansehen/trainieren). */
+  isOwner?: boolean;
 }
 
 export interface RepertoireFile {

@@ -15,6 +15,43 @@ public class RepertoireDto
     public int FileCount { get; set; }
     public bool UseForExtension { get; set; }
     public string? ChessableCourseId { get; set; }
+
+    /// <summary><c>true</c> = dieses Repertoire wurde von einem anderen Nutzer mit mir geteilt
+    /// (ich bin nicht der Besitzer). Steuert die Sektion „Mit mir geteilt" + das „von X"-Badge.</summary>
+    public bool IsShared { get; set; }
+
+    /// <summary>Benutzername des Teilenden, wenn <see cref="IsShared"/> — für das „von X"-Badge.</summary>
+    public string? SharedByUsername { get; set; }
+}
+
+/// <summary>Eingabe: mit welchen Nutzern ein Repertoire geteilt werden soll (Batch, analog Kurs).</summary>
+public class ShareRepertoireInputDto
+{
+    [System.ComponentModel.DataAnnotations.MaxLength(50)]
+    public List<int> RecipientUserIds { get; set; } = new();
+}
+
+/// <summary>Ergebnis eines Teilen-Vorgangs: wie viele neu geteilt, welche Empfänger übersprungen (+Grund).</summary>
+public class RepertoireShareResultDto
+{
+    public int Shared { get; set; }
+    public List<RepertoireShareSkipDto> Skipped { get; set; } = new();
+}
+
+/// <summary>Ein übersprungener Empfänger. <see cref="Reason"/> ∈ self / not_found / not_friends / duplicate.</summary>
+public class RepertoireShareSkipDto
+{
+    public int UserId { get; set; }
+    public string Reason { get; set; } = string.Empty;
+}
+
+/// <summary>Ein Nutzer, mit dem ein Repertoire aktuell geteilt ist (für die „geteilt mit"-Liste im Dialog).</summary>
+public class RepertoireShareRecipientDto
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+    public DateTime SharedAt { get; set; }
 }
 
 public class RepertoireDetailDto
@@ -29,6 +66,10 @@ public class RepertoireDetailDto
     public List<RepertoireFileDto> Files { get; set; } = new();
     public bool UseForExtension { get; set; }
     public string? ChessableCourseId { get; set; }
+
+    /// <summary><c>true</c> = der Aufrufer ist der Besitzer (darf bearbeiten/Dateien verwalten).
+    /// <c>false</c> = das Repertoire ist ihm nur geteilt (nur ansehen/herunterladen/trainieren).</summary>
+    public bool IsOwner { get; set; }
 }
 
 public class RepertoireFileDto
