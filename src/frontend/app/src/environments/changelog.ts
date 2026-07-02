@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.249.0';
+export const APP_VERSION = '0.249.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.249.1", date: "2026-07-02", changes: [
+    { en: "Repertoire trainer (Learn mode): added a short 0.8s pause between the auto-played opponent move and showing your next move — previously the opponent's reply and your next move flashed up almost simultaneously.", de: "Repertoire-Trainer (Lern-Modus): kurze 0,8-Sekunden-Pause zwischen dem automatisch gespielten Gegnerzug und dem Zeigen deines nächsten Zugs — vorher kamen Gegnerantwort und dein nächster Zug quasi gleichzeitig." },
+  ]},
   { version: "0.249.0", date: "2026-07-02", changes: [
     { en: "Repertoire trainer (Review mode): a wrong move now offers a “Mouseslip” button next to “Show solution”. Mouseslip forgives the slip — it doesn't count against the line — and lets you play the correct move; you can do this as often as you like. A wrong move only counts against the line (dropping it back to level 1) if you continue without mouseslipping or reveal the solution.", de: "Repertoire-Trainer (Abfragen): ein falscher Zug bietet jetzt neben „Lösung zeigen“ auch „Mausrutscher“. Mausrutscher verzeiht den Ausrutscher — er zählt nicht gegen die Linie — und du spielst den richtigen Zug; das geht beliebig oft. Ein Fehler zählt nur dann gegen die Linie (Rückfall auf Stufe 1), wenn du ohne Mausrutscher weitermachst oder die Lösung anzeigst." },
   ]},

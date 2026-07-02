@@ -210,10 +210,10 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).toBe('PLAYING');
     // Erste Linie (Chapter A): e4, Nf3 des Users durchspielen.
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // korrekt nachgespielt
-    tick(400);                                            // Gegner e5 → nächster Learn-Show
+    tick(400); tick(800);                                 // Gegner e5 + Pause → nächster Learn-Show
     tick(2000);                                           // Show → retract
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
-    tick(400);                                            // Gegner Nc6 → finishLine → promote
+    tick(400); tick(800);                                 // Gegner Nc6 + Pause → finishLine → promote
     expect(promote).toHaveBeenCalled();
   }));
 

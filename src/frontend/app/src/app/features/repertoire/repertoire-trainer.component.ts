@@ -32,6 +32,7 @@ const ADVANCE_MS: Record<Outcome, number> = { correct: 600, tolerated: 1500, wro
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
 const LEARN_SHOW_MS = 2000;      // Zug im Learn-Modus so lange zeigen, dann zurücknehmen
+const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs
 
 /**
  * Line-basiertes Repertoire-Training: eine ganze PGN-Linie wird vom Startzug an durchgespielt,
@@ -508,7 +509,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.lastMove = [mv.from as Key, mv.to as Key];
       } catch { this.finishLine(); return; }
       this.currentPly++;
-      this.advanceToUserMove();
+      this.cdr.markForCheck();
+      // Learn: kurze Pause zwischen dem Gegnerzug und dem Zeigen des nächsten eigenen Zugs, damit
+      // beide nicht quasi gleichzeitig erscheinen.
+      if (this.mode === 'learn') {
+        this.oppTimer = setTimeout(() => { this.oppTimer = null; this.advanceToUserMove(); }, LEARN_GAP_MS);
+      } else {
+        this.advanceToUserMove();
+      }
     }, OPP_MOVE_DELAY_MS);
   }
 
