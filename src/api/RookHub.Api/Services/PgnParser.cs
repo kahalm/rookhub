@@ -131,10 +131,18 @@ public static partial class PgnParser
         int i = 0, n = moveText.Length;
         var cur = new StringBuilder();
 
+        // Ein Hauptlinien-Kommentar, der (auf Chessable-Art) mit einem Verweis auf eine Fortsetzung
+        // endet („…the continuation would have been", „better was …"), wird im PGN unmittelbar von
+        // einer Variante fortgesetzt. Ohne Faltung endet der gespeicherte Kommentar mitten im Satz.
+        // Daher: folgt einer NICHT-leeren Hauptlinien-Kommentar direkt eine Variante, hängen wir deren
+        // kompakt gerenderten Inhalt (Züge + Zug-Kommentare) an den Kommentar an.
+        bool commentTrailing = false;   // letzter depth-0-Token war ein nicht-leerer Kommentar
+        int lastCommentKey = -1;
+
         void Flush()
         {
             if (cur.Length == 0) return;
-            if (IsSanMove(cur.ToString())) sanCount++;
+            if (IsSanMove(cur.ToString())) { sanCount++; commentTrailing = false; }
             cur.Clear();
         }
 
@@ -156,9 +164,20 @@ public static partial class PgnParser
                         map[key] = map.TryGetValue(key, out var prev)
                             ? Truncate($"{prev} {cleaned}", MaxCommentLength)
                             : Truncate(cleaned, MaxCommentLength);
+                        commentTrailing = true;
+                        lastCommentKey = key;
                     }
                 }
                 i = (j < n) ? j + 1 : n;
+            }
+            else if (c == '(' && depth == 0 && commentTrailing)
+            {
+                // Fortsetzungs-Variante direkt nach einem Kommentar → in den Kommentar falten.
+                int end = MatchParen(moveText, i);
+                var rendered = RenderVariation(moveText.Substring(i + 1, end - (i + 1)));
+                if (rendered.Length > 0 && map.TryGetValue(lastCommentKey, out var prev))
+                    map[lastCommentKey] = Truncate($"{prev} {rendered}", MaxCommentLength);
+                i = end + 1; // ganze Variante konsumiert; commentTrailing bleibt (Folge-Varianten falten mit)
             }
             else if (c == '(') { Flush(); depth++; i++; }
             else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
@@ -167,6 +186,30 @@ public static partial class PgnParser
         }
         Flush();
         return map.Count == 0 ? null : map;
+    }
+
+    /// <summary>Index der zu <paramref name="open"/> (einem '(') gehörenden schließenden ')'; bei
+    /// unbalanciertem PGN das Textende.</summary>
+    private static int MatchParen(string s, int open)
+    {
+        int d = 0;
+        for (int k = open; k < s.Length; k++)
+        {
+            if (s[k] == '(') d++;
+            else if (s[k] == ')') { d--; if (d == 0) return k; }
+        }
+        return s.Length - 1;
+    }
+
+    /// <summary>Rendert den Inhalt einer Varianten-Fortsetzung kompakt als Fließtext: Züge bleiben stehen,
+    /// Kommentar-Klammern <c>{…}</c> werden entfernt (Text inline), <c>[%…]</c>-Marker und NAGs raus,
+    /// Whitespace kollabiert.</summary>
+    private static string RenderVariation(string inner)
+    {
+        var noAnn = AnnotationRegex().Replace(inner, "");
+        var noNag = NagRegex().Replace(noAnn, "");
+        var noBraces = noNag.Replace("{", " ").Replace("}", " ").Replace("(", " ").Replace(")", " ");
+        return WhitespaceRegex().Replace(noBraces, " ").Trim();
     }
 
     /// <summary>Eine Board-Annotation aus <c>[%cal]</c>/<c>[%csl]</c>: Pfeil (o→d) bzw. Feld-Markierung

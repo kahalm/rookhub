@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.18';
+export const APP_VERSION = '0.242.19';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.19", date: "2026-07-02", changes: [
+    { en: "Move comments that referred to a continuation line are no longer cut off mid-sentence. In Chessable-style courses a main-line comment often ends with a pointer to a follow-up (“the most energetic continuation would have been”) whose moves live in a following variation — previously that variation was dropped, so the comment stopped mid-sentence. Now the variation (its moves plus their comments) is folded compactly into the comment. Existing courses need a re-process/re-fetch to pick up the fuller text (import pipeline version 9).", de: "Zug-Kommentare, die auf eine Fortsetzung verweisen, werden nicht mehr mitten im Satz abgeschnitten. In Kursen im Chessable-Stil endet ein Hauptlinien-Kommentar oft mit einem Verweis auf eine Fortsetzung („the most energetic continuation would have been“), deren Züge in einer folgenden Variante stehen — bisher wurde diese Variante verworfen, der Kommentar brach mitten im Satz ab. Jetzt wird die Variante (Züge samt Kommentaren) kompakt in den Kommentar gefaltet. Bestehende Kurse übernehmen den vollständigen Text erst nach einem „Aktualisieren“ (Re-Import bzw. Chessable-Re-Fetch; Import-Pipeline-Version 9)." },
+  ]},
   { version: "0.242.18", date: "2026-07-02", changes: [
     { en: "Repertoires page: repertoires that are actively used by the RepCheck extension now appear at the top in their own section (\"In RepCheck\"), with the remaining ones (\"Other repertoires\") below. Each card also gets a small extension badge in its title so you see at a glance which ones RepCheck watches. Toggle \"Use for extension\" in the edit dialog to move a repertoire between the two sections.", de: "Repertoires-Seite: Repertoires, die die RepCheck-Extension aktiv nutzt, erscheinen jetzt oben in einem eigenen Block („In RepCheck“); die übrigen („Weitere Repertoires“) darunter. Jede Karte trägt zusätzlich ein kleines Extension-Icon im Titel, sodass du auf einen Blick siehst, welche RepCheck beobachtet. Über „Für Extension nutzen“ im Bearbeiten-Dialog kannst du ein Repertoire zwischen den beiden Sektionen verschieben." },
   ]},

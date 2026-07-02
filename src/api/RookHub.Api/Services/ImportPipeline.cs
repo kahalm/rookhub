@@ -53,10 +53,17 @@ namespace RookHub.Api.Services;
 ///   gespeichert, statt beim Kommentar-Cleanup verworfen zu werden → das Frontend zeichnet sie im
 ///   Review aufs Brett. Die Annotationen stehen bereits im <c>Book.SourcePgn</c> → lokal aufbereitbar;
 ///   Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
+/// <item><c>9</c> — Fortsetzungs-Varianten in Zug-Kommentaren werden nicht mehr verworfen: endet ein
+///   Hauptlinien-Kommentar (Chessable-Stil) mit einem Verweis auf eine Fortsetzung („…the continuation
+///   would have been", „better was …") und folgt ihm direkt eine Varianten-Klammer <c>(…)</c>, so wird
+///   deren Inhalt (Züge + Zug-Kommentare) kompakt in den Kommentar gefaltet, statt ihn mitten im Satz
+///   enden zu lassen (<c>PgnParser.ExtractMoveComments</c>). Der Varianten-Text steht bereits im
+///   <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
+///   Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
 }

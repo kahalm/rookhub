@@ -75,6 +75,30 @@ public class PgnImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ParsePgn_FoldsContinuationVariationIntoTrailingComment()
+    {
+        // Chessable-Stil: der Hauptlinien-Kommentar endet mit einem Verweis auf eine Fortsetzung,
+        // die direkt als Variante folgt. Diese Variante darf nicht verworfen werden (Kommentar sonst
+        // mitten im Satz abgeschnitten), sondern wird kompakt in den Kommentar gefaltet.
+        var pgn = @"
+[Event ""X""]
+[Round ""1""]
+[FEN ""rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2""]
+
+2. Nf3 {A bad move. The most energetic continuation would have been} (2. Bc4 {, hitting f7.} 2... Nc6 3. Qh5 {with threats.}) Nc6 3. Bb5 *
+";
+        var p = Assert.Single(PgnImportService.ParsePgn("c.pgn", pgn).Puzzles);
+        Assert.NotNull(p.MoveComments);
+        var c = p.MoveComments![0];
+        Assert.StartsWith("A bad move. The most energetic continuation would have been", c);
+        Assert.Contains("Bc4", c);            // Varianten-Zug gefaltet
+        Assert.Contains("hitting f7.", c);    // Varianten-Kommentar gefaltet
+        Assert.Contains("with threats.", c);
+        Assert.DoesNotContain("{", c);        // Klammern entfernt
+        Assert.DoesNotContain("(", c);
+    }
+
+    [Fact]
     public async Task ImportFileAsync_PersistsMoveComments_RoundtripsThroughMapToDto()
     {
         var pgn = @"
