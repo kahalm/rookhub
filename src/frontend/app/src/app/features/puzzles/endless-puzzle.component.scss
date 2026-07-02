@@ -305,4 +305,15 @@
       .help-overlay { padding: 0.5rem; }
       .help-content { border-radius: 8px; }
       .threshold-fields { grid-template-columns: 1fr; }
+      .themes-row { flex-direction: column; align-items: stretch; }
+    }
+
+    /* Themen-Chip-Feld + „Alle löschen"-Knopf nebeneinander. */
+    .themes-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+
+      .themes-field { flex: 1; min-width: 0; }
+      .themes-clear { align-self: flex-start; margin-top: 4px; white-space: nowrap; }
     }

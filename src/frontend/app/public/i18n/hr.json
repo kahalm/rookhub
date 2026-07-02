@@ -24,7 +24,11 @@
     "evalMateAllowed": "Tvoj potez omogućuje protivniku forsirani mat.",
     "continue": "Nastavi",
     "playYourMove": "Odigraj svoj potez na ploči.",
-    "tapToContinue": "Nastavak… (dodirni za preskakanje)"
+    "tapToContinue": "Nastavak… (dodirni za preskakanje)",
+    "lineProgress": "Linija {{done}} od {{total}}",
+    "lineDone": "Linija gotova — sljedeća se učitava…",
+    "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
+    "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani."
   },
   "common": {
     "save": "Spremi",
@@ -609,7 +613,10 @@
     },
     "lines": {
       "allLines": "Sve linije",
-      "empty": "U ovom repertoaru nema pronađenih linija."
+      "empty": "U ovom repertoaru nema pronađenih linija.",
+      "noChapter": "(Bez poglavlja)",
+      "toggleChapter": "Otvori / zatvori poglavlje",
+      "trainChapter": "Treniraj ovo poglavlje"
     },
     "tree": {
       "start": "Početak",
@@ -1046,6 +1053,7 @@
       "themes": "Themes (opcionalno)",
       "themesPlaceholder": "npr. fork pin (bilo koja)",
       "themesHint": "Pretraži i odaberi teme — zagonetka treba samo jednu.",
+      "clearThemes": "Obriši sve",
       "thresholdExplain": "Rejtinzi pri kojima obično gubiš živote. Prilagodi da brže ili sporije preskačeš lakše zagonetke.",
       "firstThreshold": "1. prag",
       "secondThreshold": "2. prag",

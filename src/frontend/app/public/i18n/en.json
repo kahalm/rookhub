@@ -24,7 +24,11 @@
     "evalMateAllowed": "Your move allows a forced mate for the opponent.",
     "continue": "Continue",
     "playYourMove": "Make your move on the board.",
-    "tapToContinue": "Continuing… (tap to skip)"
+    "tapToContinue": "Continuing… (tap to skip)",
+    "lineProgress": "Line {{done}} of {{total}}",
+    "lineDone": "Line complete — next one loading…",
+    "resetTooltip": "Reset training progress (delete SM-2 state).",
+    "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted."
   },
   "common": {
     "save": "Save",
@@ -611,7 +615,10 @@
     },
     "lines": {
       "allLines": "All Lines",
-      "empty": "No lines found in this repertoire."
+      "empty": "No lines found in this repertoire.",
+      "noChapter": "(No chapter)",
+      "toggleChapter": "Expand / collapse chapter",
+      "trainChapter": "Train this chapter"
     },
     "tree": {
       "start": "Start",
@@ -1048,6 +1055,7 @@
       "themes": "Themes (optional)",
       "themesPlaceholder": "e.g. fork pin (any of them)",
       "themesHint": "Search and pick themes — a puzzle just needs one of them.",
+      "clearThemes": "Clear all",
       "thresholdExplain": "Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.",
       "firstThreshold": "1st Threshold",
       "secondThreshold": "2nd Threshold",

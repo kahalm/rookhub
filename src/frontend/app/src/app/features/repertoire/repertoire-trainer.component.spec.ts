@@ -1,115 +1,133 @@
 import { fakeAsync, tick } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
-import { RepCard } from './repertoire-tree.util';
 
-const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -';
+/** Minimal-PGN mit zwei einfachen Linien für den Line-basierten Trainer. */
+const PGN = [
+  '[Event "Rep"]',
+  '[White "1.e4 e5"]',
+  '[Black "Chapter A"]',
+  '',
+  '1. e4 e5 2. Nf3 Nc6 *',
+  '',
+  '[Event "Rep"]',
+  '[White "1.d4 d5"]',
+  '[Black "Chapter B"]',
+  '',
+  '1. d4 d5 2. c4 e6 *',
+  '',
+].join('\n');
 
-function card(expected: string, accepted: string[] = []): RepCard {
-  return { cardKey: START, fenBefore: START, expected, accepted };
-}
-
-function make(): RepertoireTrainerComponent {
-  const route: any = { snapshot: { paramMap: { get: () => '1' } } };
-  const training: any = { review: () => of({ cardKey: START }) };
-  const prefs: any = {};
-  const translate: any = {};
+function make(color: 'w' | 'b' = 'w', queryChapter: string | null = null, pgn: string = PGN): RepertoireTrainerComponent {
+  const route: any = {
+    snapshot: {
+      paramMap: { get: () => '1' },
+      queryParamMap: { get: (k: string) => k === 'chapter' ? queryChapter : null },
+    },
+  };
+  const training: any = {
+    getPgn: () => of(pgn),
+    getCards: () => of([]),
+    review: () => of({ cardKey: '', expectedMove: '', reps: 0, lapses: 0, intervalDays: 0, ease: 2.5, dueAt: '', lastReviewedAt: null }),
+    reset: () => of({ deleted: 0 }),
+  };
+  const prefs: any = { boardTheme: 'brown', pieceSet: 'cburnett' };
+  const translate: any = { instant: (k: string) => k };
   const cdr: any = { markForCheck: () => {} };
-  const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('+0.0') };
+  const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish);
-  c.fen = START + ' 0 1';
-  c.queue = [card('e4', ['d4']), card('Nf3')];
-  c.index = 0;
-  c.phase = 'PLAYING';
+  c.color = color;
+  c.ngOnInit();
   return c;
 }
 
-describe('RepertoireTrainerComponent auto-advance', () => {
-  it('correct move auto-advances without a button', fakeAsync(() => {
-    const c = make();
-    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    expect(c.outcome).toBe('correct');
-    expect(c.phase).toBe('FEEDBACK');
-    expect(c.index).toBe(0);   // noch nicht weiter
-    tick(700);
-    expect(c.index).toBe(1);   // automatisch weiter, kein Klick nötig
-    expect(c.phase).toBe('PLAYING');
-  }));
-
-  it('tolerated move stays visible, then is taken back and retries the same card', fakeAsync(() => {
-    const c = make();
-    const startFen = c.fen;
-    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });
-    expect(c.outcome).toBe('tolerated');
-    expect(c.phase).toBe('FEEDBACK');
-    expect(c.lastMove).toEqual(['d2', 'd4'] as any);   // Zug bleibt zunächst sichtbar
-    expect(c.fen).not.toBe(startFen);                  // Brett zeigt die Stellung nach dem Zug
-    tick(700);
-    expect(c.index).toBe(0);              // bei geduldet länger sichtbar
-    expect(c.phase).toBe('FEEDBACK');
-    tick(1200);                          // > ADVANCE_MS.tolerated (1800 ms) gesamt
-    expect(c.index).toBe(0);              // KEIN Weiterspringen — dieselbe Karte erneut
-    expect(c.phase).toBe('PLAYING');
-    expect(c.lastMove).toBeUndefined();  // jetzt zurückgenommen
-    expect(c.fen).toBe(startFen);        // Brett zurück auf der Ausgangsstellung
-  }));
-
-  it('correct move keeps the played move on the board (no flicker)', fakeAsync(() => {
-    const c = make();
-    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    expect(c.outcome).toBe('correct');
-    expect(c.fen).not.toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-    expect(c.lastMove).toEqual(['e2', 'e4'] as any);   // gespielter Zug bleibt markiert
-  }));
-
-  it('tapping skips the wait and continues immediately', fakeAsync(() => {
-    const c = make();
-    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    c.onPlayClick();
-    expect(c.index).toBe(1);   // sofort weiter
-    expect(c.phase).toBe('PLAYING');
-    tick(2000);                // kein doppeltes Weiterschalten
-    expect(c.index).toBe(1);
-  }));
-
-  it('wrong move reverts immediately and stays retryable without mouseslip', () => {
-    const c = make();
-    const startFen = c.fen;
-    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
-    expect(c.outcome).toBe('wrong');
-    expect(c.phase).toBe('FEEDBACK');
-    expect(c.lastMove).toEqual(['g1', 'f3'] as any);   // Versuch markiert
-    expect(c.fen).toBe(startFen);                        // Zug SOFORT zurückgenommen (kein Warten)
-    expect(c.wrongRevealed).toBeFalse();
-    expect(c.wrong).toBe(0);                             // Fehler erst beim „Lösung zeigen"
-    // Direkt erneut ziehen (ohne „Mausrutscher"): richtiger Zug wird normal gewertet, kein Fehler.
-    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    expect(c.outcome).toBe('correct');
-    expect(c.wrong).toBe(0);
+describe('RepertoireTrainerComponent (line mode)', () => {
+  it('builds a queue from all lines when no chapter filter is set', () => {
+    const c = make('w', null);
+    expect(c.queue.length).toBe(2);
+    expect(c.phase).toBe('PLAYING');   // erste Linie gestartet, Weiß ist am Zug (e2-e4 erwartet)
   });
 
-  it('mouseslip after wrong move: no penalty, return to PLAYING', () => {
-    const c = make();
-    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
-    expect(c.outcome).toBe('wrong');
-    const queueLenBefore = c.queue.length;
-    c.mouseslip();
-    expect(c.phase).toBe('PLAYING');
-    expect(c.wrong).toBe(0);
-    expect(c.queue.length).toBe(queueLenBefore);   // KEIN Re-Queue der Karte
+  it('filters lines by chapter query param', () => {
+    const c = make('w', 'Chapter B');
+    expect(c.queue.length).toBe(1);
+    expect((c as any).queue[0].headers.Black).toBe('Chapter B');
   });
 
-  it('showSolution after wrong move: counts as wrong + reveal + re-queue + plays the move on the board', () => {
-    const c = make();
+  it('sets phase EMPTY when no line matches the chapter', () => {
+    const c = make('w', 'Chapter Z');
+    expect(c.phase).toBe('EMPTY');
+  });
+
+  it('correct user move advances the ply and plays opponent auto-response', fakeAsync(() => {
+    const c = make('w', 'Chapter A');
+    // Chapter A hat 1.e4 e5 2.Nf3 Nc6 — weißer 1. Zug erwartet: e4
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.correct).toBe(1);
+    tick(600);    // ADVANCE_MS.correct
+    tick(400);    // OPP_MOVE_DELAY_MS
+    // Nach automatischem Gegnerzug (e7-e5) sollte Weiß wieder am Zug sein (Nf3 erwarten).
+    expect(c.phase).toBe('PLAYING');
+    expect(c.correct).toBe(1);
+  }));
+
+  it('wrong move keeps fen at start and increments only on showSolution', () => {
+    const c = make('w', 'Chapter A');
     const startFen = c.fen;
-    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
-    const queueLenBefore = c.queue.length;
+    c.onMove({ orig: 'a2' as any, dest: 'a3' as any });   // falsch (erwartet e4)
+    expect(c.outcome).toBe('wrong');
+    expect(c.wrong).toBe(0);   // erst nach „Lösung zeigen"
+    expect(c.fen).toBe(startFen);   // Zug SOFORT zurückgenommen
     c.showSolution();
-    expect(c.wrongRevealed).toBeTrue();
     expect(c.wrong).toBe(1);
-    expect(c.queue.length).toBe(queueLenBefore + 1);
-    // Der korrekte Zug (e4) wird auf dem Brett gespielt + markiert.
-    expect(c.fen).not.toBe(startFen);
-    expect(c.lastMove).toEqual(['e2', 'e4'] as any);
+    expect(c.wrongRevealed).toBeTrue();
+    expect(c.fen).not.toBe(startFen);   // erwarteter Zug e2-e4 wird gespielt
+  });
+
+  it('a move outside expected + accepted is treated as wrong (no auto-advance)', () => {
+    const c = make('w', 'Chapter A');
+    c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // d4 ist im PGN nur Kapitel-B-Linie
+    expect(c.outcome).toBe('wrong');
+    expect(c.phase).toBe('FEEDBACK');
+  });
+
+  it('resetProgress calls the backend, clears state and rebuilds the queue', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    const c = make('w', null);
+    const resetSpy = jasmine.createSpy('reset').and.returnValue(of({ deleted: 3 }));
+    (c as any).training.reset = resetSpy;
+    c.resetProgress();
+    expect(resetSpy).toHaveBeenCalledWith(1);
+    expect(c.resetting).toBeFalse();
+    expect(c.queue.length).toBe(2);   // Queue neu aufgebaut
+  });
+
+  it('resetProgress does nothing when user cancels the confirm', () => {
+    spyOn(window, 'confirm').and.returnValue(false);
+    const c = make('w', null);
+    const resetSpy = jasmine.createSpy('reset');
+    (c as any).training.reset = resetSpy;
+    c.resetProgress();
+    expect(resetSpy).not.toHaveBeenCalled();
+  });
+
+  it('LOADING failure sets phase to EMPTY', () => {
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: () => null },
+      },
+    };
+    const training: any = {
+      getPgn: () => throwError(() => new Error('nope')),
+      getCards: () => of([]),
+    };
+    const c = new RepertoireTrainerComponent(
+      route, training, {} as any, { instant: (k: string) => k } as any,
+      { markForCheck: () => {} } as any, { init: () => Promise.resolve() } as any,
+    );
+    c.ngOnInit();
+    expect(c.phase).toBe('EMPTY');
   });
 });

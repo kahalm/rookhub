@@ -37,4 +37,9 @@ export class RepertoireTrainingService {
   review(repertoireId: number, req: ReviewCardRequest): Observable<RepertoireCardStateDto> {
     return this.http.post<RepertoireCardStateDto>(`/api/repertoires/${repertoireId}/training/review`, req);
   }
+
+  /** Löscht alle SM-2-Zustände des Users für dieses Repertoire (frischer Trainings-Start). */
+  reset(repertoireId: number): Observable<{ deleted: number }> {
+    return this.http.delete<{ deleted: number }>(`/api/repertoires/${repertoireId}/training/reset`);
+  }
 }

@@ -135,4 +135,48 @@ public class RepertoireTrainingServiceTests : IDisposable
         Assert.Equal(2, cards!.Count);
         Assert.Contains(cards, c => c.CardKey == "fenA" && c.ExpectedMove == "e6");
     }
+
+    [Fact]
+    public async Task Reset_ForeignRepertoire_ReturnsNullAndKeepsData()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var repId = await CreateRepertoireAsync(owner);
+        await _service.ReviewAsync(owner, repId, Req("fenA", "e6", 2));
+
+        var deleted = await _service.ResetAsync(other, repId);
+        Assert.Null(deleted);
+        Assert.Single(await _service.GetCardsAsync(owner, repId) ?? new());
+    }
+
+    [Fact]
+    public async Task Reset_OwnRepertoire_RemovesAllCards()
+    {
+        var owner = await CreateUserAsync("owner");
+        var repId = await CreateRepertoireAsync(owner);
+        await _service.ReviewAsync(owner, repId, Req("fenA", "e6", 2));
+        await _service.ReviewAsync(owner, repId, Req("fenB", "c5", 2));
+
+        var deleted = await _service.ResetAsync(owner, repId);
+        Assert.Equal(2, deleted);
+        Assert.Empty((await _service.GetCardsAsync(owner, repId))!);
+    }
+
+    [Fact]
+    public async Task Reset_DoesNotTouchOtherRepertoiresOrUsers()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var repA = await CreateRepertoireAsync(owner);
+        var repB = await CreateRepertoireAsync(owner);
+        var repC = await CreateRepertoireAsync(other);
+        await _service.ReviewAsync(owner, repA, Req("fx", "e4", 2));
+        await _service.ReviewAsync(owner, repB, Req("fx", "d4", 2));
+        await _service.ReviewAsync(other, repC, Req("fx", "e4", 2));
+
+        Assert.Equal(1, await _service.ResetAsync(owner, repA));
+        Assert.Empty((await _service.GetCardsAsync(owner, repA))!);
+        Assert.Single((await _service.GetCardsAsync(owner, repB))!);
+        Assert.Single((await _service.GetCardsAsync(other, repC))!);
+    }
 }

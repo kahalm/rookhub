@@ -108,6 +108,7 @@
                       }
                     </div>
                   </div>
+                  <div class="themes-row">
                   <mat-form-field appearance="outline" class="themes-field">
                     <mat-label>{{ 'endless.config.themes' | translate }}</mat-label>
                     <mat-chip-grid #themeChips [disabled]="!!config.worstTags" aria-label="Themen">
@@ -137,6 +138,14 @@
                     </mat-autocomplete>
                     <mat-hint>{{ 'endless.config.themesHint' | translate }}</mat-hint>
                   </mat-form-field>
+                  <button mat-stroked-button type="button" class="themes-clear"
+                          [disabled]="!!config.worstTags || selectedThemes.length === 0"
+                          (click)="clearThemes()"
+                          [attr.aria-label]="'endless.config.clearThemes' | translate">
+                    <mat-icon>backspace</mat-icon>
+                    {{ 'endless.config.clearThemes' | translate }}
+                  </button>
+                  </div>
                   @if (isLoggedIn) {
                     <div class="worst-tags-row">
                       <mat-slide-toggle [(ngModel)]="config.worstTags" (ngModelChange)="onWorstTagsToggle($event)">{{ 'puzzles.filters.worstTags' | translate }}</mat-slide-toggle>

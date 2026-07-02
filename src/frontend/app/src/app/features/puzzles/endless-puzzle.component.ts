@@ -139,10 +139,21 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   readonly themePresets = PUZZLE_THEME_PRESETS;
 
   /** Preset anwenden: überschreibt die Themen. „Schwächste Themen" wird dabei deaktiviert
-   *  (es überschriebe sonst die Themen-Auswahl). */
+   *  (es überschriebe sonst die Themen-Auswahl). Erneuter Klick auf einen bereits aktiven Preset
+   *  löscht die Auswahl wieder (Toggle-off — der User kann so alles freischalten). */
   applyThemePreset(preset: ThemePreset): void {
     if (this.config.worstTags) this.config.worstTags = false;
-    this.setSelectedThemes(preset.themes);
+    if (this.isThemePresetActive(preset)) {
+      this.setSelectedThemes([]);
+    } else {
+      this.setSelectedThemes(preset.themes);
+    }
+  }
+
+  /** Löscht die gesamte Themen-Auswahl (Endless zeigt danach ALLE Themen). */
+  clearThemes(): void {
+    if (this.config.worstTags) this.config.worstTags = false;
+    this.setSelectedThemes([]);
   }
 
   /** True, wenn der Preset gerade exakt aktiv ist (für die Chip-Hervorhebung). */

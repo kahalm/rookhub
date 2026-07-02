@@ -96,6 +96,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                   [moves]="viewerService.currentMoves"
                   [currentMoveIndex]="viewerService.currentMoveIndex"
                   [comments]="viewerService.currentComments"
+                  [repertoireId]="id"
                   (lineSelected)="viewerService.selectLine($event)"
                   (lineDeselected)="viewerService.deselectLine()"
                   (moveClicked)="viewerService.goToMove($event)" />

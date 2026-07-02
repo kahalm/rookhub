@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.243.0';
+export const APP_VERSION = '0.244.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.244.0", date: "2026-07-02", changes: [
+    { en: "Repertoire trainer overhaul: (1) The trainer now plays each line from the very beginning instead of jumping in at branch points — the board stays put for the whole line, opponent moves are auto-played, and you're asked at each of your own moves. When a line ends, the next line starts fresh from move 1. (2) New reset button in the trainer toolbar (↻) — a confirm dialog wipes the spaced-repetition state for that repertoire so you can start over. (3) Chapter grouping in the Lines view: repertoire lines are now grouped by their PGN chapter (Black header), collapsible per chapter, with a per-chapter school-icon button that starts the trainer restricted to that chapter (?chapter=Name). (4) Endless mode: a new \"Clear all\" button next to the themes dropdown wipes the whole theme filter in one click, and clicking an already-active quick-preset again now toggles it off (so you can quickly get back to \"all themes\").", de: "Repertoire-Trainer überarbeitet: (1) Der Trainer spielt jetzt jede Linie VOM ANFANG durch, statt an der letzten Abzweigung einzusteigen — das Brett bleibt eine ganze Linie stehen, Gegnerzüge werden automatisch gespielt, und du wirst an jedem deiner Züge gefragt. Nach einer Linie startet die nächste frisch bei Zug 1. (2) Neuer Reset-Knopf in der Trainer-Leiste (↻) — Bestätigungs-Dialog löscht den Spaced-Repetition-Fortschritt dieses Repertoires. (3) Kapitel-Gruppierung in der Linien-Ansicht: Linien werden jetzt nach dem PGN-Kapitel (Black-Header) gruppiert, pro Kapitel auf-/zuklappbar, mit einem Schul-Icon-Knopf je Kapitel, der den Trainer eingeschränkt auf dieses Kapitel startet (?chapter=Name). (4) Endless-Modus: neuer „Alle löschen“-Knopf neben dem Themen-Dropdown räumt den Themenfilter in einem Klick auf, und ein erneuter Klick auf ein bereits aktives Quick-Preset schaltet es wieder aus (so bist du schnell wieder bei „alle Themen“)." },
+  ]},
   { version: "0.243.0", date: "2026-07-02", changes: [
     { en: "Analysis mode now has a “Set up position” board editor. Open it from the FEN card: place pieces from the palette above and below the board (tap a piece then tap a square, or drag it on with the mouse), erase with the eraser tool, drag existing pieces to move them or off the board to remove them, choose who is to move, flip, load the starting position or empty the board. “Apply” validates the position (e.g. both kings present, derived castling rights) and loads it into the analysis board.", de: "Der Analysemodus hat jetzt einen „Stellung aufbauen“-Brett-Editor. Aufruf über die FEN-Karte: Figuren aus der Palette über und unter dem Brett setzen (Figur antippen, dann Feld antippen — oder mit der Maus aufs Brett ziehen), mit dem Radierer löschen, vorhandene Figuren per Drag verschieben bzw. vom Brett ziehen zum Entfernen, Zugrecht wählen, drehen, Grundstellung laden oder Brett leeren. „Übernehmen“ validiert die Stellung (z. B. beide Könige vorhanden, abgeleitete Rochade-Rechte) und lädt sie ins Analysebrett." },
   ]},

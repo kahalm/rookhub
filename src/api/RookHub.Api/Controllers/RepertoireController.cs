@@ -46,6 +46,16 @@ public class RepertoireController : BaseApiController
         return dto is null ? NotFound() : Ok(dto);
     }
 
+    /// <summary>Löscht ALLE SM-2-Trainingszustände des eigenen Users für dieses Repertoire — der
+    /// Trainer startet danach mit einem frisch leeren Fortschritt (Karten werden beim nächsten
+    /// Review wieder on-demand angelegt). 404 wenn Repertoire nicht existiert / nicht dem User gehört.</summary>
+    [HttpDelete("{id}/training/reset")]
+    public async Task<ActionResult<int>> TrainingReset(int id, CancellationToken ct)
+    {
+        var deleted = await _training.ResetAsync(GetUserId(), id, ct);
+        return deleted is null ? NotFound() : Ok(new { deleted });
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<RepertoireDto>>> GetAll()
     {

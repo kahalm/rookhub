@@ -10,6 +10,8 @@ export interface RepertoireLine {
   black: string;
   result: string;
   moveCount: number;
+  /** Chapter-Label (Chessable-Konvention: Black-Header) — für Gruppierung in der Lines-Ansicht. */
+  chapter: string;
 }
 
 @Injectable()
@@ -114,6 +116,7 @@ export class RepertoireViewerService {
       black: game.headers['Black'] || '?',
       result: game.headers['Result'] || '*',
       moveCount: Math.ceil(moves.length / 2),
+      chapter: (game.headers['Black'] || '').trim(),
     };
   }
 }

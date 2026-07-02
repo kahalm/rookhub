@@ -24,7 +24,11 @@
     "evalMateAllowed": "Dein Zug erlaubt dem Gegner ein erzwungenes Matt.",
     "continue": "Weiter",
     "playYourMove": "Mach deinen Zug auf dem Brett.",
-    "tapToContinue": "Weiter… (tippen zum Überspringen)"
+    "tapToContinue": "Weiter… (tippen zum Überspringen)",
+    "lineProgress": "Linie {{done}} von {{total}}",
+    "lineDone": "Linie fertig — nächste wird geladen…",
+    "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
+    "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht."
   },
   "common": {
     "save": "Speichern",
@@ -611,7 +615,10 @@
     },
     "lines": {
       "allLines": "Alle Linien",
-      "empty": "Keine Linien in diesem Repertoire gefunden."
+      "empty": "Keine Linien in diesem Repertoire gefunden.",
+      "noChapter": "(Ohne Kapitel)",
+      "toggleChapter": "Kapitel auf-/zuklappen",
+      "trainChapter": "Dieses Kapitel trainieren"
     },
     "tree": {
       "start": "Start",
@@ -1048,6 +1055,7 @@
       "themes": "Themes (optional)",
       "themesPlaceholder": "z.B. fork pin (eines genügt)",
       "themesHint": "Themen suchen & wählen — ein Puzzle braucht nur eines davon.",
+      "clearThemes": "Alle löschen",
       "thresholdExplain": "Ratings, bei denen du typischerweise Leben verlierst. Anpassen, um leichtere Puzzles schneller oder langsamer zu überspringen.",
       "firstThreshold": "1. Schwellenwert",
       "secondThreshold": "2. Schwellenwert",

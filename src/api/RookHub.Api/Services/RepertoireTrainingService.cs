@@ -112,6 +112,20 @@ public class RepertoireTrainingService
         card.LastReviewedAt = now;
     }
 
+    /// <summary>Löscht sämtliche SM-2-Kartenzustände des Users für dieses Repertoire. Gibt die Anzahl
+    /// gelöschter Karten zurück, oder null wenn das Repertoire nicht dem User gehört.</summary>
+    public async Task<int?> ResetAsync(int userId, int repertoireId, CancellationToken ct = default)
+    {
+        if (!await OwnsRepertoireAsync(userId, repertoireId, ct)) return null;
+        var cards = await _db.RepertoireCardStates
+            .Where(c => c.UserId == userId && c.RepertoireId == repertoireId)
+            .ToListAsync(ct);
+        if (cards.Count == 0) return 0;
+        _db.RepertoireCardStates.RemoveRange(cards);
+        await _db.SaveChangesAsync(ct);
+        return cards.Count;
+    }
+
     private Task<bool> OwnsRepertoireAsync(int userId, int repertoireId, CancellationToken ct) =>
         _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId, ct);
 }
