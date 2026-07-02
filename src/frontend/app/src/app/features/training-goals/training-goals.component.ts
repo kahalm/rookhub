@@ -20,8 +20,8 @@ import {
   ActivityPreset, ActivityPresetInput, TIMER_KINDS,
   ActivityTheme, ACTIVITY_THEMES,
 } from './training-goals.service';
-import { activityKindIcon } from './activity-timer-tile.component';
 import { ManualActivitiesCardComponent } from './manual-activities-card.component';
+import { ActivityPresetsCardComponent } from './activity-presets-card.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -182,7 +182,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
     MatSelectModule, MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent,
-    ManualActivitiesCardComponent,
+    ManualActivitiesCardComponent, ActivityPresetsCardComponent,
   ],
   template: `
     <div class="tg-container">
@@ -311,70 +311,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
 
         <app-manual-activities-card [manualList]="manualList" (changed)="reload()" />
 
-        <!-- Timer-Vorlagen: wiederverwendbare Kurztexte für den Dashboard-Schnellstart-Timer. -->
-        <mat-card id="presets">
-          <mat-card-header>
-            <mat-card-title>{{ 'trainingGoals.presets.title' | translate }}</mat-card-title>
-            <mat-card-subtitle>{{ 'trainingGoals.presets.subtitle' | translate }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="preset-form">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-label-field">
-                <mat-label>{{ 'trainingGoals.presets.labelLabel' | translate }}</mat-label>
-                <input matInput maxlength="100" [(ngModel)]="presetEdit.label"
-                       [placeholder]="'trainingGoals.presets.labelPlaceholder' | translate">
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
-                <mat-label>{{ 'trainingGoals.presets.kindLabel' | translate }}</mat-label>
-                <mat-select [(ngModel)]="presetEdit.kind">
-                  @for (k of timerKinds; track k) {
-                    <mat-option [value]="k">{{ ('trainingGoals.manual.kinds.' + k) | translate }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
-                <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
-                <mat-select [(ngModel)]="presetEdit.theme">
-                  <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
-                  @for (t of activityThemes; track t) {
-                    <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <div class="actions">
-                <button mat-raised-button color="primary" (click)="savePreset()"
-                        [disabled]="savingPreset || !presetEdit.label.trim()">
-                  <mat-icon>{{ editingPresetId ? 'save' : 'add' }}</mat-icon>
-                  {{ (editingPresetId ? 'common.save' : 'trainingGoals.presets.add') | translate }}
-                </button>
-                @if (editingPresetId) {
-                  <button mat-button (click)="cancelPresetEdit()" [disabled]="savingPreset">{{ 'common.cancel' | translate }}</button>
-                }
-              </div>
-            </div>
-
-            @if (presets.length) {
-              <ul class="preset-list">
-                @for (p of presets; track p.id) {
-                  <li>
-                    <mat-icon class="p-icon">{{ presetIcon(p.kind) }}</mat-icon>
-                    <span class="p-label">{{ p.label }}</span>
-                    <span class="p-kind">{{ ('trainingGoals.manual.kinds.' + p.kind) | translate }}</span>
-                    @if (p.theme) {
-                      <span class="p-theme">{{ ('trainingGoals.theme.' + p.theme) | translate }}</span>
-                    }
-                    <span class="p-actions">
-                      <button mat-icon-button (click)="editPreset(p)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
-                      <button mat-icon-button (click)="deletePreset(p)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
-                    </span>
-                  </li>
-                }
-              </ul>
-            } @else {
-              <p class="preset-empty">{{ 'trainingGoals.presets.empty' | translate }}</p>
-            }
-          </mat-card-content>
-        </mat-card>
+        <app-activity-presets-card />
 
         <!-- Tracker -->
         @if (tracker.length) {
@@ -669,13 +606,6 @@ export class TrainingGoalsComponent implements OnInit {
   // ----- Manuelle Offline-Aktivitäten (Formular/Liste in ManualActivitiesCardComponent) -----
   manualList: ManualActivity[] = [];
 
-  // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
-  readonly timerKinds: ManualActivityKind[] = TIMER_KINDS;
-  readonly activityThemes: ActivityTheme[] = ACTIVITY_THEMES;
-  presets: ActivityPreset[] = [];
-  savingPreset = false;
-  editingPresetId: number | null = null;
-  presetEdit: ActivityPresetInput = { label: '', kind: 'OfflineStudy', theme: null };
 
   // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
   readonly chessableThemes: ChessableTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics'];
@@ -714,9 +644,8 @@ export class TrainingGoalsComponent implements OnInit {
       tracker: this.service.getTracker(),
       series: this.service.getDailySeries(),
       manual: this.service.listManual(),
-      presets: this.service.listPresets(),
     }).subscribe({
-      next: ({ goal, today, tracker, series, manual, presets }) => {
+      next: ({ goal, today, tracker, series, manual }) => {
         this.applyGoal(goal);
         this.today = today;
         this.todaySourceRows = this.sourceRows(today.bySource);
@@ -726,7 +655,6 @@ export class TrainingGoalsComponent implements OnInit {
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
-        this.presets = presets;
         this.loading = false;
         this.loadChessableCourses();
       },
@@ -734,56 +662,6 @@ export class TrainingGoalsComponent implements OnInit {
     });
   }
 
-  // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
-
-  presetIcon(kind: ManualActivityKind): string { return activityKindIcon(kind); }
-
-  editPreset(p: ActivityPreset): void {
-    this.editingPresetId = p.id;
-    this.presetEdit = { label: p.label, kind: p.kind, theme: p.theme ?? null };
-  }
-
-  cancelPresetEdit(): void {
-    this.editingPresetId = null;
-    this.presetEdit = { label: '', kind: 'OfflineStudy', theme: null };
-  }
-
-  savePreset(): void {
-    const label = (this.presetEdit.label ?? '').trim();
-    if (!label) return;
-    this.savingPreset = true;
-    const payload: ActivityPresetInput = { label, kind: this.presetEdit.kind, theme: this.presetEdit.theme ?? null };
-    const req = this.editingPresetId
-      ? this.service.updatePreset(this.editingPresetId, payload)
-      : this.service.addPreset(payload);
-    req.subscribe({
-      next: saved => {
-        // In-place aktualisieren / anhängen.
-        const idx = this.presets.findIndex(p => p.id === saved.id);
-        if (idx >= 0) this.presets[idx] = saved;
-        else this.presets = [...this.presets, saved];
-        this.savingPreset = false;
-        this.cancelPresetEdit();
-      },
-      error: err => {
-        this.savingPreset = false;
-        this.snackbar.info(err?.error?.error ?? this.translate.instant('trainingGoals.presets.saveFailed'),
-          { action: 'common.ok', duration: 3000 });
-      },
-    });
-  }
-
-  deletePreset(p: ActivityPreset): void {
-    if (!confirm(this.translate.instant('trainingGoals.presets.deleteConfirm', { label: p.label }))) return;
-    this.service.deletePreset(p.id).subscribe({
-      next: () => {
-        this.presets = this.presets.filter(x => x.id !== p.id);
-        if (this.editingPresetId === p.id) this.cancelPresetEdit();
-      },
-      error: () => this.snackbar.info(this.translate.instant('trainingGoals.presets.deleteFailed'),
-        { action: 'common.ok', duration: 3000 }),
-    });
-  }
 
   // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
 

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.13';
+export const APP_VERSION = '0.242.14';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.14", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the activity-timer presets card on the Training Goals page was extracted into its own ActivityPresetsCardComponent, which loads and manages the presets itself. TrainingGoalsComponent is down from ~1071 to ~820 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte mit den Aktivitäts-Timer-Vorlagen auf der Trainingsziele-Seite wurde in eine eigene ActivityPresetsCardComponent ausgelagert, die die Vorlagen selbst lädt und verwaltet. TrainingGoalsComponent schrumpft von ~1071 auf ~820 Zeilen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.13", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the \"manual offline activity\" card (form + list + create/edit/delete) on the Training Goals page was extracted from the large TrainingGoalsComponent into its own ManualActivitiesCardComponent; the shared MANUAL_KINDS/isMinutesKind moved to a small util. First step of splitting the Training Goals page into cards. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte „Manuelle Offline-Aktivität\" (Formular + Liste + Anlegen/Bearbeiten/Löschen) auf der Trainingsziele-Seite wurde aus der großen TrainingGoalsComponent in eine eigene ManualActivitiesCardComponent ausgelagert; die geteilten MANUAL_KINDS/isMinutesKind in eine kleine Util. Erster Schritt der Karten-Aufteilung der Trainingsziele-Seite. Keine sichtbare Änderung." },
   ]},

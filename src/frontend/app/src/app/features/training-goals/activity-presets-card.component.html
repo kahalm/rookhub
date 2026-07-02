@@ -1,0 +1,63 @@
+<mat-card id="presets">
+  <mat-card-header>
+    <mat-card-title>{{ 'trainingGoals.presets.title' | translate }}</mat-card-title>
+    <mat-card-subtitle>{{ 'trainingGoals.presets.subtitle' | translate }}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="preset-form">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-label-field">
+        <mat-label>{{ 'trainingGoals.presets.labelLabel' | translate }}</mat-label>
+        <input matInput maxlength="100" [(ngModel)]="presetEdit.label"
+               [placeholder]="'trainingGoals.presets.labelPlaceholder' | translate">
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
+        <mat-label>{{ 'trainingGoals.presets.kindLabel' | translate }}</mat-label>
+        <mat-select [(ngModel)]="presetEdit.kind">
+          @for (k of timerKinds; track k) {
+            <mat-option [value]="k">{{ ('trainingGoals.manual.kinds.' + k) | translate }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
+        <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
+        <mat-select [(ngModel)]="presetEdit.theme">
+          <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
+          @for (t of activityThemes; track t) {
+            <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <div class="actions">
+        <button mat-raised-button color="primary" (click)="savePreset()"
+                [disabled]="savingPreset || !presetEdit.label.trim()">
+          <mat-icon>{{ editingPresetId ? 'save' : 'add' }}</mat-icon>
+          {{ (editingPresetId ? 'common.save' : 'trainingGoals.presets.add') | translate }}
+        </button>
+        @if (editingPresetId) {
+          <button mat-button (click)="cancelPresetEdit()" [disabled]="savingPreset">{{ 'common.cancel' | translate }}</button>
+        }
+      </div>
+    </div>
+
+    @if (presets.length) {
+      <ul class="preset-list">
+        @for (p of presets; track p.id) {
+          <li>
+            <mat-icon class="p-icon">{{ presetIcon(p.kind) }}</mat-icon>
+            <span class="p-label">{{ p.label }}</span>
+            <span class="p-kind">{{ ('trainingGoals.manual.kinds.' + p.kind) | translate }}</span>
+            @if (p.theme) {
+              <span class="p-theme">{{ ('trainingGoals.theme.' + p.theme) | translate }}</span>
+            }
+            <span class="p-actions">
+              <button mat-icon-button (click)="editPreset(p)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button (click)="deletePreset(p)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="preset-empty">{{ 'trainingGoals.presets.empty' | translate }}</p>
+    }
+  </mat-card-content>
+</mat-card>
