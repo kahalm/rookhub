@@ -89,6 +89,8 @@ public class ManualActivityDto
     /// <summary>Bei OtbGame = Anzahl Partien; sonst = Minuten.</summary>
     public int Amount { get; set; }
     public string? Note { get; set; }
+    /// <summary>Optionales Thema (Opening/Middlegame/Endgame/Tactics/Other) — null = Kind-Default.</summary>
+    public ChessableTheme? Theme { get; set; }
 }
 
 /// <summary>Eingabe zum Anlegen/Ändern einer manuellen Offline-Aktivität.
@@ -100,6 +102,8 @@ public class ManualActivityInputDto
     public ManualActivityKind Kind { get; set; }
     [Range(1, 600)] public int Amount { get; set; }
     [MaxLength(200)] public string? Note { get; set; }
+    /// <summary>Optionales Thema — null = kein User-Override (Kind-Default greift).</summary>
+    public ChessableTheme? Theme { get; set; }
 }
 
 /// <summary>Wiederverwendbare Vorlage für eine Offline-Trainings-Aktivität (Timer-Schnellstart).</summary>
@@ -109,6 +113,8 @@ public class ActivityPresetDto
     [Required] [MaxLength(100)] public string Label { get; set; } = string.Empty;
     /// <summary>Nur Minuten-Arten sind sinnvoll (OfflinePuzzle/OfflineStudy/Coaching). OtbGame wird abgelehnt.</summary>
     public ManualActivityKind Kind { get; set; }
+    /// <summary>Optionales Thema; wird beim Timer-Start übernommen und beim Stop in den Eintrag geschrieben.</summary>
+    public ChessableTheme? Theme { get; set; }
 }
 
 /// <summary>Eingabe zum Anlegen/Ändern einer Vorlage.</summary>
@@ -116,6 +122,7 @@ public class ActivityPresetInputDto
 {
     [Required] [MaxLength(100)] public string Label { get; set; } = string.Empty;
     public ManualActivityKind Kind { get; set; }
+    public ChessableTheme? Theme { get; set; }
 }
 
 /// <summary>Aktuell laufender Offline-Trainings-Timer eines Users (null = kein Timer aktiv).</summary>
@@ -123,6 +130,7 @@ public class ActivityTimerDto
 {
     [Required] public string Label { get; set; } = string.Empty;
     public ManualActivityKind Kind { get; set; }
+    public ChessableTheme? Theme { get; set; }
     /// <summary>UTC-Startzeitpunkt (ISO 8601).</summary>
     public string StartedAt { get; set; } = string.Empty;
     /// <summary>Zum Zeitpunkt des Abrufs verstrichene Sekunden (Server berechnet; Client kann weiter hochzählen).</summary>
@@ -136,15 +144,24 @@ public class StartActivityTimerDto
     public int? PresetId { get; set; }
     [MaxLength(100)] public string? Label { get; set; }
     public ManualActivityKind? Kind { get; set; }
+    public ChessableTheme? Theme { get; set; }
 }
 
-/// <summary>Stop-Eingabe: optionales Ende-ISO für Backdating (falls Timer vergessen wurde).</summary>
+/// <summary>Stop-Eingabe. Client darf Start, Ende UND/ODER Dauer übergeben — der Client hält sie
+/// bereits konsistent. Server nimmt <see cref="StartedAt"/> (falls gesetzt) als neue Startzeit,
+/// sonst die ursprüngliche des laufenden Timers; <see cref="EndedAt"/> als Ende, sonst „jetzt".
+/// Beide müssen in der Reihenfolge Start ≤ Ende ≤ jetzt liegen, sonst 400.</summary>
 public class StopActivityTimerDto
 {
-    /// <summary>UTC-Ende als ISO 8601. Fehlt oder in Zukunft → jetzt. Vor Startzeit → 400.</summary>
+    /// <summary>UTC-Start als ISO 8601 (nur wenn der User Start manuell verschoben hat). Fehlt →
+    /// Timer-Startzeit bleibt erhalten. Darf nicht in der Zukunft liegen.</summary>
+    public string? StartedAt { get; set; }
+    /// <summary>UTC-Ende als ISO 8601. Fehlt oder in Zukunft → jetzt. Vor Start → 400.</summary>
     public string? EndedAt { get; set; }
     /// <summary>Optionale Notiz für den entstehenden <see cref="ManualActivity"/>-Eintrag.</summary>
     [MaxLength(200)] public string? Note { get; set; }
+    /// <summary>Optionales Thema-Override (überschreibt das vom Preset geerbte Timer-Thema).</summary>
+    public ChessableTheme? Theme { get; set; }
 }
 
 /// <summary>Aufschlüsselung von Trainingssekunden nach <b>Quelle</b> (woher die Zeit stammt).</summary>

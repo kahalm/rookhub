@@ -40,13 +40,13 @@ interface TileDef {
 
 /** Kuratierter Standard: diese Kacheln sind anfänglich sichtbar — in genau dieser Reihenfolge. */
 const DEFAULT_VISIBLE = [
-  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'activityTimer', 'leaderboards',
+  'puzzles', 'weekly', 'repertoires', 'pinnedCourses', 'courses', 'trainingGoals', 'leaderboards',
 ];
 /** Kanonische Reihenfolge ALLER bekannten Kacheln: Standard-sichtbare zuerst, Rest dahinter
  *  (der Rest ist im Standard ausgeblendet, im Bearbeitungsmodus aber zuschaltbar). */
 const DEFAULT_ORDER = [
   ...DEFAULT_VISIBLE,
-  'favorites', 'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
+  'activityTimer', 'favorites', 'tournaments', 'friends', 'games', 'stats', 'analysis', 'messages', 'chessableQueue',
 ];
 /** Im Standard ausgeblendete Kacheln (alles außer DEFAULT_VISIBLE). */
 const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id));

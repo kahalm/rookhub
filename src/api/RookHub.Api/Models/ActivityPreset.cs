@@ -28,6 +28,10 @@ public class ActivityPreset
     /// OtbGame ist als Vorlage nicht sinnvoll timer-basiert und wird serverseitig abgelehnt.</summary>
     public ManualActivityKind Kind { get; set; }
 
+    /// <summary>Optionales Thema (Eröffnung/Mittelspiel/Endspiel/Taktik/Sonstiges) — wird beim Start
+    /// in den Timer und beim Stop in den <see cref="ManualActivity"/>-Eintrag übernommen.</summary>
+    public ChessableTheme? Theme { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

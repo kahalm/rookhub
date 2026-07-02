@@ -861,6 +861,57 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task StopTimer_HonoursOverriddenStartedAt()
+    {
+        var u = await CreateUserAsync();
+        var originalStart = DateTime.UtcNow.AddHours(-5);
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Coaching", Kind = ManualActivityKind.Coaching, StartedAt = originalStart });
+        await _db.SaveChangesAsync();
+
+        // Client hat Start nach vorn geschoben (Duration-Feld angepasst) — Server nimmt den neuen Start.
+        var newStart = DateTime.UtcNow.AddMinutes(-30);
+        var end = DateTime.UtcNow;
+        var saved = await _service.StopTimerAsync(u.Id, new() { StartedAt = newStart.ToString("o"), EndedAt = end.ToString("o") });
+
+        Assert.NotNull(saved);
+        Assert.InRange(saved!.Amount, 29, 31);  // ~30 Minuten Dauer, nicht 5 h
+    }
+
+    [Fact]
+    public async Task StopTimer_PersistsThemeOverride()
+    {
+        var u = await CreateUserAsync();
+        _db.ActivityTimers.Add(new ActivityTimer {
+            UserId = u.Id, Label = "Study", Kind = ManualActivityKind.OfflineStudy,
+            Theme = ChessableTheme.Middlegame, StartedAt = DateTime.UtcNow.AddMinutes(-10),
+        });
+        await _db.SaveChangesAsync();
+
+        var saved = await _service.StopTimerAsync(u.Id, new() { Theme = ChessableTheme.Endgame });
+        Assert.NotNull(saved);
+        Assert.Equal(ChessableTheme.Endgame, saved!.Theme);
+    }
+
+    [Fact]
+    public async Task AddManual_PersistsTheme_And_ThemeDrivesBreakdown()
+    {
+        var u = await CreateUserAsync();
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        // Coaching = default „Other"; User setzt Thema explizit auf Endgame.
+        await _service.AddManualAsync(u.Id, new() {
+            Date = today, Kind = ManualActivityKind.Coaching, Amount = 45, Theme = ChessableTheme.Endgame,
+        });
+
+        var list = await _service.ListManualAsync(u.Id);
+        Assert.Equal(ChessableTheme.Endgame, list.Single().Theme);
+
+        var tracker = await _service.GetTrackerAsync(u.Id, 4);
+        var day = Assert.Single(tracker.Days);
+        Assert.Equal(45 * 60, day.ByTheme.EndgameSeconds);
+        Assert.Equal(0, day.ByTheme.OtherSeconds);  // Default „Other" wurde überschrieben
+    }
+
+    [Fact]
     public async Task DiscardTimer_RemovesWithoutCreatingManualActivity()
     {
         var u = await CreateUserAsync();

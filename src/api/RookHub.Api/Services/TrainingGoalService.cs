@@ -261,6 +261,7 @@ public class TrainingGoalService
                 Kind = m.Kind,
                 Amount = m.Amount,
                 Note = m.Note,
+                Theme = m.Theme,
             })
             .ToListAsync();
     }
@@ -276,6 +277,7 @@ public class TrainingGoalService
             Kind = dto.Kind,
             Amount = ClampAmount(dto.Kind, dto.Amount),
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            Theme = dto.Theme,
             CreatedAt = DateTime.UtcNow,
         };
         _db.ManualActivities.Add(entity);
@@ -292,6 +294,7 @@ public class TrainingGoalService
         entity.Kind = dto.Kind;
         entity.Amount = ClampAmount(dto.Kind, dto.Amount);
         entity.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        entity.Theme = dto.Theme;
         await _db.SaveChangesAsync();
         return ToDto(entity);
     }
@@ -329,6 +332,7 @@ public class TrainingGoalService
         Kind = m.Kind,
         Amount = m.Amount,
         Note = m.Note,
+        Theme = m.Theme,
     };
 
     // ----- Tracker / Heute -------------------------------------------------
@@ -535,20 +539,23 @@ public class TrainingGoalService
         var windowStartDate = DateOnly.FromDateTime(windowStartUtc.Date);
         foreach (var m in await _db.ManualActivities.AsNoTracking()
                      .Where(m => m.UserId == userId && m.Date >= windowStartDate)
-                     .Select(m => new { m.Date, m.Kind, m.Amount }).ToListAsync())
+                     .Select(m => new { m.Date, m.Kind, m.Amount, m.Theme }).ToListAsync())
         {
             Day(m.Date).HasManual = true;
             switch (m.Kind)
             {
                 case ManualActivityKind.OtbGame:
+                    // Themen-Zuordnung ist bei OtbGame zeitunwirksam (füttert nur PlayGames).
                     Day(m.Date).PlayGames += Math.Clamp(m.Amount, 0, ManualGamesCap);
                     break;
                 case ManualActivityKind.OfflinePuzzle:
-                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.RandomPuzzle, Thm.Tactics);
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.RandomPuzzle,
+                        m.Theme.HasValue ? ThemeFromChessable(m.Theme.Value) : Thm.Tactics);
                     break;
                 case ManualActivityKind.OfflineStudy:
                 case ManualActivityKind.Coaching:
-                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.CourseBook, Thm.Other);
+                    AddTime(m.Date.ToDateTime(TimeOnly.MinValue), m.Amount * 60, PerSessionCapSeconds, Src.CourseBook,
+                        m.Theme.HasValue ? ThemeFromChessable(m.Theme.Value) : Thm.Other);
                     break;
             }
         }
@@ -682,7 +689,7 @@ public class TrainingGoalService
         => await _db.ActivityPresets.AsNoTracking()
             .Where(p => p.UserId == userId)
             .OrderBy(p => p.Id)
-            .Select(p => new ActivityPresetDto { Id = p.Id, Label = p.Label, Kind = p.Kind })
+            .Select(p => new ActivityPresetDto { Id = p.Id, Label = p.Label, Kind = p.Kind, Theme = p.Theme })
             .ToListAsync();
 
     public async Task<ActivityPresetDto> AddPresetAsync(int userId, ActivityPresetInputDto dto)
@@ -692,12 +699,12 @@ public class TrainingGoalService
         if (!IsTimerKind(dto.Kind)) throw new ArgumentException("Für Timer-Vorlagen sind nur Minuten-Arten erlaubt.");
         var entity = new ActivityPreset
         {
-            UserId = userId, Label = label, Kind = dto.Kind,
+            UserId = userId, Label = label, Kind = dto.Kind, Theme = dto.Theme,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
         };
         _db.ActivityPresets.Add(entity);
         await _db.SaveChangesAsync();
-        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind };
+        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind, Theme = entity.Theme };
     }
 
     public async Task<ActivityPresetDto?> UpdatePresetAsync(int userId, int id, ActivityPresetInputDto dto)
@@ -709,9 +716,10 @@ public class TrainingGoalService
         if (!IsTimerKind(dto.Kind)) throw new ArgumentException("Für Timer-Vorlagen sind nur Minuten-Arten erlaubt.");
         entity.Label = label;
         entity.Kind = dto.Kind;
+        entity.Theme = dto.Theme;
         entity.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind };
+        return new ActivityPresetDto { Id = entity.Id, Label = entity.Label, Kind = entity.Kind, Theme = entity.Theme };
     }
 
     public async Task<bool> DeletePresetAsync(int userId, int id)
@@ -736,6 +744,7 @@ public class TrainingGoalService
     {
         string label;
         ManualActivityKind kind;
+        ChessableTheme? theme;
 
         if (dto.PresetId is int pid)
         {
@@ -743,6 +752,7 @@ public class TrainingGoalService
                 ?? throw new ArgumentException("Vorlage nicht gefunden.");
             label = preset.Label;
             kind = preset.Kind;
+            theme = dto.Theme ?? preset.Theme;   // Preset-Thema als Default, Client-Override möglich
         }
         else
         {
@@ -750,11 +760,12 @@ public class TrainingGoalService
             if (label.Length == 0) throw new ArgumentException("Label darf nicht leer sein.");
             if (dto.Kind is not { } k || !IsTimerKind(k)) throw new ArgumentException("Für Timer sind nur Minuten-Arten erlaubt.");
             kind = k;
+            theme = dto.Theme;
         }
 
         var existing = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
         if (existing != null) _db.ActivityTimers.Remove(existing);
-        var timer = new ActivityTimer { UserId = userId, Label = label, Kind = kind, StartedAt = DateTime.UtcNow };
+        var timer = new ActivityTimer { UserId = userId, Label = label, Kind = kind, Theme = theme, StartedAt = DateTime.UtcNow };
         _db.ActivityTimers.Add(timer);
         await _db.SaveChangesAsync();
         return ToTimerDto(timer);
@@ -762,27 +773,39 @@ public class TrainingGoalService
 
     /// <summary>Stoppt den laufenden Timer, erzeugt einen <see cref="ManualActivity"/>-Eintrag
     /// mit der gerechneten Dauer (in Minuten, gerundet, geklemmt) und entfernt den Timer. 404 wenn
-    /// kein Timer läuft. <see cref="StopActivityTimerDto.EndedAt"/> darf zurückdatiert werden (aber
-    /// nicht vor <see cref="ActivityTimer.StartedAt"/>).</summary>
+    /// kein Timer läuft. <see cref="StopActivityTimerDto.StartedAt"/> UND <see cref="StopActivityTimerDto.EndedAt"/>
+    /// dürfen zurückdatiert werden — der Client hält Start/Ende/Dauer selbst konsistent, der Server
+    /// validiert nur Start ≤ Ende ≤ jetzt.</summary>
     public async Task<ManualActivityDto?> StopTimerAsync(int userId, StopActivityTimerDto dto)
     {
         var timer = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
         if (timer == null) return null;
 
         var now = DateTime.UtcNow;
+        var startedAt = timer.StartedAt;
+        if (!string.IsNullOrWhiteSpace(dto.StartedAt))
+        {
+            if (!DateTime.TryParse(dto.StartedAt, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
+                out var parsedStart))
+                throw new ArgumentException("Ungültige Startzeit (ISO 8601 erwartet).");
+            startedAt = parsedStart.ToUniversalTime();
+            if (startedAt > now) throw new ArgumentException("Start darf nicht in der Zukunft liegen.");
+        }
+
         var endedAt = now;
         if (!string.IsNullOrWhiteSpace(dto.EndedAt))
         {
             if (!DateTime.TryParse(dto.EndedAt, System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal,
-                out var parsed))
+                out var parsedEnd))
                 throw new ArgumentException("Ungültiges Enddatum (ISO 8601 erwartet).");
-            endedAt = parsed.ToUniversalTime();
+            endedAt = parsedEnd.ToUniversalTime();
             if (endedAt > now) endedAt = now;
-            if (endedAt < timer.StartedAt) throw new ArgumentException("Ende darf nicht vor dem Start liegen.");
         }
+        if (endedAt < startedAt) throw new ArgumentException("Ende darf nicht vor dem Start liegen.");
 
-        var seconds = (int)Math.Round((endedAt - timer.StartedAt).TotalSeconds);
+        var seconds = (int)Math.Round((endedAt - startedAt).TotalSeconds);
         var minutes = Math.Max(1, Math.Min(600, (int)Math.Round(seconds / 60.0)));
         var date = DateOnly.FromDateTime(endedAt);
 
@@ -793,6 +816,7 @@ public class TrainingGoalService
             Kind = timer.Kind,
             Amount = minutes,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? timer.Label : $"{timer.Label} — {dto.Note!.Trim()}",
+            Theme = dto.Theme ?? timer.Theme,   // Override > Timer > null
             CreatedAt = DateTime.UtcNow,
         };
         _db.ManualActivities.Add(manual);
@@ -806,6 +830,7 @@ public class TrainingGoalService
             Kind = manual.Kind,
             Amount = manual.Amount,
             Note = manual.Note,
+            Theme = manual.Theme,
         };
     }
 
@@ -827,6 +852,7 @@ public class TrainingGoalService
         {
             Label = t.Label,
             Kind = t.Kind,
+            Theme = t.Theme,
             StartedAt = DateTime.SpecifyKind(t.StartedAt, DateTimeKind.Utc).ToString("o"),
             ElapsedSeconds = elapsed,
         };

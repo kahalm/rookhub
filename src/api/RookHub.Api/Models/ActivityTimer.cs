@@ -23,6 +23,10 @@ public class ActivityTimer
 
     public ManualActivityKind Kind { get; set; }
 
+    /// <summary>Vom Preset übernommenes Thema (falls gesetzt) — wandert beim Stop 1:1 in den
+    /// <see cref="ManualActivity"/>-Eintrag.</summary>
+    public ChessableTheme? Theme { get; set; }
+
     /// <summary>UTC-Zeitpunkt des Timer-Starts. Beim Stoppen wird optional ein Endzeitpunkt vom
     /// User übergeben (Backdate), sonst gilt „jetzt".</summary>
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;

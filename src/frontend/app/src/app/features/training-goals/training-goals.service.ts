@@ -78,6 +78,8 @@ export interface ManualActivity {
   /** Bei OtbGame = Anzahl Partien; sonst = Minuten. */
   amount: number;
   note: string | null;
+  /** Optionales Thema; null = kein User-Override (Kind-Default greift). */
+  theme?: ActivityTheme | null;
 }
 
 export interface ManualActivityInput {
@@ -85,10 +87,16 @@ export interface ManualActivityInput {
   kind: ManualActivityKind;
   amount: number;
   note?: string | null;
+  theme?: ActivityTheme | null;
 }
 
 /** Manuell zuweisbares Thema eines Chessable-Kurses (entspricht der Themen-Aufschlüsselung ohne „other"). */
 export type ChessableTheme = 'Opening' | 'Middlegame' | 'Endgame' | 'Tactics';
+
+/** Manuell zuweisbares Thema einer Offline-Aktivität / Timer-Vorlage. Wie {@link ChessableTheme},
+ *  jedoch inklusive „Other" (Sammelbecken für nicht klassifizierbare Sessions). */
+export type ActivityTheme = ChessableTheme | 'Other';
+export const ACTIVITY_THEMES: ActivityTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics', 'Other'];
 
 /** Ein in der Chessable-History gruppierter Kurs inkl. ermitteltem Thema. */
 export interface ChessableCourseSummary {
@@ -268,11 +276,13 @@ export interface ActivityPreset {
   label: string;
   /** Nur Minuten-Arten (OfflinePuzzle/OfflineStudy/Coaching) sind gültig. */
   kind: ManualActivityKind;
+  theme?: ActivityTheme | null;
 }
 
 export interface ActivityPresetInput {
   label: string;
   kind: ManualActivityKind;
+  theme?: ActivityTheme | null;
 }
 
 /** Kind-Werte, die als Timer-Vorlage gültig sind (im Frontend + Backend übereinstimmend). */
@@ -282,6 +292,7 @@ export const TIMER_KINDS: ManualActivityKind[] = ['OfflinePuzzle', 'OfflineStudy
 export interface ActivityTimer {
   label: string;
   kind: ManualActivityKind;
+  theme?: ActivityTheme | null;
   /** UTC-ISO-String. */
   startedAt: string;
   /** Sekunden verstrichen laut Server im Moment des Abrufs. */
@@ -292,10 +303,15 @@ export interface StartTimerInput {
   presetId?: number;
   label?: string;
   kind?: ManualActivityKind;
+  theme?: ActivityTheme | null;
 }
 
 export interface StopTimerInput {
+  /** UTC-ISO-String Startzeit (nach User-Anpassung im Dialog). Fehlt → Server-Startzeit bleibt. */
+  startedAt?: string;
   /** UTC-ISO-String; fehlt oder in Zukunft → jetzt. Vor Start → 400. */
   endedAt?: string;
   note?: string;
+  /** Thema-Override — überschreibt das Timer/Preset-Thema. */
+  theme?: ActivityTheme | null;
 }

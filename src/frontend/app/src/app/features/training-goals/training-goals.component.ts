@@ -18,6 +18,7 @@ import {
   SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS,
   ChessableCourseSummary, ChessableTheme,
   ActivityPreset, ActivityPresetInput, TIMER_KINDS,
+  ActivityTheme, ACTIVITY_THEMES,
 } from './training-goals.service';
 import { activityKindIcon } from './activity-timer-tile.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -339,6 +340,17 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 <mat-label>{{ (manualMinutes ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</mat-label>
                 <input matInput type="number" min="1" [max]="manualMinutes ? 600 : 50" [(ngModel)]="manualEdit.amount" />
               </mat-form-field>
+              @if (manualMinutes) {
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
+                  <mat-select [(ngModel)]="manualEdit.theme">
+                    <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
+                    @for (t of activityThemes; track t) {
+                      <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="note-field">
                 <mat-label>{{ 'trainingGoals.manual.note' | translate }}</mat-label>
                 <input matInput maxlength="200" [(ngModel)]="manualEdit.note" />
@@ -360,6 +372,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                     <span class="m-date">{{ m.date }}</span>
                     <span class="m-kind">{{ ('trainingGoals.manual.kinds.' + m.kind) | translate }}</span>
                     <span class="m-amount">{{ m.amount }} <span class="unit">{{ (isMinutes(m.kind) ? 'trainingGoals.min' : 'trainingGoals.games') | translate }}</span></span>
+                    @if (m.theme) {
+                      <span class="m-theme">{{ ('trainingGoals.theme.' + m.theme) | translate }}</span>
+                    }
                     <span class="m-note">{{ m.note }}</span>
                     <span class="m-actions">
                       <button mat-icon-button (click)="editManual(m)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
@@ -393,6 +408,15 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                   }
                 </mat-select>
               </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="preset-kind-field">
+                <mat-label>{{ 'trainingGoals.theme.label' | translate }}</mat-label>
+                <mat-select [(ngModel)]="presetEdit.theme">
+                  <mat-option [value]="null">{{ 'trainingGoals.theme.unset' | translate }}</mat-option>
+                  @for (t of activityThemes; track t) {
+                    <mat-option [value]="t">{{ ('trainingGoals.theme.' + t) | translate }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
               <div class="actions">
                 <button mat-raised-button color="primary" (click)="savePreset()"
                         [disabled]="savingPreset || !presetEdit.label.trim()">
@@ -412,6 +436,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                     <mat-icon class="p-icon">{{ presetIcon(p.kind) }}</mat-icon>
                     <span class="p-label">{{ p.label }}</span>
                     <span class="p-kind">{{ ('trainingGoals.manual.kinds.' + p.kind) | translate }}</span>
+                    @if (p.theme) {
+                      <span class="p-theme">{{ ('trainingGoals.theme.' + p.theme) | translate }}</span>
+                    }
                     <span class="p-actions">
                       <button mat-icon-button (click)="editPreset(p)" [attr.aria-label]="'common.edit' | translate"><mat-icon>edit</mat-icon></button>
                       <button mat-icon-button (click)="deletePreset(p)" [attr.aria-label]="'common.delete' | translate"><mat-icon>delete</mat-icon></button>
@@ -654,6 +681,11 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     .preset-list .p-icon { color: color-mix(in srgb, currentColor 55%, transparent); }
     .preset-list .p-label { font-weight: 600; flex: 1; overflow-wrap: anywhere; }
     .preset-list .p-kind { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .82rem; }
+    .preset-list .p-theme, .manual-list .m-theme {
+      font-size: .72rem; padding: 2px 8px; border-radius: 999px;
+      background: color-mix(in srgb, currentColor 10%, transparent);
+      color: color-mix(in srgb, currentColor 75%, transparent);
+    }
     .preset-list .p-actions { display: flex; gap: 2px; margin-left: auto; }
     .preset-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 12px 0 0; font-size: .9rem; }
     .legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
@@ -719,10 +751,11 @@ export class TrainingGoalsComponent implements OnInit {
 
   // ----- Aktivitäts-Vorlagen (Timer-Schnellstart) -----
   readonly timerKinds: ManualActivityKind[] = TIMER_KINDS;
+  readonly activityThemes: ActivityTheme[] = ACTIVITY_THEMES;
   presets: ActivityPreset[] = [];
   savingPreset = false;
   editingPresetId: number | null = null;
-  presetEdit: ActivityPresetInput = { label: '', kind: 'OfflineStudy' };
+  presetEdit: ActivityPresetInput = { label: '', kind: 'OfflineStudy', theme: null };
 
   // ----- Chessable-Kurs-History + manuelle Themen-Zuordnung -----
   readonly chessableThemes: ChessableTheme[] = ['Opening', 'Middlegame', 'Endgame', 'Tactics'];
@@ -787,19 +820,19 @@ export class TrainingGoalsComponent implements OnInit {
 
   editPreset(p: ActivityPreset): void {
     this.editingPresetId = p.id;
-    this.presetEdit = { label: p.label, kind: p.kind };
+    this.presetEdit = { label: p.label, kind: p.kind, theme: p.theme ?? null };
   }
 
   cancelPresetEdit(): void {
     this.editingPresetId = null;
-    this.presetEdit = { label: '', kind: 'OfflineStudy' };
+    this.presetEdit = { label: '', kind: 'OfflineStudy', theme: null };
   }
 
   savePreset(): void {
     const label = (this.presetEdit.label ?? '').trim();
     if (!label) return;
     this.savingPreset = true;
-    const payload: ActivityPresetInput = { label, kind: this.presetEdit.kind };
+    const payload: ActivityPresetInput = { label, kind: this.presetEdit.kind, theme: this.presetEdit.theme ?? null };
     const req = this.editingPresetId
       ? this.service.updatePreset(this.editingPresetId, payload)
       : this.service.addPreset(payload);
@@ -932,7 +965,7 @@ export class TrainingGoalsComponent implements OnInit {
   isMinutes(kind: ManualActivityKind): boolean { return isMinutesKind(kind); }
 
   private emptyManual(): ManualActivityInput {
-    return { kind: 'OtbGame', date: this.todayDate, amount: 1, note: '' };
+    return { kind: 'OtbGame', date: this.todayDate, amount: 1, note: '', theme: null };
   }
 
   saveManual(): void {
@@ -941,6 +974,8 @@ export class TrainingGoalsComponent implements OnInit {
       date: this.manualEdit.date || this.todayDate,
       amount: this.clamp(this.manualEdit.amount, this.manualMinutes ? 600 : 50) || 1,
       note: this.manualEdit.note?.trim() || null,
+      // Themen-Zuordnung ist bei OtbGame zeitunwirksam → nicht mitspeichern.
+      theme: this.manualMinutes ? (this.manualEdit.theme ?? null) : null,
     };
     this.savingManual = true;
     const req = this.editingManualId
@@ -959,7 +994,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   editManual(m: ManualActivity): void {
     this.editingManualId = m.id;
-    this.manualEdit = { kind: m.kind, date: m.date, amount: m.amount, note: m.note ?? '' };
+    this.manualEdit = { kind: m.kind, date: m.date, amount: m.amount, note: m.note ?? '', theme: m.theme ?? null };
   }
 
   cancelManualEdit(): void {

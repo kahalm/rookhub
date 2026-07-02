@@ -175,9 +175,13 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   openStopDialog(): void {
     if (!this.running || this.busy) return;
-    const data: StopDialogData = { label: this.running.label, startedAtIso: this.running.startedAt };
+    const data: StopDialogData = {
+      label: this.running.label,
+      startedAtIso: this.running.startedAt,
+      theme: this.running.theme ?? null,
+    };
     const ref = this.dialog.open<ActivityTimerStopDialogComponent, StopDialogData, StopDialogResult>(
-      ActivityTimerStopDialogComponent, { data, width: '440px', maxWidth: '95vw' });
+      ActivityTimerStopDialogComponent, { data, width: '460px', maxWidth: '95vw' });
     ref.afterClosed().subscribe(result => {
       if (!result) return;
       this.doStop(result);
@@ -186,8 +190,12 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   private doStop(result: StopDialogResult): void {
     this.busy = true;
-    this.goals.stopTimer({ endedAt: result.endedAtIso ?? undefined, note: result.note || undefined })
-      .subscribe({
+    this.goals.stopTimer({
+      startedAt: result.startedAtIso,
+      endedAt: result.endedAtIso ?? undefined,
+      note: result.note || undefined,
+      theme: result.theme,
+    }).subscribe({
         next: saved => {
           this.running = null;
           this.elapsed = 0;

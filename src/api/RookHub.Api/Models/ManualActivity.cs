@@ -44,5 +44,10 @@ public class ManualActivity
     [MaxLength(200)]
     public string? Note { get; set; }
 
+    /// <summary>Optionale Themen-Zuordnung (Eröffnung/Mittelspiel/Endspiel/Taktik/Sonstiges) für die
+    /// Themen-Aufschlüsselung im Tracker. <c>null</c> = kein User-Override → es greift der bisherige
+    /// Kind-Default (OfflinePuzzle → Tactics, OfflineStudy/Coaching → Other; OtbGame ist zeitunwirksam).</summary>
+    public ChessableTheme? Theme { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

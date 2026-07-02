@@ -16,7 +16,8 @@ export interface DashboardLayout {
 }
 
 // v2: kuratierter Standard eingeführt (Puzzles/Weekly/Repertoires/Kurse/Trainingsziele/Bestenlisten
-// sichtbar, Rest aus). Schlüssel-Bump = jeder User startet einmalig frisch auf dem neuen Standard.
+// sichtbar, Rest aus). Kein weiterer Bump, wenn eine neue Kachel default-versteckt eingeführt wird —
+// die Komponente hängt neue IDs hinten an und lässt gespeicherte User-Layouts intakt.
 const LAYOUT_KEY = 'rookhub_dashboard_layout_v2';
 
 @Injectable({ providedIn: 'root' })

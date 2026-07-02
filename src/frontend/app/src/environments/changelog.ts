@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.241.2';
+export const APP_VERSION = '0.242.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.0", date: "2026-07-02", changes: [
+    { en: "Offline activities are now classifiable by theme (Opening / Middlegame / Endgame / Tactics / Other), so manual entries and timer sessions show up in the right slice of the theme breakdown instead of always defaulting to Tactics (puzzle work) or Other (study/coaching). You can set a theme per timer preset, per manual entry, and when saving a timer stop. The dashboard \"Training timer\" tile is no longer visible by default — turn it on via the Anpassen mode on the dashboard. The stop dialog now shows Start, Duration AND End as editable fields that stay in sync: change one and the other two follow automatically (end never goes into the future — if start + duration would land there, start is shifted back so end = now).", de: "Offline-Aktivitäten sind jetzt nach Thema klassifizierbar (Eröffnung / Mittelspiel / Endspiel / Taktik / Sonstiges), sodass manuelle Einträge und Timer-Sessions in der Themen-Aufschlüsselung im richtigen Segment landen — statt immer im Default Taktik (Puzzletraining) oder Sonstiges (Studium/Coaching). Du kannst ein Thema pro Timer-Vorlage, pro manuellem Eintrag und beim Speichern des Timer-Stops setzen. Die Dashboard-Kachel „Trainings-Timer\" ist nicht mehr standardmäßig sichtbar — im Anpassen-Modus auf dem Dashboard zuschaltbar. Der Stopp-Dialog zeigt jetzt Start, Dauer UND Ende als bearbeitbare Felder, die konsistent bleiben: änderst du eines, ziehen die anderen beiden automatisch nach (Ende darf nie in der Zukunft liegen — würde Start + Dauer dort landen, wird stattdessen der Start entsprechend nach vorn geschoben, sodass Ende = jetzt)." },
+  ]},
   { version: "0.241.2", date: "2026-07-01", changes: [
     { en: "New: offline training timer with reusable presets. In Training Goals you can now create reusable activity presets (name + category — offline puzzle training, offline study, or coaching). On the dashboard a new \"Training timer\" tile lets you start one of your presets with a single click; the running timer is shown live with a big elapsed counter and a Stop button. Stopping opens a small dialog that shows the duration and lets you adjust the end time — so if you forgot to hit stop, you can backdate the entry to when you actually finished. The result is saved as a normal manual offline activity and counts toward your goals like any other tracked time. \"Discard\" throws the timer away without saving.", de: "Neu: Offline-Trainings-Timer mit wiederverwendbaren Vorlagen. In den Trainingszielen kannst du jetzt Aktivitäts-Vorlagen anlegen (Name + Kategorie — Offline-Puzzletraining, Offline-Studium oder Trainerstunde). Auf dem Dashboard gibt es eine neue Kachel „Trainings-Timer“, mit der du eine deiner Vorlagen mit einem Klick startest; der laufende Timer wird live mit großem Zähler und Stopp-Knopf angezeigt. Beim Stoppen öffnet sich ein kleiner Dialog mit der Dauer und einem Endzeit-Feld — hast du vergessen zu stoppen, kannst du den Eintrag zurückdatieren auf die Zeit, zu der du tatsächlich aufgehört hast. Das Ergebnis wird als normale manuelle Offline-Aktivität gespeichert und zählt für deine Ziele wie jede andere erfasste Zeit. „Verwerfen\" wirft den Timer weg, ohne zu speichern." },
   ]},
