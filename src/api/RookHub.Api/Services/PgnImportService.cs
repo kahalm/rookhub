@@ -1,8 +1,5 @@
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Chess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
@@ -12,11 +9,14 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services;
 
 /// <summary>
-/// Serverseitiges Parsen von ChessBase-/Standard-PGN-Dateien zu Buch-Puzzles.
+/// Serverseitiges Parsen von ChessBase-/Standard-PGN-Dateien zu Buch-Puzzles und deren Persistenz.
 /// Repliziert das Verhalten von rookhub/scripts/import_books.py:
 /// FEN-Header + komplette Hauptvariante als UCI + erster Kommentar; SAN→UCI via Gera.Chess.
+/// <para>Die reine (DB-freie) Parsing-Mechanik liegt in <see cref="PgnParser"/>; diese Klasse ist der
+/// Orchestrator: <see cref="ParsePgn"/> baut aus den Parser-Bausteinen die Puzzles, <see cref="ImportFileAsync"/>
+/// legt Book + BookPuzzles an bzw. aktualisiert sie in-place.</para>
 /// </summary>
-public partial class PgnImportService
+public class PgnImportService
 {
     private readonly AppDbContext _db;
     private readonly IBackgroundTaskQueue? _bgQueue;
@@ -29,38 +29,6 @@ public partial class PgnImportService
         _bgQueue = bgQueue;
     }
 
-    // ---- regex helpers (vorkompiliert) -----------------------------------
-    [GeneratedRegex(@"^\s*\[\s*([A-Za-z][A-Za-z0-9_]*)\s+""(.*)""\s*\]\s*$")]
-    private static partial Regex HeaderLineRegex();
-    [GeneratedRegex(@"\[%\w+[^\]]*\]")]            // [%tqu ...], [%cal ...], [%csl ...]
-    private static partial Regex AnnotationRegex();
-    [GeneratedRegex(@"\[%(cal|csl)\s+([^\]]*)\]")] // farbige Pfeile / Feld-Markierungen (Chessable)
-    private static partial Regex CalCslRegex();
-    [GeneratedRegex(@"\{[^}]*\}")]                 // Kommentare
-    private static partial Regex CommentRegex();
-    [GeneratedRegex(@"\$\d+")]                     // NAGs
-    private static partial Regex NagRegex();
-    [GeneratedRegex(@"\d+\.+")]                    // Zugnummern "12." / "12..."
-    private static partial Regex MoveNumberRegex();
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespaceRegex();
-
-    private static readonly string[] ResultTokens = { "1-0", "0-1", "1/2-1/2", "1/2", "*" };
-
-    /// <summary>Ein aus der PGN extrahiertes Puzzle (DB-frei, daher gut testbar).</summary>
-    public record ParsedPuzzle(
-        string LineId, string Round, string Fen, string Moves, int StartPly,
-        string? Title, string? Chapter, string? Comment,
-        Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false,
-        Dictionary<int, List<MoveShape>>? MoveShapes = null);
-
-    /// <summary>
-    /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
-    /// fehlender/ungültiger Felder verworfen wurden (kein FEN/Round, keine spielbare
-    /// Mainline, Grundstellung ohne Trainingsmarker etc.).
-    /// </summary>
-    public record ParseResult(List<ParsedPuzzle> Puzzles, int Invalid);
-
     /// <summary>Entfernt PGN-Suffixe für den Anzeigenamen (wie schach-bot _clean_book_name).</summary>
     public static string CleanDisplayName(string fileName)
     {
@@ -71,14 +39,25 @@ public partial class PgnImportService
         return fileName;
     }
 
+    /// <summary>Ein aus der PGN extrahiertes Puzzle (DB-frei, daher gut testbar).</summary>
+    public record ParsedPuzzle(
+        string LineId, string Round, string Fen, string Moves, int StartPly,
+        string? Title, string? Chapter, string? Comment,
+        Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false,
+        Dictionary<int, List<PgnParser.MoveShape>>? MoveShapes = null);
+
+    /// <summary>
+    /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
+    /// fehlender/ungültiger Felder verworfen wurden (kein FEN/Round, keine spielbare
+    /// Mainline, Grundstellung ohne Trainingsmarker etc.).
+    /// </summary>
+    public record ParseResult(List<ParsedPuzzle> Puzzles, int Invalid);
+
     /// <summary>
     /// Parst einen PGN-Text in eine Liste von Puzzles. Reine Funktion (kein DB-Zugriff).
     /// Ungültige/unparsebare Einträge werden übersprungen und in <see cref="ParseResult.Invalid"/>
     /// gezählt, nicht geworfen.
     /// </summary>
-    /// <summary>Standard-Grundstellung (für synthetische Info-Linien ohne eigene Züge).</summary>
-    private const string StartPositionFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
     /// <param name="keepCommentOnlyAsInfo">Wenn true (Buch-/Kurs-Import): zug-lose Linien MIT Erklärtext
     /// (Chessable-Intro-/Info-Seiten) werden nicht verworfen, sondern als Info-Linie behalten — Fake-Zug
     /// e4 ab Grundstellung, <c>IsInfoOnly</c>, damit der Text beim sequenziellen Durcharbeiten erscheint
@@ -87,7 +66,7 @@ public partial class PgnImportService
     {
         var result = new List<ParsedPuzzle>();
         var invalid = 0;
-        foreach (var (headers, moveText) in SplitGames(pgnText))
+        foreach (var (headers, moveText) in PgnParser.SplitGames(pgnText))
         {
             var fen = headers.GetValueOrDefault("FEN", "").Trim();
             var round = headers.GetValueOrDefault("Round", "").Trim();
@@ -95,13 +74,13 @@ public partial class PgnImportService
             if (string.IsNullOrEmpty(fen) || fen == "?") { invalid++; continue; }
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
 
-            var comment = ExtractFirstComment(moveText);
-            var moveComments = ExtractMoveComments(moveText);
-            var moveShapes = ExtractMoveShapes(moveText);
+            var comment = PgnParser.ExtractFirstComment(moveText);
+            var moveComments = PgnParser.ExtractMoveComments(moveText);
+            var moveShapes = PgnParser.ExtractMoveShapes(moveText);
             // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
             // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren.
             var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
-            var uci = TryExtractUciMainline(fen, moveText);
+            var uci = PgnParser.TryExtractUciMainline(fen, moveText);
             if (uci == null || uci.Count == 0)
             {
                 // Zug-lose Linie mit Erklärtext (Chessable-Intro-/Info-Seite): nicht verwerfen, sondern
@@ -111,19 +90,19 @@ public partial class PgnImportService
                 //  • Chessable-Kapitel-Intro `{[%info]} 1. -- {Text}` → NULL-Zug `--`, der erste
                 //    Kommentar ist nur der leere [%info]-Marker, der Text steht im ZWEITEN (Zug-)
                 //    Kommentar. Daher robust den ersten NICHT-leeren Kommentar nehmen.
-                var infoText = !string.IsNullOrEmpty(comment) ? comment : FirstNonEmptyComment(moveText);
+                var infoText = !string.IsNullOrEmpty(comment) ? comment : PgnParser.FirstNonEmptyComment(moveText);
                 if (keepCommentOnlyAsInfo && (isInfoOnly || !string.IsNullOrEmpty(infoText)))
                 {
                     var iw = headers.GetValueOrDefault("White", "").Trim();
                     var ib = headers.GetValueOrDefault("Black", "").Trim();
                     result.Add(new ParsedPuzzle(
-                        LineId: Truncate($"{fileName}:{round}", 300),
-                        Round: Truncate(round, 20),
-                        Fen: StartPositionFen,
+                        LineId: PgnParser.Truncate($"{fileName}:{round}", 300),
+                        Round: PgnParser.Truncate(round, 20),
+                        Fen: PgnParser.StartPositionFen,
                         Moves: "e2e4",
                         StartPly: -1,
-                        Title: iw.Length == 0 ? null : Truncate(iw, 300),
-                        Chapter: ib.Length == 0 ? null : Truncate(ib, 200),
+                        Title: iw.Length == 0 ? null : PgnParser.Truncate(iw, 300),
+                        Chapter: ib.Length == 0 ? null : PgnParser.Truncate(ib, 200),
                         Comment: infoText,
                         MoveComments: moveComments,
                         IsInfoOnly: true,
@@ -140,7 +119,7 @@ public partial class PgnImportService
             //      → StartPly = -1.
             // Ausnahme: FEN = Grundstellung OHNE Mid-line-Marker = ganze Partie ohne definierten
             // Trainingsstart → kein Puzzle, überspringen (wie der Bot non-[%tqu]-Partien filtert).
-            var tquIndex = FindTquMoveIndex(moveText);
+            var tquIndex = PgnParser.FindTquMoveIndex(moveText);
             int startPly;
             if (tquIndex is int k && k >= 0 && k <= uci.Count - 2)
             {
@@ -150,7 +129,7 @@ public partial class PgnImportService
             {
                 // Grundstellung ohne Trainingsmarker = kein definierter Trainingsstart → verwerfen.
                 // AUSNAHME: Info-Linien behalten wir (werden nicht abgefragt, nur durchgeklickt).
-                if (IsStartPosition(fen) && !isInfoOnly) { invalid++; continue; }
+                if (PgnParser.IsStartPosition(fen) && !isInfoOnly) { invalid++; continue; }
                 startPly = -1;
             }
 
@@ -158,13 +137,13 @@ public partial class PgnImportService
             var black = headers.GetValueOrDefault("Black", "").Trim();
 
             result.Add(new ParsedPuzzle(
-                LineId: Truncate($"{fileName}:{round}", 300),
-                Round: Truncate(round, 20),
+                LineId: PgnParser.Truncate($"{fileName}:{round}", 300),
+                Round: PgnParser.Truncate(round, 20),
                 Fen: fen,
                 Moves: string.Join(' ', uci),
                 StartPly: startPly,
-                Title: string.IsNullOrEmpty(white) ? null : Truncate(white, 300),
-                Chapter: string.IsNullOrEmpty(black) ? null : Truncate(black, 200),
+                Title: string.IsNullOrEmpty(white) ? null : PgnParser.Truncate(white, 300),
+                Chapter: string.IsNullOrEmpty(black) ? null : PgnParser.Truncate(black, 200),
                 Comment: comment,
                 MoveComments: moveComments,
                 IsInfoOnly: isInfoOnly,
@@ -173,344 +152,7 @@ public partial class PgnImportService
         return new ParseResult(result, invalid);
     }
 
-    // ---- Spiel-Splitting (Header-Block + Movetext) ------------------------
-    private static IEnumerable<(Dictionary<string, string> Headers, string MoveText)> SplitGames(string pgnText)
-    {
-        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var moves = new StringBuilder();
-        bool inMoves = false;
-        bool hasContent = false;
-
-        foreach (var rawLine in pgnText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
-        {
-            var m = HeaderLineRegex().Match(rawLine);
-            if (m.Success)
-            {
-                // Neuer Header nach Movetext ⇒ vorheriges Spiel abschließen
-                if (inMoves)
-                {
-                    yield return (headers, moves.ToString());
-                    headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    moves = new StringBuilder();
-                    inMoves = false;
-                    hasContent = false;
-                }
-                headers[m.Groups[1].Value] = m.Groups[2].Value;
-                hasContent = true;
-            }
-            else if (rawLine.TrimStart().StartsWith('['))
-            {
-                // Tag-artige Zeile, die nicht das Header-Muster trifft – ignorieren
-                continue;
-            }
-            else if (!string.IsNullOrWhiteSpace(rawLine))
-            {
-                moves.Append(rawLine).Append(' ');
-                inMoves = true;
-                hasContent = true;
-            }
-        }
-        if (hasContent)
-            yield return (headers, moves.ToString());
-    }
-
-    /// <summary>Obergrenze für gespeicherte Kommentar-Texte (Einleitung + Pro-Zug-Kommentare). Großzügig,
-    /// da Chessable-Erklär-/Intro-Linien mehrere Tausend Zeichen lang sein können (früher hart bei 5000
-    /// gekappt → lange Intros abgeschnitten); nur als Missbrauchs-/Sanity-Schranke, Spalte ist LONGTEXT.</summary>
-    private const int MaxCommentLength = 100_000;
-
-    // ---- erster (nicht-leerer) Mainline-Kommentar -------------------------
-    private static string? ExtractFirstComment(string moveText)
-    {
-        foreach (Match m in CommentRegex().Matches(moveText))
-        {
-            var inner = m.Value.Trim('{', '}');
-            var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
-            // import_books.py bricht beim ersten Kommentar ab, auch wenn er leer wird
-            return string.IsNullOrEmpty(cleaned) ? null : Truncate(cleaned, MaxCommentLength);
-        }
-        return null;
-    }
-
-    // ---- erster NICHT-leerer Kommentar (über alle Kommentare hinweg) ------
-    /// <summary>Wie <see cref="ExtractFirstComment"/>, bricht aber NICHT beim ersten (evtl. leeren)
-    /// Kommentar ab, sondern liefert den ersten Kommentar mit echtem Text. Nur für Info-Linien:
-    /// Chessable-Kapitel-Intros haben als ersten Kommentar bloß den leeren <c>{[%info]}</c>-Marker,
-    /// der Erklärtext folgt erst im Zug-Kommentar nach dem NULL-Zug <c>1. --</c>.</summary>
-    private static string? FirstNonEmptyComment(string moveText)
-    {
-        foreach (Match m in CommentRegex().Matches(moveText))
-        {
-            var inner = m.Value.Trim('{', '}');
-            var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
-            if (!string.IsNullOrEmpty(cleaned)) return Truncate(cleaned, MaxCommentLength);
-        }
-        return null;
-    }
-
-    // ---- Pro-Zug-Kommentare der Hauptlinie --------------------------------
-    /// <summary>
-    /// Sammelt alle Hauptlinien-Kommentare je Halbzug. Schlüssel = 0-basierter Halbzug-Index, NACH
-    /// dessen Zug der Kommentar in der PGN steht; <c>-1</c> = Kommentar vor dem ersten Zug (Einleitung).
-    /// Die Zählung läuft identisch zu <see cref="FindTquMoveIndex"/> / <see cref="TryExtractUciMainline"/>
-    /// (nur Tiefe 0, Varianten <c>(…)</c> werden ignoriert), sodass die Schlüssel exakt zu den UCI-Zügen
-    /// passen. <c>[%…]</c>-Annotationen werden entfernt, Whitespace normalisiert, leere Kommentare
-    /// verworfen, mehrere Kommentare am selben Zug mit Leerzeichen verbunden. <c>null</c> = keine.
-    /// </summary>
-    private static Dictionary<int, string>? ExtractMoveComments(string moveText)
-    {
-        var map = new Dictionary<int, string>();
-        int depth = 0;       // Variantentiefe
-        int sanCount = 0;    // gezählte Hauptlinien-Züge
-        int i = 0, n = moveText.Length;
-        var cur = new StringBuilder();
-
-        void Flush()
-        {
-            if (cur.Length == 0) return;
-            if (IsSanMove(cur.ToString())) sanCount++;
-            cur.Clear();
-        }
-
-        while (i < n)
-        {
-            char c = moveText[i];
-            if (c == '{')
-            {
-                Flush();
-                int j = moveText.IndexOf('}', i + 1);
-                if (j < 0) j = n;
-                if (depth == 0)
-                {
-                    var inner = moveText.Substring(i + 1, Math.Min(j, n) - (i + 1));
-                    var cleaned = WhitespaceRegex().Replace(AnnotationRegex().Replace(inner, ""), " ").Trim();
-                    if (cleaned.Length > 0)
-                    {
-                        int key = sanCount - 1; // Kommentar gehört zum zuletzt gezählten Zug (-1 = Einleitung)
-                        map[key] = map.TryGetValue(key, out var prev)
-                            ? Truncate($"{prev} {cleaned}", MaxCommentLength)
-                            : Truncate(cleaned, MaxCommentLength);
-                    }
-                }
-                i = (j < n) ? j + 1 : n;
-            }
-            else if (c == '(') { Flush(); depth++; i++; }
-            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
-            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
-            else { if (depth == 0) cur.Append(c); i++; }
-        }
-        Flush();
-        return map.Count == 0 ? null : map;
-    }
-
-    /// <summary>Eine Board-Annotation aus <c>[%cal]</c>/<c>[%csl]</c>: Pfeil (o→d) bzw. Feld-Markierung
-    /// (nur o). <c>b</c> = chessground-Brush (green/red/blue/yellow). Kompakte JSON-Feldnamen o/d/b.</summary>
-    public record MoveShape(
-        [property: JsonPropertyName("o")] string O,
-        [property: JsonPropertyName("d")] string? D,
-        [property: JsonPropertyName("b")] string B);
-
-    private static readonly Dictionary<char, string> BrushByColor = new()
-    { ['G'] = "green", ['R'] = "red", ['B'] = "blue", ['Y'] = "yellow" };
-
-    /// <summary>Parst die <c>[%cal …]</c>-Pfeile und <c>[%csl …]</c>-Feld-Markierungen eines Kommentars
-    /// (kommagetrennte Tokens „Farbe+Feld[+Feld]", z. B. <c>Gd8g8</c> = grüner Pfeil d8→g8, <c>Rg8</c> =
-    /// rotes Feld g8).</summary>
-    private static List<MoveShape> ParseShapes(string inner)
-    {
-        var list = new List<MoveShape>();
-        foreach (Match m in CalCslRegex().Matches(inner))
-        {
-            bool arrow = m.Groups[1].Value.Equals("cal", StringComparison.OrdinalIgnoreCase);
-            foreach (var tok in m.Groups[2].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (tok.Length < 3) continue;
-                var brush = BrushByColor.TryGetValue(char.ToUpperInvariant(tok[0]), out var b) ? b : "green";
-                var coords = tok[1..];
-                if (arrow && coords.Length >= 4) list.Add(new MoveShape(coords[..2], coords.Substring(2, 2), brush));
-                else if (!arrow && coords.Length >= 2) list.Add(new MoveShape(coords[..2], null, brush));
-            }
-        }
-        return list;
-    }
-
-    /// <summary>Sammelt je Halbzug die Board-Annotationen (Pfeile/Feld-Markierungen) — Schlüssel-Konvention
-    /// identisch zu <see cref="ExtractMoveComments"/> (<c>-1</c> = vor dem ersten Zug). <c>null</c> = keine.</summary>
-    private static Dictionary<int, List<MoveShape>>? ExtractMoveShapes(string moveText)
-    {
-        var map = new Dictionary<int, List<MoveShape>>();
-        int depth = 0, sanCount = 0, i = 0, n = moveText.Length;
-        var cur = new StringBuilder();
-        void Flush() { if (cur.Length == 0) return; if (IsSanMove(cur.ToString())) sanCount++; cur.Clear(); }
-        while (i < n)
-        {
-            char c = moveText[i];
-            if (c == '{')
-            {
-                Flush();
-                int j = moveText.IndexOf('}', i + 1);
-                if (j < 0) j = n;
-                if (depth == 0)
-                {
-                    var shapes = ParseShapes(moveText.Substring(i + 1, Math.Min(j, n) - (i + 1)));
-                    if (shapes.Count > 0)
-                    {
-                        int key = sanCount - 1;
-                        if (map.TryGetValue(key, out var existing)) existing.AddRange(shapes);
-                        else map[key] = shapes;
-                    }
-                }
-                i = (j < n) ? j + 1 : n;
-            }
-            else if (c == '(') { Flush(); depth++; i++; }
-            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
-            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
-            else { if (depth == 0) cur.Append(c); i++; }
-        }
-        Flush();
-        return map.Count == 0 ? null : map;
-    }
-
-    // ---- Hauptvariante als UCI --------------------------------------------
-    private static List<string>? TryExtractUciMainline(string fen, string moveText)
-    {
-        // 1) Kommentare + Varianten + NAGs + Zugnummern + Ergebnis entfernen
-        var s = CommentRegex().Replace(moveText, " ");
-        s = RemoveVariations(s);
-        s = NagRegex().Replace(s, " ");
-        s = MoveNumberRegex().Replace(s, " ");
-
-        var sanMoves = new List<string>();
-        foreach (var tok in s.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var t = tok.Trim();
-            if (t.Length == 0 || ResultTokens.Contains(t)) continue;
-            t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O");
-            t = t.TrimEnd('!', '?', '+', '#');
-            if (t.Length == 0 || ResultTokens.Contains(t)) continue;
-            sanMoves.Add(t);
-        }
-        if (sanMoves.Count == 0) return null;
-
-        try
-        {
-            var board = ChessBoard.LoadFromFen(fen);
-            foreach (var san in sanMoves)
-            {
-                if (!board.Move(san)) return null;
-            }
-            var uci = new List<string>(board.ExecutedMoves.Count);
-            foreach (var mv in board.ExecutedMoves)
-                uci.Add(ToUci(mv));
-            return uci;
-        }
-        catch
-        {
-            return null; // ungültige FEN oder nicht spielbarer SAN ⇒ Eintrag überspringen
-        }
-    }
-
-    private static string ToUci(Move m)
-    {
-        var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();
-        var ss = m.Parameter?.ShortStr;
-        if (!string.IsNullOrEmpty(ss) && ss.StartsWith('=') && ss.Length >= 2)
-            u += char.ToLowerInvariant(ss[1]);
-        return u;
-    }
-
-    // ---- Trainingsstart ([%tqu]) finden -----------------------------------
-    /// <summary>
-    /// Liefert den 0-basierten Index des Hauptlinien-Zugs, an dessen Folgekommentar das erste
-    /// ChessBase-[%tqu] hängt (= Setup-Zug der Trainingsstellung). Sonderfälle:
-    /// <list type="bullet">
-    /// <item><c>null</c> = kein [%tqu] in der Hauptlinie (klassisches Verhalten).</item>
-    /// <item><c>-1</c> = [%tqu] steht vor dem ersten Zug (Wurzel) → FEN ist bereits die
-    /// Trainingsstellung, gelöst wird ab moves[0] ohne Setup-Zug.</item>
-    /// </list>
-    /// Varianten (…) und Kommentar-Inhalte werden übersprungen, sodass der Index exakt zur
-    /// SAN-/UCI-Hauptliniensequenz von <see cref="TryExtractUciMainline"/> passt.
-    /// </summary>
-    private static int? FindTquMoveIndex(string moveText)
-    {
-        int depth = 0;       // Variantentiefe
-        int sanCount = 0;    // gezählte Hauptlinien-Züge
-        int i = 0, n = moveText.Length;
-        var cur = new StringBuilder();
-
-        void Flush()
-        {
-            if (cur.Length == 0) return;
-            if (IsSanMove(cur.ToString())) sanCount++;
-            cur.Clear();
-        }
-
-        while (i < n)
-        {
-            char c = moveText[i];
-            if (c == '{')
-            {
-                Flush();
-                int j = moveText.IndexOf('}', i + 1);
-                if (j < 0) j = n;
-                if (depth == 0)
-                {
-                    var content = moveText.Substring(i + 1, Math.Min(j, n) - (i + 1));
-                    if (content.Contains("[%tqu", StringComparison.OrdinalIgnoreCase))
-                        return sanCount - 1; // Kommentar gehört zum zuletzt gezählten Zug (-1 = Wurzel)
-                }
-                i = (j < n) ? j + 1 : n;
-            }
-            else if (c == '(') { Flush(); depth++; i++; }
-            else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
-            else if (char.IsWhiteSpace(c)) { Flush(); i++; }
-            else { if (depth == 0) cur.Append(c); i++; }
-        }
-        Flush();
-        return null;
-    }
-
-    /// <summary>Ist die FEN die Standard-Grundstellung (nur Brettfeld verglichen, ohne Zähler)?</summary>
-    private static bool IsStartPosition(string fen)
-        => fen.Split(' ', 2)[0] == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-
-    /// <summary>Ist das Token ein SAN-Zug (kein Zugnummern-, NAG- oder Ergebnis-Token)?</summary>
-    private static bool IsSanMove(string token)
-    {
-        var t = MoveNumberRegex().Replace(token.Trim(), ""); // führende "12." / "12..." entfernen
-        if (t.Length == 0 || t.StartsWith('$')) return false; // leer oder NAG
-        t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
-        if (t.Length == 0 || ResultTokens.Contains(t)) return false;
-        return true;
-    }
-
-    private static string RemoveVariations(string s)
-    {
-        var sb = new StringBuilder(s.Length);
-        int depth = 0;
-        foreach (char c in s)
-        {
-            if (c == '(') depth++;
-            else if (c == ')') { if (depth > 0) depth--; }
-            else if (depth == 0) sb.Append(c);
-        }
-        return sb.ToString();
-    }
-
-    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
-
     // ---- Persistenz -------------------------------------------------------
-    /// <summary>
-    /// Parst eine Datei und legt Book + BookPuzzles an. Neue Linien (per LineId) werden hinzugefügt,
-    /// bereits vorhandene normalerweise übersprungen (idempotenter (Re-)Import / Resume).
-    /// <para>AUSNAHME — Neu-Aufbereitung: Ist das Buch <b>veraltet</b> (<c>Book.ImportVersion &lt;
-    /// <see cref="ImportPipeline.CurrentVersion"/></c>), werden bestehende Linien <b>in-place
-    /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
-    /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
-    /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
-    /// Immer wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
-    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist.
-    /// </summary>
     /// <summary>
     /// Erkennt eine Kapitel-Überschrift mit motivverratendem Titel („Chapter 2: Back-Rank Mates",
     /// „Kapitel 3: Abzugsschach") und behält nur das Label („Chapter 2"). Greift bewusst nur bei
@@ -533,6 +175,17 @@ public partial class PgnImportService
     private static string? ChapterForBook(BookKind kind, string? chapter)
         => kind == BookKind.Puzzle ? StripChapterSpoiler(chapter) : chapter;
 
+    /// <summary>
+    /// Parst eine Datei und legt Book + BookPuzzles an. Neue Linien (per LineId) werden hinzugefügt,
+    /// bereits vorhandene normalerweise übersprungen (idempotenter (Re-)Import / Resume).
+    /// <para>AUSNAHME — Neu-Aufbereitung: Ist das Buch <b>veraltet</b> (<c>Book.ImportVersion &lt;
+    /// <see cref="ImportPipeline.CurrentVersion"/></c>), werden bestehende Linien <b>in-place
+    /// aktualisiert</b> (Moves/StartPly/Comment/MoveComments/Title/Chapter), statt sie zu überspringen
+    /// — die BookPuzzle-Id bleibt erhalten, also auch aller Fortschritt/alle Statistiken, die darauf
+    /// verweisen. So holt ein Re-Import eines Altbuchs die neuen abgeleiteten Felder nach.</para>
+    /// Immer wird das Roh-PGN als <c>Book.SourcePgn</c> gespeichert und die Pipeline-Version
+    /// hochgesetzt, damit das Buch künftig offline neu aufbereitbar ist.
+    /// </summary>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
@@ -544,8 +197,8 @@ public partial class PgnImportService
         {
             book = new Book
             {
-                FileName = Truncate(fileName, 200),
-                DisplayName = Truncate(CleanDisplayName(fileName), 200),
+                FileName = PgnParser.Truncate(fileName, 200),
+                DisplayName = PgnParser.Truncate(CleanDisplayName(fileName), 200),
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -597,7 +250,7 @@ public partial class PgnImportService
             toAdd.Add(new BookPuzzle
             {
                 LineId = p.LineId,
-                BookFileName = Truncate(fileName, 200),
+                BookFileName = PgnParser.Truncate(fileName, 200),
                 BookId = book.Id,
                 Round = p.Round,
                 Fen = p.Fen,

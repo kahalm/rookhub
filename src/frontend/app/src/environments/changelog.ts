@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.0';
+export const APP_VERSION = '0.242.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.1", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the pure PGN-parsing engine (game splitting, SAN→UCI mainline, comment extraction, [%tqu]/[%cal]/[%csl] marker parsing) was split out of PgnImportService into a dedicated, independently testable PgnParser class; PgnImportService is now just the orchestrator (parse + database persistence). No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die reine PGN-Parsing-Engine (Spiel-Splitting, SAN→UCI-Hauptvariante, Kommentar-Extraktion, [%tqu]/[%cal]/[%csl]-Marker) wurde aus PgnImportService in eine eigene, unabhängig testbare Klasse PgnParser gezogen; PgnImportService ist jetzt nur noch der Orchestrator (Parsen + Datenbank-Persistenz). Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.0", date: "2026-07-02", changes: [
     { en: "Offline activities are now classifiable by theme (Opening / Middlegame / Endgame / Tactics / Other), so manual entries and timer sessions show up in the right slice of the theme breakdown instead of always defaulting to Tactics (puzzle work) or Other (study/coaching). You can set a theme per timer preset, per manual entry, and when saving a timer stop. The dashboard \"Training timer\" tile is no longer visible by default — turn it on via the Anpassen mode on the dashboard. The stop dialog now shows Start, Duration AND End as editable fields that stay in sync: change one and the other two follow automatically (end never goes into the future — if start + duration would land there, start is shifted back so end = now).", de: "Offline-Aktivitäten sind jetzt nach Thema klassifizierbar (Eröffnung / Mittelspiel / Endspiel / Taktik / Sonstiges), sodass manuelle Einträge und Timer-Sessions in der Themen-Aufschlüsselung im richtigen Segment landen — statt immer im Default Taktik (Puzzletraining) oder Sonstiges (Studium/Coaching). Du kannst ein Thema pro Timer-Vorlage, pro manuellem Eintrag und beim Speichern des Timer-Stops setzen. Die Dashboard-Kachel „Trainings-Timer\" ist nicht mehr standardmäßig sichtbar — im Anpassen-Modus auf dem Dashboard zuschaltbar. Der Stopp-Dialog zeigt jetzt Start, Dauer UND Ende als bearbeitbare Felder, die konsistent bleiben: änderst du eines, ziehen die anderen beiden automatisch nach (Ende darf nie in der Zukunft liegen — würde Start + Dauer dort landen, wird stattdessen der Start entsprechend nach vorn geschoben, sodass Ende = jetzt)." },
   ]},
