@@ -9,9 +9,14 @@ import { Key } from 'chessground/types';
 @Component({
   selector: 'app-chess-board',
   standalone: true,
-  template: `<div #boardEl></div>`,
+  template: `<div #boardEl class="cg-square"></div>`,
   styles: [`
     :host { display: block; width: 100%; }
+    /* Verschließ-Sicher: der Boden-Div bleibt immer quadratisch, egal welche width
+       chess-board.component per JS setzt oder ob die JS-Größenberechnung verpasst wird.
+       Ohne aspect-ratio zieht Chessground die Squares horizontal, das Brett wirkt
+       gequetscht (siehe Games-Dialog-Bug 0.244.x). */
+    .cg-square { aspect-ratio: 1 / 1; }
   `]
 })
 export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy {

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.244.0';
+export const APP_VERSION = '0.244.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.244.1", date: "2026-07-02", changes: [
+    { en: "Defensive fix for the /games replay board: the shared chess-board component now enforces a 1:1 aspect-ratio in CSS on top of the JS size calculation, so if the parent width and height ever get out of sync (e.g. during a dialog open animation) the board can't render as a stretched rectangle with the pieces squeezed to the top and bottom and rank labels missing.", de: "Defensiver Fix fürs /games-Nachspiel-Brett: die gemeinsame chess-board-Komponente erzwingt jetzt zusätzlich zur JS-Größenberechnung ein 1:1-Seitenverhältnis in CSS. Wenn Breite und Höhe des Container-Elements aus irgendeinem Grund auseinanderlaufen (z. B. während der Dialog-Öffnungs-Animation), kann das Brett nicht mehr als gestrecktes Rechteck rendern (Figuren an Ober- und Unterkante gequetscht, halbe Rang-Labels fehlten)." },
+  ]},
   { version: "0.244.0", date: "2026-07-02", changes: [
     { en: "Repertoire trainer overhaul: (1) The trainer now plays each line from the very beginning instead of jumping in at branch points — the board stays put for the whole line, opponent moves are auto-played, and you're asked at each of your own moves. When a line ends, the next line starts fresh from move 1. (2) New reset button in the trainer toolbar (↻) — a confirm dialog wipes the spaced-repetition state for that repertoire so you can start over. (3) Chapter grouping in the Lines view: repertoire lines are now grouped by their PGN chapter (Black header), collapsible per chapter, with a per-chapter school-icon button that starts the trainer restricted to that chapter (?chapter=Name). (4) Endless mode: a new \"Clear all\" button next to the themes dropdown wipes the whole theme filter in one click, and clicking an already-active quick-preset again now toggles it off (so you can quickly get back to \"all themes\").", de: "Repertoire-Trainer überarbeitet: (1) Der Trainer spielt jetzt jede Linie VOM ANFANG durch, statt an der letzten Abzweigung einzusteigen — das Brett bleibt eine ganze Linie stehen, Gegnerzüge werden automatisch gespielt, und du wirst an jedem deiner Züge gefragt. Nach einer Linie startet die nächste frisch bei Zug 1. (2) Neuer Reset-Knopf in der Trainer-Leiste (↻) — Bestätigungs-Dialog löscht den Spaced-Repetition-Fortschritt dieses Repertoires. (3) Kapitel-Gruppierung in der Linien-Ansicht: Linien werden jetzt nach dem PGN-Kapitel (Black-Header) gruppiert, pro Kapitel auf-/zuklappbar, mit einem Schul-Icon-Knopf je Kapitel, der den Trainer eingeschränkt auf dieses Kapitel startet (?chapter=Name). (4) Endless-Modus: neuer „Alle löschen“-Knopf neben dem Themen-Dropdown räumt den Themenfilter in einem Klick auf, und ein erneuter Klick auf ein bereits aktives Quick-Preset schaltet es wieder aus (so bist du schnell wieder bei „alle Themen“)." },
   ]},
