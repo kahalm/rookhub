@@ -21,15 +21,14 @@ import {
   ChessableCourse,
   ChessableTestResult,
   ChessableImport,
-  ChessableAdminImport,
   ChessableImportTarget,
 } from './chessable.service';
+import { ChessableAdminImportsFeedComponent } from './chessable-admin-imports-feed.component';
 import {
   CHESSABLE_LINES_PER_MIN,
   formatDuration,
   effectiveTotalLines,
   estimateRemainingMinutes,
-  chessableStatusLabel,
   chessableQueueLabel,
   compareImportsByQueue,
 } from './chessable-progress.util';
@@ -57,6 +56,7 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
     MatProgressSpinnerModule,
     MatTooltipModule,
     TranslateModule,
+    ChessableAdminImportsFeedComponent,
   ],
   template: `
     <div class="container">
@@ -285,32 +285,8 @@ type ActiveImport = ChessableImport & { queueLabelText: string };
         </mat-card>
       }
 
-      @if (isAdmin && adminImports !== null) {
-        <mat-card class="admin-imports-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar>admin_panel_settings</mat-icon>
-            <mat-card-title>{{ 'chessable.adminImportsTitle' | translate }}</mat-card-title>
-            <mat-card-subtitle>{{ 'chessable.adminImportsSubtitle' | translate }}</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            @if (adminImports.length === 0) {
-              <p class="empty">{{ 'chessable.adminNoImports' | translate }}</p>
-            } @else {
-              <div class="admin-list">
-                @for (imp of adminImports; track imp.id) {
-                  <div class="admin-row" [class.active]="imp.status === 'running' || imp.status === 'paused'">
-                    <span class="admin-user"><mat-icon>person</mat-icon> {{ imp.username }}</span>
-                    <span class="admin-name">{{ imp.courseName || imp.bid }}</span>
-                    <span class="admin-target">{{ ('chessable.target_' + imp.target) | translate }}</span>
-                    <span class="admin-status" [attr.data-status]="imp.status">{{ imp.statusLabel }}</span>
-                    @if (imp.durationLabel; as dur) { <span class="admin-duration">{{ dur }}</span> }
-                    <span class="admin-date">{{ imp.createdAt | date:'short' }}</span>
-                  </div>
-                }
-              </div>
-            }
-          </mat-card-content>
-        </mat-card>
+      @if (isAdmin) {
+        <app-chessable-admin-imports-feed />
       }
       }
     </div>
@@ -432,10 +408,6 @@ export class ChessableComponent implements OnInit, OnDestroy {
   activeImports: Record<string, ActiveImport> = {};
   private pollSub?: Subscription;
 
-  /** Admin-Sicht: alle Importe aller User (Verlauf + aktive). null = (noch) nicht geladen / kein Admin. */
-  adminImports: (ChessableAdminImport & { statusLabel: string; durationLabel: string })[] | null = null;
-  private adminPollSub?: Subscription;
-
   constructor(
     private chessable: ChessableService,
     private snackbar: SnackbarService,
@@ -486,8 +458,8 @@ export class ChessableComponent implements OnInit, OnDestroy {
   private proceed(): void {
     this.refresh();
     this.loadActiveImports();
-    // Admins sehen zusätzlich ALLE Importe aller User (Verlauf + aktive), live aktualisiert.
-    if (this.isAdmin) this.startAdminPolling();
+    // Admins sehen zusätzlich ALLE Importe aller User (live) — der Feed pollt selbst
+    // (ChessableAdminImportsFeedComponent, im Template unter @if (isAdmin)).
     // Per Bookmarklet übergebenen Bearer automatisch übernehmen, sobald der Disclaimer steht.
     if (this.pendingBearer) {
       this.bearerInput = this.pendingBearer;
@@ -513,31 +485,6 @@ export class ChessableComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
-    this.adminPollSub?.unsubscribe();
-  }
-
-  /** Admin: alle Importe laden + alle 5 s aktualisieren (zeigt aktive Queue + Verlauf live). */
-  private startAdminPolling(): void {
-    this.loadAdminImports();
-    this.adminPollSub = timer(5000, 12000).subscribe(() => this.loadAdminImports());
-  }
-
-  private loadAdminImports(): void {
-    this.chessable.getAllImportsAdmin().subscribe({
-      // Labels EINMAL je Poll berechnen + cachen (statt je CD-Zyklus translate.instant pro Zeile).
-      next: list => this.adminImports = list.map(imp => ({
-        ...imp,
-        statusLabel: this.adminStatusLabel(imp),
-        durationLabel: this.importDurationLabel(imp),
-      })),
-      error: () => { /* nicht kritisch */ }
-    });
-  }
-
-  /** Zeilen-Status in der Admin-Liste: aktive nutzen die Queue-/Phasen-Anzeige, erledigte den Endstatus. */
-  adminStatusLabel(imp: ChessableAdminImport): string {
-    if (imp.status === 'running' || imp.status === 'paused') return this.queueLabel(imp);
-    return this.translate.instant('chessable.adminStatus_' + imp.status);
   }
 
   /** Beim Laden der Seite noch laufende/wartende Importe übernehmen + Polling aufnehmen. */
@@ -646,19 +593,6 @@ export class ChessableComponent implements OnInit, OnDestroy {
       },
       error: e => { delete this.activeImports[c.bid]; this.showError(e); }
     });
-  }
-
-  /** Text für den Zeilen-Status (Phase + ggf. Kapitel/Linien-Fortschritt). */
-  statusLabel(imp: ChessableImport): string {
-    return chessableStatusLabel(imp, this.translate);
-  }
-
-  /** „Wartezeit X · Holzeit Y" eines abgeschlossenen Imports; '' solange keine Zeiten vorliegen. */
-  importDurationLabel(imp: ChessableImport): string {
-    if (!imp.startedAt || !imp.completedAt) return '';
-    const queue = formatDuration(Date.parse(imp.startedAt) - Date.parse(imp.createdAt));
-    const fetch = formatDuration(Date.parse(imp.completedAt) - Date.parse(imp.startedAt));
-    return this.translate.instant('chessable.importDuration', { queue, fetch });
   }
 
   /** Liste der laufenden/wartenden/pausierten Importe (für die Warteschlangen-Anzeige oben),
