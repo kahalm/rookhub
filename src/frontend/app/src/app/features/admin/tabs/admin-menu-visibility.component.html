@@ -1,0 +1,36 @@
+<div class="tab-content">
+  <h2>{{ 'admin.menu.title' | translate }}</h2>
+  <p class="hint">{{ 'admin.menu.intro' | translate }}</p>
+  @if (menuLoading) {
+    <app-loading-spinner />
+  } @else {
+    <div class="menu-list">
+      @for (item of menuConfig; track item.key) {
+        <div class="menu-row">
+          <span class="menu-label">{{ 'admin.menu.items.' + item.key | translate }}</span>
+          <mat-form-field appearance="outline" class="menu-level">
+            <mat-label>{{ 'admin.menu.level' | translate }}</mat-label>
+            <mat-select [(ngModel)]="item.level">
+              @for (lvl of menuLevels; track lvl) {
+                <mat-option [value]="lvl">{{ 'admin.menu.levels.' + lvl | translate }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (item.level === 'Groups') {
+            <mat-form-field appearance="outline" class="menu-groups">
+              <mat-label>{{ 'admin.menu.groups' | translate }}</mat-label>
+              <mat-select multiple [(ngModel)]="item.groupIds">
+                @for (g of groups; track g.id) {
+                  <mat-option [value]="g.id">{{ g.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+        </div>
+      }
+    </div>
+    <button mat-raised-button color="primary" class="menu-save" [disabled]="menuSaving" (click)="saveMenuConfig()">
+      <mat-icon>save</mat-icon> {{ 'admin.menu.save' | translate }}
+    </button>
+  }
+</div>

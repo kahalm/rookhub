@@ -18,7 +18,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
+import { AdminService, AdminUser, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
 import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
@@ -28,6 +28,9 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
+import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
+import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
+import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 
 @Component({
@@ -37,7 +40,8 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
     MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
-    AdminGithubActionsComponent, AdminChessableDownloadComponent
+    AdminGithubActionsComponent, AdminChessableDownloadComponent,
+    AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
@@ -75,23 +79,6 @@ export class AdminComponent implements OnInit {
   /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
   kibanaUrl = '';
 
-  // --- Tagespuzzle ------------------------------------------------------
-  /** Heute (UTC) als yyyy-MM-dd — obere Grenze fürs Datumsfeld (keine Zukunft). */
-  readonly today = new Date().toISOString().slice(0, 10);
-  /** Gewähltes Datum als yyyy-MM-dd (HTML date input); Default heute (UTC). */
-  dailyDate = new Date().toISOString().slice(0, 10);
-  dailyPuzzle: DailyPuzzleInfo | null = null;
-  dailyLoading = false;
-  dailyRegenerating = false;
-
-  // --- Puzzles (Standard) -----------------------------------------------
-  puzzleTagsBackfilling = false;
-
-  // --- Menü-Sichtbarkeit ------------------------------------------------
-  menuConfig: MenuItemConfig[] = [];
-  menuLoading = false;
-  menuSaving = false;
-  readonly menuLevels: MenuVisibilityLevel[] = ['All', 'Registered', 'Groups', 'Admin'];
 
   impersonatingId: number | null = null;
 
@@ -146,8 +133,6 @@ export class AdminComponent implements OnInit {
     this.loadBooks();
     this.loadGroups();
     this.loadAllUsers();
-    this.loadDailyPuzzle();
-    this.loadMenuConfig();
     this.msgUserSearchTrigger.pipe(
       debounceTime(250),
       distinctUntilChanged(),
@@ -430,88 +415,6 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  // --- Tagespuzzle ------------------------------------------------------
-  /** yyyy-MM-dd → yyyyMMdd für die API-Route. */
-  private compactDate(d: string): string {
-    return (d || '').replace(/-/g, '');
-  }
-
-  loadDailyPuzzle(): void {
-    const date = this.compactDate(this.dailyDate);
-    if (date.length !== 8) return;
-    this.dailyLoading = true;
-    this.dailyPuzzle = null;
-    this.adminService.getDailyPuzzle(date).subscribe({
-      next: p => { this.dailyPuzzle = p; this.dailyLoading = false; },
-      error: err => {
-        this.dailyLoading = false;
-        // 404 = noch kein Tagespuzzle für dieses Datum (z. B. leerer Pool) — kein Fehler-Toast nötig.
-        if (err.status !== 404) {
-          this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.load'));
-        }
-      }
-    });
-  }
-
-  regenerateDailyPuzzle(): void {
-    const date = this.compactDate(this.dailyDate);
-    if (date.length !== 8) return;
-    if (!confirm(this.translate.instant('admin.daily.regenerateConfirm'))) return;
-
-    this.dailyRegenerating = true;
-    this.adminService.regenerateDailyPuzzle(date).subscribe({
-      next: p => {
-        this.dailyPuzzle = p;
-        this.dailyRegenerating = false;
-        this.snackbar.info(this.translate.instant('admin.daily.regenerated'));
-      },
-      error: err => {
-        this.dailyRegenerating = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.regenerate'));
-      }
-    });
-  }
-
-  // --- Puzzles (Standard) -----------------------------------------------
-  backfillPuzzleTags(): void {
-    if (this.puzzleTagsBackfilling) return;
-    if (!confirm(this.translate.instant('admin.puzzles.backfillConfirm'))) return;
-    this.puzzleTagsBackfilling = true;
-    this.adminService.backfillPuzzleTags().subscribe({
-      next: () => {
-        this.puzzleTagsBackfilling = false;
-        this.snackbar.info(this.translate.instant('admin.puzzles.backfillStarted'));
-      },
-      error: err => {
-        this.puzzleTagsBackfilling = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.puzzles.backfillError'));
-      }
-    });
-  }
-
-  // --- Menü-Sichtbarkeit ------------------------------------------------
-  loadMenuConfig(): void {
-    this.menuLoading = true;
-    this.adminService.getMenuConfig().subscribe({
-      next: cfg => { this.menuConfig = cfg; this.menuLoading = false; },
-      error: () => { this.snackbar.info(this.translate.instant('admin.menu.loadError')); this.menuLoading = false; }
-    });
-  }
-
-  saveMenuConfig(): void {
-    this.menuSaving = true;
-    // Gruppen nur bei Level=Groups mitschicken (sonst leeren).
-    const payload = this.menuConfig.map(i => ({ ...i, groupIds: i.level === 'Groups' ? i.groupIds : [] }));
-    this.adminService.saveMenuConfig(payload).subscribe({
-      next: cfg => {
-        this.menuConfig = cfg;
-        this.menuSaving = false;
-        this.menu.refresh(); // eigene Navbar sofort aktualisieren
-        this.snackbar.info(this.translate.instant('admin.menu.saved'));
-      },
-      error: () => { this.snackbar.info(this.translate.instant('admin.menu.saveError')); this.menuSaving = false; }
-    });
-  }
 
   // --- Gruppen ----------------------------------------------------------
   loadGroups(): void {

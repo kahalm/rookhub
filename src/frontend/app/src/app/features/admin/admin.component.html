@@ -196,59 +196,15 @@
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.daily' | translate">
-          <div class="tab-content">
-            <p class="daily-intro">{{ 'admin.daily.intro' | translate }}</p>
-
-            <div class="daily-controls">
-              <mat-form-field appearance="outline" class="daily-date-field" subscriptSizing="dynamic">
-                <mat-label>{{ 'admin.daily.dateLabel' | translate }}</mat-label>
-                <input matInput type="date" [(ngModel)]="dailyDate" [max]="today" (change)="loadDailyPuzzle()">
-              </mat-form-field>
-              <button mat-stroked-button (click)="loadDailyPuzzle()" [disabled]="dailyLoading">
-                <mat-icon>refresh</mat-icon> {{ 'admin.daily.reload' | translate }}
-              </button>
-            </div>
-
-            @if (dailyLoading) {
-              <app-loading-spinner />
-            } @else if (dailyPuzzle) {
-              <mat-card class="daily-card">
-                <mat-card-content>
-                  <div class="daily-row"><span class="daily-key">{{ 'admin.daily.puzzleId' | translate }}</span><span>#{{ dailyPuzzle.id }}</span></div>
-                  <div class="daily-row"><span class="daily-key">{{ 'admin.daily.book' | translate }}</span><span>{{ dailyPuzzle.bookFileName }}</span></div>
-                  @if (dailyPuzzle.title) {
-                    <div class="daily-row"><span class="daily-key">{{ 'admin.daily.puzzleTitle' | translate }}</span><span>{{ dailyPuzzle.title }}</span></div>
-                  }
-                  <div class="daily-row"><span class="daily-key">LineId</span><span class="daily-lineid">{{ dailyPuzzle.lineId }}</span></div>
-                </mat-card-content>
-                <mat-card-actions>
-                  <button mat-raised-button color="warn" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
-                    <mat-icon>autorenew</mat-icon> {{ 'admin.daily.regenerate' | translate }}
-                  </button>
-                </mat-card-actions>
-              </mat-card>
-            } @else {
-              <p class="empty-hint">{{ 'admin.daily.none' | translate }}</p>
-              <button mat-raised-button color="primary" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
-                <mat-icon>add</mat-icon> {{ 'admin.daily.generate' | translate }}
-              </button>
-            }
-          </div>
+          <ng-template matTabContent>
+            <app-admin-daily-puzzle />
+          </ng-template>
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.puzzles' | translate">
-          <div class="tab-content">
-            <h2>{{ 'admin.puzzles.title' | translate }}</h2>
-            <mat-card>
-              <mat-card-content>
-                <p>{{ 'admin.puzzles.backfillHint' | translate }}</p>
-                <button mat-raised-button color="primary" (click)="backfillPuzzleTags()" [disabled]="puzzleTagsBackfilling">
-                  <mat-icon>sync</mat-icon>
-                  {{ (puzzleTagsBackfilling ? 'admin.puzzles.backfillRunning' : 'admin.puzzles.backfillBtn') | translate }}
-                </button>
-              </mat-card-content>
-            </mat-card>
-          </div>
+          <ng-template matTabContent>
+            <app-admin-puzzle-tags />
+          </ng-template>
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.groups' | translate">
@@ -378,42 +334,9 @@
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.menu' | translate">
-          <div class="tab-content">
-            <h2>{{ 'admin.menu.title' | translate }}</h2>
-            <p class="hint">{{ 'admin.menu.intro' | translate }}</p>
-            @if (menuLoading) {
-              <app-loading-spinner />
-            } @else {
-              <div class="menu-list">
-                @for (item of menuConfig; track item.key) {
-                  <div class="menu-row">
-                    <span class="menu-label">{{ 'admin.menu.items.' + item.key | translate }}</span>
-                    <mat-form-field appearance="outline" class="menu-level">
-                      <mat-label>{{ 'admin.menu.level' | translate }}</mat-label>
-                      <mat-select [(ngModel)]="item.level">
-                        @for (lvl of menuLevels; track lvl) {
-                          <mat-option [value]="lvl">{{ 'admin.menu.levels.' + lvl | translate }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                    @if (item.level === 'Groups') {
-                      <mat-form-field appearance="outline" class="menu-groups">
-                        <mat-label>{{ 'admin.menu.groups' | translate }}</mat-label>
-                        <mat-select multiple [(ngModel)]="item.groupIds">
-                          @for (g of groups; track g.id) {
-                            <mat-option [value]="g.id">{{ g.name }}</mat-option>
-                          }
-                        </mat-select>
-                      </mat-form-field>
-                    }
-                  </div>
-                }
-              </div>
-              <button mat-raised-button color="primary" class="menu-save" [disabled]="menuSaving" (click)="saveMenuConfig()">
-                <mat-icon>save</mat-icon> {{ 'admin.menu.save' | translate }}
-              </button>
-            }
-          </div>
+          <ng-template matTabContent>
+            <app-admin-menu-visibility />
+          </ng-template>
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.messages' | translate">

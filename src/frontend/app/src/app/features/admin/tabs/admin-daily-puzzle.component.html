@@ -1,0 +1,38 @@
+<div class="tab-content">
+  <p class="daily-intro">{{ 'admin.daily.intro' | translate }}</p>
+
+  <div class="daily-controls">
+    <mat-form-field appearance="outline" class="daily-date-field" subscriptSizing="dynamic">
+      <mat-label>{{ 'admin.daily.dateLabel' | translate }}</mat-label>
+      <input matInput type="date" [(ngModel)]="dailyDate" [max]="today" (change)="loadDailyPuzzle()">
+    </mat-form-field>
+    <button mat-stroked-button (click)="loadDailyPuzzle()" [disabled]="dailyLoading">
+      <mat-icon>refresh</mat-icon> {{ 'admin.daily.reload' | translate }}
+    </button>
+  </div>
+
+  @if (dailyLoading) {
+    <app-loading-spinner />
+  } @else if (dailyPuzzle) {
+    <mat-card class="daily-card">
+      <mat-card-content>
+        <div class="daily-row"><span class="daily-key">{{ 'admin.daily.puzzleId' | translate }}</span><span>#{{ dailyPuzzle.id }}</span></div>
+        <div class="daily-row"><span class="daily-key">{{ 'admin.daily.book' | translate }}</span><span>{{ dailyPuzzle.bookFileName }}</span></div>
+        @if (dailyPuzzle.title) {
+          <div class="daily-row"><span class="daily-key">{{ 'admin.daily.puzzleTitle' | translate }}</span><span>{{ dailyPuzzle.title }}</span></div>
+        }
+        <div class="daily-row"><span class="daily-key">LineId</span><span class="daily-lineid">{{ dailyPuzzle.lineId }}</span></div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-raised-button color="warn" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
+          <mat-icon>autorenew</mat-icon> {{ 'admin.daily.regenerate' | translate }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  } @else {
+    <p class="empty-hint">{{ 'admin.daily.none' | translate }}</p>
+    <button mat-raised-button color="primary" (click)="regenerateDailyPuzzle()" [disabled]="dailyRegenerating">
+      <mat-icon>add</mat-icon> {{ 'admin.daily.generate' | translate }}
+    </button>
+  }
+</div>

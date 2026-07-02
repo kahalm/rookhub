@@ -1,0 +1,9 @@
+.tab-content { padding: 16px 0; }
+.empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+.daily-intro { color: color-mix(in srgb, currentColor 60%, transparent); max-width: 640px; }
+.daily-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+.daily-date-field { min-width: 180px; }
+.daily-card { max-width: 640px; }
+.daily-row { display: flex; gap: 12px; padding: 4px 0; }
+.daily-key { min-width: 120px; color: color-mix(in srgb, currentColor 60%, transparent); font-weight: 500; }
+.daily-lineid { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
