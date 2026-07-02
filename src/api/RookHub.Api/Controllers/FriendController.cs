@@ -12,9 +12,9 @@ namespace RookHub.Api.Controllers;
 public class FriendController : BaseApiController
 {
     private readonly FriendService _friendService;
-    private readonly PuzzleService _puzzleService;
+    private readonly PuzzleStatsService _puzzleService;
 
-    public FriendController(FriendService friendService, PuzzleService puzzleService)
+    public FriendController(FriendService friendService, PuzzleStatsService puzzleService)
     {
         _friendService = friendService;
         _puzzleService = puzzleService;

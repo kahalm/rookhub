@@ -16,7 +16,7 @@ public class FriendControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly FriendService _friendService;
-    private readonly PuzzleService _puzzleService;
+    private readonly PuzzleStatsService _puzzleService;
     private readonly FriendController _controller;
 
     public FriendControllerTests()
@@ -26,7 +26,7 @@ public class FriendControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _friendService = new FriendService(_db, new NotificationService(_db));
-        _puzzleService = new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance));
+        _puzzleService = new PuzzleStatsService(_db, new MemoryCache(new MemoryCacheOptions()));
         _controller = new FriendController(_friendService, _puzzleService);
     }
 

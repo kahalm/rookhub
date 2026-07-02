@@ -16,7 +16,7 @@ public class BotStatsService
 {
     private readonly AppDbContext _db;
     private readonly TrainingGoalService _goals;
-    private readonly PuzzleService _puzzles;
+    private readonly PuzzleStatsService _puzzles;
     private readonly WeeklyPostService _weekly;
     private readonly CrawlerProxyService _crawler;
 
@@ -29,7 +29,7 @@ public class BotStatsService
     /// <summary>Höchstens so viele Turniere in den DM aufnehmen (die zeitnächsten zuerst).</summary>
     internal int MaxTournaments { get; set; } = 5;
 
-    public BotStatsService(AppDbContext db, TrainingGoalService goals, PuzzleService puzzles,
+    public BotStatsService(AppDbContext db, TrainingGoalService goals, PuzzleStatsService puzzles,
         WeeklyPostService weekly, CrawlerProxyService crawler)
     {
         _db = db;

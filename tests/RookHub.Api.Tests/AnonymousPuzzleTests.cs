@@ -11,6 +11,7 @@ public class AnonymousPuzzleTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly PuzzleService _service;
+    private readonly PuzzleStatsService _stats;
 
     public AnonymousPuzzleTests()
     {
@@ -19,6 +20,7 @@ public class AnonymousPuzzleTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance));
+        _stats = new PuzzleStatsService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
     }
 
     public void Dispose() => _db.Dispose();
@@ -115,7 +117,7 @@ public class AnonymousPuzzleTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var stats = await _service.GetAnonymousStatsAsync(sessionId);
+        var stats = await _stats.GetAnonymousStatsAsync(sessionId);
 
         Assert.Equal(3, stats.TotalAttempts);
         Assert.Equal(2, stats.Solved);
@@ -126,7 +128,7 @@ public class AnonymousPuzzleTests : IDisposable
     [Fact]
     public async Task GetAnonymousStats_ReturnsZeros_WhenNoAttempts()
     {
-        var stats = await _service.GetAnonymousStatsAsync("nonexistent-session");
+        var stats = await _stats.GetAnonymousStatsAsync("nonexistent-session");
 
         Assert.Equal(0, stats.TotalAttempts);
         Assert.Equal(0, stats.Solved);
@@ -143,8 +145,8 @@ public class AnonymousPuzzleTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var statsA = await _service.GetAnonymousStatsAsync("session-a");
-        var statsB = await _service.GetAnonymousStatsAsync("session-b");
+        var statsA = await _stats.GetAnonymousStatsAsync("session-a");
+        var statsB = await _stats.GetAnonymousStatsAsync("session-b");
 
         Assert.Equal(1, statsA.TotalAttempts);
         Assert.True(statsA.Accuracy > 99);
@@ -165,7 +167,7 @@ public class AnonymousPuzzleTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var claimed = await _service.ClaimSessionAsync(userId, sessionId);
+        var claimed = await _stats.ClaimSessionAsync(userId, sessionId);
 
         Assert.Equal(2, claimed);
 
@@ -182,7 +184,7 @@ public class AnonymousPuzzleTests : IDisposable
     {
         var userId = await CreateUserAsync();
 
-        var claimed = await _service.ClaimSessionAsync(userId, "nonexistent-session");
+        var claimed = await _stats.ClaimSessionAsync(userId, "nonexistent-session");
 
         Assert.Equal(0, claimed);
     }
@@ -202,7 +204,7 @@ public class AnonymousPuzzleTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var claimed = await _service.ClaimSessionAsync(user2, sessionId);
+        var claimed = await _stats.ClaimSessionAsync(user2, sessionId);
 
         Assert.Equal(1, claimed);
 
@@ -231,9 +233,9 @@ public class AnonymousPuzzleTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        await _service.ClaimSessionAsync(userId, sessionId);
+        await _stats.ClaimSessionAsync(userId, sessionId);
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.Equal(2, stats.TotalAttempts);
         Assert.Equal(2, stats.Solved);

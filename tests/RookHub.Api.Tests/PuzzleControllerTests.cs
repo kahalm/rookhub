@@ -24,7 +24,7 @@ public class PuzzleControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
         _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance));
-        _controller = new PuzzleController(_service);
+        _controller = new PuzzleController(_service, new PuzzleStatsService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())));
         SetUser(1);
     }
 

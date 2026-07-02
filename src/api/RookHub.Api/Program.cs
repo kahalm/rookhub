@@ -155,6 +155,7 @@ try
     builder.Services.AddScoped<RepertoireAnalyzeService>();
     builder.Services.AddScoped<PlayerSearchService>();
     builder.Services.AddScoped<PuzzleTaggingService>();
+    builder.Services.AddScoped<PuzzleStatsService>();
     builder.Services.AddScoped<PuzzleService>();
     builder.Services.AddScoped<PgnImportService>();
     builder.Services.AddScoped<ChessableImportService>();

@@ -14,8 +14,13 @@ namespace RookHub.Api.Controllers;
 public class PuzzleController : BaseApiController
 {
     private readonly PuzzleService _puzzleService;
+    private readonly PuzzleStatsService _stats;
 
-    public PuzzleController(PuzzleService puzzleService) => _puzzleService = puzzleService;
+    public PuzzleController(PuzzleService puzzleService, PuzzleStatsService stats)
+    {
+        _puzzleService = puzzleService;
+        _stats = stats;
+    }
 
     [AllowAnonymous]
     [HttpGet("rating-range")]
@@ -98,7 +103,7 @@ public class PuzzleController : BaseApiController
     {
         // vizLevel bewusst nullable durchreichen: ohne explizites Level liefert der Service
         // das Elo des meistgespielten Levels (Dashboard/Übersicht), nicht stur Level 0.
-        return Ok(await _puzzleService.GetStatsAsync(GetUserId(), vizLevel));
+        return Ok(await _stats.GetStatsAsync(GetUserId(), vizLevel));
     }
 
     [HttpGet("history")]
@@ -106,19 +111,19 @@ public class PuzzleController : BaseApiController
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        return Ok(await _puzzleService.GetHistoryAsync(GetUserId(), page, pageSize));
+        return Ok(await _stats.GetHistoryAsync(GetUserId(), page, pageSize));
     }
 
     [HttpGet("elo-history")]
     public async Task<ActionResult<List<EloHistoryPointDto>>> GetEloHistory([FromQuery] int limit = 500)
     {
-        return Ok(await _puzzleService.GetEloHistoryAsync(GetUserId(), limit));
+        return Ok(await _stats.GetEloHistoryAsync(GetUserId(), limit));
     }
 
     [HttpGet("stats/breakdown")]
     public async Task<ActionResult<PuzzleBreakdownDto>> GetBreakdown()
     {
-        return Ok(await _puzzleService.GetBreakdownAsync(GetUserId()));
+        return Ok(await _stats.GetBreakdownAsync(GetUserId()));
     }
 
     /// <summary>Die schwächsten Themen des Users (niedrigste Lösungsquote) — für „X schwächste Themen trainieren".</summary>
@@ -127,14 +132,14 @@ public class PuzzleController : BaseApiController
     {
         count = Math.Clamp(count, 1, 20);
         minAttempts = Math.Clamp(minAttempts, 1, 1000);
-        return Ok(await _puzzleService.GetWorstThemesAsync(GetUserId(), count, minAttempts));
+        return Ok(await _stats.GetWorstThemesAsync(GetUserId(), count, minAttempts));
     }
 
     /// <summary>Alle im Puzzle-Pool vorkommenden Themen (sortiert) — Optionen für den Themen-Filter (Multiselect-Dropdown).</summary>
     [AllowAnonymous]
     [HttpGet("themes")]
     public async Task<ActionResult<List<string>>> GetThemes()
-        => Ok(await _puzzleService.GetAllThemesAsync());
+        => Ok(await _stats.GetAllThemesAsync());
 
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
@@ -164,7 +169,7 @@ public class PuzzleController : BaseApiController
         if (!IsValidSessionId(sessionId))
             return BadRequest(new { message = "Invalid session ID." });
 
-        return Ok(await _puzzleService.GetAnonymousStatsAsync(sessionId));
+        return Ok(await _stats.GetAnonymousStatsAsync(sessionId));
     }
 
     [HttpPost("claim-session")]
@@ -173,7 +178,7 @@ public class PuzzleController : BaseApiController
         if (!IsValidSessionId(dto.SessionId))
             return BadRequest(new { message = "Invalid session ID." });
 
-        var claimed = await _puzzleService.ClaimSessionAsync(GetUserId(), dto.SessionId);
+        var claimed = await _stats.ClaimSessionAsync(GetUserId(), dto.SessionId);
         return Ok(new { claimed });
     }
 

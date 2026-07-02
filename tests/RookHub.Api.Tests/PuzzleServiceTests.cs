@@ -18,6 +18,7 @@ public class PuzzleServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly PuzzleService _service;
     private readonly PuzzleTaggingService _tagging;
+    private readonly PuzzleStatsService _stats;
 
     public PuzzleServiceTests()
     {
@@ -27,6 +28,7 @@ public class PuzzleServiceTests : IDisposable
         _db = new AppDbContext(options);
         _tagging = new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance);
         _service = new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, _tagging);
+        _stats = new PuzzleStatsService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
     }
 
     public void Dispose() => _db.Dispose();
@@ -44,14 +46,14 @@ public class PuzzleServiceTests : IDisposable
     [InlineData(10, 10, 20)]  // 10 & 10 → normale Schrittweite
     [InlineData(40, 25, 20)]  // lange eingependelt → normal
     public void ProvisionalKFactor_LargerStepsUntilSolvedAndFailedThresholds(int solved, int failed, int expectedK)
-        => Assert.Equal(expectedK, PuzzleService.ProvisionalKFactor(solved, failed));
+        => Assert.Equal(expectedK, PuzzleElo.ProvisionalKFactor(solved, failed));
 
     [Fact]
     public void ProvisionalK_TimesCalculateElo_YieldsLargerEarlyEloChange()
     {
         // Gleiches Puzzle/Rating: am Anfang (×4) muss der Elo-Schritt deutlich größer sein als eingependelt (×1).
-        var (_, earlyChange) = PuzzleService.CalculateElo(1500, 1500, solved: true, PuzzleService.ProvisionalKFactor(0, 0));
-        var (_, settledChange) = PuzzleService.CalculateElo(1500, 1500, solved: true, PuzzleService.ProvisionalKFactor(10, 10));
+        var (_, earlyChange) = PuzzleElo.CalculateElo(1500, 1500, solved: true, PuzzleElo.ProvisionalKFactor(0, 0));
+        var (_, settledChange) = PuzzleElo.CalculateElo(1500, 1500, solved: true, PuzzleElo.ProvisionalKFactor(10, 10));
         Assert.True(earlyChange > settledChange, $"early {earlyChange} should exceed settled {settledChange}");
         Assert.Equal(settledChange * 4, earlyChange); // ×4 zu Beginn
     }
@@ -337,7 +339,7 @@ public class PuzzleServiceTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.Equal(3, stats.TotalAttempts);
         Assert.Equal(2, stats.Solved);
@@ -350,7 +352,7 @@ public class PuzzleServiceTests : IDisposable
     {
         var userId = await CreateUserAsync();
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.Equal(0, stats.TotalAttempts);
         Assert.Equal(0, stats.Solved);
@@ -375,8 +377,8 @@ public class PuzzleServiceTests : IDisposable
         );
         await _db.SaveChangesAsync();
 
-        var overview = await _service.GetStatsAsync(userId);    // ohne Level → meistgespieltes (Level 1)
-        var level0 = await _service.GetStatsAsync(userId, 0);    // explizit Level 0
+        var overview = await _stats.GetStatsAsync(userId);    // ohne Level → meistgespieltes (Level 1)
+        var level0 = await _stats.GetStatsAsync(userId, 0);    // explizit Level 0
 
         Assert.Equal(1800, overview.PuzzleElo);   // tatsächliches Haupt-Elo, nicht der Level-0-Default
         Assert.Equal(1500, level0.PuzzleElo);     // explizit angefragtes Level bleibt unverändert
@@ -401,8 +403,8 @@ public class PuzzleServiceTests : IDisposable
         }
         await _db.SaveChangesAsync();
 
-        var page1 = await _service.GetHistoryAsync(userId, page: 1, pageSize: 2);
-        var page2 = await _service.GetHistoryAsync(userId, page: 2, pageSize: 2);
+        var page1 = await _stats.GetHistoryAsync(userId, page: 1, pageSize: 2);
+        var page2 = await _stats.GetHistoryAsync(userId, page: 2, pageSize: 2);
 
         Assert.Equal(2, page1.Count);
         Assert.Equal(2, page2.Count);
@@ -490,7 +492,7 @@ public class PuzzleServiceTests : IDisposable
         }
         await _db.SaveChangesAsync();
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.Equal(50, stats.TotalAttempts);
         Assert.Equal(30, stats.Solved);
@@ -563,7 +565,7 @@ public class PuzzleServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var history = await _service.GetHistoryAsync(userId, 1, 10);
+        var history = await _stats.GetHistoryAsync(userId, 1, 10);
 
         Assert.Single(history);
         Assert.Equal(moveLog, history[0].MoveLog);
@@ -688,7 +690,7 @@ public class PuzzleServiceTests : IDisposable
         var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_s1");
         await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.True(stats.PuzzleElo > 1500);
     }
@@ -711,7 +713,7 @@ public class PuzzleServiceTests : IDisposable
         var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "elo_hist1");
         await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
 
-        var history = await _service.GetHistoryAsync(userId, 1, 10);
+        var history = await _stats.GetHistoryAsync(userId, 1, 10);
 
         Assert.Single(history);
         Assert.NotNull(history[0].EloAfter);
@@ -833,7 +835,7 @@ public class PuzzleServiceTests : IDisposable
         user!.PuzzleEloViz3 = 1200;
         await _db.SaveChangesAsync();
 
-        var stats = await _service.GetStatsAsync(userId, vizLevel: 3);
+        var stats = await _stats.GetStatsAsync(userId, vizLevel: 3);
 
         Assert.Equal(1200, stats.PuzzleElo);
     }
@@ -847,7 +849,7 @@ public class PuzzleServiceTests : IDisposable
         user.PuzzleEloViz3 = 1250;
         await _db.SaveChangesAsync();
 
-        var stats = await _service.GetStatsAsync(userId);
+        var stats = await _stats.GetStatsAsync(userId);
 
         Assert.NotNull(stats.PuzzleEloPerLevel);
         Assert.Equal(1500, stats.PuzzleEloPerLevel![0]); // PuzzleElo default
@@ -882,7 +884,7 @@ public class PuzzleServiceTests : IDisposable
     [InlineData(14, 100)]  // clamped to min 100
     public void GetDefaultElo_ReturnsCorrectValues(int level, int expected)
     {
-        Assert.Equal(expected, PuzzleService.GetDefaultElo(level));
+        Assert.Equal(expected, PuzzleElo.GetDefaultElo(level));
     }
 
     [Fact]
@@ -898,7 +900,7 @@ public class PuzzleServiceTests : IDisposable
             new PuzzleAttempt { UserId = userId, PuzzleId = puzzle.Id, Solved = true, EloAfter = null, AttemptedAt = t0.AddMinutes(1) }); // ohne Elo -> ausgeschlossen
         await _db.SaveChangesAsync();
 
-        var hist = await _service.GetEloHistoryAsync(userId);
+        var hist = await _stats.GetEloHistoryAsync(userId);
 
         Assert.Equal(3, hist.Count);
         Assert.Equal(new[] { 1505, 1520, 1540 }, hist.Select(h => h.Elo));   // chronologisch aufsteigend
@@ -918,7 +920,7 @@ public class PuzzleServiceTests : IDisposable
             new PuzzleAttempt { UserId = userId, PuzzleId = p2.Id, Solved = true, AttemptedAt = now });
         await _db.SaveChangesAsync();
 
-        var b = await _service.GetBreakdownAsync(userId);
+        var b = await _stats.GetBreakdownAsync(userId);
 
         var fork = b.Themes.Single(t => t.Theme == "fork");
         Assert.Equal(3, fork.Attempts);   // p1 x2 + p2 x1
@@ -949,7 +951,7 @@ public class PuzzleServiceTests : IDisposable
         add(pRare, false); add(pRare, false);   // nur 2 Versuche → unter minAttempts=3
         await _db.SaveChangesAsync();
 
-        var worst = await _service.GetWorstThemesAsync(userId, count: 5, minAttempts: 3);
+        var worst = await _stats.GetWorstThemesAsync(userId, count: 5, minAttempts: 3);
 
         // endgame (0%, aber zu wenig Daten) fällt raus; Reihenfolge: fork (25%) < skewer (50%) < pin (100%).
         Assert.Equal(new[] { "fork", "skewer", "pin" }, worst.Select(t => t.Theme).ToArray());
@@ -971,7 +973,7 @@ public class PuzzleServiceTests : IDisposable
         }
         await _db.SaveChangesAsync();
 
-        var worst = await _service.GetWorstThemesAsync(userId, count: 2, minAttempts: 3);
+        var worst = await _stats.GetWorstThemesAsync(userId, count: 2, minAttempts: 3);
 
         Assert.Equal(2, worst.Count);
         Assert.Equal("a", worst[0].Theme);   // 0/3 = schwächstes
@@ -1095,7 +1097,7 @@ public class PuzzleServiceTests : IDisposable
         await CreatePuzzleAsync(rating: 1600, themes: "fork pin", lichessId: "th2");
         await _tagging.BackfillPuzzleTagsAsync();   // füllt die Tags-Tabelle (fork, endgame, pin)
 
-        var themes = await _service.GetAllThemesAsync();
+        var themes = await _stats.GetAllThemesAsync();
 
         Assert.Equal(new[] { "endgame", "fork", "pin" }, themes);   // distinkt + alphabetisch
     }
@@ -1107,7 +1109,7 @@ public class PuzzleServiceTests : IDisposable
         await CreatePuzzleAsync(rating: 1600, themes: "pin fork", lichessId: "tf2");
         // KEIN Backfill → Tags-Tabelle leer → Fallback auf die Puzzle.Themes-Tokens.
 
-        var themes = await _service.GetAllThemesAsync();
+        var themes = await _stats.GetAllThemesAsync();
 
         Assert.Empty(await _db.Tags.ToListAsync());
         Assert.Equal(new[] { "endgame", "fork", "pin" }, themes);
