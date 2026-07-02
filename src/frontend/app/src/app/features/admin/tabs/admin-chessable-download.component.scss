@@ -1,0 +1,25 @@
+.tab-content { padding: 16px 0; }
+.hint { color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 12px; }
+.empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 8px 0; }
+
+.dl-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.dl-user { min-width: 240px; }
+.dl-courses { display: flex; flex-direction: column; gap: 6px; }
+.dl-course-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 6px 10px; border: 1px solid color-mix(in srgb, currentColor 15%, transparent); border-radius: 6px; }
+.dl-course-name { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-import-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.dl-done { display: inline-flex; align-items: center; gap: 3px; font-size: 0.82rem; opacity: 0.8; white-space: nowrap; }
+.dl-done .ok { color: #2e7d32; font-size: 18px; width: 18px; height: 18px; }
+.dl-status { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; opacity: 0.85; white-space: nowrap; }
+.dl-status mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.dl-status .ok { color: #2e7d32; }
+.dl-status .err { color: #d32f2f; }
+.dl-status.dl-queued { color: #ef6c00; opacity: 1; }   /* „bereits in Warteschlange" — Amber-Hinweis */
+.dl-course-name .cached-badge { color: #f9a825; font-size: 18px; width: 18px; height: 18px; vertical-align: text-bottom; margin-left: 4px; }
+.dl-hide-loaded { margin: 4px 0 8px; }
+.dl-est-btn { width: 28px; height: 28px; line-height: 28px; }
+.dl-est-btn mat-icon { font-size: 17px; width: 17px; height: 17px; opacity: 0.7; }
+.dl-est { font-size: 0.82rem; opacity: 0.85; white-space: nowrap; }
+.dl-est-err { font-size: 0.82rem; color: #d32f2f; }
+.dl-est-spin { display: inline-block; vertical-align: middle; }
