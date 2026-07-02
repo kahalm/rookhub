@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.15';
+export const APP_VERSION = '0.242.16';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.16", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the switchable period breakdown (day/week/month/year/all + paging) below the tracker heatmap was extracted into its own self-computing PeriodBreakdownCardComponent (takes the full daily series as an input, owns the period/anchor state and navigation). The pure period/breakdown math (periodBounds/shiftAnchor/sumBreakdown/breakdownRows/…) moved into a shared breakdown.util (re-exported from the component for existing imports/specs). TrainingGoalsComponent is down from ~700 to ~530 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt + Durchschalten) unter der Tracker-Heatmap wurde in eine eigene, selbst rechnende PeriodBreakdownCardComponent ausgelagert (bekommt die vollständige Tagesreihe als Input, besitzt Perioden-/Anker-Zustand und Navigation selbst). Die reine Perioden-/Aufschlüsselungs-Mathematik (periodBounds/shiftAnchor/sumBreakdown/breakdownRows/…) wanderte in eine geteilte breakdown.util (aus der Komponente re-exportiert für bestehende Importe/Specs). TrainingGoalsComponent schrumpft von ~700 auf ~530 Zeilen. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.15", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the \"Chessable courses: history + manual theme assignment\" card was extracted from the large TrainingGoalsComponent into its own self-loading ChessableThemesCardComponent (loads its course list itself, reports theme changes via a (changed) output so the parent reloads the theme breakdown). The chessable-themes state and methods left the parent; MatSelectModule dropped from it. TrainingGoalsComponent is down another ~90 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Karte „Chessable-Kurse: Verlauf + manuelle Themen-Zuordnung“ wurde aus der großen TrainingGoalsComponent in eine eigene, selbst ladende ChessableThemesCardComponent ausgelagert (lädt ihre Kursliste selbst, meldet Themen-Änderungen über ein (changed)-Output, sodass der Eltern-Container die Themen-Aufschlüsselung neu lädt). Der Chessable-Themen-Zustand samt Methoden verließ den Eltern-Container; MatSelectModule dort entfernt. TrainingGoalsComponent schrumpft um weitere ~90 Zeilen. Keine sichtbare Änderung." },
   ]},

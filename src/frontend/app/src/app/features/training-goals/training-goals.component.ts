@@ -8,7 +8,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
@@ -21,79 +20,22 @@ import {
 import { ManualActivitiesCardComponent } from './manual-activities-card.component';
 import { ActivityPresetsCardComponent } from './activity-presets-card.component';
 import { ChessableThemesCardComponent } from './chessable-themes-card.component';
+import { PeriodBreakdownCardComponent } from './period-breakdown-card.component';
 import { formatDuration } from './duration.util';
+import { BreakRow, breakdownRows } from './breakdown.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 // level -1 = Zukunft (leer); manual = enthält selbst gemeldete Aktivität
 export interface GoalCell { date: string; status: GoalStatus; level: number; manual: boolean; }
 
-/** Eine Zeile einer Aufschlüsselung (Quelle/Thema): i18n-Label + Sekunden + Balkenanteil. */
-export interface BreakRow { label: string; seconds: number; pct: number; }
-
-/** Periode der umschaltbaren Aufschlüsselung. */
-export type BreakdownPeriod = 'day' | 'week' | 'month' | 'year' | 'all';
-export const BREAKDOWN_PERIODS: BreakdownPeriod[] = ['day', 'week', 'month', 'year', 'all'];
-
-/** Lokales yyyy-MM-dd eines Date. */
-export function ymd(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-/** yyyy-MM-dd → lokales Date (Mitternacht). */
-export function parseYmd(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-/** [start,end] (inkl., yyyy-MM-dd) der Periode, die `anchor` enthält. 'all' = firstDate…today. */
-export function periodBounds(
-  period: BreakdownPeriod, anchor: string, firstDate: string, today: string,
-): { start: string; end: string } {
-  if (period === 'all') return { start: firstDate || today, end: today };
-  const d = parseYmd(anchor);
-  if (period === 'day') return { start: anchor, end: anchor };
-  if (period === 'week') {
-    const dow = (d.getDay() + 6) % 7;                  // 0 = Montag
-    const s = new Date(d); s.setDate(d.getDate() - dow);
-    const e = new Date(s); e.setDate(s.getDate() + 6);
-    return { start: ymd(s), end: ymd(e) };
-  }
-  if (period === 'month') {
-    return { start: ymd(new Date(d.getFullYear(), d.getMonth(), 1)), end: ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
-  }
-  return { start: ymd(new Date(d.getFullYear(), 0, 1)), end: ymd(new Date(d.getFullYear(), 11, 31)) }; // year
-}
-
-/** Anker um eine Periode verschieben (dir −1 = zurück, +1 = vor). Monats-/Jahresschritte normalisieren
- * auf den Periodenanfang, damit kein Tag-Überlauf (z.B. 31.03. − 1 Monat) eine Periode überspringt. */
-export function shiftAnchor(period: BreakdownPeriod, anchor: string, dir: number): string {
-  const d = parseYmd(anchor);
-  if (period === 'day') { d.setDate(d.getDate() + dir); return ymd(d); }
-  if (period === 'week') { d.setDate(d.getDate() + dir * 7); return ymd(d); }
-  if (period === 'month') return ymd(new Date(d.getFullYear(), d.getMonth() + dir, 1));
-  if (period === 'year') return ymd(new Date(d.getFullYear() + dir, 0, 1));
-  return anchor; // 'all' kennt kein Durchschalten
-}
-
-/** Summiert bySource+byTheme über alle Tage im [start,end]-Fenster (yyyy-MM-dd lexikografisch = chronologisch). */
-export function sumBreakdown(days: TrackerDay[], start: string, end: string): { bySource: SourceBreakdown; byTheme: ThemeBreakdown } {
-  const bySource: SourceBreakdown = { randomPuzzleSeconds: 0, courseBookSeconds: 0, chessableSeconds: 0 };
-  const byTheme: ThemeBreakdown = { openingSeconds: 0, middlegameSeconds: 0, endgameSeconds: 0, tacticsSeconds: 0, otherSeconds: 0 };
-  for (const day of days) {
-    if (day.date < start || day.date > end) continue;
-    bySource.randomPuzzleSeconds += day.bySource.randomPuzzleSeconds;
-    bySource.courseBookSeconds += day.bySource.courseBookSeconds;
-    bySource.chessableSeconds += day.bySource.chessableSeconds;
-    byTheme.openingSeconds += day.byTheme.openingSeconds;
-    byTheme.middlegameSeconds += day.byTheme.middlegameSeconds;
-    byTheme.endgameSeconds += day.byTheme.endgameSeconds;
-    byTheme.tacticsSeconds += day.byTheme.tacticsSeconds;
-    byTheme.otherSeconds += day.byTheme.otherSeconds;
-  }
-  return { bySource, byTheme };
-}
+// Perioden-/Aufschlüsselungs-Mathematik + BreakRow/BreakdownPeriod liegen in breakdown.util
+// (Zyklus-Vermeidung mit PeriodBreakdownCardComponent); hier re-exportiert für bestehende Importe/Specs.
+export type { BreakRow, BreakdownPeriod } from './breakdown.util';
+export {
+  BREAKDOWN_PERIODS, ymd, parseYmd,
+  periodBounds, shiftAnchor, sumBreakdown, breakdownRows,
+} from './breakdown.util';
 
 // MANUAL_KINDS + isMinutesKind liegen in manual-activity.util (geteilt mit ManualActivitiesCardComponent);
 // hier rückwärtskompatibel re-exportiert (bestehende Importe/Specs).
@@ -118,14 +60,6 @@ export function statusLevel(status: GoalStatus): number {
   if (status === 'full') return 4;
   if (status === 'partial') return 2;
   return 0;
-}
-
-/** Wandelt eine Aufschlüsselung in Anzeige-Zeilen (nur Töpfe mit Zeit, Anteil am Topf-Total). */
-export function breakdownRows(buckets: Record<string, number>, keys: { key: string; label: string }[]): BreakRow[] {
-  const total = keys.reduce((sum, k) => sum + (buckets[k.key] ?? 0), 0);
-  return keys
-    .map(k => ({ label: k.label, seconds: buckets[k.key] ?? 0, pct: total > 0 ? Math.round((100 * (buckets[k.key] ?? 0)) / total) : 0 }))
-    .filter(r => r.seconds > 0);
 }
 
 /** Baut ein Wochen-Raster (Spalten = Wochen Mo–So) für die Ziele-Heatmap (rein, testbar). */
@@ -160,8 +94,9 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
-    MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent,
+    TranslateModule, LoadingSpinnerComponent,
     ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
+    PeriodBreakdownCardComponent,
   ],
   template: `
     <div class="tg-container">
@@ -314,52 +249,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                 <span class="legend-item"><span class="sw gl0 manual"></span>{{ 'trainingGoals.manual.marker' | translate }}</span>
               </div>
 
-              <!-- Umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt + Durchschalten) -->
-              <div class="period-breakdown">
-                <div class="pb-controls">
-                  <mat-button-toggle-group class="pb-periods" [value]="period" (change)="setPeriod($event.value)" hideSingleSelectionIndicator>
-                    @for (p of periods; track p) {
-                      <mat-button-toggle [value]="p">{{ ('trainingGoals.period.' + p) | translate }}</mat-button-toggle>
-                    }
-                  </mat-button-toggle-group>
-                  <div class="pb-nav">
-                    @if (period !== 'all') {
-                      <button mat-icon-button (click)="navPeriod(-1)" [disabled]="!canPrev" [attr.aria-label]="'trainingGoals.prevPeriod' | translate"><mat-icon>chevron_left</mat-icon></button>
-                    }
-                    <span class="pb-label">{{ periodLabel }}</span>
-                    @if (period !== 'all') {
-                      <button mat-icon-button (click)="navPeriod(1)" [disabled]="!canNext" [attr.aria-label]="'trainingGoals.nextPeriod' | translate"><mat-icon>chevron_right</mat-icon></button>
-                    }
-                  </div>
-                </div>
-
-                @if (periodSourceRows.length) {
-                  <div class="breakdowns period">
-                    <div class="bd">
-                      <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
-                      @for (r of periodSourceRows; track r.label) {
-                        <div class="bd-row">
-                          <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
-                          <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
-                          <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
-                        </div>
-                      }
-                    </div>
-                    <div class="bd">
-                      <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
-                      @for (r of periodThemeRows; track r.label) {
-                        <div class="bd-row">
-                          <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
-                          <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
-                          <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                } @else {
-                  <p class="muted small pb-empty">{{ 'trainingGoals.noActivityPeriod' | translate }}</p>
-                }
-              </div>
+              <!-- Umschaltbare Perioden-Aufschlüsselung: eigene, selbst rechnende Karte -->
+              <app-period-breakdown-card [series]="series" />
             </mat-card-content>
           </mat-card>
         }
@@ -522,18 +413,8 @@ export class TrainingGoalsComponent implements OnInit {
   todaySourceRows: BreakRow[] = [];
   todayThemeRows: BreakRow[] = [];
 
-  // ----- Umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt) -----
-  readonly periods = BREAKDOWN_PERIODS;
-  /** Vollständige Tagesreihe (ganze Historie) — Grundlage der Periodenberechnung. */
+  /** Vollständige Tagesreihe (ganze Historie) — an die PeriodBreakdownCardComponent durchgereicht. */
   series: TrackerDay[] = [];
-  period: BreakdownPeriod = 'all';
-  /** Ein Datum innerhalb der aktuell betrachteten Periode (yyyy-MM-dd). */
-  anchor = this.todayDate;
-  periodSourceRows: BreakRow[] = [];
-  periodThemeRows: BreakRow[] = [];
-  periodLabel = '';
-  canPrev = false;
-  canNext = false;
 
   // ----- Manuelle Offline-Aktivitäten (Formular/Liste in ManualActivitiesCardComponent) -----
   manualList: ManualActivity[] = [];
@@ -575,7 +456,6 @@ export class TrainingGoalsComponent implements OnInit {
         this.todaySourceRows = this.sourceRows(today.bySource);
         this.todayThemeRows = this.themeRows(today.byTheme);
         this.series = series.days;
-        this.recomputePeriod();
         this.tracker = tracker.days.length ? buildGoalTracker(tracker.days, new Date()) : [];
         this.historyDays = orderHistory(tracker.days); // neueste zuerst
         this.manualList = manual;
@@ -591,57 +471,6 @@ export class TrainingGoalsComponent implements OnInit {
   private themeRows(b: ThemeBreakdown): BreakRow[] {
     return breakdownRows(b as unknown as Record<string, number>, THEME_KEYS);
   }
-
-  // ----- Umschaltbare Perioden-Aufschlüsselung --------------------------
-
-  /** Periode wechseln → Anker auf heute zurücksetzen (man startet bei der jüngsten Periode). */
-  setPeriod(period: BreakdownPeriod): void {
-    this.period = period;
-    this.anchor = this.todayDate;
-    this.recomputePeriod();
-  }
-
-  /** Eine Periode vor/zurück blättern (−1 = zurück, +1 = vor). */
-  navPeriod(dir: number): void {
-    this.anchor = shiftAnchor(this.period, this.anchor, dir);
-    this.recomputePeriod();
-  }
-
-  /** Aufschlüsselung + Navigations-Status + Label für die aktuelle Periode neu berechnen. */
-  private recomputePeriod(): void {
-    const today = this.todayDate;
-    const firstDate = this.series.length ? this.series[0].date : today;
-    const { start, end } = periodBounds(this.period, this.anchor, firstDate, today);
-    const { bySource, byTheme } = sumBreakdown(this.series, start, end);
-    this.periodSourceRows = this.sourceRows(bySource);
-    this.periodThemeRows = this.themeRows(byTheme);
-    this.canPrev = this.period !== 'all' && start > firstDate;
-    this.canNext = this.period !== 'all' && end < today;
-    this.periodLabel = this.formatPeriodLabel(start, end);
-  }
-
-  /** Lesbares Label der aktuellen Periode in der aktiven UI-Sprache. */
-  private formatPeriodLabel(start: string, end: string): string {
-    if (this.period === 'all') return this.translate.instant('trainingGoals.period.all');
-    const lang = this.translate.currentLang || this.translate.getDefaultLang() || 'en';
-    const fmt = (s: string, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(lang, opts).format(parseYmd(s));
-    if (this.period === 'day') return fmt(start, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-    if (this.period === 'week') {
-      return `${fmt(start, { day: 'numeric', month: 'short' })} – ${fmt(end, { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    }
-    if (this.period === 'month') return fmt(start, { year: 'numeric', month: 'long' });
-    return fmt(start, { year: 'numeric' }); // year
-  }
-
-  // ----- Manuelle Offline-Aktivitäten -----
-
-  /** Lokales Datum als yyyy-MM-dd (für date-Input + Default). */
-  get todayDate(): string {
-    const d = new Date();
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-  }
-
 
   private applyGoal(goal: TrainingGoal): void {
     this.goal = goal;

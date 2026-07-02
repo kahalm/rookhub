@@ -1,0 +1,46 @@
+<!-- Umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt + Durchschalten) -->
+<div class="period-breakdown">
+  <div class="pb-controls">
+    <mat-button-toggle-group class="pb-periods" [value]="period" (change)="setPeriod($event.value)" hideSingleSelectionIndicator>
+      @for (p of periods; track p) {
+        <mat-button-toggle [value]="p">{{ ('trainingGoals.period.' + p) | translate }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    <div class="pb-nav">
+      @if (period !== 'all') {
+        <button mat-icon-button (click)="navPeriod(-1)" [disabled]="!canPrev" [attr.aria-label]="'trainingGoals.prevPeriod' | translate"><mat-icon>chevron_left</mat-icon></button>
+      }
+      <span class="pb-label">{{ periodLabel }}</span>
+      @if (period !== 'all') {
+        <button mat-icon-button (click)="navPeriod(1)" [disabled]="!canNext" [attr.aria-label]="'trainingGoals.nextPeriod' | translate"><mat-icon>chevron_right</mat-icon></button>
+      }
+    </div>
+  </div>
+
+  @if (periodSourceRows.length) {
+    <div class="breakdowns period">
+      <div class="bd">
+        <div class="bd-title">{{ 'trainingGoals.breakdownBySource' | translate }}</div>
+        @for (r of periodSourceRows; track r.label) {
+          <div class="bd-row">
+            <span class="bd-label">{{ ('trainingGoals.source.' + r.label) | translate }}</span>
+            <span class="bd-bar"><span class="bd-fill src" [style.width.%]="r.pct"></span></span>
+            <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+          </div>
+        }
+      </div>
+      <div class="bd">
+        <div class="bd-title">{{ 'trainingGoals.breakdownByTheme' | translate }}</div>
+        @for (r of periodThemeRows; track r.label) {
+          <div class="bd-row">
+            <span class="bd-label">{{ ('trainingGoals.theme.' + r.label) | translate }}</span>
+            <span class="bd-bar"><span class="bd-fill thm" [style.width.%]="r.pct"></span></span>
+            <span class="bd-val">{{ durValue(r.seconds) }} {{ durUnit(r.seconds) | translate }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="muted small pb-empty">{{ 'trainingGoals.noActivityPeriod' | translate }}</p>
+  }
+</div>
