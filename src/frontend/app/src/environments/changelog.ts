@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.10';
+export const APP_VERSION = '0.242.11';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.11", date: "2026-07-02", changes: [
+    { en: "Internal maintainability refactor (no behaviour change): the admin \"Messages\" tab (admin↔user direct messages) was extracted from the large AdminComponent into its own lazy-loaded AdminMessagesComponent, which handles the ?thread= deep-link itself. This completes the extraction of the independent admin tabs. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): der Admin-Tab „Nachrichten“ (Admin↔User-Direktnachrichten) wurde aus der großen AdminComponent in eine eigene, lazy geladene AdminMessagesComponent ausgelagert, die den ?thread=-Deep-Link selbst behandelt. Damit sind die unabhängigen Admin-Tabs vollständig ausgegliedert. Keine sichtbare Änderung." },
+  ]},
   { version: "0.242.10", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): three more admin tabs — Daily puzzle, Puzzle tags, and Menu visibility — were extracted from the large AdminComponent into their own lazy-loaded child components. Also fixed a build-breaking straight-quote typo in the previous changelog entry. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): drei weitere Admin-Tabs — Tagespuzzle, Puzzle-Tags und Menü-Sichtbarkeit — wurden aus der großen AdminComponent in eigene, lazy geladene Kind-Komponenten ausgelagert. Außerdem einen Build-brechenden geraden Anführungszeichen-Tippfehler im vorherigen Changelog-Eintrag behoben. Keine sichtbare Änderung." },
   ]},

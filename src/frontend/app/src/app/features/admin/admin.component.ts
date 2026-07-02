@@ -19,9 +19,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
-import { MessageService, AdminThreadSummary, ChatMessage } from '../../core/message.service';
-import { Subject, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -31,6 +28,7 @@ import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download
 import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
 import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
+import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 
 @Component({
@@ -41,7 +39,7 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
     MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
     AdminGithubActionsComponent, AdminChessableDownloadComponent,
-    AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent
+    AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
@@ -82,33 +80,11 @@ export class AdminComponent implements OnInit {
 
   impersonatingId: number | null = null;
 
-  // --- Nachrichten (Admin↔User) ----------------------------------------
-  threads: AdminThreadSummary[] = [];
-  threadsLoading = false;
-  /** Aktuell geöffneter Thread (null = keiner ausgewählt). */
-  selectedThreadUserId: number | null = null;
-  selectedThreadName = '';
-  threadMessages: ChatMessage[] = [];
-  threadLoading = false;
-  adminDraft = '';
-  adminSending = false;
-  /** Neue Konversation: User-Suche. */
-  msgUserSearch = '';
-  msgUserResults: AdminUser[] = [];
-  msgSearching = false;
-
-
   /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
   selectedTabIndex = 0;
-  /** Per Deep-Link zu öffnender Thread (User-Id), sobald die Thread-Liste geladen ist. */
-  private pendingThreadUserId: number | null = null;
   private destroyRef = inject(DestroyRef);
-  // Such-Trigger für die User-Suche der Direktnachrichten: entkoppelt vom (keyup) im Template,
-  // gedrosselt + switchMap, damit nicht jeder Tastendruck einen Request feuert und eine ältere
-  // Antwort keine neuere überschreibt (Out-of-order-Race).
-  private msgUserSearchTrigger = new Subject<string>();
 
-  constructor(private adminService: AdminService, private messageService: MessageService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {}
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
   impersonate(u: AdminUser): void {
@@ -133,29 +109,13 @@ export class AdminComponent implements OnInit {
     this.loadBooks();
     this.loadGroups();
     this.loadAllUsers();
-    this.msgUserSearchTrigger.pipe(
-      debounceTime(250),
-      distinctUntilChanged(),
-      tap(() => this.msgSearching = true),
-      switchMap(q => this.adminService.getUsers(q, 1, 10).pipe(catchError(() => of(null)))),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe(res => { this.msgUserResults = res ? res.items : this.msgUserResults; this.msgSearching = false; });
-    // Deep-Link aus Benachrichtigungen: /admin?tab=messages&thread=<userId>. Als laufendes Abo (nicht
-    // nur snapshot), damit aufeinanderfolgende Glocken-Klicks auf verschiedene Threads — ohne Component-
-    // Neuerstellung — jeweils greifen: Tab wechseln + die richtige Konversation öffnen.
+    // Deep-Link: /admin?tab=<key> — Tab aus der URL wählen (der `?thread=`-Teil wird vom
+    // Nachrichten-Tab selbst behandelt, siehe AdminMessagesComponent).
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
       const tabIdx = adminTabIndex(qp.get('tab'));   // beliebiger Tab-Key, Index aus admin-tabs.ts
       if (tabIdx >= 0) this.selectedTabIndex = tabIdx;
-      const thread = qp.get('thread');
-      if (thread && !isNaN(+thread)) {
-        const uid = +thread;
-        const t = this.threads.find(x => x.userId === uid);
-        if (t) this.openThread(uid, t.username);   // Liste schon geladen → sofort öffnen
-        else this.pendingThreadUserId = uid;        // sonst öffnet loadThreads(), sobald die Liste da ist
-      }
     });
 
-    this.loadThreads();
     this.adminService.getConfig().subscribe({
       next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
       error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
@@ -177,117 +137,6 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  // --- Nachrichten (Admin↔User) ----------------------------------------
-
-  loadThreads(): void {
-    this.threadsLoading = true;
-    this.messageService.getThreads().subscribe({
-      next: list => {
-        this.threads = list;
-        this.threadsLoading = false;
-        this.messageService.refreshAdminUnread();
-        // Deep-Link-Ziel öffnen, sobald die Liste (mit Usernamen) da ist.
-        if (this.pendingThreadUserId != null) {
-          const uid = this.pendingThreadUserId;
-          this.pendingThreadUserId = null;
-          const t = this.threads.find(x => x.userId === uid);
-          if (t) this.openThread(uid, t.username);
-        }
-      },
-      error: () => { this.threadsLoading = false; },
-    });
-  }
-
-  /** Bestehenden Thread öffnen + User-Antworten als gelesen markieren. */
-  openThread(userId: number, username: string): void {
-    this.selectedThreadUserId = userId;
-    this.selectedThreadName = username;
-    this.msgUserResults = [];
-    this.msgUserSearch = '';
-    this.threadLoading = true;
-    this.messageService.getAdminThread(userId).subscribe({
-      next: list => {
-        this.threadMessages = list;
-        this.threadLoading = false;
-        if (list.some(m => !m.fromAdmin && !m.readByRecipient)) {
-          this.messageService.markAdminSeen(userId).subscribe({
-            next: () => this.loadThreads(),
-            error: () => {},
-          });
-        }
-      },
-      error: () => { this.threadLoading = false; },
-    });
-  }
-
-  /** Nachricht des Admins absenden (startet den Thread, falls neu). */
-  sendAdminMessage(): void {
-    const body = this.adminDraft.trim();
-    if (!body || this.adminSending || this.selectedThreadUserId == null) return;
-    this.adminSending = true;
-    this.messageService.sendToUser(this.selectedThreadUserId, body).subscribe({
-      next: m => {
-        this.threadMessages = [...this.threadMessages, m];
-        this.adminDraft = '';
-        this.adminSending = false;
-        this.loadThreads();
-      },
-      error: () => {
-        this.adminSending = false;
-        this.snackbar.show(this.translate.instant('messages.sendError'), { duration: 3000 });
-      },
-    });
-  }
-
-  /** User für eine neue Konversation suchen (Username/E-Mail). */
-  searchMsgUsers(): void {
-    const q = this.msgUserSearch.trim();
-    if (q.length < 1) { this.msgUserResults = []; this.msgSearching = false; return; }
-    this.msgUserSearchTrigger.next(q);
-  }
-
-  /** Neue (oder bestehende) Konversation mit dem gewählten User beginnen. */
-  startConversation(user: AdminUser): void {
-    const existing = this.threads.find(t => t.userId === user.id);
-    if (existing) { this.openThread(user.id, user.username); return; }
-    this.selectedThreadUserId = user.id;
-    this.selectedThreadName = user.username;
-    this.threadMessages = [];
-    this.msgUserResults = [];
-    this.msgUserSearch = '';
-  }
-
-  closeThread(): void {
-    this.selectedThreadUserId = null;
-    this.threadMessages = [];
-    this.adminDraft = '';
-  }
-
-  /** Übersicht-Eintrag des gerade offenen Threads (für Claim-Status im Detail-Header). */
-  get selectedThread(): AdminThreadSummary | null {
-    return this.threads.find(t => t.userId === this.selectedThreadUserId) ?? null;
-  }
-
-  /** Eigene Admin-Id (zum Erkennen „von mir übernommen"). */
-  get myId(): number | null {
-    return this.auth.currentUser?.userId ?? null;
-  }
-
-  /** Thread übernehmen (Zuweisung an mich). */
-  claimThread(userId: number): void {
-    this.messageService.claimThread(userId).subscribe({
-      next: () => this.loadThreads(),
-      error: () => {},
-    });
-  }
-
-  /** Thread wieder freigeben. */
-  releaseThread(userId: number): void {
-    this.messageService.releaseThread(userId).subscribe({
-      next: () => this.loadThreads(),
-      error: () => {},
-    });
-  }
 
 
   loadUsers(): void {

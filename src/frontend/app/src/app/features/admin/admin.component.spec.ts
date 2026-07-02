@@ -20,7 +20,7 @@ function make(adminOverrides: any = {}) {
   const router = { navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)) };
   const route = {};
   const c = TestBed.runInInjectionContext(() => new AdminComponent(
-    adminService as any, {} as any, {} as any, {} as any,
+    adminService as any, {} as any, {} as any,
     router as any, route as any, snackbar as any, translate as any,
   ));
   return { c, adminService, snackbar, router };
