@@ -142,7 +142,9 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .lines-list { overflow-y: auto; height: 100%; }
     .course-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px;
       border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); position: sticky; top: 0;
-      background: var(--mat-app-background-color, #fff); z-index: 1; }
+      /* Material-M3-Surface-Token (adaptiert an Light/Dark); die alte --mat-app-background-color
+         existiert in diesem Theme nicht → fiel im Dark-Mode auf Weiß zurück (heller Balken). */
+      background: var(--mat-sys-surface-container, #fff); z-index: 1; }
     .course-bar .spacer { flex: 1; }
     .chapter-block { border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
     .chapter-head { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 4px;

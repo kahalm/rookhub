@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.249.1';
+export const APP_VERSION = '0.249.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.249.2", date: "2026-07-02", changes: [
+    { en: "Dark mode fix: the sticky bar at the top of a repertoire's line list (Review/Learn buttons) rendered white in dark mode. It used a CSS variable (--mat-app-background-color) that doesn't exist in this Material 3 theme, so it fell back to white; switched to the proper surface token (--mat-sys-surface-container), which adapts to light/dark.", de: "Dark-Mode-Fix: der angeheftete Balken oben in der Linien-Liste eines Repertoires (Abfragen/Lernen-Knöpfe) wurde im Dark-Mode weiß dargestellt. Er nutzte eine CSS-Variable (--mat-app-background-color), die es in diesem Material-3-Theme nicht gibt, und fiel daher auf Weiß zurück; jetzt das korrekte Surface-Token (--mat-sys-surface-container), das sich an Hell/Dunkel anpasst." },
+  ]},
   { version: "0.249.1", date: "2026-07-02", changes: [
     { en: "Repertoire trainer (Learn mode): added a short 0.8s pause between the auto-played opponent move and showing your next move — previously the opponent's reply and your next move flashed up almost simultaneously.", de: "Repertoire-Trainer (Lern-Modus): kurze 0,8-Sekunden-Pause zwischen dem automatisch gespielten Gegnerzug und dem Zeigen deines nächsten Zugs — vorher kamen Gegnerantwort und dein nächster Zug quasi gleichzeitig." },
   ]},
