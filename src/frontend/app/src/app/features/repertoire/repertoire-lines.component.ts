@@ -125,7 +125,13 @@ interface ChapterGroup {
   `],
 })
 export class RepertoireLinesComponent {
-  @Input() lines: RepertoireLine[] = [];
+  // `lines` liegt hinter einem Signal, damit das `chapterGroups`-computed darauf reagiert:
+  // die Linien werden asynchron nachgeladen (loadPgn), ein plain @Input() würde das computed
+  // NICHT invalidieren → Kapitel blieben beim ersten Öffnen leer, bis die Komponente neu
+  // aufgebaut wird (Wechsel Baum↔Linien).
+  private linesSig = signal<RepertoireLine[]>([]);
+  @Input() set lines(v: RepertoireLine[]) { this.linesSig.set(v ?? []); }
+  get lines(): RepertoireLine[] { return this.linesSig(); }
   @Input() selectedIndex = -1;
   @Input() moves: Move[] = [];
   @Input() currentMoveIndex = -1;

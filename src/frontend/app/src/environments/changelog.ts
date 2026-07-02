@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.244.2';
+export const APP_VERSION = '0.244.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.244.3", date: "2026-07-02", changes: [
+    { en: "Repertoire detail: fixed the line list staying empty when you first open a repertoire — the chapter grouping only appeared after switching to the tree view and back. The grouping was a computed() reading a plain @Input, so it never recomputed when the lines finished loading asynchronously. The lines input is now signal-backed, so chapters show immediately on first open.", de: "Repertoire-Detail: behoben, dass die Linien-Liste beim ersten Öffnen eines Repertoires leer blieb — die Kapitel erschienen erst nach dem Wechsel auf die Baum-Ansicht und zurück. Die Gruppierung war ein computed(), das ein einfaches @Input las und daher nie neu berechnet wurde, wenn die Linien asynchron nachgeladen waren. Das Linien-Input ist jetzt Signal-basiert, sodass die Kapitel sofort beim ersten Öffnen erscheinen." },
+  ]},
   { version: "0.244.2", date: "2026-07-02", changes: [
     { en: "Repertoire trainer: fixed a regression where playing a tolerated (optional) move — one accepted via a [%alt] annotation but not the main line — auto-played the expected main move for you and moved on. Now the tolerated move is briefly shown, then taken back, and the same position stays playable so you play the main move yourself (the established behaviour).", de: "Repertoire-Trainer: Regression behoben, bei der ein geduldeter (optionaler) Zug — per [%alt] akzeptiert, aber nicht der Hauptzug — den erwarteten Hauptzug automatisch für dich gespielt und weitergeschaltet hat. Jetzt wird der geduldete Zug kurz gezeigt, dann zurückgenommen, und dieselbe Stellung bleibt spielbar, sodass du den Hauptzug selbst ziehst (das etablierte Verhalten)." },
   ]},
