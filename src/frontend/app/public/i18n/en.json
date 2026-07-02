@@ -1478,6 +1478,7 @@
       "title": "Download courses from users",
       "intro": "Pull a Chessable course that a user owns into your own account as a repertoire — using their stored Chessable access. Only users who saved a Chessable bearer are listed.",
       "selectUser": "User",
+      "showExpired": "Also show expired",
       "refresh": "Refresh list",
       "noUsers": "No user has stored a Chessable access yet.",
       "noCourses": "No courses found for this user.",

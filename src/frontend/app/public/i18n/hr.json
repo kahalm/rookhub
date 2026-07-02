@@ -1476,6 +1476,7 @@
       "title": "Preuzmi tečajeve od korisnika",
       "intro": "Povuci Chessable tečaj koji korisnik posjeduje u vlastiti račun kao repertoar — koristeći njegov pohranjeni Chessable pristup. Navedeni su samo korisnici koji su spremili Chessable bearer.",
       "selectUser": "Korisnik",
+      "showExpired": "Prikaži i istekle",
       "refresh": "Osvježi popis",
       "noUsers": "Nijedan korisnik još nije pohranio Chessable pristup.",
       "noCourses": "Nema pronađenih tečajeva za ovog korisnika.",

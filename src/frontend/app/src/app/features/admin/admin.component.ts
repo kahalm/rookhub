@@ -15,6 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminService, AdminUser, Book, DailyPuzzleInfo, Group, GroupMember, GroupTrainingGoal, MenuItemConfig, MenuVisibilityLevel } from '../../core/admin.service';
@@ -36,7 +37,7 @@ import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
   imports: [
     CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
+    MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
     AdminGithubActionsComponent
   ],
   templateUrl: './admin.component.html',
@@ -113,6 +114,8 @@ export class AdminComponent implements OnInit, OnDestroy {
   // --- Kurse von Usern holen (Chessable-Download im Namen eines Users) ---
   dlUsers: ChessableCredentialedUser[] = [];
   dlUsersLoading = false;
+  /** „Auch abgelaufene anzeigen": zeigt zusätzlich User mit gesperrtem/totem Bearer. Default aus → nur gültige Token. */
+  dlShowExpired = false;
   dlTesting = false;
   dlSelectedUserId: number | null = null;
   dlCourses: ChessableCourse[] = [];
@@ -333,6 +336,21 @@ export class AdminComponent implements OnInit, OnDestroy {
   /** Der aktuell gewählte Download-User (oder undefined). */
   dlSelectedUser(): ChessableCredentialedUser | undefined {
     return this.dlUsers.find(u => u.userId === this.dlSelectedUserId);
+  }
+
+  /** Im Dropdown anzuzeigende User — ohne „auch abgelaufene" nur solche mit gültigem (nicht gesperrtem) Bearer. */
+  dlVisibleUsers(): ChessableCredentialedUser[] {
+    if (this.dlShowExpired) return this.dlUsers;
+    return this.dlUsers.filter(u => !u.blocked);
+  }
+
+  /** „Auch abgelaufene anzeigen" umgeschaltet: ist der gewählte User nun ausgeblendet, Auswahl + Kursliste leeren. */
+  onDlShowExpiredChange(): void {
+    if (this.dlSelectedUserId != null && !this.dlVisibleUsers().some(u => u.userId === this.dlSelectedUserId)) {
+      this.dlSelectedUserId = null;
+      this.dlCourses = [];
+      this.dlCoursesError = null;
+    }
   }
 
   /** Anzuzeigende Kurse — bei aktivem „geladene ausblenden" ohne bereits als Repertoire/Buch importierte. */

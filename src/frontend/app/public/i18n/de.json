@@ -1478,6 +1478,7 @@
       "title": "Kurse von Usern herunterladen",
       "intro": "Hol dir einen Chessable-Kurs, den ein User besitzt, als Repertoire in dein eigenes Konto — über dessen hinterlegten Chessable-Zugang. Gelistet werden nur User, die einen Chessable-Bearer gespeichert haben.",
       "selectUser": "User",
+      "showExpired": "Auch abgelaufene anzeigen",
       "refresh": "Liste aktualisieren",
       "noUsers": "Noch kein User hat einen Chessable-Zugang hinterlegt.",
       "noCourses": "Keine Kurse für diesen User gefunden.",

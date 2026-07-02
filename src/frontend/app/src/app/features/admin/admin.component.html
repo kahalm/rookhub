@@ -543,11 +543,14 @@
               <mat-form-field appearance="outline" class="dl-user">
                 <mat-label>{{ 'admin.courseDl.selectUser' | translate }}</mat-label>
                 <mat-select [(ngModel)]="dlSelectedUserId" (selectionChange)="onDlUserChange()">
-                  @for (u of dlUsers; track u.userId) {
+                  @for (u of dlVisibleUsers(); track u.userId) {
                     <mat-option [value]="u.userId">{{ u.username }}{{ u.blocked ? ' 🔒' : '' }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
+              <mat-checkbox [(ngModel)]="dlShowExpired" (ngModelChange)="onDlShowExpiredChange()">
+                {{ 'admin.courseDl.showExpired' | translate }}
+              </mat-checkbox>
               @if (dlSelectedUserId != null) {
                 <button mat-stroked-button [disabled]="dlCoursesLoading" (click)="loadDlCourses(true)">
                   <mat-icon>refresh</mat-icon> {{ 'admin.courseDl.refresh' | translate }}

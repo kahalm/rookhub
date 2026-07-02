@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.3';
+export const APP_VERSION = '0.242.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.4", date: "2026-07-02", changes: [
+    { en: "Admin course download: a checkbox next to the user box “Also show expired”. Unchecked by default, so the dropdown lists only users whose Chessable token is valid; tick it to also see users whose token is blocked/dead (🔒). Switching it off while a blocked user is selected clears the selection.", de: "Admin-Kursdownload: eine Checkbox neben der Userbox „Auch abgelaufene anzeigen“. Standardmäßig aus, sodass das Dropdown nur User mit gültigem Chessable-Token zeigt; angehakt erscheinen auch User mit gesperrtem/totem Token (🔒). Wird der Haken bei ausgewähltem gesperrtem User wieder entfernt, wird die Auswahl geleert." },
+  ]},
   { version: "0.242.3", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the puzzle theme-tagging logic (tag/PuzzleTag sync on import, one-off backfill, and the en-passant-possible theme scan) was split out of the large PuzzleService into a dedicated PuzzleTaggingService. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die Puzzle-Themen-Tagging-Logik (Tag/PuzzleTag-Sync beim Import, einmaliger Backfill, en-passant-möglich-Theme-Scan) wurde aus dem großen PuzzleService in einen eigenen PuzzleTaggingService gezogen. Keine sichtbare Änderung." },
   ]},
