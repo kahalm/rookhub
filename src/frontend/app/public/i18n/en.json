@@ -576,7 +576,12 @@
       "convertToCourseFailed": "Could not convert the repertoire to a course",
       "updateFailed": "Repertoire could not be updated",
       "extHint": "Tip: with the matching browser extension (for Chrome and Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
-      "extHintLink": "Learn more in the help"
+      "extHintLink": "Learn more in the help",
+      "sectionExtension": "In RepCheck",
+      "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess.",
+      "sectionOther": "Other repertoires",
+      "sectionOtherHint": "Not used by RepCheck. Toggle \"Use for extension\" in edit to move a repertoire up.",
+      "extensionBadge": "Used by the RepCheck extension"
     },
     "detail": {
       "noDescription": "No description",

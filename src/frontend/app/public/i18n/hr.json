@@ -576,7 +576,12 @@
       "convertToCourseFailed": "Pretvaranje repertoara u tečaj nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
       "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (za Chrome i Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
-      "extHintLink": "Saznaj više u pomoći"
+      "extHintLink": "Saznaj više u pomoći",
+      "sectionExtension": "U RepCheck-u",
+      "sectionExtensionHint": "Repertoari koje RepCheck ekstenzija provjerava na chess.com / lichess.",
+      "sectionOther": "Ostali repertoari",
+      "sectionOtherHint": "RepCheck ih ne koristi. Uključi „Koristi za ekstenziju“ u uređivanju da bi repertoar premjestio gore.",
+      "extensionBadge": "Koristi ga RepCheck ekstenzija"
     },
     "detail": {
       "noDescription": "Nema opisa",

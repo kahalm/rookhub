@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -21,7 +22,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
 @Component({
   selector: 'app-repertoire-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent, ReprocessBannerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatDialogModule, MatChipsModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent, ReprocessBannerComponent],
   template: `
     <div class="repertoire-container">
       <div class="header">
@@ -56,37 +57,70 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
             }
           </mat-form-field>
         }
-        <div class="repertoire-grid">
-          @for (rep of filteredRepertoires; track rep.id) {
-            <mat-card>
-              <mat-card-header>
-                <mat-card-title>
-                  {{ rep.name }}
-                  @if (rep.kind !== Kind.None) {
-                    <mat-chip-set class="kind-chip-set">
-                      <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
-                    </mat-chip-set>
-                  }
-                </mat-card-title>
-                <mat-card-subtitle>{{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}</mat-card-subtitle>
-              </mat-card-header>
-              <mat-card-content>
-                <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
-              </mat-card-content>
-              <mat-card-actions>
-                <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
-                <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
-                <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
-                <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
-                <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
-              </mat-card-actions>
-            </mat-card>
-          } @empty {
-            <p>{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
-          }
-        </div>
+        @if (extensionRepertoires.length > 0) {
+          <section class="repertoire-section">
+            <h2 class="section-title">
+              <mat-icon class="section-icon">extension</mat-icon>
+              {{ 'repertoire.list.sectionExtension' | translate }}
+            </h2>
+            <p class="section-hint">{{ 'repertoire.list.sectionExtensionHint' | translate }}</p>
+            <div class="repertoire-grid">
+              @for (rep of extensionRepertoires; track rep.id) {
+                <ng-container *ngTemplateOutlet="repCard; context: { $implicit: rep }"></ng-container>
+              }
+            </div>
+          </section>
+        }
+
+        @if (otherRepertoires.length > 0) {
+          <section class="repertoire-section">
+            @if (extensionRepertoires.length > 0) {
+              <h2 class="section-title">{{ 'repertoire.list.sectionOther' | translate }}</h2>
+              <p class="section-hint">{{ 'repertoire.list.sectionOtherHint' | translate }}</p>
+            }
+            <div class="repertoire-grid">
+              @for (rep of otherRepertoires; track rep.id) {
+                <ng-container *ngTemplateOutlet="repCard; context: { $implicit: rep }"></ng-container>
+              }
+            </div>
+          </section>
+        }
+
+        @if (filteredRepertoires.length === 0) {
+          <p>{{ (search ? 'repertoire.list.noMatch' : 'repertoire.list.empty') | translate:{ query: search } }}</p>
+        }
       }
     </div>
+
+    <ng-template #repCard let-rep>
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            {{ rep.name }}
+            @if (rep.kind !== Kind.None) {
+              <mat-chip-set class="kind-chip-set">
+                <mat-chip class="kind-chip" [class.kind-opening]="rep.kind === Kind.Opening" [class.kind-middlegame]="rep.kind === Kind.Middlegame" [class.kind-endgame]="rep.kind === Kind.Endgame">{{ kindLabel(rep.kind) | translate }}</mat-chip>
+              </mat-chip-set>
+            }
+            @if (rep.useForExtension) {
+              <mat-icon class="ext-badge"
+                        [matTooltip]="'repertoire.list.extensionBadge' | translate">extension</mat-icon>
+            }
+          </mat-card-title>
+          <mat-card-subtitle>{{ 'repertoire.list.fileCount' | translate: { count: rep.fileCount } }} | {{ (rep.isPublic ? 'repertoire.list.public' : 'repertoire.list.private') | translate }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ rep.description || ('repertoire.list.noDescription' | translate) }}</p>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button [routerLink]="['/repertoires', rep.id]">{{ 'repertoire.list.open' | translate }}</button>
+          <button mat-button (click)="downloadPgn(rep)">{{ 'common.downloadPgn' | translate }}</button>
+          <button mat-button [disabled]="converting === rep.id" (click)="convertToCourse(rep)">{{ 'repertoire.list.convertToCourse' | translate }}</button>
+          <button mat-button (click)="openEditDialog(rep)">{{ 'common.edit' | translate }}</button>
+          <button mat-button color="warn" (click)="deleteRepertoire(rep.id)">{{ 'common.delete' | translate }}</button>
+        </mat-card-actions>
+      </mat-card>
+    </ng-template>
   `,
   styles: [`
     .repertoire-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
@@ -98,12 +132,18 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
     .ext-hint mat-icon { flex: 0 0 auto; opacity: 0.7; }
     .ext-hint a { color: inherit; text-decoration: underline; cursor: pointer; }
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 1rem; }
+    .repertoire-section { margin-bottom: 1.75rem; }
+    .repertoire-section .section-title { display: flex; align-items: center; gap: 6px; margin: 0.25rem 0 0.15rem; font-size: 1.05rem; font-weight: 600; }
+    .repertoire-section .section-icon { color: var(--mat-sys-primary, #3f51b5); }
+    .repertoire-section .section-hint { margin: 0 0 0.65rem; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; }
     .repertoire-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
     .kind-chip-set { display: inline-flex; margin-left: 8px; vertical-align: middle; }
     .kind-chip { font-size: 0.72rem; min-height: 22px; }
     .kind-chip.kind-opening { background-color: #1976d2; color: #fff; }
     .kind-chip.kind-middlegame { background-color: #7b1fa2; color: #fff; }
     .kind-chip.kind-endgame { background-color: #c62828; color: #fff; }
+    /* Kleiner „RepCheck ok"-Marker im Karten-Titel, in Primärfarbe. */
+    .ext-badge { color: var(--mat-sys-primary, #3f51b5); font-size: 18px; width: 18px; height: 18px; margin-left: 8px; vertical-align: middle; opacity: 0.9; }
   `]
 })
 export class RepertoireListComponent implements OnInit {
@@ -118,6 +158,16 @@ export class RepertoireListComponent implements OnInit {
     if (!q) return this.repertoires;
     return this.repertoires.filter(r =>
       (r.name || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
+  }
+
+  /** Für die RepCheck-Extension aktive Repertoires — als eigener Block oben. */
+  get extensionRepertoires(): Repertoire[] {
+    return this.filteredRepertoires.filter(r => r.useForExtension);
+  }
+
+  /** Alle übrigen Repertoires (Archiv / nicht für die Extension aktiv). */
+  get otherRepertoires(): Repertoire[] {
+    return this.filteredRepertoires.filter(r => !r.useForExtension);
   }
   /** Enum im Template referenzierbar (statt Magic-Numbers 1/2/3 für die Kind-Chip-Klassen). */
   readonly Kind = RepertoireKind;

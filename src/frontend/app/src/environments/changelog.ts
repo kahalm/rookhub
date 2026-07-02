@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.17';
+export const APP_VERSION = '0.242.18';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.18", date: "2026-07-02", changes: [
+    { en: "Repertoires page: repertoires that are actively used by the RepCheck extension now appear at the top in their own section (\"In RepCheck\"), with the remaining ones (\"Other repertoires\") below. Each card also gets a small extension badge in its title so you see at a glance which ones RepCheck watches. Toggle \"Use for extension\" in the edit dialog to move a repertoire between the two sections.", de: "Repertoires-Seite: Repertoires, die die RepCheck-Extension aktiv nutzt, erscheinen jetzt oben in einem eigenen Block („In RepCheck“); die übrigen („Weitere Repertoires“) darunter. Jede Karte trägt zusätzlich ein kleines Extension-Icon im Titel, sodass du auf einen Blick siehst, welche RepCheck beobachtet. Über „Für Extension nutzen“ im Bearbeiten-Dialog kannst du ein Repertoire zwischen den beiden Sektionen verschieben." },
+  ]},
   { version: "0.242.17", date: "2026-07-02", changes: [
     { en: "Endless puzzles now record the used hint level again (data fix): endless attempts were the only mode not sending hintsUsed to the backend, so endless hint usage was silently lost. Now sent like the other modes. Plus a small maintainability refactor of the puzzle-solver trio (no behaviour change): the identical opponentArrowMode override and the themeMode field were hoisted into the shared BasePuzzleSolver, and a dead showIntendedSolution() method was removed from the endless solver.", de: "Endless-Puzzles erfassen die genutzte Tipp-Stufe wieder (Datenfix): Endless war der einzige Modus, der hintsUsed nicht ans Backend sendete — die Tipp-Nutzung ging dort still verloren. Wird jetzt wie in den anderen Modi mitgesendet. Dazu ein kleiner Wartbarkeits-Refactor des Puzzle-Solver-Trios (keine Verhaltensänderung): das identische opponentArrowMode-Override und das themeMode-Feld wurden in die gemeinsame BasePuzzleSolver-Basisklasse hochgezogen, und eine tote showIntendedSolution()-Methode aus dem Endless-Solver entfernt." },
   ]},

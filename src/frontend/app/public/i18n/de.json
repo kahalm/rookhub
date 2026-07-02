@@ -576,7 +576,12 @@
       "convertToCourseFailed": "Repertoire konnte nicht in einen Kurs umgewandelt werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
       "extHint": "Tipp: Mit der passenden Browser-Erweiterung (für Chrome und Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
-      "extHintLink": "Mehr dazu in der Hilfe"
+      "extHintLink": "Mehr dazu in der Hilfe",
+      "sectionExtension": "In RepCheck",
+      "sectionExtensionHint": "Repertoires, die die RepCheck-Extension auf chess.com / lichess abgleicht.",
+      "sectionOther": "Weitere Repertoires",
+      "sectionOtherHint": "Nicht von RepCheck genutzt. Über „Für Extension nutzen“ im Bearbeiten kannst du ein Repertoire nach oben schieben.",
+      "extensionBadge": "Wird von der RepCheck-Extension genutzt"
     },
     "detail": {
       "noDescription": "Keine Beschreibung",
