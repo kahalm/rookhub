@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
 import { ParsedGame, START_FEN, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
+import { lineKeyFromSans } from './repertoire-line-key.util';
 
 export interface RepertoireLine {
   gameIndex: number;
@@ -12,6 +13,8 @@ export interface RepertoireLine {
   moveCount: number;
   /** Chapter-Label (Chessable-Konvention: Black-Header) — für Gruppierung in der Lines-Ansicht. */
   chapter: string;
+  /** Stabiler SR-Schlüssel (identisch zum Trainer) — für Pool-/Fälligkeits-Anzeige + Aktionen. */
+  lineKey: string;
 }
 
 @Injectable()
@@ -117,6 +120,7 @@ export class RepertoireViewerService {
       result: game.headers['Result'] || '*',
       moveCount: Math.ceil(moves.length / 2),
       chapter: (game.headers['Black'] || '').trim(),
+      lineKey: lineKeyFromSans(moves.map(m => m.san)),
     };
   }
 }

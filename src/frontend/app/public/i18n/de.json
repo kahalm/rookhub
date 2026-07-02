@@ -33,7 +33,14 @@
     "nothingInPool": "Noch keine Linien im Übungspool — füge welche hinzu, um zu starten.",
     "addAllToPool": "Alle Linien in den Pool",
     "makeAllDue": "Alle jetzt fällig machen",
-    "manageLines": "Linien verwalten"
+    "manageLines": "Linien verwalten",
+    "modeQuiz": "Abfragen",
+    "modeLearn": "Lernen",
+    "learnShow": "Diesen Zug einprägen: {{move}}",
+    "learnPlay": "Spiel jetzt den gezeigten Zug.",
+    "learnDone": "Alle Linien gelernt — sie sind jetzt im Übungspool.",
+    "nothingToLearn": "Hier gibt es nichts Neues zu lernen — jede Linie ist bereits im Pool.",
+    "switchToQuiz": "Abfragen starten"
   },
   "srConfig": {
     "title": "Übungszyklen",
@@ -633,7 +640,30 @@
       "empty": "Keine Linien in diesem Repertoire gefunden.",
       "noChapter": "(Ohne Kapitel)",
       "toggleChapter": "Kapitel auf-/zuklappen",
-      "trainChapter": "Dieses Kapitel trainieren"
+      "trainChapter": "Dieses Kapitel trainieren",
+      "sr": {
+        "reviewAll": "Fällige Linien abfragen",
+        "learnAll": "Neue Linien lernen",
+        "courseActions": "Kurs-Aktionen",
+        "chapterActions": "Kapitel-Aktionen",
+        "lineActions": "Linien-Aktionen",
+        "learn": "Lernen",
+        "review": "Abfragen",
+        "addToPool": "In den Übungspool",
+        "makeDue": "Jetzt fällig machen",
+        "makeAllDue": "Alle fällig machen",
+        "addAll": "Alle in den Pool",
+        "pause": "Pausieren",
+        "resume": "Fortsetzen",
+        "pauseAll": "Alle pausieren",
+        "resumeAll": "Alle fortsetzen",
+        "status": {
+          "new": "Noch nicht im Pool",
+          "due": "Jetzt fällig",
+          "scheduled": "Im Pool — geplant",
+          "paused": "Pausiert"
+        }
+      }
     },
     "tree": {
       "start": "Start",

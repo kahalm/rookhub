@@ -23,13 +23,15 @@ import { lineKeyFromSans } from './repertoire-line-key.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
-type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE';
+type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW';
 type Outcome = 'correct' | 'tolerated' | 'wrong';
+type Mode = 'quiz' | 'learn';
 
 const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
 const ADVANCE_MS: Record<Outcome, number> = { correct: 600, tolerated: 1500, wrong: 0 };
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
+const LEARN_SHOW_MS = 2000;      // Zug im Learn-Modus so lange zeigen, dann zurücknehmen
 
 /**
  * Line-basiertes Repertoire-Training: eine ganze PGN-Linie wird vom Startzug an durchgespielt,
@@ -56,6 +58,10 @@ const WRONG_HOLD_MS = 1000;
         <span class="chapter-chip"><mat-icon>bookmark</mat-icon>{{ chapterFilter }}</span>
       }
     </span>
+    <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" hideSingleSelectionIndicator="true" aria-label="Mode">
+      <mat-button-toggle value="quiz">{{ 'repertoireTrainer.modeQuiz' | translate }}</mat-button-toggle>
+      <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
+    </mat-button-toggle-group>
     <mat-button-toggle-group [value]="color" (change)="setColor($event.value)" hideSingleSelectionIndicator="true" aria-label="Color">
       <mat-button-toggle value="w">{{ 'repertoireTrainer.white' | translate }}</mat-button-toggle>
       <mat-button-toggle value="b">{{ 'repertoireTrainer.black' | translate }}</mat-button-toggle>
@@ -76,6 +82,16 @@ const WRONG_HOLD_MS = 1000;
     <div *ngSwitchCase="'LOADING'" class="center">{{ 'common.loading' | translate }}</div>
 
     <mat-card *ngSwitchCase="'EMPTY'" class="msg">
+      @if (mode === 'learn') {
+        <mat-icon>school</mat-icon>
+        <p>{{ 'repertoireTrainer.nothingToLearn' | translate }}</p>
+        <button mat-flat-button color="primary" (click)="setMode('quiz')">
+          <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
+        </button>
+        <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+          <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+        </a>
+      } @else {
       <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
       @if (nextDueAt) {
         <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
@@ -91,12 +107,20 @@ const WRONG_HOLD_MS = 1000;
       <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
         <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
       </a>
+      }
     </mat-card>
 
     <mat-card *ngSwitchCase="'DONE'" class="msg">
       <mat-icon>celebration</mat-icon>
-      <p>{{ 'repertoireTrainer.done' | translate: { correct: correct, total: sessionUserMoves } }}</p>
-      <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
+      @if (mode === 'learn') {
+        <p>{{ 'repertoireTrainer.learnDone' | translate }}</p>
+        <button mat-raised-button color="primary" (click)="setMode('quiz')">
+          <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
+        </button>
+      } @else {
+        <p>{{ 'repertoireTrainer.done' | translate: { correct: correct, total: sessionUserMoves } }}</p>
+        <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
+      }
     </mat-card>
 
     <div *ngSwitchDefault class="play" (click)="onPlayClick()">
@@ -119,6 +143,16 @@ const WRONG_HOLD_MS = 1000;
           <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}</p>
         }
         <p class="prompt">{{ (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove') | translate }}</p>
+
+        @if (phase === 'LEARN_SHOW') {
+          <div class="feedback learn">
+            <p><mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.learnShow' | translate: { move: expectedDisplay } }}</p>
+            @if (learnComment) {
+              <p class="learn-comment">{{ learnComment }}</p>
+              <p class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
+            }
+          </div>
+        }
 
         <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
           <p *ngIf="outcome === 'correct'"><mat-icon>check_circle</mat-icon> {{ 'repertoireTrainer.correct' | translate }}</p>
@@ -146,7 +180,7 @@ const WRONG_HOLD_MS = 1000;
           </ng-container>
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
-        <p *ngIf="phase === 'PLAYING'" class="hint">{{ 'repertoireTrainer.playYourMove' | translate }}</p>
+        <p *ngIf="phase === 'PLAYING'" class="hint">{{ (mode === 'learn' ? 'repertoireTrainer.learnPlay' : 'repertoireTrainer.playYourMove') | translate }}</p>
         <p *ngIf="phase === 'LINE_DONE'" class="hint"><mat-icon>done_all</mat-icon> {{ 'repertoireTrainer.lineDone' | translate }}</p>
       </div>
     </div>
@@ -175,6 +209,8 @@ const WRONG_HOLD_MS = 1000;
     .feedback.correct { background: rgba(46,125,50,.12); }
     .feedback.tolerated { background: rgba(255,160,0,.15); }
     .feedback.wrong { background: rgba(198,40,40,.12); }
+    .feedback.learn { background: rgba(21,101,192,.12); }
+    .learn-comment { display: block !important; white-space: pre-wrap; font-size: 13px; opacity: .9; }
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -187,6 +223,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   color: 'w' | 'b' = 'w';
   /** Kapitel-Filter aus ?chapter=…. Null = alle Kapitel. */
   chapterFilter: string | null = null;
+  /** 'quiz' = fällige Pool-Linien abfragen; 'learn' = neue Linien durchspielen → in Pool (?mode=learn). */
+  mode: Mode = 'quiz';
+  /** Optional nur EINE Linie (?line=<lineKey>) — für „Diese Linie lernen/üben". */
+  private singleLineKey: string | null = null;
+  /** Learn-Modus: Kommentar des gerade gezeigten Zugs (hält die Anzeige, bis der User weitertippt). */
+  learnComment = '';
+  private learnTimer: ReturnType<typeof setTimeout> | null = null;
 
   fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   dests = new Map<Key, Key[]>();
@@ -236,6 +279,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.repertoireId = Number(this.route.snapshot.paramMap.get('id')) || 0;
     this.chapterFilter = this.route.snapshot.queryParamMap.get('chapter');
+    this.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
+    this.singleLineKey = this.route.snapshot.queryParamMap.get('line');
     const saved = localStorage.getItem(COLOR_KEY(this.repertoireId));
     if (saved === 'w' || saved === 'b') this.color = saved;
     this.stockfish.init().catch(() => {});
@@ -255,13 +300,21 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); }
+  ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); }
 
   setColor(c: 'w' | 'b'): void {
     if (c === this.color) return;
-    this.clearAdvance(); this.clearOppTimer();
+    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
     this.color = c;
     localStorage.setItem(COLOR_KEY(this.repertoireId), c);
+    this.buildQueue();
+  }
+
+  setMode(m: Mode): void {
+    if (m === this.mode) return;
+    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
+    this.mode = m;
+    this.singleLineKey = null;   // Moduswechsel hebt die Einzellinien-Beschränkung auf
     this.buildQueue();
   }
 
@@ -277,21 +330,31 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return !!st && st.inPool && !st.paused && new Date(st.dueAt).getTime() <= now;
   }
 
-  /** Baut die Session-Warteschlange aus den FÄLLIGEN Pool-Linien (Chapter-gefiltert), gemischt. */
+  /** Learn-Kandidat = noch NICHT im Pool und nicht pausiert. */
+  private isLearnable(line: ParsedGame): boolean {
+    const st = this.statesByKey.get(this.lineKeyOf(line));
+    return (!st || !st.inPool) && !st?.paused;
+  }
+
+  /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien (gemischt), learn = ungelernte
+   * Linien der Reihe nach. Chapter-/Einzellinien-Filter greifen in beiden Modi. */
   private buildQueue(): void {
-    this.clearAdvance(); this.clearOppTimer();
+    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
     const now = Date.now();
-    const filtered = this.chapterFilter
+    let filtered = this.chapterFilter
       ? this.allLines.filter(l => (l.headers['Black'] || '').trim() === this.chapterFilter!.trim())
       : this.allLines;
+    if (this.singleLineKey) filtered = filtered.filter(l => this.lineKeyOf(l) === this.singleLineKey);
     const usable = filtered.filter(l => this.hasUserMove(l));
-    this.queue = shuffle(usable.filter(l => this.isDue(l, now)));
+    this.queue = this.mode === 'learn'
+      ? usable.filter(l => this.isLearnable(l))                 // Reihenfolge = PGN-Reihenfolge
+      : shuffle(usable.filter(l => this.isDue(l, now)));
     this.qIndex = 0;
     this.correct = 0;
     this.wrong = 0;
     this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
     if (this.queue.length === 0) {
-      this.nextDueAt = this.computeNextDue(usable);
+      this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
       this.phase = 'EMPTY';
       this.cdr.markForCheck();
       return;
@@ -414,8 +477,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
     const nextSide = this.chess.turn();
     if (nextSide === this.color) {
-      // User ist am Zug → warten
+      // User ist am Zug.
       this.startFen = this.fen;
+      if (this.mode === 'learn') { this.enterLearnShow(); return; }
       try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
       this.phase = 'PLAYING';
       this.cdr.markForCheck();
@@ -441,13 +505,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   private finishLine(): void {
-    // SR-Bewertung PRO LINIE: fehlerfrei durchgespielt → +1 Stufe, sonst zurück auf Stufe 1.
     const line = this.queue[this.qIndex];
     if (line) {
       const lineKey = this.lineKeyOf(line);
-      const label = (line.headers['White'] || '').trim().slice(0, 120);
-      this.training.reviewLine(this.repertoireId, { lineKey, label, correct: !this.lineHadWrong })
-        .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
+      if (this.mode === 'learn') {
+        // Learn: durchgespielte Linie in den Pool aufnehmen (sofort fällig für die 1. Abfrage).
+        this.training.promote(this.repertoireId, [lineKey])
+          .subscribe({ next: () => {}, error: () => {} });
+      } else {
+        // SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
+        const label = (line.headers['White'] || '').trim().slice(0, 120);
+        this.training.reviewLine(this.repertoireId, { lineKey, label, correct: !this.lineHadWrong })
+          .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
+      }
     }
     this.phase = 'LINE_DONE';
     this.cdr.markForCheck();
@@ -504,6 +574,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     const line = this.queue[this.qIndex];
     if (!line || this.currentPly >= line.moves.length) return;
+    if (this.mode === 'learn') { this.onLearnMove(ev); return; }
     const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
     if (this.phase !== 'PLAYING' && !wrongRetry) return;
     if (wrongRetry) {
@@ -569,6 +640,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   onPlayClick(): void {
+    if (this.phase === 'LEARN_SHOW' && this.learnComment) { this.learnRetract(); return; }
     if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
   }
 
@@ -619,6 +691,67 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     }
     this.currentPly++;
     this.advanceToUserMove();
+  }
+
+  // ===== Learn-Modus =====
+
+  /** Zeigt den erwarteten Zug auf dem Brett (view-only). Ohne Kommentar nach 2s automatisch
+   * zurücknehmen; MIT Kommentar stehen lassen, bis der User weitertippt (zum Lesen). */
+  private enterLearnShow(): void {
+    this.clearLearn();
+    const line = this.queue[this.qIndex];
+    const expected = line?.moves[this.currentPly];
+    if (!expected) { this.finishLine(); return; }
+    let fenAfter = this.startFen;
+    try {
+      const c = new Chess(this.startFen);
+      const mv = c.move(expected.san);
+      if (mv) { fenAfter = c.fen(); this.lastMove = [mv.from as Key, mv.to as Key]; }
+    } catch { /* nicht spielbar → nur Text */ }
+    this.fen = fenAfter;
+    this.dests = new Map();
+    this.expectedDisplay = expected.san;
+    this.learnComment = (line.comments?.[this.currentPly] || '').trim();
+    this.phase = 'LEARN_SHOW';
+    this.cdr.markForCheck();
+    if (!this.learnComment) {
+      this.learnTimer = setTimeout(() => { this.learnTimer = null; this.learnRetract(); }, LEARN_SHOW_MS);
+    }
+  }
+
+  /** Gezeigten Zug zurücknehmen → der User spielt ihn selbst. */
+  private learnRetract(): void {
+    this.clearLearn();
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.learnComment = '';
+    this.phase = 'PLAYING';
+    this.cdr.markForCheck();
+  }
+
+  private clearLearn(): void {
+    if (this.learnTimer !== null) { clearTimeout(this.learnTimer); this.learnTimer = null; }
+  }
+
+  /** Learn-Zug: nur der gezeigte (erwartete) Zug führt weiter; falsch → Zug erneut zeigen. */
+  private onLearnMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
+    const line = this.queue[this.qIndex];
+    if (!line || this.phase !== 'PLAYING' || this.currentPly >= line.moves.length) return;
+    let userSan = '';
+    try {
+      const c = new Chess(this.startFen);
+      userSan = normSan(c.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }).san);
+    } catch { return; }
+    if (userSan === normSan(line.moves[this.currentPly].san)) {
+      try { this.chess.move({ from: ev.orig, to: ev.dest, promotion: (ev.promotion as any) || 'q' }); } catch {}
+      this.fen = this.chess.fen();
+      this.lastMove = [ev.orig, ev.dest];
+      this.currentPly++;
+      this.advanceToUserMove();
+    } else {
+      this.enterLearnShow();   // nicht der Zug → nochmal vormachen
+    }
   }
 
   /** Geduldeten Zug zurücknehmen und die aktuelle Stellung erneut spielbar machen. */

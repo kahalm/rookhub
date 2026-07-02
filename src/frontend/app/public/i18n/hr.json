@@ -33,7 +33,14 @@
     "nothingInPool": "Još nema linija u bazenu za vježbanje — dodaj neke za početak.",
     "addAllToPool": "Dodaj sve linije u bazen",
     "makeAllDue": "Učini sve dospjelim sada",
-    "manageLines": "Upravljaj linijama"
+    "manageLines": "Upravljaj linijama",
+    "modeQuiz": "Provjera",
+    "modeLearn": "Uči",
+    "learnShow": "Zapamti ovaj potez: {{move}}",
+    "learnPlay": "Sad odigraj prikazani potez.",
+    "learnDone": "Sve linije naučene — sad su u bazenu za vježbanje.",
+    "nothingToLearn": "Ovdje nema ništa novo za naučiti — svaka linija je već u bazenu.",
+    "switchToQuiz": "Počni provjeru"
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",
@@ -631,7 +638,30 @@
       "empty": "U ovom repertoaru nema pronađenih linija.",
       "noChapter": "(Bez poglavlja)",
       "toggleChapter": "Otvori / zatvori poglavlje",
-      "trainChapter": "Treniraj ovo poglavlje"
+      "trainChapter": "Treniraj ovo poglavlje",
+      "sr": {
+        "reviewAll": "Provjeri dospjele linije",
+        "learnAll": "Uči nove linije",
+        "courseActions": "Radnje tečaja",
+        "chapterActions": "Radnje poglavlja",
+        "lineActions": "Radnje linije",
+        "learn": "Uči",
+        "review": "Provjera",
+        "addToPool": "U bazen za vježbanje",
+        "makeDue": "Učini dospjelim sada",
+        "makeAllDue": "Učini sve dospjelim",
+        "addAll": "Sve u bazen",
+        "pause": "Pauziraj",
+        "resume": "Nastavi",
+        "pauseAll": "Pauziraj sve",
+        "resumeAll": "Nastavi sve",
+        "status": {
+          "new": "Još nije u bazenu",
+          "due": "Dospjelo sada",
+          "scheduled": "U bazenu — zakazano",
+          "paused": "Pauzirano"
+        }
+      }
     },
     "tree": {
       "start": "Početak",

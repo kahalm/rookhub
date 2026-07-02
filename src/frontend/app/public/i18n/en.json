@@ -33,7 +33,14 @@
     "nothingInPool": "No lines in your practice pool yet — add some to start.",
     "addAllToPool": "Add all lines to pool",
     "makeAllDue": "Make all due now",
-    "manageLines": "Manage lines"
+    "manageLines": "Manage lines",
+    "modeQuiz": "Review",
+    "modeLearn": "Learn",
+    "learnShow": "Memorise this move: {{move}}",
+    "learnPlay": "Now play the move you were shown.",
+    "learnDone": "All lines learned — they're now in your practice pool.",
+    "nothingToLearn": "Nothing new to learn here — every line is already in your pool.",
+    "switchToQuiz": "Start reviewing"
   },
   "srConfig": {
     "title": "Practice cycles",
@@ -633,7 +640,30 @@
       "empty": "No lines found in this repertoire.",
       "noChapter": "(No chapter)",
       "toggleChapter": "Expand / collapse chapter",
-      "trainChapter": "Train this chapter"
+      "trainChapter": "Train this chapter",
+      "sr": {
+        "reviewAll": "Review due lines",
+        "learnAll": "Learn new lines",
+        "courseActions": "Course actions",
+        "chapterActions": "Chapter actions",
+        "lineActions": "Line actions",
+        "learn": "Learn",
+        "review": "Review",
+        "addToPool": "Add to practice pool",
+        "makeDue": "Make due now",
+        "makeAllDue": "Make all due now",
+        "addAll": "Add all to pool",
+        "pause": "Pause",
+        "resume": "Resume",
+        "pauseAll": "Pause all",
+        "resumeAll": "Resume all",
+        "status": {
+          "new": "Not in pool yet",
+          "due": "Due now",
+          "scheduled": "In pool — scheduled",
+          "paused": "Paused"
+        }
+      }
     },
     "tree": {
       "start": "Start",

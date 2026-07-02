@@ -77,6 +77,7 @@ function make(
 }
 
 describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_color_1'));
   it('builds a queue from all DUE pool lines when no chapter filter is set', () => {
     const c = make('w', null);
     expect(c.queue.length).toBe(2);
@@ -166,6 +167,41 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(spy).toHaveBeenCalled();
     expect(spy.calls.mostRecent().args[1].length).toBe(2);   // beide Linien
   });
+
+  it('learn mode: plays a not-in-pool line through and promotes it at the end', fakeAsync(() => {
+    const promote = jasmine.createSpy('promote').and.returnValue(of({ affected: 1 }));
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => k === 'mode' ? 'learn' : null },
+      },
+    };
+    const training: any = {
+      getPgn: () => of(PGN),
+      getLineStates: () => of([]),               // nichts im Pool → alle Linien lernbar
+      reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote, makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
+    };
+    localStorage.setItem('rookhub_rep_train_color_1', 'w');   // deterministisch Weiß am Zug
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+    );
+    c.ngOnInit();
+    expect(c.mode).toBe('learn');
+    // Learn zeigt zuerst den erwarteten Zug (view-only), dann zurücknehmen (2s).
+    expect(c.phase).toBe('LEARN_SHOW');
+    tick(2000);
+    expect(c.phase).toBe('PLAYING');
+    // Erste Linie (Chapter A): e4, Nf3 des Users durchspielen.
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // korrekt nachgespielt
+    tick(400);                                            // Gegner e5 → nächster Learn-Show
+    tick(2000);                                           // Show → retract
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
+    tick(400);                                            // Gegner Nc6 → finishLine → promote
+    expect(promote).toHaveBeenCalled();
+  }));
 
   it('LOADING failure sets phase to EMPTY', () => {
     const route: any = {
