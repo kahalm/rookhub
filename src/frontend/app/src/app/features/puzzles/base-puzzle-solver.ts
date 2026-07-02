@@ -2,7 +2,7 @@ import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
-import { applyVisualizationHide, clearVisualizationHide } from './board-theme.util';
+import { applyVisualizationHide, clearVisualizationHide, ThemeMode } from './board-theme.util';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
@@ -36,6 +36,9 @@ export abstract class BasePuzzleSolver {
   /** Crazy-Figuren-Modus: 'piece' = je Figur eigenes Set (Default), 'square' = das Feld bestimmt
    *  den Stil (`?anarchy=max+1`). Wird ans `app-puzzle-board` durchgereicht. */
   crazyPieceMode: import('./board-theme.util').CrazyPieceMode = 'piece';
+  /** Brett-Themen-Modus (fixed/crazy/…), aus den Prefs bzw. Share-View-Params gesetzt. Steuert u.a.
+   *  {@link opponentArrowMode} (crazy → bleibender Gegnerzug-Pfeil). Geteilt über alle Modi. */
+  themeMode: ThemeMode = 'fixed';
   lastMove?: [Key, Key];
   isCheck = false;
 
@@ -611,9 +614,9 @@ export abstract class BasePuzzleSolver {
   /** Wann der Gegnerzug-Pfeil gezeigt wird und wie lange:
    *  'off' = gar nicht, 'timed' = 1s einblenden (Viz-Modus), 'persist' = stehen lassen bis zum
    *  nächsten User-Zug (Crazy-Modus, da der Gegnerzug auf dem Crazy-Brett schlecht erkennbar ist).
-   *  Default richtet sich nach dem Viz-Modus; Komponenten überschreiben für Crazy. */
+   *  Crazy-Modus → bleibender Pfeil ('persist'); sonst richtet er sich nach dem Viz-Modus. */
   protected get opponentArrowMode(): 'off' | 'timed' | 'persist' {
-    return this.visualizationMode > 0 ? 'timed' : 'off';
+    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
   }
 
   /** Zeigt den letzten Gegnerzug als Pfeil — je nach {@link opponentArrowMode} zeitlich begrenzt

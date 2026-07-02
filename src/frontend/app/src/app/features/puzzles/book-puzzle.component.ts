@@ -101,7 +101,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
   // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
@@ -392,9 +391,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
-  }
-  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' {
-    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
   }
 
   toggleEval(): void {

@@ -205,7 +205,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
   /** `?start=1`/`?autostart=1`: Endless-Lauf direkt starten (sobald die Rating-Range geladen ist),
@@ -616,9 +615,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
-  }
-  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' {
-    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
   }
 
   protected override onSolvingBegins(): void {
@@ -1159,14 +1155,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     });
   }
 
-  showIntendedSolution(): void {
-    if (!this.puzzle) return;
-    if (this.state === 'FAILED') this.reviewingWrongPuzzle = true;
-    this.state = 'SOLVED';
-    this.reviewMode = true;
-    this.reviewGoTo(0);
-  }
-
   override get reviewTotal(): number {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
@@ -1375,14 +1363,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const body: Record<string, unknown> = {
       solved, timeSpentSeconds: timeSpent, moveLog: log ?? null, visualizationLevel: this.visualizationMode,
       evalShown: this.evalShown, vizShowCount: this.vizShowCount,
+      hintsUsed: this.maxHintLevel,
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!loggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
     // Offline gelöste Endless-Puzzles nicht verlieren → vormerken (Sync bei Reconnect).
     if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
     const obs = loggedIn
-      ? this.puzzleService.recordAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount)
-      : this.puzzleService.recordAnonymousAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount);
+      ? this.puzzleService.recordAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel)
+      : this.puzzleService.recordAnonymousAttempt(id, solved, timeSpent, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel);
     obs.subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
   }
 

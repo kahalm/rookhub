@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.242.16';
+export const APP_VERSION = '0.242.17';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.242.17", date: "2026-07-02", changes: [
+    { en: "Endless puzzles now record the used hint level again (data fix): endless attempts were the only mode not sending hintsUsed to the backend, so endless hint usage was silently lost. Now sent like the other modes. Plus a small maintainability refactor of the puzzle-solver trio (no behaviour change): the identical opponentArrowMode override and the themeMode field were hoisted into the shared BasePuzzleSolver, and a dead showIntendedSolution() method was removed from the endless solver.", de: "Endless-Puzzles erfassen die genutzte Tipp-Stufe wieder (Datenfix): Endless war der einzige Modus, der hintsUsed nicht ans Backend sendete — die Tipp-Nutzung ging dort still verloren. Wird jetzt wie in den anderen Modi mitgesendet. Dazu ein kleiner Wartbarkeits-Refactor des Puzzle-Solver-Trios (keine Verhaltensänderung): das identische opponentArrowMode-Override und das themeMode-Feld wurden in die gemeinsame BasePuzzleSolver-Basisklasse hochgezogen, und eine tote showIntendedSolution()-Methode aus dem Endless-Solver entfernt." },
+  ]},
   { version: "0.242.16", date: "2026-07-02", changes: [
     { en: "Internal maintainability refactor (no behaviour change): the switchable period breakdown (day/week/month/year/all + paging) below the tracker heatmap was extracted into its own self-computing PeriodBreakdownCardComponent (takes the full daily series as an input, owns the period/anchor state and navigation). The pure period/breakdown math (periodBounds/shiftAnchor/sumBreakdown/breakdownRows/…) moved into a shared breakdown.util (re-exported from the component for existing imports/specs). TrainingGoalsComponent is down from ~700 to ~530 lines. No user-facing change.", de: "Interner Wartbarkeits-Refactor (keine Verhaltensänderung): die umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt + Durchschalten) unter der Tracker-Heatmap wurde in eine eigene, selbst rechnende PeriodBreakdownCardComponent ausgelagert (bekommt die vollständige Tagesreihe als Input, besitzt Perioden-/Anker-Zustand und Navigation selbst). Die reine Perioden-/Aufschlüsselungs-Mathematik (periodBounds/shiftAnchor/sumBreakdown/breakdownRows/…) wanderte in eine geteilte breakdown.util (aus der Komponente re-exportiert für bestehende Importe/Specs). TrainingGoalsComponent schrumpft von ~700 auf ~530 Zeilen. Keine sichtbare Änderung." },
   ]},

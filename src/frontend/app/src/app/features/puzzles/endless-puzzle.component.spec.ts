@@ -503,3 +503,19 @@ describe('EndlessPuzzleComponent prefetch race (runGeneration)', () => {
     expect(c.offlinePool.length).toBe(1);
   });
 });
+
+describe('EndlessPuzzleComponent recordAttempt', () => {
+  it('sends the used hint level (regression: endless dropped hintsUsed)', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.maxHintLevel = 2;
+    const spy = jasmine.createSpy('recordAnonymousAttempt').and.returnValue(sub(null));
+    c.puzzleService.recordAnonymousAttempt = spy;
+
+    c.recordAttempt(true, 12);   // anonym (auth.isLoggedIn=false) → recordAnonymousAttempt
+
+    expect(spy).toHaveBeenCalled();
+    // Signatur: (id, solved, timeSpentSeconds, moveLog?, viz, evalShown, vizShowCount, hintsUsed)
+    expect(spy.calls.mostRecent().args[7]).toBe(2);
+  });
+});

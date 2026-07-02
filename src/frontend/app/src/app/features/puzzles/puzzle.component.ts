@@ -201,9 +201,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
   }
-  protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' {
-    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
-  }
 
   protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';
@@ -241,7 +238,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   readonly boardThemes = BOARD_THEMES;
 
   pieceSet = 'cburnett';
-  themeMode: ThemeMode = 'fixed';
   readonly pieceSets = PIECE_SETS;
 
   get isLoggedIn(): boolean { return this.authService.isLoggedIn; }
