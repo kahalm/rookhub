@@ -500,6 +500,14 @@ try
         scopes.Add(LogContext.PushProperty(
             "RequestKind",
             RookHub.Api.Logging.SystemCallClassifier.Classify(ctx.Request.Path.Value)));
+        // Geräteklasse (mobile/tablet/desktop/bot/unknown) aus dem User-Agent → in Kibana als
+        // Mobile-vs-PC-Anteil (gesamt + je Bereich über url.path) auswertbar. Roh-UA gekürzt
+        // mitschreiben (Diagnose), DeviceType immer (auch "unknown", damit die Terms-Agg vollständig ist).
+        var ua = ctx.Request.Headers.UserAgent.ToString();
+        if (!string.IsNullOrEmpty(ua))
+            scopes.Add(LogContext.PushProperty("UserAgent", ua.Length > 512 ? ua[..512] : ua));
+        scopes.Add(LogContext.PushProperty(
+            "DeviceType", RookHub.Api.Logging.DeviceClassifier.Classify(ua)));
         try { await next(); }
         finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
     });

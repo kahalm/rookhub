@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.257.0';
+export const APP_VERSION = '0.258.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.258.0", date: "2026-07-03", changes: [
+    { en: "Observability: each request now logs a device class (mobile / tablet / desktop / bot) derived from the User-Agent, plus the raw User-Agent. A new Kibana dashboard 'RookHub Geräte' shows the mobile-vs-PC share overall, broken down by area (puzzles / repertoires / courses / tournaments / …) and over time — filtered to real user traffic (RequestKind=user). No user-facing UI change; data starts accumulating after deploy (past requests carry no device info).", de: "Observability: jeder Request loggt jetzt eine Geräteklasse (mobile / tablet / desktop / bot), abgeleitet aus dem User-Agent, plus den rohen User-Agent. Ein neues Kibana-Dashboard „RookHub Geräte“ zeigt den Mobile-vs-PC-Anteil gesamt, aufgeschlüsselt nach Bereich (Puzzle / Repertoires / Kurse / Turniere / …) und über die Zeit — gefiltert auf echten Nutzer-Traffic (RequestKind=user). Keine sichtbare UI-Änderung; die Daten sammeln sich erst ab dem Deploy (frühere Requests tragen keine Geräteinfo)." },
+  ]},
   { version: "0.257.0", date: "2026-07-03", changes: [
     { en: "Repertoire trainer Learn mode: a comment on an opponent's move no longer flashes by — the trainer now pauses after playing a commented opponent move, shows the comment permanently, and waits for you to confirm with “Continue” (tap the board, Space or Enter) before moving on. Previously the comment was only visible for the brief gap between the opponent's move and your next move, so it was easy to miss.", de: "Repertoire-Trainer Lern-Modus: ein Kommentar an einem Gegnerzug blitzt nicht mehr nur kurz auf — der Trainer hält jetzt nach einem kommentierten Gegnerzug an, zeigt den Kommentar dauerhaft und wartet auf deine Bestätigung „Weiter“ (Brett antippen, Leertaste oder Enter), bevor es weitergeht. Vorher war der Kommentar nur für die kurze Lücke zwischen Gegnerzug und deinem nächsten Zug sichtbar und leicht zu übersehen." },
   ]},
