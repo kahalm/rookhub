@@ -237,24 +237,47 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).not.toBe('LINE_DONE');
   });
 
-  it('movesInLine marks the next-to-play ply as current, prior plies as past, future ones as future', () => {
+  it('movesInLine trims to past + current (never shows future plies)', () => {
     const c = make('w', 'Chapter A');
-    // Frisch gestartete Linie: currentPly === 0 → erster Halbzug ist „current".
+    // currentPly === 0 → nur der erste Halbzug ist sichtbar (als „current"); die restlichen 3 sind
+    // Zukunft und werden BEWUSST NICHT gerendert.
     let m = c.movesInLine;
-    expect(m.length).toBe(4);
-    expect(m[0].san).toBe('e4'); expect(m[0].state).toBe('current');
-    expect(m[0].num).toBe(1);                       // Nummer beim ersten Weiß-Halbzug
-    expect(m[1].num).toBeNull();                    // Schwarz-Halbzug bekommt keine Zugnummer
-    expect(m[1].state).toBe('future');
-    expect(m[2].num).toBe(2);                       // Nummer bei Weiß-Halbzug des 2. Zugs
-    // Cursor per State-Manipulation vorrücken — hier wird das Bucketing (past/current/future)
-    // getestet, nicht die Zeit-getriebene Ply-Progression. Race-frei.
+    expect(m.length).toBe(1);
+    expect(m[0].san).toBe('e4');
+    expect(m[0].state).toBe('current');
+    expect(m[0].num).toBe(1);
+    // Cursor auf 2 → past + past + current.
     (c as any).currentPly = 2;
     m = c.movesInLine;
+    expect(m.length).toBe(3);
     expect(m[0].state).toBe('past');
     expect(m[1].state).toBe('past');
     expect(m[2].state).toBe('current');
-    expect(m[3].state).toBe('future');
+    expect(m[2].num).toBe(2);                       // Nummer bei Weiß-Halbzug des 2. Zugs
+  });
+
+  it('learn-mode comment surfaces PGN comment of the current move', () => {
+    const withComment = [
+      '[Event "Rep"]',
+      '[White "Philidor"]',
+      '[Black "Chapter A"]',
+      '',
+      '1. e4 e5 2. Nf3 d6 {Philidor Defence — solid, primitive defence of e5.} 3. d4 exd4 *',
+      '',
+    ].join('\n');
+    const c = make('w', null, withComment, [
+      state(lineKeyFromSans(['e4', 'e5', 'Nf3', 'd6', 'd4', 'exd4']), PAST()),
+    ]);
+    // currentPly=3 = Schwarz-Halbzug d6, an dem der Kommentar hängt.
+    (c as any).currentPly = 3;
+    expect(c.currentComment).toContain('Philidor Defence');
+    expect(c.currentCommentParagraphs.length).toBe(1);
+    expect(c.currentMovePrettyLabel).toBe('2… d6');
+    // Am nächsten Halbzug (d4, Ply 4) gibt es keinen Kommentar mehr.
+    (c as any).currentPly = 4;
+    expect(c.currentComment).toBe('');
+    expect(c.currentCommentParagraphs).toEqual([]);
+    expect(c.currentMovePrettyLabel).toBe('3. d4');
   });
 
   it('streak: correct move increments (best follows); showSolution resets, bestStreak stays', () => {

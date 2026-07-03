@@ -28,6 +28,7 @@
     "lineProgress": "Linija {{done}} od {{total}}",
     "streakTooltip": "Trenutačni niz točnih poteza · najbolji u ovoj sesiji: {{best}}",
     "movesInLine": "Potezi ove linije",
+    "moveComment": "Komentar poteza",
     "lineDone": "Linija gotova — sljedeća se učitava…",
     "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
     "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani.",

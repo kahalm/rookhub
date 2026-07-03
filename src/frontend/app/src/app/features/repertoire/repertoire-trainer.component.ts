@@ -161,6 +161,17 @@ const LEARN_REPEATS = 3;
               <span class="mv" [ngClass]="m.state">{{ m.san }}</span>
             }
           </div>
+          @if (mode === 'learn' && currentComment) {
+            <div class="ctx-comment" [attr.aria-label]="'repertoireTrainer.moveComment' | translate">
+              <div class="ctx-head">
+                <mat-icon>chat_bubble</mat-icon>
+                <span>{{ currentMovePrettyLabel }}</span>
+              </div>
+              @for (p of currentCommentParagraphs; track $index) {
+                <p>{{ p }}</p>
+              }
+            </div>
+          }
         }
         <p class="prompt">{{ (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove') | translate }}</p>
 
@@ -223,7 +234,7 @@ const LEARN_REPEATS = 3;
 </div>
   `,
   styles: [`
-    .trainer { max-width: 1080px; margin: 0 auto; padding: 8px; }
+    .trainer { max-width: min(1400px, 96vw); margin: 0 auto; padding: 8px; }
     .bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
     .bar .title { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
@@ -233,8 +244,11 @@ const LEARN_REPEATS = 3;
     .msg { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .msg mat-icon { font-size: 40px; height: 40px; width: 40px; }
     .play { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
-    app-puzzle-board { flex: 1 1 420px; max-width: 560px; }
-    .side { flex: 1 1 300px; min-width: 260px; }
+    /* Brett darf jetzt bis knapp Viewport-Höhe (minus Navbar + Toolbar) hochwachsen (Chessable-artig)
+     * und außerdem breit werden — begrenzt zusätzlich über min(80vh, 96vw − Seitenleiste). Der
+     * innere chess-board hat aspect-ratio 1/1, daher wird Höhe automatisch = Breite. */
+    app-puzzle-board { flex: 1 1 480px; max-width: min(820px, calc(100vh - 180px)); }
+    .side { flex: 1 1 340px; min-width: 300px; max-width: 520px; }
     .counts { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
     .counts .ok { color: #2e7d32; } .counts .bad { color: #c62828; }
     .counts .streak { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: 999px;
@@ -256,6 +270,16 @@ const LEARN_REPEATS = 3;
       color: var(--mat-sys-primary, #1565c0); font-weight: 700; padding: 0 6px; }
     .line-moves .mv.current::before { content: '▸ '; }
     .line-moves .mv.future { opacity: .8; }
+    /* Prosa-Block für den aktuellen Zug-Kommentar im Lern-Modus (Chessable-artig): eigener
+     * Kasten unter der Züge-Liste mit Move-Label als Überschrift und Absätzen. */
+    .ctx-comment { margin: 4px 0 12px; padding: 12px 14px; border-radius: 8px;
+      background: var(--mat-sys-surface-container-high, rgba(21,101,192,.10));
+      border-left: 3px solid var(--mat-sys-primary, #1565c0); }
+    .ctx-comment .ctx-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      font-weight: 600; color: var(--mat-sys-primary, #1565c0); }
+    .ctx-comment .ctx-head mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .ctx-comment p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .ctx-comment p:last-child { margin-bottom: 0; }
     .prompt { font-weight: 600; }
     .feedback { padding: 10px; border-radius: 8px; }
     .feedback p { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
@@ -654,10 +678,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return (line.headers['Black'] || '').trim();
   }
 
-  /** Züge der aktuellen Linie als flache Tokens fürs Template. `state` markiert den nächsten
-   * zu spielenden Halbzug (=`current`), alles davor `past`, alles danach `future`. `num` ist
-   * gesetzt für den ersten Halbzug eines Zugpaares (typisch Weiß, kann bei Startseite Schwarz sein). */
-  get movesInLine(): { num: number | null; san: string; ply: number; state: 'past' | 'current' | 'future' }[] {
+  /** Züge der aktuellen Linie als flache Tokens fürs Template. Nur bereits gespielte + aktueller
+   * Halbzug — die Zukunft wird bewusst NICHT vorweggenommen (Chessable-artig, spart Spoiler).
+   * `state` = `past` (vor currentPly) bzw. `current` (aktueller Halbzug). `num` ist gesetzt für
+   * den ersten Halbzug eines Zugpaares. `comment` ist der PGN-Kommentar zum Halbzug (falls einer
+   * hinterlegt ist) — im Template im Lern-Modus angezeigt. */
+  get movesInLine(): { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] {
     const line = this.queue[this.qIndex];
     if (!line || line.moves.length === 0) return [];
     // Zug-Nummerierung stabil aus dem Start-FEN ableiten (fullmove counter + turn).
@@ -670,16 +696,16 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       const n = parseInt(parts[5] || '1', 10);
       if (Number.isFinite(n) && n >= 1) fullMove = n;
     } catch { /* Defaults reichen */ }
-    const out: { num: number | null; san: string; ply: number; state: 'past' | 'current' | 'future' }[] = [];
+    const out: { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] = [];
     let curSide = side;
     let curMove = fullMove;
-    for (let ply = 0; ply < line.moves.length; ply++) {
-      // Zugnummer VOR Weiß-Halbzug bzw. beim allerersten Halbzug (auch wenn Schwarz).
+    const upto = Math.min(this.currentPly, line.moves.length - 1);
+    for (let ply = 0; ply <= upto; ply++) {
       const isFirstBlackHalfmove = ply === 0 && curSide === 'b';
       const num = curSide === 'w' || isFirstBlackHalfmove ? curMove : null;
-      const state: 'past' | 'current' | 'future' =
-        ply < this.currentPly ? 'past' : ply === this.currentPly ? 'current' : 'future';
-      out.push({ num, san: line.moves[ply].san, ply, state });
+      const state: 'past' | 'current' = ply < this.currentPly ? 'past' : 'current';
+      const comment = (line.comments?.[ply] || '').trim();
+      out.push({ num, san: line.moves[ply].san, ply, state, comment });
       if (curSide === 'b') curMove++;
       curSide = curSide === 'w' ? 'b' : 'w';
     }
@@ -689,6 +715,44 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private bumpStreak(): void {
     this.currentStreak++;
     if (this.currentStreak > this.bestStreak) this.bestStreak = this.currentStreak;
+  }
+
+  /** PGN-Kommentar zum AKTUELL zu spielenden Halbzug (nur relevant für Lern-Modus, wo wir dem
+   * User Kontext geben — im Review-Modus bewusst nicht, weil er den Zug SELBST finden soll). */
+  get currentComment(): string {
+    const line = this.queue[this.qIndex];
+    if (!line) return '';
+    return (line.comments?.[this.currentPly] || '').trim();
+  }
+
+  /** Kommentar in Absätze gesplittet (leere Zeile trennt) — für die Prosa-Anzeige im Lern-Modus. */
+  get currentCommentParagraphs(): string[] {
+    const c = this.currentComment;
+    if (!c) return [];
+    return c.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  }
+
+  /** Menschenlesbares Label des aktuellen Halbzugs, z. B. „3. exd5" (Weiß) oder „2… d6" (Schwarz). */
+  get currentMovePrettyLabel(): string {
+    const line = this.queue[this.qIndex];
+    if (!line || this.currentPly < 0 || this.currentPly >= line.moves.length) return '';
+    let side: 'w' | 'b' = 'w';
+    let fullMove = 1;
+    try {
+      const start = new Chess(line.fens[0]);
+      side = start.turn();
+      const parts = line.fens[0].split(/\s+/);
+      const n = parseInt(parts[5] || '1', 10);
+      if (Number.isFinite(n) && n >= 1) fullMove = n;
+    } catch { /* Defaults */ }
+    let curSide = side;
+    let num = fullMove;
+    for (let ply = 0; ply < this.currentPly; ply++) {
+      if (curSide === 'b') num++;
+      curSide = curSide === 'w' ? 'b' : 'w';
+    }
+    const san = line.moves[this.currentPly].san;
+    return curSide === 'w' ? `${num}. ${san}` : `${num}… ${san}`;
   }
 
   /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
