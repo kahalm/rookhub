@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.253.0';
+export const APP_VERSION = '0.253.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.253.1", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer: the green “Correct” badge after a right move now stays up for 1.5 s instead of 3 s — the 3 s from 0.250.0 felt too slow when playing through a line. Space/Enter/tap still skips ahead. Tolerated stays at 1.5 s (unchanged).", de: "Repertoire-Trainer: das grüne „Richtig“-Badge nach einem korrekten Zug bleibt jetzt 1,5 s stehen statt 3 s — die 3 s aus 0.250.0 fühlten sich beim Durchspielen einer Linie zu langsam an. Leertaste/Enter/Tippen überspringt weiterhin. Geduldet bleibt bei 1,5 s (unverändert)." },
+  ]},
   { version: "0.253.0", date: "2026-07-03", changes: [
     { en: "Repertoire trainer layout, part 2: (1) the board now grows to fill vertical space (Chessable-style) — capped at min(820 px, viewport height − 180 px) instead of a hard 560 px; the whole trainer widens to min(1400 px, 96 vw) so the board and side panel both have room. (2) The moves list on the right only shows moves up to and including the current one (never the future) — no spoilers. (3) In Learn mode only, when a PGN comment is attached to the current move, it now appears below the moves list as a proper prose block with the move label as its header (e.g. “2… d6”) and multi-paragraph body — matching Chessable's layout. Review mode stays comment-free so you have to find the move yourself.", de: "Repertoire-Trainer-Layout, Teil 2: (1) Das Brett wächst jetzt bis knapp Viewport-Höhe (Chessable-artig) — Kappung min(820 px, viewport-height − 180 px) statt harter 560-px-Grenze; der ganze Trainer weitet sich auf min(1400 px, 96 vw), sodass Brett + Seitenleiste beide Platz haben. (2) Die Züge-Liste rechts zeigt jetzt NUR die gespielten + den aktuellen Zug (keine Zukunft mehr) — kein Spoiler. (3) NUR im Lern-Modus: hat der aktuelle Zug einen PGN-Kommentar, erscheint er unter der Züge-Liste als eigener Prosa-Block mit Zug-Label als Überschrift (z. B. „2… d6“) und mehrzeiligem Text — passend zu Chessables Layout. Der Abfragen-Modus bleibt kommentarfrei, damit du den Zug selbst findest." },
   ]},

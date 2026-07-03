@@ -29,9 +29,10 @@ type Mode = 'quiz' | 'learn';
 
 const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
 // Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
-// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct bewusst lang
-// (3 s), damit man das grüne Badge in Ruhe sieht.
-const ADVANCE_MS: Record<Outcome, number> = { correct: 3000, tolerated: 1500, wrong: 0 };
+// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct war in
+// 0.250.0 auf 3 s hochgezogen (vorher „sehr kurz"), das fühlte sich beim Durchspielen einer
+// Linie zu langsam an — jetzt 1,5 s als Kompromiss.
+const ADVANCE_MS: Record<Outcome, number> = { correct: 1500, tolerated: 1500, wrong: 0 };
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
 const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
