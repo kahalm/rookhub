@@ -656,6 +656,12 @@
       "noChapter": "(Ohne Kapitel)",
       "toggleChapter": "Kapitel auf-/zuklappen",
       "trainChapter": "Dieses Kapitel trainieren",
+      "color": {
+        "title": "Trainingsfarbe",
+        "white": "Weiß",
+        "black": "Schwarz",
+        "tooltip": "Aus welcher Seite du dieses Kapitel trainierst (automatisch erkannt — hier korrigieren, falls falsch)"
+      },
       "sr": {
         "reviewAll": "Fällige Linien abfragen",
         "learnAll": "Neue Linien lernen",

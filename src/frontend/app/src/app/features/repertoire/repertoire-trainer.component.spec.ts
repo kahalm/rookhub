@@ -50,6 +50,7 @@ function make(
   pgn: string = PGN,
   states: LineStateDto[] = [state(KEY_A, PAST()), state(KEY_B, PAST())],
   reviewSpy?: jasmine.Spy,
+  forceColor = true,
 ): RepertoireTrainerComponent {
   const route: any = {
     snapshot: {
@@ -70,14 +71,25 @@ function make(
   const cdr: any = { markForCheck: () => {} };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const dialog: any = { open: () => ({ afterClosed: () => of(false) }) };
+  // Trainingsfarbe ist jetzt pro Kapitel (Auto-Erkennung + Override). Für deterministische Tests
+  // jedes im PGN vorkommende Kapitel per localStorage-Override auf die gewünschte Farbe zwingen
+  // (außer die Auto-Erkennung selbst wird getestet → forceColor=false).
+  if (forceColor) {
+    const chapters: Record<string, 'w' | 'b'> = {};
+    for (const m of pgn.matchAll(/\[Black "([^"]*)"\]/g)) chapters[m[1].trim()] = color;
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify(chapters));
+  }
+  // forceColor=false → localStorage NICHT anfassen (Test setzt Overrides/Auto-Erkennung selbst).
   const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog);
-  c.color = color;
   c.ngOnInit();
   return c;
 }
 
 describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
-  afterEach(() => localStorage.removeItem('rookhub_rep_train_color_1'));
+  afterEach(() => {
+    localStorage.removeItem('rookhub_rep_train_color_1');
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1');
+  });
   it('builds a queue from all DUE pool lines when no chapter filter is set', () => {
     const c = make('w', null);
     expect(c.queue.length).toBe(2);
@@ -105,6 +117,32 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     const c = make('w', 'Chapter B');
     expect(c.queue.length).toBe(1);
     expect((c as any).queue[0].headers.Black).toBe('Chapter B');
+  });
+
+  it('auto-detects the trained color per chapter in a color-mixed repertoire (no override)', () => {
+    // „White rep": Linie endet auf Weiß-Zug (Nf3) → Weiß trainiert. „Black rep": endet auf Schwarz
+    // (d5) → Schwarz trainiert. Ohne globalen Toggle wird jede Linie aus ihrer eigenen Seite gespielt.
+    const MIXED = [
+      '[Event "R"]', '[White "Sicilian"]', '[Black "White rep"]', '', '1. e4 c5 2. Nf3 *', '',
+      '[Event "R"]', '[White "French"]', '[Black "Black rep"]', '', '1. e4 e6 2. d4 d5 *', '',
+    ].join('\n');
+    const kW = lineKeyFromSans(['e4', 'c5', 'Nf3']);
+    const kB = lineKeyFromSans(['e4', 'e6', 'd4', 'd5']);
+    const st = [state(kW, PAST()), state(kB, PAST())];
+    const cW = make('w', 'White rep', MIXED, st, undefined, false);
+    expect(cW.color).toBe('w');   // Weiß am Zug (spielt e4 selbst)
+    const cB = make('w', 'Black rep', MIXED, st, undefined, false);
+    expect(cB.color).toBe('b');   // Schwarz: Gegner-e4 wird automatisch gespielt
+  });
+
+  it('a per-chapter override beats the auto-detection', () => {
+    const MIXED = [
+      '[Event "R"]', '[White "Sicilian"]', '[Black "White rep"]', '', '1. e4 c5 2. Nf3 *', '',
+    ].join('\n');
+    const kW = lineKeyFromSans(['e4', 'c5', 'Nf3']);
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'White rep': 'b' }));
+    const c = make('w', 'White rep', MIXED, [state(kW, PAST())], undefined, false);
+    expect(c.color).toBe('b');   // Override 'b' schlägt Auto 'w'
   });
 
   it('correct user move advances the ply and plays opponent auto-response', fakeAsync(() => {
@@ -196,7 +234,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       reviewLine: () => of(state(KEY_A, FUTURE())),
       promote, makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
     };
-    localStorage.setItem('rookhub_rep_train_color_1', 'w');   // deterministisch Weiß am Zug
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));   // beide Kapitel als Weiß trainieren
     const c = new RepertoireTrainerComponent(
       route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
@@ -242,7 +280,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       reviewLine: () => of(state(KEY_A, FUTURE())),
       promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
     };
-    localStorage.setItem('rookhub_rep_train_color_1', 'w');
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));   // beide Kapitel als Weiß trainieren
     const c = new RepertoireTrainerComponent(
       route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,

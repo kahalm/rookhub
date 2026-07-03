@@ -656,6 +656,12 @@
       "noChapter": "(No chapter)",
       "toggleChapter": "Expand / collapse chapter",
       "trainChapter": "Train this chapter",
+      "color": {
+        "title": "Trained side",
+        "white": "White",
+        "black": "Black",
+        "tooltip": "Which side you train this chapter as (auto-detected — change it here if wrong)"
+      },
       "sr": {
         "reviewAll": "Review due lines",
         "learnAll": "Learn new lines",

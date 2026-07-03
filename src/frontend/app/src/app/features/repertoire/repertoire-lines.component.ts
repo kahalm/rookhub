@@ -12,6 +12,7 @@ import { Move } from 'chess.js';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { RepertoireLine } from './repertoire-viewer.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
+import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from './repertoire-color.util';
 
 /** Ein Chapter-Bucket mit seinen Linien. Reihenfolge = erstes Auftreten im PGN. */
 interface ChapterGroup {
@@ -84,6 +85,10 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                   <span class="chapter-count">{{ group.lines.length }}</span>
                 </button>
                 @if (repertoireId != null) {
+                  <span class="chapter-color" [ngClass]="chapterColor(group)"
+                        [matTooltip]="'repertoire.lines.color.tooltip' | translate">
+                    {{ (chapterColor(group) === 'w' ? 'repertoire.lines.color.white' : 'repertoire.lines.color.black') | translate }}
+                  </span>
                   <button mat-icon-button [matMenuTriggerFor]="chapterMenu" [disabled]="busy"
                           [attr.aria-label]="'repertoire.lines.sr.chapterActions' | translate"><mat-icon>more_vert</mat-icon></button>
                   <mat-menu #chapterMenu="matMenu">
@@ -95,6 +100,13 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                     <button mat-menu-item (click)="makeDue(chapterKeys(group))"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeDue' | translate }}</button>
                     <button mat-menu-item (click)="setPaused(chapterKeys(group), true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pause' | translate }}</button>
                     <button mat-menu-item (click)="setPaused(chapterKeys(group), false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resume' | translate }}</button>
+                    <div class="menu-label">{{ 'repertoire.lines.color.title' | translate }}</div>
+                    <button mat-menu-item (click)="setChapterColor(group, 'w')">
+                      <mat-icon>{{ chapterColor(group) === 'w' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>{{ 'repertoire.lines.color.white' | translate }}
+                    </button>
+                    <button mat-menu-item (click)="setChapterColor(group, 'b')">
+                      <mat-icon>{{ chapterColor(group) === 'b' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>{{ 'repertoire.lines.color.black' | translate }}
+                    </button>
                   </mat-menu>
                 }
               </div>
@@ -157,6 +169,12 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .chapter-count { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 12px;
       padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 10%, transparent); }
+    .chapter-color { flex: 0 0 auto; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+      border: 1px solid color-mix(in srgb, currentColor 30%, transparent); cursor: default; }
+    .chapter-color.w { background: #f5f5f5; color: #222; }
+    .chapter-color.b { background: #222; color: #f5f5f5; }
+    .menu-label { padding: 6px 16px 2px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; opacity: .6; }
     .line-item { display: flex; align-items: flex-start; border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
     .line-main { flex: 1; padding: 10px 8px 10px 32px; cursor: pointer; transition: background 0.15s; min-width: 0; }
     .line-main:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
@@ -202,10 +220,15 @@ export class RepertoireLinesComponent implements OnInit {
   busy = false;
   private states = signal<Map<string, LineStateDto>>(new Map());
   private collapsed = signal<Set<string>>(new Set());
+  /** Manuelle Trainingsfarb-Overrides je Kapitel (localStorage, pro Gerät). */
+  private colorOverrides = signal<Record<string, TrainColor>>({});
 
   constructor(private training: RepertoireTrainingService) {}
 
-  ngOnInit(): void { this.loadStates(); }
+  ngOnInit(): void {
+    this.loadStates();
+    if (this.repertoireId != null) this.colorOverrides.set(readChapterColorOverrides(this.repertoireId));
+  }
 
   private loadStates(): void {
     if (this.repertoireId == null) return;
@@ -231,6 +254,26 @@ export class RepertoireLinesComponent implements OnInit {
     const next = new Set(this.collapsed());
     if (next.has(chapter)) next.delete(chapter); else next.add(chapter);
     this.collapsed.set(next);
+  }
+
+  // ===== Trainingsfarbe je Kapitel =====
+
+  /** Automatisch erkannte Trainingsfarbe je Kapitel (Mehrheit der „Seite des letzten Zugs"). */
+  private readonly autoColors = computed<Map<string, TrainColor>>(() =>
+    autoChapterColors(this.lines.map(l => ({
+      chapter: l.chapter, side: l.lastMoveSide, rootSide: rootSideOf(l.startFen),
+    }))));
+
+  /** Effektive Trainingsfarbe eines Kapitels: manueller Override, sonst Auto-Erkennung. */
+  chapterColor(group: ChapterGroup): TrainColor {
+    return this.colorOverrides()[group.chapter] ?? this.autoColors().get(group.chapter) ?? 'w';
+  }
+
+  /** Trainingsfarbe eines Kapitels dauerhaft festlegen (überschreibt die Auto-Erkennung). */
+  setChapterColor(group: ChapterGroup, color: TrainColor): void {
+    if (this.repertoireId == null) return;
+    setChapterColorOverride(this.repertoireId, group.chapter, color);
+    this.colorOverrides.set({ ...this.colorOverrides(), [group.chapter]: color });
   }
 
   // ===== SR-Status + Aktionen =====

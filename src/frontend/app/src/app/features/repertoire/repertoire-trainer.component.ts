@@ -20,6 +20,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
 import { buildRepertoireGraph, normSan, normFen, RepertoireGraph } from './repertoire-tree.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
+import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
@@ -27,7 +28,6 @@ type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE'
 type Outcome = 'correct' | 'tolerated' | 'wrong';
 type Mode = 'quiz' | 'learn';
 
-const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
 // Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
 // weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct war in
 // 0.250.0 auf 3 s hochgezogen (vorher „sehr kurz"), das fühlte sich beim Durchspielen einer
@@ -69,10 +69,6 @@ const LEARN_REPEATS = 3;
     <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" hideSingleSelectionIndicator="true" aria-label="Mode">
       <mat-button-toggle value="quiz">{{ 'repertoireTrainer.modeQuiz' | translate }}</mat-button-toggle>
       <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
-    </mat-button-toggle-group>
-    <mat-button-toggle-group [value]="color" (change)="setColor($event.value)" hideSingleSelectionIndicator="true" aria-label="Color">
-      <mat-button-toggle value="w">{{ 'repertoireTrainer.white' | translate }}</mat-button-toggle>
-      <mat-button-toggle value="b">{{ 'repertoireTrainer.black' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
     <button mat-icon-button (click)="openConfig()"
             [matTooltip]="'srConfig.title' | translate"
@@ -305,7 +301,12 @@ const LEARN_REPEATS = 3;
 export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   repertoireId = 0;
   phase: Phase = 'LOADING';
-  color: 'w' | 'b' = 'w';
+  /** Trainingsfarbe der AKTUELL laufenden Linie (Brett-Orientierung / „X am Zug" / Eval-Vorzeichen).
+   *  Wird pro Linie aus `chapterColors` gesetzt — es gibt keinen globalen Farb-Umschalter mehr, weil
+   *  ein Repertoire Kapitel beider Farben mischen kann. Siehe repertoire-color.util. */
+  color: TrainColor = 'w';
+  /** Effektive Trainingsfarbe je Kapitel (Auto-Erkennung + manuelle Overrides). */
+  private chapterColors = new Map<string, TrainColor>();
   /** Kapitel-Filter aus ?chapter=…. Null = alle Kapitel. */
   chapterFilter: string | null = null;
   /** 'quiz' = fällige Pool-Linien abfragen; 'learn' = neue Linien durchspielen → in Pool (?mode=learn). */
@@ -378,8 +379,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.chapterFilter = this.route.snapshot.queryParamMap.get('chapter');
     this.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
     this.singleLineKey = this.route.snapshot.queryParamMap.get('line');
-    const saved = localStorage.getItem(COLOR_KEY(this.repertoireId));
-    if (saved === 'w' || saved === 'b') this.color = saved;
     this.stockfish.init().catch(() => {});
 
     forkJoin({
@@ -388,8 +387,16 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: ({ pgn, states }) => {
         this.graph = buildRepertoireGraph(pgn);
-        if (!saved) this.color = this.graph.guessedColor;
         this.allLines = parsePgnText(pgn);
+        // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
+        // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
+        // Farben mischt.
+        const auto = autoChapterColors(this.allLines.map(l => ({
+          chapter: (l.headers['Black'] || '').trim(),
+          side: sideOfLastMove(l.fens[0], l.moves.length),
+          rootSide: rootSideOf(l.fens[0]),
+        })));
+        this.chapterColors = resolveChapterColors(this.repertoireId, auto);
         this.statesByKey = new Map(states.map(s => [s.lineKey, s]));
         this.buildQueue();
       },
@@ -399,12 +406,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); }
 
-  setColor(c: 'w' | 'b'): void {
-    if (c === this.color) return;
-    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
-    this.color = c;
-    localStorage.setItem(COLOR_KEY(this.repertoireId), c);
-    this.buildQueue();
+  /** Effektive Trainingsfarbe einer Linie (aus ihrem Kapitel). */
+  private colorOf(line: ParsedGame): TrainColor {
+    return this.chapterColors.get((line.headers['Black'] || '').trim()) ?? 'w';
   }
 
   setMode(m: Mode): void {
@@ -536,23 +540,25 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   private hasUserMove(line: ParsedGame): boolean {
-    // FEN[0] enthält die Startseite; wir suchen den ersten Ply, an dem der User zieht.
+    // FEN[0] enthält die Startseite; wir suchen den ersten Ply, an dem der User (= Kapitelfarbe) zieht.
     if (line.moves.length === 0) return false;
+    const color = this.colorOf(line);
     const start = new Chess(line.fens[0]);
     let side: 'w' | 'b' = start.turn();
     for (let i = 0; i < line.moves.length; i++) {
-      if (side === this.color) return true;
+      if (side === color) return true;
       side = side === 'w' ? 'b' : 'w';
     }
     return false;
   }
 
   private countUserMoves(line: ParsedGame): number {
+    const color = this.colorOf(line);
     const start = new Chess(line.fens[0]);
     let side: 'w' | 'b' = start.turn();
     let n = 0;
     for (let i = 0; i < line.moves.length; i++) {
-      if (side === this.color) n++;
+      if (side === color) n++;
       side = side === 'w' ? 'b' : 'w';
     }
     return n;
@@ -566,6 +572,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.clearAdvance();
     this.clearOppTimer();
     this.clearLearn();
+    // Brett-Orientierung / „am Zug"-Text / Eval-Vorzeichen richten sich nach der Farbe DIESER Linie.
+    this.color = this.colorOf(line);
     this.chess = new Chess(line.fens[0]);
     this.currentPly = 0;
     this.lineHadWrong = false;

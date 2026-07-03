@@ -654,6 +654,12 @@
       "noChapter": "(Bez poglavlja)",
       "toggleChapter": "Otvori / zatvori poglavlje",
       "trainChapter": "Treniraj ovo poglavlje",
+      "color": {
+        "title": "Boja treniranja",
+        "white": "Bijeli",
+        "black": "Crni",
+        "tooltip": "Kojom stranom treniraš ovo poglavlje (automatski prepoznato — ovdje ispravi ako je pogrešno)"
+      },
       "sr": {
         "reviewAll": "Provjeri dospjele linije",
         "learnAll": "Uči nove linije",

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
 import { ParsedGame, START_FEN, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
+import { sideOfLastMove, TrainColor } from './repertoire-color.util';
 
 export interface RepertoireLine {
   gameIndex: number;
@@ -15,6 +16,10 @@ export interface RepertoireLine {
   chapter: string;
   /** Stabiler SR-Schlüssel (identisch zum Trainer) — für Pool-/Fälligkeits-Anzeige + Aktionen. */
   lineKey: string;
+  /** Start-FEN der Linie (für die Trainingsfarb-Erkennung). */
+  startFen: string;
+  /** Seite des letzten Halbzugs — Signal für die automatische Trainingsfarbe je Kapitel. */
+  lastMoveSide: TrainColor | null;
 }
 
 @Injectable()
@@ -121,6 +126,8 @@ export class RepertoireViewerService {
       moveCount: Math.ceil(moves.length / 2),
       chapter: (game.headers['Black'] || '').trim(),
       lineKey: lineKeyFromSans(moves.map(m => m.san)),
+      startFen: game.fens[0],
+      lastMoveSide: sideOfLastMove(game.fens[0], moves.length),
     };
   }
 }

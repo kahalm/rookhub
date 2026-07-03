@@ -2,10 +2,13 @@ import { of } from 'rxjs';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireLine } from './repertoire-viewer.service';
 
-function line(chapter: string, gameIndex: number): RepertoireLine {
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+function line(chapter: string, gameIndex: number, lastMoveSide: 'w' | 'b' | null = 'w'): RepertoireLine {
   return {
     gameIndex, summary: '1. e4', opening: '', white: 'W', black: chapter,
     result: '*', moveCount: 1, chapter, lineKey: 'k' + gameIndex,
+    startFen: START, lastMoveSide,
   };
 }
 
@@ -73,5 +76,31 @@ describe('RepertoireLinesComponent chapterGroups reactivity', () => {
     expect(c.status(line('A', 1))).toBe('paused');    // k1, paused
     expect(c.status(line('A', 2))).toBe('new');       // k2, kein Zustand
     expect(c.badge(line('A', 0))).toBe('S3');
+  });
+});
+
+describe('RepertoireLinesComponent trained color per chapter', () => {
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_7'));
+
+  it('auto-detects color from the chapter majority of last-move sides', () => {
+    const c = makeComponent();
+    c.repertoireId = 7;
+    c.ngOnInit();
+    // Kapitel „W": beide Linien enden auf Weiß → Weiß. Kapitel „B": beide auf Schwarz → Schwarz.
+    c.lines = [line('W', 0, 'w'), line('W', 1, 'w'), line('B', 2, 'b'), line('B', 3, 'b')];
+    const groups = c.chapterGroups();
+    expect(c.chapterColor(groups.find(g => g.chapter === 'W')!)).toBe('w');
+    expect(c.chapterColor(groups.find(g => g.chapter === 'B')!)).toBe('b');
+  });
+
+  it('setChapterColor persists an override that wins over auto-detection', () => {
+    const c = makeComponent();
+    c.repertoireId = 7;
+    c.ngOnInit();
+    c.lines = [line('Caro', 0, 'w'), line('Caro', 1, 'b')];   // Gleichstand → Auto-Fallback
+    const group = c.chapterGroups()[0];
+    c.setChapterColor(group, 'w');
+    expect(c.chapterColor(group)).toBe('w');
+    expect(JSON.parse(localStorage.getItem('rookhub_rep_train_chaptercolor_7')!)['Caro']).toBe('w');
   });
 });
