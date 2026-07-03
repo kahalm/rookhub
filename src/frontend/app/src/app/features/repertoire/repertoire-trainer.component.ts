@@ -36,7 +36,7 @@ const ADVANCE_MS: Record<Outcome, number> = { correct: 1500, tolerated: 1500, wr
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
 const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
-const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs
+const LEARN_GAP_MS = 400;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs (fühlte sich beim Wiederholen zu lang an, halbiert von 800)
 // Learn-Modus: wie oft eine Linie durchgespielt werden muss, bevor sie in den Übungspool wandert
 // (1× geführt lernen + 2× „durchklicken").
 const LEARN_REPEATS = 3;

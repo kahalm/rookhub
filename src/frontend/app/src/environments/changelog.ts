@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.255.1';
+export const APP_VERSION = '0.255.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.255.2", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer Learn mode: the pause after your move before it continues (opponent reply → next move) is now shorter — the gap between the opponent's move and showing/asking the next move was halved from 800 ms to 400 ms, so repeating a line feels snappier.", de: "Repertoire-Trainer Lern-Modus: die Pause nach deinem Zug, bis es weitergeht (Gegnerantwort → nächster Zug), ist jetzt kürzer — die Lücke zwischen dem Gegnerzug und dem nächsten Zug wurde von 800 ms auf 400 ms halbiert, sodass sich das Wiederholen einer Linie flüssiger anfühlt." },
+  ]},
   { version: "0.255.1", date: "2026-07-03", changes: [
     { en: "Repertoire detail page: the button at the top now reads “Review” (with the dumbbell icon) instead of “Train” — it opens the trainer in its default Review/quiz mode, so the label now matches the mode it lands in (the trainer's own toggle already used Review/Learn).", de: "Repertoire-Detailseite: der Knopf ganz oben heißt jetzt „Abfragen“ (mit Hantel-Icon) statt „Trainieren“ — er öffnet den Trainer im Standard-Abfragen-Modus, das Label passt jetzt also zum Modus, in dem man landet (der Umschalter im Trainer selbst nutzte längst Abfragen/Lernen)." },
   ]},
