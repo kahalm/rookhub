@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.256.0';
+export const APP_VERSION = '0.257.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.257.0", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer Learn mode: a comment on an opponent's move no longer flashes by — the trainer now pauses after playing a commented opponent move, shows the comment permanently, and waits for you to confirm with “Continue” (tap the board, Space or Enter) before moving on. Previously the comment was only visible for the brief gap between the opponent's move and your next move, so it was easy to miss.", de: "Repertoire-Trainer Lern-Modus: ein Kommentar an einem Gegnerzug blitzt nicht mehr nur kurz auf — der Trainer hält jetzt nach einem kommentierten Gegnerzug an, zeigt den Kommentar dauerhaft und wartet auf deine Bestätigung „Weiter“ (Brett antippen, Leertaste oder Enter), bevor es weitergeht. Vorher war der Kommentar nur für die kurze Lücke zwischen Gegnerzug und deinem nächsten Zug sichtbar und leicht zu übersehen." },
+  ]},
   { version: "0.256.0", date: "2026-07-03", changes: [
     { en: "Repertoire trainer now handles COLOR-MIXED repertoires: the single global White/Black toggle is gone. Each line is trained from its correct side, detected automatically per chapter (majority of the side that plays the last move — Chessable ends a learned line on the trained side). A chapter you play as Black (e.g. a 'French with black' chapter) and one you play as White (e.g. a Sicilian chapter) are no longer jumbled — each plays from its own side even in the same session. On the repertoire's line list, every chapter shows a White/Black badge and a menu to correct the detection (stored per device); useful when the heuristic ties (e.g. Caro-Kann).", de: "Der Repertoire-Trainer kommt jetzt mit FARBGEMISCHTEN Repertoires klar: der globale Weiß/Schwarz-Umschalter ist weg. Jede Linie wird aus der richtigen Seite trainiert, pro Kapitel automatisch erkannt (Mehrheit der Seite, die den letzten Zug zieht — Chessable beendet eine gelernte Linie auf der trainierten Seite). Ein Kapitel, das man mit Schwarz spielt (z. B. ein French-mit-Schwarz-Kapitel), und eines mit Weiß (z. B. ein Sizilianisch-Kapitel) sind nicht mehr durcheinander — jedes wird aus seiner eigenen Seite gespielt, auch in derselben Sitzung. In der Linienliste zeigt jedes Kapitel ein Weiß/Schwarz-Abzeichen samt Menü zum Korrigieren der Erkennung (pro Gerät gespeichert); praktisch bei Gleichstand (z. B. Caro-Kann)." },
   ]},

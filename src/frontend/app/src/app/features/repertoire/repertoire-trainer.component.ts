@@ -24,7 +24,7 @@ import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, Tr
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 
-type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW';
+type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';
 type Outcome = 'correct' | 'tolerated' | 'wrong';
 type Mode = 'quiz' | 'learn';
 
@@ -185,6 +185,19 @@ const LEARN_REPEATS = 3;
           }
         }
 
+        @if (phase === 'COMMENT') {
+          <div class="comment-hold">
+            <div class="comment-box">
+              <mat-icon>chat_bubble</mat-icon>
+              <div class="comment-text">{{ holdComment }}</div>
+            </div>
+            <button mat-raised-button color="primary" (click)="continueFromComment(); $event.stopPropagation()">
+              {{ 'repertoireTrainer.continue' | translate }}
+            </button>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          </div>
+        }
+
         <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
           <p *ngIf="outcome === 'correct'"><mat-icon>check_circle</mat-icon> {{ 'repertoireTrainer.correct' | translate }}</p>
           <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon> {{ 'repertoireTrainer.toleratedPlayable' | translate }}</p>
@@ -292,6 +305,8 @@ const LEARN_REPEATS = 3;
     .comment-box mat-icon { flex: 0 0 auto; opacity: .7; font-size: 18px; width: 18px; height: 18px; margin-top: 1px; }
     .comment-text { white-space: pre-wrap; font-size: 13px; line-height: 1.45; }
     .line-done { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .comment-hold { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .comment-hold .comment-box { width: 100%; }
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -315,6 +330,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private singleLineKey: string | null = null;
   /** Learn-Modus: Kommentar des gerade gezeigten Zugs (hält die Anzeige, bis der User weitertippt). */
   learnComment = '';
+  /** COMMENT-Phase: Kommentar eines gerade gespielten Gegnerzugs, hält bis der User „Weiter" bestätigt. */
+  holdComment = '';
   private learnTimer: ReturnType<typeof setTimeout> | null = null;
   /** Learn-Modus: wie oft die AKTUELLE Linie schon komplett durchgespielt wurde (0-basiert bis
    *  <see cref="LEARN_REPEATS"/>); erst danach wandert sie in den Übungspool. */
@@ -578,6 +595,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.currentPly = 0;
     this.lineHadWrong = false;
     this.pendingWrong = false;
+    this.holdComment = '';
     this.fen = this.chess.fen();
     this.lastMove = undefined;
     this.advanceToUserMove();
@@ -622,9 +640,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       } catch { this.finishLine(); return; }
       this.currentPly++;
       this.cdr.markForCheck();
-      // Learn: kurze Pause zwischen dem Gegnerzug und dem Zeigen des nächsten eigenen Zugs, damit
-      // beide nicht quasi gleichzeitig erscheinen.
+      // Learn: hat der gerade gespielte Gegnerzug einen Kommentar, halten wir an und zeigen ihn
+      // dauerhaft (bis der User „Weiter" bestätigt) — sonst würde er nur für die kurze
+      // LEARN_GAP-Spanne aufblitzen. Ohne Kommentar nur die kurze Pause bis zum nächsten Zug.
       if (this.mode === 'learn') {
+        const playedComment = (line.comments?.[this.currentPly - 1] || '').trim();
+        if (playedComment) { this.enterCommentHold(playedComment); return; }
         this.oppTimer = setTimeout(() => { this.oppTimer = null; this.advanceToUserMove(); }, LEARN_GAP_MS);
       } else {
         this.advanceToUserMove();
@@ -882,6 +903,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   onPlayClick(): void {
     if (this.phase === 'LINE_DONE') { this.continueLine(); return; }
+    if (this.phase === 'COMMENT') { this.continueFromComment(); return; }
     if (this.phase === 'LEARN_SHOW' && this.learnComment) { this.learnRetract(); return; }
     if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
   }
@@ -895,6 +917,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     let acted = true;
     if (this.phase === 'LINE_DONE') this.continueLine();
+    else if (this.phase === 'COMMENT') this.continueFromComment();
     else if (this.phase === 'LEARN_SHOW' && this.learnComment) this.learnRetract();
     else if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
     else acted = false;
@@ -974,6 +997,24 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   // ===== Learn-Modus =====
+
+  /** Kommentar eines gerade gespielten Gegnerzugs dauerhaft anzeigen (COMMENT-Phase), bis der User
+   * „Weiter" bestätigt (Tap/Leertaste/Enter). Brett bleibt in der aktuellen Stellung, view-only. */
+  private enterCommentHold(comment: string): void {
+    this.clearLearn();
+    this.clearOppTimer();
+    this.holdComment = comment;
+    this.dests = new Map();
+    this.phase = 'COMMENT';
+    this.cdr.markForCheck();
+  }
+
+  /** „Weiter" aus der COMMENT-Phase: Kommentar wegräumen und mit der Linie fortfahren. */
+  continueFromComment(): void {
+    if (this.phase !== 'COMMENT') return;
+    this.holdComment = '';
+    this.advanceToUserMove();
+  }
 
   /** Wiederholungs-Durchläufe (learnPass ≥ 1): den erwarteten Zug NICHT vorzeigen — der User spielt
    * ihn aus dem Gedächtnis. Ein falscher Zug blendet ihn via onLearnMove → enterLearnShow als

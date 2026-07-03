@@ -267,6 +267,47 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(promote).toHaveBeenCalled();
   }));
 
+  it('learn mode: comment on an opponent move holds (COMMENT phase) until confirmed', fakeAsync(() => {
+    const withOppComment = [
+      '[Event "Rep"]',
+      '[White "1.e4 e5"]',
+      '[Black "Chapter A"]',
+      '',
+      '1. e4 e5 {Open game — Black contests the centre.} 2. Nf3 Nc6 *',
+      '',
+    ].join('\n');
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => k === 'mode' ? 'learn' : null },
+      },
+    };
+    const training: any = {
+      getPgn: () => of(withOppComment),
+      getLineStates: () => of([]),
+      reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
+    };
+    // Farbe wird pro Kapitel erkannt (Seite des letzten Zugs); diese Linie endet auf Schwarz →
+    // per Override auf Weiß zwingen, damit Schwarz (e5) der GEGNERzug mit Kommentar ist.
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w' }));
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+    );
+    c.ngOnInit();
+    expect(c.phase).toBe('LEARN_SHOW');                   // e4 vorgezeigt (kein Kommentar)
+    tick(1000);
+    expect(c.phase).toBe('PLAYING');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // eigener Zug e4
+    tick(400);                                            // Gegner spielt e5 (mit Kommentar)
+    expect(c.phase).toBe('COMMENT');                      // → hält an statt kurz aufzublitzen
+    expect(c.holdComment).toContain('Open game');
+    c.continueFromComment();                              // „Weiter"
+    expect(c.phase).not.toBe('COMMENT');
+  }));
+
   it('learn repeat pass: wrong move reveals the expected move as a reminder (LEARN_SHOW)', fakeAsync(() => {
     const route: any = {
       snapshot: {
