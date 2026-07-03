@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.255.0';
+export const APP_VERSION = '0.255.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.255.1", date: "2026-07-03", changes: [
+    { en: "Repertoire detail page: the button at the top now reads “Review” (with the dumbbell icon) instead of “Train” — it opens the trainer in its default Review/quiz mode, so the label now matches the mode it lands in (the trainer's own toggle already used Review/Learn).", de: "Repertoire-Detailseite: der Knopf ganz oben heißt jetzt „Abfragen“ (mit Hantel-Icon) statt „Trainieren“ — er öffnet den Trainer im Standard-Abfragen-Modus, das Label passt jetzt also zum Modus, in dem man landet (der Umschalter im Trainer selbst nutzte längst Abfragen/Lernen)." },
+  ]},
   { version: "0.255.0", date: "2026-07-03", changes: [
     { en: "Repertoire trainer Learn mode: only the FIRST pass through a new line shows you the moves (guided learning). The two repeat run-throughs now require you to play each move from memory instead of showing it first — a wrong move briefly reveals the expected move as a reminder, then lets you try again. Previously every pass showed the move (only the comment was dropped on later passes), which defeated the point of the repeats.", de: "Repertoire-Trainer, Lern-Modus: nur der ERSTE Durchlauf einer neuen Linie zeigt die Züge vor (geführtes Lernen). Die beiden Wiederholungs-Durchläufe verlangen jeden Zug jetzt aus dem Gedächtnis, statt ihn vorzuzeigen — ein falscher Zug blendet den erwarteten Zug kurz als Erinnerung ein, danach darf man erneut ziehen. Vorher zeigte jeder Durchlauf den Zug vor (nur der Kommentar fiel bei späteren Durchläufen weg), was den Sinn der Wiederholungen aushebelte." },
   ]},

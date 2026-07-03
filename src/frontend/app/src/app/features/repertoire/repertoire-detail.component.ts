@@ -39,7 +39,7 @@ type ViewMode = 'lines' | 'tree' | 'edit';
             <h2>{{ repertoire.name }}</h2>
             <span class="subtitle">{{ repertoire.description || ('repertoire.detail.noDescription' | translate) }}</span>
             <a mat-raised-button color="primary" class="train-btn" [routerLink]="['/repertoires', id, 'train']">
-              <mat-icon>school</mat-icon> {{ 'repertoireTrainer.train' | translate }}
+              <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.modeQuiz' | translate }}
             </a>
           </div>
           <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" appearance="standard">
