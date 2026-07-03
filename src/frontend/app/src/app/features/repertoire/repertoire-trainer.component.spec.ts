@@ -206,13 +206,18 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.mode).toBe('learn');
 
     // Eine Linie (Chapter A: e4/Nf3) muss LEARN_REPEATS=3 mal durchgespielt werden.
+    // Pass 0 zeigt die Züge vor (LEARN_SHOW → retract → PLAYING); Pass 1/2 verlangen sie aus dem
+    // Gedächtnis (direkt PLAYING, kein LEARN_SHOW).
     for (let pass = 0; pass < 3; pass++) {
-      expect(c.phase).toBe('LEARN_SHOW');
-      tick(1000);                                         // ohne Kommentar → nach LEARN_SHOW_MS zurücknehmen
+      if (pass === 0) {
+        expect(c.phase).toBe('LEARN_SHOW');
+        tick(1000);                                       // ohne Kommentar → nach LEARN_SHOW_MS zurücknehmen
+      }
       expect(c.phase).toBe('PLAYING');
       c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-      tick(400); tick(800);                               // Gegner e5 + Pause → nächster Learn-Show
-      tick(1000);                                         // Show Nf3 → retract
+      tick(400); tick(800);                               // Gegner e5 + Pause → nächster Halbzug
+      if (pass === 0) tick(1000);                         // Show Nf3 → retract (nur Pass 0)
+      expect(c.phase).toBe('PLAYING');
       c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
       tick(400); tick(800);                               // Gegner Nc6 → finishLine → LINE_DONE
       expect(c.phase).toBe('LINE_DONE');
@@ -222,6 +227,36 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       }
     }
     expect(promote).toHaveBeenCalled();
+  }));
+
+  it('learn repeat pass: wrong move reveals the expected move as a reminder (LEARN_SHOW)', fakeAsync(() => {
+    const route: any = {
+      snapshot: {
+        paramMap: { get: () => '1' },
+        queryParamMap: { get: (k: string) => k === 'mode' ? 'learn' : null },
+      },
+    };
+    const training: any = {
+      getPgn: () => of(PGN),
+      getLineStates: () => of([]),
+      reviewLine: () => of(state(KEY_A, FUTURE())),
+      promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 0 }), reset: () => of({ deleted: 0 }),
+    };
+    localStorage.setItem('rookhub_rep_train_color_1', 'w');
+    const c = new RepertoireTrainerComponent(
+      route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+    );
+    c.ngOnInit();
+    // In einen Wiederholungs-Durchlauf versetzen: der 2. Durchlauf zeigt NICHT vor → direkt PLAYING.
+    (c as any).learnPass = 1;
+    (c as any).startCurrentLine();
+    expect(c.phase).toBe('PLAYING');                      // kein LEARN_SHOW im Wiederholungs-Durchlauf
+    c.onMove({ orig: 'e2' as any, dest: 'e3' as any });   // falscher Zug (erwartet e4)
+    expect(c.phase).toBe('LEARN_SHOW');                   // → Zug wird als Erinnerung eingeblendet
+    tick(1000);
+    expect(c.phase).toBe('PLAYING');                      // danach wieder spielbar
   }));
 
   it('continueLine only advances from LINE_DONE (manual continue, no auto-advance)', () => {

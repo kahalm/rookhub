@@ -585,7 +585,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (nextSide === this.color) {
       // User ist am Zug.
       this.startFen = this.fen;
-      if (this.mode === 'learn') { this.enterLearnShow(); return; }
+      if (this.mode === 'learn') {
+        // Nur der ERSTE Durchlauf (learnPass 0) zeigt den erwarteten Zug vor (geführtes Lernen);
+        // die Wiederholungs-Durchläufe (Pass 2/3) verlangen ihn aus dem Gedächtnis. Ein falscher
+        // Zug blendet ihn dann via onLearnMove → enterLearnShow als Erinnerung ein.
+        if (this.learnPass === 0) { this.enterLearnShow(); }
+        else { this.enterLearnPlay(); }
+        return;
+      }
       try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
       this.phase = 'PLAYING';
       this.cdr.markForCheck();
@@ -959,6 +966,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   // ===== Learn-Modus =====
+
+  /** Wiederholungs-Durchläufe (learnPass ≥ 1): den erwarteten Zug NICHT vorzeigen — der User spielt
+   * ihn aus dem Gedächtnis. Ein falscher Zug blendet ihn via onLearnMove → enterLearnShow als
+   * Erinnerung ein. Brett bleibt in der Startstellung des Halbzugs und ist sofort spielbar. */
+  private enterLearnPlay(): void {
+    this.clearLearn();
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.learnComment = '';
+    this.phase = 'PLAYING';
+    this.cdr.markForCheck();
+  }
 
   /** Zeigt den erwarteten Zug auf dem Brett (view-only). Ohne Kommentar nach 2s automatisch
    * zurücknehmen; MIT Kommentar stehen lassen, bis der User weitertippt (zum Lesen). */

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.254.0';
+export const APP_VERSION = '0.255.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.255.0", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer Learn mode: only the FIRST pass through a new line shows you the moves (guided learning). The two repeat run-throughs now require you to play each move from memory instead of showing it first — a wrong move briefly reveals the expected move as a reminder, then lets you try again. Previously every pass showed the move (only the comment was dropped on later passes), which defeated the point of the repeats.", de: "Repertoire-Trainer, Lern-Modus: nur der ERSTE Durchlauf einer neuen Linie zeigt die Züge vor (geführtes Lernen). Die beiden Wiederholungs-Durchläufe verlangen jeden Zug jetzt aus dem Gedächtnis, statt ihn vorzuzeigen — ein falscher Zug blendet den erwarteten Zug kurz als Erinnerung ein, danach darf man erneut ziehen. Vorher zeigte jeder Durchlauf den Zug vor (nur der Kommentar fiel bei späteren Durchläufen weg), was den Sinn der Wiederholungen aushebelte." },
+  ]},
   { version: "0.254.0", date: "2026-07-03", changes: [
     { en: "Larger board across all puzzle modes: the Chessable-style vertical sizing introduced for the repertoire trainer in 0.253.0 now applies to every solver — standard puzzle, endless, book/course/weekly/daily puzzle. The board grows up to `min(60vw, 820 px, viewport-height − 180 px)` instead of the old hard 560 px cap; the page container widens from 1200 px to `min(1400 px, 96 vw)` so the info panel next to the board still has room.", de: "Größeres Brett in allen Puzzle-Modi: die viewport-basierte Chessable-Kappung aus 0.253.0 (Repertoire-Trainer) greift jetzt in jedem Solver — Standard-Puzzle, Endlos, Buch-/Kurs-/Wochenpost-/Tagespuzzle. Das Brett wächst bis `min(60vw, 820 px, viewport-height − 180 px)` statt hart bei 560 px zu klemmen; der Seiten-Container weitet sich von 1200 auf `min(1400 px, 96 vw)`, damit die Info-Spalte neben dem Brett weiterhin Platz hat." },
   ]},
