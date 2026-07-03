@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.255.2';
+export const APP_VERSION = '0.255.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.255.3", date: "2026-07-03", changes: [
+    { en: "Time spent solving weekly-post puzzles now counts as tactical training time in the training-goals tracker. `WeeklyPostAttempt` rows are aggregated as source `randomPuzzle` / theme `tactics` (curator picks these as tactics sets, so the theme is fixed — no tag routing). Per-puzzle time cap (1800 s) is applied same as standard/daily puzzles.", de: "Die im Wochenpost verbrachte Puzzle-Zeit zählt jetzt als Taktik-Trainingszeit im Trainingsziele-Tracker. `WeeklyPostAttempt`-Einträge fließen in Quelle `randomPuzzle` / Thema `tactics` (der Kurator legt sie als Taktik-Set an, daher fest verbucht — kein Tag-Routing). Pro-Puzzle-Cap (1800 s) wie bei Standard-/Tagespuzzle." },
+  ]},
   { version: "0.255.2", date: "2026-07-03", changes: [
     { en: "Repertoire trainer Learn mode: the pause after your move before it continues (opponent reply → next move) is now shorter — the gap between the opponent's move and showing/asking the next move was halved from 800 ms to 400 ms, so repeating a line feels snappier.", de: "Repertoire-Trainer Lern-Modus: die Pause nach deinem Zug, bis es weitergeht (Gegnerantwort → nächster Zug), ist jetzt kürzer — die Lücke zwischen dem Gegnerzug und dem nächsten Zug wurde von 800 ms auf 400 ms halbiert, sodass sich das Wiederholen einer Linie flüssiger anfühlt." },
   ]},

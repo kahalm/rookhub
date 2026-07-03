@@ -231,6 +231,33 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Tracker_WeeklyPostAttempts_CountAsRandomPuzzleTactics()
+    {
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(daily: 10)); // 600 s
+        var now = DateTime.UtcNow;
+        var post = new WeeklyPost { Title = "wp1", FileName = "wp1.pgn", PgnContent = "", ScheduledAt = now };
+        _db.WeeklyPosts.Add(post);
+        await _db.SaveChangesAsync();
+
+        _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt {
+            WeeklyPostId = post.Id, UserId = u.Id, PuzzleIndex = 0,
+            Solved = true, TimeSeconds = 400, AttemptedAt = now,
+        });
+        _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt {
+            WeeklyPostId = post.Id, UserId = u.Id, PuzzleIndex = 1,
+            Solved = false, TimeSeconds = 250, AttemptedAt = now,
+        });
+        await _db.SaveChangesAsync();
+
+        var day = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
+        Assert.Equal(650, day.TotalSeconds);                         // 400 + 250
+        Assert.Equal(650, day.BySource.RandomPuzzleSeconds);         // Wochenpost fließt in Puzzles
+        Assert.Equal(650, day.ByTheme.TacticsSeconds);               // fest als Taktik
+        Assert.Equal("full", day.Status);                            // 650 >= 600
+    }
+
+    [Fact]
     public async Task Tracker_CourseTime_BothBookKinds_CountAsCourseBookSource()
     {
         var u = await CreateUserAsync();

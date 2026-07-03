@@ -504,6 +504,13 @@ public class TrainingGoalService
                      .Select(s => new { s.CreatedAt, s.DurationSeconds }).ToListAsync())
             AddTime(s.CreatedAt, s.DurationSeconds, PerSessionCapSeconds, Src.RandomPuzzle, Thm.Tactics);
 
+        // Quelle „randomPuzzle": Wochenpost-Puzzle-Versuche — der Kurator legt sie als Taktik-Set an,
+        // daher fest als Taktik verbucht (kein Kind-/Tag-Routing). Cap wie Standard-/Buch-Puzzle.
+        foreach (var a in await _db.WeeklyPostAttempts.AsNoTracking()
+                     .Where(a => a.UserId == userId && a.AttemptedAt >= windowStartUtc)
+                     .Select(a => new { a.AttemptedAt, a.TimeSeconds }).ToListAsync())
+            AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.RandomPuzzle, Thm.Tactics);
+
         // Quelle „courseBook": alle Kurs-Versuche — Thema aus Tags/Chapter; sonst Puzzle-Buch→Taktik, Studienbuch→other.
         foreach (var a in await (
                      from a in _db.CourseAttempts.AsNoTracking()
