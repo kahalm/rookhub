@@ -237,6 +237,64 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).not.toBe('LINE_DONE');
   });
 
+  it('movesInLine marks the next-to-play ply as current, prior plies as past, future ones as future', () => {
+    const c = make('w', 'Chapter A');
+    // Frisch gestartete Linie: currentPly === 0 → erster Halbzug ist „current".
+    let m = c.movesInLine;
+    expect(m.length).toBe(4);
+    expect(m[0].san).toBe('e4'); expect(m[0].state).toBe('current');
+    expect(m[0].num).toBe(1);                       // Nummer beim ersten Weiß-Halbzug
+    expect(m[1].num).toBeNull();                    // Schwarz-Halbzug bekommt keine Zugnummer
+    expect(m[1].state).toBe('future');
+    expect(m[2].num).toBe(2);                       // Nummer bei Weiß-Halbzug des 2. Zugs
+    // Cursor per State-Manipulation vorrücken — hier wird das Bucketing (past/current/future)
+    // getestet, nicht die Zeit-getriebene Ply-Progression. Race-frei.
+    (c as any).currentPly = 2;
+    m = c.movesInLine;
+    expect(m[0].state).toBe('past');
+    expect(m[1].state).toBe('past');
+    expect(m[2].state).toBe('current');
+    expect(m[3].state).toBe('future');
+  });
+
+  it('streak: correct move increments (best follows); showSolution resets, bestStreak stays', () => {
+    const c = make('w', 'Chapter A');
+    expect(c.currentStreak).toBe(0);
+    expect(c.bestStreak).toBe(0);
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });      // richtig → Streak 1
+    expect(c.currentStreak).toBe(1);
+    expect(c.bestStreak).toBe(1);
+    // Falscher Zug OHNE Zwischen-Advance: Guard verhindert onMove-Verarbeitung (phase=FEEDBACK).
+    // Wir simulieren daher direkt einen pendingWrong-Zustand und lassen showSolution die Serie brechen.
+    (c as any).currentStreak = 5;
+    (c as any).bestStreak = 5;
+    (c as any).phase = 'FEEDBACK';
+    (c as any).outcome = 'wrong';
+    (c as any).pendingWrong = true;
+    (c as any).wrongRevealed = false;
+    c.showSolution();
+    expect(c.currentStreak).toBe(0);                          // Serie gebrochen
+    expect(c.bestStreak).toBe(5);                             // Session-Best bleibt
+    expect(c.wrong).toBeGreaterThan(0);                       // showSolution zählt als Fehler
+  });
+
+  it('mouseslip forgives a wrong move and preserves the streak', () => {
+    const c = make('w', 'Chapter A');
+    // Am Ausgangs-Ply falsch spielen (a3 statt e4) — pendingWrong=true, Streak bleibt 0.
+    c.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    expect(c.outcome).toBe('wrong');
+    expect(c.currentStreak).toBe(0);
+    // Mausrutscher verzeihen — der offene Fehler zählt NICHT, Streak unangetastet.
+    c.mouseslip();
+    expect(c.currentStreak).toBe(0);
+    expect(c.phase).toBe('PLAYING');
+    // Danach den korrekten Zug spielen: Streak wächst auf 1 (der Mausrutscher hat nichts gebrochen).
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(c.outcome).toBe('correct');
+    expect(c.currentStreak).toBe(1);
+    expect(c.bestStreak).toBe(1);
+  });
+
   it('LOADING failure sets phase to EMPTY', () => {
     const route: any = {
       snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } },

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.251.0';
+export const APP_VERSION = '0.252.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.252.0", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer side panel is no longer half-empty: the moves of the current line are shown in the side panel with the next move to play highlighted (bold, ▸ marker) and the moves you've already played dimmed — you can see where you are in the line at a glance. Session stats add a streak chip (🔥 N) once you're on 2+ correct/tolerated moves in a row, with the session best in the tooltip; mouse-slips don't break the streak, a real wrong move or “Show solution” does. The board is a bit larger too (max 560 px instead of 480), and the whole trainer widens to 1080 px so the moves list has room.", de: "Repertoire-Trainer, rechte Spalte nicht mehr halbleer: die Züge der aktuellen Linie stehen jetzt in der Seitenleiste, der nächste zu spielende Halbzug ist hervorgehoben (fett, ▸-Marker), bereits gespielte Züge gedimmt — man sieht auf einen Blick, wo man in der Linie ist. Die Sitzungs-Stats bekommen einen Streak-Chip (🔥 N) ab 2 richtigen/geduldeten Zügen in Folge, die Session-Bestserie steht im Tooltip; Mausrutscher unterbrechen den Streak nicht, ein echter Fehler oder „Lösung zeigen“ schon. Das Brett ist etwas größer (max. 560 statt 480 px), und der Trainer weitet sich auf 1080 px auf, damit die Züge-Liste Platz hat." },
+  ]},
   { version: "0.251.0", date: "2026-07-03", changes: [
     { en: "Link two courses (e.g. a book and its workbook) so you can switch between them in one click. On the courses page each course has a new link button (🔗) to pair it with another course; a small “🔗 <name>” badge on the card links straight to the partner. While solving a course, a “switch” button in the puzzle header jumps to the linked course in the same mode — handy for going back and forth between the book you're reading sequentially and its workbook. Links are personal (per user, each course has at most one partner) and are removed automatically if a course is deleted.", de: "Zwei Kurse verknüpfen (z. B. ein Buch und sein Workbook), um mit einem Klick dazwischen zu wechseln. Auf der Kurse-Seite hat jeder Kurs einen neuen Verknüpfen-Knopf (🔗), um ihn mit einem anderen Kurs zu paaren; ein kleines „🔗 <Name>“-Badge auf der Karte führt direkt zum Partner. Beim Durcharbeiten eines Kurses springt ein „Wechseln“-Knopf im Puzzle-Kopf in den verknüpften Kurs im selben Modus — praktisch, um zwischen dem sequenziell gelesenen Buch und seinem Workbook hin- und herzuwechseln. Verknüpfungen sind persönlich (pro Nutzer, je Kurs höchstens ein Partner) und werden beim Löschen eines Kurses automatisch entfernt." },
   ]},

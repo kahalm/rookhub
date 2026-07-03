@@ -26,6 +26,8 @@
     "playYourMove": "Mach deinen Zug auf dem Brett.",
     "tapToContinue": "Weiter… (tippen oder Leertaste zum Überspringen)",
     "lineProgress": "Linie {{done}} von {{total}}",
+    "streakTooltip": "Aktuelle Serie richtiger Züge · beste Serie in dieser Sitzung: {{best}}",
+    "movesInLine": "Züge dieser Linie",
     "lineDone": "Linie fertig — nächste wird geladen…",
     "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
     "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht.",

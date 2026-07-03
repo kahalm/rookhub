@@ -26,6 +26,8 @@
     "playYourMove": "Make your move on the board.",
     "tapToContinue": "Continuing… (tap or Space to skip)",
     "lineProgress": "Line {{done}} of {{total}}",
+    "streakTooltip": "Current streak of correct moves · session best: {{best}}",
+    "movesInLine": "Moves in this line",
     "lineDone": "Line complete — next one loading…",
     "resetTooltip": "Reset training progress (delete SM-2 state).",
     "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted.",

@@ -145,9 +145,22 @@ const LEARN_REPEATS = 3;
           <span>{{ 'repertoireTrainer.lineProgress' | translate: { done: qIndex + 1, total: queue.length } }}</span>
           <span class="ok">✓ {{ correct }}</span>
           <span class="bad">✗ {{ wrong }}</span>
+          @if (currentStreak >= 2) {
+            <span class="streak" [matTooltip]="'repertoireTrainer.streakTooltip' | translate: { best: bestStreak }">
+              <mat-icon>local_fire_department</mat-icon>{{ currentStreak }}
+            </span>
+          }
         </div>
         @if (currentLineLabel) {
           <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}</p>
+        }
+        @if (movesInLine.length > 0) {
+          <div class="line-moves" [attr.aria-label]="'repertoireTrainer.movesInLine' | translate">
+            @for (m of movesInLine; track m.ply) {
+              @if (m.num !== null) { <span class="mv-num">{{ m.num }}.</span> }
+              <span class="mv" [ngClass]="m.state">{{ m.san }}</span>
+            }
+          </div>
         }
         <p class="prompt">{{ (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove') | translate }}</p>
 
@@ -210,7 +223,7 @@ const LEARN_REPEATS = 3;
 </div>
   `,
   styles: [`
-    .trainer { max-width: 920px; margin: 0 auto; padding: 8px; }
+    .trainer { max-width: 1080px; margin: 0 auto; padding: 8px; }
     .bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
     .bar .title { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
@@ -220,11 +233,29 @@ const LEARN_REPEATS = 3;
     .msg { display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .msg mat-icon { font-size: 40px; height: 40px; width: 40px; }
     .play { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
-    app-puzzle-board { flex: 1 1 360px; max-width: 480px; }
-    .side { flex: 1 1 240px; min-width: 220px; }
-    .counts { display: flex; gap: 14px; margin: 10px 0; }
+    app-puzzle-board { flex: 1 1 420px; max-width: 560px; }
+    .side { flex: 1 1 300px; min-width: 260px; }
+    .counts { display: flex; align-items: center; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
     .counts .ok { color: #2e7d32; } .counts .bad { color: #c62828; }
+    .counts .streak { display: inline-flex; align-items: center; gap: 2px; padding: 2px 8px; border-radius: 999px;
+      background: color-mix(in srgb, #ff6f00 22%, transparent); color: #ff6f00; font-weight: 600; font-size: .85rem; }
+    .counts .streak mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .line-label { font-size: 13px; opacity: .85; margin: 4px 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Züge der aktuellen Linie: bereits gespielte grau, aktueller in Primary hervorgehoben, verbleibende
+     * gedimmt. Monospace + wrap, damit lange Linien lesbar bleiben. */
+    .line-moves { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; margin: 4px 0 10px;
+      padding: 8px 10px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 13px; line-height: 1.5;
+      background: var(--mat-sys-surface-container-high, rgba(255,255,255,.04));
+      max-height: 200px; overflow-y: auto; }
+    .line-moves .mv-num { opacity: .6; font-size: 12px; margin-left: 4px; }
+    .line-moves .mv-num:first-child { margin-left: 0; }
+    .line-moves .mv { padding: 0 2px; border-radius: 3px; }
+    .line-moves .mv.past { opacity: .55; }
+    .line-moves .mv.current { background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 22%, transparent);
+      color: var(--mat-sys-primary, #1565c0); font-weight: 700; padding: 0 6px; }
+    .line-moves .mv.current::before { content: '▸ '; }
+    .line-moves .mv.future { opacity: .8; }
     .prompt { font-weight: 600; }
     .feedback { padding: 10px; border-radius: 8px; }
     .feedback p { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
@@ -280,6 +311,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private currentPly = 0;
   correct = 0;
   wrong = 0;
+  currentStreak = 0;   // fortlaufende ✓/geduldet-Zug-Serie; echter Fehler setzt zurück (Mausrutscher nicht).
+  bestStreak = 0;      // Session-Rekord.
   sessionUserMoves = 0;   // Zähler für Progress-Balken (grob geschätzt)
 
   outcome: Outcome = 'correct';
@@ -392,6 +425,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.learnPass = 0;
     this.correct = 0;
     this.wrong = 0;
+    this.currentStreak = 0;
+    this.bestStreak = 0;
     this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
     if (this.queue.length === 0) {
       this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
@@ -619,6 +654,43 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return (line.headers['Black'] || '').trim();
   }
 
+  /** Züge der aktuellen Linie als flache Tokens fürs Template. `state` markiert den nächsten
+   * zu spielenden Halbzug (=`current`), alles davor `past`, alles danach `future`. `num` ist
+   * gesetzt für den ersten Halbzug eines Zugpaares (typisch Weiß, kann bei Startseite Schwarz sein). */
+  get movesInLine(): { num: number | null; san: string; ply: number; state: 'past' | 'current' | 'future' }[] {
+    const line = this.queue[this.qIndex];
+    if (!line || line.moves.length === 0) return [];
+    // Zug-Nummerierung stabil aus dem Start-FEN ableiten (fullmove counter + turn).
+    let fullMove = 1;
+    let side: 'w' | 'b' = 'w';
+    try {
+      const start = new Chess(line.fens[0]);
+      side = start.turn();
+      const parts = line.fens[0].split(/\s+/);
+      const n = parseInt(parts[5] || '1', 10);
+      if (Number.isFinite(n) && n >= 1) fullMove = n;
+    } catch { /* Defaults reichen */ }
+    const out: { num: number | null; san: string; ply: number; state: 'past' | 'current' | 'future' }[] = [];
+    let curSide = side;
+    let curMove = fullMove;
+    for (let ply = 0; ply < line.moves.length; ply++) {
+      // Zugnummer VOR Weiß-Halbzug bzw. beim allerersten Halbzug (auch wenn Schwarz).
+      const isFirstBlackHalfmove = ply === 0 && curSide === 'b';
+      const num = curSide === 'w' || isFirstBlackHalfmove ? curMove : null;
+      const state: 'past' | 'current' | 'future' =
+        ply < this.currentPly ? 'past' : ply === this.currentPly ? 'current' : 'future';
+      out.push({ num, san: line.moves[ply].san, ply, state });
+      if (curSide === 'b') curMove++;
+      curSide = curSide === 'w' ? 'b' : 'w';
+    }
+    return out;
+  }
+
+  private bumpStreak(): void {
+    this.currentStreak++;
+    if (this.currentStreak > this.bestStreak) this.bestStreak = this.currentStreak;
+  }
+
   /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
   get nextDueLabel(): string {
     if (!this.nextDueAt) return '';
@@ -678,8 +750,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (userSan === expectedSan) {
       this.outcome = 'correct'; this.correct++;
       // Ein an dieser Stellung offener Fehler, den der User NICHT als Mausrutscher deklariert hat,
-      // zählt jetzt (er macht ohne „Mausrutscher" weiter).
-      if (this.pendingWrong) { this.lineHadWrong = true; this.wrong++; this.pendingWrong = false; }
+      // zählt jetzt (er macht ohne „Mausrutscher" weiter). Streak wird durch den echten Fehler
+      // unterbrochen — dieser Zug startet eine neue Serie bei 1.
+      if (this.pendingWrong) {
+        this.lineHadWrong = true; this.wrong++; this.pendingWrong = false;
+        this.currentStreak = 0;
+      }
+      this.bumpStreak();
       // Korrekten Zug in der maßgeblichen Partie nachführen, damit advanceToUserMove die
       // Gegnerzüge aus der richtigen Stellung spielt (sonst hängt eine Linie mit mehreren
       // eigenen Zügen).
@@ -687,7 +764,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.fen = this.chess.fen();
     } else if (accepted.has(userSan)) {
       this.outcome = 'tolerated';
-      if (this.pendingWrong) { this.lineHadWrong = true; this.wrong++; this.pendingWrong = false; }
+      if (this.pendingWrong) {
+        this.lineHadWrong = true; this.wrong++; this.pendingWrong = false;
+        this.currentStreak = 0;
+      }
+      this.bumpStreak();
       this.fen = fenAfterPlayer;
     } else {
       // Falscher Zug: NOCH nicht als Fehler zählen — der User kann „Mausrutscher" sagen. Erst beim
@@ -738,6 +819,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.clearWrongRevert();
     this.wrongRevealed = true;
     this.wrong++;
+    this.currentStreak = 0;   // „Lösung zeigen" bricht die Serie (Mausrutscher tut das NICHT).
     this.lineHadWrong = true;   // Lösung zeigen = echter Fehler für die Linie
     this.pendingWrong = false;
     const line = this.queue[this.qIndex];
