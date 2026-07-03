@@ -1,6 +1,9 @@
-    .puzzle-page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .puzzle-page { padding: 1rem; max-width: min(1400px, 96vw); margin: 0 auto; }
     .puzzle-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
-    .board-section { flex: 0 0 auto; width: min(60vw, 560px); min-width: 280px; }
+    /* Brett wächst bis knapp Viewport-Höhe (Chessable-artig) — chess-board's aspect-ratio 1/1
+     * hält es quadratisch. `min(…, 60vw, …)` sorgt außerdem dafür, dass genug Platz für die
+     * .info-section daneben bleibt. */
+    .board-section { flex: 0 0 auto; width: min(60vw, 820px, calc(100vh - 180px)); min-width: 280px; }
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
     .status-card { min-height: 120px; position: relative; }
     .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }

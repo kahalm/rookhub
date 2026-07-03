@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.253.2';
+export const APP_VERSION = '0.254.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.254.0", date: "2026-07-03", changes: [
+    { en: "Larger board across all puzzle modes: the Chessable-style vertical sizing introduced for the repertoire trainer in 0.253.0 now applies to every solver — standard puzzle, endless, book/course/weekly/daily puzzle. The board grows up to `min(60vw, 820 px, viewport-height − 180 px)` instead of the old hard 560 px cap; the page container widens from 1200 px to `min(1400 px, 96 vw)` so the info panel next to the board still has room.", de: "Größeres Brett in allen Puzzle-Modi: die viewport-basierte Chessable-Kappung aus 0.253.0 (Repertoire-Trainer) greift jetzt in jedem Solver — Standard-Puzzle, Endlos, Buch-/Kurs-/Wochenpost-/Tagespuzzle. Das Brett wächst bis `min(60vw, 820 px, viewport-height − 180 px)` statt hart bei 560 px zu klemmen; der Seiten-Container weitet sich von 1200 auf `min(1400 px, 96 vw)`, damit die Info-Spalte neben dem Brett weiterhin Platz hat." },
+  ]},
   { version: "0.253.2", date: "2026-07-03", changes: [
     { en: "Repertoire trainer pool-training desync fix: when tapping/pressing Space to skip the correct-badge, the scheduled 1.5 s advance timer was still firing later — a second runAdvance would increment the ply counter WITHOUT playing the opponent's move, so the trainer would then ask you to play the opponent's next move as if it were yours (e.g. asking Black to play Nf3 in a Queen's Gambit line, where Nf3 was White's move). runAdvance now cancels its own pending timer at entry, and startCurrentLine clears any leftover advance/opp/learn timers from the previous line — so pool sessions can't inherit stale timers across line transitions.", de: "Repertoire-Trainer, Pool-Training-Desync gefixt: hat man das Richtig-Badge per Tipp/Leertaste übersprungen, feuerte der geplante 1,5-s-Advance-Timer trotzdem später noch — ein zweites runAdvance zählte den Zug-Cursor hoch, OHNE dass der Gegnerzug gespielt wurde. Ergebnis: der Trainer verlangt vom Nutzer den Gegnerzug (z. B. Schwarz soll in einer Damengambit-Linie Sf3 spielen — Sf3 wäre aber Weiß' Zug gewesen). runAdvance räumt jetzt beim Betreten seinen eigenen Timer weg, und startCurrentLine cleart übrig gebliebene Advance/Opp/Learn-Timer aus der Vorgänger-Linie — Pool-Sitzungen können keine stale-Timer mehr über Linien-Wechsel hinweg mitschleppen." },
   ]},
