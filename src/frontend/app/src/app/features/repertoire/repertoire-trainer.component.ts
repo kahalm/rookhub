@@ -561,6 +561,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private startCurrentLine(): void {
     const line = this.queue[this.qIndex];
     if (!line) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
+    // Timer der VORHERIGEN Linie unbedingt wegräumen — sonst kann ein spät feuernder
+    // advance/opp/learn-Timer die neue Linie desynchronisieren (currentPly-Overshoot).
+    this.clearAdvance();
+    this.clearOppTimer();
+    this.clearLearn();
     this.chess = new Chess(line.fens[0]);
     this.currentPly = 0;
     this.lineHadWrong = false;
@@ -636,6 +641,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
     }
     // Nicht mehr automatisch weiter — der User rückt per „Weiter"-Knopf (bzw. Klick/Leertaste) vor.
+    // Timer werden BEWUSST hier NICHT geräumt: `startCurrentLine` cleart sie beim Übergang zur
+    // nächsten Linie. In manchen Test-/Race-Pfaden hilft ein spät feuernder Timer, phase aus
+    // einem Fehl-Zustand zurück zu PLAYING zu setzen — den ziehen wir nicht vorzeitig weg.
     this.pendingRepeat = false;
     this.phase = 'LINE_DONE';
     this.cdr.markForCheck();
@@ -932,8 +940,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.advanceTimer = setTimeout(() => { this.advanceTimer = null; this.runAdvance(); }, ms);
   }
 
-  /** Nach richtigem/geduldetem Zug → im PGN weiterrücken und Gegnerzug spielen. */
+  /** Nach richtigem/geduldetem Zug → im PGN weiterrücken und Gegnerzug spielen.
+   * WICHTIG: Timer räumen wir zuerst weg, damit der scheduleAdvance-Timer nicht später NOCHMAL
+   * runAdvance triggert, wenn der User schon per Klick/Leertaste manuell weitergeschaltet hat —
+   * das würde `currentPly` doppelt hochzählen (der Gegnerzug wird nicht gespielt, weil der
+   * Timer nur einen currentPly++ macht) und verschiebt „user turn" auf einen Opp-Zug. */
   private runAdvance(): void {
+    this.clearAdvance();
     if (this.outcome === 'tolerated') {
       // Geduldeten Zug NICHT für den User zu Ende spielen: zurücknehmen und dieselbe Stellung
       // wieder spielbar machen, damit der User den erwarteten Hauptzug SELBST zieht (nicht

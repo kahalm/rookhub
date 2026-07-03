@@ -318,6 +318,18 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.bestStreak).toBe(1);
   });
 
+  it('runAdvance clears its own advanceTimer to prevent a double-fire (manual click + scheduled)', () => {
+    // Direkt und race-frei: manuell scheduleAdvance simulieren, dann runAdvance aufrufen —
+    // advanceTimer muss danach null sein (der scheduled setTimeout kann nicht mehr feuern).
+    const c = make('w', 'Chapter A');
+    (c as any).outcome = 'correct';
+    (c as any).phase = 'FEEDBACK';
+    (c as any).scheduleAdvance(3000);
+    expect((c as any).advanceTimer).not.toBeNull();
+    (c as any).runAdvance();
+    expect((c as any).advanceTimer).toBeNull();
+  });
+
   it('LOADING failure sets phase to EMPTY', () => {
     const route: any = {
       snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } },

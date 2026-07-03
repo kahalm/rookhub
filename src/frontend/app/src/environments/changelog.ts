@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.253.1';
+export const APP_VERSION = '0.253.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.253.2", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer pool-training desync fix: when tapping/pressing Space to skip the correct-badge, the scheduled 1.5 s advance timer was still firing later — a second runAdvance would increment the ply counter WITHOUT playing the opponent's move, so the trainer would then ask you to play the opponent's next move as if it were yours (e.g. asking Black to play Nf3 in a Queen's Gambit line, where Nf3 was White's move). runAdvance now cancels its own pending timer at entry, and startCurrentLine clears any leftover advance/opp/learn timers from the previous line — so pool sessions can't inherit stale timers across line transitions.", de: "Repertoire-Trainer, Pool-Training-Desync gefixt: hat man das Richtig-Badge per Tipp/Leertaste übersprungen, feuerte der geplante 1,5-s-Advance-Timer trotzdem später noch — ein zweites runAdvance zählte den Zug-Cursor hoch, OHNE dass der Gegnerzug gespielt wurde. Ergebnis: der Trainer verlangt vom Nutzer den Gegnerzug (z. B. Schwarz soll in einer Damengambit-Linie Sf3 spielen — Sf3 wäre aber Weiß' Zug gewesen). runAdvance räumt jetzt beim Betreten seinen eigenen Timer weg, und startCurrentLine cleart übrig gebliebene Advance/Opp/Learn-Timer aus der Vorgänger-Linie — Pool-Sitzungen können keine stale-Timer mehr über Linien-Wechsel hinweg mitschleppen." },
+  ]},
   { version: "0.253.1", date: "2026-07-03", changes: [
     { en: "Repertoire trainer: the green “Correct” badge after a right move now stays up for 1.5 s instead of 3 s — the 3 s from 0.250.0 felt too slow when playing through a line. Space/Enter/tap still skips ahead. Tolerated stays at 1.5 s (unchanged).", de: "Repertoire-Trainer: das grüne „Richtig“-Badge nach einem korrekten Zug bleibt jetzt 1,5 s stehen statt 3 s — die 3 s aus 0.250.0 fühlten sich beim Durchspielen einer Linie zu langsam an. Leertaste/Enter/Tippen überspringt weiterhin. Geduldet bleibt bei 1,5 s (unverändert)." },
   ]},
