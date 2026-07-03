@@ -44,6 +44,24 @@ public class CourseListItemDto
 
     /// <summary>Benutzername des Teilenden, wenn <see cref="IsShared"/> — für das „von X"-Badge.</summary>
     public string? SharedByUsername { get; set; }
+
+    /// <summary>Verknüpfter Partner-Kurs (Buch↔Workbook), sofern gesetzt — für den Schnellwechsel.</summary>
+    public int? LinkedBookId { get; set; }
+    /// <summary>Anzeigename des verknüpften Kurses (nur wenn <see cref="LinkedBookId"/> gesetzt).</summary>
+    public string? LinkedDisplayName { get; set; }
+}
+
+/// <summary>Eingabe: mit welchem anderen Kurs verknüpft werden soll.</summary>
+public class LinkCourseInputDto
+{
+    public int LinkedBookId { get; set; }
+}
+
+/// <summary>Der aktuell verknüpfte Partner-Kurs (oder <c>null</c>-Felder, wenn keine Verknüpfung).</summary>
+public class CourseLinkDto
+{
+    public int? LinkedBookId { get; set; }
+    public string? LinkedDisplayName { get; set; }
 }
 
 /// <summary>Eingabe: mit welchen Nutzern ein Kurs geteilt werden soll (Batch, wie Puzzle-Challenges).</summary>

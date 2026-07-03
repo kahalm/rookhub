@@ -27,6 +27,16 @@ export interface CourseListItem {
   isShared?: boolean;
   /** Benutzername des Teilenden (nur wenn isShared) — für das „von X"-Badge. */
   sharedByUsername?: string | null;
+  /** Verknüpfter Partner-Kurs (Buch↔Workbook) für den Schnellwechsel; null = keine Verknüpfung. */
+  linkedBookId?: number | null;
+  /** Anzeigename des verknüpften Kurses (nur wenn linkedBookId gesetzt). */
+  linkedDisplayName?: string | null;
+}
+
+/** Der verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
+export interface CourseLink {
+  linkedBookId: number | null;
+  linkedDisplayName: string | null;
 }
 
 /** Ergebnis eines Teilen-Vorgangs (Batch). */
@@ -150,6 +160,21 @@ export class CourseService {
   /** Nimmt die Freigabe des eigenen Kurses für einen Empfänger zurück. */
   unshareCourse(bookId: number, recipientId: number): Observable<void> {
     return this.http.delete<void>(`/api/courses/${bookId}/share/${recipientId}`);
+  }
+
+  /** Verknüpft diesen Kurs mit einem anderen (Buch↔Workbook) für den Schnellwechsel. */
+  linkCourse(bookId: number, linkedBookId: number): Observable<void> {
+    return this.http.post<void>(`/api/courses/${bookId}/link`, { linkedBookId });
+  }
+
+  /** Der aktuell verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
+  getLink(bookId: number): Observable<CourseLink> {
+    return this.http.get<CourseLink>(`/api/courses/${bookId}/link`);
+  }
+
+  /** Hebt die Verknüpfung dieses Kurses wieder auf. */
+  unlinkCourse(bookId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}/link`);
   }
 
   /** Wandelt einen Kurs in ein neues Repertoire um (Original bleibt); liefert das neue Repertoire. */

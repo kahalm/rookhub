@@ -1050,6 +1050,21 @@
       "unshared": "Pristup uklonjen za {{name}}.",
       "failed": "Dijeljenje nije uspjelo.",
       "loadFailed": "Podaci o dijeljenju nisu učitani."
+    },
+    "link": {
+      "title": "Poveži „{{name}}“",
+      "hint": "Poveži ovaj tečaj s drugim (npr. njegovom radnom bilježnicom) za brzo prebacivanje tijekom vježbanja.",
+      "currently": "Povezano s: {{name}}",
+      "unlink": "Ukloni poveznicu",
+      "noCandidates": "Nema drugih tečajeva za povezivanje.",
+      "pick": "Poveži s tečajem",
+      "linkButton": "Poveži",
+      "linked": "Tečajevi povezani.",
+      "unlinked": "Poveznica uklonjena.",
+      "failed": "Povezivanje nije uspjelo.",
+      "tooltip": "Poveži s drugim tečajem (knjiga ↔ radna bilježnica)",
+      "linkedTooltip": "Povezano s {{name}} — klikni za promjenu",
+      "openLinked": "Otvori povezani tečaj"
     }
   },
   "weekly": {
@@ -1343,7 +1358,8 @@
       "wholeBook": "Cijela knjiga",
       "noChapter": "Bez poglavlja",
       "accuracyHint": "Stopa pogodaka (1. pokušaj)",
-      "timeHint": "Ukupno utrošeno vrijeme"
+      "timeHint": "Ukupno utrošeno vrijeme",
+      "switchLinkedTooltip": "Prebaci na {{name}}"
     },
     "weekly": {
       "backToWeekly": "Na pregled tjednih objava",

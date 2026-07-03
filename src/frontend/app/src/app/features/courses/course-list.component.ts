@@ -18,6 +18,7 @@ import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reproces
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
 import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
+import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-dialog.component';
 
 @Component({
   selector: 'app-course-list',
@@ -114,6 +115,12 @@ import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-cours
               <mat-icon>group</mat-icon>{{ 'courses.share.sharedBy' | translate:{ name: c.sharedByUsername } }}
             </div>
           }
+          @if (c.linkedBookId && c.linkedDisplayName) {
+            <a class="linked-badge" [routerLink]="['/courses', c.linkedBookId, 'sequential']"
+               [matTooltip]="'courses.link.openLinked' | translate">
+              <mat-icon>link</mat-icon>{{ c.linkedDisplayName }}
+            </a>
+          }
           <div class="card-meta">
             <span>{{ 'courses.puzzleCount' | translate:{ count: c.puzzleCount } }}</span>
             @if (c.difficulty) { <span class="meta-sep">·</span><span>{{ c.difficulty }}</span> }
@@ -165,6 +172,11 @@ import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-cours
               <button mat-icon-button [matTooltip]="'courses.convertToRepertoireTooltip' | translate"
                       [disabled]="converting === c.bookId" (click)="convertToRepertoire(c)">
                 <mat-icon>library_books</mat-icon>
+              </button>
+              <button mat-icon-button class="link-btn" [class.linked]="c.linkedBookId"
+                      [matTooltip]="(c.linkedBookId ? 'courses.link.linkedTooltip' : 'courses.link.tooltip') | translate:{ name: c.linkedDisplayName }"
+                      (click)="openLinkDialog(c)">
+                <mat-icon>{{ c.linkedBookId ? 'link' : 'add_link' }}</mat-icon>
               </button>
               @if (c.isOwned) {
                 <button mat-icon-button class="share-btn" [matTooltip]="'courses.share.tooltip' | translate"
@@ -237,6 +249,13 @@ import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-cours
       color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px;
     }
     .shared-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .linked-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; margin-bottom: 6px;
+      color: var(--mdc-theme-primary, #3f51b5); text-decoration: none; cursor: pointer; max-width: 100%;
+    }
+    .linked-badge:hover { text-decoration: underline; }
+    .linked-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
+    .link-btn.linked mat-icon { color: var(--mdc-theme-primary, #3f51b5); }
     /* Pin-Symbol: gedämpft wenn nicht angepinnt, in Primärfarbe + leicht gekippt wenn angepinnt. */
     .pin-btn mat-icon { opacity: 0.55; transition: opacity .15s, color .15s; }
     .pin-btn.pinned mat-icon { opacity: 1; color: var(--mdc-theme-primary, #3f51b5); transform: rotate(0); }
@@ -482,6 +501,24 @@ export class CourseListComponent implements OnInit {
         width: '440px', maxWidth: '95vw',
         data: { bookId: course.bookId, courseName: course.displayName }
       });
+  }
+
+  /** Öffnet den „Kurs verknüpfen"-Dialog (Buch↔Workbook). Kandidaten = alle anderen Kurse der Liste. */
+  openLinkDialog(course: CourseListItem): void {
+    const candidates = this.courses
+      .filter(c => c.bookId !== course.bookId)
+      .map(c => ({ bookId: c.bookId, displayName: c.displayName }));
+    const ref = this.dialog.open<LinkCourseDialogComponent, LinkCourseDialogData, boolean>(
+      LinkCourseDialogComponent, {
+        width: '440px', maxWidth: '95vw',
+        data: {
+          bookId: course.bookId, displayName: course.displayName,
+          currentLinkedBookId: course.linkedBookId ?? null,
+          currentLinkedName: course.linkedDisplayName ?? null,
+          candidates,
+        }
+      });
+    ref.afterClosed().subscribe(changed => { if (changed) this.loadCourses(); });
   }
 
   /** Öffnet den Upload-Dialog; startet nach Bestätigung den Upload. */

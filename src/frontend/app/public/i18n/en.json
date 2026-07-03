@@ -1052,6 +1052,21 @@
       "unshared": "Removed access for {{name}}.",
       "failed": "Sharing failed.",
       "loadFailed": "Could not load sharing information."
+    },
+    "link": {
+      "title": "Link “{{name}}”",
+      "hint": "Link this course with another (e.g. its workbook) so you can switch between them quickly while training.",
+      "currently": "Linked with: {{name}}",
+      "unlink": "Remove link",
+      "noCandidates": "No other courses to link with.",
+      "pick": "Link with course",
+      "linkButton": "Link",
+      "linked": "Courses linked.",
+      "unlinked": "Link removed.",
+      "failed": "Linking failed.",
+      "tooltip": "Link with another course (book ↔ workbook)",
+      "linkedTooltip": "Linked with {{name}} — click to change",
+      "openLinked": "Open linked course"
     }
   },
   "weekly": {
@@ -1345,7 +1360,8 @@
       "wholeBook": "Whole book",
       "noChapter": "No chapter",
       "accuracyHint": "First-try success rate",
-      "timeHint": "Total time spent"
+      "timeHint": "Total time spent",
+      "switchLinkedTooltip": "Switch to {{name}}"
     },
     "weekly": {
       "backToWeekly": "To weekly post overview",

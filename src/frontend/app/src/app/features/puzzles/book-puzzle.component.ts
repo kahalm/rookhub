@@ -95,6 +95,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
   dailyDate: string | null = null;
   private dailySub?: Subscription;
+  private courseSub?: Subscription;
+  /** Verknüpfter Partner-Kurs (Buch↔Workbook) für den Schnellwechsel; null = keiner. */
+  linkedCourseBookId: number | null = null;
+  linkedCourseName: string | null = null;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -564,12 +568,20 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const modeParam = this.route.snapshot.paramMap.get('mode');
     if (bookIdParam && modeParam) {
       this.inCourse = true;
-      this.courseBookId = Number(bookIdParam);
-      this.courseModeKind = modeParam === 'random' ? 'random' : 'sequential';
-      const chapterParam = this.route.snapshot.paramMap.get('chapterIndex');
-      this.courseChapterIndex = chapterParam != null ? Number(chapterParam) : null;
-      this.loadCourseNext();
-      this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
+      // Reaktiv auf die Kurs-Params hören → der Schnellwechsel zum verknüpften Kurs (Buch↔Workbook)
+      // und Browser zurück/vor laden neu, ohne die Komponente neu aufzubauen (Snapshot würde nicht
+      // erneut feuern). paramMap emittiert den aktuellen Stand synchron → Erst-Load wie bisher.
+      this.courseSub = this.route.paramMap.subscribe(pm => {
+        const bid = Number(pm.get('bookId'));
+        if (!bid) return;
+        this.courseBookId = bid;
+        this.courseModeKind = pm.get('mode') === 'random' ? 'random' : 'sequential';
+        const ch = pm.get('chapterIndex');
+        this.courseChapterIndex = ch != null ? Number(ch) : null;
+        this.loadCourseNext();
+        this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
+        this.loadCourseLink();    // verknüpften Partner-Kurs für den Schnellwechsel laden
+      });
       return;
     }
 
@@ -619,8 +631,26 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.challengeService.resolve(this.challengeId, solved, this.solveSeconds).subscribe({ next: () => {}, error: () => {} });
   }
 
+  /** Lädt den verknüpften Partner-Kurs (falls vorhanden) für den Schnellwechsel-Knopf. */
+  private loadCourseLink(): void {
+    this.linkedCourseBookId = null;
+    this.linkedCourseName = null;
+    if (this.courseBookId == null) return;
+    this.courseService.getLink(this.courseBookId).subscribe({
+      next: l => { this.linkedCourseBookId = l.linkedBookId; this.linkedCourseName = l.linkedDisplayName; },
+      error: () => {}
+    });
+  }
+
+  /** Wechselt zum verknüpften Kurs (Buch↔Workbook) im selben Modus; die Param-Subscription lädt neu. */
+  switchToLinkedCourse(): void {
+    if (this.linkedCourseBookId == null) return;
+    this.router.navigate(['/courses', this.linkedCourseBookId, this.courseModeKind]);
+  }
+
   ngOnDestroy(): void {
     this.dailySub?.unsubscribe();
+    this.courseSub?.unsubscribe();
     this.stopTimer();
     this.clearSolutionPlay();
     this.abortSolver();

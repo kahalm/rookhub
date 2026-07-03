@@ -141,6 +141,8 @@ public class BookAdminService
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         _db.CoursePins.RemoveRange(_db.CoursePins.Where(p => p.BookId == id));
         _db.CourseShares.RemoveRange(_db.CourseShares.Where(cs => cs.BookId == id));
+        // Verknüpfungen in BEIDE Richtungen entfernen (LinkedBookId hat keinen Cascade-FK).
+        _db.CourseLinks.RemoveRange(_db.CourseLinks.Where(l => l.BookId == id || l.LinkedBookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
         // BookPuzzleAttempt hat (wie CoursePuzzleResult) eine Restrict-FK auf BookPuzzle →
         // die Versuche (Tagespuzzle-/Buch-Solves) explizit vor den Puzzles entfernen, sonst

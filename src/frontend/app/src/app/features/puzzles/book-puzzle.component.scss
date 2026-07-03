@@ -77,6 +77,10 @@
     .context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
     .context-card .ctx-back { flex-shrink: 0; margin: -4px -4px 0 -8px; }
     .context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+    /* Schnellwechsel Buch↔Workbook: kompakter Knopf rechts im Kopf, Label gekürzt. */
+    .context-card .ctx-switch { flex-shrink: 0; align-self: flex-start; max-width: 45%; height: 30px; line-height: 30px; padding: 0 8px; }
+    .context-card .ctx-switch .ctx-switch-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; font-size: 0.8rem; }
+    .context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
     .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
     .context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0.25rem 0 0; font-variant-numeric: tabular-nums; }

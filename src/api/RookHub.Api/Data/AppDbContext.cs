@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<CoursePuzzleResult> CoursePuzzleResults => Set<CoursePuzzleResult>();
     public DbSet<CoursePin> CoursePins => Set<CoursePin>();
     public DbSet<CourseShare> CourseShares => Set<CourseShare>();
+    public DbSet<CourseLink> CourseLinks => Set<CourseLink>();
     public DbSet<CourseInfoView> CourseInfoViews => Set<CourseInfoView>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
@@ -514,6 +515,25 @@ public class AppDbContext : DbContext
             e.HasIndex(cs => new { cs.BookId, cs.RecipientId }).IsUnique();
             // „Welche Kurse sind mit mir geteilt?" (Kursliste/Menü-Sichtbarkeit).
             e.HasIndex(cs => cs.RecipientId);
+        });
+
+        modelBuilder.Entity<CourseLink>(e =>
+        {
+            e.HasOne(l => l.User)
+             .WithMany()
+             .HasForeignKey(l => l.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Nur EIN Cascade-Pfad von Book (über BookId); LinkedBookId hat bewusst keinen FK
+            // (sonst „multiple cascade paths"). Cleanup der Gegenzeile beim Buch-Löschen erfolgt
+            // explizit in BookAdminService.DeleteBookAsync.
+            e.HasOne(l => l.Book)
+             .WithMany()
+             .HasForeignKey(l => l.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            // Ein Buch hat je Nutzer höchstens einen verknüpften Partner.
+            e.HasIndex(l => new { l.UserId, l.BookId }).IsUnique();
         });
 
         modelBuilder.Entity<RepertoireShare>(e =>

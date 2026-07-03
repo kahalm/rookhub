@@ -1052,6 +1052,21 @@
       "unshared": "Zugriff für {{name}} entzogen.",
       "failed": "Teilen fehlgeschlagen.",
       "loadFailed": "Freigabe-Informationen konnten nicht geladen werden."
+    },
+    "link": {
+      "title": "„{{name}}“ verknüpfen",
+      "hint": "Verknüpfe diesen Kurs mit einem anderen (z. B. dem Workbook), um beim Training schnell zwischen beiden zu wechseln.",
+      "currently": "Verknüpft mit: {{name}}",
+      "unlink": "Verknüpfung lösen",
+      "noCandidates": "Keine weiteren Kurse zum Verknüpfen.",
+      "pick": "Mit Kurs verknüpfen",
+      "linkButton": "Verknüpfen",
+      "linked": "Kurse verknüpft.",
+      "unlinked": "Verknüpfung gelöst.",
+      "failed": "Verknüpfen fehlgeschlagen.",
+      "tooltip": "Mit anderem Kurs verknüpfen (Buch ↔ Workbook)",
+      "linkedTooltip": "Verknüpft mit {{name}} — zum Ändern klicken",
+      "openLinked": "Verknüpften Kurs öffnen"
     }
   },
   "weekly": {
@@ -1345,7 +1360,8 @@
       "wholeBook": "Ganzes Buch",
       "noChapter": "Ohne Kapitel",
       "accuracyHint": "Trefferquote (1. Versuch)",
-      "timeHint": "Gesamte aufgewendete Zeit"
+      "timeHint": "Gesamte aufgewendete Zeit",
+      "switchLinkedTooltip": "Zu {{name}} wechseln"
     },
     "weekly": {
       "backToWeekly": "Zur Wochenpost-Übersicht",

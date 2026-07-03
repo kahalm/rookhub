@@ -147,6 +147,31 @@ public class CourseController : BaseApiController
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
     }
 
+    /// <summary>Verknüpft diesen Kurs mit einem anderen (Buch↔Workbook) für den Schnellwechsel.</summary>
+    [HttpPost("{bookId}/link")]
+    public async Task<IActionResult> Link(int bookId, [FromBody] LinkCourseInputDto dto)
+    {
+        try { await _service.LinkCoursesAsync(GetUserId(), bookId, dto.LinkedBookId, IsAdmin); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    /// <summary>Der aktuell verknüpfte Partner-Kurs (oder leere Felder). Literale Route.</summary>
+    [HttpGet("{bookId}/link")]
+    public async Task<ActionResult<CourseLinkDto>> GetLink(int bookId)
+    {
+        try { return Ok(await _service.GetLinkAsync(GetUserId(), bookId, IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Hebt die Verknüpfung dieses Kurses wieder auf (idempotent).</summary>
+    [HttpDelete("{bookId}/link")]
+    public async Task<IActionResult> Unlink(int bookId)
+    {
+        await _service.UnlinkCourseAsync(GetUserId(), bookId);
+        return NoContent();
+    }
+
     // --- Kurs-Statistik (für die /stats-Seite, Umschalter „Kurse"). Literale Routen MÜSSEN vor
     //     den `{bookId}`-Routen stehen, sonst matcht der Router „stats"/„history" als bookId. ---
 

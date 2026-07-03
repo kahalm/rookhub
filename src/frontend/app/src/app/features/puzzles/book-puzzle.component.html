@@ -88,6 +88,13 @@
                     @if (puzzle.chapter) { <p class="meta-chapter">{{ puzzle.chapter }}</p> }
                     <span class="book-name">{{ displayBookName }}</span>
                   </div>
+                  @if (inCourse && linkedCourseBookId) {
+                    <button mat-stroked-button class="ctx-switch" (click)="switchToLinkedCourse()"
+                            [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName }">
+                      <mat-icon>swap_horiz</mat-icon>
+                      <span class="ctx-switch-label">{{ linkedCourseName }}</span>
+                    </button>
+                  }
                 </div>
 
                 <!-- Info-/Kommentar-Block: der Erklär-/Zug-Kommentar zur Linie steht über der
