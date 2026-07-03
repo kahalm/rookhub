@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -28,11 +28,17 @@ type Outcome = 'correct' | 'tolerated' | 'wrong';
 type Mode = 'quiz' | 'learn';
 
 const COLOR_KEY = (id: number) => `rookhub_rep_train_color_${id}`;
-const ADVANCE_MS: Record<Outcome, number> = { correct: 600, tolerated: 1500, wrong: 0 };
+// Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
+// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct bewusst lang
+// (3 s), damit man das grüne Badge in Ruhe sieht.
+const ADVANCE_MS: Record<Outcome, number> = { correct: 3000, tolerated: 1500, wrong: 0 };
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
-const LEARN_SHOW_MS = 2000;      // Zug im Learn-Modus so lange zeigen, dann zurücknehmen
+const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
 const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs
+// Learn-Modus: wie oft eine Linie durchgespielt werden muss, bevor sie in den Übungspool wandert
+// (1× geführt lernen + 2× „durchklicken").
+const LEARN_REPEATS = 3;
 
 /**
  * Line-basiertes Repertoire-Training: eine ganze PGN-Linie wird vom Startzug an durchgespielt,
@@ -148,11 +154,14 @@ const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeig
         @if (phase === 'LEARN_SHOW') {
           <div class="feedback learn">
             <p><mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.learnShow' | translate: { move: expectedDisplay } }}</p>
-            @if (learnComment) {
-              <p class="learn-comment">{{ learnComment }}</p>
-              <p class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
-            }
           </div>
+          @if (learnComment) {
+            <div class="comment-box">
+              <mat-icon>chat_bubble</mat-icon>
+              <div class="comment-text">{{ learnComment }}</div>
+            </div>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          }
         }
 
         <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
@@ -185,7 +194,16 @@ const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeig
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
         <p *ngIf="phase === 'PLAYING'" class="hint">{{ (mode === 'learn' ? 'repertoireTrainer.learnPlay' : 'repertoireTrainer.playYourMove') | translate }}</p>
-        <p *ngIf="phase === 'LINE_DONE'" class="hint"><mat-icon>done_all</mat-icon> {{ 'repertoireTrainer.lineDone' | translate }}</p>
+        @if (phase === 'LINE_DONE') {
+          <div class="line-done">
+            <p class="hint"><mat-icon>done_all</mat-icon>
+              {{ (pendingRepeat ? 'repertoireTrainer.linePassDone' : 'repertoireTrainer.lineDone') | translate }}</p>
+            <button mat-raised-button color="primary" (click)="continueLine(); $event.stopPropagation()">
+              {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
+            </button>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          </div>
+        }
       </div>
     </div>
   </ng-container>
@@ -214,7 +232,14 @@ const LEARN_GAP_MS = 800;        // Learn: Pause zwischen Gegnerzug und dem Zeig
     .feedback.tolerated { background: rgba(255,160,0,.15); }
     .feedback.wrong { background: rgba(198,40,40,.12); }
     .feedback.learn { background: rgba(21,101,192,.12); }
-    .learn-comment { display: block !important; white-space: pre-wrap; font-size: 13px; opacity: .9; }
+    /* Kommentar im Learn-Modus als eigene, deutlich abgesetzte Box (besser lesbar). */
+    .comment-box { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 6px;
+      padding: 10px 12px; border-radius: 8px; text-align: left;
+      background: var(--mat-sys-surface-container-high, rgba(21,101,192,.10));
+      border-left: 3px solid var(--mat-sys-primary, #1565c0); }
+    .comment-box mat-icon { flex: 0 0 auto; opacity: .7; font-size: 18px; width: 18px; height: 18px; margin-top: 1px; }
+    .comment-text { white-space: pre-wrap; font-size: 13px; line-height: 1.45; }
+    .line-done { display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -234,6 +259,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Learn-Modus: Kommentar des gerade gezeigten Zugs (hält die Anzeige, bis der User weitertippt). */
   learnComment = '';
   private learnTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Learn-Modus: wie oft die AKTUELLE Linie schon komplett durchgespielt wurde (0-basiert bis
+   *  <see cref="LEARN_REPEATS"/>); erst danach wandert sie in den Übungspool. */
+  private learnPass = 0;
+  /** LINE_DONE: true = beim „Weiter" wird DIESELBE Linie erneut gestartet (Learn-Wiederholung),
+   *  false = es geht zur nächsten Linie. Steuert Button-Label + Verhalten. */
+  pendingRepeat = false;
 
   fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   dests = new Map<Key, Key[]>();
@@ -358,6 +389,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       ? usable.filter(l => this.isLearnable(l))                 // Reihenfolge = PGN-Reihenfolge
       : shuffle(usable.filter(l => this.isDue(l, now)));
     this.qIndex = 0;
+    this.learnPass = 0;
     this.correct = 0;
     this.wrong = 0;
     this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
@@ -522,27 +554,46 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   private finishLine(): void {
     const line = this.queue[this.qIndex];
-    if (line) {
-      const lineKey = this.lineKeyOf(line);
-      if (this.mode === 'learn') {
-        // Learn: durchgespielte Linie in den Pool aufnehmen (sofort fällig für die 1. Abfrage).
-        this.training.promote(this.repertoireId, [lineKey])
-          .subscribe({ next: () => {}, error: () => {} });
-      } else {
-        // SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
-        const label = (line.headers['White'] || '').trim().slice(0, 120);
-        this.training.reviewLine(this.repertoireId, { lineKey, label, correct: !this.lineHadWrong })
-          .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
+
+    // Learn-Modus: eine Linie muss LEARN_REPEATS-mal durchgespielt werden (1× geführt + 2× „durch-
+    // klicken"), bevor sie in den Pool wandert.
+    if (this.mode === 'learn' && line) {
+      this.learnPass++;
+      if (this.learnPass < LEARN_REPEATS) {
+        // Noch nicht oft genug → beim „Weiter" dieselbe Linie erneut (noch nicht in den Pool).
+        this.pendingRepeat = true;
+        this.phase = 'LINE_DONE';
+        this.cdr.markForCheck();
+        return;
       }
+      // Oft genug gelernt → in den Pool aufnehmen (sofort fällig für die 1. Abfrage).
+      this.training.promote(this.repertoireId, [this.lineKeyOf(line)])
+        .subscribe({ next: () => {}, error: () => {} });
+    } else if (line) {
+      // Quiz: SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
+      const label = (line.headers['White'] || '').trim().slice(0, 120);
+      this.training.reviewLine(this.repertoireId, { lineKey: this.lineKeyOf(line), label, correct: !this.lineHadWrong })
+        .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
     }
+    // Nicht mehr automatisch weiter — der User rückt per „Weiter"-Knopf (bzw. Klick/Leertaste) vor.
+    this.pendingRepeat = false;
     this.phase = 'LINE_DONE';
     this.cdr.markForCheck();
-    // Kurz die Endstellung stehen lassen, dann nächste Linie.
-    this.oppTimer = setTimeout(() => {
-      this.oppTimer = null;
+  }
+
+  /** „Weiter" nach einer fertig gespielten Linie: entweder dieselbe Linie erneut (Learn-Wiederholung)
+   *  oder die nächste Linie. Wird vom Knopf, Klick aufs Brett und Leertaste/Enter ausgelöst. */
+  continueLine(): void {
+    if (this.phase !== 'LINE_DONE') return;
+    this.clearOppTimer();
+    if (this.pendingRepeat) {
+      this.pendingRepeat = false;
+      this.startCurrentLine();          // dieselbe Linie (qIndex unverändert), learnPass bleibt
+    } else {
       this.qIndex++;
+      this.learnPass = 0;
       this.startCurrentLine();
-    }, 900);
+    }
   }
 
   get isPlayable(): boolean {
@@ -661,8 +712,24 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   onPlayClick(): void {
+    if (this.phase === 'LINE_DONE') { this.continueLine(); return; }
     if (this.phase === 'LEARN_SHOW' && this.learnComment) { this.learnRetract(); return; }
     if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
+  }
+
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen): Kommentar im Learn-Show wegtippen, Feedback
+   *  überspringen oder nach einer fertigen Linie fortfahren. */
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent): void {
+    if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    let acted = true;
+    if (this.phase === 'LINE_DONE') this.continueLine();
+    else if (this.phase === 'LEARN_SHOW' && this.learnComment) this.learnRetract();
+    else if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
+    else acted = false;
+    if (acted) e.preventDefault();
   }
 
   /** „Lösung zeigen": zählt als falsch (Server-Review), spielt den erwarteten Zug + weiter mit der Linie. */
@@ -749,7 +816,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.fen = fenAfter;
     this.dests = new Map();
     this.expectedDisplay = expected.san;
-    this.learnComment = (line.comments?.[this.currentPly] || '').trim();
+    // Kommentar nur beim ERSTEN Durchlauf zeigen (hält bis zum Weitertippen); die Wiederholungs-
+    // Durchläufe („durchklicken") laufen ohne Kommentar-Halt schnell durch.
+    this.learnComment = this.learnPass === 0 ? (line.comments?.[this.currentPly] || '').trim() : '';
     this.phase = 'LEARN_SHOW';
     this.cdr.markForCheck();
     if (!this.learnComment) {

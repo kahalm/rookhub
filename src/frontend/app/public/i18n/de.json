@@ -24,7 +24,7 @@
     "evalMateAllowed": "Dein Zug erlaubt dem Gegner ein erzwungenes Matt.",
     "continue": "Weiter",
     "playYourMove": "Mach deinen Zug auf dem Brett.",
-    "tapToContinue": "Weiter… (tippen zum Überspringen)",
+    "tapToContinue": "Weiter… (tippen oder Leertaste zum Überspringen)",
     "lineProgress": "Linie {{done}} von {{total}}",
     "lineDone": "Linie fertig — nächste wird geladen…",
     "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
@@ -40,7 +40,11 @@
     "learnPlay": "Spiel jetzt den gezeigten Zug.",
     "learnDone": "Alle Linien gelernt — sie sind jetzt im Übungspool.",
     "nothingToLearn": "Hier gibt es nichts Neues zu lernen — jede Linie ist bereits im Pool.",
-    "switchToQuiz": "Abfragen starten"
+    "switchToQuiz": "Abfragen starten",
+    "pressToContinue": "Aufs Brett tippen, Leertaste oder Enter zum Fortfahren",
+    "linePassDone": "Linie durchgespielt — spiel sie nochmal durch",
+    "repeatLine": "Nochmal",
+    "nextLine": "Nächste Linie"
   },
   "srConfig": {
     "title": "Übungszyklen",

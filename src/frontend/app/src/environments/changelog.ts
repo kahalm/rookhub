@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.249.2';
+export const APP_VERSION = '0.250.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.250.0", date: "2026-07-03", changes: [
+    { en: "Repertoire trainer pacing & flow tweaks: (1) In Learn mode a move with no comment is now shown for half as long (1s instead of 2s) before it's taken back for you to replay. (2) When a move has a comment it can now be dismissed with the Space bar or Enter (not just a tap/click), and the comment is shown in its own clearly-outlined box so it's easier to read. (3) A newly learned line must now be played through three times (one guided pass + two quick run-throughs) before it lands in your practice pool — comments only show on the first pass. (4) When practising from the pool, the green “Correct” badge now stays up for 3 seconds (was very brief) — tap/Space/Enter to skip ahead. (5) Finishing a line no longer auto-jumps to the next one: you get a “Next line” (or “Again”) button, so you decide when to move on. (6) In the course/weekly/book puzzle solver, the Space bar (or Enter) now goes to the next puzzle, just like clicking the button.", de: "Repertoire-Trainer – Tempo & Ablauf: (1) Im Lern-Modus wird ein Zug OHNE Kommentar nur noch halb so lange gezeigt (1 s statt 2 s), bevor er zum Nachspielen zurückgenommen wird. (2) Hat ein Zug einen Kommentar, kann man ihn jetzt auch mit der Leertaste oder Enter wegklicken (nicht nur per Tipp/Klick), und der Kommentar steht in einer eigenen, klar abgesetzten Box – besser lesbar. (3) Eine neu gelernte Linie muss jetzt dreimal durchgespielt werden (1× geführt + 2× schnell durchklicken), bevor sie in den Übungspool wandert – Kommentare erscheinen nur beim ersten Durchlauf. (4) Beim Üben aus dem Pool bleibt das grüne „Correct“-Badge jetzt 3 Sekunden stehen (war sehr kurz) – mit Tipp/Leertaste/Enter überspringen. (5) Nach einer fertigen Linie springt der Trainer nicht mehr automatisch zur nächsten: es gibt einen „Nächste Linie“- (bzw. „Nochmal“-)Knopf, du entscheidest, wann es weitergeht. (6) Im Kurs-/Wochenpost-/Buch-Puzzle-Modus springt die Leertaste (oder Enter) jetzt zum nächsten Puzzle – wie ein Klick auf den Knopf." },
+  ]},
   { version: "0.249.2", date: "2026-07-02", changes: [
     { en: "Dark mode fix: the sticky bar at the top of a repertoire's line list (Review/Learn buttons) rendered white in dark mode. It used a CSS variable (--mat-app-background-color) that doesn't exist in this Material 3 theme, so it fell back to white; switched to the proper surface token (--mat-sys-surface-container), which adapts to light/dark.", de: "Dark-Mode-Fix: der angeheftete Balken oben in der Linien-Liste eines Repertoires (Abfragen/Lernen-Knöpfe) wurde im Dark-Mode weiß dargestellt. Er nutzte eine CSS-Variable (--mat-app-background-color), die es in diesem Material-3-Theme nicht gibt, und fiel daher auf Weiß zurück; jetzt das korrekte Surface-Token (--mat-sys-surface-container), das sich an Hell/Dunkel anpasst." },
   ]},

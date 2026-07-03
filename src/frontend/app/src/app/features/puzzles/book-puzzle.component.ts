@@ -1273,8 +1273,24 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED' && !this.reviewMode) return;
-    if (e.key === 'ArrowLeft') this.reviewPrev();
-    if (e.key === 'ArrowRight') this.reviewNext();
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.key === 'ArrowLeft') { this.reviewPrev(); return; }
+    if (e.key === 'ArrowRight') { this.reviewNext(); return; }
+    // Leertaste/Enter = „nächstes Puzzle" (wie ein Klick auf den primären Weiter-Knopf) im
+    // Kurs-/Wochenpost-/Buch-Blätter-Modus.
+    if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+      if (this.advanceKeyAction()) e.preventDefault();
+    }
+  }
+
+  /** Löst die primäre „Weiter/nächstes Puzzle"-Aktion des aktuellen Kontexts aus (Kurs/Wochenpost/
+   *  Buch-Blättern), passend zum jeweils angezeigten Primär-Knopf. Liefert true, wenn etwas passierte. */
+  private advanceKeyAction(): boolean {
+    if (this.inWeekly) { this.weeklyNext(); return true; }
+    if (this.inCourse) { this.courseNext(); return true; }
+    if (this.browseInBook) { if (!this.bookNavLoading) this.nextInBook(); return true; }
+    return false;
   }
 
   resetPuzzle(): void {

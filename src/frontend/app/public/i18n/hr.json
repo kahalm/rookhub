@@ -24,7 +24,7 @@
     "evalMateAllowed": "Tvoj potez omogućuje protivniku forsirani mat.",
     "continue": "Nastavi",
     "playYourMove": "Odigraj svoj potez na ploči.",
-    "tapToContinue": "Nastavak… (dodirni za preskakanje)",
+    "tapToContinue": "Nastavak… (dodirni ili razmaknica za preskakanje)",
     "lineProgress": "Linija {{done}} od {{total}}",
     "lineDone": "Linija gotova — sljedeća se učitava…",
     "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
@@ -40,7 +40,11 @@
     "learnPlay": "Sad odigraj prikazani potez.",
     "learnDone": "Sve linije naučene — sad su u bazenu za vježbanje.",
     "nothingToLearn": "Ovdje nema ništa novo za naučiti — svaka linija je već u bazenu.",
-    "switchToQuiz": "Počni provjeru"
+    "switchToQuiz": "Počni provjeru",
+    "pressToContinue": "Dodirni ploču, pritisni razmaknicu ili Enter za nastavak",
+    "linePassDone": "Linija odigrana — odigraj je ponovno",
+    "repeatLine": "Ponovno",
+    "nextLine": "Sljedeća linija"
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",

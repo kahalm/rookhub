@@ -24,7 +24,7 @@
     "evalMateAllowed": "Your move allows a forced mate for the opponent.",
     "continue": "Continue",
     "playYourMove": "Make your move on the board.",
-    "tapToContinue": "Continuing… (tap to skip)",
+    "tapToContinue": "Continuing… (tap or Space to skip)",
     "lineProgress": "Line {{done}} of {{total}}",
     "lineDone": "Line complete — next one loading…",
     "resetTooltip": "Reset training progress (delete SM-2 state).",
@@ -40,7 +40,11 @@
     "learnPlay": "Now play the move you were shown.",
     "learnDone": "All lines learned — they're now in your practice pool.",
     "nothingToLearn": "Nothing new to learn here — every line is already in your pool.",
-    "switchToQuiz": "Start reviewing"
+    "switchToQuiz": "Start reviewing",
+    "pressToContinue": "Tap the board, press Space or Enter to continue",
+    "linePassDone": "Line done — play it through again",
+    "repeatLine": "Again",
+    "nextLine": "Next line"
   },
   "srConfig": {
     "title": "Practice cycles",

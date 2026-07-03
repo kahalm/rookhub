@@ -111,7 +111,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     const c = make('w', 'Chapter A');
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
     expect(c.outcome).toBe('correct');
-    tick(600); tick(400);
+    tick(3000); tick(400);   // correct-Feedback bleibt 3 s stehen, dann Gegnerzug
     expect(c.phase).toBe('PLAYING');
   }));
 
@@ -119,9 +119,9 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     const spy = jasmine.createSpy('reviewLine').and.returnValue(of(state(KEY_A, FUTURE())));
     const c = make('w', 'Chapter A', PGN, [state(KEY_A, PAST())], spy);
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // e4
-    tick(600); tick(400);                                 // advance + opp e5
+    tick(3000); tick(400);                                 // advance + opp e5
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
-    tick(600); tick(400);                                 // advance + opp Nc6 → finishLine
+    tick(3000); tick(400);                                 // advance + opp Nc6 → finishLine
     expect(spy).toHaveBeenCalled();
     expect(spy.calls.mostRecent().args[1].correct).toBeTrue();
   }));
@@ -135,7 +135,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     c.continueAfterWrong();    // → opp e5
     tick(400);
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3 korrekt
-    tick(600); tick(400);      // advance + opp Nc6 → finishLine
+    tick(3000); tick(400);      // advance + opp Nc6 → finishLine
     expect(spy.calls.mostRecent().args[1].correct).toBeFalse();
   }));
 
@@ -147,9 +147,9 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     c.mouseslip();                                        // verzeihen → kein Fehler
     expect(c.phase).toBe('PLAYING');
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // korrekt
-    tick(600); tick(400);
+    tick(3000); tick(400);
     c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
-    tick(600); tick(400);                                 // → finishLine
+    tick(3000); tick(400);                                 // → finishLine
     expect(spy.calls.mostRecent().args[1].correct).toBeTrue();
   }));
 
@@ -182,7 +182,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(spy.calls.mostRecent().args[1].length).toBe(2);   // beide Linien
   });
 
-  it('learn mode: plays a not-in-pool line through and promotes it at the end', fakeAsync(() => {
+  it('learn mode: line must be played 3× (1 learn + 2 replays) before it is promoted to the pool', fakeAsync(() => {
     const promote = jasmine.createSpy('promote').and.returnValue(of({ affected: 1 }));
     const route: any = {
       snapshot: {
@@ -204,18 +204,38 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     );
     c.ngOnInit();
     expect(c.mode).toBe('learn');
-    // Learn zeigt zuerst den erwarteten Zug (view-only), dann zurücknehmen (2s).
-    expect(c.phase).toBe('LEARN_SHOW');
-    tick(2000);
-    expect(c.phase).toBe('PLAYING');
-    // Erste Linie (Chapter A): e4, Nf3 des Users durchspielen.
-    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // korrekt nachgespielt
-    tick(400); tick(800);                                 // Gegner e5 + Pause → nächster Learn-Show
-    tick(2000);                                           // Show → retract
-    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });   // Nf3
-    tick(400); tick(800);                                 // Gegner Nc6 + Pause → finishLine → promote
+
+    // Eine Linie (Chapter A: e4/Nf3) muss LEARN_REPEATS=3 mal durchgespielt werden.
+    for (let pass = 0; pass < 3; pass++) {
+      expect(c.phase).toBe('LEARN_SHOW');
+      tick(1000);                                         // ohne Kommentar → nach LEARN_SHOW_MS zurücknehmen
+      expect(c.phase).toBe('PLAYING');
+      c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+      tick(400); tick(800);                               // Gegner e5 + Pause → nächster Learn-Show
+      tick(1000);                                         // Show Nf3 → retract
+      c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+      tick(400); tick(800);                               // Gegner Nc6 → finishLine → LINE_DONE
+      expect(c.phase).toBe('LINE_DONE');
+      if (pass < 2) {
+        expect(promote).not.toHaveBeenCalled();           // erst nach dem 3. Durchlauf
+        c.continueLine();                                 // „Weiter" → dieselbe Linie erneut
+      }
+    }
     expect(promote).toHaveBeenCalled();
   }));
+
+  it('continueLine only advances from LINE_DONE (manual continue, no auto-advance)', () => {
+    const c = make('w', 'Chapter A');
+    // In PLAYING tut continueLine nichts (kein versehentliches Vorrücken).
+    expect(c.phase).toBe('PLAYING');
+    c.continueLine();
+    expect(c.phase).toBe('PLAYING');
+    // Aus LINE_DONE rückt continueLine zur nächsten Linie vor.
+    (c as any).phase = 'LINE_DONE';
+    c.pendingRepeat = false;
+    c.continueLine();
+    expect(c.phase).not.toBe('LINE_DONE');
+  });
 
   it('LOADING failure sets phase to EMPTY', () => {
     const route: any = {
