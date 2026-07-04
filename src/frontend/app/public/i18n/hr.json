@@ -1074,7 +1074,8 @@
       "tooltip": "Poveži s drugim tečajem (knjiga ↔ radna bilježnica)",
       "linkedTooltip": "Povezano s {{name}} — klikni za promjenu",
       "openLinked": "Otvori povezani tečaj"
-    }
+    },
+    "moreActions": "Više radnji"
   },
   "weekly": {
     "title": "Tjedna objava",

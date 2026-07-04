@@ -1076,7 +1076,8 @@
       "tooltip": "Link with another course (book ↔ workbook)",
       "linkedTooltip": "Linked with {{name}} — click to change",
       "openLinked": "Open linked course"
-    }
+    },
+    "moreActions": "More actions"
   },
   "weekly": {
     "title": "Weekly",

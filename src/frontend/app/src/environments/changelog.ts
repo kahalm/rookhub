@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.258.1';
+export const APP_VERSION = '0.258.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.258.2", date: "2026-07-04", changes: [
+    { en: "Courses overview cleaner on every screen: the eight secondary icon buttons on each course card (pin, offline, download, reset, convert, link, share, delete) are now collected into a single “⋮” overflow menu with labelled entries, instead of a crowded row that overflowed on mobile. Only the two primary buttons (Sequential / Random) plus the menu button remain on the card, so it never runs off the edge. The pin/link icon still highlights when active and delete stays red inside the menu.", de: "Kursübersicht auf jedem Screen aufgeräumter: die acht sekundären Icon-Buttons jeder Kurskarte (Anpinnen, Offline, Download, Zurücksetzen, Umwandeln, Verknüpfen, Teilen, Löschen) stecken jetzt in EINEM „⋮“-Überlaufmenü mit beschrifteten Einträgen, statt in einer überfüllten Zeile, die auf dem Handy überlief. Auf der Karte bleiben nur die zwei Primär-Buttons (Sequenziell / Zufällig) plus der Menü-Knopf — nichts läuft mehr über den Rand. Das Anpinnen-/Verknüpfen-Icon leuchtet im Menü weiterhin auf, wenn aktiv, und Löschen bleibt rot." },
+  ]},
   { version: "0.258.1", date: "2026-07-04", changes: [
     { en: "Mobile fix on the courses overview: each course card's action buttons no longer overflow the card edge. The action row now wraps, and on narrow screens (≤560 px) the two primary buttons (Sequential / Random) stretch to full width on their own line while the icon actions (pin, offline, download, reset, convert, link, share, delete) spread evenly on the line below instead of running off the side.", de: "Mobil-Fix in der Kursübersicht: die Aktions-Buttons jeder Kurskarte laufen nicht mehr über den Kartenrand hinaus. Die Aktionszeile bricht jetzt um, und auf schmalen Screens (≤560 px) nehmen die beiden Primär-Buttons (Sequenziell / Zufällig) in einer eigenen Zeile die volle Breite ein, während die Icon-Aktionen (Anpinnen, Offline, Download, Zurücksetzen, Umwandeln, Verknüpfen, Teilen, Löschen) in der Zeile darunter gleichmäßig verteilt sind statt seitlich abzulaufen." },
   ]},

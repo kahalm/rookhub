@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -25,7 +26,7 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
+    MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatMenuModule, MatDialogModule,
     LoadingSpinnerComponent, TranslateModule, ReprocessBannerComponent
   ],
   template: `
@@ -150,44 +151,54 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
               </button>
             </div>
             <div class="util-actions">
-              <button mat-icon-button class="pin-btn" [class.pinned]="c.isPinned"
-                      [matTooltip]="(c.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate"
-                      [disabled]="pinning === c.bookId" (click)="togglePin(c)">
-                <mat-icon>push_pin</mat-icon>
+              <button mat-icon-button [matMenuTriggerFor]="actionMenu"
+                      [matTooltip]="'courses.moreActions' | translate"
+                      [attr.aria-label]="'courses.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
               </button>
-              <button mat-icon-button
-                      [matTooltip]="(isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate"
-                      [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
-                      (click)="toggleOffline(c)">
-                <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
-              </button>
-              <button mat-icon-button [matTooltip]="'courses.downloadPgnTooltip' | translate"
-                      [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
-                <mat-icon>download</mat-icon>
-              </button>
-              <button mat-icon-button [matTooltip]="'courses.resetTooltip' | translate"
-                      [disabled]="c.solvedCount === 0" (click)="reset(c)">
-                <mat-icon>restart_alt</mat-icon>
-              </button>
-              <button mat-icon-button [matTooltip]="'courses.convertToRepertoireTooltip' | translate"
-                      [disabled]="converting === c.bookId" (click)="convertToRepertoire(c)">
-                <mat-icon>library_books</mat-icon>
-              </button>
-              <button mat-icon-button class="link-btn" [class.linked]="c.linkedBookId"
-                      [matTooltip]="(c.linkedBookId ? 'courses.link.linkedTooltip' : 'courses.link.tooltip') | translate:{ name: c.linkedDisplayName }"
-                      (click)="openLinkDialog(c)">
-                <mat-icon>{{ c.linkedBookId ? 'link' : 'add_link' }}</mat-icon>
-              </button>
-              @if (c.isOwned) {
-                <button mat-icon-button class="share-btn" [matTooltip]="'courses.share.tooltip' | translate"
-                        (click)="openShareDialog(c)">
-                  <mat-icon>group_add</mat-icon>
+              <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item [class.active-item]="c.isPinned"
+                        [disabled]="pinning === c.bookId" (click)="togglePin(c)">
+                  <mat-icon>push_pin</mat-icon>
+                  <span>{{ (c.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
                 </button>
-                <button mat-icon-button class="delete-btn" [matTooltip]="'courses.deleteTooltip' | translate"
-                        [disabled]="deleting === c.bookId" (click)="deleteCourse(c)">
-                  <mat-icon>delete</mat-icon>
+                <button mat-menu-item
+                        [disabled]="c.puzzleCount === 0 || savingOffline === c.bookId"
+                        (click)="toggleOffline(c)">
+                  <mat-icon>{{ isOffline(c) ? 'cloud_done' : 'cloud_download' }}</mat-icon>
+                  <span>{{ (isOffline(c) ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate }}</span>
                 </button>
-              }
+                <button mat-menu-item
+                        [disabled]="c.puzzleCount === 0 || downloadingPgn === c.bookId" (click)="downloadPgn(c)">
+                  <mat-icon>download</mat-icon>
+                  <span>{{ 'courses.downloadPgnTooltip' | translate }}</span>
+                </button>
+                <button mat-menu-item
+                        [disabled]="c.solvedCount === 0" (click)="reset(c)">
+                  <mat-icon>restart_alt</mat-icon>
+                  <span>{{ 'courses.resetTooltip' | translate }}</span>
+                </button>
+                <button mat-menu-item
+                        [disabled]="converting === c.bookId" (click)="convertToRepertoire(c)">
+                  <mat-icon>library_books</mat-icon>
+                  <span>{{ 'courses.convertToRepertoireTooltip' | translate }}</span>
+                </button>
+                <button mat-menu-item [class.active-item]="c.linkedBookId" (click)="openLinkDialog(c)">
+                  <mat-icon>{{ c.linkedBookId ? 'link' : 'add_link' }}</mat-icon>
+                  <span>{{ (c.linkedBookId ? 'courses.link.linkedTooltip' : 'courses.link.tooltip') | translate:{ name: c.linkedDisplayName } }}</span>
+                </button>
+                @if (c.isOwned) {
+                  <button mat-menu-item (click)="openShareDialog(c)">
+                    <mat-icon>group_add</mat-icon>
+                    <span>{{ 'courses.share.tooltip' | translate }}</span>
+                  </button>
+                  <button mat-menu-item class="delete-item"
+                          [disabled]="deleting === c.bookId" (click)="deleteCourse(c)">
+                    <mat-icon>delete</mat-icon>
+                    <span>{{ 'courses.deleteTooltip' | translate }}</span>
+                  </button>
+                }
+              </mat-menu>
             </div>
           </div>
 
@@ -243,7 +254,6 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
     .list-search { width: 100%; max-width: 360px; display: block; margin-bottom: 16px; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
 
-    .delete-btn { color: color-mix(in srgb, #e53935 80%, currentColor); }
     .shared-badge {
       display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem;
       color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px;
@@ -255,10 +265,6 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
     }
     .linked-badge:hover { text-decoration: underline; }
     .linked-badge mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .link-btn.linked mat-icon { color: var(--mdc-theme-primary, #3f51b5); }
-    /* Pin-Symbol: gedämpft wenn nicht angepinnt, in Primärfarbe + leicht gekippt wenn angepinnt. */
-    .pin-btn mat-icon { opacity: 0.55; transition: opacity .15s, color .15s; }
-    .pin-btn.pinned mat-icon { opacity: 1; color: var(--mdc-theme-primary, #3f51b5); transform: rotate(0); }
     .course-section { margin-bottom: 28px; }
     .course-section h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; letter-spacing: .01em; }
     .section-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.88rem; margin: 0 0 10px; }
@@ -286,22 +292,19 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
 
     .card-footer { padding: 0 16px 12px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); margin-top: 2px; }
 
-    .action-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 4px; flex-wrap: wrap; padding-top: 8px; }
-    .primary-actions { display: flex; gap: 6px; }
+    /* Zwei Primär-Buttons links, alle weiteren Aktionen im „⋮"-Überlaufmenü rechts.
+       Nur noch drei Elemente in der Zeile → läuft auch auf schmalen Phones nicht über. */
+    .action-row { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+    .primary-actions { display: flex; gap: 6px; flex: 1; min-width: 0; }
     .primary-actions button { font-size: 0.82rem; height: 32px; line-height: 32px; padding: 0 10px; }
     .primary-actions mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
-    .util-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .util-actions { display: flex; align-items: center; flex-shrink: 0; }
     .util-actions .mat-mdc-icon-button { width: 32px; height: 32px; padding: 4px; }
     .util-actions mat-icon { font-size: 18px; }
 
-    /* Auf schmalen Screens (Mobil): Primär-Buttons volle Breite, Icon-Aktionen darunter
-       gleichmäßig verteilt statt über den Kartenrand hinaus zu laufen. */
-    @media (max-width: 560px) {
-      .action-row { flex-direction: column; align-items: stretch; }
-      .primary-actions { gap: 8px; }
-      .primary-actions button { flex: 1; }
-      .util-actions { justify-content: space-between; }
-    }
+    /* Aktionsmenü: aktive Aktion (angepinnt / verknüpft) in Primärfarbe, Löschen rot. */
+    .active-item mat-icon { color: var(--mdc-theme-primary, #3f51b5); }
+    .delete-item mat-icon { color: color-mix(in srgb, #e53935 80%, currentColor); }
 
     .chapters-block { margin-top: 6px; }
     .chapters-toggle {

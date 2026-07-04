@@ -1076,7 +1076,8 @@
       "tooltip": "Mit anderem Kurs verknüpfen (Buch ↔ Workbook)",
       "linkedTooltip": "Verknüpft mit {{name}} — zum Ändern klicken",
       "openLinked": "Verknüpften Kurs öffnen"
-    }
+    },
+    "moreActions": "Weitere Aktionen"
   },
   "weekly": {
     "title": "Wochenpost",
