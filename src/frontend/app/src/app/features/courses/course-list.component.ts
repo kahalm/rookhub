@@ -286,13 +286,22 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
 
     .card-footer { padding: 0 16px 12px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); margin-top: 2px; }
 
-    .action-row { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
+    .action-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 4px; flex-wrap: wrap; padding-top: 8px; }
     .primary-actions { display: flex; gap: 6px; }
     .primary-actions button { font-size: 0.82rem; height: 32px; line-height: 32px; padding: 0 10px; }
     .primary-actions mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; vertical-align: middle; }
-    .util-actions { display: flex; align-items: center; }
+    .util-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
     .util-actions .mat-mdc-icon-button { width: 32px; height: 32px; padding: 4px; }
     .util-actions mat-icon { font-size: 18px; }
+
+    /* Auf schmalen Screens (Mobil): Primär-Buttons volle Breite, Icon-Aktionen darunter
+       gleichmäßig verteilt statt über den Kartenrand hinaus zu laufen. */
+    @media (max-width: 560px) {
+      .action-row { flex-direction: column; align-items: stretch; }
+      .primary-actions { gap: 8px; }
+      .primary-actions button { flex: 1; }
+      .util-actions { justify-content: space-between; }
+    }
 
     .chapters-block { margin-top: 6px; }
     .chapters-toggle {

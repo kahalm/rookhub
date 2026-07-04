@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.258.0';
+export const APP_VERSION = '0.258.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.258.1", date: "2026-07-04", changes: [
+    { en: "Mobile fix on the courses overview: each course card's action buttons no longer overflow the card edge. The action row now wraps, and on narrow screens (≤560 px) the two primary buttons (Sequential / Random) stretch to full width on their own line while the icon actions (pin, offline, download, reset, convert, link, share, delete) spread evenly on the line below instead of running off the side.", de: "Mobil-Fix in der Kursübersicht: die Aktions-Buttons jeder Kurskarte laufen nicht mehr über den Kartenrand hinaus. Die Aktionszeile bricht jetzt um, und auf schmalen Screens (≤560 px) nehmen die beiden Primär-Buttons (Sequenziell / Zufällig) in einer eigenen Zeile die volle Breite ein, während die Icon-Aktionen (Anpinnen, Offline, Download, Zurücksetzen, Umwandeln, Verknüpfen, Teilen, Löschen) in der Zeile darunter gleichmäßig verteilt sind statt seitlich abzulaufen." },
+  ]},
   { version: "0.258.0", date: "2026-07-03", changes: [
     { en: "Observability: each request now logs a device class (mobile / tablet / desktop / bot) derived from the User-Agent, plus the raw User-Agent. A new Kibana dashboard 'RookHub Geräte' shows the mobile-vs-PC share overall, broken down by area (puzzles / repertoires / courses / tournaments / …) and over time — filtered to real user traffic (RequestKind=user). No user-facing UI change; data starts accumulating after deploy (past requests carry no device info).", de: "Observability: jeder Request loggt jetzt eine Geräteklasse (mobile / tablet / desktop / bot), abgeleitet aus dem User-Agent, plus den rohen User-Agent. Ein neues Kibana-Dashboard „RookHub Geräte“ zeigt den Mobile-vs-PC-Anteil gesamt, aufgeschlüsselt nach Bereich (Puzzle / Repertoires / Kurse / Turniere / …) und über die Zeit — gefiltert auf echten Nutzer-Traffic (RequestKind=user). Keine sichtbare UI-Änderung; die Daten sammeln sich erst ab dem Deploy (frühere Requests tragen keine Geräteinfo)." },
   ]},
