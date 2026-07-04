@@ -84,6 +84,10 @@ export interface BookPuzzleDto {
    *  `{ "ply": [{ "o":"d8", "d":"g8", "b":"green" }, …] }` (Schlüssel wie moveComments; `d` fehlt bei
    *  Feld-Markierungen). Vom Solver geparst und im Review aufs Brett gezeichnet. */
   moveShapes?: string | null;
+  /** Von Chessable geduldete Alternativzüge je Halbzug als ROHER JSON-String `{ "ply": ["uci", …] }`
+   *  (Schlüssel wie moveComments, Werte UCI). Der Solver akzeptiert einen solchen Zug als gleichwertige
+   *  Alternative (zeigt „auch eine Alternative", nimmt ihn zurück, verlangt weiter den Hauptzug). */
+  altMoves?: string | null;
   difficulty?: string;
   bookRating?: number;
   tags?: string;

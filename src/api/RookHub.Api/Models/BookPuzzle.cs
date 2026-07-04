@@ -60,6 +60,16 @@ public class BookPuzzle
     /// </summary>
     public string? MoveShapes { get; set; }
 
+    /// <summary>
+    /// Von Chessable geduldete Alternativzüge (softFail → <c>[%alt …]</c> im Quell-PGN) als JSON-Objekt
+    /// <c>{ "plyIndex": ["uci", …] }</c>. Schlüssel-Konvention wie <see cref="MoveComments"/> (0-basierter
+    /// Halbzug in <see cref="Moves"/>), Werte sind UCI-Züge (SAN→UCI beim Import umgesetzt, Anknüpfpunkt =
+    /// Stellung VOR dem Hauptzug). Der Kurs-/Puzzle-Solver erkennt sie: statt „falsch" wird der Zug als
+    /// gleichwertige Alternative angezeigt, zurückgenommen und weiter auf den Hauptzug gewartet. Der
+    /// Repertoire-Trainer nutzt weiterhin das <c>[%alt]</c> im PGN-Baum direkt. LONGTEXT, null = keine.
+    /// </summary>
+    public string? AltMoves { get; set; }
+
     [MaxLength(50)]
     public string? Difficulty { get; set; }
 

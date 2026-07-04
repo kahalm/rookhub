@@ -26,6 +26,7 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { parseMoveShapes } from './move-shapes.util';
+import { parseAltMoves } from './alt-moves.util';
 import { applyUci } from './puzzle-move.util';
 import { FirstMoveHint } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
@@ -392,6 +393,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
   protected override onOffPathWarning(): void {
     this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
+  }
+  protected override onAlternativeMove(_userUci: string): void {
+    this.snackbar.info(this.translate.instant('book.alternativeMove'), { duration: 3000 });
   }
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
@@ -1100,6 +1104,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (puzzle.isInfoOnly) { this.enterInfoReview(puzzle); return; }
     // Lös-Automat (Setup, StartPly-Vorspiel, Zug-Handling, Stockfish, Viz) aus BasePuzzleSolver.
     this.setupSolver(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
+    // Geduldete Alternativzüge NACH setupSolver setzen (das leert altMovesByPly beim Aufsetzen).
+    this.altMovesByPly = parseAltMoves(puzzle.altMoves);
   }
 
   /**

@@ -60,10 +60,18 @@ namespace RookHub.Api.Services;
 ///   enden zu lassen (<c>PgnParser.ExtractMoveComments</c>). Der Varianten-Text steht bereits im
 ///   <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
 ///   Re-Fetch.</item>
+/// <item><c>10</c> — Von Chessable geduldete Alternativzüge (softFail → <c>[%alt …]</c>) werden beim
+///   Import je Halbzug nach <c>BookPuzzle.AltMoves</c> (JSON <c>{ply:[uci]}</c>) extrahiert (SAN→UCI aus
+///   der Stellung vor dem Hauptzug), statt beim Kommentar-Cleanup verworfen zu werden. Der Kurs-/Puzzle-
+///   Solver erkennt einen solchen Zug jetzt als gleichwertige Alternative (zeigt „auch eine Alternative",
+///   nimmt ihn zurück, wartet weiter auf den Hauptzug) statt ihn als Fehler zu werten — analog zum
+///   Repertoire-Trainer, der <c>[%alt]</c> aus dem PGN-Baum bereits akzeptiert. Die Marker stehen bereits
+///   im <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
+///   Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 9;
+    public const int CurrentVersion = 10;
 }

@@ -7,12 +7,16 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 class TestSolver extends BasePuzzleSolver {
   evalRefreshCount = 0;
+  altNoticeCount = 0;
   protected handleSolved(): void { this.state = 'SOLVED'; }
   protected handleFailed(): void { this.state = 'FAILED'; }
   override get reviewTotal(): number { return this.solutionMoves.length; }
   protected override reviewGoTo(index: number): void { this.reviewIndex = index; }
   protected override refreshEvalIfShown(): void { this.evalRefreshCount++; }
+  protected override onAlternativeMove(): void { this.altNoticeCount++; }
   setup(fen: string, moves: string): void { this.setupSolver(fen, moves, 0); }
+  setAlts(map: Record<number, string[]>): void { this.altMovesByPly = map; }
+  get moveIdx(): number { return (this as unknown as { moveIndex: number }).moveIndex; }
   get fen(): string { return (this as unknown as { chess: { fen(): string } }).chess.fen(); }
 }
 
@@ -271,5 +275,42 @@ describe('BasePuzzleSolver playSolutionFromStart (geteiltes Aufgeben)', () => {
     tick(900); expect(solver.reviewIndex).toBe(1);
     tick(900 * 3); expect(solver.reviewIndex).toBe(4);   // bis ans Ende
     tick(900); expect(solver.reviewIndex).toBe(4);       // gestoppt, läuft nicht weiter
+  }));
+});
+
+describe('BasePuzzleSolver geduldeter Alternativzug ([%alt])', () => {
+  it('wertet einen Alt-Zug nicht als Fehler: Hinweis, kurz halten, zurücknehmen, Hauptzug bleibt erwartet', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+
+    // 1.e4 automatisch; Schwarz löst ab e7e5 (moveIndex 1). d7d5 sei geduldete Alternative.
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    const afterSetup = solver.fen;
+    solver.setAlts({ 1: ['d7d5'] });
+
+    solver.onMoveMade({ orig: 'd7' as Key, dest: 'd5' as Key });
+    // Zug wird kurz gezeigt, als Alternative gewürdigt, NICHT als Lösungszug gezählt.
+    expect(solver.altNoticeCount).toBe(1);
+    expect(solver.state).toBe('THINKING');
+    expect(solver.moveIdx).toBe(1);          // kein Fortschritt
+
+    tick(1400);                              // ALT_HOLD_MS
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    expect(solver.fen).toBe(afterSetup);     // zurückgenommen, Hauptzug e7e5 weiter erwartet
+    expect(solver.moveIdx).toBe(1);
+  }));
+
+  it('nicht als Alternative gelistete falsche Züge bleiben off-path (kein Alt-Hinweis)', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    solver.setAlts({ 1: ['d7d5'] });
+
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });  // weder Haupt- noch Alt-Zug
+    tick();
+    expect(solver.altNoticeCount).toBe(0);
+    expect(solver.state).toBe('PLAYING');    // off-path (Stockfish-Fehlerpfad)
   }));
 });

@@ -711,4 +711,48 @@ public class PgnImportServiceTests : IDisposable
         // Zwischenzüge ohne Annotation haben keine Shapes.
         Assert.False(p.MoveShapes!.ContainsKey(2));
     }
+
+    [Fact]
+    public void ParsePgn_ExtractsAltMoves_SoftFailAlternative_AsUci()
+    {
+        // Von Chessable geduldeter Alternativzug (softFail → [%alt]) am 2. Löserzug: Qd2 [%alt Qd3].
+        // Puzzle „255. Rooze vs. Buchäckert" (1001 Chess Exercises), Kapitel „5. Skewer".
+        const string pgn = @"
+[Event ""Book""]
+[Round ""006.017""]
+[White ""255. Rooze, J. vs. Buchäckert, J.""]
+[Result ""*""]
+[FEN ""r1r3k1/ppqnbb1p/2p2pp1/3Pp3/4P1P1/4BNNP/PPQ2P2/R2R2K1 w - - 0 1""]
+
+{Luring} 1. d6 Bxd6 2. Qd2 {[%alt Qd3]} {Or Qd3+- .} Bc5 3. Qxd7 {and White won.} *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-u5-21646.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.AltMoves);
+        // Halbzug-Index 2 = Qd2 (c2d2). Die Alternative Qd3 = c2d3.
+        Assert.Equal(new[] { "c2d3" }, p.AltMoves![2]);
+        // Hauptzug selbst steht NICHT in den Alternativen; andere Halbzüge haben keine.
+        Assert.False(p.AltMoves!.ContainsKey(0));
+        Assert.False(p.AltMoves!.ContainsKey(1));
+    }
+
+    [Fact]
+    public void ParsePgn_ExtractsAltMoves_PromotionAlternative()
+    {
+        // Alternative mit Umwandlung: d1=Q [%alt d1=R+] → UCI der Alternative trägt das Promo-Suffix.
+        const string pgn = @"
+[Event ""Book""]
+[Round ""006.018""]
+[White ""256. Navara vs. Bacrot""]
+[Result ""*""]
+[FEN ""8/8/p5p1/2k5/P7/2nK1P2/1r1pB3/7R b - - 0 1""]
+
+{Luring} 1... Nxe2 2. Kxe2 d1=Q {[%alt d1=R+]} 3. Kxd1 Rb1 *
+";
+        var (puzzles, _) = PgnImportService.ParsePgn("chessable-u5-21646.pgn", pgn);
+        var p = Assert.Single(puzzles);
+        Assert.NotNull(p.AltMoves);
+        // Halbzug-Index 2 = d1=Q (d2d1q). Alternative d1=R → d2d1r.
+        Assert.Equal(new[] { "d2d1r" }, p.AltMoves![2]);
+    }
 }

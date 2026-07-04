@@ -142,6 +142,13 @@ public class BookPuzzleDto
     /// Wird 1:1 aus <c>BookPuzzle.MoveShapes</c> durchgereicht; das Frontend parst und zeichnet ihn im Review.
     /// </summary>
     public string? MoveShapes { get; set; }
+    /// <summary>
+    /// Von Chessable geduldete Alternativzüge (softFail → <c>[%alt]</c>) als ROHER JSON-String
+    /// <c>{ "ply": ["uci", …] }</c> (Schlüssel wie <see cref="MoveComments"/>, Werte UCI). Das Frontend
+    /// parst ihn; der Solver erkennt einen Alt-Zug, zeigt „auch eine Alternative", nimmt ihn zurück und
+    /// wartet weiter auf den Hauptzug. 1:1 aus <c>BookPuzzle.AltMoves</c> durchgereicht. Null = keine.
+    /// </summary>
+    public string? AltMoves { get; set; }
     public string? Difficulty { get; set; }
     public int? BookRating { get; set; }
     public string? Tags { get; set; }

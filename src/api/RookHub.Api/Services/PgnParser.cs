@@ -20,6 +20,8 @@ public static partial class PgnParser
     private static partial Regex AnnotationRegex();
     [GeneratedRegex(@"\[%(cal|csl)\s+([^\]]*)\]")] // farbige Pfeile / Feld-Markierungen (Chessable)
     private static partial Regex CalCslRegex();
+    [GeneratedRegex(@"\[%alt\s+([^\]]*)\]")]       // von Chessable geduldete Alternativzüge (softFail)
+    private static partial Regex AltRegex();
     [GeneratedRegex(@"\{[^}]*\}")]                 // Kommentare
     private static partial Regex CommentRegex();
     [GeneratedRegex(@"\$\d+")]                     // NAGs
@@ -285,22 +287,7 @@ public static partial class PgnParser
     /// Ergebnis entfernt, SAN→UCI via Gera.Chess). <c>null</c> bei ungültiger FEN / nicht spielbarem SAN.</summary>
     public static List<string>? TryExtractUciMainline(string fen, string moveText)
     {
-        // 1) Kommentare + Varianten + NAGs + Zugnummern + Ergebnis entfernen
-        var s = CommentRegex().Replace(moveText, " ");
-        s = RemoveVariations(s);
-        s = NagRegex().Replace(s, " ");
-        s = MoveNumberRegex().Replace(s, " ");
-
-        var sanMoves = new List<string>();
-        foreach (var tok in s.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var t = tok.Trim();
-            if (t.Length == 0 || ResultTokens.Contains(t)) continue;
-            t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O");
-            t = t.TrimEnd('!', '?', '+', '#');
-            if (t.Length == 0 || ResultTokens.Contains(t)) continue;
-            sanMoves.Add(t);
-        }
+        var sanMoves = ExtractMainlineSans(moveText);
         if (sanMoves.Count == 0) return null;
 
         try
@@ -328,6 +315,111 @@ public static partial class PgnParser
         if (!string.IsNullOrEmpty(ss) && ss.StartsWith('=') && ss.Length >= 2)
             u += char.ToLowerInvariant(ss[1]);
         return u;
+    }
+
+    /// <summary>SAN einzeln von Zug-Dekorationen bereinigen (0-0→O-O, Suffixe !?+# weg). Leer/Ergebnis → "".</summary>
+    private static string CleanSan(string token)
+    {
+        var t = token.Trim();
+        if (t.Length == 0 || ResultTokens.Contains(t)) return "";
+        t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
+        return ResultTokens.Contains(t) ? "" : t;
+    }
+
+    /// <summary>Hauptvariante als gereinigte SAN-Liste (Kommentare/Varianten/NAGs/Zugnummern/Ergebnis raus).</summary>
+    private static List<string> ExtractMainlineSans(string moveText)
+    {
+        var s = CommentRegex().Replace(moveText, " ");
+        s = RemoveVariations(s);
+        s = NagRegex().Replace(s, " ");
+        s = MoveNumberRegex().Replace(s, " ");
+
+        var sanMoves = new List<string>();
+        foreach (var tok in s.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var t = CleanSan(tok);
+            if (t.Length > 0) sanMoves.Add(t);
+        }
+        return sanMoves;
+    }
+
+    // ---- Geduldete Alternativzüge ([%alt]) --------------------------------
+    /// <summary>
+    /// Sammelt je Halbzug die von Chessable geduldeten Alternativzüge (softFail → <c>[%alt …]</c>) und
+    /// setzt sie SAN→UCI um. Anknüpfpunkt ist die Stellung VOR dem Hauptzug dieses Halbzugs (die Alternative
+    /// ersetzt IHN). Schlüssel-Konvention identisch zu <see cref="ExtractMoveComments"/> (0-basierter Halbzug
+    /// der Hauptlinie = Index in der UCI-Zugliste von <see cref="TryExtractUciMainline"/>). <c>null</c> = keine.
+    /// </summary>
+    public static Dictionary<int, List<string>>? ExtractAltMoves(string fen, string moveText)
+    {
+        // 1) [%alt …]-SANs je Halbzug einsammeln (gleicher Scanner-Aufbau wie ExtractMoveShapes).
+        var altSanByPly = new Dictionary<int, List<string>>();
+        {
+            int depth = 0, sanCount = 0, i = 0, n = moveText.Length;
+            var cur = new StringBuilder();
+            void Flush() { if (cur.Length == 0) return; if (IsSanMove(cur.ToString())) sanCount++; cur.Clear(); }
+            while (i < n)
+            {
+                char c = moveText[i];
+                if (c == '{')
+                {
+                    Flush();
+                    int j = moveText.IndexOf('}', i + 1);
+                    if (j < 0) j = n;
+                    if (depth == 0)
+                    {
+                        var inner = moveText.Substring(i + 1, Math.Min(j, n) - (i + 1));
+                        foreach (Match m in AltRegex().Matches(inner))
+                        {
+                            int key = sanCount - 1;             // Alt gehört zum zuletzt gezählten Zug
+                            if (key < 0) continue;
+                            var sans = m.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            if (sans.Length == 0) continue;
+                            if (!altSanByPly.TryGetValue(key, out var l)) { l = []; altSanByPly[key] = l; }
+                            l.AddRange(sans);
+                        }
+                    }
+                    i = (j < n) ? j + 1 : n;
+                }
+                else if (c == '(') { Flush(); depth++; i++; }
+                else if (c == ')') { Flush(); if (depth > 0) depth--; i++; }
+                else if (char.IsWhiteSpace(c)) { Flush(); i++; }
+                else { if (depth == 0) cur.Append(c); i++; }
+            }
+            Flush();
+        }
+        if (altSanByPly.Count == 0) return null;
+
+        // 2) SAN→UCI: Hauptlinie bis VOR den Zielhalbzug nachspielen, dann die Alt-SAN aus dieser Stellung.
+        var mainSans = ExtractMainlineSans(moveText);
+        if (mainSans.Count == 0) return null;
+
+        var result = new Dictionary<int, List<string>>();
+        foreach (var (key, sans) in altSanByPly)
+        {
+            if (key >= mainSans.Count) continue;
+            var ucis = new List<string>();
+            foreach (var rawSan in sans)
+            {
+                var altSan = CleanSan(rawSan);
+                if (altSan.Length == 0) continue;
+                try
+                {
+                    var board = ChessBoard.LoadFromFen(fen);
+                    bool ok = true;
+                    for (int p = 0; p < key; p++) { if (!board.Move(mainSans[p])) { ok = false; break; } }
+                    if (!ok) break;                              // Hauptlinie nicht spielbar → Key überspringen
+                    if (board.Move(altSan))
+                    {
+                        var u = ToUci(board.ExecutedMoves[^1]);
+                        if (!ucis.Contains(u)) ucis.Add(u);
+                    }
+                }
+                catch { /* ungültige FEN / nicht spielbarer Alt-SAN ⇒ diesen Zug überspringen */ }
+            }
+            if (ucis.Count > 0) result[key] = ucis;
+        }
+        return result.Count == 0 ? null : result;
     }
 
     // ---- Trainingsstart ([%tqu]) finden -----------------------------------

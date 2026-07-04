@@ -44,7 +44,8 @@ public class PgnImportService
         string LineId, string Round, string Fen, string Moves, int StartPly,
         string? Title, string? Chapter, string? Comment,
         Dictionary<int, string>? MoveComments = null, bool IsInfoOnly = false,
-        Dictionary<int, List<PgnParser.MoveShape>>? MoveShapes = null);
+        Dictionary<int, List<PgnParser.MoveShape>>? MoveShapes = null,
+        Dictionary<int, List<string>>? AltMoves = null);
 
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
@@ -77,6 +78,10 @@ public class PgnImportService
             var comment = PgnParser.ExtractFirstComment(moveText);
             var moveComments = PgnParser.ExtractMoveComments(moveText);
             var moveShapes = PgnParser.ExtractMoveShapes(moveText);
+            // Von Chessable geduldete Alternativzüge (softFail → [%alt]) je Halbzug als UCI. Anknüpfpunkt
+            // ist die Stellung VOR dem jeweiligen Hauptzug (siehe ExtractAltMoves). Nur für die echte
+            // Puzzle-Linie sinnvoll (die Info-Linie unten nutzt eine synthetische FEN/Zugliste).
+            var altMoves = PgnParser.ExtractAltMoves(fen, moveText);
             // Info-/Erklärlinie? piratechess setzt [%info] für Chessable-IsInfo-Linien (kein [%tqu]).
             // Solche Linien werden nicht abgefragt, sondern nur durchgeklickt → IsInfoOnly markieren.
             var isInfoOnly = moveText.Contains("[%info", StringComparison.OrdinalIgnoreCase);
@@ -147,7 +152,8 @@ public class PgnImportService
                 Comment: comment,
                 MoveComments: moveComments,
                 IsInfoOnly: isInfoOnly,
-                MoveShapes: moveShapes));
+                MoveShapes: moveShapes,
+                AltMoves: altMoves));
         }
         return new ParseResult(result, invalid);
     }
@@ -241,6 +247,7 @@ public class PgnImportService
                     bp.Comment = p.Comment;
                     bp.MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments);
                     bp.MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes);
+                    bp.AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves);
                     bp.IsInfoOnly = p.IsInfoOnly;
                     updated++;
                 }
@@ -261,6 +268,7 @@ public class PgnImportService
                 Comment = p.Comment,
                 MoveComments = p.MoveComments == null ? null : JsonSerializer.Serialize(p.MoveComments),
                 MoveShapes = p.MoveShapes == null ? null : JsonSerializer.Serialize(p.MoveShapes),
+                AltMoves = p.AltMoves == null ? null : JsonSerializer.Serialize(p.AltMoves),
                 IsInfoOnly = p.IsInfoOnly,
             });
         }

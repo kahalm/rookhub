@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.258.2';
+export const APP_VERSION = '0.259.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.259.0", date: "2026-07-04", changes: [
+    { en: "Course & daily puzzles now accept Chessable's tolerated alternative moves. Some Chessable lines mark a second, equally-winning move as accepted (softFail → [%alt] in the PGN); until now the course/daily solver only accepted the single main move and scored everything else as wrong (the repertoire trainer already honoured these). The import now keeps those alternatives per move (new BookPuzzle.AltMoves, SAN→UCI); if you play one, it is no longer counted as a mistake — it briefly shows on the board with a note “Also a good move”, is then taken back, and the main line's move is still expected. Effective for a course only after it is updated/re-fetched (pipeline v10). Example: daily puzzle 2026-07-04 (Rooze–Buchäckert, Skewer) accepts Qd3 alongside Qd2.", de: "Kurs- und Tagespuzzle akzeptieren jetzt die von Chessable geduldeten Alternativzüge. Manche Chessable-Linien markieren einen zweiten, gleichwertig gewinnenden Zug als zulässig (softFail → [%alt] im PGN); bisher akzeptierte der Kurs-/Tagespuzzle-Solver nur den einen Hauptzug und wertete alles andere als falsch (der Repertoire-Trainer beachtete sie schon). Der Import behält diese Alternativen jetzt je Zug (neues BookPuzzle.AltMoves, SAN→UCI); spielst du eine davon, gilt sie nicht mehr als Fehler — sie wird kurz mit dem Hinweis „Auch ein guter Zug“ auf dem Brett gezeigt, dann zurückgenommen, und der Zug der Hauptvariante wird weiterhin verlangt. Greift für einen Kurs erst nach dem Aktualisieren/Re-Fetch (Pipeline v10). Beispiel: Tagespuzzle 04.07.2026 (Rooze–Buchäckert, Spieß) akzeptiert Qd3 neben Qd2." },
+  ]},
   { version: "0.258.2", date: "2026-07-04", changes: [
     { en: "Courses overview cleaner on every screen: the eight secondary icon buttons on each course card (pin, offline, download, reset, convert, link, share, delete) are now collected into a single “⋮” overflow menu with labelled entries, instead of a crowded row that overflowed on mobile. Only the two primary buttons (Sequential / Random) plus the menu button remain on the card, so it never runs off the edge. The pin/link icon still highlights when active and delete stays red inside the menu.", de: "Kursübersicht auf jedem Screen aufgeräumter: die acht sekundären Icon-Buttons jeder Kurskarte (Anpinnen, Offline, Download, Zurücksetzen, Umwandeln, Verknüpfen, Teilen, Löschen) stecken jetzt in EINEM „⋮“-Überlaufmenü mit beschrifteten Einträgen, statt in einer überfüllten Zeile, die auf dem Handy überlief. Auf der Karte bleiben nur die zwei Primär-Buttons (Sequenziell / Zufällig) plus der Menü-Knopf — nichts läuft mehr über den Rand. Das Anpinnen-/Verknüpfen-Icon leuchtet im Menü weiterhin auf, wenn aktiv, und Löschen bleibt rot." },
   ]},

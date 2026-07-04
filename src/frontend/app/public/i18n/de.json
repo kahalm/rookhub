@@ -1285,6 +1285,7 @@
     }
   },
   "book": {
+    "alternativeMove": "Auch ein guter Zug — spiel aber den Zug der Hauptvariante.",
     "hints": {
       "show": "Tipp",
       "next": "Nächster Tipp",

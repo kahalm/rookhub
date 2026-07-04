@@ -9,6 +9,10 @@ import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
+/** Wie lange ein gespielter (geduldeter) Alternativzug auf dem Brett stehen bleibt, bevor er
+ *  zurückgenommen wird und der Hauptzug weiter erwartet wird. */
+const ALT_HOLD_MS = 1400;
+
 /**
  * Gemeinsamer Lös-Automat für alle 3 Puzzle-Modi (Normal, Endless, Buch).
  * Kapselt chess.js-State, den Zustandsautomaten (SETUP→AWAITING→THINKING→PLAYING),
@@ -49,6 +53,14 @@ export abstract class BasePuzzleSolver {
   alternativeSolve = false;
   mouseslipUsed = false;
   currentEval = '';
+
+  /** Von Chessable geduldete Alternativzüge je Halbzug als UCI (Schlüssel = Index in `solutionMoves`;
+   *  aus `puzzle.altMoves` geparst, nur im Buch-/Kurs-Modus befüllt). Spielt der User an einem eigenen
+   *  Zug eine dieser Alternativen statt des Hauptzugs, wird sie NICHT als Fehler gewertet: kurz gezeigt
+   *  („auch eine Alternative"), dann zurückgenommen — der Hauptzug wird weiterhin verlangt. */
+  protected altMovesByPly: Record<number, string[]> = {};
+  /** Timer, der einen kurz gezeigten Alternativzug wieder zurücknimmt. */
+  protected altHoldTimer?: ReturnType<typeof setTimeout>;
 
   // ---- Off-Path-Warnung: Weicht der User von der Lösung ab und spielt gegen Stockfish weiter,
   //      wird — sobald die Eval nicht mehr mind. +2 für den Spieler ist — ab dem N-ten off-path-Zug
@@ -242,6 +254,8 @@ export abstract class BasePuzzleSolver {
    */
   protected setupSolver(fen: string, movesStr: string, startPly = 0): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    if (this.altHoldTimer) clearTimeout(this.altHoldTimer);
+    this.altMovesByPly = {};    // wird von der Komponente nach setupSolver neu gesetzt (nur Buch/Kurs)
     this.clearSolutionPlay();   // evtl. laufende Lösungs-Wiedergabe (nach Aufgeben) stoppen
     this.stopCountdown();
     this.reviewMode = false;
@@ -329,6 +343,10 @@ export abstract class BasePuzzleSolver {
         this.playMove(expectedUci);
         this.moveIndex++;
         this.advanceAfterCorrectMove();
+      } else if (this.matchesAlternative(userUci)) {
+        // Von Chessable geduldeter Alternativzug (softFail → [%alt]): kein Fehler. Kurz zeigen,
+        // als Alternative würdigen, dann zurücknehmen und weiter auf den Hauptzug warten.
+        this.handleAlternativeMove(event, userUci);
       } else {
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
@@ -348,6 +366,42 @@ export abstract class BasePuzzleSolver {
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
+
+  /** Ist `userUci` an der aktuell erwarteten Stelle ein von Chessable geduldeter Alternativzug? */
+  protected matchesAlternative(userUci: string): boolean {
+    const alts = this.altMovesByPly[this.moveIndex];
+    return !!alts && alts.some(a => userUci === a.substring(0, userUci.length));
+  }
+
+  /**
+   * Geduldeten Alternativzug behandeln (kein Fehler, kein Fortschritt): den Zug kurz auf dem Brett
+   * zeigen, die Komponente darüber informieren ({@link onAlternativeMove} → Hinweis „auch eine
+   * Alternative"), dann zurücknehmen und dieselbe Stellung wieder spielbar lassen — der Hauptzug
+   * wird weiterhin verlangt. `this.chess` bleibt unangetastet (kein moveIndex-Fortschritt).
+   */
+  protected handleAlternativeMove(event: { orig: Key; dest: Key; promotion?: string }, userUci: string): void {
+    // Zug testweise auf einer Kopie anwenden, um ihn kurz sichtbar zu machen.
+    const probe = new Chess(this.chess.fen());
+    tryFreeMove(probe, event.orig, event.dest, event.promotion);
+    this.lastMove = [event.orig, event.dest];
+    this.boardFen = probe.fen();
+    this.turnColor = probe.turn() === 'w' ? 'white' : 'black';
+    this.isCheck = probe.isCheck();
+    this.dests = new Map();       // während des Holds gesperrt
+    this.state = 'THINKING';
+    this.onAlternativeMove(userUci);
+    if (this.altHoldTimer) clearTimeout(this.altHoldTimer);
+    this.altHoldTimer = setTimeout(() => {
+      if (this.aborted) return;
+      this.lastMove = undefined;
+      this.state = 'AWAITING_USER_MOVE';
+      this.moveStartTime = Date.now();
+      this.updateBoard();         // schnappt auf die Stellung VOR dem Zug zurück (Hauptzug erwartet)
+    }, ALT_HOLD_MS);
+  }
+
+  /** Hook: der User hat einen geduldeten Alternativzug gespielt. Komponente zeigt einen Hinweis. */
+  protected onAlternativeMove(_userUci: string): void { /* von der Komponente überschrieben */ }
 
   protected advanceAfterCorrectMove(): void {
     if (this.moveIndex >= this.solutionMoves.length) { this.solvedInternal(false); return; }

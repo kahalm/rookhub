@@ -1285,6 +1285,7 @@
     }
   },
   "book": {
+    "alternativeMove": "Also a good move — but play the main line's move.",
     "hints": {
       "show": "Hint",
       "next": "Next hint",

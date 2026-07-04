@@ -680,6 +680,7 @@ public class BookPuzzleService
         Comment = bp.Comment,
         MoveComments = ParseMoveComments(bp.MoveComments),
         MoveShapes = bp.MoveShapes,   // roher JSON-String; das Frontend parst ihn selbst
+        AltMoves = bp.AltMoves,       // roher JSON-String {ply:[uci]}; Solver akzeptiert die Alternativen
         // Metadaten bevorzugt vom Buch (admin-gepflegt), sonst vom Puzzle.
         Difficulty = bp.Book?.Difficulty ?? bp.Difficulty,
         BookRating = bp.Book?.Rating ?? bp.BookRating,
