@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.260.0';
+export const APP_VERSION = '0.260.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.260.1", date: "2026-07-05", changes: [
+    { en: "Crawler resilience (chessresults_crawler): the periodic VPN IP rotation no longer holds the single crawl rate-limiter during the ~5s public-IP lookup that only logs the new address. Previously each rotation blocked all queued crawls for the full tunnel restart plus that lookup (~8s), risking the 60s acquisition timeout; now only the actual tunnel restart (which must block anyway, since the tunnel is down) is under the lock, and the IP is resolved/logged detached. Rotation/timing knobs (RotateAfterRequests, VpnRestartPauseMs, MinDelayMs) are now configurable. Backend-only, no visible change.", de: "Crawler-Robustheit (chessresults_crawler): die periodische VPN-IP-Rotation hält den einzelnen Crawl-Rate-Limiter nicht mehr während der ~5s dauernden Public-IP-Ermittlung, die nur die neue Adresse loggt. Vorher blockierte jede Rotation alle wartenden Crawls für den ganzen Tunnel-Neustart plus diese Ermittlung (~8s) und riskierte den 60s-Timeout; jetzt liegt nur der eigentliche Tunnel-Neustart (der ohnehin blockieren muss, da der Tunnel unten ist) im Lock, die IP wird losgelöst ermittelt/geloggt. Rotations-/Timing-Stellschrauben (RotateAfterRequests, VpnRestartPauseMs, MinDelayMs) sind jetzt konfigurierbar. Nur Backend, keine sichtbare Änderung." },
+  ]},
   { version: "0.260.0", date: "2026-07-05", changes: [
     { en: "Admins can now inspect a player's weekly-post result in detail: an (i) button next to each player in the weekly leaderboard opens a per-puzzle breakdown — one row per puzzle with time, hints used, wrong moves and mouse-slips, plus a totals row. Wrong moves and mouse-slips are newly tracked per weekly puzzle (previously only solved/time/hints were stored), so they populate for weekly posts played from this version on; older data shows 0 there.", de: "Admins können das Wochenpost-Ergebnis eines Spielers jetzt im Detail ansehen: ein (i) neben jedem Spieler in der Wochenpost-Bestenliste öffnet eine Aufschlüsselung pro Puzzle — eine Zeile je Puzzle mit Zeit, genutzten Tipps, Fehlzügen und Mausrutschern, plus eine Summenzeile. Fehlzüge und Mausrutscher werden pro Wochenpost-Puzzle neu erfasst (bisher wurden nur gelöst/Zeit/Tipps gespeichert); sie füllen sich daher für ab dieser Version gespielte Wochenposts, ältere Daten zeigen dort 0." },
   ]},
