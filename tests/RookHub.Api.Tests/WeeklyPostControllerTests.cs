@@ -470,4 +470,55 @@ public class WeeklyPostControllerTests : IDisposable
         var res = await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true });
         Assert.IsType<NotFoundObjectResult>(res.Result);
     }
+
+    // --- Admin-Detailaufschlüsselung (i) -------------------------------------
+
+    [Fact]
+    public async Task GetResults_IncludesUserId_ForAdminBreakdownLinking()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(42);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 15 });
+
+        var results = Unwrap<WeeklyPostResultsDto>(await _controller.GetResults(id));
+        var player = Assert.Single(results.Players);
+        Assert.Equal(42, player.UserId);
+    }
+
+    [Fact]
+    public async Task GetPlayerBreakdown_ReturnsRowPerPuzzle_WithWrongAndMouseslips()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(7);
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto
+        { PuzzleIndex = 0, Solved = true, TimeSeconds = 30, HintsUsed = 2, WrongAttempts = 3, Mouseslips = 1 });
+        await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto
+        { PuzzleIndex = 1, Solved = false, TimeSeconds = 12, HintsUsed = 0, WrongAttempts = 0, Mouseslips = 0 });
+
+        SetUser(99, admin: true);
+        var bd = Unwrap<WeeklyPlayerBreakdownDto>(await _controller.GetPlayerBreakdown(id, 7));
+
+        Assert.Equal(2, bd.Total);
+        Assert.Equal(7, bd.UserId);
+        Assert.Equal(2, bd.Rows.Count);
+        // Nach PuzzleIndex sortiert.
+        Assert.Equal(0, bd.Rows[0].PuzzleIndex);
+        Assert.Equal(1, bd.Rows[1].PuzzleIndex);
+        // Zeile 0 trägt die erfassten Fehlzüge/Mausrutscher/Tipps.
+        Assert.True(bd.Rows[0].Solved);
+        Assert.Equal(30, bd.Rows[0].TimeSeconds);
+        Assert.Equal(2, bd.Rows[0].HintsUsed);
+        Assert.Equal(3, bd.Rows[0].WrongAttempts);
+        Assert.Equal(1, bd.Rows[0].Mouseslips);
+        Assert.False(bd.Rows[1].Solved);
+        Assert.Equal(0, bd.Rows[1].WrongAttempts);
+    }
+
+    [Fact]
+    public async Task GetPlayerBreakdown_UnknownPost_Returns404()
+    {
+        SetUser(1, admin: true);
+        var res = await _controller.GetPlayerBreakdown(999, 1);
+        Assert.IsType<NotFoundObjectResult>(res.Result);
+    }
 }

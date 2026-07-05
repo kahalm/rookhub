@@ -6,11 +6,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -23,7 +25,7 @@ interface WeeklyPostRow extends WeeklyPost {
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule,
+    MatFormFieldModule, MatInputModule, MatDialogModule,
     TranslateModule, LoadingSpinnerComponent
   ],
   template: `
@@ -126,6 +128,7 @@ interface WeeklyPostRow extends WeeklyPost {
                             <th>{{ 'weekly.leaderboard.player' | translate }}</th>
                             <th class="lb-acc">{{ 'weekly.leaderboard.accuracy' | translate }}</th>
                             <th class="lb-time">{{ 'weekly.leaderboard.time' | translate }}</th>
+                            @if (auth.isAdmin) { <th class="lb-info"></th> }
                           </tr>
                         </thead>
                         <tbody>
@@ -135,6 +138,14 @@ interface WeeklyPostRow extends WeeklyPost {
                               <td>{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
                               <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
                               <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
+                              @if (auth.isAdmin) {
+                                <td class="lb-info">
+                                  <button mat-icon-button (click)="openBreakdown(r.id, p)"
+                                          [attr.title]="'weekly.breakdown.open' | translate">
+                                    <mat-icon>info_outline</mat-icon>
+                                  </button>
+                                </td>
+                              }
                             </tr>
                           }
                         </tbody>
@@ -182,7 +193,9 @@ interface WeeklyPostRow extends WeeklyPost {
 
     .lb { padding: 12px 0 4px; }
     .lb-scroll { overflow-x: auto; }
-    .lb-table { width: 100%; max-width: 560px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .lb-table { width: 100%; max-width: 620px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    .lb-info { width: 2.5em; text-align: center; }
+    .lb-info button { width: 32px; height: 32px; line-height: 32px; }
     .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
     .lb-table th { color: color-mix(in srgb, currentColor 47%, transparent); font-weight: 600; font-size: 0.8rem; }
     .lb-rank { width: 2.5em; color: color-mix(in srgb, currentColor 40%, transparent); }
@@ -229,8 +242,17 @@ export class WeeklyListComponent implements OnInit {
     public auth: AuthService,
     private weekly: WeeklyService,
     private snackbar: SnackbarService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private dialog: MatDialog
   ) {}
+
+  /** Admin: Detailaufschlüsselung eines Spielers öffnen (eine Zeile je Puzzle). */
+  openBreakdown(weeklyId: number, p: WeeklyPlayerResult): void {
+    this.dialog.open(WeeklyBreakdownDialogComponent, {
+      data: { weeklyId, userId: p.userId, playerName: p.discordUsername || p.name },
+      width: '640px', maxWidth: '95vw',
+    });
+  }
 
   ngOnInit(): void {
     this.loadPosts();

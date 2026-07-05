@@ -1124,6 +1124,22 @@
       "time": "Zeit",
       "completed": "Alle Puzzles gespielt",
       "empty": "Noch niemand dabei."
+    },
+    "breakdown": {
+      "title": "Aufschlüsselung: {{name}}",
+      "open": "Details pro Puzzle",
+      "empty": "Noch keine Puzzles gespielt.",
+      "loadFailed": "Aufschlüsselung konnte nicht geladen werden.",
+      "untitled": "(ohne Titel)",
+      "puzzle": "Puzzle",
+      "result": "Ergebnis",
+      "time": "Zeit",
+      "hints": "Tipps",
+      "wrong": "Fehlzüge",
+      "mouseslips": "Rutscher",
+      "solved": "Gelöst",
+      "failed": "Nicht gelöst",
+      "totalRow": "Gesamt ({{played}}/{{total}} gespielt)"
     }
   },
   "endless": {

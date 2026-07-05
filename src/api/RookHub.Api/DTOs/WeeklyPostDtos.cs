@@ -43,6 +43,10 @@ public class RecordWeeklyAttemptDto
     public bool Solved { get; set; }
     [Range(0, 86400)] public int TimeSeconds { get; set; }
     [Range(0, 3)] public int HintsUsed { get; set; }
+    /// <summary>Anzahl Fehlzüge in diesem Puzzle (Abweichungen vom Lösungszug).</summary>
+    [Range(0, 10000)] public int WrongAttempts { get; set; }
+    /// <summary>Anzahl genutzter Mausrutscher in diesem Puzzle (0/1).</summary>
+    [Range(0, 1000)] public int Mouseslips { get; set; }
 }
 
 /// <summary>Per-User-Fortschritt eines Wochenposts. „Erledigt" = alle Puzzles gespielt (Solved egal).</summary>
@@ -77,6 +81,8 @@ public class WeeklyPostResultsDto
 /// <summary>Stand eines Users bei einem Wochenpost (für die Discord-Anzeige).</summary>
 public class WeeklyPlayerResultDto
 {
+    /// <summary>Interne User-Id — für die Admin-Detail-Aufschlüsselung (i). Für Nicht-Admin-Zwecke irrelevant.</summary>
+    public int UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? DiscordId { get; set; }
     public string? DiscordUsername { get; set; }
@@ -88,4 +94,33 @@ public class WeeklyPlayerResultDto
     public int HintsUsed { get; set; }
     /// <summary>True, wenn alle Puzzles gespielt wurden.</summary>
     public bool Completed { get; set; }
+}
+
+/// <summary>Admin-Detailaufschlüsselung eines Spielers bei einem Wochenpost: eine Zeile je gespieltem Puzzle.</summary>
+public class WeeklyPlayerBreakdownDto
+{
+    public int WeeklyPostId { get; set; }
+    public int UserId { get; set; }
+    public string PlayerName { get; set; } = string.Empty;
+    /// <summary>Anzahl Puzzles im Wochenpost.</summary>
+    public int Total { get; set; }
+    public List<WeeklyPuzzleBreakdownRowDto> Rows { get; set; } = new();
+}
+
+/// <summary>Eine Zeile der Admin-Aufschlüsselung: das Ergebnis des Spielers an einem einzelnen Puzzle.</summary>
+public class WeeklyPuzzleBreakdownRowDto
+{
+    /// <summary>0-basierter Index des Puzzles in der Wochenpost-Sequenz.</summary>
+    public int PuzzleIndex { get; set; }
+    /// <summary>Titel/Bezeichnung des Puzzles (aus dem PGN), falls vorhanden.</summary>
+    public string? Title { get; set; }
+    public bool Solved { get; set; }
+    public int TimeSeconds { get; set; }
+    /// <summary>Höchste genutzte Tipp-Stufe (0–3).</summary>
+    public int HintsUsed { get; set; }
+    /// <summary>Anzahl Fehlzüge in diesem Puzzle.</summary>
+    public int WrongAttempts { get; set; }
+    /// <summary>Anzahl genutzter Mausrutscher in diesem Puzzle.</summary>
+    public int Mouseslips { get; set; }
+    public DateTime AttemptedAt { get; set; }
 }

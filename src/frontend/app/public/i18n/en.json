@@ -1124,6 +1124,22 @@
       "time": "Time",
       "completed": "Played all puzzles",
       "empty": "No one has played yet."
+    },
+    "breakdown": {
+      "title": "Breakdown: {{name}}",
+      "open": "Details per puzzle",
+      "empty": "No puzzles played yet.",
+      "loadFailed": "Could not load the breakdown.",
+      "untitled": "(untitled)",
+      "puzzle": "Puzzle",
+      "result": "Result",
+      "time": "Time",
+      "hints": "Hints",
+      "wrong": "Wrong",
+      "mouseslips": "Slips",
+      "solved": "Solved",
+      "failed": "Failed",
+      "totalRow": "Total ({{played}}/{{total}} played)"
     }
   },
   "endless": {

@@ -84,12 +84,34 @@ describe('WeeklyService', () => {
 
   it('records a played attempt (solved or not) and returns updated progress', () => {
     let played = 0;
-    svc.recordAttempt(7, 2, false, 15).subscribe(p => (played = p.playedCount));
+    svc.recordAttempt(7, 2, false, 15, 1, 3, 2).subscribe(p => (played = p.playedCount));
     const req = http.expectOne('/api/weekly-posts/7/attempt');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15, hintsUsed: 0 });
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: false, timeSeconds: 15, hintsUsed: 1, wrongAttempts: 3, mouseslips: 2 });
     req.flush({ weeklyPostId: 7, total: 5, playedCount: 3, solvedCount: 1, completed: false });
     expect(played).toBe(3);
+  });
+
+  it('records an attempt with wrong/mouseslip defaulting to 0 when omitted', () => {
+    svc.recordAttempt(7, 2, true, 15).subscribe();
+    const req = http.expectOne('/api/weekly-posts/7/attempt');
+    expect(req.request.body).toEqual({ puzzleIndex: 2, solved: true, timeSeconds: 15, hintsUsed: 0, wrongAttempts: 0, mouseslips: 0 });
+    req.flush({ weeklyPostId: 7, total: 5, playedCount: 1, solvedCount: 1, completed: false });
+  });
+
+  it('loads the admin per-player breakdown', () => {
+    let rows = 0;
+    svc.getPlayerBreakdown(7, 42).subscribe(bd => (rows = bd.rows.length));
+    const req = http.expectOne('/api/weekly-posts/7/players/42/breakdown');
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      weeklyPostId: 7, userId: 42, playerName: 'Zoe', total: 2,
+      rows: [
+        { puzzleIndex: 0, title: 'P1', solved: true, timeSeconds: 30, hintsUsed: 1, wrongAttempts: 2, mouseslips: 1, attemptedAt: '' },
+        { puzzleIndex: 1, title: 'P2', solved: false, timeSeconds: 12, hintsUsed: 0, wrongAttempts: 0, mouseslips: 0, attemptedAt: '' },
+      ],
+    });
+    expect(rows).toBe(2);
   });
 
   it('loads progress over all weekly posts (overview), incl. total time', () => {
@@ -140,7 +162,7 @@ describe('weekly slot helpers', () => {
 
 describe('sortLeaderboard', () => {
   const mk = (name: string, solved: number, secs: number): WeeklyPlayerResult => ({
-    name, solvedCount: solved, totalSeconds: secs, playedCount: 5, completed: true,
+    userId: 0, name, solvedCount: solved, totalSeconds: secs, playedCount: 5, completed: true,
   });
 
   it('sortiert nach Genauigkeit (gelöst/gesamt) absteigend', () => {

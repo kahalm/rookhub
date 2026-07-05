@@ -955,8 +955,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.auth.isLoggedIn) return;
     this.weeklyAttemptRecorded = true;
     const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
+    const wrongAttempts = this.wrongMoveCount;
+    const mouseslips = this.mouseslipUsed ? 1 : 0;
     const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel };
+    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, wrongAttempts, mouseslips };
     if (!navigator.onLine) {
       this.offlineQueue.enqueue('POST', url, body);
       this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
@@ -964,7 +966,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.weeklySeconds += this.solveSeconds;
       return;
     }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel).subscribe({
+    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel, wrongAttempts, mouseslips).subscribe({
       next: p => { this.weeklyPlayed = p.playedCount; this.weeklySolved = p.solvedCount; this.weeklySeconds = p.totalSeconds; },
       error: () => this.offlineQueue.enqueue('POST', url, body),
     });

@@ -39,6 +39,8 @@ export interface WeeklyProgress {
 
 /** Stand eines Spielers bei einem Wochenpost (für die Bestenliste). */
 export interface WeeklyPlayerResult {
+  /** Interne User-Id — für die Admin-Detailaufschlüsselung (i). */
+  userId: number;
   name: string;
   discordId?: string | null;
   discordUsername?: string | null;
@@ -54,6 +56,27 @@ export interface WeeklyResults {
   total: number;
   completedCount: number;
   players: WeeklyPlayerResult[];
+}
+
+/** Eine Zeile der Admin-Detailaufschlüsselung: Ergebnis des Spielers an einem einzelnen Puzzle. */
+export interface WeeklyPuzzleBreakdownRow {
+  puzzleIndex: number;
+  title?: string | null;
+  solved: boolean;
+  timeSeconds: number;
+  hintsUsed: number;
+  wrongAttempts: number;
+  mouseslips: number;
+  attemptedAt: string;
+}
+
+/** Admin-Detailaufschlüsselung eines Spielers: eine Zeile je gespieltem Puzzle. */
+export interface WeeklyPlayerBreakdown {
+  weeklyPostId: number;
+  userId: number;
+  playerName: string;
+  total: number;
+  rows: WeeklyPuzzleBreakdownRow[];
 }
 
 /**
@@ -133,8 +156,13 @@ export class WeeklyService {
   }
 
   /** Zeichnet ein gespieltes Puzzle (gelöst oder nicht) des Wochenposts auf. */
-  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number, hintsUsed = 0): Observable<WeeklyProgress> {
-    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds, hintsUsed });
+  recordAttempt(id: number, puzzleIndex: number, solved: boolean, timeSeconds: number, hintsUsed = 0, wrongAttempts = 0, mouseslips = 0): Observable<WeeklyProgress> {
+    return this.http.post<WeeklyProgress>(`/api/weekly-posts/${id}/attempt`, { puzzleIndex, solved, timeSeconds, hintsUsed, wrongAttempts, mouseslips });
+  }
+
+  /** Admin: Detailaufschlüsselung eines Spielers (eine Zeile je Puzzle). */
+  getPlayerBreakdown(id: number, userId: number): Observable<WeeklyPlayerBreakdown> {
+    return this.http.get<WeeklyPlayerBreakdown>(`/api/weekly-posts/${id}/players/${userId}/breakdown`);
   }
 
   /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */

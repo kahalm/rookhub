@@ -28,5 +28,11 @@ public class WeeklyPostAttempt
     /// <summary>Höchste angesehene Tipp-Stufe in diesem Versuch (0 = keine, 1–3). &gt; 0 ⇒ mit Tipps gelöst.</summary>
     public int HintsUsed { get; set; }
 
+    /// <summary>Anzahl Fehlzüge (Abweichungen vom Lösungszug) in diesem Puzzle. 0 bei Alt-Datensätzen.</summary>
+    public int WrongAttempts { get; set; }
+
+    /// <summary>Anzahl genutzter Mausrutscher in diesem Puzzle (pro Puzzle höchstens 1). 0 bei Alt-Datensätzen.</summary>
+    public int Mouseslips { get; set; }
+
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

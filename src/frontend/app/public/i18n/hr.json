@@ -1122,6 +1122,22 @@
       "time": "Vrijeme",
       "completed": "Odigrao sve zagonetke",
       "empty": "Još nitko nije igrao."
+    },
+    "breakdown": {
+      "title": "Razrada: {{name}}",
+      "open": "Detalji po zagonetki",
+      "empty": "Još nema odigranih zagonetki.",
+      "loadFailed": "Razradu nije moguće učitati.",
+      "untitled": "(bez naslova)",
+      "puzzle": "Zagonetka",
+      "result": "Rezultat",
+      "time": "Vrijeme",
+      "hints": "Pomoći",
+      "wrong": "Pogreške",
+      "mouseslips": "Omaške",
+      "solved": "Riješeno",
+      "failed": "Neriješeno",
+      "totalRow": "Ukupno ({{played}}/{{total}} odigrano)"
     }
   },
   "endless": {

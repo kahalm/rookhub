@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.259.1';
+export const APP_VERSION = '0.260.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.260.0", date: "2026-07-05", changes: [
+    { en: "Admins can now inspect a player's weekly-post result in detail: an (i) button next to each player in the weekly leaderboard opens a per-puzzle breakdown — one row per puzzle with time, hints used, wrong moves and mouse-slips, plus a totals row. Wrong moves and mouse-slips are newly tracked per weekly puzzle (previously only solved/time/hints were stored), so they populate for weekly posts played from this version on; older data shows 0 there.", de: "Admins können das Wochenpost-Ergebnis eines Spielers jetzt im Detail ansehen: ein (i) neben jedem Spieler in der Wochenpost-Bestenliste öffnet eine Aufschlüsselung pro Puzzle — eine Zeile je Puzzle mit Zeit, genutzten Tipps, Fehlzügen und Mausrutschern, plus eine Summenzeile. Fehlzüge und Mausrutscher werden pro Wochenpost-Puzzle neu erfasst (bisher wurden nur gelöst/Zeit/Tipps gespeichert); sie füllen sich daher für ab dieser Version gespielte Wochenposts, ältere Daten zeigen dort 0." },
+  ]},
   { version: "0.259.1", date: "2026-07-05", changes: [
     { en: "Install page always offers the current Android app: the APK build workflow (android-twa.yml, prod variant) now also publishes the fresh signed APK + AAB to a GitHub release tagged with the app version and marks it 'latest', so the /install download link (releases/latest/download) no longer serves the old build. Infrastructure only — takes effect the next time the prod APK workflow is run (bump APK_VERSION alongside it to nudge existing users to update).", de: "Die Installationsseite bietet immer die aktuelle Android-App an: der APK-Build-Workflow (android-twa.yml, prod-Variante) veröffentlicht die frische signierte APK + AAB jetzt zusätzlich in einem GitHub-Release mit der App-Version als Tag und markiert es als „latest“, sodass der /install-Download-Link (releases/latest/download) nicht mehr die alte App liefert. Reine Infrastruktur — greift beim nächsten Lauf des prod-APK-Workflows (dabei APK_VERSION mit erhöhen, um bestehende Nutzer zum Update anzustoßen)." },
   ]},

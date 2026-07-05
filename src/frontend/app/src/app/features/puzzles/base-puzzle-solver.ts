@@ -52,6 +52,9 @@ export abstract class BasePuzzleSolver {
   onSolutionPath = true;
   alternativeSolve = false;
   mouseslipUsed = false;
+  /** Anzahl Fehlzüge (Züge, die weder der erwartete Lösungszug noch eine geduldete Alternative waren)
+   *  in diesem Puzzle. Für die Wochenpost-Aufzeichnung (Fehlversuche); über alle Modi verfügbar. */
+  wrongMoveCount = 0;
   currentEval = '';
 
   /** Von Chessable geduldete Alternativzüge je Halbzug als UCI (Schlüssel = Index in `solutionMoves`;
@@ -270,6 +273,7 @@ export abstract class BasePuzzleSolver {
     this.onSolutionPath = true;
     this.aborted = false;
     this.mouseslipUsed = false;
+    this.wrongMoveCount = 0;
     this.alternativeSolve = false;
     this.resetOffPathTracking();
     this.moveLog = [];
@@ -351,6 +355,7 @@ export abstract class BasePuzzleSolver {
         this.moveLog.push({ i: this.moveIndex, uci: userUci, exp: expectedUci, ms: thinkMs, ok: false });
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
+        this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
         this.offPathUserPlies++;   // erster Abweich-Zug
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();

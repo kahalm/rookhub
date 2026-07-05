@@ -148,6 +148,24 @@ public class WeeklyPostController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Admin-Detailaufschlüsselung eines Spielers: eine Zeile je gespieltem Puzzle (Zeit, Tipps,
+    /// Fehlzüge, Mausrutscher). Nur für Admins — hinter dem (i) in der Bestenliste.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("{id:int}/players/{userId:int}/breakdown")]
+    public async Task<ActionResult<WeeklyPlayerBreakdownDto>> GetPlayerBreakdown(int id, int userId)
+    {
+        try
+        {
+            return Ok(await _progress.GetPlayerBreakdownAsync(id, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Fortschritt des eingeloggten Users für diesen Wochenpost.</summary>
     [Authorize]
     [HttpGet("{id}/progress")]

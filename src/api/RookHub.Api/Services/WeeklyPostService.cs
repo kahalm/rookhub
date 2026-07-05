@@ -72,6 +72,8 @@ public class WeeklyPostService
                 Solved = dto.Solved,
                 TimeSeconds = timeSeconds,
                 HintsUsed = Math.Clamp(dto.HintsUsed, 0, 3),
+                WrongAttempts = Math.Clamp(dto.WrongAttempts, 0, 10000),
+                Mouseslips = Math.Clamp(dto.Mouseslips, 0, 1000),
                 AttemptedAt = DateTime.UtcNow,
             });
             try
@@ -127,6 +129,7 @@ public class WeeklyPostService
                 names.TryGetValue(u.UserId, out var uname);
                 return new WeeklyPlayerResultDto
                 {
+                    UserId = u.UserId,
                     Name = prof?.DisplayName ?? uname ?? $"#{u.UserId}",
                     DiscordId = prof?.DiscordId,
                     DiscordUsername = prof?.DiscordUsername,
@@ -148,6 +151,49 @@ public class WeeklyPostService
             Total = total,
             CompletedCount = players.Count(p => p.Completed),
             Players = players,
+        };
+    }
+
+    /// <summary>
+    /// Admin-Detailaufschlüsselung eines Spielers bei einem Wochenpost: eine Zeile je gespieltem Puzzle
+    /// (Zeit, Tipps, Fehlzüge, Mausrutscher). Puzzle-Titel werden EINMAL aus dem PGN aufgelöst.
+    /// </summary>
+    public async Task<WeeklyPlayerBreakdownDto> GetPlayerBreakdownAsync(int weeklyPostId, int userId)
+    {
+        var post = await _db.WeeklyPosts.FindAsync(weeklyPostId)
+            ?? throw new KeyNotFoundException("Weekly post not found.");
+        var total = await GetTotalAsync(post);
+
+        var attempts = await _db.WeeklyPostAttempts
+            .Where(a => a.WeeklyPostId == weeklyPostId && a.UserId == userId)
+            .OrderBy(a => a.PuzzleIndex)
+            .ToListAsync();
+
+        // Titel je Puzzle-Index aus dem PGN (on-the-fly geparst, wie beim Durchspielen).
+        var titles = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles
+            .Select(p => p.Title).ToList();
+
+        var name = await _db.UserProfiles.Where(p => p.UserId == userId).Select(p => p.DisplayName).FirstOrDefaultAsync()
+            ?? await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync()
+            ?? $"#{userId}";
+
+        return new WeeklyPlayerBreakdownDto
+        {
+            WeeklyPostId = weeklyPostId,
+            UserId = userId,
+            PlayerName = name,
+            Total = total,
+            Rows = attempts.Select(a => new WeeklyPuzzleBreakdownRowDto
+            {
+                PuzzleIndex = a.PuzzleIndex,
+                Title = a.PuzzleIndex >= 0 && a.PuzzleIndex < titles.Count ? titles[a.PuzzleIndex] : null,
+                Solved = a.Solved,
+                TimeSeconds = a.TimeSeconds,
+                HintsUsed = a.HintsUsed,
+                WrongAttempts = a.WrongAttempts,
+                Mouseslips = a.Mouseslips,
+                AttemptedAt = a.AttemptedAt,
+            }).ToList(),
         };
     }
 

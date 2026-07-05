@@ -8,7 +8,7 @@ describe('WeeklyListComponent file validation', () => {
     infoCalls = 0;
     const snackbar = { info: () => { infoCalls++; } } as any;
     const translate = { instant: (k: string) => k } as any;
-    component = new WeeklyListComponent({} as any, {} as any, snackbar, translate);
+    component = new WeeklyListComponent({} as any, {} as any, snackbar, translate, {} as any);
   });
 
   function selectFile(name: string, size: number): HTMLInputElement {
