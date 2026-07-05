@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.259.0';
+export const APP_VERSION = '0.259.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.259.1", date: "2026-07-05", changes: [
+    { en: "Install page always offers the current Android app: the APK build workflow (android-twa.yml, prod variant) now also publishes the fresh signed APK + AAB to a GitHub release tagged with the app version and marks it 'latest', so the /install download link (releases/latest/download) no longer serves the old build. Infrastructure only — takes effect the next time the prod APK workflow is run (bump APK_VERSION alongside it to nudge existing users to update).", de: "Die Installationsseite bietet immer die aktuelle Android-App an: der APK-Build-Workflow (android-twa.yml, prod-Variante) veröffentlicht die frische signierte APK + AAB jetzt zusätzlich in einem GitHub-Release mit der App-Version als Tag und markiert es als „latest“, sodass der /install-Download-Link (releases/latest/download) nicht mehr die alte App liefert. Reine Infrastruktur — greift beim nächsten Lauf des prod-APK-Workflows (dabei APK_VERSION mit erhöhen, um bestehende Nutzer zum Update anzustoßen)." },
+  ]},
   { version: "0.259.0", date: "2026-07-04", changes: [
     { en: "Course & daily puzzles now accept Chessable's tolerated alternative moves. Some Chessable lines mark a second, equally-winning move as accepted (softFail → [%alt] in the PGN); until now the course/daily solver only accepted the single main move and scored everything else as wrong (the repertoire trainer already honoured these). The import now keeps those alternatives per move (new BookPuzzle.AltMoves, SAN→UCI); if you play one, it is no longer counted as a mistake — it briefly shows on the board with a note “Also a good move”, is then taken back, and the main line's move is still expected. Effective for a course only after it is updated/re-fetched (pipeline v10). Example: daily puzzle 2026-07-04 (Rooze–Buchäckert, Skewer) accepts Qd3 alongside Qd2.", de: "Kurs- und Tagespuzzle akzeptieren jetzt die von Chessable geduldeten Alternativzüge. Manche Chessable-Linien markieren einen zweiten, gleichwertig gewinnenden Zug als zulässig (softFail → [%alt] im PGN); bisher akzeptierte der Kurs-/Tagespuzzle-Solver nur den einen Hauptzug und wertete alles andere als falsch (der Repertoire-Trainer beachtete sie schon). Der Import behält diese Alternativen jetzt je Zug (neues BookPuzzle.AltMoves, SAN→UCI); spielst du eine davon, gilt sie nicht mehr als Fehler — sie wird kurz mit dem Hinweis „Auch ein guter Zug“ auf dem Brett gezeigt, dann zurückgenommen, und der Zug der Hauptvariante wird weiterhin verlangt. Greift für einen Kurs erst nach dem Aktualisieren/Re-Fetch (Pipeline v10). Beispiel: Tagespuzzle 04.07.2026 (Rooze–Buchäckert, Spieß) akzeptiert Qd3 neben Qd2." },
   ]},

@@ -3,6 +3,10 @@ name: Build Android TWA (AAB)
 # Manuell ausgelöst: baut aus twa/twa-manifest{,.dev}.json einen signierten Android
 # App Bundle (AAB) + APK und lädt ihn als Artefakt hoch.
 #
+# Für die 'prod'-Variante wird die frische APK/AAB ZUSÄTZLICH an ein GitHub-Release
+# `v<APP_VERSION>` gehängt und als "latest" markiert — damit der /install-Download-Link
+# (releases/latest/download/app-release-signed.apk) immer die aktuelle App liefert.
+#
 # Variant 'prod' → twa-manifest.json (rookhub.oberschmid.homes, Play-Store-App)
 # Variant 'dev'  → twa-manifest.dev.json (rookhub-dev.oberschmid.homes,
 #                                          separater packageId, parallel installierbar)
@@ -27,6 +31,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Release-Publish (prod) braucht Schreibrechte auf Contents/Releases.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
 
@@ -101,3 +108,32 @@ jobs:
             twa/app-release-bundle.aab
             twa/app-release-signed.apk
           if-no-files-found: warn
+
+      # Nur prod: App-Version aus changelog.ts lesen (Single Source, siehe CLAUDE.md).
+      - name: Read app version
+        if: inputs.variant == 'prod'
+        id: ver
+        run: |
+          v=$(grep -oE "APP_VERSION = '[0-9.]+'" src/frontend/app/src/environments/changelog.ts | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+          if [ -z "$v" ]; then echo "APP_VERSION nicht gefunden"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "App version: $v"
+
+      # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
+      # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.
+      - name: Publish GitHub Release with fresh APK
+        if: inputs.variant == 'prod'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: RookHub ${{ steps.ver.outputs.version }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          body: |
+            RookHub Android-App v${{ steps.ver.outputs.version }}.
+
+            - `app-release-signed.apk` — Direkt-Download für /install
+            - `app-release-bundle.aab` — Play-Store-Bundle
+          files: |
+            twa/app-release-signed.apk
+            twa/app-release-bundle.aab
