@@ -739,7 +739,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       }
       return lines;   // ggf. leer → kein Kommentar-Block (kein Intro-Rückfall)
     }
-    return this.puzzle.comment ? [this.puzzle.comment] : [];   // vor dem ersten Zug: Einleitung
+    // Einleitung NUR vor dem ersten Zug (noch auf dem Lösungspfad). Nach einem Fehlzug (off-path,
+    // onSolutionPath=false) NICHT auf die Einleitung zurückfallen — sonst „ploppt" das Anfangs-
+    // kommentar nach einem falschen Zug wieder auf.
+    return (this.onSolutionPath && this.puzzle.comment) ? [this.puzzle.comment] : [];
   }
 
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */

@@ -608,8 +608,30 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
     (c as any).moveIndex = 4;                                  // ply 3 KEIN Kommentar → KEIN Intro-Rückfall
     expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
-    (c as any).onSolutionPath = false;                         // off-path → Intro (vor/außerhalb Lösung)
+    (c as any).onSolutionPath = false;                         // off-path (Fehlzug) → KEIN Intro-Rückfall
+    expect(c.commentLines).toEqual([]);
+  });
+
+  it('commentLines: nach einem Fehlzug (off-path) kein Rückfall auf die Einleitung', () => {
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3 b8c6', bookFileName: 'b', startPly: 0,
+      comment: 'Einleitung', moveComments: { '0': 'Guter erster Zug' } } as any;
+    c.reviewMode = false;
+    (c as any).startPly = 0;
+    (c as any).state = 'AWAITING_USER_MOVE';
+
+    // Vor dem 1. Zug: Einleitung.
+    (c as any).onSolutionPath = true;
+    (c as any).moveIndex = 0;
     expect(c.commentLines).toEqual(['Einleitung']);
+
+    // 1. Zug richtig → dessen Kommentar; Einleitung weg.
+    (c as any).moveIndex = 1;
+    expect(c.commentLines).toEqual(['Guter erster Zug']);
+
+    // 2. Zug FALSCH → off-path: die Einleitung darf NICHT wieder auftauchen (Bug-Report Buch 84572).
+    (c as any).onSolutionPath = false;
+    expect(c.commentLines).toEqual([]);
   });
 
   it('commentLines: Mid-Line-Puzzle (startPly ≥ 1) zeigt den Kommentar NICHT zu früh', () => {
