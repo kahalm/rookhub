@@ -17,7 +17,7 @@ describe('CourseListComponent sorting', () => {
 
   function buildWith(items: CourseListItem[]): CourseListComponent {
     const courseService = { getCourses: () => of(items) } as any;
-    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
     comp.loadCourses();
     return comp;
   }
@@ -69,7 +69,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 2, solvedCount: 0, lastActivityAt: null }),                    // nie begonnen
         item2({ bookId: 3, solvedCount: 10, lastActivityAt: '2026-06-02T10:00:00Z' }), // fertig
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
     });
@@ -82,7 +82,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 4, solvedCount: 0, isPinned: false }),        // weder gepinnt noch angefangen
         item2({ bookId: 5, solvedCount: 10, isPinned: true }),        // gepinnt, aber schon fertig → NICHT in-progress
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       // Angepinnte zuerst (2, 3), danach der begonnene Rest (1). BookId 4 (weder-noch) und 5 (fertig) draußen.
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([2, 3, 1]);
@@ -92,7 +92,7 @@ describe('CourseListComponent sorting', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.length).toBe(1);
 
@@ -100,12 +100,21 @@ describe('CourseListComponent sorting', () => {
       expect(comp.inProgressCourses.length).toBe(0);
     });
 
+    it('canManageThemes: Admin für alle, sonst nur Besitzer', () => {
+      const cs = { getCourses: () => of([]) } as any;
+      const admin = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: true } as any);
+      const user = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: false } as any);
+      expect(admin.canManageThemes({ isOwned: false } as any)).toBeTrue();
+      expect(user.canManageThemes({ isOwned: true } as any)).toBeTrue();
+      expect(user.canManageThemes({ isOwned: false } as any)).toBeFalse();
+    });
+
     it('filtert Kurse nach Suchtext (Titel, case-insensitive) über alle Sektionen', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, displayName: 'Sicilian Defense', isOwned: true }),
         item2({ bookId: 2, displayName: 'French Defense', isOwned: true }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any);
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       comp.search = 'SICIL';
       expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
@@ -134,7 +143,7 @@ describe('CourseListComponent sorting', () => {
         uploadCourse: jasmine.createSpy('uploadCourse').and.returnValue(of(uploaded)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
 
       const file = new File(['pgn'], 'my.pgn');
@@ -156,7 +165,7 @@ describe('CourseListComponent sorting', () => {
       const file = new File(['pgn'], 'd.pgn');
       const dialogRef = { afterClosed: () => of({ file, name: 'From Dialog' }) } as any;
       const dialog = { open: jasmine.createSpy('open').and.returnValue(dialogRef) } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog);
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any);
       comp.loadCourses();
       comp.openUploadDialog();
 
@@ -173,7 +182,7 @@ describe('CourseListComponent sorting', () => {
       } as any;
       const dialogRef = { afterClosed: () => of(undefined) } as any;
       const dialog = { open: () => dialogRef } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog);
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any);
       comp.loadCourses();
       comp.openUploadDialog();
 
@@ -188,7 +197,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse').and.returnValue(of(void 0)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
 
@@ -204,7 +213,7 @@ describe('CourseListComponent sorting', () => {
         deleteCourse: jasmine.createSpy('deleteCourse'),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any);
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
       expect(courseService.deleteCourse).not.toHaveBeenCalled();

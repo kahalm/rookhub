@@ -352,26 +352,31 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Theme_CourseBook_StudyWithoutTags_IsOther_PuzzleBookIsTactics()
+    public async Task Theme_CourseBook_FromBookThemes_DefaultTactics_MultiSplitEvenly()
     {
         var u = await CreateUserAsync();
         await _service.SetPersonalGoalAsync(u.Id, Input(daily: 10));
-        var study = await CreateBookAsync(BookKind.Study, 1);
-        var puzzle = await CreateBookAsync(BookKind.Puzzle, 2);
-        await CreateBookPuzzleAsync(1, bookId: study.Id);                       // keine Tags
-        await CreateBookPuzzleAsync(2, bookId: puzzle.Id);                      // keine Tags
-        await CreateBookPuzzleAsync(3, tags: "endgame technique", bookId: study.Id); // Phase aus Tags
+        var def = await CreateBookAsync(BookKind.Study, 1);                 // Themes unset → Default Taktik
+        var endgame = await CreateBookAsync(BookKind.Study, 2);
+        endgame.Themes = "endgame";
+        var split = await CreateBookAsync(BookKind.Study, 3);
+        split.Themes = "tactics,endgame";                                  // 50/50-Aufteilung
+        await CreateBookPuzzleAsync(1, bookId: def.Id);
+        await CreateBookPuzzleAsync(2, bookId: endgame.Id);
+        await CreateBookPuzzleAsync(3, bookId: split.Id);
+        await _db.SaveChangesAsync();
         var now = DateTime.UtcNow;
 
-        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = study.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 100, AttemptedAt = now });
-        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = puzzle.Id, BookPuzzleId = 2, Solved = true, TimeSeconds = 200, AttemptedAt = now });
-        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = study.Id, BookPuzzleId = 3, Solved = true, TimeSeconds = 50, AttemptedAt = now });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = def.Id, BookPuzzleId = 1, Solved = true, TimeSeconds = 100, AttemptedAt = now });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = endgame.Id, BookPuzzleId = 2, Solved = true, TimeSeconds = 60, AttemptedAt = now });
+        _db.CourseAttempts.Add(new CourseAttempt { UserId = u.Id, BookId = split.Id, BookPuzzleId = 3, Solved = true, TimeSeconds = 200, AttemptedAt = now });
         await _db.SaveChangesAsync();
 
         var day = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
-        Assert.Equal(100, day.ByTheme.OtherSeconds);    // Studienbuch ohne Signal
-        Assert.Equal(200, day.ByTheme.TacticsSeconds);  // Puzzlebuch ohne Signal
-        Assert.Equal(50, day.ByTheme.EndgameSeconds);   // Phase aus Tags
+        Assert.Equal(200, day.ByTheme.TacticsSeconds);  // 100 (Default) + 100 (Split-Hälfte)
+        Assert.Equal(160, day.ByTheme.EndgameSeconds);  // 60 (Endspiel-Buch) + 100 (Split-Hälfte)
+        Assert.Equal(0, day.ByTheme.OtherSeconds);
+        Assert.Equal(360, day.TotalSeconds);            // Gesamtzeit bleibt korrekt (kein Doppelzählen)
     }
 
     [Fact]

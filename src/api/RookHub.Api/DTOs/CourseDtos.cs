@@ -49,6 +49,17 @@ public class CourseListItemDto
     public int? LinkedBookId { get; set; }
     /// <summary>Anzeigename des verknüpften Kurses (nur wenn <see cref="LinkedBookId"/> gesetzt).</summary>
     public string? LinkedDisplayName { get; set; }
+
+    /// <summary>Themen-Tags des Buchs (Keys „opening/middlegame/endgame/tactics/other"). Steuern die
+    /// Themen-Aufschlüsselung der Kurszeit im Trainingsfortschritt; leer/unset = Default „tactics".
+    /// Bearbeitbar für Admin (alle) bzw. Besitzer eigener Kurse (<see cref="IsOwned"/>).</summary>
+    public List<string> Themes { get; set; } = new();
+}
+
+/// <summary>Eingabe: die Themen-Tags eines Kurs-Buchs setzen (leer = Rückfall auf Default „tactics").</summary>
+public class SetCourseThemesInputDto
+{
+    public List<string> Themes { get; set; } = new();
 }
 
 /// <summary>Eingabe: mit welchem anderen Kurs verknüpft werden soll.</summary>

@@ -480,6 +480,22 @@ public class TrainingGoalService
             d.Theme[(int)thm] += s;
         }
 
+        // Kurs-Versuchszeit (Quelle courseBook): erst einmal gegen Inflation deckeln, dann gleichmäßig
+        // auf die Buch-Themen aufteilen (Rest auf das erste Thema) — so bleibt die Gesamtzeit korrekt
+        // und die Themen-Summe übertreibt nicht.
+        void AddCourseTime(DateTime when, int seconds, IReadOnlyList<Thm> themes)
+        {
+            var capped = Math.Clamp(seconds, 0, PerPuzzleCapSeconds);
+            if (capped <= 0 || themes.Count == 0) return;
+            var each = capped / themes.Count;
+            var rem = capped % themes.Count;
+            for (var i = 0; i < themes.Count; i++)
+            {
+                var slice = each + (i == 0 ? rem : 0);
+                if (slice > 0) AddTime(when, slice, int.MaxValue, Src.CourseBook, themes[i]);
+            }
+        }
+
         // Quelle „randomPuzzle": Standard-Puzzle-Versuche — Thema aus Lichess-Themes (Phase, sonst Taktik).
         foreach (var a in await (
                      from a in _db.PuzzleAttempts.AsNoTracking()
@@ -511,15 +527,17 @@ public class TrainingGoalService
                      .Select(a => new { a.AttemptedAt, a.TimeSeconds }).ToListAsync())
             AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.RandomPuzzle, Thm.Tactics);
 
-        // Quelle „courseBook": alle Kurs-Versuche — Thema aus Tags/Chapter; sonst Puzzle-Buch→Taktik, Studienbuch→other.
+        // Quelle „courseBook": alle Kurs-Versuche — Thema aus den EXPLIZITEN Buch-Themen-Tags
+        // (Book.Themes). Ein Buch kann mehrere Tags tragen (z. B. Taktik+Endspiel); die Versuchszeit
+        // wird dann gleichmäßig auf die Themen aufgeteilt (Gesamtzeit bleibt korrekt). Unset/leer →
+        // Default Taktik (jedes Buch ist standardmäßig Taktik). Ersetzt die frühere Tags/Chapter-
+        // Heuristik, damit der Fortschritt exakt den im Kurs gesetzten Tags folgt.
         foreach (var a in await (
                      from a in _db.CourseAttempts.AsNoTracking()
                      where a.UserId == userId && a.AttemptedAt >= windowStartUtc
                      join b in _db.Books.AsNoTracking() on a.BookId equals b.Id
-                     join bp in _db.BookPuzzles.AsNoTracking() on a.BookPuzzleId equals bp.Id
-                     select new { a.AttemptedAt, a.TimeSeconds, b.Kind, bp.Tags, bp.Chapter }).ToListAsync())
-            AddTime(a.AttemptedAt, a.TimeSeconds, PerPuzzleCapSeconds, Src.CourseBook,
-                    PhaseFromText(a.Tags, a.Chapter) ?? (a.Kind == BookKind.Study ? Thm.Other : Thm.Tactics));
+                     select new { a.AttemptedAt, a.TimeSeconds, b.Themes }).ToListAsync())
+            AddCourseTime(a.AttemptedAt, a.TimeSeconds, BookThemes(a.Themes));
 
         // Quelle „chessable": aktiv trainierte Zeit-Häppchen — Thema aus manueller Kurs-Zuordnung
         // (Vorrang), sonst aus CourseKind (Repertoire-Auto), sonst other.
@@ -604,6 +622,29 @@ public class TrainingGoalService
         ChessableTheme.Tactics => Thm.Tactics,
         _ => Thm.Other,
     };
+
+    /// <summary>Parst die CSV-Themen-Tags eines Kurs-Buchs (<see cref="Models.Book.Themes"/>) zur Themen-Liste
+    /// (Reihenfolge stabil, dedupliziert). Unset/leer/nur-ungültig → Default <c>[Taktik]</c> — jedes Buch
+    /// ist standardmäßig Taktik.</summary>
+    private static List<Thm> BookThemes(string? csv)
+    {
+        var list = new List<Thm>();
+        if (!string.IsNullOrWhiteSpace(csv))
+            foreach (var raw in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                Thm? t = raw.ToLowerInvariant() switch
+                {
+                    "opening" => Thm.Opening,
+                    "middlegame" => Thm.Middlegame,
+                    "endgame" => Thm.Endgame,
+                    "tactics" => Thm.Tactics,
+                    "other" => Thm.Other,
+                    _ => null,
+                };
+                if (t.HasValue && !list.Contains(t.Value)) list.Add(t.Value);
+            }
+        return list.Count > 0 ? list : new List<Thm> { Thm.Tactics };
+    }
 
     // ----- Helfer ----------------------------------------------------------
 

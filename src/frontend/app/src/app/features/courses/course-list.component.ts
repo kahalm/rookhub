@@ -20,6 +20,8 @@ import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzz
 import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
 import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-dialog.component';
+import { CourseThemesDialogComponent, CourseThemesDialogData } from './course-themes-dialog.component';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-course-list',
@@ -128,6 +130,14 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
             @if (c.rating) { <span class="meta-sep">·</span><span>{{ c.rating }}/10</span> }
           </div>
 
+          @if (c.themes?.length) {
+            <div class="theme-chips" [attr.aria-label]="'courses.themes.tooltip' | translate">
+              @for (t of c.themes; track t) {
+                <span class="theme-chip">{{ ('trainingGoals.theme.' + t) | translate }}</span>
+              }
+            </div>
+          }
+
           <div class="progress-row">
             <mat-progress-bar mode="determinate" [value]="c.progressPercent"></mat-progress-bar>
             <span class="progress-label">{{ c.solvedCount }}/{{ c.puzzleCount }}</span>
@@ -187,6 +197,12 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
                   <mat-icon>{{ c.linkedBookId ? 'link' : 'add_link' }}</mat-icon>
                   <span>{{ (c.linkedBookId ? 'courses.link.linkedTooltip' : 'courses.link.tooltip') | translate:{ name: c.linkedDisplayName } }}</span>
                 </button>
+                @if (canManageThemes(c)) {
+                  <button mat-menu-item (click)="openThemesDialog(c)">
+                    <mat-icon>sell</mat-icon>
+                    <span>{{ 'courses.themes.tooltip' | translate }}</span>
+                  </button>
+                }
                 @if (c.isOwned) {
                   <button mat-menu-item (click)="openShareDialog(c)">
                     <mat-icon>group_add</mat-icon>
@@ -290,6 +306,11 @@ import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-d
     .done-hint { display: flex; align-items: center; gap: 4px; color: #4caf50; font-size: 0.82rem; font-weight: 500; margin: 6px 0 0; }
     .done-hint mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
+    .theme-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
+    .theme-chip { font-size: 0.72rem; line-height: 1; padding: 3px 8px; border-radius: 999px;
+      background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 16%, transparent);
+      color: var(--mat-sys-primary, #1565c0); font-weight: 600; }
+
     .card-footer { padding: 0 16px 12px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); margin-top: 2px; }
 
     /* Zwei Primär-Buttons links, alle weiteren Aktionen im „⋮"-Überlaufmenü rechts.
@@ -350,7 +371,31 @@ export class CourseListComponent implements OnInit {
   /** Buch, dessen Kapitel gerade geladen werden. */
   loadingChapters: number | null = null;
 
-  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog) {}
+  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService) {}
+
+  /** Darf der aktuelle Nutzer die Themen-Tags dieses Kurses setzen? Admin (alle) oder Besitzer. */
+  canManageThemes(course: CourseListItem): boolean {
+    return this.auth.isAdmin || course.isOwned;
+  }
+
+  /** Öffnet den Themen-Multi-Select; speichert nach Bestätigung buch-global und aktualisiert die Karte. */
+  openThemesDialog(course: CourseListItem): void {
+    const ref = this.dialog.open<CourseThemesDialogComponent, CourseThemesDialogData, string[] | undefined>(
+      CourseThemesDialogComponent, {
+        width: '360px', maxWidth: '95vw',
+        data: { bookId: course.bookId, displayName: course.displayName, themes: course.themes ?? [] },
+      });
+    ref.afterClosed().subscribe(themes => {
+      if (!themes) return; // abgebrochen
+      this.courseService.setCourseThemes(course.bookId, themes).subscribe({
+        next: res => {
+          course.themes = res.themes; // effektive Keys (Default „tactics" wenn leer)
+          this.snackbar.info(this.translate.instant('courses.themes.saved', { name: course.displayName }), { action: 'common.ok', duration: 2000 });
+        },
+        error: () => this.snackbar.warn(this.translate.instant('courses.themes.error')),
+      });
+    });
+  }
 
   /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
    *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt

@@ -1081,7 +1081,14 @@
       "linkedTooltip": "Povezano s {{name}} — klikni za promjenu",
       "openLinked": "Otvori povezani tečaj"
     },
-    "moreActions": "Više radnji"
+    "moreActions": "Više radnji",
+    "themes": {
+      "title": "Teme tečaja",
+      "tooltip": "Uredi teme",
+      "hint": "Koje teme pokriva „{{name}}“? Vrijeme treniranja ovog tečaja u napretku se ravnomjerno raspoređuje na odabrane teme. Bez odabira = Taktika.",
+      "saved": "Teme za „{{name}}“ spremljene.",
+      "error": "Teme nije moguće spremiti."
+    }
   },
   "weekly": {
     "title": "Tjedna objava",

@@ -253,4 +253,15 @@ public class CourseController : BaseApiController
         await _service.UnpinCourseAsync(GetUserId(), bookId);
         return NoContent();
     }
+
+    /// <summary>Setzt die Themen-Tags des Kurs-Buchs (Admin/Besitzer). 404 unzugänglich, 403 nicht
+    /// berechtigt, 400 ungültiger Theme-Key. Antwortet mit den effektiven Keys (Default „tactics").</summary>
+    [HttpPut("{bookId}/themes")]
+    public async Task<IActionResult> SetThemes(int bookId, [FromBody] SetCourseThemesInputDto dto)
+    {
+        try { return Ok(new { themes = await _service.SetBookThemesAsync(GetUserId(), bookId, dto.Themes ?? new List<string>(), IsAdmin) }); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
 }

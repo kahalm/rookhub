@@ -1083,7 +1083,14 @@
       "linkedTooltip": "Linked with {{name}} — click to change",
       "openLinked": "Open linked course"
     },
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "themes": {
+      "title": "Course themes",
+      "tooltip": "Edit themes",
+      "hint": "Which themes does “{{name}}” cover? Training time on this course is split evenly across the selected themes in your progress. No selection = Tactics.",
+      "saved": "Themes for “{{name}}” saved.",
+      "error": "Could not save themes."
+    }
   },
   "weekly": {
     "title": "Weekly",

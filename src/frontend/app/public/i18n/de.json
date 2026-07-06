@@ -1083,7 +1083,14 @@
       "linkedTooltip": "Verknüpft mit {{name}} — zum Ändern klicken",
       "openLinked": "Verknüpften Kurs öffnen"
     },
-    "moreActions": "Weitere Aktionen"
+    "moreActions": "Weitere Aktionen",
+    "themes": {
+      "title": "Kurs-Themen",
+      "tooltip": "Themen bearbeiten",
+      "hint": "Welche Themen deckt „{{name}}“ ab? Die Trainingszeit dieses Kurses wird im Fortschritt gleichmäßig auf die gewählten Themen aufgeteilt. Keine Auswahl = Taktik.",
+      "saved": "Themen für „{{name}}“ gespeichert.",
+      "error": "Themen konnten nicht gespeichert werden."
+    }
   },
   "weekly": {
     "title": "Wochenpost",

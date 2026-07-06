@@ -31,6 +31,9 @@ export interface CourseListItem {
   linkedBookId?: number | null;
   /** Anzeigename des verknüpften Kurses (nur wenn linkedBookId gesetzt). */
   linkedDisplayName?: string | null;
+  /** Themen-Tags des Buchs (Keys opening/middlegame/endgame/tactics/other); leer/unset = ["tactics"].
+   *  Steuern die Themen-Aufschlüsselung der Kurszeit im Trainingsfortschritt. */
+  themes?: string[];
 }
 
 /** Der verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
@@ -190,6 +193,12 @@ export class CourseService {
   /** Löst einen angepinnten Kurs wieder vom Dashboard. */
   unpinCourse(bookId: number): Observable<void> {
     return this.http.delete<void>(`/api/courses/${bookId}/pin`);
+  }
+
+  /** Setzt die Themen-Tags des Kurs-Buchs (Admin/Besitzer). Antwortet mit den effektiven Keys
+   *  (leer → Default ["tactics"]). */
+  setCourseThemes(bookId: number, themes: string[]): Observable<{ themes: string[] }> {
+    return this.http.put<{ themes: string[] }>(`/api/courses/${bookId}/themes`, { themes });
   }
 
   /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */

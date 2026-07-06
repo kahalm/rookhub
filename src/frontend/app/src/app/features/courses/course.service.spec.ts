@@ -72,4 +72,14 @@ describe('CourseService', () => {
     req.flush({ hasAccess: true });
     expect(hasAccess).toBeTrue();
   });
+
+  it('sets course themes (PUT) and returns effective keys', () => {
+    let result: string[] | undefined;
+    svc.setCourseThemes(7, ['tactics', 'endgame']).subscribe(r => result = r.themes);
+    const req = http.expectOne('/api/courses/7/themes');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ themes: ['tactics', 'endgame'] });
+    req.flush({ themes: ['tactics', 'endgame'] });
+    expect(result).toEqual(['tactics', 'endgame']);
+  });
 });

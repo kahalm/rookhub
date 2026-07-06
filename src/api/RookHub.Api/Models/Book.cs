@@ -45,6 +45,16 @@ public class Book
     /// Kategorie „Puzzles"; Studienbuch → Kategorie „Buch/Kurs". Default Puzzle (klassisches Verhalten).</summary>
     public BookKind Kind { get; set; } = BookKind.Puzzle;
 
+    /// <summary>
+    /// Themen-Tags dieses Buchs (CSV der Theme-Keys „opening/middlegame/endgame/tactics/other",
+    /// z. B. "tactics" oder "tactics,endgame"). Steuern die Themen-Aufschlüsselung der Kurszeit im
+    /// Trainingsziele-Tracker: die Zeit eines Kurs-Versuchs wird gleichmäßig auf die gesetzten Themen
+    /// aufgeteilt. <c>null</c>/leer = Default „Taktik" (jedes Buch ist standardmäßig Taktik).
+    /// Bearbeitbar vom Admin (alle Bücher) bzw. dem Besitzer eines persönlichen Kurses.
+    /// </summary>
+    [MaxLength(100)]
+    public string? Themes { get; set; }
+
     /// <summary>Für das deterministische Tagespuzzle nutzbar.</summary>
     public bool ForDaily { get; set; }
 
