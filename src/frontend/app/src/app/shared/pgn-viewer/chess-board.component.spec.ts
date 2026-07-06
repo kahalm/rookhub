@@ -38,3 +38,31 @@ describe('ChessBoardComponent RAF cleanup', () => {
     expect((c as any).resizeObserver).toBeUndefined();
   });
 });
+
+/**
+ * Testet, dass das reine Anzeige-Brett interaktiv (nicht viewOnly) initialisiert wird,
+ * damit Chessground die Rechtsklick-Zeichen-Listener bindet — aber jegliche
+ * Figuren-Interaktion (Ziehen/Zug) ausgeschaltet bleibt.
+ */
+describe('ChessBoardComponent right-click drawing', () => {
+  it('boots interactive with drawing enabled but no piece movement', () => {
+    const host = document.createElement('div');
+    host.style.width = '320px';
+    document.body.appendChild(host);
+    const inner = document.createElement('div');
+    host.appendChild(inner);
+
+    const c: any = new ChessBoardComponent();
+    c.boardEl = { nativeElement: inner };
+    c.ngAfterViewInit();
+
+    const state = c.ground.state;
+    expect(state.viewOnly).toBe(false);        // sonst würden die Listener nicht gebunden
+    expect(state.drawable.enabled).toBe(true); // Pfeile/Kreise per Rechtsklick
+    expect(state.movable.color).toBeUndefined();
+    expect(state.draggable.enabled).toBe(false);
+
+    c.ngOnDestroy();
+    document.body.removeChild(host);
+  });
+});
