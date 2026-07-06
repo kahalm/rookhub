@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.260.2';
+export const APP_VERSION = '0.260.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.260.3", date: "2026-07-06", changes: [
+    { en: "Fixed course/daily-puzzle move comments appearing one or more moves too early while solving a mid-line puzzle. The live comment stack computed the last-played half-move as `startPly + moveIndex`, but `moveIndex` is already an absolute index into the full move list (it starts at `startPly + 1` after the setup move) — so the extra `startPly` shifted comments forward by startPly plies. On the daily puzzle 2026-07-05 the move-31 comment (Greco's mate, absolute ply 59 = Dxf2+) showed up already after De7. Now the stack uses `moveIndex - 1` for the last-played ply; comments appear on the correct move. Review paths were already correct. +1 regression test (mid-line startPly).", de: "Kurs-/Tagespuzzle-Zugkommentare erschienen beim Lösen einer Mid-Line-Aufgabe einen oder mehrere Züge zu früh. Der Live-Kommentar-Stapel bestimmte den zuletzt gespielten Halbzug als `startPly + moveIndex`, doch `moveIndex` ist bereits ein absoluter Index in die volle Zugliste (er startet nach dem Setup-Zug bei `startPly + 1`) — das zusätzliche `startPly` verschob die Kommentare um startPly Halbzüge nach vorne. Beim Tagespuzzle 05.07.2026 tauchte der Kommentar zu Zug 31 (Greco-Matt, absoluter ply 59 = Dxf2+) schon nach De7 auf. Jetzt nutzt der Stapel `moveIndex - 1` für den zuletzt gespielten Halbzug; Kommentare erscheinen am richtigen Zug. Die Review-Pfade waren bereits korrekt. +1 Regressionstest (Mid-Line startPly)." },
+  ]},
   { version: "0.260.2", date: "2026-07-06", changes: [
     { en: "Observability (backend-only): API request logs now carry the authenticated UserId again for ApiToken-authenticated requests (e.g. the RepCheck extension's `rkh_` token). These are authenticated during authorization, after the log-context enrichment middleware ran, so the request-completion log previously had no UserId. Added a Serilog `EnrichDiagnosticContext` step that runs after the endpoint. This makes it possible to count distinct extension users in Kibana (unique `metadata.UserId` over `url.path: /api/extension/*`). No visible change; takes effect for logs from deploy onward.", de: "Observability (nur Backend): API-Request-Logs tragen bei ApiToken-authentifizierten Requests (z. B. dem `rkh_`-Token der RepCheck-Extension) wieder die UserId. Diese werden erst in der Autorisierung authentifiziert — nach der LogContext-Anreicherungs-Middleware —, weshalb das Request-Completion-Log bisher keine UserId hatte. Ergänzt um einen Serilog-`EnrichDiagnosticContext`-Schritt, der nach dem Endpoint läuft. Damit lässt sich die Zahl distinct Extension-Nutzer in Kibana zählen (unique `metadata.UserId` über `url.path: /api/extension/*`). Keine sichtbare Änderung; wirkt für Logs ab dem Deploy." },
   ]},

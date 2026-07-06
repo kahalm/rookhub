@@ -612,6 +612,24 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     expect(c.commentLines).toEqual(['Einleitung']);
   });
 
+  it('commentLines: Mid-Line-Puzzle (startPly ≥ 1) zeigt den Kommentar NICHT zu früh', () => {
+    // Regression: `moveIndex` ist absolut (nach Setup = startPly+1). Die Stapel-Schleife addierte
+    // `start` erneut dazu → bei startPly ≥ 1 erschienen Kommentare um startPly Halbzüge zu früh
+    // (Daily 2026-07-05: Zug-31-Kommentar bei absolutem ply 59 tauchte schon nach De7/ply 58 auf).
+    const c = makeComponent();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3 b8c6 f1c4', bookFileName: 'b', startPly: 2,
+      comment: 'Einleitung', moveComments: { '3': 'Springer-Kommentar' } } as any;
+    c.reviewMode = false;
+    (c as any).onSolutionPath = true;
+    (c as any).startPly = 2;
+    (c as any).state = 'AWAITING_USER_MOVE';
+
+    (c as any).moveIndex = 3;   // nach Setup: letzter gespielter Halbzug = ply 2 (ohne Kommentar)
+    expect(c.commentLines).toEqual([]);        // KEIN verfrühter Kommentar
+    (c as any).moveIndex = 4;   // ply 3 gespielt → dessen Kommentar erscheint
+    expect(c.commentLines).toEqual(['Springer-Kommentar']);
+  });
+
   it('commentLines: leer ohne jeden Kommentar während des Lösens (kein Intro)', () => {
     const c = makeComponent();
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b', startPly: 0, comment: 'Einleitung' };

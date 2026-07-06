@@ -715,7 +715,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         && (this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING')) {
       const start = Math.max(0, this.startPly);
       const lines: string[] = [];
-      for (let ply = start; ply <= start + this.moveIndex - 1; ply++) {
+      // `moveIndex` ist bereits ABSOLUT (nach dem Setup einer Mid-Line-Linie steht er auf
+      // `startPly + 1`, siehe BasePuzzleSolver) → der zuletzt gespielte Halbzug ist `moveIndex - 1`.
+      // NICHT `start` erneut addieren (das verschob den Kommentar bei startPly ≥ 1 um startPly Halbzüge
+      // nach vorne — z. B. erschien der Zug-31-Kommentar schon nach De7 statt nach Dxf2+).
+      for (let ply = start; ply <= this.moveIndex - 1; ply++) {
         const c = this.commentForPlyPlayed(ply);   // gleiche Ply-Konvention wie der Review
         if (c) lines.push(c);
       }
