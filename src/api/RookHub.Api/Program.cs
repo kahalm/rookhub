@@ -514,6 +514,21 @@ try
 
     app.UseSerilogRequestLogging(options =>
     {
+        // UserId/UserName ans Request-Completion-Log hängen. Die LogContext-Anreicherungs-Middleware
+        // oben läuft VOR UseAuthorization — ApiToken-authentifizierte Requests (z. B. die RepCheck-
+        // Extension mit `rkh_`-Token) werden aber erst in der Autorisierung authentifiziert, sodass
+        // dort `HttpContext.User` noch anonym war und das Request-Log KEINE UserId trug. Diese
+        // Enrichment-Lambda läuft erst NACH dem Endpoint (Completion), da ist `User` gesetzt →
+        // z. B. die Extension-Nutzerzahl (distinct UserId über `/api/extension/*`) wird in Kibana
+        // zählbar. Für JWT-Requests ist es idempotent (gleicher Wert wie via LogContext).
+        options.EnrichDiagnosticContext = (diagCtx, httpCtx) =>
+        {
+            if (httpCtx.User?.Identity?.IsAuthenticated != true) return;
+            var uid = httpCtx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(uid)) diagCtx.Set("UserId", uid);
+            if (!string.IsNullOrEmpty(httpCtx.User.Identity.Name))
+                diagCtx.Set("UserName", httpCtx.User.Identity.Name);
+        };
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
             var path = httpContext.Request.Path.Value ?? "";

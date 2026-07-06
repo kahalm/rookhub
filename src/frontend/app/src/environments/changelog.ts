@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.260.1';
+export const APP_VERSION = '0.260.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.260.2", date: "2026-07-06", changes: [
+    { en: "Observability (backend-only): API request logs now carry the authenticated UserId again for ApiToken-authenticated requests (e.g. the RepCheck extension's `rkh_` token). These are authenticated during authorization, after the log-context enrichment middleware ran, so the request-completion log previously had no UserId. Added a Serilog `EnrichDiagnosticContext` step that runs after the endpoint. This makes it possible to count distinct extension users in Kibana (unique `metadata.UserId` over `url.path: /api/extension/*`). No visible change; takes effect for logs from deploy onward.", de: "Observability (nur Backend): API-Request-Logs tragen bei ApiToken-authentifizierten Requests (z. B. dem `rkh_`-Token der RepCheck-Extension) wieder die UserId. Diese werden erst in der Autorisierung authentifiziert — nach der LogContext-Anreicherungs-Middleware —, weshalb das Request-Completion-Log bisher keine UserId hatte. Ergänzt um einen Serilog-`EnrichDiagnosticContext`-Schritt, der nach dem Endpoint läuft. Damit lässt sich die Zahl distinct Extension-Nutzer in Kibana zählen (unique `metadata.UserId` über `url.path: /api/extension/*`). Keine sichtbare Änderung; wirkt für Logs ab dem Deploy." },
+  ]},
   { version: "0.260.1", date: "2026-07-05", changes: [
     { en: "Crawler resilience (chessresults_crawler): the periodic VPN IP rotation no longer holds the single crawl rate-limiter during the ~5s public-IP lookup that only logs the new address. Previously each rotation blocked all queued crawls for the full tunnel restart plus that lookup (~8s), risking the 60s acquisition timeout; now only the actual tunnel restart (which must block anyway, since the tunnel is down) is under the lock, and the IP is resolved/logged detached. Rotation/timing knobs (RotateAfterRequests, VpnRestartPauseMs, MinDelayMs) are now configurable. Backend-only, no visible change.", de: "Crawler-Robustheit (chessresults_crawler): die periodische VPN-IP-Rotation hält den einzelnen Crawl-Rate-Limiter nicht mehr während der ~5s dauernden Public-IP-Ermittlung, die nur die neue Adresse loggt. Vorher blockierte jede Rotation alle wartenden Crawls für den ganzen Tunnel-Neustart plus diese Ermittlung (~8s) und riskierte den 60s-Timeout; jetzt liegt nur der eigentliche Tunnel-Neustart (der ohnehin blockieren muss, da der Tunnel unten ist) im Lock, die IP wird losgelöst ermittelt/geloggt. Rotations-/Timing-Stellschrauben (RotateAfterRequests, VpnRestartPauseMs, MinDelayMs) sind jetzt konfigurierbar. Nur Backend, keine sichtbare Änderung." },
   ]},
