@@ -30,6 +30,11 @@ public class WeeklyPostService
     /// </summary>
     private async Task<int> GetTotalAsync(WeeklyPost post)
     {
+        // Buch-Kapitel-Quelle: Inhalt ist live an das Buch gebunden → Anzahl frisch aus den (Quiz-)Puzzles
+        // des Kapitels zählen, damit „erledigt"/Total mit der tatsächlichen Spielsequenz übereinstimmt.
+        if (post.SourceBookId is int bookId)
+            return await ChapterQuizPuzzles(bookId, post.SourceChapter).CountAsync();
+
         if (post.PuzzleCount > 0) return post.PuzzleCount;
         var total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
         if (total > 0)
@@ -39,6 +44,130 @@ public class WeeklyPostService
             catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
         }
         return total;
+    }
+
+    // ---- Buch-Kapitel-Quelle -------------------------------------------------
+    // Ein Wochenpost kann statt eines hochgeladenen PGN EIN Kapitel eines Buchs spiegeln. Die Puzzles
+    // werden dann live aus den BookPuzzles gebaut — dieselbe Reihenfolge/Filterung wie im Kurs
+    // (Round dann Id, Info-/Erklärlinien raus). Kapitel-Grouping analog CourseService.
+
+    /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
+    private static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
+
+    /// <summary>Quiz-Puzzles (ohne Info-/Erklärlinien) eines Buch-Kapitels in Lesereihenfolge (Round, dann Id).
+    /// <paramref name="chapterName"/> = null ⇒ Sammel-„ohne Kapitel".</summary>
+    private IQueryable<BookPuzzle> ChapterQuizPuzzles(int bookId, string? chapterName)
+    {
+        var q = _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly);
+        q = chapterName == null
+            ? q.Where(bp => bp.Chapter == null || bp.Chapter == "")
+            : q.Where(bp => bp.Chapter == chapterName);
+        return q.OrderBy(bp => bp.Round).ThenBy(bp => bp.Id);
+    }
+
+    /// <summary>Die Kapitelnamen eines Buchs in Lesereihenfolge (erste Erscheinung in Round/Id-Sortierung),
+    /// nur Quiz-Linien — deckungsgleich mit <c>CourseService.GetChaptersAsync</c>, damit der von der
+    /// Kapitel-Liste gelieferte Index hier denselben Namen auflöst.</summary>
+    private async Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
+    {
+        var chapters = await _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
+            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .Select(bp => bp.Chapter)
+            .ToListAsync();
+        var names = new List<string?>();
+        var seen = new HashSet<string>();
+        foreach (var c in chapters)
+        {
+            var name = NormalizeChapter(c);
+            if (seen.Add(name ?? "\0__none__")) names.Add(name);
+        }
+        return names;
+    }
+
+    /// <summary>
+    /// Puzzle-Sequenz eines Wochenposts zum Durchspielen. Buch-Kapitel-Quelle → live aus den BookPuzzles
+    /// (voller <see cref="BookPuzzleDto"/> inkl. Tipps/Shapes/Alt-Zügen); sonst das gespeicherte PGN
+    /// on-the-fly geparst (Alt-Verhalten). In beiden Fällen ist <c>Id</c> der 0-basierte Sequenz-Index
+    /// (kein DB-Datensatz) — der Wochenpost-Fortschritt ist index-basiert.
+    /// </summary>
+    public async Task<List<BookPuzzleDto>> GetPlayPuzzlesAsync(WeeklyPost post)
+    {
+        if (post.SourceBookId is int bookId)
+        {
+            var puzzles = await ChapterQuizPuzzles(bookId, post.SourceChapter).Include(bp => bp.Book).ToListAsync();
+            return puzzles.Select((bp, i) =>
+            {
+                var dto = BookPuzzleService.MapToDto(bp);
+                dto.Id = i;   // Sequenz-Index (Fortschritt ist index-basiert), nicht die DB-Id
+                return dto;
+            }).ToList();
+        }
+
+        var parsed = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles;
+        return parsed.Select((p, i) => new BookPuzzleDto
+        {
+            Id = i,
+            LineId = p.LineId,
+            BookFileName = post.FileName,
+            Round = p.Round,
+            Fen = p.Fen,
+            Moves = p.Moves,
+            StartPly = p.StartPly,
+            Title = p.Title,
+            Chapter = p.Chapter,
+            Comment = p.Comment,
+            MoveComments = p.MoveComments,
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Legt einen Wochenpost aus EINEM Kapitel eines Buchs an. <paramref name="chapterIndex"/> ist die
+    /// 0-basierte Position aus der Kapitel-Liste. Wirft <see cref="ArgumentException"/> (→ 400), wenn das
+    /// Buch fehlt, der Index ungültig ist oder das Kapitel keine (Quiz-)Puzzles enthält.
+    /// </summary>
+    public async Task<WeeklyPost> CreateFromChapterAsync(int bookId, int chapterIndex, DateTime scheduledAt, string? title, string? description)
+    {
+        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
+            ?? throw new ArgumentException("Book not found.");
+
+        var names = await GetOrderedChapterNamesAsync(bookId);
+        if (chapterIndex < 0 || chapterIndex >= names.Count)
+            throw new ArgumentException("Chapter index out of range.");
+        var chapterName = names[chapterIndex];
+
+        var count = await ChapterQuizPuzzles(bookId, chapterName).CountAsync();
+        if (count == 0)
+            throw new ArgumentException("Chapter has no puzzles.");
+
+        var bookName = string.IsNullOrWhiteSpace(book.DisplayName) ? book.FileName : book.DisplayName;
+        var finalTitle = string.IsNullOrWhiteSpace(title)
+            ? (chapterName == null ? bookName : $"{bookName}: {chapterName}")
+            : title.Trim();
+        if (finalTitle.Length == 0) finalTitle = bookName;
+        if (finalTitle.Length > 300) finalTitle = finalTitle[..300];
+
+        var desc = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        if (desc != null && desc.Length > 500) desc = desc[..500];
+
+        var now = DateTime.UtcNow;
+        var post = new WeeklyPost
+        {
+            Title = finalTitle,
+            Description = desc,
+            FileName = book.FileName,
+            PgnContent = string.Empty,      // Buch-Quelle: kein gespeichertes PGN, Puzzles kommen live aus den BookPuzzles
+            FileSize = 0,
+            PuzzleCount = count,            // GetTotalAsync zählt für Buch-Quellen ohnehin live; hier fürs Übersichts-DTO
+            SourceBookId = bookId,
+            SourceChapter = chapterName,
+            ScheduledAt = scheduledAt == default ? now : scheduledAt,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        _db.WeeklyPosts.Add(post);
+        await _db.SaveChangesAsync();
+        return post;
     }
 
     /// <summary>Zeichnet einen gespielten Puzzle-Versuch auf (erster Versuch je Index zählt) und liefert den Stand.</summary>
@@ -169,9 +298,8 @@ public class WeeklyPostService
             .OrderBy(a => a.PuzzleIndex)
             .ToListAsync();
 
-        // Titel je Puzzle-Index aus dem PGN (on-the-fly geparst, wie beim Durchspielen).
-        var titles = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles
-            .Select(p => p.Title).ToList();
+        // Titel je Puzzle-Index aus derselben Sequenz wie beim Durchspielen (PGN- oder Buch-Kapitel-Quelle).
+        var titles = (await GetPlayPuzzlesAsync(post)).Select(p => p.Title).ToList();
 
         var name = await _db.UserProfiles.Where(p => p.UserId == userId).Select(p => p.DisplayName).FirstOrDefaultAsync()
             ?? await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync()

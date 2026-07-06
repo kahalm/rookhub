@@ -12,6 +12,10 @@ export interface WeeklyPost {
   scheduledAt: string;
   createdAt: string;
   updatedAt: string;
+  /** Gesetzt, wenn der Wochenpost aus einem Buch-Kapitel stammt (statt hochgeladenem PGN). */
+  sourceBookId?: number | null;
+  /** Kapitelname der Buch-Quelle (null = „ohne Kapitel"); nur wenn sourceBookId gesetzt. */
+  sourceChapter?: string | null;
 }
 
 export interface WeeklyPostDetail extends WeeklyPost {
@@ -174,6 +178,11 @@ export class WeeklyService {
     if (title) form.append('title', title);
     if (description) form.append('description', description);
     return this.http.post<WeeklyPost>('/api/admin/weekly-posts', form);
+  }
+
+  /** Legt einen Wochenpost aus EINEM Kapitel eines Buchs (Kurs) an. `chapterIndex` = Index aus der Kapitel-Liste. */
+  createFromChapter(bookId: number, chapterIndex: number, scheduledAt: string, title?: string, description?: string): Observable<WeeklyPost> {
+    return this.http.post<WeeklyPost>('/api/admin/weekly-posts/from-chapter', { bookId, chapterIndex, scheduledAt, title, description });
   }
 
   update(id: number, dto: { title?: string; description?: string; scheduledAt?: string }): Observable<WeeklyPost> {

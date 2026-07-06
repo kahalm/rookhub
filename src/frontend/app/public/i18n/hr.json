@@ -1161,6 +1161,20 @@
       "solved": "Riješeno",
       "failed": "Neriješeno",
       "totalRow": "Ukupno ({{played}}/{{total}} odigrano)"
+    },
+    "fromChapter": {
+      "button": "Iz poglavlja knjige",
+      "title": "Tjedni post iz poglavlja knjige",
+      "or": "ili",
+      "book": "Knjiga",
+      "chapter": "Poglavlje",
+      "noChapter": "Bez poglavlja",
+      "noChapters": "Ova knjiga nema poglavlja.",
+      "titlePlaceholder": "Zadano: knjiga + poglavlje",
+      "create": "Stvori",
+      "createFailed": "Tjedni post nije moguće stvoriti.",
+      "loadBooksFailed": "Knjige nije moguće učitati.",
+      "loadChaptersFailed": "Poglavlja nije moguće učitati."
     }
   },
   "endless": {

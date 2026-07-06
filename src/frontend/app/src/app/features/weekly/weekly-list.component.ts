@@ -13,6 +13,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
+import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 interface WeeklyPostRow extends WeeklyPost {
@@ -65,6 +66,12 @@ interface WeeklyPostRow extends WeeklyPost {
               </button>
             </div>
             <p class="upload-hint">{{ 'weekly.upload.hint' | translate }}</p>
+            <div class="or-chapter">
+              <span class="or-sep">{{ 'weekly.fromChapter.or' | translate }}</span>
+              <button mat-stroked-button (click)="openFromChapter()">
+                <mat-icon>menu_book</mat-icon> {{ 'weekly.fromChapter.button' | translate }}
+              </button>
+            </div>
           </mat-card-content>
         </mat-card>
       }
@@ -179,6 +186,8 @@ interface WeeklyPostRow extends WeeklyPost {
     .f-date, .f-time { width: 150px; }
     .f-title { flex: 1; min-width: 180px; }
     .upload-hint { color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.8rem; margin: 4px 0 0; }
+    .or-chapter { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+    .or-sep { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85rem; }
     .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
     .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
     .inline-desc { font: inherit; font-size: 0.9rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 420px; }
@@ -268,6 +277,20 @@ export class WeeklyListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPosts();
+  }
+
+  /** Öffnet den Dialog „Wochenpost aus Buch-Kapitel" (Buch + Kapitel wählen); lädt bei Erfolg neu. */
+  openFromChapter(): void {
+    const ref = this.dialog.open(WeeklyFromChapterDialogComponent, {
+      data: { date: this.uploadDate, time: this.uploadTime },
+      width: '480px', maxWidth: '95vw',
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result) {
+        this.snackbar.info(this.translate.instant('weekly.created'), { action: 'common.ok', duration: 3000 });
+        this.loadPosts();
+      }
+    });
   }
 
   loadPosts(): void {

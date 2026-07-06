@@ -13,6 +13,10 @@ public class WeeklyPostDto
     public DateTime ScheduledAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Gesetzt, wenn der Wochenpost aus einem Buch-Kapitel stammt (statt hochgeladenem PGN) — Buch-Id.</summary>
+    public int? SourceBookId { get; set; }
+    /// <summary>Kapitelname der Buch-Quelle (null = „ohne Kapitel"); nur wenn <see cref="SourceBookId"/> gesetzt ist.</summary>
+    public string? SourceChapter { get; set; }
 }
 
 /// <summary>Wochenpost-Detail inkl. PGN-Inhalt (für den Viewer).</summary>
@@ -29,6 +33,20 @@ public class UpdateWeeklyPostDto
     [MaxLength(500)]
     public string? Description { get; set; }
     public DateTime? ScheduledAt { get; set; }
+}
+
+/// <summary>Anlegen eines Wochenposts aus EINEM Kapitel eines Buchs (Kurs) statt aus hochgeladenem PGN.
+/// <see cref="ChapterIndex"/> ist die 0-basierte Position aus <c>GET /api/courses/{bookId}/chapters</c>.</summary>
+public class CreateWeeklyFromChapterDto
+{
+    public int BookId { get; set; }
+    /// <summary>0-basierter Kapitel-Index (Lesereihenfolge, wie von der Kapitel-Liste geliefert).</summary>
+    public int ChapterIndex { get; set; }
+    public DateTime ScheduledAt { get; set; }
+    [MaxLength(300)]
+    public string? Title { get; set; }
+    [MaxLength(500)]
+    public string? Description { get; set; }
 }
 
 /// <summary>Wochenpost als Puzzle-Sequenz zum Durchspielen (PGN on-the-fly geparst).</summary>

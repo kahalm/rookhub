@@ -553,4 +553,96 @@ public class WeeklyPostControllerTests : IDisposable
         var cleared = Unwrap<WeeklyPostDto>(await _controller.Update(created.Id, new UpdateWeeklyPostDto { Description = "" }));
         Assert.Null(cleared.Description);
     }
+
+    // ---- Wochenpost aus Buch-Kapitel ----------------------------------------
+
+    /// <summary>Seedet ein Buch mit zwei Kapiteln (je Puzzle Fen+Moves) + optionaler Info-Linie und gibt die Book-Id zurück.</summary>
+    private async Task<int> SeedBookWithChaptersAsync()
+    {
+        var book = new Book { FileName = "book.pgn", DisplayName = "Mein Buch" };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        BookPuzzle P(string round, string? chapter, string fen, string moves, bool info = false) => new()
+        {
+            LineId = $"book:{round}", BookFileName = "book.pgn", BookId = book.Id,
+            Round = round, Chapter = chapter, Fen = fen, Moves = moves, StartPly = -1, IsInfoOnly = info,
+        };
+        _db.BookPuzzles.AddRange(
+            P("001.001", "Kapitel 1", "8/8/8/8/8/8/4K3/4k3 w - - 0 1", "e2e3"),
+            P("001.002", "Kapitel 1", "8/8/8/8/8/8/5K2/4k3 w - - 0 1", "f2f3"),
+            P("002.001", "Kapitel 2", "8/8/8/8/8/8/6K1/4k3 w - - 0 1", "g2g3"),
+            P("002.002", "Kapitel 2", "8/8/8/8/8/8/7K/4k3 w - - 0 1", "h2h3", info: true)   // Info-Linie: kein Quiz
+        );
+        await _db.SaveChangesAsync();
+        return book.Id;
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_ValidChapter_CreatesBookSourcedPostWithChapterPuzzles()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        Assert.Equal(bookId, post.SourceBookId);
+        Assert.Equal("Kapitel 1", post.SourceChapter);
+        Assert.Equal("Mein Buch: Kapitel 1", post.Title);   // Default-Titel aus Buch + Kapitel
+
+        // Durchspielen: genau die zwei Quiz-Puzzles aus Kapitel 1, in Lesereihenfolge, index-basiert.
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+        Assert.Equal(2, play.Puzzles.Count);
+        Assert.Equal(new[] { 0, 1 }, play.Puzzles.Select(p => p.Id).ToArray());
+        Assert.Equal("e2e3", play.Puzzles[0].Moves);
+        Assert.All(play.Puzzles, p => Assert.Equal("Kapitel 1", p.Chapter));
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_SecondChapter_ExcludesInfoOnlyLines()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 1, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        // Kapitel 2 hat 2 Linien, davon 1 Info-only → nur 1 Quiz-Puzzle.
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+        Assert.Single(play.Puzzles);
+        Assert.Equal("g2g3", play.Puzzles[0].Moves);
+
+        // Fortschritts-Total nutzt dieselbe Quiz-Zählung.
+        var prog = Unwrap<WeeklyPostProgressDto>(await _controller.GetProgress(post.Id));
+        Assert.Equal(1, prog.Total);
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_InvalidChapterIndex_ReturnsBadRequest()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 9, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_UnknownBook_ReturnsBadRequest()
+    {
+        SetUser(1, admin: true);
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = 999, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+        Assert.IsType<BadRequestObjectResult>(res);
+    }
 }

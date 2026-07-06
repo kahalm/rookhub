@@ -1163,6 +1163,20 @@
       "solved": "Solved",
       "failed": "Failed",
       "totalRow": "Total ({{played}}/{{total}} played)"
+    },
+    "fromChapter": {
+      "button": "From book chapter",
+      "title": "Weekly post from a book chapter",
+      "or": "or",
+      "book": "Book",
+      "chapter": "Chapter",
+      "noChapter": "Without chapter",
+      "noChapters": "This book has no chapters.",
+      "titlePlaceholder": "Defaults to book + chapter",
+      "create": "Create",
+      "createFailed": "Could not create the weekly post.",
+      "loadBooksFailed": "Could not load books.",
+      "loadChaptersFailed": "Could not load chapters."
     }
   },
   "endless": {

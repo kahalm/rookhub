@@ -1163,6 +1163,20 @@
       "solved": "Gelöst",
       "failed": "Nicht gelöst",
       "totalRow": "Gesamt ({{played}}/{{total}} gespielt)"
+    },
+    "fromChapter": {
+      "button": "Aus Buch-Kapitel",
+      "title": "Wochenpost aus Buch-Kapitel",
+      "or": "oder",
+      "book": "Buch",
+      "chapter": "Kapitel",
+      "noChapter": "Ohne Kapitel",
+      "noChapters": "Dieses Buch hat keine Kapitel.",
+      "titlePlaceholder": "Standard: Buch + Kapitel",
+      "create": "Anlegen",
+      "createFailed": "Wochenpost konnte nicht angelegt werden.",
+      "loadBooksFailed": "Bücher konnten nicht geladen werden.",
+      "loadChaptersFailed": "Kapitel konnten nicht geladen werden."
     }
   },
   "endless": {

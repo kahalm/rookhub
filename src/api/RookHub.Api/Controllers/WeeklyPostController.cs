@@ -48,6 +48,8 @@ public class WeeklyPostController : BaseApiController
                 ScheduledAt = w.ScheduledAt,
                 CreatedAt = w.CreatedAt,
                 UpdatedAt = w.UpdatedAt,
+                SourceBookId = w.SourceBookId,
+                SourceChapter = w.SourceChapter,
             })
             .ToListAsync();
         return Ok(posts);
@@ -70,6 +72,8 @@ public class WeeklyPostController : BaseApiController
             ScheduledAt = w.ScheduledAt,
             CreatedAt = w.CreatedAt,
             UpdatedAt = w.UpdatedAt,
+            SourceBookId = w.SourceBookId,
+            SourceChapter = w.SourceChapter,
             PgnContent = w.PgnContent,
         });
     }
@@ -86,22 +90,7 @@ public class WeeklyPostController : BaseApiController
         if (w == null || (!IsAdmin() && !IsPublished(w)))
             return NotFound(new { message = "Weekly post not found." });
 
-        var parsed = PgnImportService.ParsePgn(w.FileName, w.PgnContent).Puzzles;
-        var puzzles = parsed.Select((p, i) => new BookPuzzleDto
-        {
-            Id = i,                       // lokaler Index (kein DB-Datensatz)
-            LineId = p.LineId,
-            BookFileName = w.FileName,
-            Round = p.Round,
-            Fen = p.Fen,
-            Moves = p.Moves,
-            StartPly = p.StartPly,
-            Title = p.Title,
-            Chapter = p.Chapter,
-            Comment = p.Comment,
-            MoveComments = p.MoveComments,
-        }).ToList();
-
+        var puzzles = await _progress.GetPlayPuzzlesAsync(w);
         return Ok(new WeeklyPlayDto { Id = w.Id, Title = w.Title, Puzzles = puzzles });
     }
 
@@ -234,6 +223,25 @@ public class WeeklyPostController : BaseApiController
         return Ok(ToDto(post));
     }
 
+    /// <summary>
+    /// Legt einen Wochenpost aus EINEM Kapitel eines Buchs (Kurs) an, statt ein PGN hochzuladen.
+    /// Die Puzzles kommen dann live aus den BookPuzzles dieses Kapitels.
+    /// </summary>
+    [HttpPost("/api/admin/weekly-posts/from-chapter")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateFromChapter([FromBody] CreateWeeklyFromChapterDto dto)
+    {
+        try
+        {
+            var post = await _progress.CreateFromChapterAsync(dto.BookId, dto.ChapterIndex, dto.ScheduledAt, dto.Title, dto.Description);
+            return Ok(ToDto(post));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("/api/admin/weekly-posts/{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateWeeklyPostDto dto)
@@ -289,5 +297,7 @@ public class WeeklyPostController : BaseApiController
         ScheduledAt = w.ScheduledAt,
         CreatedAt = w.CreatedAt,
         UpdatedAt = w.UpdatedAt,
+        SourceBookId = w.SourceBookId,
+        SourceChapter = w.SourceChapter,
     };
 }

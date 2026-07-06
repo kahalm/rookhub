@@ -55,6 +55,18 @@ describe('WeeklyService', () => {
       scheduledAt: '2026-06-15T19:00:00', createdAt: '', updatedAt: '' });
   });
 
+  it('creates a post from a book chapter', () => {
+    svc.createFromChapter(12, 1, '2026-06-08T19:00:00', 'Kapitel-Titel', 'Beschr').subscribe(p =>
+      expect(p.sourceBookId).toBe(12));
+    const req = http.expectOne('/api/admin/weekly-posts/from-chapter');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      bookId: 12, chapterIndex: 1, scheduledAt: '2026-06-08T19:00:00', title: 'Kapitel-Titel', description: 'Beschr',
+    });
+    req.flush({ id: 4, title: 'Kapitel-Titel', fileName: 'book.pgn', fileSize: 0,
+      scheduledAt: '2026-06-08T19:00:00', createdAt: '', updatedAt: '', sourceBookId: 12, sourceChapter: 'Kapitel 2' });
+  });
+
   it('loads the play sequence (puzzles)', () => {
     svc.getPlay(7).subscribe(p => {
       expect(p.title).toBe('Woche 1');

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.268.0';
+export const APP_VERSION = '0.269.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.269.0", date: "2026-07-06", changes: [
+    { en: "Weekly posts can now be created from a book chapter, not only by uploading a PGN. In the weekly admin area, next to the PGN upload, there is a “From book chapter” button: pick a book (course), then one of its chapters, set the schedule/title/description and create. The weekly post then mirrors that chapter’s puzzles live from the book (including hints, board arrows and tolerated alternative moves) — no PGN round-trip. Progress/leaderboard stay index-based exactly as before. New WeeklyPost.SourceBookId + SourceChapter (migration AddWeeklyPostBookChapter) and endpoint POST /api/admin/weekly-posts/from-chapter; the play/breakdown paths build the sequence from the chapter’s quiz puzzles (info/explanation lines excluded). +4 backend tests, +1 frontend test.", de: "Wochenposts lassen sich jetzt aus einem Buch-Kapitel anlegen, nicht mehr nur per PGN-Upload. Im Wochenpost-Adminbereich gibt es neben dem PGN-Upload einen Knopf „Aus Buch-Kapitel“: Buch (Kurs) wählen, dann eines seiner Kapitel, Termin/Titel/Beschreibung setzen und anlegen. Der Wochenpost spiegelt dann live die Puzzles dieses Kapitels aus dem Buch (inkl. Tipps, Brett-Pfeile und geduldeter Alternativzüge) — kein PGN-Umweg. Fortschritt/Bestenliste bleiben genau wie bisher index-basiert. Neu: WeeklyPost.SourceBookId + SourceChapter (Migration AddWeeklyPostBookChapter) und Endpoint POST /api/admin/weekly-posts/from-chapter; die Durchspiel-/Aufschlüsselungs-Pfade bauen die Sequenz aus den Quiz-Puzzles des Kapitels (Info-/Erklärlinien ausgenommen). +4 Backend-Tests, +1 Frontend-Test." },
+  ]},
   { version: "0.268.0", date: "2026-07-06", changes: [
     { en: "Course/book puzzles: the auto-advance for trailing citation comments (v0.262.0) now also skips short result/outcome comments after the last move — “White wins.”, “Black wins.”, “White resigns.”, “Stalemate!”, “It is game over.” etc., as well as a result phrase followed by a source citation (“White wins. Rinck (1928).”) and single-name study/composer citations (“Kubbel (1916).”, “This exercise was based on a study, composed by Troitzky in 1914.”). Those no longer pause for you to read them; instructional comments still stop as before. Detection extended and validated data-driven against a full endgame book (379 such comments matched, no teaching comment wrongly skipped).", de: "Kurs-/Buch-Puzzles: das automatische Weiterrücken bei Abschluss-Zitaten (v0.262.0) überspringt jetzt auch kurze Ergebnis-/Ausgangskommentare nach dem letzten Zug — „White wins.“, „Black wins.“, „White resigns.“, „Stalemate!“, „It is game over.“ usw., ebenso eine Ergebnis-Floskel mit angehängter Quellenangabe („White wins. Rinck (1928).“) und Einzelnamen-Studien-/Komponisten-Zitate („Kubbel (1916).“, „This exercise was based on a study, composed by Troitzky in 1914.“). Diese halten nicht mehr zum Lesen an; lehrreiche Kommentare stoppen weiterhin. Erkennung erweitert und datengetrieben gegen ein ganzes Endspielbuch validiert (379 solche Kommentare getroffen, kein lehrreicher Kommentar fälschlich übersprungen)." },
   ]},
