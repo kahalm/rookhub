@@ -66,6 +66,8 @@ public class AppDbContext : DbContext
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
     public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
     public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
+    public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
+    public DbSet<NotificationPushSetting> NotificationPushSettings => Set<NotificationPushSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -489,6 +491,19 @@ public class AppDbContext : DbContext
             // Ein Pin pro (User, Buch); Sortier-/Ladeindex nach Anpin-Zeitpunkt.
             e.HasIndex(p => new { p.UserId, p.BookId }).IsUnique();
             e.HasIndex(p => new { p.UserId, p.PinnedAt });
+        });
+
+        modelBuilder.Entity<UserPushSubscription>(e =>
+        {
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(s => s.Endpoint).IsUnique();   // eine Subscription je Endpoint
+            e.HasIndex(s => s.UserId);
+        });
+
+        modelBuilder.Entity<NotificationPushSetting>(e =>
+        {
+            e.HasKey(s => s.UserId);                  // genau eine Zeile je User
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CourseShare>(e =>

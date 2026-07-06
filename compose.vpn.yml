@@ -143,6 +143,11 @@ services:
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       # Optional: GitHub-PAT (actions:read) für den Admin-Tab „CI / Actions". Leer -> Tab zeigt Hinweis.
       GitHub__Token: ${GITHUB_TOKEN:-}
+      # Optional: VAPID-Schlüssel für Web-Push-Benachrichtigungen. Alle drei leer -> Push deaktiviert
+      # (Panel zeigt „nicht verfügbar"). Keypair generieren: siehe README/CLAUDE.md.
+      WebPush__Subject: ${WEBPUSH_SUBJECT:-}
+      WebPush__PublicKey: ${WEBPUSH_PUBLIC_KEY:-}
+      WebPush__PrivateKey: ${WEBPUSH_PRIVATE_KEY:-}
     volumes:
       - dataprotection-keys:/keys
     networks:

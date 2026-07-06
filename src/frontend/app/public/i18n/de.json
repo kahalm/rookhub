@@ -125,6 +125,14 @@
       "tournaments": "Turniere",
       "admin": "Admin",
       "other": "Sonstiges"
+    },
+    "push": {
+      "title": "Push-Benachrichtigungen",
+      "hint": "Erhalte eine Browser-/Handy-Benachrichtigung, wenn etwas passiert. Schalte die gewünschten Bereiche ein — standardmäßig aus.",
+      "unsupported": "Dein Browser oder Gerät unterstützt keine Push-Benachrichtigungen.",
+      "notConfigured": "Push-Benachrichtigungen sind auf diesem Server noch nicht verfügbar.",
+      "denied": "Benachrichtigungen sind in deinen Browser-Einstellungen blockiert — erlaube sie für diese Seite, um Push zu nutzen.",
+      "enableError": "Push-Benachrichtigungen konnten nicht geändert werden."
     }
   },
   "nav": {

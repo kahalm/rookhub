@@ -5,12 +5,17 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
 import {
   notificationText, notificationIcon, notificationCategory,
   NotificationCategory, NOTIFICATION_CATEGORIES,
 } from '../../core/notification-text';
+import { PushService } from '../../core/push.service';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
@@ -19,10 +24,38 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent],
   template: `
     <div class="notif-container">
       <h1>{{ 'notifications.historyTitle' | translate }}</h1>
+
+      <mat-card class="push-card">
+        <mat-card-content>
+          <div class="push-head">
+            <mat-icon>notifications_active</mat-icon>
+            <span class="push-title">{{ 'notifications.push.title' | translate }}</span>
+          </div>
+          @if (!pushSupported) {
+            <p class="push-hint">{{ 'notifications.push.unsupported' | translate }}</p>
+          } @else if (!pushPublicKey) {
+            <p class="push-hint">{{ 'notifications.push.notConfigured' | translate }}</p>
+          } @else {
+            <p class="push-hint">{{ 'notifications.push.hint' | translate }}</p>
+            @if (pushDenied) {
+              <p class="push-hint push-denied">{{ 'notifications.push.denied' | translate }}</p>
+            }
+            <div class="push-cats">
+              @for (cat of pushCategories; track cat) {
+                <mat-slide-toggle color="primary"
+                    [checked]="isPushOn(cat)" [disabled]="pushBusy || pushDenied"
+                    (change)="togglePush(cat, $event.checked)">
+                  {{ ('notifications.category.' + cat) | translate }}
+                </mat-slide-toggle>
+              }
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
 
       @if (loading && items.length === 0) {
         <app-loading-spinner />
@@ -81,6 +114,11 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
   styles: [`
     .notif-container { max-width: 760px; margin: 24px auto; padding: 0 16px; }
     .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
+    .push-card { margin-bottom: 16px; }
+    .push-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
+    .push-hint { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 10px; }
+    .push-hint.push-denied { color: #c62828; }
+    .push-cats { display: flex; flex-wrap: wrap; gap: 8px 20px; }
     .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 12px; }
     .filter-label { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .filter-chip { cursor: pointer; user-select: none; }
@@ -111,15 +149,64 @@ export class NotificationsComponent implements OnInit {
   private page = 0;
   private readonly pageSize = 30;
 
+  // ----- Push -----
+  /** Bereiche im Push-Panel (Admin-Bereich nur für Admins). */
+  pushCategories: NotificationCategory[] = [];
+  /** VAPID-Key (null = serverseitig nicht konfiguriert). */
+  pushPublicKey: string | null = null;
+  /** Aktuell für Push aktivierte Bereiche. */
+  private pushEnabled = new Set<NotificationCategory>();
+  pushBusy = false;
+
   constructor(
     private notif: InAppNotificationService,
     private translate: TranslateService,
     private router: Router,
+    private push: PushService,
+    private auth: AuthService,
+    private snackbar: SnackbarService,
   ) {
     this.hidden = readHiddenCategories();
+    // „admin"-Bereich nur für Admins anbieten.
+    this.pushCategories = NOTIFICATION_CATEGORIES.filter(c => c !== 'admin' || this.auth.isAdmin);
   }
 
-  ngOnInit(): void { this.loadMore(); }
+  ngOnInit(): void {
+    this.loadMore();
+    if (this.pushSupported) this.push.getConfig().subscribe({
+      next: cfg => {
+        this.pushPublicKey = cfg.publicKey;
+        this.pushEnabled = new Set(cfg.enabledCategories as NotificationCategory[]);
+      },
+      error: () => {},
+    });
+  }
+
+  get pushSupported(): boolean { return this.push.supported; }
+  get pushDenied(): boolean { return this.push.permissionDenied; }
+  isPushOn(cat: NotificationCategory): boolean { return this.pushEnabled.has(cat); }
+
+  /** Einen Bereich für Push ein-/ausschalten: beim ersten Aktivieren Browser-Berechtigung anfordern +
+   *  Subscription anlegen; beim Deaktivieren des letzten Bereichs die Subscription wieder abmelden. */
+  async togglePush(cat: NotificationCategory, checked: boolean): Promise<void> {
+    if (this.pushBusy || !this.pushPublicKey) return;
+    const next = new Set(this.pushEnabled);
+    if (checked) next.add(cat); else next.delete(cat);
+    this.pushBusy = true;
+    try {
+      if (checked && this.pushEnabled.size === 0) {
+        // Erstes Aktivieren → Berechtigung + Subscription (kann bei Ablehnung werfen).
+        await this.push.ensureSubscribed(this.pushPublicKey);
+      }
+      const eff = await this.push.setPreferences([...next]).toPromise();
+      this.pushEnabled = new Set((eff?.categories ?? [...next]) as NotificationCategory[]);
+      if (this.pushEnabled.size === 0) await this.push.removeSubscription();
+    } catch {
+      this.snackbar.warn(this.translate.instant('notifications.push.enableError'));
+    } finally {
+      this.pushBusy = false;
+    }
+  }
 
   /** Nur Kategorien anzeigen, für die wir tatsächlich Einträge geladen haben. */
   get availableCategories(): NotificationCategory[] {

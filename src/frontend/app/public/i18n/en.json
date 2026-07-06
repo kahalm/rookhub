@@ -125,6 +125,14 @@
       "tournaments": "Tournaments",
       "admin": "Admin",
       "other": "Other"
+    },
+    "push": {
+      "title": "Push notifications",
+      "hint": "Get a browser/phone notification when something happens. Turn on the areas you want — off by default.",
+      "unsupported": "Your browser or device does not support push notifications.",
+      "notConfigured": "Push notifications are not available on this server yet.",
+      "denied": "Notifications are blocked in your browser settings — allow them for this site to use push.",
+      "enableError": "Could not change push notifications."
     }
   },
   "nav": {

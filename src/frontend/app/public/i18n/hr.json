@@ -125,6 +125,14 @@
       "tournaments": "Turniri",
       "admin": "Administracija",
       "other": "Ostalo"
+    },
+    "push": {
+      "title": "Push obavijesti",
+      "hint": "Primaj obavijest u pregledniku/na mobitelu kad se nešto dogodi. Uključi željena područja — standardno isključeno.",
+      "unsupported": "Tvoj preglednik ili uređaj ne podržava push obavijesti.",
+      "notConfigured": "Push obavijesti još nisu dostupne na ovom poslužitelju.",
+      "denied": "Obavijesti su blokirane u postavkama preglednika — dopusti ih za ovu stranicu da koristiš push.",
+      "enableError": "Push obavijesti nije moguće promijeniti."
     }
   },
   "nav": {

@@ -145,6 +145,11 @@ try
     builder.Services.AddScoped<ProfileService>();
     builder.Services.AddSingleton<DiscordLinkService>();
     builder.Services.AddScoped<NotificationService>();
+    // Web-Push: VAPID-Konfig aus dem Abschnitt „WebPush" (ENV WebPush__Subject/PublicKey/PrivateKey);
+    // ohne Schlüssel bleibt Push serverseitig deaktiviert (No-op).
+    builder.Services.Configure<RookHub.Api.Services.WebPushOptions>(builder.Configuration.GetSection("WebPush"));
+    builder.Services.AddSingleton<IWebPushSender, WebPushSender>();
+    builder.Services.AddScoped<PushNotificationService>();
     builder.Services.AddScoped<AdminMessageService>();
     builder.Services.AddScoped<FriendService>();
     builder.Services.AddScoped<ChallengeService>();

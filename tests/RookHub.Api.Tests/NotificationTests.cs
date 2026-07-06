@@ -194,7 +194,10 @@ public class NotificationTests : IDisposable
 
     private NotificationController ControllerFor(int userId)
     {
-        var ctrl = new NotificationController(_service);
+        var push = new PushNotificationService(_db, new WebPushSender(),
+            Microsoft.Extensions.Options.Options.Create(new WebPushOptions()),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PushNotificationService>.Instance);
+        var ctrl = new NotificationController(_service, push);
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
         ctrl.ControllerContext = new ControllerContext
         {

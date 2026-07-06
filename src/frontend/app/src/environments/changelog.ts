@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.265.0';
+export const APP_VERSION = '0.266.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.266.0", date: "2026-07-06", changes: [
+    { en: "Push notifications: you can now get browser/phone push notifications for the notification areas (Courses/Friends/Puzzles/Messages/Tournaments/Admin/Other). On the /notifications page, toggle the areas you want — each area is a separate switch; turning the first one on asks for browser permission and subscribes this device. Push is OFF by default and fully per-area. The Admin area is only offered to admins. A push tells you something happened in that area and opens the app on click; the detailed text stays in the bell. Requires the server to have VAPID keys configured (WebPush section); until then the panel shows “not available”.", de: "Push-Benachrichtigungen: du kannst jetzt Browser-/Handy-Push für die Benachrichtigungs-Bereiche erhalten (Kurse/Freunde/Puzzles/Nachrichten/Turniere/Admin/Sonstiges). Auf der /notifications-Seite schaltest du die gewünschten Bereiche ein — jeder Bereich ist ein eigener Schalter; beim ersten Einschalten wird die Browser-Berechtigung angefragt und dieses Gerät angemeldet. Push ist standardmäßig AUS und komplett pro Bereich steuerbar. Der Admin-Bereich wird nur Admins angeboten. Ein Push meldet, dass in dem Bereich etwas passiert ist, und öffnet beim Klick die App; der Detailtext bleibt in der Glocke. Setzt voraus, dass der Server VAPID-Schlüssel konfiguriert hat (Abschnitt WebPush); bis dahin zeigt das Panel „nicht verfügbar“." },
+  ]},
   { version: "0.265.0", date: "2026-07-06", changes: [
     { en: "Course books can now be tagged with themes (Tactics/Endgame/Opening/Middlegame/Other). Every book defaults to Tactics; via the “Edit themes” item in a course's ⋮ menu (admins for all books, owners for their own) you can change it — e.g. remove Tactics and make it Endgame, or set both. The tags show as chips on the course card. In your training progress, a course's solving time is now attributed to exactly these tags (split evenly when a book has several) instead of being auto-guessed from puzzle tags — so the theme breakdown follows what you set.", de: "Kurs-Bücher lassen sich jetzt mit Themen taggen (Taktik/Endspiel/Eröffnung/Mittelspiel/Sonstiges). Jedes Buch ist standardmäßig Taktik; über den Punkt „Themen bearbeiten“ im ⋮-Menü eines Kurses (Admins für alle Bücher, Besitzer für eigene) kannst du das ändern — z. B. Taktik entfernen und Endspiel draus machen, oder beides setzen. Die Tags erscheinen als Chips auf der Kurs-Karte. Im Trainingsfortschritt wird die Lösezeit eines Kurses jetzt genau diesen Tags zugerechnet (bei mehreren gleichmäßig aufgeteilt) statt aus Puzzle-Tags geraten zu werden — die Themen-Aufschlüsselung folgt also deiner Zuordnung." },
   ]},

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -14,9 +15,14 @@ namespace RookHub.Api.Services;
 public class NotificationService
 {
     private readonly AppDbContext _db;
+    private readonly IWebhookTaskQueue? _pushQueue;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
-    public NotificationService(AppDbContext db) => _db = db;
+    public NotificationService(AppDbContext db, IWebhookTaskQueue? pushQueue = null)
+    {
+        _db = db;
+        _pushQueue = pushQueue;
+    }
 
     /// <summary>Legt eine Benachrichtigung für <paramref name="userId"/> an.</summary>
     public Task CreateAsync(int userId, string type,
@@ -35,6 +41,19 @@ public class NotificationService
         foreach (var userId in ids)
             _db.Notifications.Add(new Notification { UserId = userId, Type = type, DataJson = json, Link = link });
         await _db.SaveChangesAsync();
+
+        // Web-Push best-effort: außerhalb des Request-Pfads, mit eigenem DI-Scope (der Worker liefert
+        // den ServiceProvider). Kein Push konfiguriert / Bereich beim User aus → No-op im Service.
+        if (_pushQueue != null)
+            foreach (var userId in ids)
+            {
+                var uid = userId;
+                await _pushQueue.EnqueueAsync(async (sp, ct) =>
+                {
+                    var push = sp.GetRequiredService<PushNotificationService>();
+                    await push.SendToUserAsync(uid, type, data, link);
+                });
+            }
     }
 
     /// <summary>Letzte Benachrichtigungen eines Users (neueste zuerst).</summary>
