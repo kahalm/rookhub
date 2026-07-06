@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.271.1';
+export const APP_VERSION = '0.271.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.271.2", date: "2026-07-06", changes: [
+    { en: "Mobile fix for the weekly admin leaderboard: the per-player (i) details button no longer disappears off-screen when a player has a long username. The player-name cell now wraps/breaks long names onto multiple lines instead of widening the whole row and pushing the (i) column out of view (into the horizontal scroll area). All other columns stay on screen.", de: "Mobil-Fix für die Wochenpost-Admin-Bestenliste: der (i)-Detailknopf je Spieler verschwindet nicht mehr aus dem Bildschirm, wenn ein Spieler einen langen Usernamen hat. Die Spieler-Namens-Zelle bricht lange Namen jetzt auf mehrere Zeilen um, statt die ganze Zeile zu verbreitern und die (i)-Spalte aus dem sichtbaren Bereich (in die Horizontal-Scroll-Zone) zu schieben. Alle anderen Spalten bleiben am Bildschirm." },
+  ]},
   { version: "0.271.1", date: "2026-07-06", changes: [
     { en: "Fixed clickable comment moves treating a list of alternatives as one line. When a comment reads e.g. „a draw is likely after a move like c5, or a5“, the two moves are alternatives for the side to move — but the parser played them as a sequence (c5 as White, then a5 as Black), so a5 previewed as the wrong colour. Now alternatives separated by „or/oder/bzw.“ or a comma before an un-numbered move become separate branches, each anchored at its own position; numbered variations are anchored at the position matching their move number (instead of „latest on tie“), and number-less intro alternatives resolve from the current position. A comma before a numbered move („…a3, 41.b6…“) still counts as a continuation, not a new branch. +3 util tests.", de: "Behoben, dass klickbare Kommentar-Züge eine Aufzählung von Alternativen als eine Linie behandelten. Steht im Kommentar z. B. „remis ist wahrscheinlich nach einem Zug wie c5, oder a5“, sind die beiden Züge Alternativen für die Seite am Zug — der Parser spielte sie aber als Folge (c5 mit Weiß, dann a5 mit Schwarz), sodass a5 in der falschen Farbe vorgespielt wurde. Jetzt werden per „or/oder/bzw.“ oder Komma-vor-numerlosem-Zug getrennte Alternativen zu eigenen Zweigen, jeder an seiner eigenen Stellung verankert; nummerierte Varianten verankern an der zur Zugnummer passenden Stellung (statt „späteste bei Gleichstand“), numerlose Einleitungs-Alternativen lösen aus der aktuellen Stellung auf. Ein Komma vor einem nummerierten Zug („…a3, 41.b6…“) gilt weiter als Fortsetzung, nicht als neuer Zweig. +3 Util-Tests." },
   ]},

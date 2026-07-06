@@ -150,7 +150,7 @@ interface WeeklyPostRow extends WeeklyPost {
                           @for (p of board[r.id]; track $index; let i = $index) {
                             <tr>
                               <td class="lb-rank">{{ i + 1 }}</td>
-                              <td>{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
+                              <td class="lb-player">{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
                               <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
                               <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
                               @if (auth.isAdmin) {
@@ -219,6 +219,8 @@ interface WeeklyPostRow extends WeeklyPost {
     .lb-table th, .lb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
     .lb-table th { color: color-mix(in srgb, currentColor 47%, transparent); font-weight: 600; font-size: 0.8rem; }
     .lb-rank { width: 2.5em; color: color-mix(in srgb, currentColor 40%, transparent); }
+    /* Lange Usernamen umbrechen, statt die Zeile zu verbreitern und die (i)-Spalte aus dem Bildschirm zu schieben */
+    .lb-player { word-break: break-word; overflow-wrap: anywhere; }
     .lb-acc, .lb-time { white-space: nowrap; }
     .lb-acc { text-align: right; }
     .lb-time { text-align: right; color: color-mix(in srgb, currentColor 65%, transparent); }
