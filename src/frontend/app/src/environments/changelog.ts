@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.260.3';
+export const APP_VERSION = '0.260.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.260.4", date: "2026-07-06", changes: [
+    { en: "Giving up a course/book puzzle now drops it from the pool until the course is reset — in the sequential mode too. Previously the sequential pool excluded only solved puzzles, so a puzzle you gave up reappeared as the very first puzzle when you restarted/re-entered the course. Now the sequential pool also excludes puzzles failed since the last reset (same rule the random mode already used); once every remaining line is solved-or-failed the course reports the round as done (round-done panel with a start-over button). A reset brings failed puzzles back. +3 backend tests.", de: "Ein aufgegebenes Kurs-/Buch-Puzzle fällt jetzt bis zum nächsten Zurücksetzen aus dem Pool — auch im sequenziellen Modus. Vorher schloss der sequenzielle Pool nur gelöste Puzzles aus, sodass ein aufgegebenes Puzzle beim Neustart/Wiedereinstieg sofort wieder als erstes erschien. Jetzt schließt der sequenzielle Pool auch seit dem letzten Reset gescheiterte Puzzles aus (dieselbe Regel wie der Zufallsmodus schon nutzte); sind alle übrigen Linien gelöst-oder-gescheitert, gilt die Runde als durch (Runde-durch-Panel mit Von-vorn-Knopf). Ein Reset bringt gescheiterte Puzzles zurück. +3 Backend-Tests." },
+  ]},
   { version: "0.260.3", date: "2026-07-06", changes: [
     { en: "Fixed course/daily-puzzle move comments appearing one or more moves too early while solving a mid-line puzzle. The live comment stack computed the last-played half-move as `startPly + moveIndex`, but `moveIndex` is already an absolute index into the full move list (it starts at `startPly + 1` after the setup move) — so the extra `startPly` shifted comments forward by startPly plies. On the daily puzzle 2026-07-05 the move-31 comment (Greco's mate, absolute ply 59 = Dxf2+) showed up already after De7. Now the stack uses `moveIndex - 1` for the last-played ply; comments appear on the correct move. Review paths were already correct. +1 regression test (mid-line startPly).", de: "Kurs-/Tagespuzzle-Zugkommentare erschienen beim Lösen einer Mid-Line-Aufgabe einen oder mehrere Züge zu früh. Der Live-Kommentar-Stapel bestimmte den zuletzt gespielten Halbzug als `startPly + moveIndex`, doch `moveIndex` ist bereits ein absoluter Index in die volle Zugliste (er startet nach dem Setup-Zug bei `startPly + 1`) — das zusätzliche `startPly` verschob die Kommentare um startPly Halbzüge nach vorne. Beim Tagespuzzle 05.07.2026 tauchte der Kommentar zu Zug 31 (Greco-Matt, absoluter ply 59 = Dxf2+) schon nach De7 auf. Jetzt nutzt der Stapel `moveIndex - 1` für den zuletzt gespielten Halbzug; Kommentare erscheinen am richtigen Zug. Die Review-Pfade waren bereits korrekt. +1 Regressionstest (Mid-Line startPly)." },
   ]},
