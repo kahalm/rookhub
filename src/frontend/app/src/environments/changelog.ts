@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.266.0';
+export const APP_VERSION = '0.267.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.267.0", date: "2026-07-06", changes: [
+    { en: "Course/book puzzles: the auto-advance for trailing citation comments (v0.262.0) now also skips short result/outcome comments after the last move — “White wins.”, “Black wins.”, “White resigns.”, “Stalemate!”, “It is game over.” etc., as well as a result phrase followed by a source citation (“White wins. Rinck (1928).”) and single-name study/composer citations (“Kubbel (1916).”, “This exercise was based on a study, composed by Troitzky in 1914.”). Those no longer pause for you to read them; instructional comments still stop as before. Detection extended and validated data-driven against a full endgame book (379 such comments matched, no teaching comment wrongly skipped).", de: "Kurs-/Buch-Puzzles: das automatische Weiterrücken bei Abschluss-Zitaten (v0.262.0) überspringt jetzt auch kurze Ergebnis-/Ausgangskommentare nach dem letzten Zug — „White wins.“, „Black wins.“, „White resigns.“, „Stalemate!“, „It is game over.“ usw., ebenso eine Ergebnis-Floskel mit angehängter Quellenangabe („White wins. Rinck (1928).“) und Einzelnamen-Studien-/Komponisten-Zitate („Kubbel (1916).“, „This exercise was based on a study, composed by Troitzky in 1914.“). Diese halten nicht mehr zum Lesen an; lehrreiche Kommentare stoppen weiterhin. Erkennung erweitert und datengetrieben gegen ein ganzes Endspielbuch validiert (379 solche Kommentare getroffen, kein lehrreicher Kommentar fälschlich übersprungen)." },
+  ]},
   { version: "0.266.0", date: "2026-07-06", changes: [
     { en: "Push notifications: you can now get browser/phone push notifications for the notification areas (Courses/Friends/Puzzles/Messages/Tournaments/Admin/Other). On the /notifications page, toggle the areas you want — each area is a separate switch; turning the first one on asks for browser permission and subscribes this device. Push is OFF by default and fully per-area. The Admin area is only offered to admins. A push tells you something happened in that area and opens the app on click; the detailed text stays in the bell. Requires the server to have VAPID keys configured (WebPush section); until then the panel shows “not available”.", de: "Push-Benachrichtigungen: du kannst jetzt Browser-/Handy-Push für die Benachrichtigungs-Bereiche erhalten (Kurse/Freunde/Puzzles/Nachrichten/Turniere/Admin/Sonstiges). Auf der /notifications-Seite schaltest du die gewünschten Bereiche ein — jeder Bereich ist ein eigener Schalter; beim ersten Einschalten wird die Browser-Berechtigung angefragt und dieses Gerät angemeldet. Push ist standardmäßig AUS und komplett pro Bereich steuerbar. Der Admin-Bereich wird nur Admins angeboten. Ein Push meldet, dass in dem Bereich etwas passiert ist, und öffnet beim Klick die App; der Detailtext bleibt in der Glocke. Setzt voraus, dass der Server VAPID-Schlüssel konfiguriert hat (Abschnitt WebPush); bis dahin zeigt das Panel „nicht verfügbar“." },
   ]},
