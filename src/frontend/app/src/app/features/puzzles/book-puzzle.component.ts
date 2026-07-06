@@ -13,6 +13,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
+import { isGameCitationComment } from './game-citation.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -470,7 +471,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  des letzten Halbzugs in `moveComments`). Steuert, dass am Ende nicht auto-weitergesprungen wird. */
   private get hasTrailingSolutionComment(): boolean {
     const allMoves = (this.puzzle?.moves ?? '').split(' ').filter(m => m);
-    return allMoves.length > 0 && !!this.commentForPlyPlayed(allMoves.length - 1);
+    if (allMoves.length === 0) return false;
+    const c = this.commentForPlyPlayed(allMoves.length - 1);
+    if (!c) return false;
+    // Reine Partie-/Studien-Angaben ("Bayer - Kuenitz, Wiesbaden, 2015.") sind keine lehrreiche
+    // Erklärung → wie ohne Kommentar automatisch weiterrücken statt zum Lesen anzuhalten.
+    if (isGameCitationComment(c)) return false;
+    return true;
   }
 
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */

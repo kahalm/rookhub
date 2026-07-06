@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.260.4';
+export const APP_VERSION = '0.261.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.261.0", date: "2026-07-06", changes: [
+    { en: "Course/book puzzles: when the comment after the last move is just a game reference (e.g. “Bayer - Kuenitz, Wiesbaden, 2015.” or “Black resigned in Blalock-Francisco, Evora 2008.”), the solver now auto-advances to the next puzzle as if there were no comment, instead of pausing for you to read it. Instructional comments (tactics explanations etc.) still pause as before. Detection is heuristic (a name pairing “Name - Name” with no sentence punctuation, ending in a 4-digit year); validated against “1001 Endgame Exercises” (40 pure citations matched, no teaching comment wrongly skipped).", de: "Kurs-/Buch-Puzzles: ist der Kommentar nach dem letzten Zug nur eine Partie-Angabe (z. B. „Bayer - Kuenitz, Wiesbaden, 2015.“ oder „Black resigned in Blalock-Francisco, Evora 2008.“), rückt der Solver jetzt automatisch zum nächsten Puzzle vor, als gäbe es keinen Kommentar — statt zum Lesen anzuhalten. Lehrreiche Kommentare (Taktik-Erklärungen usw.) halten weiterhin an. Erkennung heuristisch (Namenspaarung „Name - Name“ ohne Satzzeichen, endet auf eine 4-stellige Jahreszahl); validiert gegen „1001 Endgame Exercises“ (40 reine Zitate getroffen, kein lehrreicher Kommentar fälschlich übersprungen)." },
+  ]},
   { version: "0.260.4", date: "2026-07-06", changes: [
     { en: "Giving up a course/book puzzle now drops it from the pool until the course is reset — in the sequential mode too. Previously the sequential pool excluded only solved puzzles, so a puzzle you gave up reappeared as the very first puzzle when you restarted/re-entered the course. Now the sequential pool also excludes puzzles failed since the last reset (same rule the random mode already used); once every remaining line is solved-or-failed the course reports the round as done (round-done panel with a start-over button). A reset brings failed puzzles back. +3 backend tests.", de: "Ein aufgegebenes Kurs-/Buch-Puzzle fällt jetzt bis zum nächsten Zurücksetzen aus dem Pool — auch im sequenziellen Modus. Vorher schloss der sequenzielle Pool nur gelöste Puzzles aus, sodass ein aufgegebenes Puzzle beim Neustart/Wiedereinstieg sofort wieder als erstes erschien. Jetzt schließt der sequenzielle Pool auch seit dem letzten Reset gescheiterte Puzzles aus (dieselbe Regel wie der Zufallsmodus schon nutzte); sind alle übrigen Linien gelöst-oder-gescheitert, gilt die Runde als durch (Runde-durch-Panel mit Von-vorn-Knopf). Ein Reset bringt gescheiterte Puzzles zurück. +3 Backend-Tests." },
   ]},
