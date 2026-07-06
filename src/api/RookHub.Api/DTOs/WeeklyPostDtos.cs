@@ -7,6 +7,7 @@ public class WeeklyPostDto
 {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public string FileName { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public DateTime ScheduledAt { get; set; }
@@ -25,6 +26,8 @@ public class UpdateWeeklyPostDto
 {
     [MaxLength(300)]
     public string? Title { get; set; }
+    [MaxLength(500)]
+    public string? Description { get; set; }
     public DateTime? ScheduledAt { get; set; }
 }
 

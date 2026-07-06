@@ -521,4 +521,36 @@ public class WeeklyPostControllerTests : IDisposable
         var res = await _controller.GetPlayerBreakdown(999, 1);
         Assert.IsType<NotFoundObjectResult>(res.Result);
     }
+
+    // --- Beschreibung (optional, im Frontend angezeigt + vom Bot gepostet) -----------------
+
+    [Fact]
+    public async Task Create_WithDescription_StoresAndReturnsIt()
+    {
+        var res = Unwrap<WeeklyPostDto>(await _controller.Create(
+            MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Titel", "  Kurze Beschreibung  "));
+
+        Assert.Equal("Kurze Beschreibung", res.Description);   // getrimmt
+
+        // Auch in der Liste (der Bot pollt GET /api/weekly-posts) und im Detail vorhanden.
+        var list = Unwrap<List<WeeklyPostDto>>(await _controller.GetAll());
+        Assert.Equal("Kurze Beschreibung", list.Single().Description);
+        var detail = Unwrap<WeeklyPostDetailDto>(await _controller.GetById(res.Id));
+        Assert.Equal("Kurze Beschreibung", detail.Description);
+    }
+
+    [Fact]
+    public async Task Update_SetsAndClearsDescription()
+    {
+        var created = Unwrap<WeeklyPostDto>(await _controller.Create(
+            MakePgnFile(ValidPgn), new DateTime(2025, 6, 8, 19, 0, 0), "Titel"));
+        Assert.Null(created.Description);
+
+        var set = Unwrap<WeeklyPostDto>(await _controller.Update(created.Id, new UpdateWeeklyPostDto { Description = "Neue Beschreibung" }));
+        Assert.Equal("Neue Beschreibung", set.Description);
+
+        // Leerstring → Beschreibung entfernen (null).
+        var cleared = Unwrap<WeeklyPostDto>(await _controller.Update(created.Id, new UpdateWeeklyPostDto { Description = "" }));
+        Assert.Null(cleared.Description);
+    }
 }

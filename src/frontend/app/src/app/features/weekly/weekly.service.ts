@@ -6,6 +6,7 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 export interface WeeklyPost {
   id: number;
   title: string;
+  description?: string | null;
   fileName: string;
   fileSize: number;
   scheduledAt: string;
@@ -166,15 +167,16 @@ export class WeeklyService {
   }
 
   /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */
-  create(file: File, scheduledAt: string, title?: string): Observable<WeeklyPost> {
+  create(file: File, scheduledAt: string, title?: string, description?: string): Observable<WeeklyPost> {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('scheduledAt', scheduledAt);
     if (title) form.append('title', title);
+    if (description) form.append('description', description);
     return this.http.post<WeeklyPost>('/api/admin/weekly-posts', form);
   }
 
-  update(id: number, dto: { title?: string; scheduledAt?: string }): Observable<WeeklyPost> {
+  update(id: number, dto: { title?: string; description?: string; scheduledAt?: string }): Observable<WeeklyPost> {
     return this.http.put<WeeklyPost>(`/api/admin/weekly-posts/${id}`, dto);
   }
 

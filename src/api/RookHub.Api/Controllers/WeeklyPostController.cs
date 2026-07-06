@@ -42,6 +42,7 @@ public class WeeklyPostController : BaseApiController
             {
                 Id = w.Id,
                 Title = w.Title,
+                Description = w.Description,
                 FileName = w.FileName,
                 FileSize = w.FileSize,
                 ScheduledAt = w.ScheduledAt,
@@ -63,6 +64,7 @@ public class WeeklyPostController : BaseApiController
         {
             Id = w.Id,
             Title = w.Title,
+            Description = w.Description,
             FileName = w.FileName,
             FileSize = w.FileSize,
             ScheduledAt = w.ScheduledAt,
@@ -187,7 +189,7 @@ public class WeeklyPostController : BaseApiController
     [HttpPost("/api/admin/weekly-posts")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(RepertoireService.MaxFileSize)]
-    public async Task<IActionResult> Create(IFormFile file, [FromForm] DateTime scheduledAt, [FromForm] string? title, CancellationToken ct)
+    public async Task<IActionResult> Create(IFormFile file, [FromForm] DateTime scheduledAt, [FromForm] string? title, [FromForm] string? description = null, CancellationToken ct = default)
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file provided." });
@@ -208,10 +210,14 @@ public class WeeklyPostController : BaseApiController
         if (finalTitle.Length == 0) finalTitle = safeName;
         if (finalTitle.Length > 300) finalTitle = finalTitle[..300];
 
+        var desc = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        if (desc != null && desc.Length > 500) desc = desc[..500];
+
         var now = DateTime.UtcNow;
         var post = new WeeklyPost
         {
             Title = finalTitle,
+            Description = desc,
             FileName = safeName,
             PgnContent = content,
             FileSize = file.Length,
@@ -240,6 +246,11 @@ public class WeeklyPostController : BaseApiController
         {
             var t = dto.Title.Trim();
             if (t.Length > 0) post.Title = t.Length > 300 ? t[..300] : t;
+        }
+        if (dto.Description != null)   // "" → Beschreibung entfernen; sonst trimmen/kürzen
+        {
+            var d = dto.Description.Trim();
+            post.Description = d.Length == 0 ? null : (d.Length > 500 ? d[..500] : d);
         }
         if (dto.ScheduledAt.HasValue && dto.ScheduledAt.Value != default)
             post.ScheduledAt = dto.ScheduledAt.Value;
@@ -272,6 +283,7 @@ public class WeeklyPostController : BaseApiController
     {
         Id = w.Id,
         Title = w.Title,
+        Description = w.Description,
         FileName = w.FileName,
         FileSize = w.FileSize,
         ScheduledAt = w.ScheduledAt,

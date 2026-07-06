@@ -1101,7 +1101,8 @@
     "fields": {
       "date": "Datum",
       "time": "Uhrzeit",
-      "titleOptional": "Titel (optional)"
+      "titleOptional": "Titel (optional)",
+      "descriptionOptional": "Beschreibung (optional)"
     },
     "columns": {
       "scheduled": "Termin",
@@ -1119,6 +1120,7 @@
       "title": "Neuen Wochenpost hochladen",
       "choosePgn": "PGN wählen",
       "titlePlaceholder": "aus Dateiname",
+      "descriptionPlaceholder": "kurzer Hinweis, wird angezeigt & auf Discord gepostet",
       "create": "Anlegen",
       "hint": "Standard: letzter Termin + 7 Tage, gleiche Uhrzeit (sonst 19:00).",
       "invalidFile": "Bitte eine .pgn-Datei mit höchstens 10 MB auswählen."

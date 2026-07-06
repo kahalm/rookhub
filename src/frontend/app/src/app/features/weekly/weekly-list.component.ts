@@ -54,6 +54,11 @@ interface WeeklyPostRow extends WeeklyPost {
                 <mat-label>{{ 'weekly.fields.titleOptional' | translate }}</mat-label>
                 <input matInput [(ngModel)]="uploadTitle" [placeholder]="'weekly.upload.titlePlaceholder' | translate">
               </mat-form-field>
+              <mat-form-field appearance="outline" class="f-desc">
+                <mat-label>{{ 'weekly.fields.descriptionOptional' | translate }}</mat-label>
+                <input matInput [(ngModel)]="uploadDescription" maxlength="500"
+                       [placeholder]="'weekly.upload.descriptionPlaceholder' | translate">
+              </mat-form-field>
               <button mat-raised-button color="primary"
                       [disabled]="!uploadFile || !uploadDate || !uploadTime || uploading" (click)="upload()">
                 <mat-icon>add</mat-icon> {{ 'weekly.upload.create' | translate }}
@@ -77,12 +82,15 @@ interface WeeklyPostRow extends WeeklyPost {
                   @if (auth.isAdmin) {
                     <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)"
                            [placeholder]="'weekly.columns.title' | translate">
+                    <input class="inline-desc" [(ngModel)]="r.description" (change)="savePost(r)" maxlength="500"
+                           [placeholder]="'weekly.fields.descriptionOptional' | translate">
                     <div class="wp-edit-sched">
                       <input type="date" class="inline-date" [(ngModel)]="r.editDate" (change)="savePost(r)">
                       <input type="time" class="inline-time" [(ngModel)]="r.editTime" (change)="savePost(r)">
                     </div>
                   } @else {
                     @if (r.title) { <span class="wp-title">{{ r.title }}</span> }
+                    @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
                     <span class="wp-sched">
                       {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
                     </span>
@@ -173,6 +181,9 @@ interface WeeklyPostRow extends WeeklyPost {
     .upload-hint { color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.8rem; margin: 4px 0 0; }
     .inline-date, .inline-time { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; }
     .inline-title { font: inherit; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 320px; }
+    .inline-desc { font: inherit; font-size: 0.9rem; padding: 2px 4px; border: 1px solid #ccc; border-radius: 4px; width: 100%; max-width: 420px; }
+    .f-desc { flex: 1; min-width: 200px; }
+    .wp-desc { color: color-mix(in srgb, currentColor 78%, transparent); font-size: 0.9rem; white-space: pre-wrap; }
 
     /* Karten-Liste (responsiv statt fester Tabelle) */
     .wp-list { display: flex; flex-direction: column; gap: 8px; }
@@ -236,6 +247,7 @@ export class WeeklyListComponent implements OnInit {
   uploadDate = '';
   uploadTime = '19:00';
   uploadTitle = '';
+  uploadDescription = '';
   uploading = false;
 
   constructor(
@@ -351,13 +363,14 @@ export class WeeklyListComponent implements OnInit {
     if (!this.uploadFile || !this.uploadDate || !this.uploadTime) return;
     this.uploading = true;
     const scheduledAt = `${this.uploadDate}T${this.uploadTime}:00`;
-    this.weekly.create(this.uploadFile, scheduledAt, this.uploadTitle.trim() || undefined).subscribe({
+    this.weekly.create(this.uploadFile, scheduledAt, this.uploadTitle.trim() || undefined, this.uploadDescription.trim() || undefined).subscribe({
       next: () => {
         this.snackbar.info(this.translate.instant('weekly.created'), { action: 'common.ok', duration: 3000 });
         this.uploading = false;
         this.uploadFile = null;
         this.uploadFileName = '';
         this.uploadTitle = '';
+        this.uploadDescription = '';
         this.loadPosts();   // lädt neu + setzt nächsten Termin-Vorschlag
       },
       error: err => {
@@ -370,8 +383,8 @@ export class WeeklyListComponent implements OnInit {
   savePost(row: WeeklyPostRow): void {
     if (!row.editDate || !row.editTime) return;
     const scheduledAt = `${row.editDate}T${row.editTime}:00`;
-    this.weekly.update(row.id, { title: row.title, scheduledAt }).subscribe({
-      next: p => { row.scheduledAt = p.scheduledAt; },
+    this.weekly.update(row.id, { title: row.title, description: row.description ?? '', scheduledAt }).subscribe({
+      next: p => { row.scheduledAt = p.scheduledAt; row.description = p.description ?? null; },
       error: err => {
         this.snackbar.info(err.error?.message || this.translate.instant('weekly.saveFailed'), { action: 'common.ok', duration: 3000 });
         this.loadPosts();

@@ -1099,7 +1099,8 @@
     "fields": {
       "date": "Datum",
       "time": "Vrijeme",
-      "titleOptional": "Naslov (neobavezno)"
+      "titleOptional": "Naslov (neobavezno)",
+      "descriptionOptional": "Opis (neobavezno)"
     },
     "columns": {
       "scheduled": "Termin",
@@ -1117,6 +1118,7 @@
       "title": "Učitaj novu tjednu objavu",
       "choosePgn": "Odaberi PGN",
       "titlePlaceholder": "iz naziva datoteke",
+      "descriptionPlaceholder": "kratka napomena, prikazuje se i objavljuje na Discordu",
       "create": "Stvori",
       "hint": "Zadano: zadnji termin + 7 dana, isto vrijeme (inače 19:00).",
       "invalidFile": "Odaberi .pgn datoteku ne veću od 10 MB."

@@ -1101,7 +1101,8 @@
     "fields": {
       "date": "Date",
       "time": "Time",
-      "titleOptional": "Title (optional)"
+      "titleOptional": "Title (optional)",
+      "descriptionOptional": "Description (optional)"
     },
     "columns": {
       "scheduled": "Date",
@@ -1119,6 +1120,7 @@
       "title": "Upload new weekly post",
       "choosePgn": "Choose PGN",
       "titlePlaceholder": "from file name",
+      "descriptionPlaceholder": "short note, shown & posted to Discord",
       "create": "Create",
       "hint": "Default: last date + 7 days, same time (otherwise 19:00).",
       "invalidFile": "Please choose a .pgn file no larger than 10 MB."

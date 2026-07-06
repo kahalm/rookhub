@@ -15,6 +15,10 @@ public class WeeklyPost
     [Required, MaxLength(300)]
     public string Title { get; set; } = string.Empty;
 
+    /// <summary>Optionale kurze Beschreibung (im Frontend angezeigt + vom schach-bot in Discord gepostet).</summary>
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
     [Required, MaxLength(255)]
     public string FileName { get; set; } = string.Empty;
 
