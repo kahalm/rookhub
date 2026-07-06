@@ -54,14 +54,25 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
 
+    // WICHTIG: NICHT mit viewOnly:true initialisieren — Chessground bindet die
+    // Maus-/Touch-Listener (inkl. Rechtsklick-Zeichnen) nur beim Init und
+    // überspringt sie bei viewOnly=true (bindBoard: `if (s.viewOnly) return;`).
+    // Damit man auf diesem reinen Anzeige-Brett trotzdem Pfeile/Kreise per
+    // Rechtsklick ziehen kann, initialisieren wir interaktiv, schalten aber
+    // jegliche Figuren-Interaktion (Ziehen/Auswählen/Zug) aus.
     this.ground = Chessground(el, {
       fen: this.fen,
-      viewOnly: true,
+      viewOnly: false,
       orientation: this.flipped ? 'black' : 'white',
       lastMove: this.lastMove as Key[] | undefined,
       animation: { enabled: true, duration: 200 },
       highlight: { lastMove: true, check: true },
       coordinates: true,
+      movable: { free: false, color: undefined },
+      draggable: { enabled: false },
+      selectable: { enabled: false },
+      // Pfeile/Kreise per Rechtsklick-Ziehen (wie im Analyse-/Puzzle-Brett).
+      drawable: { enabled: true, visible: true },
     });
 
     this.resizeObserver = new ResizeObserver(() => {
