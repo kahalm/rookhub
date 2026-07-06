@@ -1,4 +1,4 @@
-import { extractSanTokens, resolveVariation, buildCommentSegments } from './comment-variation.util';
+import { extractSanTokens, resolveVariation, buildCommentSegments, splitBranches } from './comment-variation.util';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -46,5 +46,38 @@ describe('comment-variation.util', () => {
     const segs2 = buildCommentSegments('Nicht Kd4 spielbar.', START, ['e2e4', 'e7e5']);
     expect(segs2.every(s => !s.move)).toBeTrue();
     expect(segs2.map(s => s.text).join('')).toBe('Nicht Kd4 spielbar.');
+  });
+
+  it('splitBranches: teilt an Zugnummer-Rücksprüngen (das „2. 39" ist ein neuer Zweig)', () => {
+    // Zweig A endet bei Zug 43; „40.b5" springt zurück → neuer Zweig B.
+    expect(splitBranches('39...d4 40.Kf4 43.h4 a4 . White wins after 40.b5 a3'))
+      .toEqual([['d4', 'Kf4', 'h4', 'a4'], ['b5', 'a3']]);
+    // Ein einzelner durchgehender Zweig bleibt einer.
+    expect(splitBranches('2.Nf3 Nc6 3.Bb5')).toEqual([['Nf3', 'Nc6', 'Bb5']]);
+  });
+
+  it('buildCommentSegments: ein zweiter, unabhängiger Zweig wird ebenfalls klickbar', () => {
+    // Flach würde „2.Bc4" als Fortsetzung nach 3.Nxe5 illegal (Schwarz am Zug) und ginge als Text verloren.
+    const segs = buildCommentSegments('2.Nf3 Nc6 3.Nxe5 sonst 2.Bc4.', START, ['e2e4', 'e7e5']);
+    const moves = segs.filter(s => s.move).map(s => s.move);
+    expect(moves).toEqual(['2.Nf3', 'Nc6', '3.Nxe5', '2.Bc4']);
+    // Der Zweig-B-Zug hat eine echte Vorschau-Stellung.
+    const bc4 = segs.find(s => s.move === '2.Bc4')!;
+    expect(bc4.fen).toBeTruthy();
+    expect(bc4.from).toBe('f1');
+    expect(bc4.to).toBe('c4');
+  });
+
+  it('deutsche Notation (D/T/L/S) wird erkannt und normalisiert', () => {
+    // Sf3 = Nf3, Sc6 = Nc6.
+    const segs = buildCommentSegments('Besser 2.Sf3 Sc6.', START, ['e2e4', 'e7e5']);
+    const moves = segs.filter(s => s.move);
+    expect(moves.map(s => s.move)).toEqual(['2.Sf3', 'Sc6']);   // Chip zeigt den Original-Wortlaut
+    expect(moves[0].from).toBe('g1');
+    expect(moves[0].to).toBe('f3');
+    // Deutsche Umwandlung a8=D → a8=Q.
+    const promo = resolveVariation('8/P7/8/8/8/8/8/k6K w - - 0 1', [], ['a8=D']);
+    expect(promo.map(s => s.san)).toEqual(['a8=D']);
+    expect(promo[0].fen.split(' ')[0]).toContain('Q');   // Dame steht auf dem Brett
   });
 });

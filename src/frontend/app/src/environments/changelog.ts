@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.265.0';
+export const APP_VERSION = '0.266.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.266.0", date: "2026-07-06", changes: [
+    { en: "Clickable comment moves now handle multiple independent branches and German notation. A single course comment can describe several separate lines in prose (the author types them into the explanation — Chessable does not structure them per move). Previously all move tokens were flattened into one sequence, so once the text jumped to a second branch (a move number that resets, e.g. after „…43.h4 a4\" comes „40.b5 a3…\") the sequence became illegal and the rest was shown as dead text. Now the comment is split into branches at move-number resets and each branch is resolved independently against the puzzle line, so the second (and further) branches become clickable too. Additionally, German figurine letters (D/T/L/S → Q/R/B/N, incl. promotions =D etc.) are recognised for translated courses; the chip still shows the original wording. +3 util tests.", de: "Klickbare Kommentar-Züge behandeln jetzt mehrere unabhängige Zweige und deutsche Notation. Ein Kurs-Kommentar kann in Prosa mehrere getrennte Linien beschreiben (der Autor tippt sie in den Erklärtext — Chessable strukturiert sie nicht pro Zug). Bisher wurden alle Zug-Token zu EINER Folge verflacht; sobald der Text auf einen zweiten Zweig sprang (Zugnummer springt zurück, z. B. nach „…43.h4 a4\" kommt „40.b5 a3…\"), wurde die Folge illegal und der Rest als toter Text angezeigt. Jetzt wird der Kommentar an Zugnummer-Rücksprüngen in Zweige zerlegt und jeder Zweig eigenständig gegen die Puzzle-Linie aufgelöst — der zweite (und weitere) Zweig wird also ebenfalls klickbar. Zusätzlich werden deutsche Figurenbuchstaben (D/T/L/S → Q/R/B/N, inkl. Umwandlungen =D usw.) für übersetzte Kurse erkannt; der Chip zeigt weiter den Original-Wortlaut. +3 Util-Tests." },
+  ]},
   { version: "0.265.0", date: "2026-07-06", changes: [
     { en: "You can now draw arrows and circles with the right mouse button on every board, including the pure replay boards (the game/PGN-viewer dialog, the repertoire tree preview and shared games). The puzzle and analysis boards already supported this; the shared view-only board did not, because Chessground only binds its mouse/touch listeners (including right-click drawing) at init and skips them when the board is created with viewOnly:true. It is now initialised interactively so those listeners bind, while all piece interaction (dragging/selecting/moving) stays disabled — so it remains a pure viewer that you can annotate. +1 test.", de: "Auf jedem Brett lassen sich jetzt Pfeile und Kreise mit der rechten Maustaste zeichnen — auch auf den reinen Anzeige-Brettern (Partie-/PGN-Viewer-Dialog, Repertoire-Baum-Vorschau und geteilte Partien). Puzzle- und Analysebrett konnten das schon; das gemeinsame Anzeige-Brett nicht, weil Chessground seine Maus-/Touch-Listener (inkl. Rechtsklick-Zeichnen) nur beim Init bindet und sie überspringt, wenn das Brett mit viewOnly:true erstellt wird. Es wird jetzt interaktiv initialisiert, damit diese Listener binden, während jegliche Figuren-Interaktion (Ziehen/Auswählen/Ziehen) ausgeschaltet bleibt — es bleibt also ein reiner Betrachter, den man beschriften kann. +1 Test." },
   ]},
