@@ -1418,6 +1418,10 @@
     "info": {
       "title": "Erklärlinie",
       "subtitle": "Nur zur Erklärung — durchklicken, nichts zu lösen."
+    },
+    "variation": {
+      "previewing": "Zeigt eine Variante aus dem Kommentar",
+      "back": "Zurück"
     }
   },
   "admin": {

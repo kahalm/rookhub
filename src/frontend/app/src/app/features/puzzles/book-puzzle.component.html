@@ -4,22 +4,22 @@
         <!-- Brett-Spalte -->
         <div class="board-section" [class.viz-hidden]="vizPiecesHidden && !vizShowPressed">
           <app-puzzle-board
-            [fen]="boardFen"
+            [fen]="variationPreview ? variationPreview.fen : boardFen"
             [actualFen]="actualFen"
             [orientation]="orientation"
             [turnColor]="turnColor"
             [dests]="dests"
-            [lastMove]="lastMove"
-            [viewOnly]="reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
+            [lastMove]="variationPreview ? variationPreview.lastMove : lastMove"
+            [viewOnly]="!!variationPreview || reviewMode || (state !== 'AWAITING_USER_MOVE' && state !== 'PLAYING' && state !== 'THINKING')"
             [premovable]="state === 'THINKING'"
-            [check]="isCheck"
+            [check]="variationPreview ? false : isCheck"
             [boardTheme]="boardTheme"
             [pieceSet]="pieceSet"
             [crazyPieceMode]="crazyPieceMode"
-            [visualization]="(!reviewMode && state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
+            [visualization]="(!variationPreview && !reviewMode && state !== 'SOLVED' && state !== 'FAILED') ? visualizationMode : 0"
             [vizOpponentArrow]="vizOpponentLastMove"
             [vizOpponentArrowBrush]="themeMode === 'crazy' ? 'green' : 'red'"
-            [reviewShapes]="reviewMode ? reviewShapes : []"
+            [reviewShapes]="(!variationPreview && reviewMode) ? reviewShapes : []"
             (moveMade)="onMoveMade($event)"
           />
           @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
@@ -105,7 +105,17 @@
                   <div class="ctx-comment">
                     <mat-icon>chat_bubble_outline</mat-icon>
                     <div class="ctx-comment-body">
-                      @for (co of commentLines; track $index) { <p>{{ co }}</p> }
+                      @for (block of commentBlocks; track $index) {
+                        <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                      }
+                      @if (variationPreview) {
+                        <div class="cmt-variation-bar">
+                          <span>{{ 'book.variation.previewing' | translate }}</span>
+                          <button mat-stroked-button type="button" (click)="exitVariationPreview()">
+                            <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                          </button>
+                        </div>
+                      }
                     </div>
                   </div>
                 }

@@ -1418,6 +1418,10 @@
     "info": {
       "title": "Explanatory line",
       "subtitle": "For reference only — click through, nothing to solve."
+    },
+    "variation": {
+      "previewing": "Showing a line from the comment",
+      "back": "Back"
     }
   },
   "admin": {

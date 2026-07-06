@@ -1416,6 +1416,10 @@
     "info": {
       "title": "Linija s objašnjenjem",
       "subtitle": "Samo za pregled — kliktaj kroz poteze, nema zadatka."
+    },
+    "variation": {
+      "previewing": "Prikaz linije iz komentara",
+      "back": "Natrag"
     }
   },
   "admin": {

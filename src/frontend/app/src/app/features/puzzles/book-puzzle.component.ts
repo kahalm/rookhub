@@ -14,6 +14,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { isGameCitationComment } from './game-citation.util';
+import { buildCommentSegments, CommentSegment } from './comment-variation.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -745,6 +746,35 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return (this.onSolutionPath && this.puzzle.comment) ? [this.puzzle.comment] : [];
   }
 
+  // ---- Klickbare Züge in Kommentaren (Variante auf dem Brett vorspielen) ----
+  /** Brett-Vorschau einer angeklickten Kommentar-Variante (überlagert boardFen/lastMove); null = aus. */
+  variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
+  private cmtCacheKey = '';
+  private cmtCache: CommentSegment[][] = [];
+
+  /** {@link commentLines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
+   *  Kommentar-Inhalt + Puzzle, da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom Ply). */
+  get commentBlocks(): CommentSegment[][] {
+    const lines = this.commentLines;
+    const key = (this.puzzle?.id ?? 0) + '|' + lines.join('');
+    if (key !== this.cmtCacheKey) {
+      const fen = this.puzzle?.fen ?? '';
+      const ucis = (this.puzzle?.moves ?? '').split(' ').filter(m => m);
+      this.cmtCache = fen ? lines.map(l => buildCommentSegments(l, fen, ucis)) : lines.map(l => [{ text: l }]);
+      this.cmtCacheKey = key;
+    }
+    return this.cmtCache;
+  }
+
+  /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
+  previewVariationMove(seg: CommentSegment): void {
+    if (!seg.fen || !seg.from || !seg.to) return;
+    this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
+  }
+
+  /** Vorschau beenden → zurück zur Puzzle-/Review-Stellung. */
+  exitVariationPreview(): void { this.variationPreview = null; }
+
   /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
   private loadCourseNext(after?: number, exclude?: number): void {
     if (this.courseBookId == null) return;
@@ -1110,6 +1140,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private setupPuzzle(puzzle: BookPuzzleDto): void {
     this.clearSolutionPlay();
+    this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
     this.bookAttemptRecorded = false;
     this.courseAttemptRecorded = false;
     this.hintLevel = 0;
@@ -1207,6 +1238,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private solutionReviewGoTo(index: number): void {
     if (!this.puzzle) return;
+    this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
     const allMoves = this.puzzle.moves.split(' ').filter(m => m);
     const start = Math.max(0, this.startPly);
     const solutionMoves = allMoves.slice(start);
@@ -1301,6 +1333,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
+    this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
     const moves = this.puzzle.moves.split(' ').filter(m => m);
     index = Math.max(0, Math.min(index, moves.length));
     this.reviewIndex = index;
