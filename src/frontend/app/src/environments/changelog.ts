@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.270.0';
+export const APP_VERSION = '0.271.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.271.0", date: "2026-07-06", changes: [
+    { en: "The “Weekly post from a book chapter” dialog now has searchable book and chapter pickers. When you open the book dropdown a search box appears at the top and auto-focuses — start typing to filter the (often long) list of books by name; the chapter dropdown gets the same search box once a book has more than a few chapters. Typing filters live, “No matches” shows when nothing fits, and the filter resets each time the dropdown reopens.", de: "Der Dialog „Wochenpost aus Buch-Kapitel“ hat jetzt suchbare Buch- und Kapitel-Auswahlfelder. Beim Öffnen der Buch-Auswahl erscheint oben ein Suchfeld und wird automatisch fokussiert — Tippen filtert die (oft lange) Bücherliste nach Name; die Kapitel-Auswahl bekommt dasselbe Suchfeld, sobald ein Buch mehr als ein paar Kapitel hat. Getippt wird live gefiltert, „Keine Treffer“ erscheint wenn nichts passt, und der Filter wird bei jedem erneuten Öffnen zurückgesetzt." },
+  ]},
   { version: "0.270.0", date: "2026-07-06", changes: [
     { en: "Weekly posts can now be created from a book chapter, not only by uploading a PGN. In the weekly admin area, next to the PGN upload, there is a “From book chapter” button: pick a book (course), then one of its chapters, set the schedule/title/description and create. The weekly post then mirrors that chapter’s puzzles live from the book (including hints, board arrows and tolerated alternative moves) — no PGN round-trip. Progress/leaderboard stay index-based exactly as before. New WeeklyPost.SourceBookId + SourceChapter (migration AddWeeklyPostBookChapter) and endpoint POST /api/admin/weekly-posts/from-chapter; the play/breakdown paths build the sequence from the chapter’s quiz puzzles (info/explanation lines excluded). +4 backend tests, +1 frontend test.", de: "Wochenposts lassen sich jetzt aus einem Buch-Kapitel anlegen, nicht mehr nur per PGN-Upload. Im Wochenpost-Adminbereich gibt es neben dem PGN-Upload einen Knopf „Aus Buch-Kapitel“: Buch (Kurs) wählen, dann eines seiner Kapitel, Termin/Titel/Beschreibung setzen und anlegen. Der Wochenpost spiegelt dann live die Puzzles dieses Kapitels aus dem Buch (inkl. Tipps, Brett-Pfeile und geduldeter Alternativzüge) — kein PGN-Umweg. Fortschritt/Bestenliste bleiben genau wie bisher index-basiert. Neu: WeeklyPost.SourceBookId + SourceChapter (Migration AddWeeklyPostBookChapter) und Endpoint POST /api/admin/weekly-posts/from-chapter; die Durchspiel-/Aufschlüsselungs-Pfade bauen die Sequenz aus den Quiz-Puzzles des Kapitels (Info-/Erklärlinien ausgenommen). +4 Backend-Tests, +1 Frontend-Test." },
   ]},

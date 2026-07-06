@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -35,9 +35,19 @@ export interface WeeklyFromChapterDialogData {
       <div class="fc-form">
         <mat-form-field appearance="outline">
           <mat-label>{{ 'weekly.fromChapter.book' | translate }}</mat-label>
-          <mat-select [(ngModel)]="bookId" (selectionChange)="onBookChange()" [disabled]="loadingBooks">
-            @for (b of books; track b.bookId) {
+          <mat-select [(ngModel)]="bookId" (selectionChange)="onBookChange()" [disabled]="loadingBooks"
+                      (openedChange)="onBookPanelToggle($event)">
+            <div class="fc-search" (click)="$event.stopPropagation()">
+              <mat-icon>search</mat-icon>
+              <input #bookSearch matInput [(ngModel)]="bookFilter" [ngModelOptions]="{ standalone: true }"
+                     [placeholder]="'weekly.fromChapter.searchBook' | translate"
+                     (keydown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+            </div>
+            @for (b of filteredBooks; track b.bookId) {
               <mat-option [value]="b.bookId">{{ b.displayName }} ({{ b.puzzleCount }})</mat-option>
+            }
+            @if (filteredBooks.length === 0) {
+              <div class="fc-nomatch">{{ 'weekly.fromChapter.noMatch' | translate }}</div>
             }
           </mat-select>
           @if (loadingBooks) { <mat-hint>{{ 'common.loading' | translate }}</mat-hint> }
@@ -45,9 +55,21 @@ export interface WeeklyFromChapterDialogData {
 
         <mat-form-field appearance="outline">
           <mat-label>{{ 'weekly.fromChapter.chapter' | translate }}</mat-label>
-          <mat-select [(ngModel)]="chapterIndex" [disabled]="!bookId || loadingChapters">
-            @for (c of chapters; track c.index) {
+          <mat-select [(ngModel)]="chapterIndex" [disabled]="!bookId || loadingChapters"
+                      (openedChange)="onChapterPanelToggle($event)">
+            @if (chapters.length > 6) {
+              <div class="fc-search" (click)="$event.stopPropagation()">
+                <mat-icon>search</mat-icon>
+                <input #chapterSearch matInput [(ngModel)]="chapterFilter" [ngModelOptions]="{ standalone: true }"
+                       [placeholder]="'weekly.fromChapter.searchChapter' | translate"
+                       (keydown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+              </div>
+            }
+            @for (c of filteredChapters; track c.index) {
               <mat-option [value]="c.index">{{ c.name || ('weekly.fromChapter.noChapter' | translate) }} ({{ c.puzzleCount }})</mat-option>
+            }
+            @if (chapters.length > 0 && filteredChapters.length === 0) {
+              <div class="fc-nomatch">{{ 'weekly.fromChapter.noMatch' | translate }}</div>
             }
           </mat-select>
           @if (loadingChapters) { <mat-hint>{{ 'common.loading' | translate }}</mat-hint> }
@@ -89,14 +111,28 @@ export interface WeeklyFromChapterDialogData {
     .fc-form { display: flex; flex-direction: column; gap: 8px; min-width: 340px; }
     .fc-row { display: flex; gap: 12px; }
     .fc-date, .fc-time { flex: 1; }
+    .fc-search {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 12px 6px; position: sticky; top: 0; z-index: 1;
+      background: var(--mat-select-panel-background-color, #fff);
+      border-bottom: 1px solid rgba(0,0,0,.12);
+    }
+    .fc-search mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: .6; }
+    .fc-search input { flex: 1; border: none; outline: none; background: transparent;
+      font: inherit; color: inherit; padding: 4px 0; }
+    .fc-nomatch { padding: 10px 16px; opacity: .6; font-size: .9rem; }
     @media (max-width: 480px) { .fc-form { min-width: 0; } }
   `],
 })
 export class WeeklyFromChapterDialogComponent implements OnInit {
+  @ViewChild('bookSearch') bookSearch?: ElementRef<HTMLInputElement>;
+  @ViewChild('chapterSearch') chapterSearch?: ElementRef<HTMLInputElement>;
   books: CourseListItem[] = [];
   chapters: CourseChapter[] = [];
   bookId: number | null = null;
   chapterIndex: number | null = null;
+  bookFilter = '';
+  chapterFilter = '';
   date = '';
   time = '19:00';
   title = '';
@@ -125,9 +161,33 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
     });
   }
 
+  get filteredBooks(): CourseListItem[] {
+    const q = this.bookFilter.trim().toLowerCase();
+    if (!q) return this.books;
+    return this.books.filter(b => b.displayName.toLowerCase().includes(q));
+  }
+
+  get filteredChapters(): CourseChapter[] {
+    const q = this.chapterFilter.trim().toLowerCase();
+    if (!q) return this.chapters;
+    return this.chapters.filter(c => (c.name ?? '').toLowerCase().includes(q));
+  }
+
+  /** Beim Öffnen der Buch-Auswahl: Filter zurücksetzen + Suchfeld fokussieren. */
+  onBookPanelToggle(opened: boolean): void {
+    if (!opened) { this.bookFilter = ''; return; }
+    setTimeout(() => this.bookSearch?.nativeElement.focus(), 0);
+  }
+
+  onChapterPanelToggle(opened: boolean): void {
+    if (!opened) { this.chapterFilter = ''; return; }
+    setTimeout(() => this.chapterSearch?.nativeElement.focus(), 0);
+  }
+
   onBookChange(): void {
     this.chapterIndex = null;
     this.chapters = [];
+    this.chapterFilter = '';
     if (!this.bookId) return;
     this.loadingChapters = true;
     this.courses.getChapters(this.bookId).subscribe({
