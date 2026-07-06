@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.261.0';
+export const APP_VERSION = '0.262.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,7 +14,8 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: "0.261.0", date: "2026-07-06", changes: [
+  { version: "0.262.0", date: "2026-07-06", changes: [
+    { en: "The hint button no longer disappears when you deviate from the solution path in any puzzle mode (standard/endless/course/daily). Once off the intended line the button stays and reveals three staged hints that you took a wrong turn: level 1 says you left the solution, level 2 tells you to take a move back (an earlier turn, not the current position), and level 3 names which of your own moves was the wrong turn (e.g. your 2nd move). Going back on the path (mouse-slip/take-back) resets it. Off-path hints do not count toward the hints-used stat (the line is already failed). Shared across all three solvers via BasePuzzleSolver.", de: "Der Tipp-Knopf verschwindet nicht mehr, wenn du in einem Puzzle-Modus (Standard/Endlos/Kurs/Tagespuzzle) vom Lösungsweg abbiegst. Abseits der vorgesehenen Linie bleibt der Knopf und deckt in drei Stufen auf, dass du falsch abgebogen bist: Stufe 1 sagt, dass du die Lösung verlassen hast, Stufe 2 rät, einen Zug zurückzunehmen (eine frühere Abzweigung, nicht die aktuelle Stellung), und Stufe 3 nennt, welcher deiner eigenen Züge die falsche Abzweigung war (z. B. dein 2. Zug). Zurück auf dem Pfad (Mausrutscher/Zurücknehmen) setzt es zurück. Off-Path-Tipps zählen nicht fürs Tipp-Statistikfeld (die Linie ist ohnehin vergeigt). Über BasePuzzleSolver in allen drei Solvern geteilt." },
     { en: "Course/book puzzles: when the comment after the last move is just a game reference (e.g. “Bayer - Kuenitz, Wiesbaden, 2015.” or “Black resigned in Blalock-Francisco, Evora 2008.”), the solver now auto-advances to the next puzzle as if there were no comment, instead of pausing for you to read it. Instructional comments (tactics explanations etc.) still pause as before. Detection is heuristic (a name pairing “Name - Name” with no sentence punctuation, ending in a 4-digit year); validated against “1001 Endgame Exercises” (40 pure citations matched, no teaching comment wrongly skipped).", de: "Kurs-/Buch-Puzzles: ist der Kommentar nach dem letzten Zug nur eine Partie-Angabe (z. B. „Bayer - Kuenitz, Wiesbaden, 2015.“ oder „Black resigned in Blalock-Francisco, Evora 2008.“), rückt der Solver jetzt automatisch zum nächsten Puzzle vor, als gäbe es keinen Kommentar — statt zum Lesen anzuhalten. Lehrreiche Kommentare (Taktik-Erklärungen usw.) halten weiterhin an. Erkennung heuristisch (Namenspaarung „Name - Name“ ohne Satzzeichen, endet auf eine 4-stellige Jahreszahl); validiert gegen „1001 Endgame Exercises“ (40 reine Zitate getroffen, kein lehrreicher Kommentar fälschlich übersprungen)." },
   ]},
   { version: "0.260.4", date: "2026-07-06", changes: [

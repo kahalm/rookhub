@@ -14,6 +14,10 @@ class TestSolver extends BasePuzzleSolver {
   protected override reviewGoTo(index: number): void { this.reviewIndex = index; }
   protected override refreshEvalIfShown(): void { this.evalRefreshCount++; }
   protected override onAlternativeMove(): void { this.altNoticeCount++; }
+  protected override get offPathHints(): string[] {
+    const n = this.offPathUserMoveNumber;
+    return ['off1', 'off2', n != null ? `wrong-${n}` : 'wrong-any'];
+  }
   setup(fen: string, moves: string): void { this.setupSolver(fen, moves, 0); }
   setAlts(map: Record<number, string[]>): void { this.altMovesByPly = map; }
   get moveIdx(): number { return (this as unknown as { moveIndex: number }).moveIndex; }
@@ -312,5 +316,56 @@ describe('BasePuzzleSolver geduldeter Alternativzug ([%alt])', () => {
     tick();
     expect(solver.altNoticeCount).toBe(0);
     expect(solver.state).toBe('PLAYING');    // off-path (Stockfish-Fehlerpfad)
+  }));
+});
+
+describe('BasePuzzleSolver Off-Path-Tipps („falsch abgebogen")', () => {
+  it('Tipp-Knopf bleibt off-path sichtbar und deckt gestuft die falsche Abzweigung auf', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // e4 auto; Loeserzug 1 = e7e5 (Schwarz)
+    tick(600);
+
+    // Auf dem Pfad hat der TestSolver keine normalen Tipps (availableHints leer) → kein Knopf.
+    expect(solver.onSolutionPath).toBeTrue();
+    expect(solver.hasHints).toBeFalse();
+
+    // Falscher (legaler) Zug → off-path.
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
+    tick();
+    expect(solver.onSolutionPath).toBeFalse();
+
+    // Knopf bleibt: off-path-Tipps sind verfuegbar, aber noch verdeckt (Stufe 0).
+    expect(solver.hasHints).toBeTrue();
+    expect(solver.totalHints).toBe(3);
+    expect(solver.hintLevel).toBe(0);
+    expect(solver.shownHints).toEqual([]);
+    expect(solver.offPathUserMoveNumber).toBe(1);   // 1. eigener Loeserzug war die Abzweigung
+
+    // Gestuft aufdecken: Stufe 3 nennt die Zug-Nummer.
+    solver.showNextHint();
+    expect(solver.shownHints).toEqual(['off1']);
+    solver.showNextHint();
+    solver.showNextHint();
+    expect(solver.shownHints).toEqual(['off1', 'off2', 'wrong-1']);
+    expect(solver.canShowMoreHints).toBeFalse();
+
+    // Off-Path-Tipps zaehlen NICHT fuers hintsUsed-Statistikfeld (maxHintLevel bleibt 0).
+    expect((solver as unknown as { maxHintLevel: number }).maxHintLevel).toBe(0);
+  }));
+
+  it('zurueck auf dem Pfad (Mausrutscher) setzt die Off-Path-Tipps zurueck', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
+    tick();
+    expect(solver.offPathUserMoveNumber).toBe(1);
+
+    solver.mouseslip();
+    expect(solver.onSolutionPath).toBeTrue();
+    expect(solver.offPathUserMoveNumber).toBeNull();
+    expect(solver.hasHints).toBeFalse();   // wieder auf dem Pfad, TestSolver hat keine On-Path-Tipps
   }));
 });

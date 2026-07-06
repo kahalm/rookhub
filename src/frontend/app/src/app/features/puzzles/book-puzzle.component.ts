@@ -132,7 +132,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Puzzles werden on-the-fly aus dem PGN geparst (puzzle.id = Index, KEINE echte BookPuzzle-Id) →
    *  nicht flaggbar. */
   get canFlagHints(): boolean {
-    return this.isLoggedIn && this.hasHints && this.hintLevel > 0 && !this.inWeekly;
+    // Off-Path zeigt der Tipp-Knopf Navigations-Hinweise, keine (LLM-)Puzzle-Tipps → nicht flaggbar.
+    return this.isLoggedIn && this.onSolutionPath && this.hasHints && this.hintLevel > 0 && !this.inWeekly;
   }
 
   /** Tipps in der aktiven UI-Sprache (Fallback en→de). Vorberechnete Tipps haben Vorrang; fehlen sie
@@ -400,6 +401,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
+  }
+  protected override get offPathHints(): string[] {
+    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+    const n = this.offPathUserMoveNumber;
+    return [t('puzzles.offPath.h1'), t('puzzles.offPath.h2'),
+      n != null ? t('puzzles.offPath.h3', { n }) : t('puzzles.offPath.h3any')];
   }
 
   toggleEval(): void {

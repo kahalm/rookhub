@@ -47,7 +47,7 @@
                         [attr.title]="'book.hints.show' | translate">
                   <mat-icon>lightbulb</mat-icon>
                   {{ (hintLevel === 0 ? 'book.hints.show' : 'book.hints.next') | translate }}
-                  ({{ hintLevel }}/{{ availableHints.length }})
+                  ({{ hintLevel }}/{{ totalHints }})
                 </button>
               }
               @if (canFlagHints) {

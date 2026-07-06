@@ -64,10 +64,10 @@
                         [attr.title]="'puzzles.hints.show' | translate">
                   <mat-icon>lightbulb</mat-icon>
                   {{ (hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
-                  ({{ hintLevel }}/{{ availableHints.length }})
+                  ({{ hintLevel }}/{{ totalHints }})
                 </button>
               }
-              @if (isLoggedIn && hasHints && hintLevel > 0) {
+              @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
                 <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                         [disabled]="flagSaving" (click)="toggleHintsFlag()"
                         [attr.title]="'puzzles.hints.flagTitle' | translate">

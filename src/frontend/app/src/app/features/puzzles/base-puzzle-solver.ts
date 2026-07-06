@@ -130,18 +130,30 @@ export abstract class BasePuzzleSolver {
   /** Anarchy-Modus (e.p. forciert): 3 (unterschiedlich formulierte) „En passant ist Pflicht"-Hinweise
    *  ersetzen die normalen Tipps. Komponenten überschreiben mit ihren übersetzten Strings. */
   protected get epForcedHints(): string[] { return []; }
-  /** Effektive Tipp-Liste: im e.p.-Zwang die Anarchy-Hinweise, sonst die normalen Tipps. */
+  /** Off-Path-Tipps (3 Stufen): sobald der User vom Lösungsweg abgebogen ist, bleibt der Tipp-Knopf
+   *  sichtbar und deckt gestuft auf, DASS falsch abgebogen wurde — Stufe 3 nennt die Zug-Nummer
+   *  ({@link offPathUserMoveNumber}). Komponenten überschreiben mit ihren übersetzten Strings. */
+  protected get offPathHints(): string[] { return []; }
+  /** 1-basierte Nummer des eigenen Löserzugs, bei dem der User ZUERST vom Lösungsweg abbog; null
+   *  solange auf dem Pfad. Speist Stufe 3 der Off-Path-Tipps. */
+  offPathUserMoveNumber: number | null = null;
+  /** Effektive Tipp-Liste: off-path die „falsch abgebogen"-Hinweise, im e.p.-Zwang die Anarchy-
+   *  Hinweise, sonst die normalen Tipps. */
   private get effectiveHints(): string[] {
+    if (!this.onSolutionPath && this.offPathHints.length) return this.offPathHints;
     return this.enPassantForced && this.epForcedHints.length ? this.epForcedHints : this.availableHints;
   }
   get hasHints(): boolean { return this.effectiveHints.length > 0; }
   get shownHints(): string[] { return this.effectiveHints.slice(0, this.hintLevel); }
   get canShowMoreHints(): boolean { return this.hintLevel < this.effectiveHints.length; }
+  /** Gesamtzahl der aktuell relevanten Tipp-Stufen (für die „x/N"-Anzeige im Knopf). */
+  get totalHints(): number { return this.effectiveHints.length; }
   /** Nächste Tipp-Stufe aufdecken. */
   showNextHint(): void {
     if (!this.canShowMoreHints) return;
     this.hintLevel++;
-    if (this.hintLevel > this.maxHintLevel) this.maxHintLevel = this.hintLevel;
+    // Nur ON-PATH-Tipps zählen fürs `hintsUsed`-Statistikfeld; off-path ist die Linie ohnehin vergeigt.
+    if (this.onSolutionPath && this.hintLevel > this.maxHintLevel) this.maxHintLevel = this.hintLevel;
   }
 
   /** Klassifikation des AKTUELL erwarteten Löserzugs (`solutionMoves[moveIndex]` aus der aktuellen
@@ -357,6 +369,7 @@ export abstract class BasePuzzleSolver {
         this.onSolutionPath = false;
         this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
         this.offPathUserPlies++;   // erster Abweich-Zug
+        this.markOffPathDeviation();   // Zug-Nr der Abzweigung merken + Off-Path-Tipps von vorn
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
       }
@@ -632,6 +645,18 @@ export abstract class BasePuzzleSolver {
     this.offPathUserPlies = 0;
     this.offPathWarned = false;
     this.offPathWarning = false;
+    this.offPathUserMoveNumber = null;
+    this.hintLevel = 0;   // zurück auf dem Pfad → Tipp-Stufe für den (wieder) erwarteten Zug verdeckt
+  }
+
+  /** Merkt EINMAL je Off-Path-Episode, der wievielte eigene Löserzug die falsche Abzweigung war
+   *  (1-basiert), und setzt die Tipp-Stufe zurück, damit die Off-Path-Tipps von Stufe 1 aufdecken. */
+  private markOffPathDeviation(): void {
+    if (this.offPathUserMoveNumber != null) return;   // nur die ERSTE Abzweigung zählt
+    const firstUserPly = this.startPly < 0 ? 0 : this.startPly + 1;
+    const n = Math.floor((this.moveIndex - firstUserPly) / 2) + 1;
+    this.offPathUserMoveNumber = n > 0 ? n : 1;
+    this.hintLevel = 0;
   }
 
   /** Prüft nach einem off-path-Zug (Eval steht in currentEval, Weiß-Sicht): ab dem

@@ -201,6 +201,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   protected override get epForcedHints(): string[] {
     return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
   }
+  protected override get offPathHints(): string[] {
+    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+    const n = this.offPathUserMoveNumber;
+    return [t('puzzles.offPath.h1'), t('puzzles.offPath.h2'),
+      n != null ? t('puzzles.offPath.h3', { n }) : t('puzzles.offPath.h3any')];
+  }
 
   protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';

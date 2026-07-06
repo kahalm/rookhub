@@ -904,6 +904,12 @@
       "offPathWarnHint": "Nakon toliko poteza izvan rješenja (protiv Stockfisha) upozori ako više ne dobivaš jasno (+2). 0 = nikad."
     },
     "offPathWarning": "Možda si ovdje krivo skrenuo — pozicija više nije jasno za tebe. Razmisli o resetu ili predaji.",
+    "offPath": {
+      "h1": "Skrenuo si s rješenja — jedan tvoj potez nije bio predviđeni.",
+      "h2": "Vrati jedan potez: nije trenutna pozicija, nego ranija grana bila pogrešna.",
+      "h3": "Tvoj {{n}}. potez bio je kriva grana — preispitaj ga.",
+      "h3any": "Jedan od tvojih prvih poteza bio je kriva grana — preispitaj ga."
+    },
     "anarchyHint1": "Holy hell! 🇫🇷 En passant je obavezan — ako je en passant na ploči, MORAŠ ga odigrati. Bez iznimke.",
     "anarchyHint2": "Google en passant. 📖 Tvoj pješak može uzeti en passant, a po svetom anarchy pravilu to je jedini legalan potez.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Zgrabi tog pješaka — sve ostalo je ovaj potez ilegalno. Actual zap.",

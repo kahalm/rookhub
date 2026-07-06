@@ -906,6 +906,12 @@
       "offPathWarnHint": "Nach so vielen Zügen abseits der Lösung (gegen Stockfish) warnen, wenn du nicht mehr klar gewinnst (+2). 0 = nie."
     },
     "offPathWarning": "Du bist hier vielleicht falsch abgebogen — die Stellung ist nicht mehr klar für dich. Vielleicht besser zurücksetzen oder aufgeben.",
+    "offPath": {
+      "h1": "Du bist vom Lösungsweg abgekommen — einer deiner Züge war nicht der vorgesehene.",
+      "h2": "Nimm einen Zug zurück: nicht die aktuelle Stellung, sondern eine frühere Abzweigung war falsch.",
+      "h3": "Dein {{n}}. Zug war die falsche Abzweigung — überdenke ihn.",
+      "h3any": "Einer deiner ersten Züge war die falsche Abzweigung — überdenke ihn."
+    },
     "anarchyHint1": "Holy hell! 🇫🇷 En passant ist Pflicht — liegt ein En-passant-Schlag auf dem Brett, MUSST du ihn spielen. Keine Ausnahmen.",
     "anarchyHint2": "Google en passant. 📖 Dein Bauer kann en passant schlagen, und nach der heiligen Anarchy-Regel ist das der einzige legale Zug.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Schnapp dir den Bauern — alles andere ist diesen Zug illegal. Actual zap.",
