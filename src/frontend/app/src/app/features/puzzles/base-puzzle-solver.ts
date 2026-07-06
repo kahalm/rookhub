@@ -75,6 +75,10 @@ export abstract class BasePuzzleSolver {
   protected offPathWarned = false;
   /** True, sobald gewarnt wurde (für eine optionale Dauer-Anzeige im Template). */
   offPathWarning = false;
+  /** Eval der Trainings-Startstellung aus SPIELER-Sicht (Bauern), lazily im Hintergrund berechnet
+   *  (nur wenn die Off-Path-Warnung aktiv ist). War sie ausgeglichen (≈0), lautet der Warntext
+   *  „nicht mehr ausgeglichen" statt „nicht mehr am Gewinnen". null = (noch) unbekannt. */
+  protected startEvalPawns: number | null = null;
 
   /** Anarchy per URL erzwungen (`?anarchy=max`): e.p.-Zwang gilt dann unabhängig von der Einstellung.
    *  Ohne URL-Zwang folgt der e.p.-Zwang im Crazy-Brett der Einstellung `prefs.enPassantForced`. */
@@ -288,6 +292,7 @@ export abstract class BasePuzzleSolver {
     this.wrongMoveCount = 0;
     this.alternativeSolve = false;
     this.resetOffPathTracking();
+    this.startEvalPawns = null;
     this.moveLog = [];
     this.evalShown = false;
     this.vizShowCount = 0;
@@ -340,6 +345,24 @@ export abstract class BasePuzzleSolver {
     this.vizStartNum = parseInt(f[5], 10) || 1;
     this.vizMoves = [];
     if (this.visualizationMode >= 2) this.startVizCountdown();
+    this.captureStartEval();
+  }
+
+  /** Einmalige Hintergrund-Eval der Trainings-Startstellung (nur wenn die Off-Path-Warnung aktiv
+   *  ist), damit {@link maybeWarnOffPath} später weiß, ob die Ausgangsstellung ausgeglichen/remis
+   *  war. Läuft asynchron und ist bis zur ersten Abzweigung (Default 3 Züge) längst fertig; die
+   *  Stockfish-Suchen sind serialisiert, kollidieren also nicht mit den Antwort-Evals. */
+  protected captureStartEval(): void {
+    if (this.offPathWarnThreshold <= 0) return;
+    const epoch = this.solverEpoch;
+    const fen = this.chess.fen();
+    const orient = this.orientation;
+    this.stockfish.getBestMove(fen, this.depth)
+      .then(r => {
+        if (this.aborted || epoch !== this.solverEpoch) return;
+        this.startEvalPawns = this.whiteEvalToPlayerPawns(r.eval, orient);
+      })
+      .catch(() => { /* Eval optional — Warntext fällt sonst auf den Standard zurück */ });
   }
 
   // ===== Zug-Handling =====
@@ -665,16 +688,32 @@ export abstract class BasePuzzleSolver {
     const threshold = this.offPathWarnThreshold;
     if (threshold <= 0 || this.offPathWarned || this.offPathUserPlies < threshold) return;
     const pawns = this.playerEvalPawns();
-    if (pawns == null || pawns >= 2) return;   // noch klar für den Spieler → keine Warnung
+    if (pawns == null) return;
+    // War die Startstellung ausgeglichen (Halten/Remis-Aufgabe) → erst warnen, wenn der Spieler
+    // KLAR schlechter steht (< −1); war sie gewonnen → warnen, sobald es nicht mehr klar
+    // gewonnen ist (< +2). Sonst würde eine noch ausgeglichene Stellung fälschlich warnen.
+    const limit = this.startWasBalanced() ? -1 : 2;
+    if (pawns >= limit) return;
     this.offPathWarned = true;
     this.offPathWarning = true;
     this.onOffPathWarning();
   }
 
+  /** War die Trainings-Startstellung ausgeglichen (Eval ≈ 0, Spieler-Sicht |x| < 1)? Dann lautet der
+   *  Off-Path-Warntext „nicht mehr ausgeglichen" statt „nicht mehr am Gewinnen". */
+  protected startWasBalanced(): boolean {
+    return this.startEvalPawns != null && Math.abs(this.startEvalPawns) < 1;
+  }
+
   /** currentEval (String, Weiß-Sicht, z. B. "+1.5"/"#3"/"#-2") → Bauerneinheiten aus Spieler-Sicht;
    *  Matt = ±100. null, wenn (noch) keine Eval vorliegt. */
   protected playerEvalPawns(): number | null {
-    const s = this.currentEval;
+    return this.whiteEvalToPlayerPawns(this.currentEval, this.orientation);
+  }
+
+  /** Eval-String aus Weiß-Sicht ("+1.5"/"#3"/"#-2") → Bauerneinheiten aus Sicht von `orientation`
+   *  (Matt = ±100). null, wenn leer/unparsbar. */
+  protected whiteEvalToPlayerPawns(s: string, orientation: Color): number | null {
     if (!s) return null;
     let white: number;
     if (s.includes('#')) {
@@ -685,7 +724,25 @@ export abstract class BasePuzzleSolver {
       white = parseFloat(s);
       if (isNaN(white)) return null;
     }
-    return this.orientation === 'white' ? white : -white;
+    return orientation === 'white' ? white : -white;
+  }
+
+  /** Aktuelle Eval aus SPIELER-Sicht als kurzer Anzeige-String ("+1.5"/"-0.8"/"#3"/"#-2"),
+   *  oder null wenn keine vorliegt. Für die Klammer im Off-Path-Hinweis. */
+  protected playerEvalDisplay(): string | null {
+    const s = this.currentEval;
+    if (!s) return null;
+    if (s.includes('#')) {
+      const m = parseInt(s.replace(/[#+]/g, ''), 10);
+      if (isNaN(m)) return null;
+      const signed = this.orientation === 'white' ? m : -m;
+      return signed >= 0 ? `#${signed}` : `#-${Math.abs(signed)}`;
+    }
+    const white = parseFloat(s);
+    if (isNaN(white)) return null;
+    const p = this.orientation === 'white' ? white : -white;
+    const v = Math.abs(p).toFixed(1);
+    return p > 0 ? `+${v}` : p < 0 ? `-${v}` : '0.0';
   }
 
   protected endVisualizationHide(): void {

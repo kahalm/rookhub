@@ -117,6 +117,9 @@ class WarnSolver extends TestSolver {
   setEval(e: string): void { (this as any).currentEval = e; }
   setOffPath(plies: number): void { (this as any).offPathUserPlies = plies; (this as any).onSolutionPath = false; }
   callWarn(): void { (this as any).maybeWarnOffPath(); }
+  setStartEval(p: number | null): void { (this as any).startEvalPawns = p; }
+  balanced(): boolean { return (this as any).startWasBalanced(); }
+  evalDisplay(): string | null { return (this as any).playerEvalDisplay(); }
 }
 
 describe('BasePuzzleSolver Off-Path-Warnung', () => {
@@ -166,8 +169,40 @@ describe('BasePuzzleSolver Off-Path-Warnung', () => {
     expect(mate.warned).toBe(1);
   });
 
+  it('ausgeglichene Startstellung: warnt erst, wenn der Spieler KLAR schlechter (< -1) steht', () => {
+    const s = new WarnSolver(noStock);
+    s.warnThreshold = 3; s.orientation = 'white'; s.setStartEval(0.2); s.setOffPath(3);
+    s.setEval('-0.5');          // nur leicht schlechter → bei remis-Start noch OK, keine Warnung
+    s.callWarn();
+    expect(s.warned).toBe(0);
+    s.setEval('-1.5');          // jetzt klar schlechter → warnen
+    s.callWarn();
+    expect(s.warned).toBe(1);
+  });
+
+  it('startWasBalanced nur bei |Start-Eval| < 1 (sonst „Gewinn-Fall“)', () => {
+    const s = new WarnSolver(noStock);
+    s.setStartEval(0.4); expect(s.balanced()).toBe(true);
+    s.setStartEval(-0.9); expect(s.balanced()).toBe(true);
+    s.setStartEval(1.5); expect(s.balanced()).toBe(false);
+    s.setStartEval(null); expect(s.balanced()).toBe(false);
+  });
+
+  it('playerEvalDisplay: aus Spieler-Sicht mit Vorzeichen + Matt-Sonderfälle', () => {
+    const w = new WarnSolver(noStock); w.orientation = 'white';
+    w.setEval('+1.5'); expect(w.evalDisplay()).toBe('+1.5');
+    w.setEval('-0.8'); expect(w.evalDisplay()).toBe('-0.8');
+    w.setEval('#3'); expect(w.evalDisplay()).toBe('#3');
+    w.setEval(''); expect(w.evalDisplay()).toBeNull();
+    const b = new WarnSolver(noStock); b.orientation = 'black';
+    b.setEval('+2.0'); expect(b.evalDisplay()).toBe('-2.0');   // Weiß +2 → Schwarz -2.0
+    b.setEval('#-2'); expect(b.evalDisplay()).toBe('#2');      // Weiß #-2 → Schwarz mattt in 2
+  });
+
   it('zählt off-path-Züge im echten Zugfluss und warnt (Integration)', fakeAsync(() => {
-    const stock = { getBestMove: () => Promise.resolve({ move: 'g1f3', eval: '+0.1' }) } as unknown as StockfishService;
+    // Weiß-Eval +2.0 → aus Schwarz-Sicht -2.0 (klar schlechter) → warnt unabhängig davon,
+    // ob die (per captureStartEval ermittelte) Startstellung als ausgeglichen gilt.
+    const stock = { getBestMove: () => Promise.resolve({ move: 'g1f3', eval: '+2.0' }) } as unknown as StockfishService;
     const s = new WarnSolver(stock);
     s.warnThreshold = 1; s.orientation = 'black';
     s.setup(START, 'e2e4 e7e5 g1f3 b8c6');   // e4 Setup; Schwarz am Zug

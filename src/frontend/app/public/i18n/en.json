@@ -914,6 +914,7 @@
       "offPathWarnHint": "After this many moves off the solution (vs. Stockfish), warn if you're no longer clearly winning (+2). 0 = never."
     },
     "offPathWarning": "You may have gone wrong here — the position isn't clearly winning for you anymore. Consider resetting or giving up.",
+    "offPathWarningEqual": "You may have gone wrong here — the position is no longer balanced. Consider resetting or giving up.",
     "offPath": {
       "h1": "You've left the solution — one of your moves wasn't the intended one.",
       "h2": "Take a move back: an earlier turn was the wrong branch, not the current position.",

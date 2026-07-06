@@ -395,7 +395,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
   protected override onOffPathWarning(): void {
-    this.snackbar.info(this.translate.instant('puzzles.offPathWarning'), { action: 'common.ok', duration: 7000 });
+    const evalStr = this.playerEvalDisplay();
+    const base = this.translate.instant(
+      this.startWasBalanced() ? 'puzzles.offPathWarningEqual' : 'puzzles.offPathWarning');
+    this.snackbar.info(evalStr ? `${base} (${evalStr})` : base, { action: 'common.ok', duration: 7000 });
   }
   protected override onAlternativeMove(_userUci: string): void {
     this.snackbar.info(this.translate.instant('book.alternativeMove'), { duration: 3000 });

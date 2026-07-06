@@ -914,6 +914,7 @@
       "offPathWarnHint": "Nach so vielen Zügen abseits der Lösung (gegen Stockfish) warnen, wenn du nicht mehr klar gewinnst (+2). 0 = nie."
     },
     "offPathWarning": "Du bist hier vielleicht falsch abgebogen — die Stellung ist nicht mehr klar für dich. Vielleicht besser zurücksetzen oder aufgeben.",
+    "offPathWarningEqual": "Du bist hier vielleicht falsch abgebogen — die Stellung ist nicht mehr ausgeglichen. Vielleicht besser zurücksetzen oder aufgeben.",
     "offPath": {
       "h1": "Du bist vom Lösungsweg abgekommen — einer deiner Züge war nicht der vorgesehene.",
       "h2": "Nimm einen Zug zurück: nicht die aktuelle Stellung, sondern eine frühere Abzweigung war falsch.",

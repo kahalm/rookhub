@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.271.3';
+export const APP_VERSION = '0.272.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.272.0", date: "2026-07-06", changes: [
+    { en: "The off-path warning (“you may have gone wrong here…”, shown across all puzzle modes when you deviate from the solution and are no longer clearly ahead) now shows the current evaluation from your side in parentheses, e.g. “(-1.2)” or “(#-3)”. In addition, if the puzzle's starting position was roughly equal/drawn, the wording changes to “the position is no longer balanced” (instead of “no longer clearly winning for you”), and in that case the warning only fires once you are clearly worse (below -1) rather than merely no longer winning. The starting evaluation is computed once in the background at puzzle start.", de: "Der Off-Path-Hinweis („du bist hier vielleicht falsch abgebogen…“, in allen Puzzle-Modi, wenn du von der Lösung abweichst und nicht mehr klar vorne bist) zeigt jetzt die aktuelle Bewertung aus deiner Sicht in Klammern, z. B. „(-1.2)“ oder „(#-3)“. Zusätzlich lautet der Text „die Stellung ist nicht mehr ausgeglichen“ (statt „nicht mehr klar für dich“), wenn die Ausgangsstellung des Puzzles etwa ausgeglichen/remis war — und in dem Fall warnt der Hinweis erst, wenn du klar schlechter stehst (unter -1), nicht schon wenn es bloß nicht mehr gewonnen ist. Die Start-Bewertung wird einmal im Hintergrund beim Puzzle-Start ermittelt." },
+  ]},
   { version: "0.271.3", date: "2026-07-06", changes: [
     { en: "Fixed: in a course/puzzle solver with visualization level ≥1, you could not draw right-click arrows/circles on the board. In visualization mode the board captures pointer events itself (to register a tap/drag as a board square while the pieces are hidden), but it did so for every mouse button — so a right-click was swallowed and Chessground's arrow drawing never fired. Now right-click (secondary button) pointer events pass straight through to Chessground, so arrows/circles work at every visualization level, just like on a normal board. +1 board test.", de: "Behoben: im Kurs-/Puzzle-Solver mit Visualisierungsstufe ≥1 ließen sich keine Rechtsklick-Pfeile/Kreise aufs Brett zeichnen. Im Visualisierungsmodus fängt das Brett Pointer-Ereignisse selbst ab (um im verdeckten Zustand einen Tap/Zug als Brettfeld zu erfassen), tat das aber für JEDE Maustaste — ein Rechtsklick wurde also verschluckt und Chessgrounds Pfeil-Zeichnen kam nie an. Jetzt werden Rechtsklick-Ereignisse (Sekundärtaste) direkt an Chessground durchgereicht, sodass Pfeile/Kreise auf jeder Visualisierungsstufe funktionieren wie auf einem normalen Brett. +1 Brett-Test." },
   ]},

@@ -912,6 +912,7 @@
       "offPathWarnHint": "Nakon toliko poteza izvan rješenja (protiv Stockfisha) upozori ako više ne dobivaš jasno (+2). 0 = nikad."
     },
     "offPathWarning": "Možda si ovdje krivo skrenuo — pozicija više nije jasno za tebe. Razmisli o resetu ili predaji.",
+    "offPathWarningEqual": "Možda si ovdje krivo skrenuo — pozicija više nije izjednačena. Razmisli o resetu ili predaji.",
     "offPath": {
       "h1": "Skrenuo si s rješenja — jedan tvoj potez nije bio predviđeni.",
       "h2": "Vrati jedan potez: nije trenutna pozicija, nego ranija grana bila pogrešna.",
