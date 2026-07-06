@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.271.2';
+export const APP_VERSION = '0.271.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.271.3", date: "2026-07-06", changes: [
+    { en: "Fixed: in a course/puzzle solver with visualization level ≥1, you could not draw right-click arrows/circles on the board. In visualization mode the board captures pointer events itself (to register a tap/drag as a board square while the pieces are hidden), but it did so for every mouse button — so a right-click was swallowed and Chessground's arrow drawing never fired. Now right-click (secondary button) pointer events pass straight through to Chessground, so arrows/circles work at every visualization level, just like on a normal board. +1 board test.", de: "Behoben: im Kurs-/Puzzle-Solver mit Visualisierungsstufe ≥1 ließen sich keine Rechtsklick-Pfeile/Kreise aufs Brett zeichnen. Im Visualisierungsmodus fängt das Brett Pointer-Ereignisse selbst ab (um im verdeckten Zustand einen Tap/Zug als Brettfeld zu erfassen), tat das aber für JEDE Maustaste — ein Rechtsklick wurde also verschluckt und Chessgrounds Pfeil-Zeichnen kam nie an. Jetzt werden Rechtsklick-Ereignisse (Sekundärtaste) direkt an Chessground durchgereicht, sodass Pfeile/Kreise auf jeder Visualisierungsstufe funktionieren wie auf einem normalen Brett. +1 Brett-Test." },
+  ]},
   { version: "0.271.2", date: "2026-07-06", changes: [
     { en: "Mobile fix for the weekly admin leaderboard: the per-player (i) details button no longer disappears off-screen when a player has a long username. The player-name cell now wraps/breaks long names onto multiple lines instead of widening the whole row and pushing the (i) column out of view (into the horizontal scroll area). All other columns stay on screen.", de: "Mobil-Fix für die Wochenpost-Admin-Bestenliste: der (i)-Detailknopf je Spieler verschwindet nicht mehr aus dem Bildschirm, wenn ein Spieler einen langen Usernamen hat. Die Spieler-Namens-Zelle bricht lange Namen jetzt auf mehrere Zeilen um, statt die ganze Zeile zu verbreitern und die (i)-Spalte aus dem sichtbaren Bereich (in die Horizontal-Scroll-Zone) zu schieben. Alle anderen Spalten bleiben am Bildschirm." },
   ]},

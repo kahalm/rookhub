@@ -211,6 +211,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private onVizPointerDown = (ev: PointerEvent): void => {
     if (!this.visualization || !this.ground) return;
+    // Rechtsklick/Sekundärtaste NICHT abfangen: Chessground zeichnet damit Pfeile/Kreise
+    // (auch im Viz-Modus). preventDefault würde sonst den kompatiblen mousedown unterdrücken,
+    // auf dem chessgrounds drawable hört → im Viz-Modus ließen sich keine Pfeile ziehen.
+    if (ev.button > 0) return;
     ev.preventDefault();
     ev.stopPropagation();              // verhindert, dass Chessground den Klick (Figur wählen) verarbeitet
     // Nur EINE Geste gleichzeitig verfolgen — ein zweiter (Multi-Touch-)Finger wird ignoriert,
@@ -229,6 +233,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private onVizPointerUp = (ev: PointerEvent): void => {
     if (!this.visualization || !this.ground) return;
+    // Rechtsklick-Loslassen durchreichen (Pfeil-Zeichnen, siehe onVizPointerDown).
+    if (ev.button > 0) return;
     ev.preventDefault();
     ev.stopPropagation();
     // Nur das pointerup der aktiven Geste behandeln (Multi-Touch-fest).

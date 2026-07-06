@@ -197,4 +197,22 @@ describe('PuzzleBoardComponent Viz-Gesten', () => {
     p.onVizPointerUp(ptr(1, 50, 450));      // a4 (200px bewegt > 35) → Drag
     expect(emit).toHaveBeenCalledWith({ orig: 'a2' as Key, dest: 'a4' as Key });
   });
+
+  it('Rechtsklick wird durchgereicht: keine Viz-Geste, kein preventDefault (Pfeil-Zeichnen)', () => {
+    const { comp, captures } = mounted();
+    const p = comp as unknown as GestPriv;
+    const prevented = jasmine.createSpy('preventDefault');
+    const stopped = jasmine.createSpy('stopPropagation');
+    const rightClick = {
+      pointerId: 1, clientX: 50, clientY: 750, button: 2,
+      preventDefault: prevented, stopPropagation: stopped,
+    } as unknown as PointerEvent;
+    p.onVizPointerDown(rightClick);
+    expect(p.vizPointerId).toBeUndefined();   // keine Geste gestartet
+    expect(prevented).not.toHaveBeenCalled(); // Chessground bekommt den mousedown
+    expect(stopped).not.toHaveBeenCalled();
+    expect(captures).toEqual([]);             // kein Pointer-Capture
+    p.onVizPointerUp(rightClick);             // Loslassen ebenfalls durchgereicht
+    expect(prevented).not.toHaveBeenCalled();
+  });
 });
