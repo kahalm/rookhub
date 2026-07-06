@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.271.0';
+export const APP_VERSION = '0.271.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.271.1", date: "2026-07-06", changes: [
+    { en: "Fixed clickable comment moves treating a list of alternatives as one line. When a comment reads e.g. „a draw is likely after a move like c5, or a5“, the two moves are alternatives for the side to move — but the parser played them as a sequence (c5 as White, then a5 as Black), so a5 previewed as the wrong colour. Now alternatives separated by „or/oder/bzw.“ or a comma before an un-numbered move become separate branches, each anchored at its own position; numbered variations are anchored at the position matching their move number (instead of „latest on tie“), and number-less intro alternatives resolve from the current position. A comma before a numbered move („…a3, 41.b6…“) still counts as a continuation, not a new branch. +3 util tests.", de: "Behoben, dass klickbare Kommentar-Züge eine Aufzählung von Alternativen als eine Linie behandelten. Steht im Kommentar z. B. „remis ist wahrscheinlich nach einem Zug wie c5, oder a5“, sind die beiden Züge Alternativen für die Seite am Zug — der Parser spielte sie aber als Folge (c5 mit Weiß, dann a5 mit Schwarz), sodass a5 in der falschen Farbe vorgespielt wurde. Jetzt werden per „or/oder/bzw.“ oder Komma-vor-numerlosem-Zug getrennte Alternativen zu eigenen Zweigen, jeder an seiner eigenen Stellung verankert; nummerierte Varianten verankern an der zur Zugnummer passenden Stellung (statt „späteste bei Gleichstand“), numerlose Einleitungs-Alternativen lösen aus der aktuellen Stellung auf. Ein Komma vor einem nummerierten Zug („…a3, 41.b6…“) gilt weiter als Fortsetzung, nicht als neuer Zweig. +3 Util-Tests." },
+  ]},
   { version: "0.271.0", date: "2026-07-06", changes: [
     { en: "The “Weekly post from a book chapter” dialog now has searchable book and chapter pickers. When you open the book dropdown a search box appears at the top and auto-focuses — start typing to filter the (often long) list of books by name; the chapter dropdown gets the same search box once a book has more than a few chapters. Typing filters live, “No matches” shows when nothing fits, and the filter resets each time the dropdown reopens.", de: "Der Dialog „Wochenpost aus Buch-Kapitel“ hat jetzt suchbare Buch- und Kapitel-Auswahlfelder. Beim Öffnen der Buch-Auswahl erscheint oben ein Suchfeld und wird automatisch fokussiert — Tippen filtert die (oft lange) Bücherliste nach Name; die Kapitel-Auswahl bekommt dasselbe Suchfeld, sobald ein Buch mehr als ein paar Kapitel hat. Getippt wird live gefiltert, „Keine Treffer“ erscheint wenn nichts passt, und der Filter wird bei jedem erneuten Öffnen zurückgesetzt." },
   ]},

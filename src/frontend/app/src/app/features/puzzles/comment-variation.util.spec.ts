@@ -80,4 +80,20 @@ describe('comment-variation.util', () => {
     expect(promo.map(s => s.san)).toEqual(['a8=D']);
     expect(promo[0].fen.split(' ')[0]).toContain('Q');   // Dame steht auf dem Brett
   });
+
+  it('Alternativen („c5, oder a5") sind getrennte Zweige, KEINE Weiß-dann-Schwarz-Folge', () => {
+    expect(splitBranches('a move like c5, or a5 as neither')).toEqual([['c5'], ['a5']]);
+
+    // Weiß am Zug, Bauern a4+c4 (plus schwarzer a7-Bauer, der die alte Fehl-Deutung erlaubte).
+    const fen = '7k/p7/8/8/P1P5/8/8/7K w - - 0 1';
+    const segs = buildCommentSegments('… nach einem Zug wie c5, oder a5 …', fen, []);
+    const c5 = segs.find(s => s.move === 'c5')!;
+    const a5 = segs.find(s => s.move === 'a5')!;
+    expect(c5.from).toBe('c4');
+    expect(a5.from).toBe('a4');   // Weißzug a4–a5 (NICHT der schwarze a7-Bauer)
+  });
+
+  it('Komma vor nummeriertem Zug ist Fortsetzung, kein Zweig-Bruch', () => {
+    expect(splitBranches('40.b5 a3, 41.b6 a2')).toEqual([['b5', 'a3', 'b6', 'a2']]);
+  });
 });

@@ -4,23 +4,21 @@ import { Chess } from 'chess.js';
  * Macht Zugfolgen in Buch-/Kurs-Kommentaren anklickbar (Vorschau auf dem Brett).
  *
  * Kommentar-Varianten (z. B. „… weil 2.fxe6 … 2…Kc7 erlaubt.") nutzen eine EIGENE Zug-Nummerierung
- * und lassen Züge aus — die Basis-Stellung lässt sich also NICHT aus dem Text ableiten. Stattdessen
- * suchen wir unter den Stellungen der Puzzle-Hauptlinie (Start-FEN + nach jedem Zug) diejenige, aus
- * der die im Kommentar genannte SAN-Folge legal spielbar ist (längster legaler Präfix; bei Gleichstand
- * die späteste Stellung). Nur die so validierten Züge werden klickbar; alles andere bleibt Text.
+ * und lassen Züge aus — die Basis-Stellung lässt sich also NICHT frei aus dem Text ableiten. Wir
+ * verankern jeden Zweig an der zu seiner Zugnummer passenden Hauptlinien-Stellung (Start-FEN + nach
+ * jedem Zug); ohne Nummer suchen wir die früheste Stellung, aus der die Folge legal ist (= die aktuelle
+ * Stellung bei Einleitungs-Kommentaren). Nur so validierte Züge werden klickbar; alles andere bleibt Text.
  *
- * Ein Kommentar kann MEHRERE unabhängige Zweige enthalten (Chessable-Autoren schreiben sie als Prosa,
- * nicht als strukturierte PGN-Varianten). Beispiel:
- *   „… nur remis nach 39…d4 40.Kf4 d3 41.Ke3 … 43.h4 a4 . Weiß gewinnt nach 40.b5 a3 41.b6 …"
- * Hier ist „40.b5" ein NEUER Zweig (die Zugnummer springt von 43 zurück auf 40). Wir zerlegen die
- * Tokenfolge daher an solchen Zugnummer-Rücksprüngen in Zweige und lösen JEDEN Zweig eigenständig
- * gegen die Hauptlinie auf — sonst würde der zweite Zweig ab dem Rücksprung „illegal" und als Text
- * verloren gehen.
+ * ZWEIGE: Ein Kommentar kann mehrere unabhängige Linien enthalten (Chessable-Autoren schreiben sie als
+ * Prosa). Wir trennen an
+ *   (a) Zugnummer-Rücksprüngen  („… 43.h4 a4 . Weiß gewinnt nach 40.b5 …" → „40.b5" ist ein neuer Zweig),
+ *   (b) Alternativ-Wörtern      („eine Zug wie c5, oder a5" → zwei getrennte Alternativzüge, KEINE Folge —
+ *                                sonst spielte der Parser c5 mit Weiß und a5 danach mit Schwarz),
+ * und lösen JEDEN Zweig eigenständig auf.
  *
- * Notation: Neben englischem SAN (KQRBN) werden auch deutsche Figurenbuchstaben (D/T/L/S → Q/R/B/N)
- * erkannt (übersetzte Kurse). Da D/T/L/S weder englische Figuren- noch Feld-Buchstaben sind, ist die
- * Zuordnung eindeutig; ein versehentlich als Zug erkanntes Wort spielt ohnehin nicht legal und bleibt
- * dadurch Text.
+ * NOTATION: Neben englischem SAN (KQRBN) werden deutsche Figurenbuchstaben (D/T/L/S → Q/R/B/N, inkl.
+ * Umwandlung =D usw.) erkannt (übersetzte Kurse). Da D/T/L/S weder englische Figuren- noch Feldbuchstaben
+ * sind, ist die Zuordnung eindeutig; ein versehentlich erkanntes Wort spielt ohnehin nicht legal → Text.
  */
 
 export interface CommentSegment {
@@ -38,15 +36,21 @@ export interface CommentSegment {
 /** Ein Zug-Schritt der aufgelösten Variante (Stellung nach dem Zug + Feldmarkierung). */
 export interface VariationStep { san: string; fen: string; from: string; to: string; }
 
+/** Ein Zweig: SAN-Folge + optionale absolute Ply des ERSTEN Zugs (aus seiner Zugnummer). */
+export interface CommentBranch { sans: string[]; startPly?: number; }
+
 // Deutsche → englische Figurenbuchstaben (für übersetzte Kurse). K bleibt K.
 const DE_PIECE: Record<string, string> = { D: 'Q', T: 'R', L: 'B', S: 'N' };
 
-// SAN-Kern: Rochade (O oder 0) | Figurenzug (engl. KQRBN + dt. DTLS) | Bauernzug (+ optionale Umwandlung / Schach-Matt).
+// SAN-Kern: Rochade (O oder 0) | Figurenzug (engl. KQRBN + dt. DTLS) | Bauernzug (+ Umwandlung / Schach-Matt).
 const SAN =
   '(?:O-O-O|O-O|0-0-0|0-0|[KQRBNDTLS][a-h]?[1-8]?x?[a-h][1-8]|[a-h](?:x[a-h])?[1-8](?:=[QRBNDTLS])?)[+#]?';
 // Optionale Zugnummer davor („2." = Weiß / „2…"/„2..." = Schwarz) + der SAN-Zug. `g` für globales Scannen.
 // Gruppen: 1=Zugnummer, 2=Punkte (>1 → Schwarzzug), 3=SAN.
 const TOKEN_RE = new RegExp(`(?:(\\d+)\\.(\\.\\.|\\u2026)?\\s?)?(${SAN})`, 'g');
+
+// „Alternativ"-Signale zwischen zwei Zug-Token → neuer Zweig (kein Fortsetzungszug).
+const ALT_WORD = /\b(?:or|oder|bzw\.?|beziehungsweise|resp\.?|respectively)\b|\//i;
 
 /** Übersetzt einen (evtl. deutschen) SAN-Zug in engl. SAN für chess.js. Englische Züge bleiben unverändert. */
 function normalizeSan(san: string): string {
@@ -56,18 +60,9 @@ function normalizeSan(san: string): string {
   return s.replace(/=([DTLS])/g, (_m, p: string) => '=' + DE_PIECE[p]);
 }
 
-/** Alle SAN-Token (nur der reine Zug, ohne Nummer) in Textreihenfolge. */
-export function extractSanTokens(text: string): string[] {
-  const re = new RegExp(TOKEN_RE.source, 'g');
-  const out: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) out.push(m[3]);
-  return out;
-}
+interface Tok { san: string; ply?: number; start: number; end: number; }
 
-interface Tok { san: string; ply?: number; }
-
-/** Scannt die Token samt implizierter Ply-Nummer (aus Zugnummer + Farbe), für die Zweig-Erkennung. */
+/** Scannt die Token samt Position + implizierter (absoluter) Ply aus Zugnummer + Farbe. */
 function scanTokens(text: string): Tok[] {
   const re = new RegExp(TOKEN_RE.source, 'g');
   const out: Tok[] = [];
@@ -77,32 +72,57 @@ function scanTokens(text: string): Tok[] {
     const isBlack = !!m[2];
     // 0-basierte Ply: Weiß N → 2N-2, Schwarz N → 2N-1.
     const ply = num !== undefined ? (num * 2 - (isBlack ? 1 : 2)) : undefined;
-    out.push({ san: m[3], ply });
+    out.push({ san: m[3], ply, start: m.index, end: m.index + m[0].length });
   }
   return out;
 }
 
+/** Alle SAN-Token (nur der reine Zug, ohne Nummer) in Textreihenfolge. */
+export function extractSanTokens(text: string): string[] {
+  return scanTokens(text).map(t => t.san);
+}
+
 /**
- * Zerlegt die Tokenfolge in Zweige. Ein neuer Zweig beginnt, sobald ein Token eine explizite
- * Zugnummer trägt, deren Ply NICHT größer ist als die zuletzt gesehene explizite Ply im laufenden
- * Zweig (= Rücksprung auf eine frühere Stellung → alternativer Zweig). Rückgabe: SAN-Listen je Zweig.
+ * Zerlegt die Tokenfolge in Zweige (siehe Datei-Kopf: Zugnummer-Rücksprung ODER Alternativ-Signal).
+ * Ein Komma trennt nur, wenn der Folgezug KEINE eigene Nummer hat (Aufzählung „c5, a5, Kd4"); ein
+ * Komma vor einem nummerierten Zug („… a3, 41.b6 …") gilt als Fortsetzung, nicht als Alternative.
  */
-export function splitBranches(text: string): string[][] {
+export function branches(text: string): CommentBranch[] {
   const toks = scanTokens(text);
-  const branches: string[][] = [];
+  const out: CommentBranch[] = [];
   let cur: string[] = [];
+  let curStartPly: number | undefined;
   let lastPly = -Infinity;
+  let prevEnd = 0;
+
   for (const t of toks) {
-    if (t.ply !== undefined && t.ply <= lastPly && cur.length) {
-      branches.push(cur);
+    let boundary = false;
+    if (cur.length) {
+      const gap = text.slice(prevEnd, t.start);
+      if (t.ply !== undefined && t.ply <= lastPly) boundary = true;          // (a) Zugnummer-Rücksprung
+      else if (ALT_WORD.test(gap)) boundary = true;                          // (b) „oder"/„or"/„/" …
+      else if (gap.includes(',') && t.ply === undefined) boundary = true;    // Komma + numerloser Zug = Aufzählung
+    }
+    if (boundary) {
+      out.push({ sans: cur, startPly: curStartPly });
       cur = [];
+      curStartPly = undefined;
       lastPly = -Infinity;
     }
-    if (t.ply !== undefined) lastPly = t.ply;
+    if (t.ply !== undefined) {
+      lastPly = t.ply;
+      if (!cur.length) curStartPly = t.ply;
+    }
     cur.push(t.san);
+    prevEnd = t.end;
   }
-  if (cur.length) branches.push(cur);
-  return branches;
+  if (cur.length) out.push({ sans: cur, startPly: curStartPly });
+  return out;
+}
+
+/** Nur die SAN-Listen der Zweige (Test-/Debug-Hilfe). */
+export function splitBranches(text: string): string[][] {
+  return branches(text).map(b => b.sans);
 }
 
 /** FEN-Liste der Hauptlinie: Start-FEN, dann nach jedem (UCI-)Zug. Ungültige Züge brechen die Kette ab. */
@@ -123,6 +143,14 @@ function safeUci(c: Chess, uci: string): boolean {
   } catch { return false; }
 }
 
+/** 0-basierte Ply der Start-FEN (aus Vollzugzahl + Farbe), zum Umrechnen absoluter Zugnummern → Basis-Index. */
+function baseStartPly(startFen: string): number {
+  const parts = startFen.split(' ');
+  const fullmove = parseInt(parts[5] || '1', 10) || 1;
+  const white = parts[1] !== 'b';
+  return (fullmove - 1) * 2 + (white ? 0 : 1);
+}
+
 /** Spielt die SAN-Folge ab `baseFen`, bis ein Zug illegal wird; liefert die Schritte des legalen Präfix. */
 function playPrefix(baseFen: string, sans: string[]): VariationStep[] {
   const c = new Chess(baseFen);
@@ -137,17 +165,27 @@ function playPrefix(baseFen: string, sans: string[]): VariationStep[] {
 }
 
 /**
- * Löst EINEN Zweig gegen die Hauptlinie auf: die Stellung mit dem LÄNGSTEN legalen Präfix der
- * SAN-Folge (bei Gleichstand die späteste). Gibt die Schritte des Präfix zurück (ggf. leer).
+ * Löst EINEN Zweig gegen die Hauptlinie auf: längster legaler Präfix. Reihenfolge der geprüften
+ * Basis-Stellungen: zuerst die zur `startPly` passende (aus der Zugnummer abgeleitet — maßgeblich bei
+ * Gleichstand), danach von der FRÜHESTEN zur spätesten (= aktuelle Stellung zuerst; wichtig für
+ * numerlose Einleitungs-Alternativen, die an der Ausgangsstellung gemeint sind). Der längste Präfix
+ * gewinnt immer; der Anker verliert nie Züge (kein Abschneiden).
  */
-export function resolveVariation(startFen: string, ucis: string[], sans: string[]): VariationStep[] {
+export function resolveVariation(startFen: string, ucis: string[], sans: string[], startPly?: number): VariationStep[] {
   if (!sans.length) return [];
   const bases = mainlineFens(startFen, ucis);
+  const order: number[] = [];
+  if (startPly !== undefined) {
+    const anchor = startPly - baseStartPly(startFen);
+    if (anchor >= 0 && anchor < bases.length) order.push(anchor);
+  }
+  for (let i = 0; i < bases.length; i++) if (!order.includes(i)) order.push(i);
+
   let best: VariationStep[] = [];
-  for (let i = bases.length - 1; i >= 0; i--) {   // späteste Stellung zuerst → bei Gleichstand bevorzugt
+  for (const i of order) {
     const s = playPrefix(bases[i], sans);
-    if (s.length > best.length) best = s;
-    if (best.length === sans.length) break;       // volle Variante gefunden
+    if (s.length > best.length) best = s;   // strikt > → bei Gleichstand gewinnt die zuerst geprüfte (Anker, sonst früheste)
+    if (best.length === sans.length) break;
   }
   return best;
 }
@@ -160,9 +198,9 @@ export function resolveVariation(startFen: string, ucis: string[], sans: string[
 export function buildCommentSegments(text: string, startFen: string, ucis: string[]): CommentSegment[] {
   // Pro Token in Original-Reihenfolge den aufgelösten Schritt (oder null) bestimmen.
   const perToken: (VariationStep | null)[] = [];
-  for (const branch of splitBranches(text)) {
-    const steps = resolveVariation(startFen, ucis, branch);
-    for (let k = 0; k < branch.length; k++) perToken.push(k < steps.length ? steps[k] : null);
+  for (const b of branches(text)) {
+    const steps = resolveVariation(startFen, ucis, b.sans, b.startPly);
+    for (let k = 0; k < b.sans.length; k++) perToken.push(k < steps.length ? steps[k] : null);
   }
 
   const segments: CommentSegment[] = [];
