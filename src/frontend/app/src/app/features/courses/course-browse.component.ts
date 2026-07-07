@@ -15,6 +15,7 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ReviewNavComponent } from '../puzzles/review-nav.component';
 import { parseMoveShapes } from '../puzzles/move-shapes.util';
 import { applyUci } from '../puzzles/puzzle-move.util';
+import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -89,15 +90,15 @@ interface ChapterGroup {
             @if (selected) {
               <div class="board-wrap">
                 <app-puzzle-board
-                  [fen]="boardFen"
+                  [fen]="variationPreview ? variationPreview.fen : boardFen"
                   [orientation]="orientation"
                   [turnColor]="turnColor"
-                  [lastMove]="lastMove"
+                  [lastMove]="variationPreview ? variationPreview.lastMove : lastMove"
                   [viewOnly]="true"
-                  [check]="isCheck"
+                  [check]="variationPreview ? false : isCheck"
                   [boardTheme]="boardTheme"
                   [pieceSet]="pieceSet"
-                  [reviewShapes]="reviewShapes"
+                  [reviewShapes]="variationPreview ? [] : reviewShapes"
                 />
               </div>
 
@@ -127,7 +128,17 @@ interface ChapterGroup {
               @if (comment) {
                 <mat-card class="comment-card">
                   <mat-card-content>
-                    @for (p of commentLines; track $index) { <p>{{ p }}</p> }
+                    @for (block of commentBlocks; track $index) {
+                      <p>@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                    }
+                    @if (variationPreview) {
+                      <div class="cmt-variation-bar">
+                        <span>{{ 'book.variation.previewing' | translate }}</span>
+                        <button mat-stroked-button type="button" (click)="exitVariationPreview()">
+                          <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                        </button>
+                      </div>
+                    }
                   </mat-card-content>
                 </mat-card>
               }
@@ -190,6 +201,18 @@ interface ChapterGroup {
     .comment-card { width: 100%; max-width: 560px; }
     .comment-card p { margin: 0 0 6px; }
     .comment-card p:last-child { margin-bottom: 0; }
+    .cmt-move {
+      font: inherit; font-weight: 600; cursor: pointer;
+      color: var(--mat-sys-primary, #1565c0);
+      background: color-mix(in srgb, currentColor 10%, transparent);
+      border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+      border-radius: 4px; padding: 0 4px; margin: 0 1px; white-space: nowrap;
+    }
+    .cmt-move:hover { background: color-mix(in srgb, currentColor 22%, transparent); }
+    .cmt-variation-bar {
+      display: flex; align-items: center; gap: 8px; margin-top: 6px;
+      font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
+    }
     .line-nav { display: flex; gap: 8px; }
 
     @media (max-width: 768px) {
@@ -229,6 +252,11 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
 
   autoplay = false;
 
+  /** Brett-Vorschau eines angeklickten Kommentar-Zugs (überlagert boardFen/lastMove); null = aus. */
+  variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
+  private cmtCacheKey = '';
+  private cmtCache: CommentSegment[][] = [];
+
   private uciMoves: string[] = [];
   private shapesByPly: Record<number, DrawShape[]> = {};
   private autoplayTimer: ReturnType<typeof setInterval> | null = null;
@@ -245,6 +273,28 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   get commentLines(): string[] {
     return (this.comment ?? '').split(/\n{2,}|\n/).map(s => s.trim()).filter(Boolean);
   }
+
+  /** {@link commentLines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
+   *  Linie + Kommentar-Inhalt — die Auflösung hängt nur von Linien-FEN/-Zügen ab, nicht vom Ply. */
+  get commentBlocks(): CommentSegment[][] {
+    const lines = this.commentLines;
+    const key = (this.selected?.id ?? 0) + '|' + lines.join('');
+    if (key !== this.cmtCacheKey) {
+      const fen = this.selected?.fen ?? '';
+      this.cmtCache = fen ? lines.map(l => buildCommentSegments(l, fen, this.uciMoves)) : lines.map(l => [{ text: l }]);
+      this.cmtCacheKey = key;
+    }
+    return this.cmtCache;
+  }
+
+  /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
+  previewVariationMove(seg: CommentSegment): void {
+    if (!seg.fen || !seg.from || !seg.to) return;
+    this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
+  }
+
+  /** Vorschau beenden → zurück zur aktuellen Linien-Stellung. */
+  exitVariationPreview(): void { this.variationPreview = null; }
 
   ngOnInit(): void {
     this.boardTheme = this.prefs.boardTheme;
@@ -339,6 +389,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   /** Ganze Linie ab FEN durchklicken (index = Anzahl gespielter Halbzüge). Spiegelt reviewGoTo. */
   goTo(index: number): void {
     if (!this.selected) return;
+    this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
     index = Math.max(0, Math.min(index, this.uciMoves.length));
     this.plyIndex = index;
     const chess = new Chess(this.selected.fen);

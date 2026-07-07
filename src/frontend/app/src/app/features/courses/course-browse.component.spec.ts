@@ -62,6 +62,24 @@ describe('CourseBrowseComponent', () => {
     expect(comp.lastMove).toEqual(['e7', 'e5']);
   });
 
+  it('turns playable moves in a comment into clickable variation chips and previews them', () => {
+    const comp = build([line({ id: 1, moveComments: { '-1': 'Instead 1.d4 is also good.' } })]);
+    comp.goTo(0);
+    expect(comp.comment).toContain('d4');
+
+    const segs = comp.commentBlocks.flat();
+    const chip = segs.find(s => s.move);
+    expect(chip).toBeTruthy();
+    expect(chip!.move).toContain('d4');
+
+    comp.previewVariationMove(chip!);
+    expect(comp.variationPreview).not.toBeNull();
+    expect(comp.variationPreview!.fen).toBe(chip!.fen!);
+
+    comp.goTo(1); // stepping ends the preview
+    expect(comp.variationPreview).toBeNull();
+  });
+
   it('navigates between lines', () => {
     const comp = build([line({ id: 1 }), line({ id: 2 }), line({ id: 3 })]);
     expect(comp.selectedIndex).toBe(0);

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.278.0';
+export const APP_VERSION = '0.279.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.279.0", date: "2026-07-07", changes: [
+    { en: "Browse mode (courses): playable moves inside a line's comment are now clickable chips, just like in the solver's solution review. Clicking a move plays that variation onto the board as a read-only preview (overlaying the current position) with an „undo“ back button; stepping to another move or switching line ends the preview. Reuses the existing comment-variation resolver. +1 FE spec.", de: "Durchsehen-Modus (Kurse): spielbare Züge im Kommentar einer Linie sind jetzt anklickbare Chips — genau wie in der Lösungs-Durchsicht des Solvers. Ein Klick spielt die Variante als schreibgeschützte Vorschau aufs Brett (überlagert die aktuelle Stellung) mit „Zurück“-Knopf; ein Weiterklicken oder Linienwechsel beendet die Vorschau. Nutzt den bestehenden Kommentar-Varianten-Resolver wieder. +1 FE-Test." },
+  ]},
   { version: "0.278.0", date: "2026-07-07", changes: [
     { en: "Courses: new „Browse“ mode to view each individual line — a read-only companion to the sequential/random quiz modes. Open it from a course's „⋮“ menu (whole book) or the new book icon per chapter (chapter only). The page shows all lines on the left (grouped by chapter) and a read-only board on the right that you click through move by move — first/previous/next/last, auto-play, arrow keys (←/→ for moves, ↑/↓ to switch line), a clickable move list, plus per-move comments and Chessable board annotations (arrows/highlights), exactly like the solution review. No quiz, no progress, no timer — just looking. New standalone CourseBrowseComponent + routes /courses/:bookId/browse and /courses/:bookId/chapter/:chapterIndex/browse; reuses the existing puzzle board, review-nav and shape parsing. i18n courses.browse.* / courses.browseTooltip en/de/hr.", de: "Kurse: neuer „Durchsehen“-Modus, um jede einzelne Linie anzusehen — ein reines Ansehen-Pendant zu den Modi Sequenziell/Zufällig. Erreichbar über das „⋮“-Menü eines Kurses (ganzes Buch) oder das neue Buch-Icon je Kapitel (nur das Kapitel). Links stehen alle Linien (nach Kapitel gruppiert), rechts ein schreibgeschütztes Brett, das man Zug für Zug durchklickt — Anfang/Zurück/Vor/Ende, Auto-Wiedergabe, Pfeiltasten (←/→ für Züge, ↑/↓ für Linienwechsel), eine anklickbare Zug-Liste sowie Pro-Zug-Kommentare und Chessable-Board-Annotationen (Pfeile/Markierungen), genau wie in der Lösungs-Durchsicht. Kein Quiz, kein Fortschritt, kein Timer — nur Ansehen. Neue eigenständige CourseBrowseComponent + Routen /courses/:bookId/browse und /courses/:bookId/chapter/:chapterIndex/browse; nutzt das bestehende Puzzle-Brett, review-nav und das Shape-Parsing wieder. i18n courses.browse.* / courses.browseTooltip en/de/hr." },
   ]},
