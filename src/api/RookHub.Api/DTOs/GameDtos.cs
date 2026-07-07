@@ -32,6 +32,12 @@ public class SaveGameInputDto
     public string? SourceUrl { get; set; }
 
     public DateTime? PlayedAt { get; set; }
+
+    /// <summary>Elo/Rating des Weißspielers auf der Plattform (Best-Effort von der Extension gelesen).</summary>
+    public int? WhiteElo { get; set; }
+
+    /// <summary>Elo/Rating des Schwarzspielers auf der Plattform.</summary>
+    public int? BlackElo { get; set; }
 }
 
 /// <summary>Listeneintrag einer gespeicherten Partie (ohne PGN, für die Übersicht).</summary>
@@ -53,6 +59,12 @@ public class SavedGameDto
 public class SavedGameDetailDto : SavedGameDto
 {
     public string Pgn { get; set; } = string.Empty;
+
+    /// <summary>Elo/Rating des Weißspielers (aus dem PGN-Header <c>WhiteElo</c> gelesen).</summary>
+    public int? WhiteElo { get; set; }
+
+    /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
+    public int? BlackElo { get; set; }
 }
 
 /// <summary>Öffentliche Sicht auf eine geteilte Partie (<c>GET /api/games/shared/{token}</c>).
@@ -67,4 +79,10 @@ public class SharedGameDto
     public string? SourceUrl { get; set; }
     public string Pgn { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Elo/Rating des Weißspielers (aus dem PGN-Header <c>WhiteElo</c> gelesen).</summary>
+    public int? WhiteElo { get; set; }
+
+    /// <summary>Elo/Rating des Schwarzspielers (aus dem PGN-Header <c>BlackElo</c> gelesen).</summary>
+    public int? BlackElo { get; set; }
 }

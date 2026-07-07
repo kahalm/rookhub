@@ -19,6 +19,8 @@ export interface SavedGame {
 /** Detail inkl. PGN (zum Nachspielen/Analysieren). */
 export interface SavedGameDetail extends SavedGame {
   pgn: string;
+  whiteElo?: number | null;
+  blackElo?: number | null;
 }
 
 /** Öffentliche Sicht auf eine geteilte Partie (ohne Besitzer-Daten). */
@@ -31,6 +33,8 @@ export interface SharedGame {
   sourceUrl?: string | null;
   pgn: string;
   createdAt: string;
+  whiteElo?: number | null;
+  blackElo?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

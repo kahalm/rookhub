@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.272.0';
+export const APP_VERSION = '0.273.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.273.0", date: "2026-07-07", changes: [
+    { en: "Shared game pages (/g/…) now show each player's rating from the platform (lichess/chess.com) in parentheses next to their name, e.g. „Alice (1832) – Bob (2011)“, when available. The RepCheck extension captures the ratings when you save a game (chess.com from the game's PGN headers, lichess from the page title) and stores them as WhiteElo/BlackElo PGN headers. Only applies to newly saved games; existing saved games have no rating. Requires RepCheck ≥ 1.23.0.", de: "Geteilte Partie-Seiten (/g/…) zeigen jetzt neben jedem Spielernamen dessen Elo/Rating der Plattform (lichess/chess.com) in Klammern, z. B. „Alice (1832) – Bob (2011)“, sofern vorhanden. Die RepCheck-Extension liest die Ratings beim „Partie speichern“ (chess.com aus den PGN-Headern der Partie, lichess aus dem Seitentitel) und legt sie als WhiteElo/BlackElo-PGN-Header ab. Gilt nur für neu gespeicherte Partien; bestehende haben kein Rating. Braucht RepCheck ≥ 1.23.0." },
+  ]},
   { version: "0.272.0", date: "2026-07-06", changes: [
     { en: "The off-path warning (“you may have gone wrong here…”, shown across all puzzle modes when you deviate from the solution and are no longer clearly ahead) now shows the current evaluation from your side in parentheses, e.g. “(-1.2)” or “(#-3)”. In addition, if the puzzle's starting position was roughly equal/drawn, the wording changes to “the position is no longer balanced” (instead of “no longer clearly winning for you”), and in that case the warning only fires once you are clearly worse (below -1) rather than merely no longer winning. The starting evaluation is computed once in the background at puzzle start.", de: "Der Off-Path-Hinweis („du bist hier vielleicht falsch abgebogen…“, in allen Puzzle-Modi, wenn du von der Lösung abweichst und nicht mehr klar vorne bist) zeigt jetzt die aktuelle Bewertung aus deiner Sicht in Klammern, z. B. „(-1.2)“ oder „(#-3)“. Zusätzlich lautet der Text „die Stellung ist nicht mehr ausgeglichen“ (statt „nicht mehr klar für dich“), wenn die Ausgangsstellung des Puzzles etwa ausgeglichen/remis war — und in dem Fall warnt der Hinweis erst, wenn du klar schlechter stehst (unter -1), nicht schon wenn es bloß nicht mehr gewonnen ist. Die Start-Bewertung wird einmal im Hintergrund beim Puzzle-Start ermittelt." },
   ]},

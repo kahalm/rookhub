@@ -134,4 +134,40 @@ public class GamesControllerTests : IDisposable
         var result = await _controller.GetShared("does-not-exist");
         Assert.IsType<NotFoundResult>(result.Result);
     }
+
+    [Fact]
+    public async Task Save_WithElo_SharedViewExposesEloFromPgn()
+    {
+        var owner = await CreateUserAsync("owner");
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b",
+            Result = "0-1", ExternalId = "elo-1", WhiteElo = 1832, BlackElo = 2011,
+        });
+
+        Assert.Contains("[WhiteElo \"1832\"]", saved.Pgn);
+        Assert.Contains("[BlackElo \"2011\"]", saved.Pgn);
+        Assert.Equal(1832, saved.WhiteElo);
+        Assert.Equal(2011, saved.BlackElo);
+
+        var shared = await _service.GetSharedAsync(saved.ShareToken);
+        Assert.Equal(1832, shared!.WhiteElo);
+        Assert.Equal(2011, shared.BlackElo);
+    }
+
+    [Fact]
+    public async Task Save_ImplausibleOrMissingElo_OmittedFromPgnAndDto()
+    {
+        var owner = await CreateUserAsync("owner");
+        var saved = await _service.SaveAsync(owner.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b",
+            Result = "0-1", ExternalId = "elo-2", WhiteElo = 42, BlackElo = null,
+        });
+
+        Assert.DoesNotContain("WhiteElo", saved.Pgn);
+        Assert.DoesNotContain("BlackElo", saved.Pgn);
+        Assert.Null(saved.WhiteElo);
+        Assert.Null(saved.BlackElo);
+    }
 }

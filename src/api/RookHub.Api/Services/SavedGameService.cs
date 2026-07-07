@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -148,6 +149,8 @@ public class SavedGameService
             SourceUrl = g.SourceUrl,
             Pgn = g.Pgn,
             CreatedAt = g.CreatedAt,
+            WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
+            BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
         };
     }
 
@@ -165,7 +168,11 @@ public class SavedGameService
         sb.Append("[Date \"").Append(dto.PlayedAt?.ToString("yyyy.MM.dd") ?? "????.??.??").Append("\"]\n");
         sb.Append("[White \"").Append(Header(dto.White)).Append("\"]\n");
         sb.Append("[Black \"").Append(Header(dto.Black)).Append("\"]\n");
-        sb.Append("[Result \"").Append(result).Append("\"]\n\n");
+        sb.Append("[Result \"").Append(result).Append("\"]\n");
+        // Elo/Rating nur ausgeben, wenn plausibel (100–4000) — sonst weglassen.
+        if (IsPlausibleElo(dto.WhiteElo)) sb.Append("[WhiteElo \"").Append(dto.WhiteElo).Append("\"]\n");
+        if (IsPlausibleElo(dto.BlackElo)) sb.Append("[BlackElo \"").Append(dto.BlackElo).Append("\"]\n");
+        sb.Append('\n');
 
         for (int i = 0; i < moves.Count; i++)
         {
@@ -174,6 +181,18 @@ public class SavedGameService
         }
         sb.Append(result);
         return sb.ToString();
+    }
+
+    /// <summary>Plausibilitäts-Check für ein Elo/Rating (verhindert Müll-Header).</summary>
+    private static bool IsPlausibleElo(int? elo) => elo is >= 100 and <= 4000;
+
+    /// <summary>Liest ein Elo aus einem PGN-Header (z. B. <c>[WhiteElo "1832"]</c>); null wenn fehlt/unplausibel.</summary>
+    public static int? ParseEloHeader(string pgn, string tag)
+    {
+        if (string.IsNullOrEmpty(pgn)) return null;
+        var m = Regex.Match(pgn, $"\\[{Regex.Escape(tag)}\\s+\"(\\d{{1,4}})\"\\]");
+        if (m.Success && int.TryParse(m.Groups[1].Value, out var elo) && IsPlausibleElo(elo)) return elo;
+        return null;
     }
 
     /// <summary>Header-Wert säubern: leere → "?", Anführungszeichen/Zeilenumbrüche entfernen.</summary>
@@ -230,5 +249,7 @@ public class SavedGameService
         MoveCount = CountPlies(g.Pgn),
         CreatedAt = g.CreatedAt,
         Pgn = g.Pgn,
+        WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
+        BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
     };
 }

@@ -35,7 +35,11 @@ import { GamesService, SharedGame } from './games.service';
       } @else if (game) {
         <mat-card class="viewer">
           <div class="header">
-            <span class="players"><strong>{{ game.white || '?' }}</strong> – <strong>{{ game.black || '?' }}</strong></span>
+            <span class="players">
+              <strong>{{ game.white || '?' }}</strong>@if (game.whiteElo) { <span class="elo">({{ game.whiteElo }})</span> }
+              –
+              <strong>{{ game.black || '?' }}</strong>@if (game.blackElo) { <span class="elo">({{ game.blackElo }})</span> }
+            </span>
             <span class="meta">
               @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
               <span>{{ game.source }}</span>
@@ -79,6 +83,7 @@ import { GamesService, SharedGame } from './games.service';
     .empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .viewer { padding: 16px; }
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .players .elo { font-weight: 400; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
     .body { display: flex; gap: 16px; align-items: flex-start; }
