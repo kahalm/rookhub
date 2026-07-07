@@ -191,6 +191,11 @@ try
     builder.Services.AddSingleton<IClaudeJsonClient, ClaudeJsonClient>();
     builder.Services.AddScoped<HintGenerationService>();
     builder.Services.AddScoped<MenuVisibilityService>();
+    // Open-Graph-/Link-Vorschau (Brett-Bild + Meta-Tag-Injektion in die SPA-index.html).
+    builder.Services.AddScoped<RookHub.Api.Services.Og.OgMetaService>();
+    builder.Services.AddSingleton<RookHub.Api.Services.Og.OgImageService>();
+    builder.Services.AddSingleton<RookHub.Api.Services.Og.OgIndexHtmlProvider>();
+    builder.Services.AddHttpClient("og-frontend");
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
     builder.Services.AddHostedService<BackgroundTaskWorker>();
     // Eigene Queue + Consumer NUR für schach-bot-Webhooks, damit Solver-Updates nicht

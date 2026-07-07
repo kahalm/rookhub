@@ -12,6 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Piece-SVGs (cburnett, App-Default) für den OG-Brett-Bild-Renderer als Embedded Resource. -->
+    <EmbeddedResource Include="Assets\pieces\cburnett\*.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Anthropic" Version="12.29.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Gera.Chess" Version="1.2.0" />
@@ -26,6 +31,11 @@
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Elastic.Serilog.Sinks" Version="8.*" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <!-- OG-Brett-Bild-Rendering: SkiaSharp + SVG-Rasterung. NoDependencies-Native-Assets brauchen kein
+         fontconfig (das Bild ist textfrei), laufen also auf dem schlanken aspnet-Debian-Image. -->
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+    <PackageReference Include="Svg.Skia" Version="1.0.0.18" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="WebPush" Version="1.0.13" />
   </ItemGroup>
