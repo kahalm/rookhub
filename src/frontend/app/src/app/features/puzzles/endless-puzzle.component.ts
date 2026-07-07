@@ -29,6 +29,7 @@ import { EndlessFasttrackState } from './endless-fasttrack-state';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -407,6 +408,17 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   ngOnInit(): void {
     // Verfügbare Themen fürs Auswahl-Dropdown laden (unabhängig vom Einstiegs-Modus).
     this.loadAllThemes();
+
+    // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen —
+    // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
+    const restored = loadLastSolved('endless');
+    if (restored) {
+      this.lastSolvedPuzzleId = restored.id;
+      this.lastSolvedFen = restored.fen;
+      this.lastSolvedMoves = restored.moves;
+      this.lastSolvedOrientation = restored.orientation;
+      this.favoriteTracker.refresh();
+    }
 
     // History-Detail (?session=ID): abgeschlossenen Lauf wie den Game-Over-Screen anzeigen.
     // Stats + Puzzle-Review werden aus dem persistierten Lauf rekonstruiert.
@@ -1066,6 +1078,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.lastSolvedFen = this.puzzle.fen;
       this.lastSolvedMoves = this.puzzle.moves;
       this.lastSolvedOrientation = this.orientation;
+      saveLastSolved('endless', {
+        id: this.puzzle.id, fen: this.puzzle.fen,
+        moves: this.puzzle.moves, orientation: this.orientation,
+      });
     }
     this.favoriteTracker.refresh();
     this.syncActiveGameToServer();

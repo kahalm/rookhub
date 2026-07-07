@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.280.0';
+export const APP_VERSION = '0.281.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.0", date: "2026-07-07", changes: [
+    { en: "„♥ last puzzle“ and „share last puzzle“ buttons now survive going to Analyze and coming back. Solving a puzzle (course/book, standard, endless) now persists the last-solved info (id, fen, moves, orientation) to sessionStorage; the solver restores it on init, so those buttons no longer vanish after router-navigating to /analysis and back — the component gets destroyed on navigation and its in-memory state was lost. New tiny helper `last-solved-store.ts` with 6 unit tests; wired into all three solvers for consistency.", de: "Die Knöpfe „♥ Letztes Puzzle“ und „Letztes teilen“ überleben jetzt einen Ausflug in den Analysemodus und zurück. Nach dem Lösen (Kurs/Buch, Standard, Endless) wird das zuletzt gelöste Puzzle (Id, FEN, Züge, Orientierung) in sessionStorage abgelegt und beim Init der Solver-Komponente wiederhergestellt — vorher zerstörte die Navigation zu /analysis die Komponente und ließ den Speicherzustand fallen, die Knöpfe verschwanden. Neuer kleiner Helfer `last-solved-store.ts` mit 6 Unit-Tests; in alle drei Solver konsistent eingehängt." },
+  ]},
   { version: "0.280.0", date: "2026-07-07", changes: [
     { en: "Browse mode (courses): each line now shows a status icon — a green check if you've already solved it, or a red ✗ if you attempted it but didn't manage it (nothing if untouched). You can also love (♥) and share a line right from the list: a heart button per line toggles it as a loved puzzle, and a share button opens the usual share dialog (QR + link + „send to a friend“) for that single line. New backend endpoint GET /api/courses/{bookId}/line-status (solved/failed line ids from CoursePuzzleResults/CourseAttempt). +backend test.", de: "Durchsehen-Modus (Kurse): jede Linie zeigt jetzt ein Status-Symbol — ein grünes Häkchen, wenn du sie schon gelöst hast, oder ein rotes ✗, wenn du es versucht, aber nicht geschafft hast (nichts, wenn noch unangetastet). Außerdem kannst du eine Linie direkt aus der Liste lieben (♥) und teilen: ein Herz-Knopf je Linie schaltet sie als geliebtes Puzzle um, ein Teilen-Knopf öffnet den gewohnten Teilen-Dialog (QR + Link + „An Freund schicken“) für genau diese Linie. Neuer Backend-Endpoint GET /api/courses/{bookId}/line-status (gelöste/gescheiterte Linien-Ids aus CoursePuzzleResults/CourseAttempt). +Backend-Test." },
   ]},

@@ -28,6 +28,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { Chess } from 'chess.js';
@@ -219,6 +220,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.lastSolvedFen = this.puzzle?.fen ?? null;
     this.lastSolvedMoves = this.puzzle?.moves ?? '';
     this.lastSolvedOrientation = this.orientation;
+    if (this.puzzle) {
+      saveLastSolved('standard', {
+        id: this.puzzle.id, fen: this.puzzle.fen,
+        moves: this.puzzle.moves ?? '', orientation: this.orientation,
+      });
+    }
     this.favoriteTracker.refresh();
     this.enterSolutionReview();
     // Auffällig lange Lösezeit (Tab lag vermutlich offen) → nachfragen, bevor gewertet wird; der
@@ -298,6 +305,17 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
     // Offen-Zustand der Einstellungen über Puzzle-Wechsel/Re-Init hinweg behalten.
     this.loadSettingsOpen();
+
+    // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen —
+    // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
+    const restored = loadLastSolved('standard');
+    if (restored) {
+      this.lastSolvedPuzzleId = restored.id;
+      this.lastSolvedFen = restored.fen;
+      this.lastSolvedMoves = restored.moves;
+      this.lastSolvedOrientation = restored.orientation;
+      this.favoriteTracker.refresh();
+    }
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {

@@ -38,6 +38,7 @@ import { AuthService } from '../../core/auth.service';
 import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -441,11 +442,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stopTimer();
     this.updateBoard();
     // Für „Letztes Puzzle analysieren"/„Letztes teilen" merken (überlebt den Auto-Advance).
+    // Zusätzlich in sessionStorage persistieren, damit die Info eine Navigation zu /analysis
+    // und zurück übersteht (sonst wird der Component-Destroy den Zustand wegwerfen).
     if (this.puzzle) {
       this.lastSolvedPuzzleId = this.puzzle.id;
       this.lastSolvedFen = this.puzzle.fen;
       this.lastSolvedMoves = this.puzzle.moves ?? '';
       this.lastSolvedOrientation = this.orientation;
+      saveLastSolved('book', {
+        id: this.puzzle.id, fen: this.puzzle.fen,
+        moves: this.puzzle.moves ?? '', orientation: this.orientation,
+      });
     }
     this.favoriteTracker.refresh();
     this.enterSolutionReview();
@@ -577,6 +584,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Optionale Anzeige-Overrides aus dem (geteilten) Link anwenden, BEVOR das Puzzle aufgebaut wird
     // (onSetupStart liest themeMode, der Solver-Setup liest visualizationMode). Gilt für alle Modi.
     this.applyShareViewOverrides();
+
+    // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen —
+    // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
+    const restored = loadLastSolved('book');
+    if (restored) {
+      this.lastSolvedPuzzleId = restored.id;
+      this.lastSolvedFen = restored.fen;
+      this.lastSolvedMoves = restored.moves;
+      this.lastSolvedOrientation = restored.orientation;
+      this.favoriteTracker.refresh();
+    }
 
     const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
     if (weeklyIdParam) {
