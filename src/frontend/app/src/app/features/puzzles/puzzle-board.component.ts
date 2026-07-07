@@ -568,7 +568,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
         this.premoveTimer = undefined;
         // Guard: Component zwischenzeitlich zerstoert / Board weg -> nicht emittieren.
         if (this.destroyed || !this.ground) return;
-        if (this.isPromotion(orig, dest)) {
+        // Premove ist noch nicht ausgeführt → Bauer steht auf orig, nicht auf dest.
+        if (this.isPromotion(orig, dest, true)) {
           this.showPromotionDialog(orig, dest);
         } else {
           this.moveMade.emit({ orig, dest });
@@ -579,19 +580,27 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   // --- Promotion logic ---
 
-  private isPromotion(orig: Key, dest: Key): boolean {
+  /**
+   * Erkennt einen Bauern-Umwandlungszug. <paramref name="fromOrigin"/>=false (Normalfall,
+   * chessground-`move`-Event): der Zug ist bereits ausgeführt → der Bauer steht auf <c>dest</c>.
+   * <paramref name="fromOrigin"/>=true (Premove-Ausführung): der Premove ist noch NICHT angewandt →
+   * der Bauer steht noch auf <c>orig</c> (dest ist leer bzw. trägt eine zu schlagende Figur). Ohne
+   * diese Unterscheidung bekamen premovte Umwandlungen keinen Figuren-Auswahldialog und wurden ohne
+   * Umwandlungsfigur (also als illegaler/falscher Zug) gemeldet.
+   */
+  private isPromotion(orig: Key, dest: Key, fromOrigin = false): boolean {
     if (!this.ground) return false;
-    // Check piece at the origin square (before the move was applied by chessground)
-    // After chessground applies the move, the piece is at dest
-    const piece = this.ground.state.pieces.get(dest);
-    if (!piece || piece.role !== 'pawn') return false;
     const destRank = dest[1];
-    return destRank === '1' || destRank === '8';
+    if (destRank !== '1' && destRank !== '8') return false;
+    const piece = this.ground.state.pieces.get(fromOrigin ? orig : dest);
+    return piece?.role === 'pawn';
   }
 
   private showPromotionDialog(orig: Key, dest: Key): void {
     this.pendingPromotion = { orig, dest };
-    const piece = this.ground?.state.pieces.get(dest);
+    // Bei einem premovten Umwandlungszug steht der Bauer noch auf orig (dest leer/geschlagen) →
+    // Farbe von dort ableiten, sonst vom bereits gezogenen Bauern auf dest.
+    const piece = this.ground?.state.pieces.get(dest) ?? this.ground?.state.pieces.get(orig);
     this.promotionColor = piece?.color === 'white' ? 'w' : 'b';
 
     // Calculate file position (0-7 mapped to percentage)

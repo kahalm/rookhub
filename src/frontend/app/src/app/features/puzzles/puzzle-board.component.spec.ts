@@ -216,3 +216,35 @@ describe('PuzzleBoardComponent Viz-Gesten', () => {
     expect(prevented).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Umwandlungs-Erkennung muss auch für einen noch NICHT ausgeführten Premove greifen: dort steht der
+ * Bauer noch auf orig (dest ist leer/wird geschlagen). Ohne die orig-Erkennung bekam eine premovte
+ * Umwandlung keinen Figuren-Auswahldialog und wurde ohne Umwandlungsfigur gemeldet.
+ */
+describe('PuzzleBoardComponent Promotion-Erkennung (Premove)', () => {
+  type Priv = { isPromotion(orig: Key, dest: Key, fromOrigin?: boolean): boolean };
+
+  function withPieces(entries: [Key, { role: string; color?: string }][]): PuzzleBoardComponent {
+    const comp = new PuzzleBoardComponent();
+    (comp as unknown as { ground: unknown }).ground = { state: { pieces: new Map(entries) } };
+    return comp;
+  }
+
+  it('erkennt einen ausgeführten Umwandlungszug am Bauern auf dest', () => {
+    const p = withPieces([['f1' as Key, { role: 'pawn', color: 'black' }]]) as unknown as Priv;
+    expect(p.isPromotion('f2' as Key, 'f1' as Key)).toBe(true);
+  });
+
+  it('erkennt einen premovten Umwandlungszug am Bauern auf orig (dest noch leer)', () => {
+    const comp = withPieces([['f2' as Key, { role: 'pawn', color: 'black' }]]);
+    const p = comp as unknown as Priv;
+    expect(p.isPromotion('f2' as Key, 'f1' as Key)).toBe(false);        // ohne Flag: dest leer
+    expect(p.isPromotion('f2' as Key, 'f1' as Key, true)).toBe(true);   // Premove: orig-Bauer
+  });
+
+  it('ist kein Umwandlungszug, wenn das Zielfeld nicht auf Grundreihe liegt', () => {
+    const p = withPieces([['e2' as Key, { role: 'pawn', color: 'white' }]]) as unknown as Priv;
+    expect(p.isPromotion('e2' as Key, 'e4' as Key, true)).toBe(false);
+  });
+});

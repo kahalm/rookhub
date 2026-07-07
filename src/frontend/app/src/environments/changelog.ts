@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.0';
+export const APP_VERSION = '0.281.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.1", date: "2026-07-07", changes: [
+    { en: "Fix: promoting a pawn via a premove (queuing your reply while the opponent's move auto-plays) no longer skips the piece-selection dialog. The board detected promotions by looking at the destination square, but a premove isn't applied yet — the pawn is still on its origin square and the destination is empty — so it emitted the move without a promotion piece (rejected as wrong / silently auto-queened). Promotion detection is now premove-aware (checks the origin square when the premove hasn't run yet), and the picker's color is derived from there too. Noticed on the „Knight Defends“ endgame where f1=Q is naturally premoved. +3 board unit tests.", de: "Fix: eine Bauernumwandlung per Premove (die Antwort schon legen, während der Gegnerzug automatisch läuft) überspringt den Figuren-Auswahldialog nicht mehr. Das Brett erkannte Umwandlungen am Zielfeld — ein Premove ist aber noch nicht ausgeführt, der Bauer steht noch auf dem Ausgangsfeld und das Ziel ist leer —, sodass der Zug ohne Umwandlungsfigur gemeldet wurde (als falsch verworfen / still zur Dame). Die Umwandlungs-Erkennung ist jetzt premove-bewusst (prüft das Ausgangsfeld, solange der Premove noch nicht lief), und die Farbe des Dialogs wird ebenfalls von dort abgeleitet. Aufgefallen im „Knight Defends“-Endspiel, wo f1=D naturgemäß premovt wird. +3 Brett-Unit-Tests." },
+  ]},
   { version: "0.281.0", date: "2026-07-07", changes: [
     { en: "„♥ last puzzle“ and „share last puzzle“ buttons now survive going to Analyze and coming back. Solving a puzzle (course/book, standard, endless) now persists the last-solved info (id, fen, moves, orientation) to sessionStorage; the solver restores it on init, so those buttons no longer vanish after router-navigating to /analysis and back — the component gets destroyed on navigation and its in-memory state was lost. New tiny helper `last-solved-store.ts` with 6 unit tests; wired into all three solvers for consistency.", de: "Die Knöpfe „♥ Letztes Puzzle“ und „Letztes teilen“ überleben jetzt einen Ausflug in den Analysemodus und zurück. Nach dem Lösen (Kurs/Buch, Standard, Endless) wird das zuletzt gelöste Puzzle (Id, FEN, Züge, Orientierung) in sessionStorage abgelegt und beim Init der Solver-Komponente wiederhergestellt — vorher zerstörte die Navigation zu /analysis die Komponente und ließ den Speicherzustand fallen, die Knöpfe verschwanden. Neuer kleiner Helfer `last-solved-store.ts` mit 6 Unit-Tests; in alle drei Solver konsistent eingehängt." },
   ]},
