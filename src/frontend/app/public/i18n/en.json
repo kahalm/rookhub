@@ -1111,7 +1111,12 @@
       "pause": "Pause",
       "prevLine": "Previous line",
       "nextLine": "Next line",
-      "loadFailed": "Could not load the course."
+      "loadFailed": "Could not load the course.",
+      "solved": "Solved",
+      "failed": "Didn't manage it",
+      "favorite": "Love this line",
+      "unfavorite": "Remove from loved",
+      "share": "Share line"
     },
     "themes": {
       "title": "Course themes",

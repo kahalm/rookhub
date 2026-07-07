@@ -1111,7 +1111,12 @@
       "pause": "Pause",
       "prevLine": "Vorige Linie",
       "nextLine": "Nächste Linie",
-      "loadFailed": "Kurs konnte nicht geladen werden."
+      "loadFailed": "Kurs konnte nicht geladen werden.",
+      "solved": "Geschafft",
+      "failed": "Nicht geschafft",
+      "favorite": "Linie lieben",
+      "unfavorite": "Nicht mehr lieben",
+      "share": "Linie teilen"
     },
     "themes": {
       "title": "Kurs-Themen",

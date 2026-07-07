@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.279.0';
+export const APP_VERSION = '0.280.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.280.0", date: "2026-07-07", changes: [
+    { en: "Browse mode (courses): each line now shows a status icon — a green check if you've already solved it, or a red ✗ if you attempted it but didn't manage it (nothing if untouched). You can also love (♥) and share a line right from the list: a heart button per line toggles it as a loved puzzle, and a share button opens the usual share dialog (QR + link + „send to a friend“) for that single line. New backend endpoint GET /api/courses/{bookId}/line-status (solved/failed line ids from CoursePuzzleResults/CourseAttempt). +backend test.", de: "Durchsehen-Modus (Kurse): jede Linie zeigt jetzt ein Status-Symbol — ein grünes Häkchen, wenn du sie schon gelöst hast, oder ein rotes ✗, wenn du es versucht, aber nicht geschafft hast (nichts, wenn noch unangetastet). Außerdem kannst du eine Linie direkt aus der Liste lieben (♥) und teilen: ein Herz-Knopf je Linie schaltet sie als geliebtes Puzzle um, ein Teilen-Knopf öffnet den gewohnten Teilen-Dialog (QR + Link + „An Freund schicken“) für genau diese Linie. Neuer Backend-Endpoint GET /api/courses/{bookId}/line-status (gelöste/gescheiterte Linien-Ids aus CoursePuzzleResults/CourseAttempt). +Backend-Test." },
+  ]},
   { version: "0.279.0", date: "2026-07-07", changes: [
     { en: "Browse mode (courses): playable moves inside a line's comment are now clickable chips, just like in the solver's solution review. Clicking a move plays that variation onto the board as a read-only preview (overlaying the current position) with an „undo“ back button; stepping to another move or switching line ends the preview. Reuses the existing comment-variation resolver. +1 FE spec.", de: "Durchsehen-Modus (Kurse): spielbare Züge im Kommentar einer Linie sind jetzt anklickbare Chips — genau wie in der Lösungs-Durchsicht des Solvers. Ein Klick spielt die Variante als schreibgeschützte Vorschau aufs Brett (überlagert die aktuelle Stellung) mit „Zurück“-Knopf; ein Weiterklicken oder Linienwechsel beendet die Vorschau. Nutzt den bestehenden Kommentar-Varianten-Resolver wieder. +1 FE-Test." },
   ]},

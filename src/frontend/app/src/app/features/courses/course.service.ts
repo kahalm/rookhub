@@ -36,6 +36,13 @@ export interface CourseListItem {
   themes?: string[];
 }
 
+/** Pro-Linien-Bearbeitungsstatus eines Kurs-Buchs (für die „Linien durchsehen"-Ansicht):
+ *  gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien-Ids des Users. */
+export interface CourseLineStatus {
+  solvedIds: number[];
+  failedIds: number[];
+}
+
 /** Der verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
 export interface CourseLink {
   linkedBookId: number | null;
@@ -204,6 +211,11 @@ export class CourseService {
   /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */
   getBookPuzzles(bookId: number): Observable<BookPuzzleDto[]> {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
+  }
+
+  /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */
+  getLineStatus(bookId: number): Observable<CourseLineStatus> {
+    return this.http.get<CourseLineStatus>(`/api/courses/${bookId}/line-status`);
   }
 
   /** Lädt das Buch als PGN (ein Spiel je Linie). */

@@ -231,3 +231,15 @@ public class CourseAttemptDto
     public int TimeSeconds { get; set; }
     public DateTime AttemptedAt { get; set; }
 }
+
+/// <summary>
+/// Pro-Linien-Bearbeitungsstatus eines (zugänglichen) Kurs-Buchs für die „Linien durchsehen"-Ansicht:
+/// welche Linien der User gelöst (✓) bzw. versucht-aber-nicht-gelöst (✗) hat. <see cref="SolvedIds"/>
+/// = aktueller Gelöst-Stand (<see cref="Models.CoursePuzzleResult"/>, respektiert Reset); <see cref="FailedIds"/>
+/// = mind. ein Versuch (<see cref="Models.CourseAttempt"/>), aber (aktuell) nicht gelöst.
+/// </summary>
+public class CourseLineStatusDto
+{
+    public List<int> SolvedIds { get; set; } = new();
+    public List<int> FailedIds { get; set; } = new();
+}

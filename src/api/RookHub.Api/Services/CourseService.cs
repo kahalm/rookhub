@@ -174,6 +174,29 @@ public class CourseService
         }).ToList();
     }
 
+    /// <summary>Pro-Linien-Bearbeitungsstatus eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:
+    /// gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien des Users. Gelöst = aktueller
+    /// <see cref="CoursePuzzleResult"/>-Stand (respektiert Reset); „gescheitert" = mind. ein
+    /// <see cref="CourseAttempt"/> vorhanden, aber (aktuell) nicht in der Gelöst-Menge.</summary>
+    public async Task<CourseLineStatusDto> GetLineStatusAsync(int userId, int bookId, bool isAdmin)
+    {
+        await EnsureAccessAsync(userId, bookId, isAdmin);
+        var solved = (await _db.CoursePuzzleResults
+            .Where(cr => cr.UserId == userId && cr.BookId == bookId)
+            .Select(cr => cr.BookPuzzleId)
+            .ToListAsync()).ToHashSet();
+        var attempted = (await _db.CourseAttempts
+            .Where(ca => ca.UserId == userId && ca.BookId == bookId)
+            .Select(ca => ca.BookPuzzleId)
+            .Distinct()
+            .ToListAsync()).ToHashSet();
+        return new CourseLineStatusDto
+        {
+            SolvedIds = solved.ToList(),
+            FailedIds = attempted.Where(id => !solved.Contains(id)).ToList(),
+        };
+    }
+
     /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
     public async Task<List<BookPuzzleDto>> GetAllPuzzlesAsync(int userId, int bookId, bool isAdmin)
     {

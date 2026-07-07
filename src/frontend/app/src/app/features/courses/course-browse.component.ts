@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
@@ -18,6 +19,9 @@ import { applyUci } from '../puzzles/puzzle-move.util';
 import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
 /** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). */
@@ -40,7 +44,7 @@ interface ChapterGroup {
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    TranslateModule, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
+    MatDialogModule, TranslateModule, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
   ],
   template: `
     <div class="browse-container">
@@ -71,16 +75,42 @@ interface ChapterGroup {
                 <div class="chapter-head">{{ g.name || ('courses.browse.noChapter' | translate) }}</div>
               }
               @for (line of g.lines; track line.id) {
-                <button class="line-item" role="option"
-                        [class.active]="selected?.id === line.id"
-                        [attr.aria-selected]="selected?.id === line.id"
-                        (click)="selectLine(line)">
-                  <span class="line-idx">{{ lineNumber(line) }}</span>
-                  <span class="line-label">{{ line.title || line.round || ('courses.browse.line' | translate) }}</span>
-                  @if (line.isInfoOnly) {
-                    <mat-icon class="info-badge" [matTooltip]="'courses.browse.infoLine' | translate">menu_book</mat-icon>
-                  }
-                </button>
+                <div class="line-row" [class.active]="selected?.id === line.id">
+                  <button class="line-item" role="option"
+                          [attr.aria-selected]="selected?.id === line.id"
+                          (click)="selectLine(line)">
+                    @if (!line.isInfoOnly) {
+                      <span class="status-icon" [ngClass]="'status-' + lineStatus(line)">
+                        @if (lineStatus(line) === 'solved') {
+                          <mat-icon [matTooltip]="'courses.browse.solved' | translate">check_circle</mat-icon>
+                        } @else if (lineStatus(line) === 'failed') {
+                          <mat-icon [matTooltip]="'courses.browse.failed' | translate">cancel</mat-icon>
+                        }
+                      </span>
+                    }
+                    <span class="line-idx">{{ lineNumber(line) }}</span>
+                    <span class="line-label">{{ line.title || line.round || ('courses.browse.line' | translate) }}</span>
+                    @if (line.isInfoOnly) {
+                      <mat-icon class="info-badge" [matTooltip]="'courses.browse.infoLine' | translate">menu_book</mat-icon>
+                    }
+                  </button>
+                  <div class="line-actions">
+                    @if (isLoggedIn && !line.isInfoOnly) {
+                      <button mat-icon-button class="line-action" (click)="toggleFavorite(line, $event)"
+                              [class.faved]="isFavorite(line)"
+                              [matTooltip]="(isFavorite(line) ? 'courses.browse.unfavorite' : 'courses.browse.favorite') | translate"
+                              [attr.aria-pressed]="isFavorite(line)"
+                              [attr.aria-label]="(isFavorite(line) ? 'courses.browse.unfavorite' : 'courses.browse.favorite') | translate">
+                        <mat-icon>{{ isFavorite(line) ? 'favorite' : 'favorite_border' }}</mat-icon>
+                      </button>
+                    }
+                    <button mat-icon-button class="line-action" (click)="shareLine(line, $event)"
+                            [matTooltip]="'courses.browse.share' | translate"
+                            [attr.aria-label]="'courses.browse.share' | translate">
+                      <mat-icon>share</mat-icon>
+                    </button>
+                  </div>
+                </div>
               }
             }
           </aside>
@@ -176,16 +206,35 @@ interface ChapterGroup {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
       color: color-mix(in srgb, currentColor 55%, transparent); padding: 10px 8px 4px;
     }
+    .line-row {
+      display: flex; align-items: center; border-radius: 6px;
+    }
+    .line-row:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+    .line-row.active { background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 18%, transparent); }
     .line-item {
-      display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+      display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; text-align: left;
       background: none; border: none; cursor: pointer; color: inherit;
       padding: 7px 8px; border-radius: 6px; font-size: 0.85rem;
     }
-    .line-item:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .line-item.active { background: color-mix(in srgb, var(--mat-sys-primary, #1565c0) 18%, transparent); font-weight: 600; }
+    .line-row.active .line-item { font-weight: 600; }
+    .status-icon { display: inline-flex; width: 18px; flex: none; }
+    .status-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .status-icon.status-solved mat-icon { color: #2e7d32; }
+    .status-icon.status-failed mat-icon { color: color-mix(in srgb, #c62828 80%, currentColor); }
     .line-idx { font-variant-numeric: tabular-nums; opacity: 0.55; min-width: 22px; text-align: right; }
     .line-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .info-badge { font-size: 16px; width: 16px; height: 16px; opacity: 0.6; }
+    .line-actions { display: flex; align-items: center; flex: none; padding-right: 2px; }
+    .line-action {
+      width: 30px; height: 30px; line-height: 30px;
+      --mdc-icon-button-state-layer-size: 30px; --mdc-icon-button-icon-size: 17px;
+      opacity: 0.5;
+    }
+    .line-row:hover .line-action { opacity: 0.8; }
+    .line-action:hover { opacity: 1; }
+    .line-action mat-icon { font-size: 17px; width: 17px; height: 17px; }
+    .line-action.faved { opacity: 1; }
+    .line-action.faved mat-icon { color: #e53935; }
 
     .board-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .board-wrap { width: 100%; max-width: min(60vw, 560px); }
@@ -261,6 +310,11 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   private shapesByPly: Record<number, DrawShape[]> = {};
   private autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
+  /** Bearbeitungsstatus je Linie (✓ gelöst / ✗ versucht-aber-nicht-gelöst) + favorisierte Linien. */
+  private solvedIds = new Set<number>();
+  private failedIds = new Set<number>();
+  private favoriteIds = new Set<number>();
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -268,7 +322,12 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     private prefs: PreferencesService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private auth: AuthService,
+    private favorites: FavoritesService,
+    private dialog: MatDialog,
   ) {}
+
+  get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
   get commentLines(): string[] {
     return (this.comment ?? '').split(/\n{2,}|\n/).map(s => s.trim()).filter(Boolean);
@@ -303,6 +362,21 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     const chapIdxRaw = this.route.snapshot.paramMap.get('chapterIndex');
     const chapterIndex = chapIdxRaw != null ? Number(chapIdxRaw) : null;
     this.load(chapterIndex);
+    this.loadStatus();
+  }
+
+  /** Lädt den Pro-Linien-Bearbeitungsstatus (✓/✗) + die favorisierten Buch-Linien des Users. */
+  private loadStatus(): void {
+    this.courseService.getLineStatus(this.bookId).subscribe({
+      next: s => { this.solvedIds = new Set(s.solvedIds); this.failedIds = new Set(s.failedIds); },
+      error: () => {},
+    });
+    if (this.isLoggedIn) {
+      this.favorites.list(500).subscribe({
+        next: favs => { this.favoriteIds = new Set(favs.filter(f => f.source === 'Book').map(f => f.puzzleId)); },
+        error: () => {},
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -360,6 +434,46 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   /** 1-basierte laufende Nummer der Linie in der aktuellen (gefilterten) Liste. */
   lineNumber(line: BookPuzzleDto): number {
     return this.lines.indexOf(line) + 1;
+  }
+
+  /** Bearbeitungsstatus der Linie: gelöst (✓), versucht-aber-nicht-gelöst (✗) oder noch offen. */
+  lineStatus(line: BookPuzzleDto): 'solved' | 'failed' | 'none' {
+    if (this.solvedIds.has(line.id)) return 'solved';
+    if (this.failedIds.has(line.id)) return 'failed';
+    return 'none';
+  }
+
+  isFavorite(line: BookPuzzleDto): boolean {
+    return this.favoriteIds.has(line.id);
+  }
+
+  /** Linie „lieben"/entlieben (optimistisch, Rollback bei Serverfehler; idempotent). */
+  toggleFavorite(line: BookPuzzleDto, ev: Event): void {
+    ev.stopPropagation();
+    if (!this.isLoggedIn) return;
+    const id = line.id;
+    const target = !this.favoriteIds.has(id);
+    if (target) this.favoriteIds.add(id); else this.favoriteIds.delete(id);
+    const op = target ? this.favorites.add('book', id) : this.favorites.remove('book', id);
+    op.subscribe({
+      error: () => { if (target) this.favoriteIds.delete(id); else this.favoriteIds.add(id); },
+    });
+  }
+
+  /** Teilen-Dialog für eine Linie (Deep-Link auf das einzelne Buch-Puzzle + „An Freund schicken"). */
+  shareLine(line: BookPuzzleDto, ev: Event): void {
+    ev.stopPropagation();
+    const url = `${window.location.origin}/puzzles/book/${line.id}?single=1`;
+    this.dialog.open(SharePuzzleDialogComponent, {
+      data: {
+        url,
+        puzzleId: line.id,
+        source: 'book',
+        canChallenge: this.isLoggedIn && !line.isInfoOnly,
+      },
+      width: '400px',
+      maxWidth: '95vw',
+    });
   }
 
   selectLine(line: BookPuzzleDto): void {

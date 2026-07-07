@@ -1109,7 +1109,12 @@
       "pause": "Pauza",
       "prevLine": "Prethodna linija",
       "nextLine": "Sljedeća linija",
-      "loadFailed": "Tečaj se nije mogao učitati."
+      "loadFailed": "Tečaj se nije mogao učitati.",
+      "solved": "Riješeno",
+      "failed": "Nije uspjelo",
+      "favorite": "Zavoli liniju",
+      "unfavorite": "Ukloni iz omiljenih",
+      "share": "Podijeli liniju"
     },
     "themes": {
       "title": "Teme tečaja",

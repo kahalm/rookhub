@@ -57,6 +57,15 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Pro-Linien-Status eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:
+    /// gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien des Users.</summary>
+    [HttpGet("{bookId}/line-status")]
+    public async Task<ActionResult<CourseLineStatusDto>> GetLineStatus(int bookId)
+    {
+        try { return Ok(await _service.GetLineStatusAsync(GetUserId(), bookId, IsAdmin)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>Lädt das Buch als PGN herunter (ein Spiel je Linie).</summary>
     [HttpGet("{bookId}/pgn")]
     public async Task<IActionResult> DownloadPgn(int bookId)

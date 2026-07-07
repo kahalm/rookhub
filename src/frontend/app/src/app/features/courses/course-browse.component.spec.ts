@@ -16,11 +16,26 @@ describe('CourseBrowseComponent', () => {
     } as BookPuzzleDto;
   }
 
-  function build(puzzles: BookPuzzleDto[], chapterIndex: number | null = null, chapters: any[] = []): CourseBrowseComponent {
+  function build(
+    puzzles: BookPuzzleDto[],
+    chapterIndex: number | null = null,
+    chapters: any[] = [],
+    opts: { status?: { solvedIds: number[]; failedIds: number[] }; favorites?: any[]; loggedIn?: boolean; dialog?: any; favService?: any } = {},
+  ): CourseBrowseComponent {
     const route: any = { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : (k === 'chapterIndex' ? (chapterIndex == null ? null : String(chapterIndex)) : null) } } };
-    const courseService: any = { getBookPuzzles: () => of(puzzles), getChapters: () => of(chapters) };
+    const courseService: any = {
+      getBookPuzzles: () => of(puzzles),
+      getChapters: () => of(chapters),
+      getLineStatus: () => of(opts.status ?? { solvedIds: [], failedIds: [] }),
+    };
     const prefs: any = { boardTheme: 'brown', pieceSet: 'cburnett' };
-    const comp = new CourseBrowseComponent(route, {} as any, courseService, prefs, { info: () => {} } as any, { instant: (k: string) => k } as any);
+    const auth: any = { isLoggedIn: opts.loggedIn ?? true };
+    const favorites: any = opts.favService ?? { list: () => of(opts.favorites ?? []), add: () => of(true), remove: () => of(false) };
+    const dialog: any = opts.dialog ?? { open: () => {} };
+    const comp = new CourseBrowseComponent(
+      route, {} as any, courseService, prefs, { info: () => {} } as any, { instant: (k: string) => k } as any,
+      auth, favorites, dialog,
+    );
     comp.ngOnInit();
     return comp;
   }
@@ -78,6 +93,46 @@ describe('CourseBrowseComponent', () => {
 
     comp.goTo(1); // stepping ends the preview
     expect(comp.variationPreview).toBeNull();
+  });
+
+  it('reports per-line status (solved ✓ / failed ✗ / none) from the loaded line status', () => {
+    const comp = build(
+      [line({ id: 1 }), line({ id: 2 }), line({ id: 3 })],
+      null, [],
+      { status: { solvedIds: [1], failedIds: [2] } },
+    );
+    expect(comp.lineStatus(line({ id: 1 }))).toBe('solved');
+    expect(comp.lineStatus(line({ id: 2 }))).toBe('failed');
+    expect(comp.lineStatus(line({ id: 3 }))).toBe('none');
+  });
+
+  it('marks favorited lines and toggles them optimistically', () => {
+    const add = jasmine.createSpy('add').and.returnValue(of(true));
+    const remove = jasmine.createSpy('remove').and.returnValue(of(false));
+    const favService = { list: () => of([{ source: 'Book', puzzleId: 1 }]), add, remove };
+    const comp = build([line({ id: 1 }), line({ id: 2 })], null, [], { favService });
+
+    expect(comp.isFavorite(line({ id: 1 }))).toBe(true);
+    expect(comp.isFavorite(line({ id: 2 }))).toBe(false);
+
+    comp.toggleFavorite(line({ id: 2 }), { stopPropagation: () => {} } as any);
+    expect(comp.isFavorite(line({ id: 2 }))).toBe(true); // optimistic
+    expect(add).toHaveBeenCalledWith('book', 2);
+
+    comp.toggleFavorite(line({ id: 1 }), { stopPropagation: () => {} } as any);
+    expect(comp.isFavorite(line({ id: 1 }))).toBe(false);
+    expect(remove).toHaveBeenCalledWith('book', 1);
+  });
+
+  it('opens the share dialog for a single line with a book deep-link', () => {
+    const open = jasmine.createSpy('open');
+    const comp = build([line({ id: 7 })], null, [], { dialog: { open } });
+    comp.shareLine(line({ id: 7 }), { stopPropagation: () => {} } as any);
+    expect(open).toHaveBeenCalled();
+    const data = open.calls.mostRecent().args[1].data;
+    expect(data.url).toContain('/puzzles/book/7?single=1');
+    expect(data.source).toBe('book');
+    expect(data.puzzleId).toBe(7);
   });
 
   it('navigates between lines', () => {
