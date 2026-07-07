@@ -167,6 +167,11 @@ import { AuthService } from '../../core/auth.service';
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #actionMenu="matMenu">
+                <button mat-menu-item [disabled]="c.puzzleCount === 0"
+                        [routerLink]="['/courses', c.bookId, 'browse']">
+                  <mat-icon>auto_stories</mat-icon>
+                  <span>{{ 'courses.browseTooltip' | translate }}</span>
+                </button>
                 <button mat-menu-item [class.active-item]="c.isPinned"
                         [disabled]="pinning === c.bookId" (click)="togglePin(c)">
                   <mat-icon>push_pin</mat-icon>
@@ -240,6 +245,10 @@ import { AuthService } from '../../core/auth.service';
                           <span class="chapter-label">{{ ch.solvedCount }}/{{ ch.puzzleCount }}</span>
                         </div>
                         <div class="chapter-btns">
+                          <button mat-icon-button [matTooltip]="'courses.browseTooltip' | translate"
+                                  [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'browse']">
+                            <mat-icon>auto_stories</mat-icon>
+                          </button>
                           <button mat-icon-button color="primary" [matTooltip]="'courses.sequential' | translate"
                                   [routerLink]="['/courses', c.bookId, 'chapter', ch.index, 'sequential']">
                             <mat-icon>format_list_numbered</mat-icon>

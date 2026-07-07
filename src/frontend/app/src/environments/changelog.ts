@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.277.1';
+export const APP_VERSION = '0.278.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.278.0", date: "2026-07-07", changes: [
+    { en: "Courses: new „Browse“ mode to view each individual line — a read-only companion to the sequential/random quiz modes. Open it from a course's „⋮“ menu (whole book) or the new book icon per chapter (chapter only). The page shows all lines on the left (grouped by chapter) and a read-only board on the right that you click through move by move — first/previous/next/last, auto-play, arrow keys (←/→ for moves, ↑/↓ to switch line), a clickable move list, plus per-move comments and Chessable board annotations (arrows/highlights), exactly like the solution review. No quiz, no progress, no timer — just looking. New standalone CourseBrowseComponent + routes /courses/:bookId/browse and /courses/:bookId/chapter/:chapterIndex/browse; reuses the existing puzzle board, review-nav and shape parsing. i18n courses.browse.* / courses.browseTooltip en/de/hr.", de: "Kurse: neuer „Durchsehen“-Modus, um jede einzelne Linie anzusehen — ein reines Ansehen-Pendant zu den Modi Sequenziell/Zufällig. Erreichbar über das „⋮“-Menü eines Kurses (ganzes Buch) oder das neue Buch-Icon je Kapitel (nur das Kapitel). Links stehen alle Linien (nach Kapitel gruppiert), rechts ein schreibgeschütztes Brett, das man Zug für Zug durchklickt — Anfang/Zurück/Vor/Ende, Auto-Wiedergabe, Pfeiltasten (←/→ für Züge, ↑/↓ für Linienwechsel), eine anklickbare Zug-Liste sowie Pro-Zug-Kommentare und Chessable-Board-Annotationen (Pfeile/Markierungen), genau wie in der Lösungs-Durchsicht. Kein Quiz, kein Fortschritt, kein Timer — nur Ansehen. Neue eigenständige CourseBrowseComponent + Routen /courses/:bookId/browse und /courses/:bookId/chapter/:chapterIndex/browse; nutzt das bestehende Puzzle-Brett, review-nav und das Shape-Parsing wieder. i18n courses.browse.* / courses.browseTooltip en/de/hr." },
+  ]},
   { version: "0.277.1", date: "2026-07-07", changes: [
     { en: "Repertoire trainer (Quiz mode): after a correct move the opponent's reply now comes a tick faster — the green-check pause dropped from 600 ms to 300 ms and the auto opponent-move delay from 400 ms to 250 ms (≈1000 ms → ≈550 ms until the reply).", de: "Repertoire-Trainer (Abfragen-Modus): nach einem richtigen Zug kommt die Antwort des Gegners jetzt einen Tick schneller — die Richtig-Pause von 600 ms auf 300 ms und die automatische Gegnerzug-Pause von 400 ms auf 250 ms reduziert (≈1000 ms → ≈550 ms bis zur Antwort)." },
   ]},

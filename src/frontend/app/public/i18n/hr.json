@@ -1092,6 +1092,25 @@
       "openLinked": "Otvori povezani tečaj"
     },
     "moreActions": "Više radnji",
+    "browseTooltip": "Pregledaj linije",
+    "browse": {
+      "title": "Pregled",
+      "back": "Natrag na tečajeve",
+      "allChapters": "Sva poglavlja",
+      "noChapter": "Bez poglavlja",
+      "lineCount": "{{count}} linija",
+      "empty": "Ovaj tečaj nema linija.",
+      "line": "Linija",
+      "infoLine": "Linija objašnjenja (bez kviza)",
+      "selectHint": "Odaberi liniju lijevo za pregled.",
+      "first": "Prvi potez",
+      "last": "Zadnji potez",
+      "play": "Automatska reprodukcija",
+      "pause": "Pauza",
+      "prevLine": "Prethodna linija",
+      "nextLine": "Sljedeća linija",
+      "loadFailed": "Tečaj se nije mogao učitati."
+    },
     "themes": {
       "title": "Teme tečaja",
       "tooltip": "Uredi teme",

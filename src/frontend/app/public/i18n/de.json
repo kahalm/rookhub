@@ -1094,6 +1094,25 @@
       "openLinked": "Verknüpften Kurs öffnen"
     },
     "moreActions": "Weitere Aktionen",
+    "browseTooltip": "Linien durchsehen",
+    "browse": {
+      "title": "Durchsehen",
+      "back": "Zurück zu den Kursen",
+      "allChapters": "Alle Kapitel",
+      "noChapter": "Ohne Kapitel",
+      "lineCount": "{{count}} Linie(n)",
+      "empty": "Dieser Kurs hat keine Linien.",
+      "line": "Linie",
+      "infoLine": "Erklärlinie (kein Quiz)",
+      "selectHint": "Wähle links eine Linie, um sie anzusehen.",
+      "first": "Erster Zug",
+      "last": "Letzter Zug",
+      "play": "Automatisch abspielen",
+      "pause": "Pause",
+      "prevLine": "Vorige Linie",
+      "nextLine": "Nächste Linie",
+      "loadFailed": "Kurs konnte nicht geladen werden."
+    },
     "themes": {
       "title": "Kurs-Themen",
       "tooltip": "Themen bearbeiten",

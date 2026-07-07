@@ -1094,6 +1094,25 @@
       "openLinked": "Open linked course"
     },
     "moreActions": "More actions",
+    "browseTooltip": "Browse lines",
+    "browse": {
+      "title": "Browse",
+      "back": "Back to courses",
+      "allChapters": "All chapters",
+      "noChapter": "Without chapter",
+      "lineCount": "{{count}} line(s)",
+      "empty": "This course has no lines.",
+      "line": "Line",
+      "infoLine": "Explanation line (no quiz)",
+      "selectHint": "Pick a line on the left to view it.",
+      "first": "First move",
+      "last": "Last move",
+      "play": "Auto-play",
+      "pause": "Pause",
+      "prevLine": "Previous line",
+      "nextLine": "Next line",
+      "loadFailed": "Could not load the course."
+    },
     "themes": {
       "title": "Course themes",
       "tooltip": "Edit themes",

@@ -37,6 +37,8 @@ export const routes: Routes = [
   { path: 'notifications', loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent), canActivate: [authGuard] },
   { path: 'messages', loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent), canActivate: [authGuard] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
