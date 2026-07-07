@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.277.0';
+export const APP_VERSION = '0.277.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.277.1", date: "2026-07-07", changes: [
+    { en: "Repertoire trainer (Quiz mode): after a correct move the opponent's reply now comes a tick faster — the green-check pause dropped from 600 ms to 300 ms and the auto opponent-move delay from 400 ms to 250 ms (≈1000 ms → ≈550 ms until the reply).", de: "Repertoire-Trainer (Abfragen-Modus): nach einem richtigen Zug kommt die Antwort des Gegners jetzt einen Tick schneller — die Richtig-Pause von 600 ms auf 300 ms und die automatische Gegnerzug-Pause von 400 ms auf 250 ms reduziert (≈1000 ms → ≈550 ms bis zur Antwort)." },
+  ]},
   { version: "0.277.0", date: "2026-07-07", changes: [
     { en: "Repertoire trainer (Quiz mode) polish: (1) after a correct move it advances to the next move faster (600 ms instead of 1.5 s) — felt sluggish before. (2) The move list no longer spoils the move you still have to find: while it's your turn, the not-yet-played half-move is hidden (it appears once played); learn mode still shows it as guidance. (3) Premoves are now allowed — you can queue your reply on the board while the opponent's move is auto-playing (and during the short correct-move feedback); chessground plays it the moment it's your turn. (4) When a line is finished, the „line complete“ card now shows when it will be reviewed again (e.g. „Next review in 2 d“), taken from the spaced-repetition schedule.", de: "Repertoire-Trainer (Abfragen-Modus) verbessert: (1) nach einem richtigen Zug kommt der nächste schneller (600 ms statt 1,5 s) — vorher zäh. (2) Die Zug-Liste verrät den gesuchten Zug nicht mehr: solange du am Zug bist, wird der noch nicht gespielte Halbzug ausgeblendet (er erscheint erst, nachdem er gespielt wurde); im Lern-Modus wird er als Hilfe weiterhin gezeigt. (3) Premoves sind jetzt erlaubt — du kannst deine Antwort schon aufs Brett legen, während der Gegnerzug automatisch läuft (und im kurzen Richtig-Feedback); chessground spielt sie, sobald du am Zug bist. (4) Ist eine Linie fertig, zeigt der „Linie fertig“-Kasten jetzt, wann sie erneut abgefragt wird (z. B. „Nächste Wiederholung in 2 d“), aus dem Spaced-Repetition-Plan." },
   ]},
