@@ -68,10 +68,15 @@ namespace RookHub.Api.Services;
 ///   Repertoire-Trainer, der <c>[%alt]</c> aus dem PGN-Baum bereits akzeptiert. Die Marker stehen bereits
 ///   im <c>Book.SourcePgn</c> → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen
 ///   Re-Fetch.</item>
+/// <item><c>11</c> — Info-/Erklärlinien behalten jetzt die ECHTE Stellung aus dem <c>[FEN]</c>-Header
+///   (Züge leer) statt einer synthetischen Grundstellung + Fake-Zug <c>e2e4</c>. Chessable-„Introduction"-
+///   /„Evaluate …"-Seiten (z. B. <c>⏲Exercise #N - Introduction</c>) zeigten sonst die Grundstellung
+///   statt der besprochenen Position. Die richtige FEN steht bereits im <c>Book.SourcePgn</c> → rein
+///   lokal aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 10;
+    public const int CurrentVersion = 11;
 }

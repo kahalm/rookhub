@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.1';
+export const APP_VERSION = '0.281.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.2", date: "2026-07-07", changes: [
+    { en: "Fix: course/book info pages („⏲Exercise #N - Introduction“, „Evaluate 11…Nxe5“ prompts) now show the actual position they discuss instead of the starting position. These move-less Chessable info lines carry a real FEN in the PGN, but the importer discarded it and stored a synthetic start position + fake e2e4 move — so browsing/clicking through them showed the initial board. The importer now keeps the real FEN (no moves) for info lines. Import-pipeline version bumped (10→11); existing books fix themselves via the „Update“ button (local reprocess from the stored PGN, no Chessable re-fetch). +1 backend test.", de: "Fix: Kurs-/Buch-Infoseiten („⏲Exercise #N - Introduction“, „Evaluate 11…Nxe5“-Aufgaben) zeigen jetzt die tatsächlich besprochene Stellung statt der Grundstellung. Diese zug-losen Chessable-Info-Linien tragen eine echte FEN im PGN, der Import verwarf sie aber und speicherte eine synthetische Grundstellung + Fake-Zug e2e4 — beim Durchsehen/Durchklicken erschien so das Ausgangsbrett. Der Import behält jetzt die echte FEN (ohne Züge) für Info-Linien. Import-Pipeline-Version erhöht (10→11); bestehende Bücher reparieren sich über den „Aktualisieren“-Knopf (lokale Neuaufbereitung aus dem gespeicherten PGN, kein Chessable-Re-Fetch). +1 Backend-Test." },
+  ]},
   { version: "0.281.1", date: "2026-07-07", changes: [
     { en: "Fix: promoting a pawn via a premove (queuing your reply while the opponent's move auto-plays) no longer skips the piece-selection dialog. The board detected promotions by looking at the destination square, but a premove isn't applied yet — the pawn is still on its origin square and the destination is empty — so it emitted the move without a promotion piece (rejected as wrong / silently auto-queened). Promotion detection is now premove-aware (checks the origin square when the premove hasn't run yet), and the picker's color is derived from there too. Noticed on the „Knight Defends“ endgame where f1=Q is naturally premoved. +3 board unit tests.", de: "Fix: eine Bauernumwandlung per Premove (die Antwort schon legen, während der Gegnerzug automatisch läuft) überspringt den Figuren-Auswahldialog nicht mehr. Das Brett erkannte Umwandlungen am Zielfeld — ein Premove ist aber noch nicht ausgeführt, der Bauer steht noch auf dem Ausgangsfeld und das Ziel ist leer —, sodass der Zug ohne Umwandlungsfigur gemeldet wurde (als falsch verworfen / still zur Dame). Die Umwandlungs-Erkennung ist jetzt premove-bewusst (prüft das Ausgangsfeld, solange der Premove noch nicht lief), und die Farbe des Dialogs wird ebenfalls von dort abgeleitet. Aufgefallen im „Knight Defends“-Endspiel, wo f1=D naturgemäß premovt wird. +3 Brett-Unit-Tests." },
   ]},

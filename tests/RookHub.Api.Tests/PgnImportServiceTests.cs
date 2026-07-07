@@ -443,10 +443,35 @@ public class PgnImportServiceTests : IDisposable
         var p = Assert.Single(result.Puzzles);
         Assert.Equal(0, result.Invalid);
         Assert.True(p.IsInfoOnly);
-        Assert.Equal("e2e4", p.Moves);                 // synthetischer Fake-Zug
-        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);
+        Assert.Equal("", p.Moves);                     // keine Züge — Info-Linie zeigt nur die Stellung
+        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", p.Fen);  // echte Header-FEN
         Assert.Contains("only explains things", p.Comment);   // Erklärtext bleibt erhalten
         Assert.Equal("Introduction #1", p.Title);
+    }
+
+    [Fact]
+    public void ParsePgn_InfoLine_KeepsRealFenFromHeader()
+    {
+        // Regression: „⏲Exercise #N - Introduction"/„Evaluate 11…Nxe5"-Seiten sind zug-lose [%info]-Linien
+        // MIT echter Stellung im Header. Früher wurde die Grundstellung + Fake-Zug e2e4 gespeichert →
+        // der User sah die Grundstellung statt der besprochenen Position. Jetzt: echte FEN, keine Züge.
+        const string realFen = "rnbqk2r/1p1n1ppp/p3p3/2b1P3/3pN1P1/7P/PPP1NPB1/R1BQK2R b KQkq - 0 11";
+        var pgn = $@"
+[Event ""Book""]
+[Round ""003.031""]
+[White ""⏲Exercise #21 - Introduction""]
+[Black ""1. Double Attack""]
+[FEN ""{realFen}""]
+[Result ""*""]
+
+{{[%info] Evaluate 11...Nxe5 .}} 11. --
+";
+        var result = PgnImportService.ParsePgn("ex.pgn", pgn, keepCommentOnlyAsInfo: true);
+        var p = Assert.Single(result.Puzzles);
+        Assert.True(p.IsInfoOnly);
+        Assert.Equal(realFen, p.Fen);
+        Assert.Equal("", p.Moves);
+        Assert.Contains("Evaluate", p.Comment);
     }
 
     [Fact]
@@ -480,7 +505,7 @@ public class PgnImportServiceTests : IDisposable
 
         var bp = await _db.BookPuzzles.SingleAsync();
         Assert.True(bp.IsInfoOnly);
-        Assert.Equal("e2e4", bp.Moves);
+        Assert.Equal("", bp.Moves);
         Assert.Contains("only explains things", bp.Comment);
     }
 

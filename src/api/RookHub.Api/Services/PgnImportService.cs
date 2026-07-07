@@ -60,9 +60,10 @@ public class PgnImportService
     /// gezählt, nicht geworfen.
     /// </summary>
     /// <param name="keepCommentOnlyAsInfo">Wenn true (Buch-/Kurs-Import): zug-lose Linien MIT Erklärtext
-    /// (Chessable-Intro-/Info-Seiten) werden nicht verworfen, sondern als Info-Linie behalten — Fake-Zug
-    /// e4 ab Grundstellung, <c>IsInfoOnly</c>, damit der Text beim sequenziellen Durcharbeiten erscheint
-    /// (kein Quiz, nicht in Random/Daily). Default false (z. B. Wochenpost = index-basiert, unverändert).</param>
+    /// (Chessable-Intro-/Info-Seiten) werden nicht verworfen, sondern als Info-Linie behalten — mit der
+    /// ECHTEN Stellung aus dem [FEN]-Header (Züge leer), <c>IsInfoOnly</c>, damit der Text + die richtige
+    /// Stellung beim sequenziellen Durcharbeiten/Durchsehen erscheinen (kein Quiz, nicht in Random/Daily).
+    /// Default false (z. B. Wochenpost = index-basiert, unverändert).</param>
     public static ParseResult ParsePgn(string fileName, string pgnText, bool keepCommentOnlyAsInfo = false)
     {
         var result = new List<ParsedPuzzle>();
@@ -89,8 +90,10 @@ public class PgnImportService
             if (uci == null || uci.Count == 0)
             {
                 // Zug-lose Linie mit Erklärtext (Chessable-Intro-/Info-Seite): nicht verwerfen, sondern
-                // als Info-Linie behalten — Fake-Zug e4 ab Grundstellung, IsInfoOnly, nur sequenziell
-                // zum Durchklicken (zeigt den Text). Zwei Ausprägungen kommen vor:
+                // als Info-Linie behalten (IsInfoOnly, nur sequenziell zum Durchklicken / im Durchsehen).
+                // Die ECHTE Stellung aus dem [FEN]-Header übernehmen (Moves leer) — z. B. eine
+                // „⏲Exercise #N - Introduction"/„Evaluate 11…Nxe5"-Seite zeigt so die tatsächliche
+                // Aufgabenstellung statt der Grundstellung. Zwei Ausprägungen kommen vor:
                 //  • reiner Kommentar ohne Zug-Token → `comment` (erster Kommentar) trägt den Text;
                 //  • Chessable-Kapitel-Intro `{[%info]} 1. -- {Text}` → NULL-Zug `--`, der erste
                 //    Kommentar ist nur der leere [%info]-Marker, der Text steht im ZWEITEN (Zug-)
@@ -103,8 +106,8 @@ public class PgnImportService
                     result.Add(new ParsedPuzzle(
                         LineId: PgnParser.Truncate($"{fileName}:{round}", 300),
                         Round: PgnParser.Truncate(round, 20),
-                        Fen: PgnParser.StartPositionFen,
-                        Moves: "e2e4",
+                        Fen: fen,
+                        Moves: "",
                         StartPly: -1,
                         Title: iw.Length == 0 ? null : PgnParser.Truncate(iw, 300),
                         Chapter: ib.Length == 0 ? null : PgnParser.Truncate(ib, 200),
