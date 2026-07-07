@@ -63,6 +63,12 @@ public class MenuVisibilityService
         var userGroupIds = userId is int uid
             ? (await _db.UserGroups.Where(ug => ug.UserId == uid).Select(ug => ug.GroupId).ToListAsync()).ToHashSet()
             : new HashSet<int>();
+        // Jeder eingeloggte Nutzer ist implizit Mitglied der System-Gruppe „Everyone".
+        if (userId != null)
+        {
+            var everyoneId = await _db.Groups.Where(g => g.IsEveryone).Select(g => (int?)g.Id).FirstOrDefaultAsync();
+            if (everyoneId is int eid) userGroupIds.Add(eid);
+        }
 
         var result = new List<string>();
         foreach (var c in config)

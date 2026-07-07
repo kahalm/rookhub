@@ -9,6 +9,8 @@ public class GroupDto
     public string? Description { get; set; }
     public int MemberCount { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>System-Gruppe „Everyone" (jeder implizit Mitglied; nicht löschbar/mitgliedsänderbar).</summary>
+    public bool IsEveryone { get; set; }
 }
 
 public class CreateGroupDto

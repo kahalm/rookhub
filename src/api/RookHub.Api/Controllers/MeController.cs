@@ -21,8 +21,11 @@ public class MeController : BaseApiController
         var groups = await _db.UserGroups
             .Where(ug => ug.UserId == userId)
             .Select(ug => ug.Group!.Name)
-            .OrderBy(n => n)
             .ToListAsync();
+        // Jeder Nutzer ist implizit Mitglied der System-Gruppe „Everyone".
+        var everyoneName = await _db.Groups.Where(g => g.IsEveryone).Select(g => g.Name).FirstOrDefaultAsync();
+        if (everyoneName != null && !groups.Contains(everyoneName)) groups.Add(everyoneName);
+        groups.Sort(StringComparer.Ordinal);
         return Ok(groups);
     }
 }

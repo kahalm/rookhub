@@ -104,4 +104,50 @@ public class GroupControllerTests : IDisposable
         Assert.Equal(0, await _db.Groups.CountAsync());
         Assert.Equal(0, await _db.UserGroups.CountAsync());
     }
+
+    private async Task<Group> CreateEveryoneAsync()
+    {
+        var g = new Group { Name = "Everyone", IsEveryone = true, CreatedAt = DateTime.UtcNow };
+        _db.Groups.Add(g);
+        await _db.SaveChangesAsync();
+        return g;
+    }
+
+    [Fact]
+    public async Task Everyone_MemberCountIsTotalUsers_AndListedFirst()
+    {
+        await CreateUserAsync("alice");
+        await CreateUserAsync("bob");
+        await CreateEveryoneAsync();
+        await CreateGroupAsync("Z-Team");
+
+        var list = (await _controller.GetGroups() as OkObjectResult)!.Value as List<GroupDto>;
+        Assert.True(list![0].IsEveryone);           // Everyone zuerst
+        Assert.Equal(2, list[0].MemberCount);        // = alle Nutzer, obwohl keine UserGroups-Zeilen
+    }
+
+    [Fact]
+    public async Task Everyone_GetMembers_ReturnsAllUsers_WithoutRows()
+    {
+        await CreateUserAsync("alice");
+        await CreateUserAsync("bob");
+        var e = await CreateEveryoneAsync();
+
+        var members = (await _controller.GetMembers(e.Id) as OkObjectResult)!.Value as List<GroupMemberDto>;
+        Assert.Equal(2, members!.Count);
+        Assert.Equal(0, await _db.UserGroups.CountAsync());
+    }
+
+    [Fact]
+    public async Task Everyone_CannotBeModifiedOrDeletedOrMemberEdited()
+    {
+        var u = await CreateUserAsync("alice");
+        var e = await CreateEveryoneAsync();
+
+        Assert.IsType<BadRequestObjectResult>(await _controller.Update(e.Id, new UpdateGroupDto { Name = "Nope" }));
+        Assert.IsType<BadRequestObjectResult>(await _controller.Delete(e.Id));
+        Assert.IsType<BadRequestObjectResult>(await _controller.AddMember(e.Id, u.Id));
+        Assert.IsType<BadRequestObjectResult>(await _controller.RemoveMember(e.Id, u.Id));
+        Assert.Equal(0, await _db.UserGroups.CountAsync());
+    }
 }

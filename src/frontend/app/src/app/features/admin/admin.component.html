@@ -107,16 +107,37 @@
               <span class="book-hint">{{ 'admin.books.poolHint' | translate }}</span>
             </div>
 
+            @if (!booksLoading && books.length > 0) {
+              <mat-form-field appearance="outline" class="book-search" subscriptSizing="dynamic">
+                <mat-icon matPrefix>search</mat-icon>
+                <input matInput [(ngModel)]="bookSearch" (ngModelChange)="applyBookFilter()"
+                       [placeholder]="'admin.books.searchPlaceholder' | translate">
+                @if (bookSearch) {
+                  <button matSuffix mat-icon-button (click)="clearBookSearch()" [attr.aria-label]="'common.clear' | translate">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+            }
+
             @if (booksLoading) {
               <app-loading-spinner />
             } @else if (books.length === 0) {
               <p class="empty-hint">{{ 'admin.books.empty' | translate }}</p>
+            } @else if (filteredBooks.length === 0) {
+              <p class="empty-hint">{{ 'admin.books.noMatch' | translate }}</p>
             } @else {
               <div class="table-responsive">
-              <table mat-table [dataSource]="books" class="full-width books-table">
+              <table mat-table [dataSource]="filteredBooks" class="full-width books-table">
                 <ng-container matColumnDef="displayName">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.book' | translate }}</th>
-                  <td mat-cell *matCellDef="let b">{{ b.displayName }}</td>
+                  <td mat-cell *matCellDef="let b">
+                    <span class="book-name">{{ b.displayName }}</span>
+                    <button mat-icon-button class="book-rename-btn" (click)="renameBook(b)"
+                            [attr.title]="'admin.books.rename' | translate">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </td>
                 </ng-container>
                 <ng-container matColumnDef="puzzleCount">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.puzzles' | translate }}</th>
@@ -234,6 +255,9 @@
                     <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.group' | translate }}</th>
                     <td mat-cell *matCellDef="let g">
                       <strong>{{ g.name }}</strong>
+                      @if (g.isEveryone) {
+                        <mat-chip class="everyone-chip" disabled>{{ 'admin.groups.everyoneBadge' | translate }}</mat-chip>
+                      }
                       @if (g.description) { <div class="group-desc">{{ g.description }}</div> }
                     </td>
                   </ng-container>
@@ -247,9 +271,11 @@
                       <button mat-icon-button (click)="selectGroup(g)" [attr.title]="'admin.groups.manageMembers' | translate">
                         <mat-icon>group</mat-icon>
                       </button>
-                      <button mat-icon-button color="warn" (click)="deleteGroup(g)" [attr.title]="'admin.groups.deleteGroup' | translate">
-                        <mat-icon>delete</mat-icon>
-                      </button>
+                      @if (!g.isEveryone) {
+                        <button mat-icon-button color="warn" (click)="deleteGroup(g)" [attr.title]="'admin.groups.deleteGroup' | translate">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      }
                     </td>
                   </ng-container>
 
@@ -264,19 +290,23 @@
                       <mat-card-title>{{ 'admin.groups.membersOf' | translate: { name: selectedGroup.name } }}</mat-card-title>
                     </mat-card-header>
                     <mat-card-content>
-                      <div class="member-add">
-                        <mat-form-field appearance="outline" class="member-select">
-                          <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
-                          <mat-select [(ngModel)]="addMemberUserId">
-                            @for (u of availableUsers; track u.id) {
-                              <mat-option [value]="u.id">{{ u.username }}</mat-option>
-                            }
-                          </mat-select>
-                        </mat-form-field>
-                        <button mat-raised-button color="primary" (click)="addMember()" [disabled]="!addMemberUserId">
-                          <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
-                        </button>
-                      </div>
+                      @if (selectedGroup.isEveryone) {
+                        <p class="everyone-hint">{{ 'admin.groups.everyoneHint' | translate }}</p>
+                      } @else {
+                        <div class="member-add">
+                          <mat-form-field appearance="outline" class="member-select">
+                            <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
+                            <mat-select [(ngModel)]="addMemberUserId">
+                              @for (u of availableUsers; track u.id) {
+                                <mat-option [value]="u.id">{{ u.username }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                          <button mat-raised-button color="primary" (click)="addMember()" [disabled]="!addMemberUserId">
+                            <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
+                          </button>
+                        </div>
+                      }
 
                       @if (membersLoading) {
                         <app-loading-spinner />
@@ -287,7 +317,9 @@
                           @for (m of groupMembers; track m.userId) {
                             <mat-chip (removed)="removeMember(m)">
                               {{ m.username }}
-                              <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+                              @if (!selectedGroup.isEveryone) {
+                                <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+                              }
                             </mat-chip>
                           }
                         </mat-chip-set>

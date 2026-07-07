@@ -104,4 +104,54 @@ describe('AdminComponent', () => {
     c.addMember();
     expect(adminService.addGroupMember).not.toHaveBeenCalled();
   });
+
+  it('applyBookFilter filters by name, file name and tags (case-insensitive)', () => {
+    const { c } = make();
+    c.books = [
+      { id: 1, displayName: 'Endgame Essentials', fileName: 'endgame.pgn', tags: 'endgame' },
+      { id: 2, displayName: 'Tactics Trainer', fileName: 'tactics.pgn', tags: 'fork,pin' },
+    ] as any;
+
+    c.bookSearch = '';
+    c.applyBookFilter();
+    expect(c.filteredBooks.length).toBe(2);
+
+    c.bookSearch = 'endGAME';        // matches name + tag of book 1
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([1]);
+
+    c.bookSearch = 'pin';            // matches tag of book 2
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([2]);
+
+    c.bookSearch = 'nope';
+    c.applyBookFilter();
+    expect(c.filteredBooks.length).toBe(0);
+  });
+
+  it('renameBook sends the new DisplayName and updates the row + filter', () => {
+    const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+    const { c } = make({ updateBook });
+    const book = { id: 7, displayName: 'Old Name', fileName: 'x.pgn', tags: null } as any;
+    c.books = [book];
+    spyOn(window, 'prompt').and.returnValue('  New Name  ');
+
+    c.renameBook(book);
+
+    expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name' });
+    expect(book.displayName).toBe('New Name');
+  });
+
+  it('renameBook does nothing on cancel or unchanged name', () => {
+    const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+    const { c } = make({ updateBook });
+    const book = { id: 7, displayName: 'Same', fileName: 'x.pgn', tags: null } as any;
+
+    const promptSpy = spyOn(window, 'prompt').and.returnValue(null);   // cancelled
+    c.renameBook(book);
+    promptSpy.and.returnValue('Same');                                  // unchanged
+    c.renameBook(book);
+
+    expect(updateBook).not.toHaveBeenCalled();
+  });
 });

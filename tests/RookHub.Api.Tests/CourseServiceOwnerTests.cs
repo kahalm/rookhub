@@ -333,4 +333,42 @@ public class CourseServiceOwnerTests : IDisposable
         await _svc.DeletePersonalCourseAsync(userId: 1, dto.BookId);
         Assert.Empty(_db.CoursePins);
     }
+
+    /// <summary>Buch an die System-Gruppe „Everyone" freigegeben — für jeden sichtbar, ohne UserGroups-Zeile.</summary>
+    private async Task<Book> SeedEveryoneBookAsync()
+    {
+        var everyone = new Group { Name = "Everyone", IsEveryone = true, CreatedAt = DateTime.UtcNow };
+        _db.Groups.Add(everyone);
+        await _db.SaveChangesAsync();
+        var book = new Book
+        {
+            FileName = "everyone.pgn", DisplayName = "Everyone Course", OwnerUserId = null,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        _db.BookGroupAccesses.Add(new BookGroupAccess { BookId = book.Id, GroupId = everyone.Id });
+        await _db.SaveChangesAsync();
+        return book;
+    }
+
+    [Fact]
+    public async Task EveryoneBook_AccessibleToAnyUser_WithoutMembership()
+    {
+        var book = await SeedEveryoneBookAsync();
+        // Nutzer 42 ist in KEINER Gruppe — trotzdem Zugriff über „Everyone".
+        Assert.True(await _svc.CanAccessAsync(userId: 42, book.Id, isAdmin: false));
+        Assert.True(await _svc.HasAnyAccessAsync(userId: 42, isAdmin: false));
+        var courses = await _svc.GetCoursesAsync(userId: 42, isAdmin: false);
+        Assert.Contains(courses, c => c.BookId == book.Id);
+        Assert.Equal(0, await _db.UserGroups.CountAsync());
+    }
+
+    [Fact]
+    public async Task NonEveryoneGroupBook_StillRequiresMembership()
+    {
+        var book = await SeedGroupBookAsync(groupId: 5, memberUserId: 1);
+        Assert.True(await _svc.CanAccessAsync(userId: 1, book.Id, isAdmin: false));   // Mitglied
+        Assert.False(await _svc.CanAccessAsync(userId: 2, book.Id, isAdmin: false));  // kein Mitglied
+    }
 }

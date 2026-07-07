@@ -122,3 +122,13 @@
 .dl-est { font-size: 0.82rem; opacity: 0.85; white-space: nowrap; }
 .dl-est-err { font-size: 0.82rem; color: #d32f2f; }
 .dl-est-spin { display: inline-block; vertical-align: middle; }
+
+/* Books-Tab: Suchfeld + Umbenennen */
+.book-search { width: 100%; max-width: 420px; margin-bottom: 0.75rem; }
+.book-name { vertical-align: middle; }
+.book-rename-btn { width: 30px; height: 30px; line-height: 30px; margin-left: 4px; }
+.book-rename-btn mat-icon { font-size: 17px; width: 17px; height: 17px; opacity: 0.6; }
+
+/* Everyone-Gruppe */
+.everyone-chip { font-size: 0.7rem; min-height: 20px; margin-left: 6px; opacity: 0.85; }
+.everyone-hint { font-size: 0.85rem; opacity: 0.8; margin: 0 0 0.5rem; }

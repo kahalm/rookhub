@@ -25,7 +25,8 @@ public class GroupController : BaseApiController
     public async Task<IActionResult> GetGroups()
     {
         var groups = await _db.Groups
-            .OrderBy(g => g.Name)
+            .OrderByDescending(g => g.IsEveryone)
+            .ThenBy(g => g.Name)
             .Select(g => new GroupDto
             {
                 Id = g.Id,
@@ -33,8 +34,15 @@ public class GroupController : BaseApiController
                 Description = g.Description,
                 MemberCount = g.Members.Count,
                 CreatedAt = g.CreatedAt,
+                IsEveryone = g.IsEveryone,
             })
             .ToListAsync();
+        // „Everyone" hat keine expliziten Mitgliedszeilen — jeder ist implizit Mitglied.
+        if (groups.Any(g => g.IsEveryone))
+        {
+            var totalUsers = await _db.AppUsers.CountAsync();
+            foreach (var g in groups.Where(g => g.IsEveryone)) g.MemberCount = totalUsers;
+        }
         return Ok(groups);
     }
 
@@ -67,6 +75,8 @@ public class GroupController : BaseApiController
         var group = await _db.Groups.FindAsync(id);
         if (group == null)
             return NotFound(new { message = "Group not found." });
+        if (group.IsEveryone)
+            return BadRequest(new { message = "The Everyone group cannot be modified." });
 
         if (!string.IsNullOrWhiteSpace(dto.Name))
         {
@@ -88,6 +98,8 @@ public class GroupController : BaseApiController
         var group = await _db.Groups.FindAsync(id);
         if (group == null)
             return NotFound(new { message = "Group not found." });
+        if (group.IsEveryone)
+            return BadRequest(new { message = "The Everyone group cannot be deleted." });
         // Mitgliedschaften + Buch-Freigaben + Ziel-Vorlage explizit entfernen (FK-Cascade greift bei InMemory nicht).
         _db.UserGroups.RemoveRange(_db.UserGroups.Where(ug => ug.GroupId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.GroupId == id));
@@ -100,8 +112,18 @@ public class GroupController : BaseApiController
     [HttpGet("{id}/members")]
     public async Task<IActionResult> GetMembers(int id)
     {
-        if (!await _db.Groups.AnyAsync(g => g.Id == id))
+        var group = await _db.Groups.FindAsync(id);
+        if (group == null)
             return NotFound(new { message = "Group not found." });
+        // „Everyone": jeder Nutzer ist implizit Mitglied → alle Nutzer zurückgeben (keine expliziten Zeilen).
+        if (group.IsEveryone)
+        {
+            var all = await _db.AppUsers
+                .Select(u => new GroupMemberDto { UserId = u.Id, Username = u.Username })
+                .OrderBy(m => m.Username)
+                .ToListAsync();
+            return Ok(all);
+        }
         var members = await _db.UserGroups
             .Where(ug => ug.GroupId == id)
             .Select(ug => new GroupMemberDto { UserId = ug.UserId, Username = ug.User!.Username })
@@ -113,8 +135,11 @@ public class GroupController : BaseApiController
     [HttpPost("{id}/members/{userId}")]
     public async Task<IActionResult> AddMember(int id, int userId)
     {
-        if (!await _db.Groups.AnyAsync(g => g.Id == id))
+        var group = await _db.Groups.FindAsync(id);
+        if (group == null)
             return NotFound(new { message = "Group not found." });
+        if (group.IsEveryone)
+            return BadRequest(new { message = "Everyone group membership is implicit and cannot be edited." });
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
             return NotFound(new { message = "User not found." });
         if (!await _db.UserGroups.AnyAsync(ug => ug.GroupId == id && ug.UserId == userId))
@@ -128,6 +153,8 @@ public class GroupController : BaseApiController
     [HttpDelete("{id}/members/{userId}")]
     public async Task<IActionResult> RemoveMember(int id, int userId)
     {
+        if (await _db.Groups.AnyAsync(g => g.Id == id && g.IsEveryone))
+            return BadRequest(new { message = "Everyone group membership is implicit and cannot be edited." });
         var membership = await _db.UserGroups.FirstOrDefaultAsync(ug => ug.GroupId == id && ug.UserId == userId);
         if (membership == null)
             return NotFound(new { message = "Membership not found." });

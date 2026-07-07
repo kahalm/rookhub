@@ -54,6 +54,8 @@ export class AdminComponent implements OnInit {
   userColumns = ['id', 'username', 'email', 'isAdmin', 'groups', 'createdAt', 'actions'];
 
   books: Book[] = [];
+  filteredBooks: Book[] = [];
+  bookSearch = '';
   booksLoading = false;
   booksUploading = false;
   bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'groups', 'actions'];
@@ -193,12 +195,43 @@ export class AdminComponent implements OnInit {
     this.adminService.getBooks().subscribe({
       next: books => {
         this.books = books;
+        this.applyBookFilter();
         this.booksLoading = false;
       },
       error: () => {
         this.snackbar.info(this.translate.instant('admin.books.errors.load'));
         this.booksLoading = false;
       }
+    });
+  }
+
+  /** Clientseitiger Filter über die bereits geladenen Bücher (Name/Dateiname/Tags, case-insensitive). */
+  applyBookFilter(): void {
+    const q = this.bookSearch.trim().toLowerCase();
+    if (!q) { this.filteredBooks = this.books; return; }
+    this.filteredBooks = this.books.filter(b =>
+      (b.displayName ?? '').toLowerCase().includes(q) ||
+      (b.fileName ?? '').toLowerCase().includes(q) ||
+      (b.tags ?? '').toLowerCase().includes(q));
+  }
+
+  clearBookSearch(): void {
+    this.bookSearch = '';
+    this.applyBookFilter();
+  }
+
+  /** Buch umbenennen (nur DisplayName; Backend akzeptiert das im Update-DTO). */
+  renameBook(book: Book): void {
+    const next = prompt(this.translate.instant('admin.books.renamePrompt'), book.displayName);
+    if (next == null) return;
+    const name = next.trim();
+    if (!name || name === book.displayName) return;
+    this.adminService.updateBook(book.id, { displayName: name }).subscribe({
+      next: () => {
+        book.displayName = name;
+        this.applyBookFilter();
+      },
+      error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save'))
     });
   }
 

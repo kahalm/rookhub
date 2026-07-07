@@ -68,6 +68,8 @@ export interface Group {
   description: string | null;
   memberCount: number;
   createdAt: string;
+  /** System-Gruppe „Everyone": jeder implizit Mitglied; nicht löschbar/mitgliedsänderbar. */
+  isEveryone?: boolean;
 }
 
 export interface GroupMember {

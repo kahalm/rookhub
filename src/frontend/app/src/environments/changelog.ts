@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.275.0';
+export const APP_VERSION = '0.276.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.276.0", date: "2026-07-07", changes: [
+    { en: "Admin → Books: search field + rename. A search box filters the book list live by name, file name or tags (empty state „No books match“). Each book now has a pencil button to rename it (edits DisplayName via the existing update endpoint). Plus a new system group „Everyone“: every user is automatically a member (no per-user rows — membership is implicit), so releasing a book/course to this group makes it visible to all. The Everyone group is seeded on startup, listed first in Admin → Groups with an „Everyone“ badge and a live member count of all users, and cannot be deleted, renamed or have its membership edited (its member list is read-only). Access checks (courses, menu visibility, my-groups) treat everyone as a member of it. +5 backend tests.", de: "Admin → Bücher: Suchfeld + Umbenennen. Ein Suchfeld filtert die Buchliste live nach Name, Dateiname oder Tags (Leerzustand „Keine Bücher passen zur Suche“). Jedes Buch hat jetzt einen Stift-Knopf zum Umbenennen (ändert DisplayName über den bestehenden Update-Endpoint). Außerdem eine neue System-Gruppe „Alle“ (Everyone): jeder Nutzer ist automatisch Mitglied (ohne Pro-Nutzer-Zeilen — die Mitgliedschaft ist implizit), sodass ein für diese Gruppe freigegebenes Buch/Kurs für alle sichtbar wird. Die Everyone-Gruppe wird beim Start angelegt, steht in Admin → Gruppen ganz oben mit einem „Alle“-Badge und einer Mitgliederzahl = alle Nutzer, und kann nicht gelöscht, umbenannt oder in der Mitgliedschaft verändert werden (ihre Mitgliederliste ist schreibgeschützt). Die Zugriffs-Checks (Kurse, Menü-Sichtbarkeit, my-groups) behandeln jeden als Mitglied. +5 Backend-Tests." },
+  ]},
   { version: "0.275.0", date: "2026-07-07", changes: [
     { en: "Saved-game ratings now work for lichess, and re-saving a game repairs an older record in place. Server side: re-saving a game you already saved (same site + game id) now heals the stored record when the new save is better — more moves, or ratings for the first time — keeping the same share link (never truncates). This lets a previously saved, incomplete/rating-less game be fixed by simply saving it again. (Needs RepCheck ≥ 1.24.0, which pulls lichess games from lichess's official export API → correct player names, ratings and a clean move list, instead of the unreliable page-title/DOM reading that could leave „…“ gaps in the moves.)", de: "Ratings gespeicherter Partien funktionieren jetzt auch für lichess, und erneutes Speichern repariert einen älteren Datensatz an Ort und Stelle. Serverseitig: speicherst du eine bereits gespeicherte Partie erneut (gleiche Seite + Partie-ID), wird der vorhandene Datensatz geheilt, wenn der neue Save besser ist — mehr Züge oder erstmals Ratings — und behält denselben Teilen-Link (kürzt nie). So lässt sich eine früher gespeicherte, lückenhafte/ratinglose Partie einfach durch erneutes Speichern reparieren. (Braucht RepCheck ≥ 1.24.0, das lichess-Partien über lichess' offizielle Export-API holt → korrekte Spielernamen, Ratings und eine saubere Zugliste, statt der unzuverlässigen Titel-/DOM-Auslese, die „…“-Lücken in den Zügen hinterlassen konnte.)" },
   ]},

@@ -16,6 +16,8 @@ public static class AdminSeeder
     /// </summary>
     public static async Task SeedAsync(AppDbContext db, IConfiguration config)
     {
+        await SeedEveryoneGroupAsync(db);
+
         var username = config["ADMIN_USERNAME"];
         var password = config["ADMIN_PASSWORD"];
 
@@ -43,6 +45,35 @@ public static class AdminSeeder
             IsAdmin = true,
             Profile = new UserProfile()
         });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Stellt sicher, dass genau EINE System-Gruppe „Everyone" existiert (<see cref="Group.IsEveryone"/>),
+    /// in der jeder Nutzer implizit Mitglied ist. Idempotent: existiert bereits eine solche Gruppe,
+    /// passiert nichts; existiert nur eine gleichnamige normale Gruppe, wird diese zur Everyone-Gruppe
+    /// erhoben (verhindert Kollision mit dem Unique-Namensindex).
+    /// </summary>
+    private static async Task SeedEveryoneGroupAsync(AppDbContext db)
+    {
+        if (await db.Groups.AnyAsync(g => g.IsEveryone))
+            return;
+
+        var byName = await db.Groups.FirstOrDefaultAsync(g => g.Name == "Everyone");
+        if (byName != null)
+        {
+            byName.IsEveryone = true;
+        }
+        else
+        {
+            db.Groups.Add(new Group
+            {
+                Name = "Everyone",
+                Description = "Alle Nutzer sind automatisch Mitglied. Bücher/Kurse, die dieser Gruppe freigegeben werden, sind für jeden sichtbar.",
+                IsEveryone = true,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
         await db.SaveChangesAsync();
     }
 }
