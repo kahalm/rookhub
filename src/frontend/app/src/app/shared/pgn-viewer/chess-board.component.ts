@@ -9,7 +9,7 @@ import { Key } from 'chessground/types';
 @Component({
   selector: 'app-chess-board',
   standalone: true,
-  template: `<div #boardEl class="cg-square"></div>`,
+  template: `<div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>`,
   styles: [`
     :host { display: block; width: 100%; }
     /* Verschließ-Sicher: der Boden-Div bleibt immer quadratisch, egal welche width
@@ -23,6 +23,10 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   @Input() lastMove?: [string, string];
   @Input() flipped = false;
+  /** Brett-Theme aus den User-Preferences (styles.scss `.board-theme-*` cg-board Regeln). */
+  @Input() boardTheme = 'brown';
+  /** Figurenset aus den User-Preferences (styles.scss `.piece-set-*` cg-board piece Regeln). */
+  @Input() pieceSet = 'cburnett';
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
 

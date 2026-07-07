@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.274.1';
+export const APP_VERSION = '0.274.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.274.2", date: "2026-07-07", changes: [
+    { en: "Games viewer (replay dialog + shared /g/… page) now honors your chosen board theme and piece set from Preferences. Previously the chess-board component in these two views always rendered the chessground default (brown board, cburnett pieces) regardless of the setting used everywhere else — so opening one of your own saved games showed the wrong pieces. Fixed by giving the shared chess-board component `boardTheme`/`pieceSet` inputs (defaults unchanged) and wiring them to PreferencesService at both call sites.", de: "Der Partie-Viewer (Nachspiel-Dialog + geteilte /g/…-Seite) respektiert jetzt das in den Einstellungen gewählte Brett-Theme und Figurenset. Vorher rendete die chess-board-Komponente in diesen zwei Ansichten immer die Chessground-Defaults (braunes Brett, cburnett-Figuren) — unabhängig von der sonst angewendeten Präferenz, weshalb das Öffnen einer eigenen gespeicherten Partie mit den falschen Figuren erschien. Fix: die geteilte chess-board-Komponente bekommt `boardTheme`/`pieceSet`-Inputs (Defaults unverändert), beide Aufrufstellen reichen die Werte aus PreferencesService durch." },
+  ]},
   { version: "0.274.1", date: "2026-07-07", changes: [
     { en: "Fix for the v0.274.0 link previews returning „frontend unavailable“ in production: the OG renderer fetches the real SPA index.html from the frontend container, but the container's DNS name differs per deployment (Compose service name „frontend“ vs container_name „rookhub-frontend“). The renderer now tries several candidate hostnames (configured Frontend:InternalUrl, then „frontend“, then „rookhub-frontend“) and remembers the one that works. Additionally, nginx now degrades gracefully: if the OG renderer errors or is unreachable, it serves the normal SPA (just without preview enrichment) instead of an error page — so these routes can never show a broken page.", de: "Fix für die v0.274.0-Link-Vorschau, die in Produktion „frontend unavailable“ lieferte: der OG-Renderer holt die echte SPA-index.html vom Frontend-Container, dessen DNS-Name je nach Deployment abweicht (Compose-Servicename „frontend“ vs. container_name „rookhub-frontend“). Der Renderer probiert jetzt mehrere Kandidaten-Hostnamen (konfiguriertes Frontend:InternalUrl, dann „frontend“, dann „rookhub-frontend“) und merkt sich den funktionierenden. Zusätzlich degradiert nginx sauber: schlägt der OG-Renderer fehl oder ist nicht erreichbar, wird die normale SPA ausgeliefert (nur ohne Vorschau-Anreicherung) statt einer Fehlerseite — diese Routen können also nie eine kaputte Seite zeigen." },
   ]},

@@ -9,6 +9,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ChessBoardComponent } from './chess-board.component';
 import { MoveListComponent } from './move-list.component';
 import { PgnViewerService } from './pgn-viewer.service';
+import { PreferencesService } from '../../core/preferences.service';
 
 export interface PgnViewerData {
   pgn: string;
@@ -70,7 +71,8 @@ export interface PgnViewerData {
       <div class="viewer-body">
         <div class="board-section">
           <div class="board-wrap">
-            <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped" />
+            <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                             [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
             <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
             <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
           </div>
@@ -209,6 +211,7 @@ export class PgnViewerComponent implements OnInit {
     public service: PgnViewerService,
     public dialogRef: MatDialogRef<PgnViewerComponent>,
     @Inject(MAT_DIALOG_DATA) private data: PgnViewerData,
+    public preferences: PreferencesService,
   ) {}
 
   ngOnInit(): void {

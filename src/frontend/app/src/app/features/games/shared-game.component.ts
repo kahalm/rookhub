@@ -9,6 +9,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { GamesService, SharedGame } from './games.service';
 
 /**
@@ -49,7 +50,8 @@ import { GamesService, SharedGame } from './games.service';
           <div class="body">
             <div class="board-section">
               <div class="board-wrap">
-                <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped" />
+                <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                                 [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
                 <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
               </div>
@@ -128,7 +130,12 @@ export class SharedGameComponent implements OnInit {
   notFound = false;
   flipped = false;
 
-  constructor(public service: PgnViewerService, private route: ActivatedRoute, private games: GamesService) {}
+  constructor(
+    public service: PgnViewerService,
+    private route: ActivatedRoute,
+    private games: GamesService,
+    public preferences: PreferencesService,
+  ) {}
 
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('token') || '';
