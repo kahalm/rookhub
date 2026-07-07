@@ -48,16 +48,23 @@ public class SavedGameService
 
         var externalId = string.IsNullOrWhiteSpace(dto.ExternalId) ? null : dto.ExternalId.Trim();
 
-        // Dedup: gleicher User + Source + ExternalId → bestehende Partie zurückgeben.
-        if (externalId != null)
-        {
-            var existing = await _db.SavedGames.AsNoTracking()
-                .FirstOrDefaultAsync(g => g.UserId == userId && g.Source == source && g.ExternalId == externalId);
-            if (existing != null) return MapDetail(existing);
-        }
-
         var result = dto.Result?.Trim();
         if (result == null || !AllowedResults.Contains(result)) result = "*";
+
+        // Dedup: gleicher User + Source + ExternalId → bestehende Partie. Wenn der neue
+        // Save BESSER ist (mehr Züge ODER erstmals Elo), heilt er den Datensatz in-place
+        // (gleiches ShareToken/Id) — so repariert ein Re-Save eine alt gespeicherte,
+        // lückenhafte/Elo-lose Partie, ohne den Teilen-Link zu ändern.
+        if (externalId != null)
+        {
+            var existing = await _db.SavedGames
+                .FirstOrDefaultAsync(g => g.UserId == userId && g.Source == source && g.ExternalId == externalId);
+            if (existing != null)
+            {
+                if (TryHeal(existing, moves, dto, result)) await _db.SaveChangesAsync();
+                return MapDetail(existing);
+            }
+        }
 
         var entity = new SavedGame
         {
@@ -185,6 +192,25 @@ public class SavedGameService
 
     /// <summary>Plausibilitäts-Check für ein Elo/Rating (verhindert Müll-Header).</summary>
     private static bool IsPlausibleElo(int? elo) => elo is >= 100 and <= 4000;
+
+    /// <summary>Aktualisiert eine bereits gespeicherte Partie beim Re-Save, wenn die neue
+    /// Version mehr Züge hat ODER erstmals ein Elo mitbringt. Gibt <c>true</c> zurück, wenn
+    /// etwas geändert wurde. Kürzt NIE (weniger Züge → keine Änderung).</summary>
+    private static bool TryHeal(SavedGame existing, List<string> moves, SaveGameInputDto dto, string result)
+    {
+        var newHasElo = IsPlausibleElo(dto.WhiteElo) || IsPlausibleElo(dto.BlackElo);
+        var oldHasElo = ParseEloHeader(existing.Pgn, "WhiteElo") != null || ParseEloHeader(existing.Pgn, "BlackElo") != null;
+        var moreMoves = moves.Count > CountPlies(existing.Pgn);
+        if (!moreMoves && !(newHasElo && !oldHasElo)) return false;
+
+        existing.Pgn = BuildPgn(moves, dto, result);
+        if (!string.IsNullOrWhiteSpace(dto.White)) existing.White = Clip(dto.White, 120);
+        if (!string.IsNullOrWhiteSpace(dto.Black)) existing.Black = Clip(dto.Black, 120);
+        existing.Result = result;
+        if (dto.PlayedAt.HasValue) existing.PlayedAt = dto.PlayedAt;
+        if (!string.IsNullOrWhiteSpace(dto.SourceUrl)) existing.SourceUrl = Clip(dto.SourceUrl, 1000);
+        return true;
+    }
 
     /// <summary>Liest ein Elo aus einem PGN-Header (z. B. <c>[WhiteElo "1832"]</c>); null wenn fehlt/unplausibel.</summary>
     public static int? ParseEloHeader(string pgn, string tag)

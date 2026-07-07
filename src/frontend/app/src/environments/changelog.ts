@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.274.2';
+export const APP_VERSION = '0.275.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.275.0", date: "2026-07-07", changes: [
+    { en: "Saved-game ratings now work for lichess, and re-saving a game repairs an older record in place. Server side: re-saving a game you already saved (same site + game id) now heals the stored record when the new save is better — more moves, or ratings for the first time — keeping the same share link (never truncates). This lets a previously saved, incomplete/rating-less game be fixed by simply saving it again. (Needs RepCheck ≥ 1.24.0, which pulls lichess games from lichess's official export API → correct player names, ratings and a clean move list, instead of the unreliable page-title/DOM reading that could leave „…“ gaps in the moves.)", de: "Ratings gespeicherter Partien funktionieren jetzt auch für lichess, und erneutes Speichern repariert einen älteren Datensatz an Ort und Stelle. Serverseitig: speicherst du eine bereits gespeicherte Partie erneut (gleiche Seite + Partie-ID), wird der vorhandene Datensatz geheilt, wenn der neue Save besser ist — mehr Züge oder erstmals Ratings — und behält denselben Teilen-Link (kürzt nie). So lässt sich eine früher gespeicherte, lückenhafte/ratinglose Partie einfach durch erneutes Speichern reparieren. (Braucht RepCheck ≥ 1.24.0, das lichess-Partien über lichess' offizielle Export-API holt → korrekte Spielernamen, Ratings und eine saubere Zugliste, statt der unzuverlässigen Titel-/DOM-Auslese, die „…“-Lücken in den Zügen hinterlassen konnte.)" },
+  ]},
   { version: "0.274.2", date: "2026-07-07", changes: [
     { en: "Games viewer (replay dialog + shared /g/… page) now honors your chosen board theme and piece set from Preferences. Previously the chess-board component in these two views always rendered the chessground default (brown board, cburnett pieces) regardless of the setting used everywhere else — so opening one of your own saved games showed the wrong pieces. Fixed by giving the shared chess-board component `boardTheme`/`pieceSet` inputs (defaults unchanged) and wiring them to PreferencesService at both call sites.", de: "Der Partie-Viewer (Nachspiel-Dialog + geteilte /g/…-Seite) respektiert jetzt das in den Einstellungen gewählte Brett-Theme und Figurenset. Vorher rendete die chess-board-Komponente in diesen zwei Ansichten immer die Chessground-Defaults (braunes Brett, cburnett-Figuren) — unabhängig von der sonst angewendeten Präferenz, weshalb das Öffnen einer eigenen gespeicherten Partie mit den falschen Figuren erschien. Fix: die geteilte chess-board-Komponente bekommt `boardTheme`/`pieceSet`-Inputs (Defaults unverändert), beide Aufrufstellen reichen die Werte aus PreferencesService durch." },
   ]},

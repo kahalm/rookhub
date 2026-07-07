@@ -156,6 +156,54 @@ public class GamesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Save_Resave_HealsExistingGameWithEloAndMoreMoves_KeepsToken()
+    {
+        var user = await CreateUserAsync();
+        // Erstsave: wenige Züge, kein Elo (wie eine alt gespeicherte, lückenhafte Partie).
+        var first = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5" }, White = "a", Black = "b",
+            Result = "*", ExternalId = "heal-1",
+        });
+        Assert.Null(first.WhiteElo);
+
+        // Re-Save derselben Partie mit mehr Zügen + Elo → heilt in-place, gleiches Token.
+        var second = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3", "Nc6" }, White = "a", Black = "b",
+            Result = "1-0", ExternalId = "heal-1", WhiteElo = 2006, BlackElo = 2070,
+        });
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(first.ShareToken, second.ShareToken);   // Link bleibt gleich
+        Assert.Equal(2006, second.WhiteElo);
+        Assert.Equal(2070, second.BlackElo);
+        Assert.Contains("Nf3", second.Pgn);
+        Assert.Equal("1-0", second.Result);
+        Assert.Equal(1, _db.SavedGames.Count(g => g.UserId == user.Id && g.ExternalId == "heal-1"));
+    }
+
+    [Fact]
+    public async Task Save_Resave_FewerMovesNoElo_DoesNotTruncate()
+    {
+        var user = await CreateUserAsync();
+        var first = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3", "Nc6" }, White = "a", Black = "b",
+            Result = "1-0", ExternalId = "heal-2", WhiteElo = 2006,
+        });
+        var second = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5" }, White = "a", Black = "b",
+            Result = "*", ExternalId = "heal-2",
+        });
+        Assert.Equal(first.Id, second.Id);
+        Assert.Contains("Nc6", second.Pgn);       // NICHT gekürzt
+        Assert.Equal(2006, second.WhiteElo);      // Elo bleibt
+        Assert.Equal("1-0", second.Result);
+    }
+
+    [Fact]
     public async Task Save_ImplausibleOrMissingElo_OmittedFromPgnAndDto()
     {
         var owner = await CreateUserAsync("owner");
