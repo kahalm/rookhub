@@ -351,23 +351,35 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).not.toBe('LINE_DONE');
   });
 
-  it('movesInLine trims to past + current (never shows future plies)', () => {
+  it('movesInLine hides the unplayed current move in quiz PLAYING (no spoiler), reveals it otherwise', () => {
     const c = make('w', 'Chapter A');
-    // currentPly === 0 → nur der erste Halbzug ist sichtbar (als „current"); die restlichen 3 sind
-    // Zukunft und werden BEWUSST NICHT gerendert.
-    let m = c.movesInLine;
-    expect(m.length).toBe(1);
-    expect(m[0].san).toBe('e4');
-    expect(m[0].state).toBe('current');
-    expect(m[0].num).toBe(1);
-    // Cursor auf 2 → past + past + current.
+    // Quiz + PLAYING, currentPly 0: der noch nicht gespielte eigene Zug darf NICHT erscheinen
+    // (sonst stünde die Lösung in der Zug-Liste). Nichts Gespieltes → leere Liste.
+    expect(c.phase).toBe('PLAYING');
+    expect(c.movesInLine.length).toBe(0);
+    // Cursor auf 2 (zwei bereits gespielte Halbzüge) → beide 'past', der aktuelle bleibt verborgen.
     (c as any).currentPly = 2;
-    m = c.movesInLine;
-    expect(m.length).toBe(3);
+    let m = c.movesInLine;
+    expect(m.length).toBe(2);
     expect(m[0].state).toBe('past');
     expect(m[1].state).toBe('past');
+    // Außerhalb von PLAYING (Feedback nach dem Zug) wird der aktuelle Halbzug gezeigt.
+    (c as any).phase = 'FEEDBACK';
+    m = c.movesInLine;
+    expect(m.length).toBe(3);
     expect(m[2].state).toBe('current');
     expect(m[2].num).toBe(2);                       // Nummer bei Weiß-Halbzug des 2. Zugs
+  });
+
+  it('premovable is true while the opponent is auto-moving (quiz), false on the user’s turn', () => {
+    const c = make('w', 'Chapter A');
+    // Nutzer (Weiß) am Zug → kein Premove.
+    expect(c.phase).toBe('PLAYING');
+    expect(c.premovable).toBe(false);
+    // Gegnerzug-Fenster: oppMoving + Brett zeigt Schwarz am Zug → Premove erlaubt.
+    (c as any).oppMoving = true;
+    (c as any).fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+    expect(c.premovable).toBe(true);
   });
 
   it('learn-mode comment surfaces PGN comment of the current move', () => {

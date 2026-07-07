@@ -29,10 +29,10 @@ type Outcome = 'correct' | 'tolerated' | 'wrong';
 type Mode = 'quiz' | 'learn';
 
 // Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
-// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct war in
-// 0.250.0 auf 3 s hochgezogen (vorher „sehr kurz"), das fühlte sich beim Durchspielen einer
-// Linie zu langsam an — jetzt 1,5 s als Kompromiss.
-const ADVANCE_MS: Record<Outcome, number> = { correct: 1500, tolerated: 1500, wrong: 0 };
+// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct war 1,5 s,
+// fühlte sich beim Durchspielen einer Linie aber noch zäh an → 600 ms (der grüne Haken blitzt
+// kurz, dann kommt der Gegnerzug). Geduldet bleibt länger stehen (der Alternativzug soll wirken).
+const ADVANCE_MS: Record<Outcome, number> = { correct: 600, tolerated: 1500, wrong: 0 };
 const OPP_MOVE_DELAY_MS = 400;   // kurze Pause vor jedem automatischen Gegnerzug
 const WRONG_HOLD_MS = 1000;
 const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
@@ -129,9 +129,10 @@ const LEARN_REPEATS = 3;
 
     <div *ngSwitchDefault class="play" (click)="onPlayClick()">
       <app-puzzle-board
-        [fen]="fen" [orientation]="color === 'w' ? 'white' : 'black'"
-        [turnColor]="color === 'w' ? 'white' : 'black'"
-        [dests]="dests" [lastMove]="lastMove" [viewOnly]="!isPlayable"
+        [fen]="fen" [orientation]="userColorName"
+        [turnColor]="boardTurn"
+        [dests]="dests" [lastMove]="lastMove" [viewOnly]="!isPlayable && !premovable"
+        [premovable]="premovable"
         [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
         (moveMade)="onMove($event)">
       </app-puzzle-board>
@@ -232,6 +233,10 @@ const LEARN_REPEATS = 3;
           <div class="line-done">
             <p class="hint"><mat-icon>done_all</mat-icon>
               {{ (pendingRepeat ? 'repertoireTrainer.linePassDone' : 'repertoireTrainer.lineDone') | translate }}</p>
+            @if (!pendingRepeat && nextRepeatLabel) {
+              <p class="repeat-due"><mat-icon>schedule</mat-icon>
+                {{ 'repertoireTrainer.repeatIn' | translate: { when: nextRepeatLabel } }}</p>
+            }
             <button mat-raised-button color="primary" (click)="continueLine(); $event.stopPropagation()">
               {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
             </button>
@@ -308,6 +313,8 @@ const LEARN_REPEATS = 3;
     .comment-hold { display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .comment-hold .comment-box { width: 100%; }
     .tap-hint { font-size: 12px; opacity: .7; margin: 0; }
+    .repeat-due { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--mat-sys-primary, #1565c0); }
+    .repeat-due mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .hint { color: var(--mdc-theme-text-secondary-on-background, #666); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .eval-info { font-size: 13px; opacity: .85; margin: 0 0 8px; }
@@ -375,6 +382,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private pendingWrong = false;
   /** Für die EMPTY-Ansicht: wann die nächste Pool-Linie fällig wird (ISO) — null = nichts im Pool. */
   nextDueAt: string | null = null;
+  /** LINE_DONE (Abfragen): wann die gerade beendete Linie erneut fällig wird (ISO, aus der
+   *  SR-Bewertung) — null solange die Antwort aussteht bzw. im Lern-Modus. */
+  nextRepeatAt: string | null = null;
+  /** true, während der Gegnerzug automatisch gespielt wird — erlaubt in dieser Phase einen
+   *  Premove (chessground). */
+  oppMoving = false;
   private graph: RepertoireGraph | null = null;
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   private wrongRevertTimer: ReturnType<typeof setTimeout> | null = null;
@@ -595,6 +608,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.currentPly = 0;
     this.lineHadWrong = false;
     this.pendingWrong = false;
+    this.oppMoving = false;
+    this.nextRepeatAt = null;
     this.holdComment = '';
     this.fen = this.chess.fen();
     this.lastMove = undefined;
@@ -610,6 +625,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const nextSide = this.chess.turn();
     if (nextSide === this.color) {
       // User ist am Zug.
+      this.oppMoving = false;
       this.startFen = this.fen;
       if (this.mode === 'learn') {
         // Nur der ERSTE Durchlauf (learnPass 0) zeigt den erwarteten Zug vor (geführtes Lernen);
@@ -626,6 +642,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     }
 
     // Gegnerzug automatisch spielen (mit kleiner Verzögerung, damit man ihn wahrnimmt).
+    // oppMoving=true erlaubt dem User in diesem Fenster einen Premove.
+    this.oppMoving = true;
     this.phase = 'PLAYING';   // Zwischenzustand: view-only, kein Feedback-Kasten
     this.dests = new Map();
     this.cdr.markForCheck();
@@ -655,6 +673,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   private finishLine(): void {
     const line = this.queue[this.qIndex];
+    this.oppMoving = false;
+    this.nextRepeatAt = null;
 
     // Learn-Modus: eine Linie muss LEARN_REPEATS-mal durchgespielt werden (1× geführt + 2× „durch-
     // klicken"), bevor sie in den Pool wandert.
@@ -674,7 +694,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       // Quiz: SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
       const label = (line.headers['White'] || '').trim().slice(0, 120);
       this.training.reviewLine(this.repertoireId, { lineKey: this.lineKeyOf(line), label, correct: !this.lineHadWrong })
-        .subscribe({ next: st => this.statesByKey.set(st.lineKey, st), error: () => {} });
+        .subscribe({
+          next: st => {
+            this.statesByKey.set(st.lineKey, st);
+            // Nächste Fälligkeit im „Linie fertig"-Kasten anzeigen (nur solange diese Linie noch offen ist).
+            if (this.phase === 'LINE_DONE') { this.nextRepeatAt = st.dueAt; this.cdr.markForCheck(); }
+          },
+          error: () => {},
+        });
     }
     // Nicht mehr automatisch weiter — der User rückt per „Weiter"-Knopf (bzw. Klick/Leertaste) vor.
     // Timer werden BEWUSST hier NICHT geräumt: `startCurrentLine` cleart sie beim Übergang zur
@@ -744,7 +771,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const out: { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] = [];
     let curSide = side;
     let curMove = fullMove;
-    const upto = Math.min(this.currentPly, line.moves.length - 1);
+    // Im Abfragen-Modus, solange der User seinen Zug noch SUCHT (PLAYING), darf der aktuelle
+    // (noch nicht gespielte) Halbzug NICHT erscheinen — sonst steht die Lösung in der Zug-Liste.
+    // Im Lern-Modus (führt den Zug ohnehin vor) und nach dem Zug (FEEDBACK/…) wird er gezeigt.
+    const revealCurrent = this.mode === 'learn' || this.phase !== 'PLAYING';
+    const upto = revealCurrent ? Math.min(this.currentPly, line.moves.length - 1) : this.currentPly - 1;
     for (let ply = 0; ply <= upto; ply++) {
       const isFirstBlackHalfmove = ply === 0 && curSide === 'b';
       const num = curSide === 'w' || isFirstBlackHalfmove ? curMove : null;
@@ -801,9 +832,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
-  get nextDueLabel(): string {
-    if (!this.nextDueAt) return '';
-    const ms = new Date(this.nextDueAt).getTime() - Date.now();
+  get nextDueLabel(): string { return this.relDueLabel(this.nextDueAt); }
+
+  /** LINE_DONE: „in X" bis die gerade beendete Linie erneut abgefragt wird (Abfragen-Modus). */
+  get nextRepeatLabel(): string { return this.relDueLabel(this.nextRepeatAt); }
+
+  private relDueLabel(iso: string | null): string {
+    if (!iso) return '';
+    const ms = new Date(iso).getTime() - Date.now();
     const h = ms / 3_600_000;
     if (h < 1) return '< 1 h';
     if (h < 48) return `${Math.round(h)} h`;
@@ -812,6 +848,21 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const w = d / 7;
     if (w < 9) return `${Math.round(w)} w`;
     return `${Math.round(d / 30)} mo`;
+  }
+
+  /** Farbe (chessground-Notation), die der User in dieser Linie spielt. */
+  get userColorName(): 'white' | 'black' { return this.color === 'w' ? 'white' : 'black'; }
+
+  /** Seite am Zug laut der aktuell angezeigten Stellung. */
+  get boardTurn(): 'white' | 'black' { return this.fen.split(/\s+/)[1] === 'b' ? 'black' : 'white'; }
+
+  /** Premove erlauben, solange der GEGNER am Zug ist — also während des automatischen Gegnerzugs
+   *  und im kurzen Feedback nach einem richtigen/geduldeten Zug. Nur im Abfragen-Modus. */
+  get premovable(): boolean {
+    if (this.mode !== 'quiz') return false;
+    if (this.boardTurn === this.userColorName) return false;
+    if (this.oppMoving) return true;
+    return this.phase === 'FEEDBACK' && this.outcome !== 'wrong';
   }
 
   get evalDeltaAbsDisplay(): string {

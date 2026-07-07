@@ -33,6 +33,7 @@
     "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
     "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht.",
     "nextDue": "Gerade nichts fällig. Nächste Wiederholung in {{when}}.",
+    "repeatIn": "Nächste Wiederholung in {{when}}",
     "nothingInPool": "Noch keine Linien im Übungspool — füge welche hinzu, um zu starten.",
     "addAllToPool": "Alle Linien in den Pool",
     "makeAllDue": "Alle jetzt fällig machen",

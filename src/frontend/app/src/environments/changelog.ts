@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.276.0';
+export const APP_VERSION = '0.277.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.277.0", date: "2026-07-07", changes: [
+    { en: "Repertoire trainer (Quiz mode) polish: (1) after a correct move it advances to the next move faster (600 ms instead of 1.5 s) — felt sluggish before. (2) The move list no longer spoils the move you still have to find: while it's your turn, the not-yet-played half-move is hidden (it appears once played); learn mode still shows it as guidance. (3) Premoves are now allowed — you can queue your reply on the board while the opponent's move is auto-playing (and during the short correct-move feedback); chessground plays it the moment it's your turn. (4) When a line is finished, the „line complete“ card now shows when it will be reviewed again (e.g. „Next review in 2 d“), taken from the spaced-repetition schedule.", de: "Repertoire-Trainer (Abfragen-Modus) verbessert: (1) nach einem richtigen Zug kommt der nächste schneller (600 ms statt 1,5 s) — vorher zäh. (2) Die Zug-Liste verrät den gesuchten Zug nicht mehr: solange du am Zug bist, wird der noch nicht gespielte Halbzug ausgeblendet (er erscheint erst, nachdem er gespielt wurde); im Lern-Modus wird er als Hilfe weiterhin gezeigt. (3) Premoves sind jetzt erlaubt — du kannst deine Antwort schon aufs Brett legen, während der Gegnerzug automatisch läuft (und im kurzen Richtig-Feedback); chessground spielt sie, sobald du am Zug bist. (4) Ist eine Linie fertig, zeigt der „Linie fertig“-Kasten jetzt, wann sie erneut abgefragt wird (z. B. „Nächste Wiederholung in 2 d“), aus dem Spaced-Repetition-Plan." },
+  ]},
   { version: "0.276.0", date: "2026-07-07", changes: [
     { en: "Admin → Books: search field + rename. A search box filters the book list live by name, file name or tags (empty state „No books match“). Each book now has a pencil button to rename it (edits DisplayName via the existing update endpoint). Plus a new system group „Everyone“: every user is automatically a member (no per-user rows — membership is implicit), so releasing a book/course to this group makes it visible to all. The Everyone group is seeded on startup, listed first in Admin → Groups with an „Everyone“ badge and a live member count of all users, and cannot be deleted, renamed or have its membership edited (its member list is read-only). Access checks (courses, menu visibility, my-groups) treat everyone as a member of it. +5 backend tests.", de: "Admin → Bücher: Suchfeld + Umbenennen. Ein Suchfeld filtert die Buchliste live nach Name, Dateiname oder Tags (Leerzustand „Keine Bücher passen zur Suche“). Jedes Buch hat jetzt einen Stift-Knopf zum Umbenennen (ändert DisplayName über den bestehenden Update-Endpoint). Außerdem eine neue System-Gruppe „Alle“ (Everyone): jeder Nutzer ist automatisch Mitglied (ohne Pro-Nutzer-Zeilen — die Mitgliedschaft ist implizit), sodass ein für diese Gruppe freigegebenes Buch/Kurs für alle sichtbar wird. Die Everyone-Gruppe wird beim Start angelegt, steht in Admin → Gruppen ganz oben mit einem „Alle“-Badge und einer Mitgliederzahl = alle Nutzer, und kann nicht gelöscht, umbenannt oder in der Mitgliedschaft verändert werden (ihre Mitgliederliste ist schreibgeschützt). Die Zugriffs-Checks (Kurse, Menü-Sichtbarkeit, my-groups) behandeln jeden als Mitglied. +5 Backend-Tests." },
   ]},

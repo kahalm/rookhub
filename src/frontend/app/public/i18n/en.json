@@ -33,6 +33,7 @@
     "resetTooltip": "Reset training progress (delete SM-2 state).",
     "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted.",
     "nextDue": "Nothing due right now. Next review in {{when}}.",
+    "repeatIn": "Next review in {{when}}",
     "nothingInPool": "No lines in your practice pool yet — add some to start.",
     "addAllToPool": "Add all lines to pool",
     "makeAllDue": "Make all due now",

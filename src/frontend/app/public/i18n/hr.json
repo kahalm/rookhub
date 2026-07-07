@@ -33,6 +33,7 @@
     "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
     "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani.",
     "nextDue": "Trenutno ništa nije na redu. Sljedeće ponavljanje za {{when}}.",
+    "repeatIn": "Sljedeće ponavljanje za {{when}}",
     "nothingInPool": "Još nema linija u bazenu za vježbanje — dodaj neke za početak.",
     "addAllToPool": "Dodaj sve linije u bazen",
     "makeAllDue": "Učini sve dospjelim sada",
