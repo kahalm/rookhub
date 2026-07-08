@@ -55,7 +55,9 @@ export interface CommentLinesState {
  * Die im Kontext-Block angezeigten Kommentar-Absätze (gestapelt).
  * - Review/Info: EIN Absatz (der zum durchgespielten Zug bzw. die Einleitung vor dem 1. Zug).
  * - WÄHREND des Lösens: die Kommentare ALLER bereits gespielten Lösungszüge in Reihenfolge; Züge
- *   ohne Kommentar fügen nichts hinzu, KEIN Rückfall auf die Einleitung.
+ *   ohne Kommentar fügen nichts hinzu, KEIN Rückfall auf die Einleitung. AUSNAHME: solange der
+ *   Spieler seinen ersten Lösungszug noch nicht gemacht hat, bleibt die Einleitung oben stehen
+ *   (damit sie bei Kurslinien mit Aufbauzügen einen Halbzug länger lesbar ist).
  * - Vor dem ersten Zug (auf dem Lösungspfad): die Einleitung des Puzzles.
  */
 export function buildCommentLines(s: CommentLinesState): string[] {
@@ -68,6 +70,12 @@ export function buildCommentLines(s: CommentLinesState): string[] {
   if (s.onSolutionPath && s.moveIndex > 0 && s.solving) {
     const start = Math.max(0, s.startPly);
     const lines: string[] = [];
+    // Einleitung einen Halbzug länger stehen lassen: bei Kurslinien mit Aufbauzügen (`startPly >= 0`)
+    // steht `moveIndex` beim Lösestart bereits auf dem ersten Löserzug (`startPly + 1`), sodass die
+    // Einleitung sonst genau dann verschwände, wenn der Aufbauzug fertig ist — zu kurz zum Lesen.
+    // Solange der Spieler seinen ERSTEN Lösungszug noch nicht gemacht hat, bleibt sie oben stehen.
+    const firstUserPly = s.startPly < 0 ? 0 : s.startPly + 1;
+    if (s.puzzleComment && s.moveIndex <= firstUserPly) lines.push(s.puzzleComment);
     // `moveIndex` ist bereits ABSOLUT → der zuletzt gespielte Halbzug ist `moveIndex - 1`.
     for (let ply = start; ply <= s.moveIndex - 1; ply++) {
       const c = commentForPlyPlayed(s.moveComments, ply);

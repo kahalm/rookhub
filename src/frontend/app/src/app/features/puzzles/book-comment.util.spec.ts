@@ -50,20 +50,31 @@ describe('book-comment.util', () => {
       onSolutionPath: true, moveIndex: 0, solving: true, startPly: 0,
     };
 
-    it('stapelt gespielte Zug-Kommentare (kein Intro-Rückfall)', () => {
+    it('stapelt gespielte Zug-Kommentare (kein Intro-Rückfall nach dem 1. Löserzug)', () => {
       expect(buildCommentLines({ ...base, moveIndex: 0 })).toEqual(['Einleitung']);
-      expect(buildCommentLines({ ...base, moveIndex: 1 })).toEqual(['Guter erster Zug']);
+      // moveIndex 1 = erster Löserzug noch ausstehend (firstUserPly bei startPly 0) → Intro bleibt oben stehen
+      expect(buildCommentLines({ ...base, moveIndex: 1 })).toEqual(['Einleitung', 'Guter erster Zug']);
       expect(buildCommentLines({ ...base, moveIndex: 2 })).toEqual(['Guter erster Zug']);
       expect(buildCommentLines({ ...base, moveIndex: 3 })).toEqual(['Guter erster Zug', 'Springer raus']);
       expect(buildCommentLines({ ...base, moveIndex: 4 })).toEqual(['Guter erster Zug', 'Springer raus']);
+    });
+
+    it('lässt die Einleitung bei Aufbauzügen (startPly ≥ 0) einen Halbzug länger stehen', () => {
+      // startPly 2 → erster Löserzug ist Ply 3; moveIndex startet dort. Intro (nur Ply -1) verschwände
+      // sonst sofort, weil der Stapel-Zweig erst ab Ply 0 sucht → hier ohne Zug-Kommentare leer.
+      const setup: CommentLinesState = { ...base, startPly: 2, puzzleComment: 'Kontext', moveComments: { '-1': 'Kontext', '4': 'Späterer Zug' } };
+      expect(buildCommentLines({ ...setup, moveIndex: 3 })).toEqual(['Kontext']);   // erster Löserzug ausstehend → Intro sichtbar
+      expect(buildCommentLines({ ...setup, moveIndex: 4 })).toEqual([]);             // 1. Löserzug gemacht, Ply 3 ohne Kommentar → Intro weg
+      expect(buildCommentLines({ ...setup, moveIndex: 5 })).toEqual(['Späterer Zug']);
     });
 
     it('off-path (Fehlzug) → leer, kein Intro-Rückfall', () => {
       expect(buildCommentLines({ ...base, moveIndex: 3, onSolutionPath: false })).toEqual([]);
     });
 
-    it('Mid-Line (startPly ≥ 1) zeigt Kommentare nicht zu früh', () => {
-      const mid: CommentLinesState = { ...base, startPly: 2, moveComments: { '3': 'Springer-Kommentar' } };
+    it('Mid-Line (startPly ≥ 1) zeigt Zug-Kommentare nicht zu früh', () => {
+      // puzzleComment null → keine Einleitung; Zug-Kommentar erst nach dem zugehörigen Zug
+      const mid: CommentLinesState = { ...base, startPly: 2, puzzleComment: null, moveComments: { '3': 'Springer-Kommentar' } };
       expect(buildCommentLines({ ...mid, moveIndex: 3 })).toEqual([]);
       expect(buildCommentLines({ ...mid, moveIndex: 4 })).toEqual(['Springer-Kommentar']);
     });

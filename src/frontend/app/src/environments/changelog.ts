@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.9';
+export const APP_VERSION = '0.281.10';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.10", date: "2026-07-08", changes: [
+    { en: "Book/course puzzle: the puzzle's intro comment no longer vanishes the instant solving starts. On course lines that begin with setup moves (startPly ≥ 0) the intro used to disappear exactly when the setup move finished — too fast to read. It now stays visible one half-move longer, i.e. until you actually play your first solution move (stacked above any move comment). +2 unit tests / spec cases updated.", de: "Buch-/Kurs-Puzzle: die Einleitung des Puzzles verschwindet nicht mehr in dem Moment, in dem das Lösen beginnt. Bei Kurslinien mit Aufbauzügen (startPly ≥ 0) verschwand die Einleitung genau dann, wenn der Aufbauzug fertig war — zu schnell zum Lesen. Sie bleibt jetzt einen Halbzug länger stehen, nämlich bis du deinen ersten Lösungszug tatsächlich machst (über einem etwaigen Zug-Kommentar gestapelt). +2 Unit-Tests / Spec-Fälle angepasst." },
+  ]},
   { version: "0.281.9", date: "2026-07-08", changes: [
     { en: "Maintainability refactor of the two big solver components (no behaviour change; state machine, timers, HTTP and offline-queue call order deliberately left untouched — only pure logic pulled out). book-puzzle (−69 lines): comment/solution-review rendering → `book-comment.util`, daily-date navigation + weekly-start + clock formatting → `book-nav.util` (the duplicated course/weekly time formatters unified). repertoire-trainer (−61 lines): SR due/queue helpers → `repertoire-sr.util`, move numbering → `repertoire-move-format.util`, eval parsing → `repertoire-eval.util` (kept separate from the base solver's because the mate encoding differs). +53 new unit tests; all book-puzzle + trainer specs pass; prod build green.", de: "Wartbarkeits-Refactor der zwei großen Solver-Komponenten (keine Verhaltensänderung; State-Machine, Timer, HTTP und Offline-Queue-Aufrufreihenfolge bewusst unangetastet — nur reine Logik ausgelagert). book-puzzle (−69 Z.): Kommentar-/Lösungs-Review-Rendering → `book-comment.util`, Tagespuzzle-Datums-Navigation + Wochenpost-Start + Zeit-Formatierung → `book-nav.util` (die doppelten Kurs-/Wochenpost-Zeitformatierer vereinheitlicht). repertoire-trainer (−61 Z.): SR-Fälligkeits-/Queue-Helfer → `repertoire-sr.util`, Zug-Nummerierung → `repertoire-move-format.util`, Eval-Parsing → `repertoire-eval.util` (getrennt vom Basis-Solver, da die Matt-Kodierung abweicht). +53 neue Unit-Tests; alle book-puzzle- + Trainer-Specs grün; Prod-Build grün." },
   ]},

@@ -600,9 +600,9 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
 
     (c as any).moveIndex = 0;                                  // vor dem ersten Zug → Einleitung
     expect(c.commentLines).toEqual(['Einleitung']);
-    (c as any).moveIndex = 1;                                  // ply 0 hat Kommentar
-    expect(c.commentLines).toEqual(['Guter erster Zug']);
-    (c as any).moveIndex = 2;                                  // ply 1 KEIN Kommentar → bleibt beim einen
+    (c as any).moveIndex = 1;                                  // erster Löserzug noch ausstehend → Einleitung bleibt oben (linger), ply-0-Kommentar darunter
+    expect(c.commentLines).toEqual(['Einleitung', 'Guter erster Zug']);
+    (c as any).moveIndex = 2;                                  // 1. Löserzug gemacht → Einleitung weg, ply 1 KEIN Kommentar → bleibt beim einen
     expect(c.commentLines).toEqual(['Guter erster Zug']);
     (c as any).moveIndex = 3;                                  // ply 2 hat Kommentar → darunter gestapelt
     expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
@@ -625,11 +625,15 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     (c as any).moveIndex = 0;
     expect(c.commentLines).toEqual(['Einleitung']);
 
-    // 1. Zug richtig → dessen Kommentar; Einleitung weg.
+    // Erster Löserzug ausstehend: Einleitung bleibt einen Halbzug länger stehen, ply-0-Kommentar darunter.
     (c as any).moveIndex = 1;
+    expect(c.commentLines).toEqual(['Einleitung', 'Guter erster Zug']);
+
+    // 1. Löserzug gemacht → Einleitung weg, nur noch der Zug-Kommentar.
+    (c as any).moveIndex = 2;
     expect(c.commentLines).toEqual(['Guter erster Zug']);
 
-    // 2. Zug FALSCH → off-path: die Einleitung darf NICHT wieder auftauchen (Bug-Report Buch 84572).
+    // Danach FALSCH → off-path: die Einleitung darf NICHT wieder auftauchen (Bug-Report Buch 84572).
     (c as any).onSolutionPath = false;
     expect(c.commentLines).toEqual([]);
   });
@@ -639,8 +643,10 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     // `start` erneut dazu → bei startPly ≥ 1 erschienen Kommentare um startPly Halbzüge zu früh
     // (Daily 2026-07-05: Zug-31-Kommentar bei absolutem ply 59 tauchte schon nach De7/ply 58 auf).
     const c = makeComponent();
+    // comment=null → keine Einleitung, damit dieser Test rein die Zug-Kommentar-Terminierung prüft
+    // (der Einleitungs-Linger ist separat abgedeckt).
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4 e7e5 g1f3 b8c6 f1c4', bookFileName: 'b', startPly: 2,
-      comment: 'Einleitung', moveComments: { '3': 'Springer-Kommentar' } } as any;
+      comment: null, moveComments: { '3': 'Springer-Kommentar' } } as any;
     c.reviewMode = false;
     (c as any).onSolutionPath = true;
     (c as any).startPly = 2;
