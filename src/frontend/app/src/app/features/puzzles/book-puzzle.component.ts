@@ -30,7 +30,7 @@ import { DrawShape } from 'chessground/draw';
 import { parseMoveShapes } from './move-shapes.util';
 import { parseAltMoves } from './alt-moves.util';
 import { applyUci } from './puzzle-move.util';
-import { FirstMoveHint } from './puzzle-hints.util';
+import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
@@ -155,14 +155,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Baut die 3 gestuften Tipp-Strings (Typ → Figur → SAN) aus einer Zug-Klassifikation. */
   private hintsForMove(f: FirstMoveHint | null): string[] {
-    if (!f) return [];
-    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
-    const tier1 = f.type === 'check' ? t('puzzles.hints.t1Check')
-      : f.type === 'capture' ? t('puzzles.hints.t1Capture')
-      : t('puzzles.hints.t1Quiet');
-    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-    const piece = t('puzzles.hints.pieces.' + (PIECE[f.pieceType] ?? 'piece'));
-    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: f.san })];
+    return buildStagedHints(f, (k, p) => this.translate.instant(k, p) as string);
   }
 
   flagSaving = false;

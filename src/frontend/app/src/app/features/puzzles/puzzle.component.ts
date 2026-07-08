@@ -34,6 +34,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { applyUci } from './puzzle-move.util';
+import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { LongSolveService } from './long-solve.service';
 import { of } from 'rxjs';
@@ -486,15 +487,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
    * welche Figur zieht, Stufe 3 = der Zug (SAN).
    */
   override get availableHints(): string[] {
-    const h = this.currentMoveHint;
-    if (!h) return [];
-    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
-    const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
-      : h.type === 'capture' ? t('puzzles.hints.t1Capture')
-      : t('puzzles.hints.t1Quiet');
-    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-    const piece = t('puzzles.hints.pieces.' + (PIECE[h.pieceType] ?? 'piece'));
-    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: h.san })];
+    return buildStagedHints(this.currentMoveHint, (k, p) => this.translate.instant(k, p) as string);
   }
 
   flagSaving = false;

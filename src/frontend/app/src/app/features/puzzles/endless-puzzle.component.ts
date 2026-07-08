@@ -35,6 +35,7 @@ import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { applyUci } from './puzzle-move.util';
+import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
@@ -1024,15 +1025,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * Zugtyp, Stufe 2 = welche Figur zieht, Stufe 3 = der Zug (SAN).
    */
   override get availableHints(): string[] {
-    const h = this.currentMoveHint;
-    if (!h) return [];
-    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
-    const tier1 = h.type === 'check' ? t('puzzles.hints.t1Check')
-      : h.type === 'capture' ? t('puzzles.hints.t1Capture')
-      : t('puzzles.hints.t1Quiet');
-    const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-    const piece = t('puzzles.hints.pieces.' + (PIECE[h.pieceType] ?? 'piece'));
-    return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: h.san })];
+    return buildStagedHints(this.currentMoveHint, (k, p) => this.translate.instant(k, p) as string);
   }
 
   flagSaving = false;

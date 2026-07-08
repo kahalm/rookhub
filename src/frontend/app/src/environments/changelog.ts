@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.3';
+export const APP_VERSION = '0.281.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.4", date: "2026-07-08", changes: [
+    { en: "Maintainability cleanup (no behaviour change): the identical staged-hint builder (tier 1 move type → tier 2 piece → tier 3 SAN) that was copy-pasted verbatim across the standard, endless and book/course solvers is now a single `buildStagedHints` helper in `puzzle-hints.util`. The three solvers delegate to it, removing ~30 duplicated lines.", de: "Wartbarkeits-Aufräumen (keine Verhaltensänderung): der identische Bauplan der gestuften Tipps (Stufe 1 Zugtyp → Stufe 2 Figur → Stufe 3 SAN), der wörtlich im Standard-, Endless- und Buch-/Kurs-Solver kopiert war, ist jetzt ein einziger `buildStagedHints`-Helfer in `puzzle-hints.util`. Die drei Solver delegieren dorthin, ~30 duplizierte Zeilen entfallen." },
+  ]},
   { version: "0.281.3", date: "2026-07-08", changes: [
     { en: "Maintainability cleanup (no behaviour change): removed ~40 lines of dead CSS from training-goals.component (styles for the manual/preset/course-list sections that had already been extracted into child cards); deduplicated the 3× copied goal-clamp helper into a shared `goal.util` (`clampGoal`), used by training-goals, admin group-goal and manual-activities-card; centralised the duplicated Discord SVG icon literal into `core/community.ts` (`DISCORD_SVG`, was pasted verbatim in AppComponent + NavbarComponent); and pulled the course PGN blob-download boilerplate into a shared `download.util` (`downloadBlob`).", de: "Wartbarkeits-Aufräumen (keine Verhaltensänderung): ~40 Zeilen tote CSS aus training-goals.component entfernt (Styles der Manuell-/Vorlagen-/Kurs-Sektionen, die längst in Kind-Karten ausgelagert sind); den 3× kopierten Trainingsziel-Clamp-Helfer in eine geteilte `goal.util` (`clampGoal`) zusammengeführt, genutzt von training-goals, Admin-Gruppenziel und manual-activities-card; das doppelte Discord-SVG-Icon-Literal in `core/community.ts` zentralisiert (`DISCORD_SVG`, war wörtlich in AppComponent + NavbarComponent kopiert); und das Blob-Download-Boilerplate des Kurs-PGN-Downloads in eine geteilte `download.util` (`downloadBlob`) gezogen." },
   ]},

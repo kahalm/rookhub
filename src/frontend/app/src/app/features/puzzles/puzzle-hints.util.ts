@@ -71,3 +71,22 @@ export function classifyMoveFromFen(fen: string, uci: string): FirstMoveHint | n
 export function classifyStandardFirstMove(fen: string, movesStr: string): FirstMoveHint | null {
   return classifyFirstSolverMove(fen, movesStr, 0);
 }
+
+/**
+ * Baut die 3 gestuften Tipp-Strings (Stufe 1 Zugtyp Schach/Schlag/ruhig → Stufe 2 ziehende Figur →
+ * Stufe 3 SAN) aus einer Zug-Klassifikation. Identisch von Standard-/Endless-/Buch-Solver genutzt.
+ * `t` ist die Übersetzungsfunktion der Komponente (`(key, params?) => translate.instant(key, params)`),
+ * damit die Util frei von Angular-Abhängigkeiten bleibt. Leere Liste bei fehlender Klassifikation.
+ */
+export function buildStagedHints(
+  hint: FirstMoveHint | null,
+  t: (key: string, params?: object) => string,
+): string[] {
+  if (!hint) return [];
+  const tier1 = hint.type === 'check' ? t('puzzles.hints.t1Check')
+    : hint.type === 'capture' ? t('puzzles.hints.t1Capture')
+    : t('puzzles.hints.t1Quiet');
+  const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+  const piece = t('puzzles.hints.pieces.' + (PIECE[hint.pieceType] ?? 'piece'));
+  return [tier1, t('puzzles.hints.t2Piece', { piece }), t('puzzles.hints.t3Move', { move: hint.san })];
+}
