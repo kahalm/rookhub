@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.7';
+export const APP_VERSION = '0.281.8';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.8", date: "2026-07-08", changes: [
+    { en: "Maintainability refactor (no behaviour change): the profile page (562 lines, mostly one big inline template) was decomposed into four self-contained child cards following the training-goals/api-tokens pattern — offline settings, theme, change password, delete account. The container now holds only the profile master data (identity form + player search + Discord link); component 562→357 lines, constructor 8→4 deps. Sections still render inside the shared profile card with the same dividers, so layout is byte-identical. Profile specs split onto the new cards (+error-mapping cases); 18 specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): die Profilseite (562 Z., überwiegend ein großes Inline-Template) in vier self-contained Kind-Karten nach dem training-goals/api-tokens-Muster zerlegt — Offline-Einstellungen, Theme, Passwort ändern, Konto löschen. Der Container hält nur noch die Profil-Stammdaten (Identitätsformular + Spielersuche + Discord-Verknüpfung); Komponente 562→357 Z., Konstruktor 8→4 Abhängigkeiten. Die Sektionen rendern weiter in derselben Profil-Karte mit denselben Trennern, Layout also byte-identisch. Profile-Specs auf die neuen Karten aufgeteilt (+Error-Mapping-Fälle); 18 Specs grün; Prod-Build grün." },
+  ]},
   { version: "0.281.7", date: "2026-07-08", changes: [
     { en: "Maintainability refactor (no behaviour change): pulled the coupling-light part of the endless-puzzle chain generation (curve params → rating windows → batch fetch) out of the 1500-line solver component into a small testable `EndlessChainService`, plus a pure `buildBatchThemes` helper in `endless-prefetch.util`. State/HTTP/timer/persistence logic deliberately stays in the component (no component state was forced into the service). +9 unit tests; all 80 endless specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): den kopplungsarmen Teil der Endless-Chain-Erzeugung (Kurvenparameter → Rating-Fenster → Batch-Abruf) aus der 1500-Zeilen-Solver-Komponente in einen kleinen, testbaren `EndlessChainService` gezogen, plus eine reine `buildBatchThemes`-Util in `endless-prefetch.util`. State-/HTTP-/Timer-/Persistenz-Logik bleibt bewusst in der Komponente (kein Komponenten-State in den Service gezwungen). +9 Unit-Tests; alle 80 endless-Specs grün; Prod-Build grün." },
   ]},

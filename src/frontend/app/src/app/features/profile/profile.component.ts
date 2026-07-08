@@ -6,7 +6,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
@@ -15,12 +14,11 @@ import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
-import { OfflineService } from '../../core/offline.service';
-import { OfflineQueueService } from '../../core/offline-queue.service';
-import { AuthService } from '../../core/auth.service';
-import { RouterModule } from '@angular/router';
 import { ApiTokensComponent } from './api-tokens.component';
-import { ThemeService, AppTheme } from '../../core/theme.service';
+import { OfflineSettingsCardComponent } from './offline-settings-card.component';
+import { ThemeCardComponent } from './theme-card.component';
+import { ChangePasswordCardComponent } from './change-password-card.component';
+import { DeleteAccountCardComponent } from './delete-account-card.component';
 
 interface Profile {
   userId: number;
@@ -60,9 +58,10 @@ interface PlayerSearchItem {
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatButtonToggleModule, MatProgressSpinnerModule, MatListModule,
-    MatIconModule, MatDividerModule, TranslateModule, RouterModule, LoadingSpinnerComponent,
-    ApiTokensComponent],
+    MatButtonModule, MatProgressSpinnerModule, MatListModule,
+    MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent,
+    ApiTokensComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+    ChangePasswordCardComponent, DeleteAccountCardComponent],
   template: `
     @if (loading) {
       <app-loading-spinner />
@@ -190,108 +189,16 @@ interface PlayerSearchItem {
             <app-api-tokens></app-api-tokens>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <div class="offline-section">
-              <h4>{{ 'profile.offline.title' | translate }}</h4>
-              <p class="offline-hint">{{ 'profile.offline.hint' | translate }}</p>
-              <div class="offline-fields">
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ 'profile.offline.puzzleCount' | translate }}</mat-label>
-                  <input matInput type="number" min="0" max="200" [(ngModel)]="offlinePuzzleCount" name="offPuzzles" (change)="saveOffline()">
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ 'profile.offline.endlessRuns' | translate }}</mat-label>
-                  <input matInput type="number" min="0" max="50" [(ngModel)]="offlineEndlessRuns" name="offRuns" (change)="saveOffline()">
-                </mat-form-field>
-              </div>
-              <div class="offline-cache">
-                <span class="offline-size">{{ 'profile.offline.cacheSize' | translate }}: <strong>{{ offlineSize }}</strong>{{ offlineBooks > 0 ? ' (' + ('profile.offline.books' | translate: { count: offlineBooks }) + ')' : '' }}</span>
-                <button mat-stroked-button color="warn" type="button" (click)="clearOfflineCache()">
-                  <mat-icon>delete_sweep</mat-icon> {{ 'profile.offline.clear' | translate }}
-                </button>
-              </div>
-              @if (offlinePending > 0) {
-                <p class="offline-pending">
-                  <mat-icon>sync</mat-icon> {{ 'profile.offline.pending' | translate: { count: offlinePending } }}
-                </p>
-              }
-            </div>
+            <app-offline-settings-card></app-offline-settings-card>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <div class="theme-section">
-              <h4>{{ 'profile.theme.title' | translate }}</h4>
-              <mat-button-toggle-group [value]="theme.preference" (change)="theme.setPreference($event.value)" class="theme-toggle">
-                <mat-button-toggle value="system">
-                  <mat-icon>brightness_auto</mat-icon>
-                  {{ 'profile.theme.system' | translate }}
-                </mat-button-toggle>
-                <mat-button-toggle value="light">
-                  <mat-icon>light_mode</mat-icon>
-                  {{ 'profile.theme.light' | translate }}
-                </mat-button-toggle>
-                <mat-button-toggle value="dark">
-                  <mat-icon>dark_mode</mat-icon>
-                  {{ 'profile.theme.dark' | translate }}
-                </mat-button-toggle>
-              </mat-button-toggle-group>
-            </div>
+            <app-theme-card></app-theme-card>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <div class="changepwd-section">
-              <h4>{{ 'profile.changePwd.title' | translate }}</h4>
-              @if (!showChangePwd) {
-                <button mat-stroked-button type="button" (click)="showChangePwd = true">
-                  <mat-icon>lock</mat-icon> {{ 'profile.changePwd.button' | translate }}
-                </button>
-              } @else {
-                <div class="changepwd-form">
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'profile.changePwd.current' | translate }}</mat-label>
-                    <input matInput type="password" [(ngModel)]="changePwdCurrent" name="cpwdCurrent" autocomplete="current-password">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'profile.changePwd.new' | translate }}</mat-label>
-                    <input matInput type="password" [(ngModel)]="changePwdNew" name="cpwdNew" autocomplete="new-password">
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'profile.changePwd.confirm' | translate }}</mat-label>
-                    <input matInput type="password" [(ngModel)]="changePwdConfirm" name="cpwdConfirm" autocomplete="new-password">
-                  </mat-form-field>
-                  <div class="changepwd-actions">
-                    <button mat-button type="button" (click)="cancelChangePwd()">{{ 'common.cancel' | translate }}</button>
-                    <button mat-raised-button color="primary" type="button" (click)="changePassword()"
-                      [disabled]="!changePwdCurrent || !changePwdNew || !changePwdConfirm || changingPwd">
-                      {{ changingPwd ? ('profile.changePwd.saving' | translate) : ('profile.changePwd.save' | translate) }}
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
+            <app-change-password-card></app-change-password-card>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <div class="danger-section">
-              <h4>{{ 'profile.delete.title' | translate }}</h4>
-              <p class="danger-hint">{{ 'profile.delete.hint' | translate }}</p>
-              @if (!showDelete) {
-                <button mat-stroked-button color="warn" type="button" (click)="showDelete = true">
-                  <mat-icon>delete_forever</mat-icon> {{ 'profile.delete.button' | translate }}
-                </button>
-              } @else {
-                <div class="danger-confirm">
-                  <p class="danger-warn">{{ 'profile.delete.warn' | translate }}</p>
-                  <mat-form-field appearance="outline">
-                    <mat-label>{{ 'profile.delete.password' | translate }}</mat-label>
-                    <input matInput type="password" [(ngModel)]="deletePassword" name="delPwd" autocomplete="current-password">
-                  </mat-form-field>
-                  <div class="danger-actions">
-                    <button mat-button type="button" (click)="cancelDelete()">{{ 'common.cancel' | translate }}</button>
-                    <button mat-raised-button color="warn" type="button" (click)="deleteAccount()" [disabled]="!deletePassword || deleting">
-                      {{ deleting ? ('profile.delete.deleting' | translate) : ('profile.delete.confirm' | translate) }}
-                    </button>
-                  </div>
-                </div>
-              }
-              <p class="danger-link"><a routerLink="/account-deletion">{{ 'profile.delete.moreInfo' | translate }}</a></p>
-            </div>
+            <app-delete-account-card></app-delete-account-card>
           </mat-card-content>
         </mat-card>
       </div>
@@ -325,32 +232,11 @@ interface PlayerSearchItem {
     .no-results { color: #bdbdbd; font-style: italic; text-align: center; padding: 1rem 0; }
     .discord-divider { margin: 1.25rem 0 1rem; }
     .discord-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
-    .offline-section h4 { margin: 0 0 0.25rem; color: #90caf9; }
-    .offline-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
-    .offline-fields { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .offline-fields mat-form-field { width: 200px; max-width: 100%; }
-    .offline-cache { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .offline-size { color: #ccc; font-size: 0.9rem; }
-    .offline-pending { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: 0.85rem; margin: 6px 0 0; }
-    .offline-pending mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .discord-linked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .discord-icon { color: #5865F2; }
     .discord-name { font-weight: 500; }
     .discord-linked button { margin-left: auto; }
     .discord-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0; }
-    .theme-section h4 { margin: 0 0 0.75rem; color: #90caf9; }
-    .theme-toggle { display: flex; flex-wrap: wrap; }
-    .theme-toggle mat-button-toggle { display: flex; align-items: center; gap: 6px; }
-    .changepwd-section h4 { margin: 0 0 0.5rem; color: #90caf9; }
-    .changepwd-form { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
-    .changepwd-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .danger-section h4 { margin: 0 0 0.25rem; color: #ef9a9a; }
-    .danger-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0 0 0.5rem; }
-    .danger-warn { color: #ef9a9a; font-size: 0.9rem; }
-    .danger-confirm { display: flex; flex-direction: column; gap: 0.25rem; max-width: 360px; }
-    .danger-actions { display: flex; gap: 8px; justify-content: flex-end; }
-    .danger-link { margin: 0.75rem 0 0; font-size: 0.85rem; }
-    .danger-link a { color: #90caf9; }
     @media (max-width: 768px) {
       .profile-container { padding: 0.75rem; }
       .name-row mat-form-field { min-width: 0; flex-basis: 100%; }
@@ -367,60 +253,18 @@ export class ProfileComponent implements OnInit {
   unlinking = false;
   searchResults: PlayerSearchResult | null = null;
 
-  offlinePuzzleCount = 10;
-  offlineEndlessRuns = 2;
-  offlineSize = '0 B';
-  offlineBooks = 0;
-  offlinePending = 0;
-
-  showChangePwd = false;
-  changePwdCurrent = '';
-  changePwdNew = '';
-  changePwdConfirm = '';
-  changingPwd = false;
-
-  showDelete = false;
-  deletePassword = '';
-  deleting = false;
-
   constructor(
     private profileService: ProfileService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
-    private offline: OfflineService,
-    private offlineQueue: OfflineQueueService,
-    private auth: AuthService,
-    public theme: ThemeService
   ) {}
 
   ngOnInit(): void {
-    this.offlinePuzzleCount = this.offline.puzzleCount;
-    this.offlineEndlessRuns = this.offline.endlessRuns;
-    this.refreshOfflineSize();
     this.profileService.getProfile<Profile>().subscribe({
       next: (p) => { this.profile = p; this.loading = false; },
       error: () => { this.loading = false; }
     });
-  }
-
-  saveOffline(): void {
-    this.offline.setPuzzleCount(this.offlinePuzzleCount);
-    this.offline.setEndlessRuns(this.offlineEndlessRuns);
-    this.offlinePuzzleCount = this.offline.puzzleCount;   // geklemmte Werte zurückspiegeln
-    this.offlineEndlessRuns = this.offline.endlessRuns;
-  }
-
-  private refreshOfflineSize(): void {
-    this.offlineSize = this.offline.formatSize(this.offline.cacheSizeBytes());
-    this.offlineBooks = this.offline.cachedBookCount();
-    this.offlinePending = this.offlineQueue.pendingCount();
-  }
-
-  clearOfflineCache(): void {
-    this.offline.clearAll();
-    this.refreshOfflineSize();
-    this.snackbar.success(this.translate.instant('profile.offline.cleared'));
   }
 
   searchPlayer(): void {
@@ -507,55 +351,6 @@ export class ProfileComponent implements OnInit {
       error: () => {
         this.unlinking = false;
         this.snackbar.info(this.translate.instant('profile.discord.linkFailed'));
-      }
-    });
-  }
-
-  cancelChangePwd(): void {
-    this.showChangePwd = false;
-    this.changePwdCurrent = '';
-    this.changePwdNew = '';
-    this.changePwdConfirm = '';
-  }
-
-  changePassword(): void {
-    if (!this.changePwdCurrent || !this.changePwdNew || !this.changePwdConfirm || this.changingPwd) return;
-    if (this.changePwdNew !== this.changePwdConfirm) {
-      this.snackbar.info(this.translate.instant('profile.changePwd.mismatch'));
-      return;
-    }
-    this.changingPwd = true;
-    this.auth.changePassword(this.changePwdCurrent, this.changePwdNew).subscribe({
-      next: () => {
-        this.changingPwd = false;
-        this.cancelChangePwd();
-        this.snackbar.success(this.translate.instant('profile.changePwd.done'));
-      },
-      error: (err) => {
-        this.changingPwd = false;
-        this.snackbar.info(this.translate.instant(
-          err?.status === 401 ? 'profile.changePwd.wrongPassword' : 'profile.changePwd.failed'));
-      }
-    });
-  }
-
-  cancelDelete(): void {
-    this.showDelete = false;
-    this.deletePassword = '';
-  }
-
-  deleteAccount(): void {
-    if (!this.deletePassword || this.deleting) return;
-    this.deleting = true;
-    this.auth.deleteAccount(this.deletePassword).subscribe({
-      next: () => {
-        // logout() in deleteAccount navigiert bereits zu /login
-        this.snackbar.success(this.translate.instant('profile.delete.done'));
-      },
-      error: (err) => {
-        this.deleting = false;
-        this.snackbar.info(this.translate.instant(
-          err?.status === 401 ? 'profile.delete.wrongPassword' : 'profile.delete.failed'));
       }
     });
   }
