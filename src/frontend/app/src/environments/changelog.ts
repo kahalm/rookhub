@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.2';
+export const APP_VERSION = '0.281.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.3", date: "2026-07-08", changes: [
+    { en: "Maintainability cleanup (no behaviour change): removed ~40 lines of dead CSS from training-goals.component (styles for the manual/preset/course-list sections that had already been extracted into child cards); deduplicated the 3× copied goal-clamp helper into a shared `goal.util` (`clampGoal`), used by training-goals, admin group-goal and manual-activities-card; centralised the duplicated Discord SVG icon literal into `core/community.ts` (`DISCORD_SVG`, was pasted verbatim in AppComponent + NavbarComponent); and pulled the course PGN blob-download boilerplate into a shared `download.util` (`downloadBlob`).", de: "Wartbarkeits-Aufräumen (keine Verhaltensänderung): ~40 Zeilen tote CSS aus training-goals.component entfernt (Styles der Manuell-/Vorlagen-/Kurs-Sektionen, die längst in Kind-Karten ausgelagert sind); den 3× kopierten Trainingsziel-Clamp-Helfer in eine geteilte `goal.util` (`clampGoal`) zusammengeführt, genutzt von training-goals, Admin-Gruppenziel und manual-activities-card; das doppelte Discord-SVG-Icon-Literal in `core/community.ts` zentralisiert (`DISCORD_SVG`, war wörtlich in AppComponent + NavbarComponent kopiert); und das Blob-Download-Boilerplate des Kurs-PGN-Downloads in eine geteilte `download.util` (`downloadBlob`) gezogen." },
+  ]},
   { version: "0.281.2", date: "2026-07-07", changes: [
     { en: "Fix: course/book info pages („⏲Exercise #N - Introduction“, „Evaluate 11…Nxe5“ prompts) now show the actual position they discuss instead of the starting position. These move-less Chessable info lines carry a real FEN in the PGN, but the importer discarded it and stored a synthetic start position + fake e2e4 move — so browsing/clicking through them showed the initial board. The importer now keeps the real FEN (no moves) for info lines. Import-pipeline version bumped (10→11); existing books fix themselves via the „Update“ button (local reprocess from the stored PGN, no Chessable re-fetch). +1 backend test.", de: "Fix: Kurs-/Buch-Infoseiten („⏲Exercise #N - Introduction“, „Evaluate 11…Nxe5“-Aufgaben) zeigen jetzt die tatsächlich besprochene Stellung statt der Grundstellung. Diese zug-losen Chessable-Info-Linien tragen eine echte FEN im PGN, der Import verwarf sie aber und speicherte eine synthetische Grundstellung + Fake-Zug e2e4 — beim Durchsehen/Durchklicken erschien so das Ausgangsbrett. Der Import behält jetzt die echte FEN (ohne Züge) für Info-Linien. Import-Pipeline-Version erhöht (10→11); bestehende Bücher reparieren sich über den „Aktualisieren“-Knopf (lokale Neuaufbereitung aus dem gespeicherten PGN, kein Chessable-Re-Fetch). +1 Backend-Test." },
   ]},

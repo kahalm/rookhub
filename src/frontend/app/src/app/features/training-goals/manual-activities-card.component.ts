@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { clampGoal } from './goal.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import {
   TrainingGoalService, ManualActivity, ManualActivityInput, ManualActivityKind,
@@ -88,7 +89,7 @@ export class ManualActivitiesCardComponent {
     const input: ManualActivityInput = {
       kind: this.manualEdit.kind,
       date: this.manualEdit.date || this.todayDate,
-      amount: this.clamp(this.manualEdit.amount, this.manualMinutes ? 600 : 50) || 1,
+      amount: clampGoal(this.manualEdit.amount, this.manualMinutes ? 600 : 50) || 1,
       note: this.manualEdit.note?.trim() || null,
       // Themen-Zuordnung ist bei OtbGame zeitunwirksam → nicht mitspeichern.
       theme: this.manualMinutes ? (this.manualEdit.theme ?? null) : null,
@@ -129,5 +130,4 @@ export class ManualActivitiesCardComponent {
     });
   }
 
-  private clamp(v: number, max: number): number { return Math.max(0, Math.min(max, Math.round(v || 0))); }
 }

@@ -17,6 +17,7 @@ import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames } from '../puzzles/book-offline.util';
+import { downloadBlob } from '../../shared/download.util';
 import { UploadCourseDialogComponent, UploadCourseDialogResult } from './upload-course-dialog.component';
 import { ShareCourseDialogComponent, ShareCourseDialogData } from './share-course-dialog.component';
 import { LinkCourseDialogComponent, LinkCourseDialogData } from './link-course-dialog.component';
@@ -663,11 +664,7 @@ export class CourseListComponent implements OnInit {
       next: blob => {
         this.downloadingPgn = null;
         const safe = (course.displayName || 'course').replace(/[^A-Za-z0-9]+/g, '_');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${safe}.pgn`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        downloadBlob(blob, `${safe}.pgn`);
       },
       error: () => {
         this.downloadingPgn = null;

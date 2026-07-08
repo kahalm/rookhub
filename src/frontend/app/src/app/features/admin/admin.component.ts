@@ -30,6 +30,7 @@ import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
+import { clampGoal } from '../training-goals/goal.util';
 
 @Component({
   selector: 'app-admin',
@@ -400,11 +401,10 @@ export class AdminComponent implements OnInit {
 
   saveGroupGoal(): void {
     if (!this.selectedGroup) return;
-    const clamp = (v: number, max: number) => Math.max(0, Math.min(max, Math.round(v || 0)));
     const goal = {
-      dailyMinutes: clamp(this.goalEdit.dailyMinutes, 600),
-      playGames: clamp(this.goalEdit.playGames, 200),
-      weeklyDaysTarget: clamp(this.goalEdit.weeklyDaysTarget, 7),
+      dailyMinutes: clampGoal(this.goalEdit.dailyMinutes, 600),
+      playGames: clampGoal(this.goalEdit.playGames, 200),
+      weeklyDaysTarget: clampGoal(this.goalEdit.weeklyDaysTarget, 7),
     };
     this.adminService.setGroupTrainingGoal(this.selectedGroup.id, goal).subscribe({
       next: () => { this.goalHasTemplate = true; this.snackbar.info(this.translate.instant('admin.groups.goal.saved')); },

@@ -22,6 +22,7 @@ import { ActivityPresetsCardComponent } from './activity-presets-card.component'
 import { ChessableThemesCardComponent } from './chessable-themes-card.component';
 import { PeriodBreakdownCardComponent } from './period-breakdown-card.component';
 import { formatDuration } from './duration.util';
+import { clampGoal } from './goal.util';
 import { BreakRow, breakdownRows } from './breakdown.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -346,32 +347,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     /* Manuell (selbst) gemeldete Tage: dezenter Punkt/Rahmen, unabhängig vom Status */
     .hm-cell.manual { box-shadow: inset 0 0 0 1.5px #1976d2; }
     .sw.manual { box-shadow: inset 0 0 0 1.5px #1976d2; }
-    .manual-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 8px 0; }
-    .manual-fields .note-field { grid-column: 1 / -1; }
-    .manual-list { list-style: none; padding: 0; margin: 12px 0 0; }
-    .manual-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); font-size: .9rem; }
-    .manual-list .m-date { font-variant-numeric: tabular-nums; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .manual-list .m-kind { font-weight: 600; }
-    .manual-list .m-amount { white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .manual-list .m-amount .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
-    .manual-list .m-note { flex: 1; color: color-mix(in srgb, currentColor 60%, transparent); overflow-wrap: anywhere; }
-    .manual-list .m-actions { display: flex; gap: 2px; margin-left: auto; }
-    .preset-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
-    .preset-form .preset-label-field { flex: 1 1 220px; min-width: 200px; }
-    .preset-form .preset-kind-field { flex: 0 1 200px; min-width: 160px; }
-    .preset-form .actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
-    .preset-list { list-style: none; padding: 0; margin: 12px 0 0; }
-    .preset-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); font-size: .9rem; }
-    .preset-list .p-icon { color: color-mix(in srgb, currentColor 55%, transparent); }
-    .preset-list .p-label { font-weight: 600; flex: 1; overflow-wrap: anywhere; }
-    .preset-list .p-kind { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .82rem; }
-    .preset-list .p-theme, .manual-list .m-theme {
-      font-size: .72rem; padding: 2px 8px; border-radius: 999px;
-      background: color-mix(in srgb, currentColor 10%, transparent);
-      color: color-mix(in srgb, currentColor 75%, transparent);
-    }
-    .preset-list .p-actions { display: flex; gap: 2px; margin-left: auto; }
-    .preset-empty { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; margin: 12px 0 0; font-size: .9rem; }
     .legend { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
@@ -385,17 +360,6 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
     table.history td { font-variant-numeric: tabular-nums; }
     table.history td.strong { font-weight: 600; }
     table.history .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
-    .filter-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; margin: 4px 0 10px; cursor: pointer; color: color-mix(in srgb, currentColor 75%, transparent); }
-    .course-list { list-style: none; padding: 0; margin: 0; }
-    .course-list li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); flex-wrap: wrap; }
-    .course-list .c-main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
-    .course-list .c-name { font-weight: 600; overflow-wrap: anywhere; }
-    .course-list .c-id { font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); font-variant-numeric: tabular-nums; }
-    .course-list .c-time { font-variant-numeric: tabular-nums; white-space: nowrap; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .course-list .c-time .unit { color: color-mix(in srgb, currentColor 50%, transparent); font-size: .8em; }
-    .course-list .c-auto { font-size: .78rem; font-style: italic; color: color-mix(in srgb, currentColor 60%, transparent); white-space: nowrap; }
-    .course-list .c-unassigned { font-size: .78rem; color: #c2772e; white-space: nowrap; }
-    .course-list .c-theme { width: 170px; flex: 0 0 auto; }
   `]
 })
 export class TrainingGoalsComponent implements OnInit {
@@ -484,9 +448,9 @@ export class TrainingGoalsComponent implements OnInit {
   save(): void {
     this.saving = true;
     const input: TrainingGoalInput = {
-      dailyMinutes: this.clamp(this.edit.dailyMinutes, 600),
-      playGames: this.clamp(this.edit.playGames, 200),
-      weeklyDaysTarget: this.clamp(this.edit.weeklyDaysTarget, 7),
+      dailyMinutes: clampGoal(this.edit.dailyMinutes, 600),
+      playGames: clampGoal(this.edit.playGames, 200),
+      weeklyDaysTarget: clampGoal(this.edit.weeklyDaysTarget, 7),
     };
     this.service.saveGoal(input).subscribe({
       next: () => { this.saving = false; this.snackbar.success(this.translate.instant('trainingGoals.saved')); this.reload(); },
@@ -526,5 +490,4 @@ export class TrainingGoalsComponent implements OnInit {
     if (target <= 0) return 0;
     return Math.min(100, Math.round((100 * done) / target));
   }
-  private clamp(v: number, max: number): number { return Math.max(0, Math.min(max, Math.round(v || 0))); }
 }
