@@ -1450,6 +1450,7 @@
       "restart": "Restart from scratch",
       "restarted": "Course reset — starting over",
       "restartFailed": "Reset failed",
+      "unavailable": "This course is not available without signing in.",
       "wholeBook": "Whole book",
       "noChapter": "No chapter",
       "accuracyHint": "First-try success rate",
@@ -1570,10 +1571,12 @@
         "daily": "Daily",
         "random": "Random",
         "blind": "Blind",
+        "public": "Public",
         "visibleFor": "Visible for (courses)",
         "actions": "Actions",
         "kind": "Type"
       },
+      "publicHint": "Public: this course can be used without registration via its direct link. An anonymous visitor's progress stays local to the browser.",
       "errors": {
         "load": "Failed to load books",
         "import": "Import failed",

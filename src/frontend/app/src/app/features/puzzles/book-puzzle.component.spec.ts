@@ -509,6 +509,60 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
   });
 });
 
+describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
+  const FILE = 'public-course.pgn';
+  const BOOK_ID = 55;
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  function anonCourse(mode: 'sequential' | 'random'): any {
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    c.auth.isLoggedIn = false;   // anonym
+    c.inCourse = true;
+    c.courseBookId = BOOK_ID;
+    c.courseModeKind = mode;
+    c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse').and.returnValue(of([
+      { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE },
+      { id: 2, fen: FEN, moves: 'd2d4', bookFileName: FILE },
+    ]));
+    return c;
+  }
+
+  it('lädt die öffentlichen Puzzles und serviert das erste (ohne Login)', () => {
+    const c = anonCourse('sequential');
+    (c as any).loadCourseNext();
+    expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID);
+    expect(c.puzzle?.id).toBe(1);
+    expect(c.courseTotal).toBe(2);
+    expect(c.loadError).toBeFalse();
+  });
+
+  it('merkt gelöste Puzzles lokal (persistiert, kein Server-Call)', () => {
+    const c = anonCourse('sequential');
+    (c as any).loadCourseNext();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE };
+    (c as any).recordCourseAttempt(true);
+    expect((c as any).offlineCourseSolvedIds.has(1)).toBeTrue();
+    expect(c.courseSolved).toBe(1);
+    // Frisch aufgesetzte Komponente übernimmt den lokal gemerkten Fortschritt.
+    const c2 = anonCourse('sequential');
+    c2.courseBookId = BOOK_ID;
+    (c2 as any).offlineCourseSolvedIds = new Set<number>();
+    // Re-Hydration wie im courseSub-Handler:
+    const solved = JSON.parse(localStorage.getItem('rookhub_course_local_solved_' + BOOK_ID) || '[]');
+    expect(solved).toContain(1);
+  });
+
+  it('zeigt „nicht verfügbar", wenn der Kurs nicht öffentlich ist (404)', () => {
+    const c = anonCourse('sequential');
+    c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse')
+      .and.returnValue({ subscribe: (h: any) => { (h.error ?? (() => {}))(new Error('404')); return { unsubscribe() {} }; } });
+    (c as any).loadCourseNext();
+    expect(c.loadError).toBeTrue();
+  });
+});
+
 describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
   it('eine IsInfoOnly-Linie geht in den INFO-Durchklick-Modus statt ins Quiz', () => {
     const c = makeComponent();
@@ -535,6 +589,7 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
 
   it('courseNext auf einer Info-Linie merkt sie serverseitig + offline (überspringen beim Wiedereinstieg)', () => {
     const c = makeComponent();
+    c.auth.isLoggedIn = true;   // serverseitiges Merken (markInfoSeen) ist ein eingeloggtes Verhalten
     spyOn(c as any, 'loadCourseNext');   // eigentliches Nachladen unterbinden
     const seen = jasmine.createSpy('markInfoSeen').and.returnValue(of(undefined));
     c.courseService.markInfoSeen = seen;

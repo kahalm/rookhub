@@ -59,7 +59,7 @@ export class AdminComponent implements OnInit {
   bookSearch = '';
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'groups', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'groups', 'actions'];
 
   groups: Group[] = [];
   groupsLoading = false;
@@ -264,6 +264,7 @@ export class AdminComponent implements OnInit {
       forDaily: book.forDaily,
       forRandom: book.forRandom,
       forBlind: book.forBlind,
+      isPublic: book.isPublic,
       kind: book.kind,
       minElo: book.minElo,
       maxElo: book.maxElo

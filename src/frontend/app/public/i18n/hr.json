@@ -1448,6 +1448,7 @@
       "restart": "Počni ispočetka",
       "restarted": "Tečaj resetiran — počinjem ispočetka",
       "restartFailed": "Resetiranje nije uspjelo",
+      "unavailable": "Ovaj tečaj nije dostupan bez prijave.",
       "wholeBook": "Cijela knjiga",
       "noChapter": "Bez poglavlja",
       "accuracyHint": "Stopa pogodaka (1. pokušaj)",
@@ -1568,10 +1569,12 @@
         "daily": "Dnevno",
         "random": "Nasumično",
         "blind": "Naslijepo",
+        "public": "Javno",
         "visibleFor": "Vidljivo za (tečajeve)",
         "actions": "Radnje",
         "kind": "Vrsta"
       },
+      "publicHint": "Javno: ovaj se tečaj može koristiti bez registracije putem izravne poveznice. Napredak anonimnog posjetitelja ostaje lokalno u pregledniku.",
       "errors": {
         "load": "Učitavanje knjiga nije uspjelo",
         "import": "Uvoz nije uspio",

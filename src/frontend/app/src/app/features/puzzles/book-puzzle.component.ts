@@ -39,7 +39,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline } from './book-offline.util';
+import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
@@ -235,6 +235,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly favoriteTracker: FavoriteTracker;
 
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
+
+  /** Anonymer (nicht eingeloggter) Nutzer in einem öffentlichen Kurs: der Kurs wird rein
+   *  clientseitig aus den öffentlichen Puzzles bedient, Fortschritt bleibt lokal im Browser
+   *  (keine auth-pflichtigen Kurs-Endpoints aufrufen). */
+  get isAnonCourse(): boolean { return this.inCourse && !this.isLoggedIn; }
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -603,6 +608,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.courseModeKind = pm.get('mode') === 'random' ? 'random' : 'sequential';
         const ch = pm.get('chapterIndex');
         this.courseChapterIndex = ch != null ? Number(ch) : null;
+        // Anonym: lokal gemerkten Fortschritt DIESES Buchs übernehmen (übersteht Reload; ersetzt den
+        // Set-Inhalt, damit beim Wechsel auf ein anderes Kurs-Buch keine fremden Ids stehen bleiben).
+        if (this.isAnonCourse) this.offlineCourseSolvedIds = new Set(loadCourseLocalSolved(bid));
         this.loadCourseNext();
         this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
         this.loadCourseLink();    // verknüpften Partner-Kurs für den Schnellwechsel laden
@@ -660,7 +668,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private loadCourseLink(): void {
     this.linkedCourseBookId = null;
     this.linkedCourseName = null;
-    if (this.courseBookId == null) return;
+    if (this.courseBookId == null || this.isAnonCourse) return;   // Verknüpfung ist auth-only
     this.courseService.getLink(this.courseBookId).subscribe({
       next: l => { this.linkedCourseBookId = l.linkedBookId; this.linkedCourseName = l.linkedDisplayName; },
       error: () => {}
@@ -769,6 +777,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.retryFn = () => this.loadCourseNext(after, exclude);
     if (!hadPuzzle) this.state = 'LOADING';
 
+    // Anonym (öffentlicher Kurs): rein clientseitig aus den öffentlichen Puzzles bedienen.
+    if (this.isAnonCourse) { this.loadAnonCourseNext(after, exclude, hadPuzzle); return; }
+
     // Offline → direkt aus dem lokal gespeicherten Buch bedienen (kein Netz-Roundtrip).
     // Kein Cache vorhanden → Fehlerzustand (mit „Erneut versuchen") statt endlosem Spinner.
     if (!navigator.onLine) {
@@ -806,6 +817,38 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /**
+   * Anonymer öffentlicher Kurs: die öffentlichen Puzzles einmal laden + lokal vorhalten, dann rein
+   * clientseitig (wie offline) bedienen. Fortschritt lebt in {@link offlineCourseSolvedIds} und wird
+   * pro Buch im localStorage persistiert. Nicht öffentlich / kein Cache → „nicht verfügbar".
+   */
+  private loadAnonCourseNext(after: number | undefined, exclude: number | undefined, hadPuzzle: boolean): void {
+    if (this.courseBookId == null) return;
+    if (getBookOfflineByBookId(this.courseBookId)?.length) {
+      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) this.showCourseUnavailable();
+      return;
+    }
+    // Kein lokaler Cache + offline → nicht ins Netz laufen, sondern „nicht verfügbar" zeigen.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) { this.showCourseUnavailable(); return; }
+    const bookId = this.courseBookId;
+    this.courseService.getPublicCourse(bookId).subscribe({
+      next: puzzles => {
+        const fileName = puzzles?.[0]?.bookFileName;
+        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId);
+        if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
+        if (!this.loadCourseOffline(after, exclude, hadPuzzle)) this.showCourseUnavailable();
+      },
+      error: () => { if (this.courseBookId === bookId) this.showCourseUnavailable(); },
+    });
+  }
+
+  /** Öffentlicher Kurs anonym nicht (mehr) verfügbar (nicht public / gelöscht). */
+  private showCourseUnavailable(): void {
+    this.state = 'LOADING';
+    this.loadError = true;
+    this.snackbar.info(this.translate.instant('book.course.unavailable'), { action: 'common.ok', duration: 4000 });
+  }
+
+  /**
    * Offline-Fallback fürs Kurs-Laden: serviert Puzzles aus dem lokal gespeicherten Buch
    * (über die bookId aufgelöst). Versuche werden via Offline-Queue nachgemeldet; der
    * Server-Fortschritt („nächstes ungelöstes") lässt sich offline nicht exakt nachbilden,
@@ -817,7 +860,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const book = getBookOfflineByBookId(this.courseBookId);
     if (!book || !book.length) return false;
 
-    this.courseTotal = book.length;
+    // Fortschritt/Zähler nur über echte Quiz-Linien (Info-/Erklärlinien zählen nicht) — wie serverseitig.
+    const quiz = book.filter(p => !p.isInfoOnly);
+    this.courseTotal = quiz.length;
+    this.courseSolved = quiz.filter(p => this.offlineCourseSolvedIds.has(p.id)).length;
     const cur = after ?? exclude;
     let next: BookPuzzleDto | undefined;
 
@@ -854,7 +900,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    * muss. Fire-and-forget, nur online, idempotent (überspringt, wenn schon gecacht).
    */
   private autoCacheCourse(): void {
-    if (this.courseBookId == null || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    if (this.courseBookId == null || this.isAnonCourse) return;   // anonym cacht loadAnonCourseNext über den public-Endpoint
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     if (getBookOfflineByBookId(this.courseBookId)?.length) return;   // schon offline vorhanden
     const bookId = this.courseBookId;
     this.courseService.getBookPuzzles(bookId).subscribe({
@@ -872,8 +919,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Sequenziell durchgeklickte Info-/Erklärlinie merken → beim nächsten Wiedereinstieg wird sie
     // übersprungen (der Kurs setzt dahinter fort statt sie erneut zu zeigen).
     if (cur != null && this.puzzle?.isInfoOnly && this.inCourse && this.courseBookId != null) {
-      this.offlineCourseSolvedIds.add(cur);   // offline dieselbe Info-Linie in dieser Sitzung überspringen
-      if (typeof navigator === 'undefined' || navigator.onLine) {
+      this.offlineCourseSolvedIds.add(cur);   // (offline/anonym) dieselbe Info-Linie nicht erneut zeigen
+      if (this.isAnonCourse) {
+        saveCourseLocalSolved(this.courseBookId, this.offlineCourseSolvedIds);   // anonym: lokal persistieren
+      } else if (typeof navigator === 'undefined' || navigator.onLine) {
         this.courseService.markInfoSeen(this.courseBookId, cur).subscribe({ next: () => {}, error: () => {} });
       }
     }
@@ -894,6 +943,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    * Puzzles wieder in den Pool. Direkt vom „abgeschlossen"-Panel aus erreichbar. */
   restartCourse(): void {
     if (this.courseBookId == null) return;
+    // Anonym: nur den lokalen Fortschritt verwerfen, kein Server-Reset.
+    if (this.isAnonCourse) {
+      this.offlineCourseSolvedIds.clear();
+      clearCourseLocalSolved(this.courseBookId);
+      this.courseCompleted = false;
+      this.snackbar.success(this.translate.instant('book.course.restarted'), { duration: 2500 });
+      this.loadCourseNext();
+      return;
+    }
     this.courseService.reset(this.courseBookId).subscribe({
       next: () => {
         this.courseCompleted = false;
@@ -1006,6 +1064,18 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private recordCourseAttempt(solved: boolean): void {
     if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
     this.courseAttemptRecorded = true;
+
+    // Anonym: Fortschritt nur lokal (localStorage). Kein Server-Call/Queue — Kurs-Endpoints sind
+    // auth-pflichtig, und anonyme Versuche zählen bewusst nicht in Bestenlisten/Trainingsziele.
+    if (this.isAnonCourse) {
+      if (solved && !this.offlineCourseSolvedIds.has(this.puzzle.id)) {
+        this.offlineCourseSolvedIds.add(this.puzzle.id);
+        saveCourseLocalSolved(this.courseBookId, this.offlineCourseSolvedIds);
+        this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
+      }
+      return;
+    }
+
     const url = `/api/courses/${this.courseBookId}/results`;
     const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.maxHintLevel };
     if (!navigator.onLine) {

@@ -213,6 +213,12 @@ export class CourseService {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
   }
 
+  /** Alle Puzzles eines ÖFFENTLICHEN Kurses — ohne Login. Basis für das registrierungsfreie
+   *  Durchspielen eines als „public" markierten Kurses (404, wenn nicht öffentlich). */
+  getPublicCourse(bookId: number): Observable<BookPuzzleDto[]> {
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`);
+  }
+
   /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */
   getLineStatus(bookId: number): Observable<CourseLineStatus> {
     return this.http.get<CourseLineStatus>(`/api/courses/${bookId}/line-status`);

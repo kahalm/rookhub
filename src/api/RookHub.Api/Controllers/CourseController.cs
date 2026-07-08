@@ -57,6 +57,17 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Alle Puzzles eines ÖFFENTLICHEN Kurses am Stück — OHNE Login. Ermöglicht das
+    /// registrierungsfreie Durchspielen eines als „public" markierten Kurses über den Direkt-Link
+    /// (der anonyme Fortschritt bleibt lokal im Browser). 404, wenn der Kurs nicht öffentlich ist.</summary>
+    [AllowAnonymous]
+    [HttpGet("{bookId}/public")]
+    public async Task<ActionResult<List<BookPuzzleDto>>> GetPublicCourse(int bookId)
+    {
+        try { return Ok(await _service.GetPublicCoursePuzzlesAsync(bookId)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     /// <summary>Pro-Linien-Status eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:
     /// gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien des Users.</summary>
     [HttpGet("{bookId}/line-status")]

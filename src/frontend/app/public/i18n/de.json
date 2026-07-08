@@ -1450,6 +1450,7 @@
       "restart": "Von vorn beginnen",
       "restarted": "Kurs zurückgesetzt — von vorn",
       "restartFailed": "Zurücksetzen fehlgeschlagen",
+      "unavailable": "Dieser Kurs ist ohne Anmeldung nicht verfügbar.",
       "wholeBook": "Ganzes Buch",
       "noChapter": "Ohne Kapitel",
       "accuracyHint": "Trefferquote (1. Versuch)",
@@ -1570,10 +1571,12 @@
         "daily": "Daily",
         "random": "Random",
         "blind": "Blind",
+        "public": "Öffentlich",
         "visibleFor": "Sichtbar für (Kurse)",
         "actions": "Aktionen",
         "kind": "Art"
       },
+      "publicHint": "Öffentlich: dieser Kurs ist ohne Registrierung über den Direkt-Link nutzbar. Fortschritt anonymer Besucher bleibt lokal im Browser.",
       "errors": {
         "load": "Bücher konnten nicht geladen werden",
         "import": "Import fehlgeschlagen",

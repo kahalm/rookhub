@@ -65,6 +65,15 @@ public class Book
     public bool ForBlind { get; set; }
 
     /// <summary>
+    /// Öffentlich = ohne Registrierung als Kurs nutzbar. Ist es gesetzt, darf JEDER (auch anonym,
+    /// ohne Login) diesen Kurs über den Direkt-Link öffnen und durchspielen; der Fortschritt eines
+    /// anonymen Besuchers wird nur lokal im Browser gehalten (zählt nicht in Bestenlisten/Ziele).
+    /// Vom Admin je Buch im Bücher-/Kurs-Tab umschaltbar. Default false (klassisches Verhalten:
+    /// Sichtbarkeit nur via Gruppen/Besitzer/Teilen).
+    /// </summary>
+    public bool IsPublic { get; set; }
+
+    /// <summary>
     /// Roh-PGN, aus dem dieses Buch importiert wurde (LONGTEXT, nullable). Quelle fürs
     /// verlustfreie Neu-Aufbereiten (Reprocessing), wenn die Import-Pipeline weiterentwickelt
     /// wurde — z. B. um nachträglich Pro-Zug-Kommentare zu extrahieren. <c>null</c> bei

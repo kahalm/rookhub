@@ -186,6 +186,13 @@
                     <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
+                <ng-container matColumnDef="isPublic">
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.public' | translate }}</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.isPublic" (change)="saveBook(b)"
+                                      [attr.title]="'admin.books.publicHint' | translate"></mat-slide-toggle>
+                  </td>
+                </ng-container>
                 <ng-container matColumnDef="groups">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.visibleFor' | translate }}</th>
                   <td mat-cell *matCellDef="let b">

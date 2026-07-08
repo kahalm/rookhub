@@ -56,6 +56,31 @@ export function removeBookOffline(fileName: string): void {
   } catch { /* ignore */ }
 }
 
+/**
+ * Lokaler Kurs-Fortschritt (gelöste/durchgeklickte Puzzle-Ids) je Buch — für anonyme (nicht
+ * eingeloggte) Nutzer, die einen öffentlichen Kurs durchspielen: der Fortschritt bleibt rein
+ * clientseitig und übersteht einen Reload. Eingeloggte Nutzer nutzen stattdessen den
+ * serverseitigen Fortschritt.
+ */
+const COURSE_LOCAL_SOLVED_PREFIX = 'rookhub_course_local_solved_';
+
+export function loadCourseLocalSolved(bookId: number): number[] {
+  try {
+    const raw = localStorage.getItem(COURSE_LOCAL_SOLVED_PREFIX + bookId);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is number => typeof x === 'number') : [];
+  } catch { return []; }
+}
+
+export function saveCourseLocalSolved(bookId: number, ids: Iterable<number>): void {
+  try { localStorage.setItem(COURSE_LOCAL_SOLVED_PREFIX + bookId, JSON.stringify([...ids])); }
+  catch { /* Quota/Privatmodus → Fortschritt eben nicht persistiert */ }
+}
+
+export function clearCourseLocalSolved(bookId: number): void {
+  try { localStorage.removeItem(COURSE_LOCAL_SOLVED_PREFIX + bookId); } catch { /* ignore */ }
+}
+
 /** Wie viele Tagespuzzles offline vorgehalten werden (jüngste gewinnen). */
 const DAILY_CACHE_MAX = 14;
 

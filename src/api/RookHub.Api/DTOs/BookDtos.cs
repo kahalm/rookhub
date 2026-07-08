@@ -18,6 +18,8 @@ public class BookDto
     public bool ForDaily { get; set; }
     public bool ForRandom { get; set; }
     public bool ForBlind { get; set; }
+    /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
+    public bool IsPublic { get; set; }
     /// <summary>Art des Buchs (Puzzle/Study) fürs Trainingsziel-Routing.</summary>
     public BookKind Kind { get; set; }
     public int PuzzleCount { get; set; }
@@ -51,6 +53,8 @@ public class UpdateBookDto
     public bool? ForDaily { get; set; }
     public bool? ForRandom { get; set; }
     public bool? ForBlind { get; set; }
+    /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
+    public bool? IsPublic { get; set; }
     /// <summary>Art des Buchs (Puzzle/Study); fürs Trainingsziel-Routing der Kurszeit.</summary>
     public BookKind? Kind { get; set; }
 }

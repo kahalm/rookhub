@@ -52,6 +52,9 @@ public class CourseService
     {
         if (!await _db.Books.AnyAsync(b => b.Id == bookId)) return false;
         if (isAdmin) return true;
+        // Öffentlicher Kurs: für JEDEN (auch eingeloggt ohne Gruppen-Freigabe) über den Direkt-Link
+        // nutzbar — der eingeloggte Nutzer bekommt dabei serverseitigen Fortschritt.
+        if (await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic)) return true;
         // Persönliches Buch des Users (z. B. eigener Chessable-Import) ist immer sichtbar.
         if (await _db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId)) return true;
         // Ein anderer Nutzer hat mir diesen Kurs direkt geteilt.
@@ -201,6 +204,22 @@ public class CourseService
     public async Task<List<BookPuzzleDto>> GetAllPuzzlesAsync(int userId, int bookId, bool isAdmin)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
+        var puzzles = await _db.BookPuzzles
+            .Include(bp => bp.Book)
+            .Where(bp => bp.BookId == bookId)
+            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .ToListAsync();
+        return puzzles.Select(BookPuzzleService.MapToDto).ToList();
+    }
+
+    /// <summary>Alle Puzzles eines ÖFFENTLICHEN Kurses am Stück — ohne Login (kein User/Zugriffs-Kontext).
+    /// Basis dafür, dass ein anonymer Besucher einen als <see cref="Book.IsPublic"/> markierten Kurs über
+    /// den Direkt-Link komplett clientseitig durchspielen kann (Fortschritt nur lokal im Browser).
+    /// Nicht öffentlich / nicht vorhanden → <see cref="KeyNotFoundException"/> (404).</summary>
+    public async Task<List<BookPuzzleDto>> GetPublicCoursePuzzlesAsync(int bookId)
+    {
+        if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic))
+            throw new KeyNotFoundException("Book not found.");
         var puzzles = await _db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)

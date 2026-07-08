@@ -34,6 +34,7 @@ public class BookAdminService
                 ForDaily = b.ForDaily,
                 ForRandom = b.ForRandom,
                 ForBlind = b.ForBlind,
+                IsPublic = b.IsPublic,
                 Kind = b.Kind,
                 PuzzleCount = b.Puzzles.Count(),
                 CreatedAt = b.CreatedAt,
@@ -98,6 +99,7 @@ public class BookAdminService
         if (dto.ForDaily.HasValue) book.ForDaily = dto.ForDaily.Value;
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
+        if (dto.IsPublic.HasValue) book.IsPublic = dto.IsPublic.Value;
         if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
         book.MinElo = dto.MinElo;
         book.MaxElo = dto.MaxElo;
@@ -119,6 +121,7 @@ public class BookAdminService
             ForDaily = book.ForDaily,
             ForRandom = book.ForRandom,
             ForBlind = book.ForBlind,
+            IsPublic = book.IsPublic,
             Kind = book.Kind,
             PuzzleCount = count,
             CreatedAt = book.CreatedAt,

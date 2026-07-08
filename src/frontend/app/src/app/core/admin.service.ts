@@ -32,6 +32,8 @@ export interface Book {
   forDaily: boolean;
   forRandom: boolean;
   forBlind: boolean;
+  /** Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar. */
+  isPublic: boolean;
   /** Art des Buchs fürs Trainingsziel-Routing der Kurszeit. */
   kind: 'Puzzle' | 'Study';
   puzzleCount: number;
@@ -52,6 +54,7 @@ export interface UpdateBook {
   forDaily?: boolean;
   forRandom?: boolean;
   forBlind?: boolean;
+  isPublic?: boolean;
   kind?: 'Puzzle' | 'Study';
 }
 

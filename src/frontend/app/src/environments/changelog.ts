@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.10';
+export const APP_VERSION = '0.282.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.282.0", date: "2026-07-08", changes: [
+    { en: "Public courses: a course can now be used WITHOUT registration. An admin marks a course as „Public“ per book in the admin Books/Courses tab; anyone can then open and play through it via its direct link (/courses/<id>/sequential or /random) without signing in — no public course catalogue, only the direct link. An anonymous visitor's progress (solved lines, clicked-through intro lines) is kept locally in the browser (localStorage) and survives a reload; it does NOT count towards leaderboards or training goals, and hints/challenges/sharing stay logged-in only. A logged-in user opening a public link gets full server-side progress as usual. New anonymous endpoint GET /api/courses/{id}/public + EF migration (Book.IsPublic). +5 backend tests, +3 frontend specs.", de: "Öffentliche Kurse: ein Kurs lässt sich jetzt OHNE Registrierung nutzen. Ein Admin markiert einen Kurs je Buch im Admin-Tab Bücher/Kurse als „Öffentlich“; danach kann ihn jeder über den Direkt-Link (/courses/<id>/sequential bzw. /random) ohne Anmeldung öffnen und durchspielen — kein öffentlicher Kurs-Katalog, nur der Direkt-Link. Der Fortschritt eines anonymen Besuchers (gelöste Linien, durchgeklickte Info-Linien) bleibt lokal im Browser (localStorage) und übersteht einen Reload; er zählt NICHT in Bestenlisten oder Trainingsziele, und Tipps/Challenges/Teilen bleiben eingeloggten Nutzern vorbehalten. Ein eingeloggter Nutzer bekommt beim Öffnen eines öffentlichen Links wie gewohnt vollen serverseitigen Fortschritt. Neuer anonymer Endpoint GET /api/courses/{id}/public + EF-Migration (Book.IsPublic). +5 Backend-Tests, +3 Frontend-Specs." },
+  ]},
   { version: "0.281.10", date: "2026-07-08", changes: [
     { en: "Book/course puzzle: the puzzle's intro comment no longer vanishes the instant solving starts. On course lines that begin with setup moves (startPly ≥ 0) the intro used to disappear exactly when the setup move finished — too fast to read. It now stays visible one half-move longer, i.e. until you actually play your first solution move (stacked above any move comment). +2 unit tests / spec cases updated.", de: "Buch-/Kurs-Puzzle: die Einleitung des Puzzles verschwindet nicht mehr in dem Moment, in dem das Lösen beginnt. Bei Kurslinien mit Aufbauzügen (startPly ≥ 0) verschwand die Einleitung genau dann, wenn der Aufbauzug fertig war — zu schnell zum Lesen. Sie bleibt jetzt einen Halbzug länger stehen, nämlich bis du deinen ersten Lösungszug tatsächlich machst (über einem etwaigen Zug-Kommentar gestapelt). +2 Unit-Tests / Spec-Fälle angepasst." },
   ]},
