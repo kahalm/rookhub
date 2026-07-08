@@ -1,4 +1,5 @@
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
+import { EndlessChainService } from './endless-chain.service';
 import { ThemePreset } from './puzzle-theme-presets';
 
 /**
@@ -67,8 +68,11 @@ function makeComponent(params: Record<string, string> = {}): any {
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   const longSolve: any = { resolve: (s: number) => sub(s) };
   const favorites: any = { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) };
+  // Echter Ketten-Service über DIESELBE puzzleService-Instanz → getRandomBatch-Spy + spätere
+  // Neuzuweisungen (c.puzzleService.getRandomBatch = …) wirken durch den Service hindurch.
+  const chainService = new EndlessChainService(puzzleService);
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites
+    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService
   );
 }
 

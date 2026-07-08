@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.6';
+export const APP_VERSION = '0.281.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.7", date: "2026-07-08", changes: [
+    { en: "Maintainability refactor (no behaviour change): pulled the coupling-light part of the endless-puzzle chain generation (curve params → rating windows → batch fetch) out of the 1500-line solver component into a small testable `EndlessChainService`, plus a pure `buildBatchThemes` helper in `endless-prefetch.util`. State/HTTP/timer/persistence logic deliberately stays in the component (no component state was forced into the service). +9 unit tests; all 80 endless specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): den kopplungsarmen Teil der Endless-Chain-Erzeugung (Kurvenparameter → Rating-Fenster → Batch-Abruf) aus der 1500-Zeilen-Solver-Komponente in einen kleinen, testbaren `EndlessChainService` gezogen, plus eine reine `buildBatchThemes`-Util in `endless-prefetch.util`. State-/HTTP-/Timer-/Persistenz-Logik bleibt bewusst in der Komponente (kein Komponenten-State in den Service gezwungen). +9 Unit-Tests; alle 80 endless-Specs grün; Prod-Build grün." },
+  ]},
   { version: "0.281.6", date: "2026-07-08", changes: [
     { en: "Maintainability refactor (no behaviour change): (1) the repertoire trainer's large inline template + styles (~260 lines) were moved out of the component into external `repertoire-trainer.component.html`/`.scss` (component 1228→966 lines, TS logic untouched); (2) the course-list card (Title/badges/progress/theme chips/action menu/chapters, ~160 lines) was extracted into a presentational `CourseCardComponent` — the list container keeps all logic and binds inputs/outputs. All 38 repertoire-trainer + course-list specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): (1) das große Inline-Template + Styles des Repertoire-Trainers (~260 Z.) in externe `repertoire-trainer.component.html`/`.scss` ausgelagert (Komponente 1228→966 Z., TS-Logik unangetastet); (2) die Kurs-Karte der Kursliste (Titel/Badges/Fortschritt/Themen-Chips/Aktions-Menü/Kapitel, ~160 Z.) in eine präsentationale `CourseCardComponent` extrahiert — der Listen-Container behält die gesamte Logik und bindet Inputs/Outputs. Alle 38 repertoire-trainer- + course-list-Specs grün; Prod-Build grün." },
   ]},

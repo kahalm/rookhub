@@ -24,7 +24,8 @@ import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
-import { buildChainWindows, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
+import { buildBatchThemes, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
+import { EndlessChainService } from './endless-chain.service';
 import { EndlessFasttrackState } from './endless-fasttrack-state';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -331,7 +332,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService,
     private longSolve: LongSolveService,
-    private favorites: FavoritesService
+    private favorites: FavoritesService,
+    private chainService: EndlessChainService
   ) {
     super(stockfish);
     this.favoriteTracker = new FavoriteTracker(
@@ -731,12 +733,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    */
   /** Themen-Filter für die Ketten-Generierung: „schwächste Themen" (ODER) hat Vorrang vor dem manuellen Themenfeld (UND). */
   private batchThemes(): { themes?: string; themesAny?: string } {
-    // Beide Quellen ODER-verknüpft (themesAny): ein Puzzle muss MINDESTENS EINS der Themen tragen.
-    // (Mehrere Themen UND-verknüpft hätten kaum Treffer — „fork pin" soll fork ODER pin liefern.)
-    const src = this.config.worstTags && this.worstThemes.length
-      ? this.worstThemes.join(' ')
-      : this.config.themes.trim();
-    return { themesAny: src || undefined };
+    return buildBatchThemes(this.config.worstTags ?? false, this.worstThemes, this.config.themes);
   }
 
   /** Lädt die schwächsten Themen (nur eingeloggt + Option aktiv), ruft danach cb. */
@@ -749,12 +746,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   private generateChainBlock(startIndex: number, then?: () => void, count = ENDLESS_CHAIN_BLOCK): void {
-    const windows = buildChainWindows(
-      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, count, startIndex, this.isFirstRun
-    );
     this.ensureWorstThemes(() => {
     const { themes, themesAny } = this.batchThemes();
-    this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
+    this.chainService.fetchBlock({
+      startElo: this.config.startElo, avgFirst: this.fasttrackAvgFirst, avgSecond: this.fasttrackAvgSecond,
+      ratingMax: this.puzzleRange.max, startIndex, firstRun: this.isFirstRun, count,
+    }, themes, themesAny).subscribe({
       next: pool => {
         const block = pool || [];
         if (block.length === 0) {
@@ -789,13 +786,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private prefetchRun(): void {
     const gen = this.runGeneration;
     this.computeFasttrackSteps();
-    const windows = buildChainWindows(
-      this.config.startElo, this.fasttrackAvgFirst, this.fasttrackAvgSecond, this.puzzleRange.max, ENDLESS_CHAIN_BLOCK, 0, this.isFirstRun
-    );
+    const windows = this.chainService.chainWindows({
+      startElo: this.config.startElo, avgFirst: this.fasttrackAvgFirst, avgSecond: this.fasttrackAvgSecond,
+      ratingMax: this.puzzleRange.max, startIndex: 0, firstRun: this.isFirstRun, count: ENDLESS_CHAIN_BLOCK,
+    });
     if (!windows.length) return;
     this.ensureWorstThemes(() => {
       const { themes, themesAny } = this.batchThemes();
-      this.puzzleService.getRandomBatch(windows, themes, false, themesAny).subscribe({
+      this.chainService.fetchBatch(windows, themes, themesAny).subscribe({
         next: pool => {
           // Inzwischen ein Run gestartet? Dann gehört dessen Pool/Seed ihm — Prefetch verwerfen.
           if (gen !== this.runGeneration) return;

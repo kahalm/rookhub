@@ -1,5 +1,5 @@
 import {
-  takeFromPool, takeNearestFromPool, autoFasttrackThresholds, fasttrackSteps,
+  takeFromPool, takeNearestFromPool, autoFasttrackThresholds, fasttrackSteps, buildBatchThemes,
   chainRatingAt, firstRunRatingAt, buildChainWindows, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK,
   FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX
 } from './endless-prefetch.util';
@@ -120,6 +120,25 @@ describe('firstRunRatingAt (steile Erst-Lauf-Kurve)', () => {
     const w = buildChainWindows(700, 1100, 1800, 4000, ENDLESS_CHAIN_BLOCK, 0, true);
     expect(w[FIRST_RUN_ANCHOR1_INDEX]).toEqual({ minRating: 1980, maxRating: 2020 }); // 2000 ±20
     expect(w[0]).toEqual({ minRating: 680, maxRating: 720 });                          // Start 700 ±20
+  });
+});
+
+describe('buildBatchThemes', () => {
+  it('kein Filter → themesAny undefined', () => {
+    expect(buildBatchThemes(false, [], '')).toEqual({ themesAny: undefined });
+    expect(buildBatchThemes(false, ['fork'], '   ')).toEqual({ themesAny: undefined });
+  });
+
+  it('manuelles Themenfeld ODER-verknüpft (getrimmt), wenn worstTags aus', () => {
+    expect(buildBatchThemes(false, ['ignored'], '  fork pin ')).toEqual({ themesAny: 'fork pin' });
+  });
+
+  it('worstTags hat Vorrang vor dem manuellen Feld (join der worstThemes)', () => {
+    expect(buildBatchThemes(true, ['pin', 'fork'], 'endgame')).toEqual({ themesAny: 'pin fork' });
+  });
+
+  it('worstTags aktiv aber keine worstThemes → fällt auf das manuelle Feld zurück', () => {
+    expect(buildBatchThemes(true, [], 'endgame')).toEqual({ themesAny: 'endgame' });
   });
 });
 

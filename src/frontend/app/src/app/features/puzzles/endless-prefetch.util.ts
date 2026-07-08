@@ -112,6 +112,19 @@ export function buildChainWindows(
   return windows;
 }
 
+/**
+ * Themen-Filter für die Ketten-Generierung (rein, kein Komponenten-State). „Schwächste Themen" (ODER)
+ * hat Vorrang vor dem manuellen Themenfeld (ebenfalls ODER-verknüpft): ein Puzzle muss MINDESTENS EINS
+ * der Themen tragen → `themesAny`. (Mehrere Themen UND hätten kaum Treffer — „fork pin" soll fork ODER
+ * pin liefern.) Kein Filter → `themesAny` bleibt `undefined`.
+ */
+export function buildBatchThemes(
+  worstTags: boolean, worstThemes: string[], themes: string,
+): { themes?: string; themesAny?: string } {
+  const src = worstTags && worstThemes.length ? worstThemes.join(' ') : (themes ?? '').trim();
+  return { themesAny: src || undefined };
+}
+
 /** Schrittweite je Phase aus den (ggf. manuell überschriebenen) Schwellen. */
 export function fasttrackSteps(startElo: number, avgFirst: number, avgSecond: number): FasttrackSteps {
   return {
