@@ -23,6 +23,9 @@ import { lineKeyFromSans } from './repertoire-line-key.util';
 import { autoChapterColors, resolveChapterColors, rootSideOf, sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
+import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle } from './repertoire-sr.util';
+import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
+import { parseWhiteEval } from './repertoire-eval.util';
 
 type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';
 type Outcome = 'correct' | 'tolerated' | 'wrong';
@@ -196,14 +199,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Fällig = im Pool, nicht pausiert und DueAt ≤ jetzt. Noch nicht gelernte Linien (kein Zustand)
    * sind NICHT im Pool und werden nicht abgefragt. */
   private isDue(line: ParsedGame, now: number): boolean {
-    const st = this.statesByKey.get(this.lineKeyOf(line));
-    return !!st && st.inPool && !st.paused && new Date(st.dueAt).getTime() <= now;
+    return isStateDue(this.statesByKey.get(this.lineKeyOf(line)), now);
   }
 
   /** Learn-Kandidat = noch NICHT im Pool und nicht pausiert. */
   private isLearnable(line: ParsedGame): boolean {
-    const st = this.statesByKey.get(this.lineKeyOf(line));
-    return (!st || !st.inPool) && !st?.paused;
+    return isStateLearnable(this.statesByKey.get(this.lineKeyOf(line)));
   }
 
   /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien (gemischt), learn = ungelernte
@@ -237,14 +238,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Früheste künftige Fälligkeit einer Pool-Linie (für die EMPTY-Ansicht); null = nichts im Pool. */
   private computeNextDue(lines: ParsedGame[]): string | null {
-    let min: number | null = null;
-    for (const l of lines) {
-      const st = this.statesByKey.get(this.lineKeyOf(l));
-      if (!st || !st.inPool || st.paused) continue;
-      const t = new Date(st.dueAt).getTime();
-      if (min === null || t < min) min = t;
-    }
-    return min === null ? null : new Date(min).toISOString();
+    return earliestDueIso(lines.map(l => this.statesByKey.get(this.lineKeyOf(l))));
   }
 
   restart(): void { this.buildQueue(); }
@@ -498,15 +492,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const line = this.queue[this.qIndex];
     if (!line || line.moves.length === 0) return [];
     // Zug-Nummerierung stabil aus dem Start-FEN ableiten (fullmove counter + turn).
-    let fullMove = 1;
-    let side: 'w' | 'b' = 'w';
-    try {
-      const start = new Chess(line.fens[0]);
-      side = start.turn();
-      const parts = line.fens[0].split(/\s+/);
-      const n = parseInt(parts[5] || '1', 10);
-      if (Number.isFinite(n) && n >= 1) fullMove = n;
-    } catch { /* Defaults reichen */ }
+    const { side, fullMove } = startNumbering(line.fens[0]);
     const out: { num: number | null; san: string; ply: number; state: 'past' | 'current'; comment: string }[] = [];
     let curSide = side;
     let curMove = fullMove;
@@ -551,43 +537,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get currentMovePrettyLabel(): string {
     const line = this.queue[this.qIndex];
     if (!line || this.currentPly < 0 || this.currentPly >= line.moves.length) return '';
-    let side: 'w' | 'b' = 'w';
-    let fullMove = 1;
-    try {
-      const start = new Chess(line.fens[0]);
-      side = start.turn();
-      const parts = line.fens[0].split(/\s+/);
-      const n = parseInt(parts[5] || '1', 10);
-      if (Number.isFinite(n) && n >= 1) fullMove = n;
-    } catch { /* Defaults */ }
-    let curSide = side;
-    let num = fullMove;
-    for (let ply = 0; ply < this.currentPly; ply++) {
-      if (curSide === 'b') num++;
-      curSide = curSide === 'w' ? 'b' : 'w';
-    }
-    const san = line.moves[this.currentPly].san;
-    return curSide === 'w' ? `${num}. ${san}` : `${num}… ${san}`;
+    return prettyMoveLabel(line.fens[0], line.moves[this.currentPly].san, this.currentPly);
   }
 
   /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
-  get nextDueLabel(): string { return this.relDueLabel(this.nextDueAt); }
+  get nextDueLabel(): string { return relDueLabel(this.nextDueAt); }
 
   /** LINE_DONE: „in X" bis die gerade beendete Linie erneut abgefragt wird (Abfragen-Modus). */
-  get nextRepeatLabel(): string { return this.relDueLabel(this.nextRepeatAt); }
-
-  private relDueLabel(iso: string | null): string {
-    if (!iso) return '';
-    const ms = new Date(iso).getTime() - Date.now();
-    const h = ms / 3_600_000;
-    if (h < 1) return '< 1 h';
-    if (h < 48) return `${Math.round(h)} h`;
-    const d = h / 24;
-    if (d < 14) return `${Math.round(d)} d`;
-    const w = d / 7;
-    if (w < 9) return `${Math.round(w)} w`;
-    return `${Math.round(d / 30)} mo`;
-  }
+  get nextRepeatLabel(): string { return relDueLabel(this.nextRepeatAt); }
 
   /** Farbe (chessground-Notation), die der User in dieser Linie spielt. */
   get userColorName(): 'white' | 'black' { return this.color === 'w' ? 'white' : 'black'; }
@@ -921,14 +878,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       fenAfterRep = c.fen();
     } catch { this.evalLoading = false; this.cdr.markForCheck(); return; }
 
-    const parseCpWhite = (s: string): { cp: number; mateFor: 'w' | 'b' | null } => {
-      if (!s) return { cp: 0, mateFor: null };
-      if (s.startsWith('#-')) return { cp: -100000 + parseInt(s.slice(2), 10), mateFor: 'b' };
-      if (s.startsWith('#'))  return { cp:  100000 - parseInt(s.slice(1), 10), mateFor: 'w' };
-      const v = parseFloat(s);
-      return { cp: isNaN(v) ? 0 : Math.round(v * 100), mateFor: null };
-    };
-
     Promise.all([
       this.stockfish.getEval(fenAfterPlayer, 14).catch(() => ''),
       this.stockfish.getEval(fenAfterRep, 14).catch(() => ''),
@@ -936,8 +885,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       if (epoch !== this.evalEpoch) return;
       this.evalLoading = false;
       if (!sPlayer || !sRep) { this.cdr.markForCheck(); return; }
-      const ep = parseCpWhite(sPlayer);
-      const er = parseCpWhite(sRep);
+      const ep = parseWhiteEval(sPlayer);
+      const er = parseWhiteEval(sRep);
       const sign = this.color === 'w' ? 1 : -1;
       const cpPlayer = ep.cp * sign;
       const cpRep = er.cp * sign;
@@ -953,14 +902,4 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
   }
-}
-
-/** Fisher–Yates in-place-Kopie. Reihenfolge der Trainings-Linien wird pro Session gemischt. */
-function shuffle<T>(arr: readonly T[]): T[] {
-  const out = arr.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
 }

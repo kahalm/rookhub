@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.8';
+export const APP_VERSION = '0.281.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.9", date: "2026-07-08", changes: [
+    { en: "Maintainability refactor of the two big solver components (no behaviour change; state machine, timers, HTTP and offline-queue call order deliberately left untouched — only pure logic pulled out). book-puzzle (−69 lines): comment/solution-review rendering → `book-comment.util`, daily-date navigation + weekly-start + clock formatting → `book-nav.util` (the duplicated course/weekly time formatters unified). repertoire-trainer (−61 lines): SR due/queue helpers → `repertoire-sr.util`, move numbering → `repertoire-move-format.util`, eval parsing → `repertoire-eval.util` (kept separate from the base solver's because the mate encoding differs). +53 new unit tests; all book-puzzle + trainer specs pass; prod build green.", de: "Wartbarkeits-Refactor der zwei großen Solver-Komponenten (keine Verhaltensänderung; State-Machine, Timer, HTTP und Offline-Queue-Aufrufreihenfolge bewusst unangetastet — nur reine Logik ausgelagert). book-puzzle (−69 Z.): Kommentar-/Lösungs-Review-Rendering → `book-comment.util`, Tagespuzzle-Datums-Navigation + Wochenpost-Start + Zeit-Formatierung → `book-nav.util` (die doppelten Kurs-/Wochenpost-Zeitformatierer vereinheitlicht). repertoire-trainer (−61 Z.): SR-Fälligkeits-/Queue-Helfer → `repertoire-sr.util`, Zug-Nummerierung → `repertoire-move-format.util`, Eval-Parsing → `repertoire-eval.util` (getrennt vom Basis-Solver, da die Matt-Kodierung abweicht). +53 neue Unit-Tests; alle book-puzzle- + Trainer-Specs grün; Prod-Build grün." },
+  ]},
   { version: "0.281.8", date: "2026-07-08", changes: [
     { en: "Maintainability refactor (no behaviour change): the profile page (562 lines, mostly one big inline template) was decomposed into four self-contained child cards following the training-goals/api-tokens pattern — offline settings, theme, change password, delete account. The container now holds only the profile master data (identity form + player search + Discord link); component 562→357 lines, constructor 8→4 deps. Sections still render inside the shared profile card with the same dividers, so layout is byte-identical. Profile specs split onto the new cards (+error-mapping cases); 18 specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): die Profilseite (562 Z., überwiegend ein großes Inline-Template) in vier self-contained Kind-Karten nach dem training-goals/api-tokens-Muster zerlegt — Offline-Einstellungen, Theme, Passwort ändern, Konto löschen. Der Container hält nur noch die Profil-Stammdaten (Identitätsformular + Spielersuche + Discord-Verknüpfung); Komponente 562→357 Z., Konstruktor 8→4 Abhängigkeiten. Die Sektionen rendern weiter in derselben Profil-Karte mit denselben Trennern, Layout also byte-identisch. Profile-Specs auf die neuen Karten aufgeteilt (+Error-Mapping-Fälle); 18 Specs grün; Prod-Build grün." },
   ]},

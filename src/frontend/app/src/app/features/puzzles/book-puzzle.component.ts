@@ -13,8 +13,12 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
-import { isGameCitationComment } from './game-citation.util';
 import { buildCommentSegments, CommentSegment } from './comment-variation.util';
+import {
+  latestCommentUpTo as latestCommentUpToUtil,
+  displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
+} from './book-comment.util';
+import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatSecondsClock } from './book-nav.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -40,7 +44,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
-import { WeeklyService, WeeklyProgress } from '../weekly/weekly.service';
+import { WeeklyService } from '../weekly/weekly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
@@ -481,14 +485,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Gibt es nach dem letzten Zug der Linie noch einen (Abschluss-)Kommentar? (0-basierter Schlüssel
    *  des letzten Halbzugs in `moveComments`). Steuert, dass am Ende nicht auto-weitergesprungen wird. */
   private get hasTrailingSolutionComment(): boolean {
-    const allMoves = (this.puzzle?.moves ?? '').split(' ').filter(m => m);
-    if (allMoves.length === 0) return false;
-    const c = this.commentForPlyPlayed(allMoves.length - 1);
-    if (!c) return false;
-    // Reine Partie-/Studien-Angaben ("Bayer - Kuenitz, Wiesbaden, 2015.") sind keine lehrreiche
-    // Erklärung → wie ohne Kommentar automatisch weiterrücken statt zum Lesen anzuhalten.
-    if (isGameCitationComment(c)) return false;
-    return true;
+    return computeHasTrailingComment(this.puzzle?.moves, this.puzzle?.moveComments);
   }
 
   /** Nächstes Puzzle je nach Modus (Auto-Advance-Ziel). */
@@ -511,15 +508,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private goDaily(delta: number): void {
     if (!this.dailyDate) return;
-    const y = +this.dailyDate.slice(0, 4), m = +this.dailyDate.slice(4, 6), d = +this.dailyDate.slice(6, 8);
-    this.router.navigate(['/puzzles/daily', this.fmtUtc(new Date(Date.UTC(y, m - 1, d + delta)))]);
+    this.router.navigate(['/puzzles/daily', shiftDailyDate(this.dailyDate, delta)]);
   }
 
-  private todayUtc(): string { return this.fmtUtc(new Date()); }
-  private fmtUtc(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}`;
-  }
+  private todayUtc(): string { return formatUtcDate(new Date()); }
 
   protected override handleFailed(): void {
     this.state = 'FAILED';
@@ -715,14 +707,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Einleitung) — Basis der Ply-Navigation; die Anzeige läuft über {@link commentLines}. */
   get displayComment(): string | null {
     if (!this.puzzle) return null;
-    if (this.reviewMode) {
-      // Einleitung nur ganz am Anfang zeigen (vor dem 1. Zug). Ab reviewIndex ≥ 1 nur den zuletzt
-      // gesehenen Zug-Kommentar — sonst schlägt eine unkommentierte Endstellung auf die Einleitung
-      // zurück und wirkt wie ein Sprung nach hinten.
-      if (this.reviewIndex === 0) return this.moveComment ?? this.puzzle.comment ?? null;
-      return this.moveComment ?? null;
-    }
-    return this.puzzle.comment ?? null;
+    return computeDisplayComment(this.reviewMode, this.reviewIndex, this.moveComment, this.puzzle.comment);
   }
 
   /** Die im Kontext-Block angezeigten Kommentar-Absätze (gestapelt).
@@ -733,31 +718,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  - Vor dem ersten Zug: die Einleitung des Puzzles. */
   get commentLines(): string[] {
     if (!this.puzzle) return [];
-    if (this.reviewMode) {
-      // Analog zu {@link displayComment}: nur vor dem 1. Zug auf die Einleitung zurückfallen.
-      const c = this.reviewIndex === 0
-        ? (this.moveComment ?? this.puzzle.comment ?? null)
-        : (this.moveComment ?? null);
-      return c ? [c] : [];
-    }
-    if (this.onSolutionPath && this.moveIndex > 0
-        && (this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING')) {
-      const start = Math.max(0, this.startPly);
-      const lines: string[] = [];
-      // `moveIndex` ist bereits ABSOLUT (nach dem Setup einer Mid-Line-Linie steht er auf
-      // `startPly + 1`, siehe BasePuzzleSolver) → der zuletzt gespielte Halbzug ist `moveIndex - 1`.
-      // NICHT `start` erneut addieren (das verschob den Kommentar bei startPly ≥ 1 um startPly Halbzüge
-      // nach vorne — z. B. erschien der Zug-31-Kommentar schon nach De7 statt nach Dxf2+).
-      for (let ply = start; ply <= this.moveIndex - 1; ply++) {
-        const c = this.commentForPlyPlayed(ply);   // gleiche Ply-Konvention wie der Review
-        if (c) lines.push(c);
-      }
-      return lines;   // ggf. leer → kein Kommentar-Block (kein Intro-Rückfall)
-    }
-    // Einleitung NUR vor dem ersten Zug (noch auf dem Lösungspfad). Nach einem Fehlzug (off-path,
-    // onSolutionPath=false) NICHT auf die Einleitung zurückfallen — sonst „ploppt" das Anfangs-
-    // kommentar nach einem falschen Zug wieder auf.
-    return (this.onSolutionPath && this.puzzle.comment) ? [this.puzzle.comment] : [];
+    return buildCommentLines({
+      reviewMode: this.reviewMode,
+      reviewIndex: this.reviewIndex,
+      moveComment: this.moveComment,
+      puzzleComment: this.puzzle.comment,
+      moveComments: this.puzzle.moveComments,
+      onSolutionPath: this.onSolutionPath,
+      moveIndex: this.moveIndex,
+      solving: this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING',
+      startPly: this.startPly,
+    });
   }
 
   // ---- Klickbare Züge in Kommentaren (Variante auf dem Brett vorspielen) ----
@@ -943,12 +914,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return this.weeklyCompleted ? 100 : Math.round(100 * this.weeklyIndex / this.weeklyTotal);
   }
   /** Gesamtzeit über alle gespielten Puzzles als m:ss bzw. h:mm:ss. */
-  get weeklyTimeDisplay(): string {
-    const s = Math.max(0, Math.floor(this.weeklySeconds));
-    const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
-    const p2 = (n: number) => n.toString().padStart(2, '0');
-    return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
-  }
+  get weeklyTimeDisplay(): string { return formatSecondsClock(this.weeklySeconds); }
 
   private loadWeekly(): void {
     if (this.weeklyId == null) return;
@@ -974,7 +940,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
               this.weeklyPlayed = p.playedCount;
               this.weeklySolved = p.solvedCount;
               this.weeklySeconds = p.totalSeconds;
-              this.loadWeeklyAt(this.weeklyStartIndex(p));
+              this.loadWeeklyAt(computeWeeklyStartIndex(this.weeklyPuzzles, p));
             },
             error: () => { if (epoch === this.loadEpoch) this.loadWeeklyAt(0); },
           });
@@ -984,17 +950,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       },
       error: () => { if (epoch !== this.loadEpoch) return; this.state = 'COURSE_DONE'; this.puzzle = null; }
     });
-  }
-
-  /**
-   * Einstiegs-Index: erstes noch NICHT gespieltes Puzzle (Sprung über bereits Gemachtes).
-   * Bei 100% gespielt → 0 (von vorne). Ohne Fortschritt → 0.
-   */
-  private weeklyStartIndex(p: WeeklyProgress): number {
-    if (p.completed) return 0;
-    const played = new Set(p.playedIndices ?? []);
-    const idx = this.weeklyPuzzles.findIndex(pz => !played.has(pz.id));
-    return idx >= 0 ? idx : 0;
   }
 
   private loadWeeklyAt(index: number): void {
@@ -1076,12 +1031,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** mm:ss bzw. h:mm:ss aus Sekunden (für die Kurs-Zeitanzeige). */
-  courseTime(seconds: number): string {
-    const s = Math.max(0, Math.floor(seconds));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-  }
+  courseTime(seconds: number): string { return formatSecondsClock(seconds); }
 
   /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */
   private loadDaily(dateParam: string): void {
@@ -1275,26 +1225,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Lösungs-Review: index = Anzahl Lösungszüge ab Trainingsstart; absoluter Halbzug = start + index.
     // Fällt der aktuelle Zug ohne Kommentar aus, den zuletzt vorher gesehenen behalten (statt zurück
     // auf die Einleitung zu fallen — das wirkte für den User wie ein „Sprung nach hinten").
-    this.moveComment = this.latestCommentUpTo(start, start + index - 1);
+    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, start, start + index - 1);
     this.reviewShapes = this.shapesForPlyPlayed(start + index - 1);
-  }
-
-  /** Kommentar des zuletzt kommentierten Halbzugs im Bereich [start .. plyPlayed] (rückwärts).
-   *  Gibt null zurück, wenn keiner dieser Züge einen Kommentar hat. */
-  private latestCommentUpTo(start: number, plyPlayed: number): string | null {
-    for (let ply = plyPlayed; ply >= start; ply--) {
-      const c = this.commentForPlyPlayed(ply);
-      if (c) return c;
-    }
-    return null;
-  }
-
-  /** Kommentar, der zum zuletzt gespielten Halbzug gehört. <paramref> ist der 0-basierte Index
-   *  dieses Zugs in `moves` (-1 = Einleitung, bevor ein Zug gespielt wurde). */
-  private commentForPlyPlayed(plyPlayed: number): string | null {
-    const mc = this.puzzle?.moveComments;
-    if (!mc) return null;
-    return mc[String(plyPlayed)] ?? null;
   }
 
   /** Board-Annotationen (Pfeile/Feld-Markierungen) zum zuletzt gespielten Halbzug (gleiche Ply-Konvention). */
@@ -1364,7 +1296,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.dests = new Map();
     // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
     // Bei Zügen ohne Kommentar den zuletzt gesehenen behalten (statt bis zur Einleitung zurückzufallen).
-    this.moveComment = this.latestCommentUpTo(0, index - 1);
+    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, 0, index - 1);
     this.reviewShapes = this.shapesForPlyPlayed(index - 1);
   }
 
