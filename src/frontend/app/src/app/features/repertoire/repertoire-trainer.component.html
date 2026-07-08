@@ -1,0 +1,190 @@
+<div class="trainer">
+  <div class="bar">
+    <a mat-button [routerLink]="['/repertoires', repertoireId]"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
+    <span class="title">
+      {{ 'repertoireTrainer.title' | translate }}
+      @if (chapterFilter) {
+        <span class="chapter-chip"><mat-icon>bookmark</mat-icon>{{ chapterFilter }}</span>
+      }
+    </span>
+    <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)" hideSingleSelectionIndicator="true" aria-label="Mode">
+      <mat-button-toggle value="quiz">{{ 'repertoireTrainer.modeQuiz' | translate }}</mat-button-toggle>
+      <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
+    </mat-button-toggle-group>
+    <button mat-icon-button (click)="openConfig()"
+            [matTooltip]="'srConfig.title' | translate"
+            [attr.aria-label]="'srConfig.title' | translate">
+      <mat-icon>tune</mat-icon>
+    </button>
+    <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
+            [matTooltip]="'repertoireTrainer.resetTooltip' | translate"
+            [attr.aria-label]="'repertoireTrainer.resetTooltip' | translate">
+      <mat-icon>restart_alt</mat-icon>
+    </button>
+  </div>
+
+  <ng-container [ngSwitch]="phase">
+    <div *ngSwitchCase="'LOADING'" class="center">{{ 'common.loading' | translate }}</div>
+
+    <mat-card *ngSwitchCase="'EMPTY'" class="msg">
+      @if (mode === 'learn') {
+        <mat-icon>school</mat-icon>
+        <p>{{ 'repertoireTrainer.nothingToLearn' | translate }}</p>
+        <button mat-flat-button color="primary" (click)="setMode('quiz')">
+          <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
+        </button>
+        <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+          <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+        </a>
+      } @else {
+      <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
+      @if (nextDueAt) {
+        <p>{{ 'repertoireTrainer.nextDue' | translate: { when: nextDueLabel } }}</p>
+        <button mat-flat-button color="primary" (click)="makeAllDue()" [disabled]="poolBusy">
+          <mat-icon>bolt</mat-icon> {{ 'repertoireTrainer.makeAllDue' | translate }}
+        </button>
+      } @else {
+        <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
+        <button mat-flat-button color="primary" (click)="promoteAllToPool()" [disabled]="poolBusy">
+          <mat-icon>playlist_add</mat-icon> {{ 'repertoireTrainer.addAllToPool' | translate }}
+        </button>
+      }
+      <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+        <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+      </a>
+      }
+    </mat-card>
+
+    <mat-card *ngSwitchCase="'DONE'" class="msg">
+      <mat-icon>celebration</mat-icon>
+      @if (mode === 'learn') {
+        <p>{{ 'repertoireTrainer.learnDone' | translate }}</p>
+        <button mat-raised-button color="primary" (click)="setMode('quiz')">
+          <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
+        </button>
+      } @else {
+        <p>{{ 'repertoireTrainer.done' | translate: { correct: correct, total: sessionUserMoves } }}</p>
+        <button mat-raised-button color="primary" (click)="restart()">{{ 'repertoireTrainer.again' | translate }}</button>
+      }
+    </mat-card>
+
+    <div *ngSwitchDefault class="play" (click)="onPlayClick()">
+      <app-puzzle-board
+        [fen]="fen" [orientation]="userColorName"
+        [turnColor]="boardTurn"
+        [dests]="dests" [lastMove]="lastMove" [viewOnly]="!isPlayable && !premovable"
+        [premovable]="premovable"
+        [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
+        (moveMade)="onMove($event)">
+      </app-puzzle-board>
+
+      <div class="side">
+        <mat-progress-bar mode="determinate" [value]="progressPct"></mat-progress-bar>
+        <div class="counts">
+          <span>{{ 'repertoireTrainer.lineProgress' | translate: { done: qIndex + 1, total: queue.length } }}</span>
+          <span class="ok">✓ {{ correct }}</span>
+          <span class="bad">✗ {{ wrong }}</span>
+          @if (currentStreak >= 2) {
+            <span class="streak" [matTooltip]="'repertoireTrainer.streakTooltip' | translate: { best: bestStreak }">
+              <mat-icon>local_fire_department</mat-icon>{{ currentStreak }}
+            </span>
+          }
+        </div>
+        @if (currentLineLabel) {
+          <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}</p>
+        }
+        @if (movesInLine.length > 0) {
+          <div class="line-moves" [attr.aria-label]="'repertoireTrainer.movesInLine' | translate">
+            @for (m of movesInLine; track m.ply) {
+              @if (m.num !== null) { <span class="mv-num">{{ m.num }}.</span> }
+              <span class="mv" [ngClass]="m.state">{{ m.san }}</span>
+            }
+          </div>
+          @if (mode === 'learn' && currentComment) {
+            <div class="ctx-comment" [attr.aria-label]="'repertoireTrainer.moveComment' | translate">
+              <div class="ctx-head">
+                <mat-icon>chat_bubble</mat-icon>
+                <span>{{ currentMovePrettyLabel }}</span>
+              </div>
+              @for (p of currentCommentParagraphs; track $index) {
+                <p>{{ p }}</p>
+              }
+            </div>
+          }
+        }
+        <p class="prompt">{{ (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove') | translate }}</p>
+
+        @if (phase === 'LEARN_SHOW') {
+          <div class="feedback learn">
+            <p><mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.learnShow' | translate: { move: expectedDisplay } }}</p>
+          </div>
+          @if (learnComment) {
+            <div class="comment-box">
+              <mat-icon>chat_bubble</mat-icon>
+              <div class="comment-text">{{ learnComment }}</div>
+            </div>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          }
+        }
+
+        @if (phase === 'COMMENT') {
+          <div class="comment-hold">
+            <div class="comment-box">
+              <mat-icon>chat_bubble</mat-icon>
+              <div class="comment-text">{{ holdComment }}</div>
+            </div>
+            <button mat-raised-button color="primary" (click)="continueFromComment(); $event.stopPropagation()">
+              {{ 'repertoireTrainer.continue' | translate }}
+            </button>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          </div>
+        }
+
+        <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
+          <p *ngIf="outcome === 'correct'"><mat-icon>check_circle</mat-icon> {{ 'repertoireTrainer.correct' | translate }}</p>
+          <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon> {{ 'repertoireTrainer.toleratedPlayable' | translate }}</p>
+          <ng-container *ngIf="outcome === 'wrong'">
+            <p *ngIf="!wrongRevealed"><mat-icon>cancel</mat-icon> {{ 'repertoireTrainer.wrongNoHint' | translate }}</p>
+            <p *ngIf="wrongRevealed"><mat-icon>cancel</mat-icon>
+              {{ 'repertoireTrainer.wrong' | translate: { move: expectedDisplay } }}</p>
+            <p class="eval-info" *ngIf="evalLoading"><mat-icon>hourglass_top</mat-icon> {{ 'repertoireTrainer.evalLoading' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === 'missed'"><mat-icon>flash_on</mat-icon> {{ 'repertoireTrainer.evalMateMissed' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === 'allowed'"><mat-icon>flash_on</mat-icon> {{ 'repertoireTrainer.evalMateAllowed' | translate }}</p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns < -0.05">
+              <mat-icon>trending_down</mat-icon>
+              {{ 'repertoireTrainer.evalWorse' | translate: { delta: evalDeltaAbsDisplay } }}
+            </p>
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns >= -0.05 && evalDeltaPawns <= 0.05">
+              <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
+            </p>
+            <div class="wrong-actions" *ngIf="!wrongRevealed">
+              <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
+                <mat-icon>back_hand</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
+              </button>
+              <button mat-raised-button color="primary" (click)="showSolution(); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon> {{ 'repertoireTrainer.showSolution' | translate }}
+              </button>
+            </div>
+            <button *ngIf="wrongRevealed" mat-raised-button color="primary" (click)="continueAfterWrong(); $event.stopPropagation()">{{ 'repertoireTrainer.continue' | translate }}</button>
+          </ng-container>
+          <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
+        </div>
+        <p *ngIf="phase === 'PLAYING'" class="hint">{{ (mode === 'learn' ? 'repertoireTrainer.learnPlay' : 'repertoireTrainer.playYourMove') | translate }}</p>
+        @if (phase === 'LINE_DONE') {
+          <div class="line-done">
+            <p class="hint"><mat-icon>done_all</mat-icon>
+              {{ (pendingRepeat ? 'repertoireTrainer.linePassDone' : 'repertoireTrainer.lineDone') | translate }}</p>
+            @if (!pendingRepeat && nextRepeatLabel) {
+              <p class="repeat-due"><mat-icon>schedule</mat-icon>
+                {{ 'repertoireTrainer.repeatIn' | translate: { when: nextRepeatLabel } }}</p>
+            }
+            <button mat-raised-button color="primary" (click)="continueLine(); $event.stopPropagation()">
+              {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
+            </button>
+            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </ng-container>
+</div>

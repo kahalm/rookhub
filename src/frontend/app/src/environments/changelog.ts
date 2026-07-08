@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.5';
+export const APP_VERSION = '0.281.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.6", date: "2026-07-08", changes: [
+    { en: "Maintainability refactor (no behaviour change): (1) the repertoire trainer's large inline template + styles (~260 lines) were moved out of the component into external `repertoire-trainer.component.html`/`.scss` (component 1228→966 lines, TS logic untouched); (2) the course-list card (Title/badges/progress/theme chips/action menu/chapters, ~160 lines) was extracted into a presentational `CourseCardComponent` — the list container keeps all logic and binds inputs/outputs. All 38 repertoire-trainer + course-list specs pass; prod build green.", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): (1) das große Inline-Template + Styles des Repertoire-Trainers (~260 Z.) in externe `repertoire-trainer.component.html`/`.scss` ausgelagert (Komponente 1228→966 Z., TS-Logik unangetastet); (2) die Kurs-Karte der Kursliste (Titel/Badges/Fortschritt/Themen-Chips/Aktions-Menü/Kapitel, ~160 Z.) in eine präsentationale `CourseCardComponent` extrahiert — der Listen-Container behält die gesamte Logik und bindet Inputs/Outputs. Alle 38 repertoire-trainer- + course-list-Specs grün; Prod-Build grün." },
+  ]},
   { version: "0.281.5", date: "2026-07-08", changes: [
     { en: "Maintainability refactor (no behaviour change): the tournament tables view (Players/Teams/Pairings tabs, desktop tables, mobile cards, favourite stars, round picker) was ~95% duplicated between the private tournament-detail page and the public tournament page. Extracted into one shared presentational `TournamentTablesComponent` (inputs for the data + favourite sets, outputs for toggle-favourite/sort/round-change/tab-change); each container keeps only its own data source (server favourites/monitor vs. localStorage) and, for tournament-detail, its action bar. ~500 net lines removed; all 31 tournament specs pass. (Minor cosmetic side-effect: the detail page's mobile view now shares the public page's two mobile spacing rules.)", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): die Turnier-Tabellenansicht (Spieler/Teams/Paarungen-Tabs, Desktop-Tabellen, Mobil-Karten, Favoriten-Sterne, Runden-Auswahl) war zwischen der privaten tournament-detail-Seite und der öffentlichen Turnierseite zu ~95% dupliziert. In eine geteilte präsentationale `TournamentTablesComponent` extrahiert (Inputs für Daten + Favoriten-Sets, Outputs für Favorit-Umschalten/Sortieren/Runden-/Tab-Wechsel); jeder Container behält nur seine Datenquelle (Server-Favoriten/Monitor vs. localStorage) und, bei tournament-detail, seine Action-Bar. ~500 Netto-Zeilen entfernt; alle 31 Turnier-Specs grün. (Kleiner kosmetischer Nebeneffekt: die Detail-Seite teilt auf Mobil jetzt die zwei Mobil-Abstandsregeln der öffentlichen Seite.)" },
   ]},
