@@ -3,28 +3,23 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { PublicTournamentService } from '../../core/public-tournament.service';
 import { MatCardModule } from '@angular/material/card';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../core/snackbar.service';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSortModule, Sort } from '@angular/material/sort';
+import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
+import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing } from '../../core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 
 @Component({
   selector: 'app-public-tournament',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './public-tournament.component.html',
   styleUrls: ['./public-tournament.component.scss'],
 })
@@ -128,6 +123,11 @@ export class PublicTournamentComponent implements OnInit {
       },
       error: () => { this.pairingsLoading = false; }
     });
+  }
+
+  onRoundChange(round: number): void {
+    this.selectedRound = round;
+    this.loadPairings();
   }
 
   // --- localStorage Favorites ---

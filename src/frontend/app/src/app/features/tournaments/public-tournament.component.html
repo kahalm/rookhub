@@ -17,224 +17,36 @@
           </mat-card-actions>
         </mat-card>
 
-        <mat-tab-group [selectedIndex]="selectedTabIndex" (selectedTabChange)="onTabChange($event)">
-          <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
-            @if (playersLoading) {
-              <app-loading-spinner />
-            } @else {
-              @if (hasFavorites) {
-                <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-                </div>
-              }
-              <!-- Desktop -->
-              <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="playerSort = $event" class="full-width">
-                  <ng-container matColumnDef="fav">
-                    <th mat-header-cell *matHeaderCellDef></th>
-                    <td mat-cell *matCellDef="let p">
-                      <mat-icon class="fav-icon" [class.fav-active]="isFavorite(p)" (click)="toggleFavorite(p)"
-                                role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
-                                [attr.aria-pressed]="isFavorite(p)"
-                                (keydown.enter)="toggleFavorite(p)" (keydown.space)="$event.preventDefault(); toggleFavorite(p)">
-                        {{ isFavorite(p) ? 'star' : 'star_border' }}
-                      </mat-icon>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="snr">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.snr' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.snr }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="title">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.title' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.title }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.name' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.name }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="fideId">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.fideId' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.fideId }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="elo">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.elo' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.elo }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="country">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.country' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.country }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="team">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club') | translate }}</th>
-                    <td mat-cell *matCellDef="let p">
-                      @if (p.teamName && hasTeamPairings) {
-                        <span class="team-link" (click)="showTeamPlayers(p.teamName)">{{ p.teamName }}</span>
-                      } @else {
-                        {{ p.teamName }}
-                      }
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.players.boardShort' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.boardNumber }}</td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: playerColumns;"></tr>
-                </table>
-              </div>
-
-              <!-- Mobile -->
-              <div class="mobile-only player-cards">
-                @for (p of displayedPlayers; track p.snr) {
-                  <div class="player-card" (click)="toggleFavorite(p)"
-                       role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
-                       [attr.aria-pressed]="isFavorite(p)"
-                       (keydown.enter)="toggleFavorite(p)" (keydown.space)="$event.preventDefault(); toggleFavorite(p)">
-                    <div class="player-main">
-                      <mat-icon class="fav-icon-sm" [class.fav-active]="isFavorite(p)">
-                        {{ isFavorite(p) ? 'star' : 'star_border' }}
-                      </mat-icon>
-                      <span class="player-snr">{{ p.snr }}</span>
-                      <span class="player-title" *ngIf="p.title">{{ p.title }}</span>
-                      <span class="player-name">{{ p.name }}</span>
-                    </div>
-                    <div class="player-details">
-                      @if (p.elo) { <span>{{ p.elo }}</span> }
-                      @if (p.country) { <span>{{ p.country }}</span> }
-                      @if (p.teamName) { <span>{{ p.teamName }}</span> }
-                      @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </mat-tab>
-
-          <mat-tab [label]="'tournaments.tabs.teams' | translate:{ count: teams.length }">
-            @if (teamsLoading) {
-              <app-loading-spinner />
-            } @else {
-              @if (hasFavorites) {
-                <div class="filter-bar">
-                  <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-                </div>
-              }
-              <div class="table-scroll">
-                <table mat-table [dataSource]="displayedTeams" matSort (matSortChange)="teamSort = $event" class="full-width">
-                  <ng-container matColumnDef="fav">
-                    <th mat-header-cell *matHeaderCellDef></th>
-                    <td mat-cell *matCellDef="let t">
-                      <mat-icon class="fav-icon" [class.fav-active]="isTeamFavorite(t)" (click)="toggleTeamFavorite(t)"
-                                role="button" tabindex="0" [attr.aria-label]="'tournaments.favorites.toggleAria' | translate"
-                                [attr.aria-pressed]="isTeamFavorite(t)"
-                                (keydown.enter)="toggleTeamFavorite(t)" (keydown.space)="$event.preventDefault(); toggleTeamFavorite(t)">
-                        {{ isTeamFavorite(t) ? 'star' : 'star_border' }}
-                      </mat-icon>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="rank">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.teams.rank' | translate }}</th>
-                    <td mat-cell *matCellDef="let t; let i = index">{{ i + 1 }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.team' | translate }}</th>
-                    <td mat-cell *matCellDef="let t">
-                      <span class="team-link" (click)="showTeamPlayers(t.name)">{{ t.name }}</span>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="points">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.teams.points' | translate }}</th>
-                    <td mat-cell *matCellDef="let t">{{ t.points }}</td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="teamColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: teamColumns;"></tr>
-                </table>
-              </div>
-            }
-          </mat-tab>
-
-          <mat-tab [label]="'tournaments.tabs.pairings' | translate">
-            <div class="round-selector">
-              <mat-form-field appearance="outline">
-                <mat-label>{{ 'tournaments.pairings.round' | translate }}</mat-label>
-                <mat-select [(ngModel)]="selectedRound" (selectionChange)="loadPairings()">
-                  @for (r of rounds; track r) {
-                    <mat-option [value]="r">{{ 'tournaments.pairings.roundLabel' | translate:{ round: r } }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              @if (hasFavorites) {
-                <mat-slide-toggle [checked]="showFavoritesOnly" (change)="onFavoritesToggle($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
-              }
-            </div>
-            @if (pairingsLoading) {
-              <app-loading-spinner />
-            } @else {
-              <!-- Desktop -->
-              <div class="table-scroll desktop-only">
-                <table mat-table [dataSource]="displayedPairings" matSort (matSortChange)="pairingSort = $event" class="full-width">
-                  <ng-container matColumnDef="board">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'tournaments.pairings.board' | translate }}</th>
-                    <td mat-cell *matCellDef="let p">{{ p.board }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="white">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.home' : 'tournaments.pairings.white') | translate }}</th>
-                    <td mat-cell *matCellDef="let p">
-                      @if (hasTeamPairings) {
-                        <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
-                      } @else {
-                        {{ p.white }}
-                      }
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="result">
-                    <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.pairings.result' | translate }}</th>
-                    <td mat-cell *matCellDef="let p" class="result-cell">{{ p.result }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="black">
-                    <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ (hasTeamPairings ? 'tournaments.pairings.away' : 'tournaments.pairings.black') | translate }}</th>
-                    <td mat-cell *matCellDef="let p">
-                      @if (hasTeamPairings) {
-                        <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
-                      } @else {
-                        {{ p.black }}
-                      }
-                    </td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="pairingColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: pairingColumns;"></tr>
-                </table>
-              </div>
-
-              <!-- Mobile -->
-              <div class="mobile-only pairing-cards">
-                @for (p of displayedPairings; track p.board) {
-                  <div class="pairing-card">
-                    <span class="pairing-board">{{ p.board }}</span>
-                    <div class="pairing-teams">
-                      <div class="pairing-team">
-                        @if (hasTeamPairings) {
-                          <span class="team-link" (click)="showTeamPlayers(p.white)">{{ p.white }}</span>
-                        } @else {
-                          {{ p.white }}
-                        }
-                      </div>
-                      <span class="pairing-result">{{ p.result }}</span>
-                      <div class="pairing-team">
-                        @if (hasTeamPairings) {
-                          <span class="team-link" (click)="showTeamPlayers(p.black)">{{ p.black }}</span>
-                        } @else {
-                          {{ p.black }}
-                        }
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </mat-tab>
-        </mat-tab-group>
+        <app-tournament-tables
+          [players]="players"
+          [teams]="teams"
+          [displayedPlayers]="displayedPlayers"
+          [displayedTeams]="displayedTeams"
+          [displayedPairings]="displayedPairings"
+          [playerColumns]="playerColumns"
+          [teamColumns]="teamColumns"
+          [pairingColumns]="pairingColumns"
+          [playersLoading]="playersLoading"
+          [teamsLoading]="teamsLoading"
+          [pairingsLoading]="pairingsLoading"
+          [hasFavorites]="hasFavorites"
+          [showFavoritesOnly]="showFavoritesOnly"
+          [favoriteSnrs]="favoriteSnrs"
+          [favoriteTeamSnrs]="favoriteTeamSnrs"
+          [hasTeamPairings]="hasTeamPairings"
+          [rounds]="rounds"
+          [selectedRound]="selectedRound"
+          [selectedTabIndex]="selectedTabIndex"
+          (tabChange)="onTabChange($event)"
+          (favoritesToggle)="onFavoritesToggle($event)"
+          (playerSort)="playerSort = $event"
+          (teamSort)="teamSort = $event"
+          (pairingSort)="pairingSort = $event"
+          (roundChange)="onRoundChange($event)"
+          (toggleFavorite)="toggleFavorite($event)"
+          (toggleTeamFavorite)="toggleTeamFavorite($event)"
+          (showTeamPlayers)="showTeamPlayers($event)">
+        </app-tournament-tables>
       </div>
     } @else {
       <div class="detail-container">

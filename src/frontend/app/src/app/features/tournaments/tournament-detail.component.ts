@@ -2,23 +2,18 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatSortModule, Sort } from '@angular/material/sort';
+import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
+import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '../../core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
@@ -27,7 +22,7 @@ import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites,
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatTabsModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatProgressBarModule, MatSlideToggleModule, MatSortModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })
@@ -343,6 +338,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       },
       error: () => { this.pairingsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPairingsFailed')); }
     });
+  }
+
+  onRoundChange(round: number): void {
+    this.selectedRound = round;
+    this.loadPairings();
   }
 
   // --- Sorting ---

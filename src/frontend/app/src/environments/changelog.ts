@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.281.4';
+export const APP_VERSION = '0.281.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.281.5", date: "2026-07-08", changes: [
+    { en: "Maintainability refactor (no behaviour change): the tournament tables view (Players/Teams/Pairings tabs, desktop tables, mobile cards, favourite stars, round picker) was ~95% duplicated between the private tournament-detail page and the public tournament page. Extracted into one shared presentational `TournamentTablesComponent` (inputs for the data + favourite sets, outputs for toggle-favourite/sort/round-change/tab-change); each container keeps only its own data source (server favourites/monitor vs. localStorage) and, for tournament-detail, its action bar. ~500 net lines removed; all 31 tournament specs pass. (Minor cosmetic side-effect: the detail page's mobile view now shares the public page's two mobile spacing rules.)", de: "Wartbarkeits-Refactor (keine Verhaltensänderung): die Turnier-Tabellenansicht (Spieler/Teams/Paarungen-Tabs, Desktop-Tabellen, Mobil-Karten, Favoriten-Sterne, Runden-Auswahl) war zwischen der privaten tournament-detail-Seite und der öffentlichen Turnierseite zu ~95% dupliziert. In eine geteilte präsentationale `TournamentTablesComponent` extrahiert (Inputs für Daten + Favoriten-Sets, Outputs für Favorit-Umschalten/Sortieren/Runden-/Tab-Wechsel); jeder Container behält nur seine Datenquelle (Server-Favoriten/Monitor vs. localStorage) und, bei tournament-detail, seine Action-Bar. ~500 Netto-Zeilen entfernt; alle 31 Turnier-Specs grün. (Kleiner kosmetischer Nebeneffekt: die Detail-Seite teilt auf Mobil jetzt die zwei Mobil-Abstandsregeln der öffentlichen Seite.)" },
+  ]},
   { version: "0.281.4", date: "2026-07-08", changes: [
     { en: "Maintainability cleanup (no behaviour change): the identical staged-hint builder (tier 1 move type → tier 2 piece → tier 3 SAN) that was copy-pasted verbatim across the standard, endless and book/course solvers is now a single `buildStagedHints` helper in `puzzle-hints.util`. The three solvers delegate to it, removing ~30 duplicated lines.", de: "Wartbarkeits-Aufräumen (keine Verhaltensänderung): der identische Bauplan der gestuften Tipps (Stufe 1 Zugtyp → Stufe 2 Figur → Stufe 3 SAN), der wörtlich im Standard-, Endless- und Buch-/Kurs-Solver kopiert war, ist jetzt ein einziger `buildStagedHints`-Helfer in `puzzle-hints.util`. Die drei Solver delegieren dorthin, ~30 duplizierte Zeilen entfallen." },
   ]},
