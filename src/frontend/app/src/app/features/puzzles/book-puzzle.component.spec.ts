@@ -532,7 +532,8 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
   it('lädt die öffentlichen Puzzles und serviert das erste (ohne Login)', () => {
     const c = anonCourse('sequential');
     (c as any).loadCourseNext();
-    expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID);
+    // Seitenweises Laden: erste Seite ab skip 0 mit einer Seitengröße.
+    expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID, 0, jasmine.any(Number));
     expect(c.puzzle?.id).toBe(1);
     expect(c.courseTotal).toBe(2);
     expect(c.loadError).toBeFalse();

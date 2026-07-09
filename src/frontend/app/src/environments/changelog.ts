@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.282.0';
+export const APP_VERSION = '0.283.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.283.0", date: "2026-07-09", changes: [
+    { en: "Public courses load much faster on large books. Opening a public course as an anonymous visitor used to download the ENTIRE book in one request before you could start — for a 4000+ puzzle course that was ~2 MB and 8–20 s. Now the public endpoint (GET /api/courses/{id}/public) is paginated (?skip=&take=, DB-side, stable Round→Id order); the player fetches a small first page (300) and starts almost instantly, then pulls the remaining pages into the offline cache in the background. Small courses are unaffected. Backward compatible: without skip/take the endpoint still returns the whole book. +3 backend tests.", de: "Öffentliche Kurse laden bei großen Büchern viel schneller. Öffnete ein anonymer Besucher einen öffentlichen Kurs, wurde bisher das GANZE Buch in einer Anfrage geladen, bevor es losging — bei einem Kurs mit 4000+ Aufgaben ~2 MB und 8–20 s. Jetzt ist der öffentliche Endpoint (GET /api/courses/{id}/public) paginiert (?skip=&take=, DB-seitig, stabile Reihenfolge Round→Id); der Player holt eine kleine erste Seite (300) und startet fast sofort, den Rest lädt er im Hintergrund in den Offline-Cache. Kleine Kurse sind unverändert. Rückwärtskompatibel: ohne skip/take liefert der Endpoint weiter das ganze Buch. +3 Backend-Tests." },
+  ]},
   { version: "0.282.0", date: "2026-07-08", changes: [
     { en: "Public courses: a course can now be used WITHOUT registration. An admin marks a course as „Public“ per book in the admin Books/Courses tab; anyone can then open and play through it via its direct link (/courses/<id>/sequential or /random) without signing in — no public course catalogue, only the direct link. An anonymous visitor's progress (solved lines, clicked-through intro lines) is kept locally in the browser (localStorage) and survives a reload; it does NOT count towards leaderboards or training goals, and hints/challenges/sharing stay logged-in only. A logged-in user opening a public link gets full server-side progress as usual. New anonymous endpoint GET /api/courses/{id}/public + EF migration (Book.IsPublic). +5 backend tests, +3 frontend specs.", de: "Öffentliche Kurse: ein Kurs lässt sich jetzt OHNE Registrierung nutzen. Ein Admin markiert einen Kurs je Buch im Admin-Tab Bücher/Kurse als „Öffentlich“; danach kann ihn jeder über den Direkt-Link (/courses/<id>/sequential bzw. /random) ohne Anmeldung öffnen und durchspielen — kein öffentlicher Kurs-Katalog, nur der Direkt-Link. Der Fortschritt eines anonymen Besuchers (gelöste Linien, durchgeklickte Info-Linien) bleibt lokal im Browser (localStorage) und übersteht einen Reload; er zählt NICHT in Bestenlisten oder Trainingsziele, und Tipps/Challenges/Teilen bleiben eingeloggten Nutzern vorbehalten. Ein eingeloggter Nutzer bekommt beim Öffnen eines öffentlichen Links wie gewohnt vollen serverseitigen Fortschritt. Neuer anonymer Endpoint GET /api/courses/{id}/public + EF-Migration (Book.IsPublic). +5 Backend-Tests, +3 Frontend-Specs." },
   ]},

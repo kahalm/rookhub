@@ -93,4 +93,32 @@ public class CoursePublicAccessTests : IDisposable
     {
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetPublicCoursePuzzlesAsync(9999));
     }
+
+    [Fact]
+    public async Task GetPublicCoursePuzzles_Paginates_WithSkipAndTake()
+    {
+        var book = await SeedBookAsync(isPublic: true, puzzleCount: 5);
+
+        var page1 = await _svc.GetPublicCoursePuzzlesAsync(book.Id, skip: 0, take: 2);
+        var page2 = await _svc.GetPublicCoursePuzzlesAsync(book.Id, skip: 2, take: 2);
+        var page3 = await _svc.GetPublicCoursePuzzlesAsync(book.Id, skip: 4, take: 2);
+
+        Assert.Equal(2, page1.Count);
+        Assert.Equal(2, page2.Count);
+        Assert.Single(page3);   // Rest (letzte, kürzere Seite → Client weiß: fertig)
+
+        // Seiten sind disjunkt und ergeben zusammen alle 5 in stabiler Lese-Reihenfolge (Round→Id).
+        var all = await _svc.GetPublicCoursePuzzlesAsync(book.Id);
+        Assert.Equal(5, all.Count);
+        var paged = page1.Concat(page2).Concat(page3).Select(p => p.Id).ToList();
+        Assert.Equal(all.Select(p => p.Id).ToList(), paged);
+    }
+
+    [Fact]
+    public async Task GetPublicCoursePuzzles_ReturnsAll_WhenNoPagingParams()
+    {
+        var book = await SeedBookAsync(isPublic: true, puzzleCount: 4);
+        var all = await _svc.GetPublicCoursePuzzlesAsync(book.Id);
+        Assert.Equal(4, all.Count);   // rückwärtskompatibel: ohne skip/take das ganze Buch
+    }
 }

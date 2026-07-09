@@ -213,10 +213,15 @@ export class CourseService {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
   }
 
-  /** Alle Puzzles eines ÖFFENTLICHEN Kurses — ohne Login. Basis für das registrierungsfreie
-   *  Durchspielen eines als „public" markierten Kurses (404, wenn nicht öffentlich). */
-  getPublicCourse(bookId: number): Observable<BookPuzzleDto[]> {
-    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`);
+  /** Puzzles eines ÖFFENTLICHEN Kurses — ohne Login. Basis für das registrierungsfreie
+   *  Durchspielen eines als „public" markierten Kurses (404, wenn nicht öffentlich).
+   *  Optional seitenweise (`skip`/`take`): große Kurse laden die erste Seite sofort, den Rest
+   *  im Hintergrund — ohne Parameter kommt (rückwärtskompatibel) das ganze Buch. */
+  getPublicCourse(bookId: number, skip?: number, take?: number): Observable<BookPuzzleDto[]> {
+    let params = new HttpParams();
+    if (skip != null) params = params.set('skip', String(skip));
+    if (take != null) params = params.set('take', String(take));
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params });
   }
 
   /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */

@@ -212,19 +212,24 @@ public class CourseService
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
 
-    /// <summary>Alle Puzzles eines ÖFFENTLICHEN Kurses am Stück — ohne Login (kein User/Zugriffs-Kontext).
+    /// <summary>Puzzles eines ÖFFENTLICHEN Kurses — ohne Login (kein User/Zugriffs-Kontext).
     /// Basis dafür, dass ein anonymer Besucher einen als <see cref="Book.IsPublic"/> markierten Kurs über
-    /// den Direkt-Link komplett clientseitig durchspielen kann (Fortschritt nur lokal im Browser).
+    /// den Direkt-Link clientseitig durchspielen kann (Fortschritt nur lokal im Browser).
+    /// <para><paramref name="skip"/>/<paramref name="take"/> paginieren DB-seitig (stabile Lese-Reihenfolge
+    /// Round→Id): der Client holt die erste kleine Seite → sofort spielbar, den Rest im Hintergrund.
+    /// Ohne beide Parameter wird (rückwärtskompatibel) das ganze Buch geliefert.</para>
     /// Nicht öffentlich / nicht vorhanden → <see cref="KeyNotFoundException"/> (404).</summary>
-    public async Task<List<BookPuzzleDto>> GetPublicCoursePuzzlesAsync(int bookId)
+    public async Task<List<BookPuzzleDto>> GetPublicCoursePuzzlesAsync(int bookId, int? skip = null, int? take = null)
     {
         if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic))
             throw new KeyNotFoundException("Book not found.");
-        var puzzles = await _db.BookPuzzles
+        IQueryable<BookPuzzle> query = _db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
-            .ToListAsync();
+            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id);
+        if (skip is int s && s > 0) query = query.Skip(s);
+        if (take is int t && t > 0) query = query.Take(t);
+        var puzzles = await query.ToListAsync();
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
 

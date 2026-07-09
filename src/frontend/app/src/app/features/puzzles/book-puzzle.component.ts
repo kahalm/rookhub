@@ -50,6 +50,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE' | 'INFO';
 
+// Seitengröße fürs anonyme öffentliche Kurs-Laden: erste Seite → sofort spielbar, Rest im Hintergrund.
+const ANON_COURSE_PAGE_SIZE = 300;
+
 @Component({
   selector: 'app-book-puzzle',
   standalone: true,
@@ -829,16 +832,36 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
     // Kein lokaler Cache + offline → nicht ins Netz laufen, sondern „nicht verfügbar" zeigen.
     if (typeof navigator !== 'undefined' && !navigator.onLine) { this.showCourseUnavailable(); return; }
+    // Seitenweise laden: erste (kleine) Seite → sofort spielbar; restliche Seiten im Hintergrund in
+    // den Offline-Cache nachladen. Große öffentliche Kurse (Tausende Puzzles) starten so in ~1 s
+    // statt erst nach dem kompletten (mehrere MB großen) Download.
     const bookId = this.courseBookId;
-    this.courseService.getPublicCourse(bookId).subscribe({
-      next: puzzles => {
-        const fileName = puzzles?.[0]?.bookFileName;
-        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId);
-        if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
-        if (!this.loadCourseOffline(after, exclude, hadPuzzle)) this.showCourseUnavailable();
-      },
-      error: () => { if (this.courseBookId === bookId) this.showCourseUnavailable(); },
-    });
+    const acc: BookPuzzleDto[] = [];
+    const fetchPage = (skip: number, first: boolean): void => {
+      this.courseService.getPublicCourse(bookId, skip, ANON_COURSE_PAGE_SIZE).subscribe({
+        next: page => {
+          if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
+          if (page?.length) {
+            acc.push(...page);
+            const fileName = acc[0]?.bookFileName;
+            if (fileName) saveBookOffline(fileName, acc, bookId);   // wachsender Cache
+          }
+          if (first) {
+            if (acc.length) { this.loadCourseOffline(after, exclude, hadPuzzle); }
+            else { this.showCourseUnavailable(); return; }
+          }
+          // Volle Seite → es gibt vermutlich mehr: nächste Seite im Hintergrund.
+          if (page && page.length === ANON_COURSE_PAGE_SIZE) fetchPage(skip + ANON_COURSE_PAGE_SIZE, false);
+        },
+        error: () => {
+          if (this.courseBookId !== bookId) return;
+          // Nur wenn schon die erste Seite scheitert (nichts geladen) → „nicht verfügbar".
+          // Ein Fehler bei einer Folgeseite lässt das bereits Geladene spielbar.
+          if (first && !acc.length) this.showCourseUnavailable();
+        },
+      });
+    };
+    fetchPage(0, true);
   }
 
   /** Öffentlicher Kurs anonym nicht (mehr) verfügbar (nicht public / gelöscht). */

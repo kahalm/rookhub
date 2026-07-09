@@ -57,14 +57,17 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
-    /// <summary>Alle Puzzles eines ÖFFENTLICHEN Kurses am Stück — OHNE Login. Ermöglicht das
-    /// registrierungsfreie Durchspielen eines als „public" markierten Kurses über den Direkt-Link
-    /// (der anonyme Fortschritt bleibt lokal im Browser). 404, wenn der Kurs nicht öffentlich ist.</summary>
+    /// <summary>Puzzles eines ÖFFENTLICHEN Kurses — OHNE Login. Ermöglicht das registrierungsfreie
+    /// Durchspielen eines als „public" markierten Kurses über den Direkt-Link (anonymer Fortschritt
+    /// bleibt lokal). Optional <c>?skip=&amp;take=</c> für seitenweises Laden (großer Kurs → erste
+    /// Seite sofort, Rest im Hintergrund); ohne Parameter das ganze Buch. 404, wenn nicht öffentlich.</summary>
     [AllowAnonymous]
     [HttpGet("{bookId}/public")]
-    public async Task<ActionResult<List<BookPuzzleDto>>> GetPublicCourse(int bookId)
+    public async Task<ActionResult<List<BookPuzzleDto>>> GetPublicCourse(int bookId, [FromQuery] int? skip, [FromQuery] int? take)
     {
-        try { return Ok(await _service.GetPublicCoursePuzzlesAsync(bookId)); }
+        int? clampedTake = take is int t ? Math.Clamp(t, 1, 1000) : null;
+        int? clampedSkip = skip is int s && s > 0 ? s : null;
+        try { return Ok(await _service.GetPublicCoursePuzzlesAsync(bookId, clampedSkip, clampedTake)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
