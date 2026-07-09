@@ -1577,6 +1577,8 @@
         "kind": "Art"
       },
       "publicHint": "Öffentlich: dieser Kurs ist ohne Registrierung über den Direkt-Link nutzbar. Fortschritt anonymer Besucher bleibt lokal im Browser.",
+      "slugPlaceholder": "Alias z. B. mate1",
+      "slugHint": "Optionaler Kurz-Alias für den öffentlichen Link: der Kurs ist dann unter /<Alias> erreichbar (z. B. /mate1). Kleinbuchstaben, Ziffern und Bindestriche, eindeutig. Leer = kein Alias.",
       "errors": {
         "load": "Bücher konnten nicht geladen werden",
         "import": "Import fehlgeschlagen",

@@ -19,6 +19,7 @@
     .book-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
     .empty-hint { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; padding: 16px 0; }
     .elo-input { width: 56px; }
+    .slug-input { width: 92px; margin-top: 4px; display: block; font: inherit; padding: 2px 4px; }
     .elo-sep { margin: 0 2px; color: color-mix(in srgb, currentColor 40%, transparent); }
     .groups-select { min-width: 150px; max-width: 220px; font-size: 0.85rem; }
 

@@ -1577,6 +1577,8 @@
         "kind": "Type"
       },
       "publicHint": "Public: this course can be used without registration via its direct link. An anonymous visitor's progress stays local to the browser.",
+      "slugPlaceholder": "alias e.g. mate1",
+      "slugHint": "Optional short alias for the public link: the course is then reachable at /<alias> (e.g. /mate1). Lowercase letters, digits and hyphens, unique. Empty = no alias.",
       "errors": {
         "load": "Failed to load books",
         "import": "Import failed",

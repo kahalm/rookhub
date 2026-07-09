@@ -71,6 +71,16 @@ public class CourseController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Löst einen öffentlichen Kurz-Alias (z. B. <c>mate1</c>) auf die BookId auf — OHNE Login.
+    /// Basis für die Kurz-URL <c>/{slug}</c>, die auf den Kurs weiterleitet. 404 bei unbekanntem Alias.</summary>
+    [AllowAnonymous]
+    [HttpGet("by-slug/{slug}")]
+    public async Task<IActionResult> ResolvePublicSlug(string slug)
+    {
+        var id = await _service.ResolvePublicSlugAsync(slug);
+        return id is int bookId ? Ok(new { bookId }) : NotFound(new { message = "Unknown alias." });
+    }
+
     /// <summary>Pro-Linien-Status eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:
     /// gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien des Users.</summary>
     [HttpGet("{bookId}/line-status")]

@@ -74,6 +74,14 @@ public class Book
     public bool IsPublic { get; set; }
 
     /// <summary>
+    /// Optionaler Kurz-Alias für einen öffentlichen Kurs (nur relevant bei <see cref="IsPublic"/>):
+    /// erreichbar über die Kurz-URL <c>/{slug}</c> (z. B. <c>/mate1</c>), die auf den Kurs
+    /// weiterleitet. Klein geschrieben, <c>[a-z0-9-]</c>, eindeutig; null = kein Alias.
+    /// </summary>
+    [MaxLength(40)]
+    public string? PublicSlug { get; set; }
+
+    /// <summary>
     /// Roh-PGN, aus dem dieses Buch importiert wurde (LONGTEXT, nullable). Quelle fürs
     /// verlustfreie Neu-Aufbereiten (Reprocessing), wenn die Import-Pipeline weiterentwickelt
     /// wurde — z. B. um nachträglich Pro-Zug-Kommentare zu extrahieren. <c>null</c> bei

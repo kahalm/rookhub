@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.283.0';
+export const APP_VERSION = '0.284.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.284.0", date: "2026-07-09", changes: [
+    { en: "Public courses can get a short alias (admin). In the admin Books/Courses tab, a public course now has an optional alias field (e.g. mate1); the course is then reachable via the short URL /<alias> (e.g. rookhub.oberschmid.homes/mate1), which redirects to the course in random mode. First step: visualisation mode is fixed to 0 (blindfold off) — configurable later. Aliases are lowercase letters/digits/hyphens, unique, and cannot collide with existing pages (reserved names rejected). New: Book.PublicSlug (+migration, unique index), admin validation (format/reserved/duplicate → clear error), anonymous resolver GET /api/courses/by-slug/{slug}, and an Angular route :slug that resolves the alias and redirects (unknown alias → dashboard). +11 backend tests.", de: "Öffentliche Kurse können einen Kurz-Alias bekommen (Admin). Im Admin-Tab Bücher/Kurse hat ein öffentlicher Kurs jetzt ein optionales Alias-Feld (z. B. mate1); der Kurs ist dann über die Kurz-URL /<Alias> erreichbar (z. B. rookhub.oberschmid.homes/mate1) und leitet auf den Kurs im Zufallsmodus weiter. Erster Schritt: Visualisierungsmodus fest auf 0 (kein Blindmodus) — später konfigurierbar. Aliasse sind Kleinbuchstaben/Ziffern/Bindestriche, eindeutig, und dürfen nicht mit bestehenden Seiten kollidieren (reservierte Namen werden abgelehnt). Neu: Book.PublicSlug (+Migration, Unique-Index), Admin-Validierung (Format/reserviert/Duplikat → klare Fehlermeldung), anonymer Resolver GET /api/courses/by-slug/{slug}, und eine Angular-Route :slug, die den Alias auflöst und weiterleitet (unbekannter Alias → Dashboard). +11 Backend-Tests." },
+  ]},
   { version: "0.283.0", date: "2026-07-09", changes: [
     { en: "Public courses load much faster on large books. Opening a public course as an anonymous visitor used to download the ENTIRE book in one request before you could start — for a 4000+ puzzle course that was ~2 MB and 8–20 s. Now the public endpoint (GET /api/courses/{id}/public) is paginated (?skip=&take=, DB-side, stable Round→Id order); the player fetches a small first page (300) and starts almost instantly, then pulls the remaining pages into the offline cache in the background. Small courses are unaffected. Backward compatible: without skip/take the endpoint still returns the whole book. +3 backend tests.", de: "Öffentliche Kurse laden bei großen Büchern viel schneller. Öffnete ein anonymer Besucher einen öffentlichen Kurs, wurde bisher das GANZE Buch in einer Anfrage geladen, bevor es losging — bei einem Kurs mit 4000+ Aufgaben ~2 MB und 8–20 s. Jetzt ist der öffentliche Endpoint (GET /api/courses/{id}/public) paginiert (?skip=&take=, DB-seitig, stabile Reihenfolge Round→Id); der Player holt eine kleine erste Seite (300) und startet fast sofort, den Rest lädt er im Hintergrund in den Offline-Cache. Kleine Kurse sind unverändert. Rückwärtskompatibel: ohne skip/take liefert der Endpoint weiter das ganze Buch. +3 Backend-Tests." },
   ]},

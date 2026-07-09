@@ -233,6 +233,19 @@ public class CourseService
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
 
+    /// <summary>Löst einen öffentlichen Kurz-Alias (<see cref="Book.PublicSlug"/>) auf die BookId auf —
+    /// nur für öffentliche Bücher. Null = unbekannter/nicht-öffentlicher Alias. Basis für die
+    /// Kurz-URL <c>/{slug}</c>, die anonym auf den Kurs weiterleitet.</summary>
+    public async Task<int?> ResolvePublicSlugAsync(string slug)
+    {
+        var s = (slug ?? string.Empty).Trim().ToLowerInvariant();
+        if (s.Length == 0) return null;
+        return await _db.Books
+            .Where(b => b.IsPublic && b.PublicSlug == s)
+            .Select(b => (int?)b.Id)
+            .FirstOrDefaultAsync();
+    }
+
     /// <summary>Exportiert ein (zugängliches) Buch als PGN. Liefert PGN-Text + Dateiname.
     /// <para>Bevorzugt das gespeicherte Roh-PGN (<see cref="Book.SourcePgn"/>) — es enthält die
     /// vollständige Originalstruktur inkl. <b>Varianten und Kommentaren</b>. Nur für Altbestand ohne

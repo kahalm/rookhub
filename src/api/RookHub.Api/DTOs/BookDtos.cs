@@ -20,6 +20,8 @@ public class BookDto
     public bool ForBlind { get; set; }
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
     public bool IsPublic { get; set; }
+    /// <summary>Optionaler Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}); null = keiner.</summary>
+    public string? PublicSlug { get; set; }
     /// <summary>Art des Buchs (Puzzle/Study) fürs Trainingsziel-Routing.</summary>
     public BookKind Kind { get; set; }
     public int PuzzleCount { get; set; }
@@ -55,6 +57,10 @@ public class UpdateBookDto
     public bool? ForBlind { get; set; }
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
     public bool? IsPublic { get; set; }
+    /// <summary>Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}). Leerstring = Alias entfernen;
+    /// null = unverändert lassen. Wird serverseitig normalisiert/validiert (a-z0-9-, eindeutig, reserviert).</summary>
+    [MaxLength(40)]
+    public string? PublicSlug { get; set; }
     /// <summary>Art des Buchs (Puzzle/Study); fürs Trainingsziel-Routing der Kurszeit.</summary>
     public BookKind? Kind { get; set; }
 }

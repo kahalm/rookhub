@@ -191,6 +191,12 @@
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.isPublic" (change)="saveBook(b)"
                                       [attr.title]="'admin.books.publicHint' | translate"></mat-slide-toggle>
+                    @if (b.isPublic) {
+                      <input class="slug-input" [(ngModel)]="b.publicSlug" (change)="saveBook(b)"
+                             maxlength="40"
+                             [placeholder]="'admin.books.slugPlaceholder' | translate"
+                             [attr.title]="'admin.books.slugHint' | translate">
+                    }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="groups">

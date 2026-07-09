@@ -35,6 +35,7 @@ public class BookAdminService
                 ForRandom = b.ForRandom,
                 ForBlind = b.ForBlind,
                 IsPublic = b.IsPublic,
+                PublicSlug = b.PublicSlug,
                 Kind = b.Kind,
                 PuzzleCount = b.Puzzles.Count(),
                 CreatedAt = b.CreatedAt,
@@ -100,6 +101,7 @@ public class BookAdminService
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
         if (dto.IsPublic.HasValue) book.IsPublic = dto.IsPublic.Value;
+        if (dto.PublicSlug != null) await ApplyPublicSlugAsync(book, dto.PublicSlug);
         if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
         book.MinElo = dto.MinElo;
         book.MaxElo = dto.MaxElo;
@@ -122,11 +124,37 @@ public class BookAdminService
             ForRandom = book.ForRandom,
             ForBlind = book.ForBlind,
             IsPublic = book.IsPublic,
+            PublicSlug = book.PublicSlug,
             Kind = book.Kind,
             PuzzleCount = count,
             CreatedAt = book.CreatedAt,
             UpdatedAt = book.UpdatedAt,
         };
+    }
+
+    /// <summary>Top-Level-Routen/Prefixe, die NICHT als öffentlicher Kurz-Alias vergeben werden dürfen
+    /// (sonst würde die Kurz-URL /{slug} eine echte Seite verdecken).</summary>
+    private static readonly HashSet<string> _reservedSlugs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "login","register","forgot-password","reset-password","dashboard","profile","friends",
+        "repertoires","tournaments","puzzles","favorites","weekly","analysis","games","stats",
+        "leaderboards","training-goals","notifications","messages","courses","chessable","admin",
+        "t","g","help","install","privacy","impressum","account-deletion","api","assets","i18n",
+    };
+
+    /// <summary>Normalisiert + validiert den öffentlichen Kurz-Alias und setzt ihn (Leerstring = entfernen).
+    /// Wirft <see cref="ArgumentException"/> (→ 400) bei ungültigem/reserviertem/vergebenem Alias.</summary>
+    private async Task ApplyPublicSlugAsync(Book book, string raw)
+    {
+        var slug = raw.Trim().ToLowerInvariant();
+        if (slug.Length == 0) { book.PublicSlug = null; return; }   // Leerstring → Alias entfernen
+        if (!System.Text.RegularExpressions.Regex.IsMatch(slug, "^[a-z][a-z0-9-]{1,39}$") || slug.EndsWith("-") || slug.Contains("--"))
+            throw new ArgumentException("Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.");
+        if (_reservedSlugs.Contains(slug))
+            throw new ArgumentException($"Alias „{slug}“ ist reserviert.");
+        if (await _db.Books.AnyAsync(b => b.Id != book.Id && b.PublicSlug == slug))
+            throw new ArgumentException($"Alias „{slug}“ ist bereits vergeben.");
+        book.PublicSlug = slug;
     }
 
     public async Task DeleteBookAsync(int id)

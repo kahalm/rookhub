@@ -211,6 +211,7 @@ public class AdminController : BaseApiController
     {
         try { return Ok(await _bookAdmin.UpdateBookAsync(id, dto)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpDelete("books/{id}")]

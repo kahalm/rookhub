@@ -265,6 +265,7 @@ export class AdminComponent implements OnInit {
       forRandom: book.forRandom,
       forBlind: book.forBlind,
       isPublic: book.isPublic,
+      publicSlug: book.publicSlug ?? '',
       kind: book.kind,
       minElo: book.minElo,
       maxElo: book.maxElo

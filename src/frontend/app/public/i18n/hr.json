@@ -1575,6 +1575,8 @@
         "kind": "Vrsta"
       },
       "publicHint": "Javno: ovaj se tečaj može koristiti bez registracije putem izravne poveznice. Napredak anonimnog posjetitelja ostaje lokalno u pregledniku.",
+      "slugPlaceholder": "alias npr. mate1",
+      "slugHint": "Neobavezni kratki alias za javnu poveznicu: tečaj je tada dostupan na /<alias> (npr. /mate1). Mala slova, brojke i crtice, jedinstveno. Prazno = bez aliasa.",
       "errors": {
         "load": "Učitavanje knjiga nije uspjelo",
         "import": "Uvoz nije uspio",

@@ -51,5 +51,9 @@ export const routes: Routes = [
   { path: 'privacy', loadComponent: () => import('./features/legal/privacy.component').then(m => m.PrivacyComponent) },
   { path: 'impressum', loadComponent: () => import('./features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'account-deletion', loadComponent: () => import('./features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
+  // Kurz-URL öffentlicher Kurse: /{slug} → leitet auf den Kurs weiter. MUSS als vorletzte Route
+  // stehen (nach allen literalen Top-Level-Routen, vor dem Catch-all), damit sie nur unbekannte
+  // Einzelsegmente abfängt und keine echte Seite verdeckt.
+  { path: ':slug', loadComponent: () => import('./features/courses/public-slug.component').then(m => m.PublicSlugComponent) },
   { path: '**', redirectTo: '/dashboard' }
 ];

@@ -224,6 +224,11 @@ export class CourseService {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params });
   }
 
+  /** Öffentlichen Kurz-Alias (z. B. „mate1") auf die BookId auflösen — ohne Login (404 = unbekannt). */
+  resolvePublicSlug(slug: string): Observable<{ bookId: number }> {
+    return this.http.get<{ bookId: number }>(`/api/courses/by-slug/${encodeURIComponent(slug)}`);
+  }
+
   /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */
   getLineStatus(bookId: number): Observable<CourseLineStatus> {
     return this.http.get<CourseLineStatus>(`/api/courses/${bookId}/line-status`);

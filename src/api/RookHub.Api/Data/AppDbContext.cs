@@ -323,6 +323,9 @@ public class AppDbContext : DbContext
         {
             e.HasIndex(b => b.FileName).IsUnique();
             e.HasIndex(b => b.OwnerUserId);
+            // Öffentlicher Kurz-Alias eindeutig (mehrere NULLs erlaubt: MySQL wertet NULL im
+            // Unique-Index nicht als gleich → Bücher ohne Alias kollidieren nicht).
+            e.HasIndex(b => b.PublicSlug).IsUnique();
         });
 
         modelBuilder.Entity<Group>(e =>
