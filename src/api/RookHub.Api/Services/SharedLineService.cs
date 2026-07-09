@@ -38,23 +38,46 @@ public class SharedLineService
             .AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId, ct);
         if (!isOwner && !isRecipient) return null;
 
-        var pgn = dto.Pgn.Trim();
-        var hash = Sha256Hex(pgn);
+        return await StoreAsync(userId, repertoireId, dto.Title, rep.Name, dto.Pgn.Trim(), null, ct);
+    }
+
+    /// <summary>
+    /// Teilt eine „freistehende" Linie (nicht an ein RookHub-Repertoire gebunden) — genutzt von der
+    /// RepCheck-Extension, die die aktuell auf chess.com/lichess gespielte Zugfolge teilt. Der Server
+    /// baut aus der SAN-Zugliste ein PGN. Dedup je Besitzer wie sonst. <c>null</c> bei leerer Zugliste.
+    /// </summary>
+    public async Task<ShareLineResultDto?> CreateStandaloneAsync(int userId, IEnumerable<string>? moves, string? title, CancellationToken ct = default)
+    {
+        var sans = (moves ?? Enumerable.Empty<string>())
+            .Select(m => (m ?? string.Empty).Trim())
+            .Where(m => m.Length > 0)
+            .Take(600)
+            .ToList();
+        if (sans.Count == 0) return null;
+        // Identität einer freistehenden Line = ihre Zugfolge (NICHT der variable Seitentitel) →
+        // Dedup über die Züge, damit derselbe Spielstand denselben Link liefert.
+        return await StoreAsync(userId, null, title, null, BuildLinePgn(sans, title), "ext|" + string.Join(' ', sans), ct);
+    }
+
+    private async Task<ShareLineResultDto?> StoreAsync(int userId, int? repertoireId, string? title, string? repertoireName, string pgn, string? dedupSource, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(pgn)) return null;
+        var hash = Sha256Hex(dedupSource ?? pgn);
 
         // Dedup je Besitzer über den PGN-Hash → derselbe Link bei erneutem Teilen.
         var existing = await _db.SharedLines.AsNoTracking()
             .FirstOrDefaultAsync(s => s.OwnerUserId == userId && s.LineHash == hash, ct);
         if (existing != null) return new ShareLineResultDto { ShareToken = existing.ShareToken };
 
-        var title = string.IsNullOrWhiteSpace(dto.Title) ? null : dto.Title!.Trim();
-        if (title is { Length: > 200 }) title = title[..200];
+        var cleanTitle = string.IsNullOrWhiteSpace(title) ? null : title!.Trim();
+        if (cleanTitle is { Length: > 200 }) cleanTitle = cleanTitle[..200];
 
         var entity = new SharedLine
         {
             OwnerUserId = userId,
             RepertoireId = repertoireId,
-            Title = title,
-            RepertoireName = rep.Name,
+            Title = cleanTitle,
+            RepertoireName = repertoireName,
             Pgn = pgn,
             LineHash = hash,
             ShareToken = await GenerateUniqueTokenAsync(ct),
@@ -75,6 +98,22 @@ public class SharedLineService
             throw;
         }
         return new ShareLineResultDto { ShareToken = entity.ShareToken };
+    }
+
+    /// <summary>Baut aus einer SAN-Hauptlinie (ab Grundstellung) ein minimales PGN mit Zugnummern.</summary>
+    private static string BuildLinePgn(List<string> sans, string? title)
+    {
+        var evt = string.IsNullOrWhiteSpace(title) ? "Repertoire line" : title!.Trim();
+        evt = evt.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var sb = new StringBuilder();
+        sb.Append("[Event \"").Append(evt).Append("\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n");
+        for (var i = 0; i < sans.Count; i++)
+        {
+            if (i % 2 == 0) sb.Append(i / 2 + 1).Append(". ");
+            sb.Append(sans[i]).Append(' ');
+        }
+        sb.Append("*\n");
+        return sb.ToString();
     }
 
     /// <summary>Öffentliche Sicht über das Token; <c>null</c> wenn unbekannt.</summary>

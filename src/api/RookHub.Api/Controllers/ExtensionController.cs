@@ -19,16 +19,18 @@ public class ExtensionController : BaseApiController
     private readonly TrainingGoalService _trainingGoalService;
     private readonly RememberedPositionService _rememberedPositionService;
     private readonly SavedGameService _savedGameService;
+    private readonly SharedLineService _sharedLineService;
 
     public ExtensionController(RepertoireService repertoireService, RepertoireAnalyzeService analyzeService,
         TrainingGoalService trainingGoalService, RememberedPositionService rememberedPositionService,
-        SavedGameService savedGameService)
+        SavedGameService savedGameService, SharedLineService sharedLineService)
     {
         _repertoireService = repertoireService;
         _analyzeService = analyzeService;
         _trainingGoalService = trainingGoalService;
         _rememberedPositionService = rememberedPositionService;
         _savedGameService = savedGameService;
+        _sharedLineService = sharedLineService;
     }
 
     /// <summary>
@@ -150,5 +152,19 @@ public class ExtensionController : BaseApiController
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Teilt die aktuell auf chess.com/lichess gespielte Zugfolge als öffentliche Nur-Ansehen-Line
+    /// (<c>/l/{token}</c>) — für die „Sharebar" im Extension-Popup. Der Server baut aus der SAN-Liste
+    /// ein PGN; dieselbe Zugfolge desselben Users liefert denselben Link (Dedup). 400 bei leerer Liste.
+    /// </summary>
+    [HttpPost("share-line")]
+    public async Task<ActionResult<ShareLineResultDto>> ShareLine([FromBody] ShareExtensionLineInputDto dto, CancellationToken ct)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        if (dto == null) return BadRequest(new { message = "Body required." });
+        var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
+        return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
     }
 }

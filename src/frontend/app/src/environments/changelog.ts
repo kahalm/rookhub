@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.287.0';
+export const APP_VERSION = '0.288.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.288.0", date: "2026-07-10", changes: [
+    { en: "RepCheck extension (v1.25.0): a share bar at the top of the popup shows a public view-only link (/l/{token}) to the line currently played on chess.com/lichess — no button needed, just open the popup and copy. New backend endpoint POST /api/extension/share-line (extension-token scoped) builds a PGN from the SAN move list and stores it as a standalone shared line; dedup is by the move sequence (not the page title), so the same position always yields the same link. +1 backend test.", de: "RepCheck-Extension (v1.25.0): eine Sharebar oben im Popup zeigt einen öffentlichen Nur-Ansehen-Link (/l/{token}) zur aktuell auf chess.com/lichess gespielten Line — ohne Button, einfach Popup öffnen und kopieren. Neuer Backend-Endpoint POST /api/extension/share-line (Extension-Token-Scope) baut aus der SAN-Zugliste ein PGN und speichert es als freistehende geteilte Line; Dedup über die Zugfolge (nicht den Seitentitel), sodass derselbe Spielstand immer denselben Link liefert. +1 Backend-Test." },
+  ]},
   { version: "0.287.0", date: "2026-07-09", changes: [
     { en: "Share a single repertoire line via a public link. In a repertoire's line list, each line's menu now has „Share line“ — it creates a view-only public link (/l/{token}) that anyone can open WITHOUT an account and replay the line (moves + comments) on a board, just like shared games (/g/{token}). The line is stored server-side as a standalone PGN snapshot, so the link is independent of the original repertoire; sharing the same line again returns the same link. Owner or share-recipients can create links. New: SharedLine model (+migration, unique token + per-owner dedup), SharedLineService, POST /api/repertoires/{id}/share-line + anonymous GET /api/repertoires/shared-line/{token}, a share dialog (QR + copy) and the public /l/:token viewer. +7 backend tests, +1 frontend util spec.", de: "Einzelne Repertoire-Linie über einen öffentlichen Link teilen. In der Linienliste eines Repertoires hat jetzt jedes Linien-Menü „Linie teilen“ — das erzeugt einen Nur-Ansehen-Link (/l/{token}), den jeder OHNE Konto öffnen und durchspielen kann (Züge + Kommentare auf einem Brett), genau wie geteilte Partien (/g/{token}). Die Linie wird serverseitig als eigenständiger PGN-Snapshot gespeichert, der Link ist also unabhängig vom Original-Repertoire; dieselbe Linie erneut geteilt liefert denselben Link. Besitzer oder Freigabe-Empfänger können Links erstellen. Neu: SharedLine-Modell (+Migration, eindeutiges Token + Dedup je Besitzer), SharedLineService, POST /api/repertoires/{id}/share-line + anonymer GET /api/repertoires/shared-line/{token}, ein Teilen-Dialog (QR + Kopieren) und der öffentliche /l/:token-Viewer. +7 Backend-Tests, +1 Frontend-Util-Spec." },
   ]},

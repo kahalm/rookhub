@@ -20,6 +20,15 @@ public class ShareLineResultDto
     public string ShareToken { get; set; } = string.Empty;
 }
 
+/// <summary>Extension-Anfrage: teilt die aktuell gespielte Zugfolge (SAN, ab Grundstellung) als Line.</summary>
+public class ShareExtensionLineInputDto
+{
+    public List<string> Moves { get; set; } = new();
+
+    [MaxLength(200)]
+    public string? Title { get; set; }
+}
+
 /// <summary>Öffentliche Sicht einer geteilten Linie (kein Login nötig).</summary>
 public class SharedLineDto
 {

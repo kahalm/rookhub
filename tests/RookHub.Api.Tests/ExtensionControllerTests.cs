@@ -36,7 +36,7 @@ public class ExtensionControllerTests : IDisposable
         var rememberedService = new RememberedPositionService(_db, encryption, chessableProxy,
             NullLogger<RememberedPositionService>.Instance);
         var savedGameService = new SavedGameService(_db);
-        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService, savedGameService);
+        _controller = new ExtensionController(_service, analyzeService, trainingGoalService, rememberedService, savedGameService, new SharedLineService(_db));
     }
 
     public void Dispose() => _db.Dispose();

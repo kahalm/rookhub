@@ -113,4 +113,28 @@ public class SharedLineServiceTests : IDisposable
         var owner = await AddUserAsync("owner");
         Assert.Null(await _svc.CreateAsync(owner, 9999, new ShareLineInputDto { Pgn = Pgn }));
     }
+
+    [Fact]
+    public async Task Standalone_BuildsPgnFromMoves_DedupsAndRejectsEmpty()
+    {
+        var user = await AddUserAsync("ext");
+
+        // Leere Zugliste → null.
+        Assert.Null(await _svc.CreateStandaloneAsync(user, new List<string>(), "x"));
+        Assert.Null(await _svc.CreateStandaloneAsync(user, new List<string> { "", "  " }, "x"));
+
+        var res = await _svc.CreateStandaloneAsync(user, new List<string> { "e4", "c5", "Nf3" }, "Sicilian");
+        Assert.NotNull(res);
+
+        var dto = await _svc.GetByTokenAsync(res!.ShareToken);
+        Assert.NotNull(dto);
+        Assert.Null(dto!.RepertoireName);                 // freistehend, kein Repertoire
+        Assert.Contains("1. e4 c5 2. Nf3", dto.Pgn);       // Zugnummern korrekt
+        Assert.Contains("[Event \"Sicilian\"]", dto.Pgn);
+
+        // Dieselbe Zugfolge erneut → derselbe Link.
+        var again = await _svc.CreateStandaloneAsync(user, new List<string> { "e4", "c5", "Nf3" }, "other title");
+        Assert.Equal(res.ShareToken, again!.ShareToken);
+        Assert.Single(_db.SharedLines);
+    }
 }
