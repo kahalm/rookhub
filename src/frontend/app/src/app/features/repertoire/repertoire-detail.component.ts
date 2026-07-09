@@ -6,13 +6,17 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatDialog } from '@angular/material/dialog';
+import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
 import { RepertoireEditComponent } from './repertoire-edit.component';
-import { RepertoireViewerService } from './repertoire-viewer.service';
+import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
+import { parsedGameToPgn } from './repertoire-line-pgn.util';
+import { ShareLineDialogComponent } from './share-line-dialog.component';
 import { MoveTreeService } from './move-tree.service';
 import { RepertoireDetail } from '../../core/models';
 
@@ -101,7 +105,8 @@ type ViewMode = 'lines' | 'tree' | 'edit';
                   [repertoireId]="id"
                   (lineSelected)="viewerService.selectLine($event)"
                   (lineDeselected)="viewerService.deselectLine()"
-                  (moveClicked)="viewerService.goToMove($event)" />
+                  (moveClicked)="viewerService.goToMove($event)"
+                  (shareLine)="onShareLine($event)" />
               } @else if (mode === 'tree') {
                 <app-repertoire-tree
                   [children]="treeService.children"
@@ -184,7 +189,25 @@ export class RepertoireDetailComponent implements OnInit {
     private repertoireService: RepertoireService,
     public viewerService: RepertoireViewerService,
     public treeService: MoveTreeService,
+    private dialog: MatDialog,
+    private snackbar: SnackbarService,
+    private translate: TranslateService,
   ) {}
+
+  /** Teilt eine einzelne Linie als öffentlichen Nur-Ansehen-Link: PGN bauen → API → Link-Dialog. */
+  onShareLine(line: RepertoireLine): void {
+    const game = this.viewerService.games[line.gameIndex];
+    if (!game) return;
+    const title = line.opening || line.chapter || `${line.white} vs ${line.black}`;
+    const pgn = parsedGameToPgn(game, { title });
+    this.repertoireService.shareLine(this.id, { pgn, title }).subscribe({
+      next: res => {
+        const url = `${location.origin}/l/${res.shareToken}`;
+        this.dialog.open(ShareLineDialogComponent, { data: { url, lineTitle: title } });
+      },
+      error: () => this.snackbar.info(this.translate.instant('repertoire.shareLine.error')),
+    });
+  }
 
   ngOnInit(): void {
     this.id = +this.route.snapshot.paramMap.get('id')!;

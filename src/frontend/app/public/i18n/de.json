@@ -81,7 +81,8 @@
     "ok": "OK",
     "remove": "Entfernen",
     "whiteToMove": "Weiß am Zug",
-    "blackToMove": "Schwarz am Zug"
+    "blackToMove": "Schwarz am Zug",
+    "copy": "Kopieren"
   },
   "notifications": {
     "title": "Benachrichtigungen",
@@ -784,6 +785,14 @@
       "unshared": "Zugriff für {{name}} entzogen.",
       "failed": "Teilen fehlgeschlagen.",
       "loadFailed": "Freigabe-Informationen konnten nicht geladen werden."
+    },
+    "shareLine": {
+      "action": "Linie teilen",
+      "title": "Diese Linie teilen",
+      "hint": "Jeder mit diesem Link kann die Linie durchspielen — kein Konto nötig.",
+      "notFound": "Diese geteilte Linie existiert nicht (mehr).",
+      "defaultTitle": "Repertoire-Linie",
+      "error": "Teilen-Link konnte nicht erstellt werden."
     }
   },
   "tournaments": {

@@ -27,7 +27,7 @@ public class RepertoireControllerTests : IDisposable
         var cache = new MemoryCache(new MemoryCacheOptions());
         _service = new RepertoireService(_db, new RepertoireAnalyzeService(_db, cache));
         var courseService = new CourseService(_db, Microsoft.Extensions.Logging.Abstractions.NullLogger<CourseService>.Instance, new PgnImportService(_db), new BookAdminService(_db), _service);
-        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), courseService);
+        _controller = new RepertoireController(_service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new RepertoireTrainingService(_db), courseService, new SharedLineService(_db));
     }
 
     public void Dispose() => _db.Dispose();

@@ -15,14 +15,37 @@ public class RepertoireController : BaseApiController
     private readonly IReprocessLauncher _reprocessLauncher;
     private readonly RepertoireTrainingService _training;
     private readonly CourseService _courseService;
+    private readonly SharedLineService _sharedLines;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
         _reprocessLauncher = reprocessLauncher;
         _training = training;
         _courseService = courseService;
+        _sharedLines = sharedLines;
+    }
+
+    // ===== Einzelne Linie öffentlich teilen (Nur-Ansehen-Link /l/{token}) =====
+
+    /// <summary>Öffentliche Sicht einer geteilten Linie über das Token — kein Login nötig.
+    /// Literale Route MUSS vor den `{id}`-Routen stehen.</summary>
+    [HttpGet("shared-line/{token}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<SharedLineDto>> GetSharedLine(string token, CancellationToken ct)
+    {
+        var dto = await _sharedLines.GetByTokenAsync(token, ct);
+        return dto == null ? NotFound() : Ok(dto);
+    }
+
+    /// <summary>Erzeugt einen öffentlichen Nur-Ansehen-Link für eine Linie des Repertoires.
+    /// Besitzer oder Freigabe-Empfänger; liefert bei erneutem Teilen derselben Linie denselben Link.</summary>
+    [HttpPost("{id:int}/share-line")]
+    public async Task<ActionResult<ShareLineResultDto>> ShareLine(int id, [FromBody] ShareLineInputDto dto, CancellationToken ct)
+    {
+        var res = await _sharedLines.CreateAsync(GetUserId(), id, dto, ct);
+        return res == null ? NotFound() : Ok(res);
     }
 
     // ===== Repertoire-Trainer (Spaced Repetition, 9-Stufen-Leiter) =====

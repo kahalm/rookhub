@@ -65,6 +65,7 @@ public class AppDbContext : DbContext
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
+    public DbSet<SharedLine> SharedLines => Set<SharedLine>();
     public DbSet<RepertoireCardState> RepertoireCardStates => Set<RepertoireCardState>();
     public DbSet<RepertoireSrSettings> RepertoireSrSettings => Set<RepertoireSrSettings>();
     public DbSet<RepertoireShare> RepertoireShares => Set<RepertoireShare>();
@@ -736,6 +737,22 @@ public class AppDbContext : DbContext
             // nicht doppelt gespeichert werden, auch nicht bei parallelem Doppel-Klick. MySQL behandelt
             // NULL-ExternalId als verschieden → mehrere Saves OHNE externe Id (manuell) bleiben erlaubt.
             e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SharedLine>(e =>
+        {
+            e.HasOne(s => s.Owner)
+             .WithMany()
+             .HasForeignKey(s => s.OwnerUserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(s => s.Title).HasMaxLength(200);
+            e.Property(s => s.RepertoireName).HasMaxLength(200);
+            e.Property(s => s.Pgn).HasColumnType("LONGTEXT");
+            e.Property(s => s.LineHash).HasMaxLength(64);
+            e.Property(s => s.ShareToken).HasMaxLength(32);
+            e.HasIndex(s => s.ShareToken).IsUnique();
+            // Dedup: dieselbe Linie desselben Besitzers erneut teilen ⇒ bestehender Link (kein Duplikat).
+            e.HasIndex(s => new { s.OwnerUserId, s.LineHash }).IsUnique();
         });
 
         modelBuilder.Entity<MenuItemSetting>(e =>

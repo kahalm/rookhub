@@ -21,6 +21,15 @@ export interface RepertoireShareRecipient {
   sharedAt: string;
 }
 
+/** Öffentliche Sicht einer geteilten Einzel-Linie (Nur-Ansehen-Link `/l/{token}`). */
+export interface SharedLine {
+  shareToken: string;
+  title: string | null;
+  repertoireName: string | null;
+  pgn: string;
+  createdAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RepertoireService {
   private readonly apiUrl = '/api/repertoires';
@@ -40,6 +49,16 @@ export class RepertoireService {
   /** Nimmt die Freigabe des eigenen Repertoires für einen Empfänger zurück. */
   unshare(id: number, recipientId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}/share/${recipientId}`);
+  }
+
+  /** Erzeugt einen öffentlichen Nur-Ansehen-Link für eine einzelne Linie (liefert das Token). */
+  shareLine(id: number, body: { pgn: string; title?: string }): Observable<{ shareToken: string }> {
+    return this.http.post<{ shareToken: string }>(`${this.apiUrl}/${id}/share-line`, body);
+  }
+
+  /** Öffentliche Sicht einer geteilten Linie über ihr Token (kein Login). */
+  getSharedLine(token: string): Observable<SharedLine> {
+    return this.http.get<SharedLine>(`${this.apiUrl}/shared-line/${token}`);
   }
 
   list(): Observable<Repertoire[]> {

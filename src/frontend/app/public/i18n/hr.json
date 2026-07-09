@@ -81,7 +81,8 @@
     "downloadPgn": "Preuzmi PGN",
     "downloadFailed": "Preuzimanje nije uspjelo.",
     "whiteToMove": "Bijeli na potezu",
-    "blackToMove": "Crni na potezu"
+    "blackToMove": "Crni na potezu",
+    "copy": "Kopiraj"
   },
   "notifications": {
     "title": "Obavijesti",
@@ -782,6 +783,14 @@
       "unshared": "Pristup uklonjen za {{name}}.",
       "failed": "Dijeljenje nije uspjelo.",
       "loadFailed": "Podaci o dijeljenju nisu učitani."
+    },
+    "shareLine": {
+      "action": "Podijeli liniju",
+      "title": "Podijeli ovu liniju",
+      "hint": "Svatko s ovom poveznicom može odigrati liniju — bez računa.",
+      "notFound": "Ova podijeljena linija ne postoji (više).",
+      "defaultTitle": "Linija repertoara",
+      "error": "Poveznicu za dijeljenje nije bilo moguće stvoriti."
     }
   },
   "tournaments": {

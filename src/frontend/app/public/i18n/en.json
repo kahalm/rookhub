@@ -81,7 +81,8 @@
     "ok": "OK",
     "remove": "Remove",
     "whiteToMove": "White to move",
-    "blackToMove": "Black to move"
+    "blackToMove": "Black to move",
+    "copy": "Copy"
   },
   "notifications": {
     "title": "Notifications",
@@ -784,6 +785,14 @@
       "unshared": "Removed access for {{name}}.",
       "failed": "Sharing failed.",
       "loadFailed": "Could not load sharing information."
+    },
+    "shareLine": {
+      "action": "Share line",
+      "title": "Share this line",
+      "hint": "Anyone with this link can replay the line — no account needed.",
+      "notFound": "This shared line does not exist (or was removed).",
+      "defaultTitle": "Repertoire line",
+      "error": "Could not create the share link."
     }
   },
   "tournaments": {
