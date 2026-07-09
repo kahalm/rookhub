@@ -172,6 +172,7 @@ try
     builder.Services.AddScoped<DailyLeaderboardService>();
     builder.Services.AddScoped<CourseService>();
     builder.Services.AddScoped<CourseStatsService>();
+    builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
     builder.Services.AddScoped<ImportReprocessService>();
     // Stößt Massen-Reprocess im Hintergrund an (eigener Scope) → Endpoint antwortet sofort statt in

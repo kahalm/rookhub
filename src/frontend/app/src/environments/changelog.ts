@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.285.0';
+export const APP_VERSION = '0.286.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.286.0", date: "2026-07-09", changes: [
+    { en: "New: shareable catalog of courses & repertoires with a request workflow. An admin can grant selected users and/or groups access to the LIST of their courses and repertoires (Admin → new „Catalog“ page). Granted users see the catalog under a new „Catalog“ nav entry and can request individual items; the owner gets a notification and approves (→ the item is shared via the existing course/repertoire sharing) or declines. No content is exposed by the list itself — only titles — until a request is approved. First step: only admins can own/share a catalog; the request always opens the course in random mode when accessed later. New Catalog tables (+migration), CatalogController/CatalogService, catalog page (viewer list + owner grants/requests management), menu key + nav gating via GET /api/catalog/access, 3 notification types. +9 backend tests.", de: "Neu: teilbarer Katalog von Kursen & Repertoires mit Anforderungs-Workflow. Ein Admin gibt ausgewählten Usern und/oder Gruppen Zugriff auf die LISTE seiner Kurse und Repertoires (neue „Katalog“-Seite). Berechtigte sehen den Katalog über den neuen „Katalog“-Menüpunkt und können einzelne Items anfordern; der Besitzer bekommt eine Benachrichtigung und genehmigt (→ das Item wird über das bestehende Kurs-/Repertoire-Teilen freigegeben) oder lehnt ab. Die Liste selbst gibt keine Inhalte preis — nur Titel — bis eine Anforderung genehmigt ist. Erster Schritt: nur Admins können einen Katalog besitzen/teilen. Neue Katalog-Tabellen (+Migration), CatalogController/CatalogService, Katalog-Seite (Viewer-Liste + Besitzer-Freigaben/-Anforderungen), Menü-Key + Navbar-Gate via GET /api/catalog/access, 3 Benachrichtigungstypen. +9 Backend-Tests." },
+  ]},
   { version: "0.285.0", date: "2026-07-09", changes: [
     { en: "Admin Books/Courses tab: per-column filter bar above the grid. In addition to the existing free-text search there is now a filter panel with one control per column — book name, type (Puzzle/Study), difficulty, puzzle-count range, Elo range, tri-state Daily/Random/Blind/Public (All/Yes/No), and Visible-for (all / a specific group / admin-only). All filters combine with AND (and with the search box); a Reset button appears while any filter is active. Purely client-side over the already-loaded book list. i18n admin.books.filters.* en/de/hr.", de: "Admin-Tab Bücher/Kurse: Filterleiste pro Spalte über dem Grid. Zusätzlich zur bestehenden Freitextsuche gibt es jetzt ein Filterfeld mit einem Bedienelement je Spalte — Buchname, Art (Puzzle/Studium), Schwierigkeit, Puzzle-Anzahl (von–bis), Elo (von–bis), Dreiwertig Täglich/Zufall/Blind/Öffentlich (Alle/Ja/Nein) sowie Sichtbar-für (alle / bestimmte Gruppe / nur Admin). Alle Filter sind UND-verknüpft (auch mit dem Suchfeld); ein Zurücksetzen-Knopf erscheint, sobald ein Filter aktiv ist. Rein clientseitig über die bereits geladene Bücherliste. i18n admin.books.filters.* en/de/hr." },
   ]},

@@ -38,6 +38,9 @@ export function notificationCategory(type: string): NotificationCategory {
     case 'chessable_token_added':
     case 'course_shared':
     case 'repertoire_shared':
+    case 'catalog_request_received':
+    case 'catalog_request_approved':
+    case 'catalog_request_declined':
       return 'courses';
     case 'friend_request_received':
     case 'friend_request_accepted':
@@ -76,6 +79,9 @@ export function notificationIcon(n: AppNotification): string {
     case 'chessable_new_course': return 'library_add';
     case 'course_shared': return 'group_add';
     case 'repertoire_shared': return 'group_add';
+    case 'catalog_request_received': return 'inbox';
+    case 'catalog_request_approved': return 'check_circle';
+    case 'catalog_request_declined': return 'block';
     default: return 'notifications';
   }
 }

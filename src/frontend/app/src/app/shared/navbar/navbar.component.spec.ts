@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
+import { CatalogService } from '../../features/catalog/catalog.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { MessageService } from '../../core/message.service';
@@ -21,7 +22,8 @@ describe('NavbarComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: { currentUser$: of(null), isAdmin: false } },
-        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }) } },
+        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
+        { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
         { provide: InAppNotificationService, useValue: notif },
         { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
@@ -34,6 +36,7 @@ describe('NavbarComponent', () => {
     return TestBed.runInInjectionContext(() => new NavbarComponent(
       TestBed.inject(AuthService),
       TestBed.inject(CourseService),
+      TestBed.inject(CatalogService),
       TestBed.inject(MenuService),
       TestBed.inject(InAppNotificationService),
       TestBed.inject(MessageService),

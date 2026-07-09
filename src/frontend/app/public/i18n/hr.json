@@ -103,7 +103,10 @@
       "chessable_token_added": "{{username}} je dodao Chessable token",
       "chessable_new_course": "Novi Chessable tečaj „{{courseName}}“ za {{username}}",
       "course_shared": "{{username}} je s tobom podijelio tečaj „{{courseName}}“",
-      "repertoire_shared": "{{username}} je s tobom podijelio repertoar „{{repertoireName}}“"
+      "repertoire_shared": "{{username}} je s tobom podijelio repertoar „{{repertoireName}}“",
+      "catalog_request_received": "{{username}} traži „{{itemName}}“ iz tvog kataloga",
+      "catalog_request_approved": "Tvoj zahtjev za „{{itemName}}“ je odobren",
+      "catalog_request_declined": "Tvoj zahtjev za „{{itemName}}“ je odbijen"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -136,8 +139,35 @@
       "enableError": "Push obavijesti nije moguće promijeniti."
     }
   },
+  "catalog": {
+    "title": "Katalog",
+    "listTitle": "Dostupni tečajevi i repertoari",
+    "empty": "Nijedan katalog ti još nije podijeljen.",
+    "request": "Zatraži",
+    "requested": "Zatraženo — vlasnik odlučuje.",
+    "requestFailed": "Zahtjev nije uspio.",
+    "pending": "Zatraženo",
+    "open": "Otvori",
+    "type": {
+      "course": "Tečaj",
+      "repertoire": "Repertoar"
+    },
+    "admin": {
+      "grantsTitle": "Tko smije vidjeti moj katalog?",
+      "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
+      "users": "Korisnici",
+      "groups": "Grupe",
+      "grantsSaved": "Pristup spremljen.",
+      "requestsTitle": "Otvoreni zahtjevi",
+      "noRequests": "Nema otvorenih zahtjeva.",
+      "approve": "Odobri",
+      "decline": "Odbij",
+      "approved": "Odobreno i podijeljeno."
+    }
+  },
   "nav": {
     "discord": "Discord zajednica",
+    "catalog": "Katalog",
     "dashboard": "Nadzorna ploča",
     "repertoires": "Repertoari",
     "tournaments": "Turniri",
@@ -347,6 +377,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Partija",
+  "catalog": {
+    "title": "Katalog",
+    "listTitle": "Dostupni tečajevi i repertoari",
+    "empty": "Nijedan katalog ti još nije podijeljen.",
+    "request": "Zatraži",
+    "requested": "Zatraženo — vlasnik odlučuje.",
+    "requestFailed": "Zahtjev nije uspio.",
+    "pending": "Zatraženo",
+    "open": "Otvori",
+    "type": {
+      "course": "Tečaj",
+      "repertoire": "Repertoar"
+    },
+    "admin": {
+      "grantsTitle": "Tko smije vidjeti moj katalog?",
+      "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
+      "users": "Korisnici",
+      "groups": "Grupe",
+      "grantsSaved": "Pristup spremljen.",
+      "requestsTitle": "Otvoreni zahtjevi",
+      "noRequests": "Nema otvorenih zahtjeva.",
+      "approve": "Odobri",
+      "decline": "Odbij",
+      "approved": "Odobreno i podijeljeno."
+    }
+  },
     "nav": {
       "first": "Prvi potez",
       "previous": "Prethodni potez",
@@ -377,6 +433,7 @@
     "chessResultsApplied": "ChessResults podaci preuzeti",
     "fideApplied": "FIDE podaci preuzeti",
     "discord": {
+    "catalog": "Katalog",
       "title": "Discord",
       "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) kako bi povezao svoj Discord račun.",
       "unlink": "Prekini povezivanje",
@@ -2010,6 +2067,7 @@
         ]
       },
       "discord": {
+    "catalog": "Katalog",
         "t": "Povezivanje Discorda",
         "p": [
           "Ako je šahovski bot aktivan na tvom Discordu, možeš povezati svoj RookHub račun s Discordom. Bot ti šalje poveznicu s tokenom; ako si prijavljen, veza se uspostavlja odmah, inače nakon sljedeće prijave.",

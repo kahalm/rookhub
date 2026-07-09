@@ -61,4 +61,13 @@ public static class NotificationType
     /// <summary>Ein Nutzer hat ein Repertoire mit dem Empfänger geteilt (→ Glocke des Empfängers,
     /// Link „/repertoires"). Daten: username (Teilender), repertoireName.</summary>
     public const string RepertoireShared = "repertoire_shared";
+    /// <summary>Ein berechtigter Viewer fordert ein Katalog-Item an (→ Glocke des Besitzers,
+    /// Link „/catalog"). Daten: username (Anfragender), itemName.</summary>
+    public const string CatalogRequestReceived = "catalog_request_received";
+    /// <summary>Der Besitzer hat eine Katalog-Anforderung genehmigt (→ Glocke des Anfragenden,
+    /// Link „/courses" bzw. „/repertoires"). Daten: itemName.</summary>
+    public const string CatalogRequestApproved = "catalog_request_approved";
+    /// <summary>Der Besitzer hat eine Katalog-Anforderung abgelehnt (→ Glocke des Anfragenden).
+    /// Daten: itemName.</summary>
+    public const string CatalogRequestDeclined = "catalog_request_declined";
 }

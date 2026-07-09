@@ -13,6 +13,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
+import { CatalogService } from '../../features/catalog/catalog.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
 import { MessageService } from '../../core/message.service';
@@ -44,6 +45,9 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
           @if (showCourses && can('courses')) {
             <button mat-button routerLink="/courses">{{ 'nav.courses' | translate }}</button>
           }
+          @if (showCatalog && can('catalog')) {
+            <button mat-button routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
+          }
           @if (can('leaderboards')) { <button mat-button routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           @if (auth.isAdmin) {
             <button mat-button routerLink="/admin">{{ 'nav.admin' | translate }}</button>
@@ -65,6 +69,9 @@ import { DISCORD_INVITE_URL, DISCORD_SVG } from '../../core/community';
           @if (can('weekly')) { <button mat-menu-item routerLink="/weekly">{{ 'nav.weekly' | translate }}</button> }
           @if (showCourses && can('courses')) {
             <button mat-menu-item routerLink="/courses">{{ 'nav.courses' | translate }}</button>
+          }
+          @if (showCatalog && can('catalog')) {
+            <button mat-menu-item routerLink="/catalog">{{ 'nav.catalog' | translate }}</button>
           }
           @if (can('leaderboards')) { <button mat-menu-item routerLink="/leaderboards">{{ 'nav.leaderboards' | translate }}</button> }
           @if (auth.isAdmin) {
@@ -228,6 +235,7 @@ export class NavbarComponent implements OnInit {
 
   /** Kurse-Menü sichtbar: Admin (sofort) oder Nicht-Admin mit mind. einem freigegebenen Kurs. */
   showCourses = false;
+  showCatalog = false;
 
   /** Admin-konfigurierte Sichtbarkeit der Menüeinträge (Snapshot für synchrones Binding). */
   visible = new Set<string>();
@@ -260,7 +268,7 @@ export class NavbarComponent implements OnInit {
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;
 
-  constructor(public auth: AuthService, private courseService: CourseService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
+  constructor(public auth: AuthService, private courseService: CourseService, private catalogService: CatalogService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
     // Discord-Markenlogo als SVG-Icon registrieren (nicht im Material-Standardsatz enthalten).
     iconRegistry.addSvgIconLiteral('discord', sanitizer.bypassSecurityTrustHtml(DISCORD_SVG));
   }
@@ -287,6 +295,14 @@ export class NavbarComponent implements OnInit {
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(show => this.showCourses = show);
+
+    // Katalog-Link nur zeigen, wenn dem User ein Katalog freigegeben ist (oder Admin).
+    this.auth.currentUser$.pipe(
+      switchMap(() => this.auth.isLoggedIn
+        ? this.catalogService.access().pipe(map(r => r.hasAccess), catchError(() => of(false)))
+        : of(false)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(show => this.showCatalog = show);
 
     // Glocken-Badge: ungelesene In-App-Benachrichtigungen. Zähler-Strom binden, bei Login/Logout
     // sofort aktualisieren und im Hintergrund alle 60 s nachziehen (zeigt „Neues" ohne Reload).

@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<SharedPuzzleAttempt> SharedPuzzleAttempts => Set<SharedPuzzleAttempt>();
     public DbSet<Book> Books => Set<Book>();
+    public DbSet<CatalogGrant> CatalogGrants => Set<CatalogGrant>();
+    public DbSet<CatalogRequest> CatalogRequests => Set<CatalogRequest>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
@@ -331,6 +333,18 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Group>(e =>
         {
             e.HasIndex(g => g.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<CatalogGrant>(e =>
+        {
+            e.HasIndex(g => new { g.OwnerUserId, g.SubjectUserId }).IsUnique();
+            e.HasIndex(g => new { g.OwnerUserId, g.SubjectGroupId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CatalogRequest>(e =>
+        {
+            e.HasIndex(r => new { r.OwnerUserId, r.Status });
+            e.HasIndex(r => r.RequesterUserId);
         });
 
         modelBuilder.Entity<UserGroup>(e =>

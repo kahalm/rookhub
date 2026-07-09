@@ -103,7 +103,10 @@
       "chessable_token_added": "{{username}} added a Chessable token",
       "chessable_new_course": "New Chessable course “{{courseName}}” for {{username}}",
       "course_shared": "{{username}} shared the course “{{courseName}}” with you",
-      "repertoire_shared": "{{username}} shared the repertoire “{{repertoireName}}” with you"
+      "repertoire_shared": "{{username}} shared the repertoire “{{repertoireName}}” with you",
+      "catalog_request_received": "{{username}} requests “{{itemName}}” from your catalog",
+      "catalog_request_approved": "Your request for “{{itemName}}” was approved",
+      "catalog_request_declined": "Your request for “{{itemName}}” was declined"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -136,8 +139,35 @@
       "enableError": "Could not change push notifications."
     }
   },
+  "catalog": {
+    "title": "Catalog",
+    "listTitle": "Available courses & repertoires",
+    "empty": "No catalog has been shared with you yet.",
+    "request": "Request",
+    "requested": "Requested — the owner will decide.",
+    "requestFailed": "Request failed.",
+    "pending": "Requested",
+    "open": "Open",
+    "type": {
+      "course": "Course",
+      "repertoire": "Repertoire"
+    },
+    "admin": {
+      "grantsTitle": "Who can see my catalog?",
+      "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
+      "users": "Users",
+      "groups": "Groups",
+      "grantsSaved": "Access saved.",
+      "requestsTitle": "Open requests",
+      "noRequests": "No open requests.",
+      "approve": "Approve",
+      "decline": "Decline",
+      "approved": "Approved & shared."
+    }
+  },
   "nav": {
     "discord": "Discord community",
+    "catalog": "Catalog",
     "dashboard": "Dashboard",
     "repertoires": "Repertoires",
     "tournaments": "Tournaments",
@@ -347,6 +377,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Game",
+  "catalog": {
+    "title": "Catalog",
+    "listTitle": "Available courses & repertoires",
+    "empty": "No catalog has been shared with you yet.",
+    "request": "Request",
+    "requested": "Requested — the owner will decide.",
+    "requestFailed": "Request failed.",
+    "pending": "Requested",
+    "open": "Open",
+    "type": {
+      "course": "Course",
+      "repertoire": "Repertoire"
+    },
+    "admin": {
+      "grantsTitle": "Who can see my catalog?",
+      "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
+      "users": "Users",
+      "groups": "Groups",
+      "grantsSaved": "Access saved.",
+      "requestsTitle": "Open requests",
+      "noRequests": "No open requests.",
+      "approve": "Approve",
+      "decline": "Decline",
+      "approved": "Approved & shared."
+    }
+  },
     "nav": {
       "first": "First move",
       "previous": "Previous move",
@@ -377,6 +433,7 @@
     "chessResultsApplied": "ChessResults data applied",
     "fideApplied": "FIDE data applied",
     "discord": {
+    "catalog": "Catalog",
       "title": "Discord",
       "hint": "Open a personal link from the RookHub Discord bot (its /link command or a puzzle DM) to connect your Discord account.",
       "unlink": "Unlink",
@@ -2012,6 +2069,7 @@
         ]
       },
       "discord": {
+    "catalog": "Catalog",
         "t": "Link Discord",
         "p": [
           "If the chess bot is active in your Discord, you can link your RookHub account to Discord. The bot sends you a link with a token; if you are logged in the link is established immediately, otherwise after your next sign-in.",

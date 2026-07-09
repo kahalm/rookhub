@@ -103,7 +103,10 @@
       "chessable_token_added": "{{username}} hat einen Chessable-Token hinterlegt",
       "chessable_new_course": "Neuer Chessable-Kurs „{{courseName}}“ bei {{username}}",
       "course_shared": "{{username}} hat den Kurs „{{courseName}}“ mit dir geteilt",
-      "repertoire_shared": "{{username}} hat das Repertoire „{{repertoireName}}“ mit dir geteilt"
+      "repertoire_shared": "{{username}} hat das Repertoire „{{repertoireName}}“ mit dir geteilt",
+      "catalog_request_received": "{{username}} fordert „{{itemName}}“ aus deinem Katalog an",
+      "catalog_request_approved": "Deine Anfrage für „{{itemName}}“ wurde genehmigt",
+      "catalog_request_declined": "Deine Anfrage für „{{itemName}}“ wurde abgelehnt"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -136,8 +139,35 @@
       "enableError": "Push-Benachrichtigungen konnten nicht geändert werden."
     }
   },
+  "catalog": {
+    "title": "Katalog",
+    "listTitle": "Verfügbare Kurse & Repertoires",
+    "empty": "Dir wurde noch kein Katalog freigegeben.",
+    "request": "Anfordern",
+    "requested": "Angefordert — der Besitzer entscheidet.",
+    "requestFailed": "Anfrage fehlgeschlagen.",
+    "pending": "Angefragt",
+    "open": "Öffnen",
+    "type": {
+      "course": "Kurs",
+      "repertoire": "Repertoire"
+    },
+    "admin": {
+      "grantsTitle": "Wer darf meinen Katalog sehen?",
+      "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
+      "users": "User",
+      "groups": "Gruppen",
+      "grantsSaved": "Freigabe gespeichert.",
+      "requestsTitle": "Offene Anforderungen",
+      "noRequests": "Keine offenen Anforderungen.",
+      "approve": "Genehmigen",
+      "decline": "Ablehnen",
+      "approved": "Genehmigt & freigegeben."
+    }
+  },
   "nav": {
     "discord": "Discord-Community",
+    "catalog": "Katalog",
     "dashboard": "Dashboard",
     "repertoires": "Repertoires",
     "tournaments": "Turniere",
@@ -347,6 +377,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Partie",
+  "catalog": {
+    "title": "Katalog",
+    "listTitle": "Verfügbare Kurse & Repertoires",
+    "empty": "Dir wurde noch kein Katalog freigegeben.",
+    "request": "Anfordern",
+    "requested": "Angefordert — der Besitzer entscheidet.",
+    "requestFailed": "Anfrage fehlgeschlagen.",
+    "pending": "Angefragt",
+    "open": "Öffnen",
+    "type": {
+      "course": "Kurs",
+      "repertoire": "Repertoire"
+    },
+    "admin": {
+      "grantsTitle": "Wer darf meinen Katalog sehen?",
+      "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
+      "users": "User",
+      "groups": "Gruppen",
+      "grantsSaved": "Freigabe gespeichert.",
+      "requestsTitle": "Offene Anforderungen",
+      "noRequests": "Keine offenen Anforderungen.",
+      "approve": "Genehmigen",
+      "decline": "Ablehnen",
+      "approved": "Genehmigt & freigegeben."
+    }
+  },
     "nav": {
       "first": "Erster Zug",
       "previous": "Vorheriger Zug",
@@ -377,6 +433,7 @@
     "chessResultsApplied": "ChessResults-Daten übernommen",
     "fideApplied": "FIDE-Daten übernommen",
     "discord": {
+    "catalog": "Katalog",
       "title": "Discord",
       "hint": "Öffne einen persönlichen Link des RookHub-Discord-Bots (dessen /link-Befehl oder eine Puzzle-DM), um dein Discord-Konto zu verknüpfen.",
       "unlink": "Verknüpfung trennen",
@@ -2012,6 +2069,7 @@
         ]
       },
       "discord": {
+    "catalog": "Katalog",
         "t": "Discord verknüpfen",
         "p": [
           "Wenn der Schach-Bot in deinem Discord aktiv ist, kannst du dein RookHub-Konto mit Discord verknüpfen. Der Bot schickt dir einen Link mit Token; bist du eingeloggt, wird die Verknüpfung sofort hergestellt, sonst nach der nächsten Anmeldung.",
