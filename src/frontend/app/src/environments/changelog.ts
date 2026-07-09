@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.284.0';
+export const APP_VERSION = '0.285.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.285.0", date: "2026-07-09", changes: [
+    { en: "Admin Books/Courses tab: per-column filter bar above the grid. In addition to the existing free-text search there is now a filter panel with one control per column — book name, type (Puzzle/Study), difficulty, puzzle-count range, Elo range, tri-state Daily/Random/Blind/Public (All/Yes/No), and Visible-for (all / a specific group / admin-only). All filters combine with AND (and with the search box); a Reset button appears while any filter is active. Purely client-side over the already-loaded book list. i18n admin.books.filters.* en/de/hr.", de: "Admin-Tab Bücher/Kurse: Filterleiste pro Spalte über dem Grid. Zusätzlich zur bestehenden Freitextsuche gibt es jetzt ein Filterfeld mit einem Bedienelement je Spalte — Buchname, Art (Puzzle/Studium), Schwierigkeit, Puzzle-Anzahl (von–bis), Elo (von–bis), Dreiwertig Täglich/Zufall/Blind/Öffentlich (Alle/Ja/Nein) sowie Sichtbar-für (alle / bestimmte Gruppe / nur Admin). Alle Filter sind UND-verknüpft (auch mit dem Suchfeld); ein Zurücksetzen-Knopf erscheint, sobald ein Filter aktiv ist. Rein clientseitig über die bereits geladene Bücherliste. i18n admin.books.filters.* en/de/hr." },
+  ]},
   { version: "0.284.0", date: "2026-07-09", changes: [
     { en: "Public courses can get a short alias (admin). In the admin Books/Courses tab, a public course now has an optional alias field (e.g. mate1); the course is then reachable via the short URL /<alias> (e.g. rookhub.oberschmid.homes/mate1), which redirects to the course in random mode. First step: visualisation mode is fixed to 0 (blindfold off) — configurable later. Aliases are lowercase letters/digits/hyphens, unique, and cannot collide with existing pages (reserved names rejected). New: Book.PublicSlug (+migration, unique index), admin validation (format/reserved/duplicate → clear error), anonymous resolver GET /api/courses/by-slug/{slug}, and an Angular route :slug that resolves the alias and redirects (unknown alias → dashboard). +11 backend tests.", de: "Öffentliche Kurse können einen Kurz-Alias bekommen (Admin). Im Admin-Tab Bücher/Kurse hat ein öffentlicher Kurs jetzt ein optionales Alias-Feld (z. B. mate1); der Kurs ist dann über die Kurz-URL /<Alias> erreichbar (z. B. rookhub.oberschmid.homes/mate1) und leitet auf den Kurs im Zufallsmodus weiter. Erster Schritt: Visualisierungsmodus fest auf 0 (kein Blindmodus) — später konfigurierbar. Aliasse sind Kleinbuchstaben/Ziffern/Bindestriche, eindeutig, und dürfen nicht mit bestehenden Seiten kollidieren (reservierte Namen werden abgelehnt). Neu: Book.PublicSlug (+Migration, Unique-Index), Admin-Validierung (Format/reserviert/Duplikat → klare Fehlermeldung), anonymer Resolver GET /api/courses/by-slug/{slug}, und eine Angular-Route :slug, die den Alias auflöst und weiterleitet (unbekannter Alias → Dashboard). +11 Backend-Tests." },
   ]},

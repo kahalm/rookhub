@@ -1589,6 +1589,13 @@
       "kind": {
         "puzzle": "Puzzle book",
         "study": "Study book"
+      },
+      "filters": {
+        "title": "Filter",
+        "reset": "Reset filters",
+        "all": "All",
+        "yes": "Yes",
+        "no": "No"
       }
     },
     "groups": {

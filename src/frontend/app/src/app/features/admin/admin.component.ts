@@ -61,6 +61,9 @@ export class AdminComponent implements OnInit {
   booksUploading = false;
   bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'groups', 'actions'];
 
+  /** Per-Spalten-Filter über dem Bücher-Grid (UND-verknüpft, zusätzlich zur globalen Suche). */
+  bookFilters = this.emptyBookFilters();
+
   groups: Group[] = [];
   groupsLoading = false;
   groupColumns = ['name', 'memberCount', 'actions'];
@@ -207,13 +210,61 @@ export class AdminComponent implements OnInit {
   }
 
   /** Clientseitiger Filter über die bereits geladenen Bücher (Name/Dateiname/Tags, case-insensitive). */
+  private emptyBookFilters() {
+    return {
+      name: '',
+      kind: '' as '' | 'Puzzle' | 'Study',
+      difficulty: '',
+      eloMin: null as number | null,
+      eloMax: null as number | null,
+      puzzlesMin: null as number | null,
+      puzzlesMax: null as number | null,
+      daily: '' as '' | 'yes' | 'no',
+      random: '' as '' | 'yes' | 'no',
+      blind: '' as '' | 'yes' | 'no',
+      public: '' as '' | 'yes' | 'no',
+      group: '' as '' | 'none' | number,
+    };
+  }
+
   applyBookFilter(): void {
     const q = this.bookSearch.trim().toLowerCase();
-    if (!q) { this.filteredBooks = this.books; return; }
-    this.filteredBooks = this.books.filter(b =>
-      (b.displayName ?? '').toLowerCase().includes(q) ||
-      (b.fileName ?? '').toLowerCase().includes(q) ||
-      (b.tags ?? '').toLowerCase().includes(q));
+    const f = this.bookFilters;
+    const name = f.name.trim().toLowerCase();
+    const diff = f.difficulty.trim().toLowerCase();
+    const tri = (v: '' | 'yes' | 'no', actual: boolean) => v === '' || (v === 'yes') === actual;
+    this.filteredBooks = this.books.filter(b => {
+      if (q && !((b.displayName ?? '').toLowerCase().includes(q) ||
+                 (b.fileName ?? '').toLowerCase().includes(q) ||
+                 (b.tags ?? '').toLowerCase().includes(q))) return false;
+      if (name && !((b.displayName ?? '').toLowerCase().includes(name) ||
+                    (b.fileName ?? '').toLowerCase().includes(name))) return false;
+      if (f.kind && b.kind !== f.kind) return false;
+      if (diff && !(b.difficulty ?? '').toLowerCase().includes(diff)) return false;
+      if (f.eloMin != null && (b.minElo == null || b.minElo < f.eloMin)) return false;
+      if (f.eloMax != null && (b.maxElo == null || b.maxElo > f.eloMax)) return false;
+      if (f.puzzlesMin != null && b.puzzleCount < f.puzzlesMin) return false;
+      if (f.puzzlesMax != null && b.puzzleCount > f.puzzlesMax) return false;
+      if (!tri(f.daily, b.forDaily)) return false;
+      if (!tri(f.random, b.forRandom)) return false;
+      if (!tri(f.blind, b.forBlind)) return false;
+      if (!tri(f.public, b.isPublic)) return false;
+      if (f.group === 'none' && (b.accessGroupIds?.length ?? 0) > 0) return false;
+      if (typeof f.group === 'number' && !(b.accessGroupIds ?? []).includes(f.group)) return false;
+      return true;
+    });
+  }
+
+  hasActiveBookFilters(): boolean {
+    const f = this.bookFilters;
+    return !!(f.name || f.kind || f.difficulty || f.eloMin != null || f.eloMax != null ||
+      f.puzzlesMin != null || f.puzzlesMax != null || f.daily || f.random || f.blind ||
+      f.public || f.group !== '');
+  }
+
+  resetBookFilters(): void {
+    this.bookFilters = this.emptyBookFilters();
+    this.applyBookFilter();
   }
 
   clearBookSearch(): void {

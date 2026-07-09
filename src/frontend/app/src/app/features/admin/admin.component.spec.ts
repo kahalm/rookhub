@@ -129,6 +129,53 @@ describe('AdminComponent', () => {
     expect(c.filteredBooks.length).toBe(0);
   });
 
+  it('applyBookFilter applies per-column filters (kind, tri-state, group, ranges) combined with AND', () => {
+    const { c } = make();
+    c.books = [
+      { id: 1, displayName: 'Endgame', fileName: 'e.pgn', tags: null, kind: 'Puzzle', difficulty: 'Easy', minElo: 1000, maxElo: 1500, puzzleCount: 50, forDaily: true, forRandom: false, forBlind: false, isPublic: true, accessGroupIds: [4] },
+      { id: 2, displayName: 'Tactics', fileName: 't.pgn', tags: null, kind: 'Study', difficulty: 'Hard', minElo: 2000, maxElo: 2400, puzzleCount: 500, forDaily: false, forRandom: true, forBlind: false, isPublic: false, accessGroupIds: [] },
+    ] as any;
+
+    c.bookFilters.kind = 'Puzzle';
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([1]);
+
+    c.resetBookFilters();
+    expect(c.filteredBooks.length).toBe(2);
+    expect(c.hasActiveBookFilters()).toBeFalse();
+
+    c.bookFilters.public = 'no';               // tri-state
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([2]);
+
+    c.resetBookFilters();
+    c.bookFilters.group = 'none';              // admin-only (no groups)
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([2]);
+
+    c.resetBookFilters();
+    c.bookFilters.group = 4;                    // specific group
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([1]);
+
+    c.resetBookFilters();
+    c.bookFilters.puzzlesMin = 100;             // range
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([2]);
+
+    c.resetBookFilters();
+    c.bookFilters.eloMax = 1600;                // elo range: only book 1 fits within
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([1]);
+
+    c.resetBookFilters();
+    expect(c.hasActiveBookFilters()).toBeFalse();
+    c.bookFilters.difficulty = 'hard';
+    expect(c.hasActiveBookFilters()).toBeTrue();
+    c.applyBookFilter();
+    expect(c.filteredBooks.map((b: any) => b.id)).toEqual([2]);
+  });
+
   it('renameBook sends the new DisplayName and updates the row + filter', () => {
     const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
     const { c } = make({ updateBook });

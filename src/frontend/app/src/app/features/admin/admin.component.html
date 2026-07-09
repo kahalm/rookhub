@@ -118,6 +118,107 @@
                   </button>
                 }
               </mat-form-field>
+
+              <div class="book-filters">
+                <div class="bf-head">
+                  <mat-icon>filter_list</mat-icon>
+                  <span>{{ 'admin.books.filters.title' | translate }}</span>
+                  @if (hasActiveBookFilters()) {
+                    <button mat-button color="primary" (click)="resetBookFilters()">
+                      <mat-icon>filter_alt_off</mat-icon> {{ 'admin.books.filters.reset' | translate }}
+                    </button>
+                  }
+                </div>
+                <div class="bf-grid">
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.book' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="bookFilters.name" (ngModelChange)="applyBookFilter()">
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.kind' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.kind" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="Puzzle">{{ 'admin.books.kind.puzzle' | translate }}</mat-option>
+                      <mat-option value="Study">{{ 'admin.books.kind.study' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.difficulty' | translate }}</mat-label>
+                    <input matInput [(ngModel)]="bookFilters.difficulty" (ngModelChange)="applyBookFilter()">
+                  </mat-form-field>
+
+                  <div class="bf-range">
+                    <span class="bf-range-label">{{ 'admin.books.columns.puzzles' | translate }}</span>
+                    <div class="bf-nums">
+                      <input type="number" class="bf-num" [(ngModel)]="bookFilters.puzzlesMin" (ngModelChange)="applyBookFilter()"
+                             [placeholder]="'admin.books.eloFrom' | translate">
+                      <span class="bf-sep">–</span>
+                      <input type="number" class="bf-num" [(ngModel)]="bookFilters.puzzlesMax" (ngModelChange)="applyBookFilter()"
+                             [placeholder]="'admin.books.eloTo' | translate">
+                    </div>
+                  </div>
+
+                  <div class="bf-range">
+                    <span class="bf-range-label">{{ 'admin.books.columns.elo' | translate }}</span>
+                    <div class="bf-nums">
+                      <input type="number" class="bf-num" [(ngModel)]="bookFilters.eloMin" (ngModelChange)="applyBookFilter()"
+                             [placeholder]="'admin.books.eloFrom' | translate">
+                      <span class="bf-sep">–</span>
+                      <input type="number" class="bf-num" [(ngModel)]="bookFilters.eloMax" (ngModelChange)="applyBookFilter()"
+                             [placeholder]="'admin.books.eloTo' | translate">
+                    </div>
+                  </div>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.daily' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.daily" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="yes">{{ 'admin.books.filters.yes' | translate }}</mat-option>
+                      <mat-option value="no">{{ 'admin.books.filters.no' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.random' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.random" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="yes">{{ 'admin.books.filters.yes' | translate }}</mat-option>
+                      <mat-option value="no">{{ 'admin.books.filters.no' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.blind' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.blind" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="yes">{{ 'admin.books.filters.yes' | translate }}</mat-option>
+                      <mat-option value="no">{{ 'admin.books.filters.no' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.public' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.public" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="yes">{{ 'admin.books.filters.yes' | translate }}</mat-option>
+                      <mat-option value="no">{{ 'admin.books.filters.no' | translate }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>{{ 'admin.books.columns.visibleFor' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="bookFilters.group" (selectionChange)="applyBookFilter()">
+                      <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
+                      <mat-option value="none">{{ 'admin.books.adminOnly' | translate }}</mat-option>
+                      @for (g of groups; track g.id) {
+                        <mat-option [value]="g.id">{{ g.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
             }
 
             @if (booksLoading) {

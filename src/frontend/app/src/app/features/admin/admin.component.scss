@@ -126,6 +126,55 @@
 
 /* Books-Tab: Suchfeld + Umbenennen */
 .book-search { width: 100%; max-width: 420px; margin-bottom: 0.75rem; }
+
+/* Books-Tab: Per-Spalten-Filter über dem Grid */
+.book-filters {
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem 0.75rem;
+  margin-bottom: 1rem;
+
+  .bf-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    mat-icon { opacity: 0.7; }
+    button { margin-left: auto; }
+  }
+
+  .bf-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: flex-start;
+
+    mat-form-field { width: 150px; }
+  }
+
+  .bf-range {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 4px;
+    .bf-range-label {
+      font-size: 0.72rem;
+      opacity: 0.75;
+    }
+    .bf-nums { display: flex; align-items: center; }
+    .bf-num {
+      width: 62px;
+      padding: 6px 6px;
+      border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+    .bf-sep { margin: 0 4px; color: color-mix(in srgb, currentColor 40%, transparent); }
+  }
+}
 .book-name { vertical-align: middle; }
 .book-rename-btn { width: 30px; height: 30px; line-height: 30px; margin-left: 4px; }
 .book-rename-btn mat-icon { font-size: 17px; width: 17px; height: 17px; opacity: 0.6; }
