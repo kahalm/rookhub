@@ -199,7 +199,8 @@
     "help": "Hilfe",
     "chessable": "Chessable",
     "messages": "Nachrichten",
-    "leaderboards": "Bestenlisten"
+    "leaderboards": "Bestenlisten",
+    "remembered": "Gemerkt"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -388,32 +389,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Partie",
-  "catalog": {
-    "title": "Katalog",
-    "listTitle": "Verfügbare Kurse & Repertoires",
-    "empty": "Dir wurde noch kein Katalog freigegeben.",
-    "request": "Anfordern",
-    "requested": "Angefordert — der Besitzer entscheidet.",
-    "requestFailed": "Anfrage fehlgeschlagen.",
-    "pending": "Angefragt",
-    "open": "Öffnen",
-    "type": {
-      "course": "Kurs",
-      "repertoire": "Repertoire"
+    "catalog": {
+      "title": "Katalog",
+      "listTitle": "Verfügbare Kurse & Repertoires",
+      "empty": "Dir wurde noch kein Katalog freigegeben.",
+      "request": "Anfordern",
+      "requested": "Angefordert — der Besitzer entscheidet.",
+      "requestFailed": "Anfrage fehlgeschlagen.",
+      "pending": "Angefragt",
+      "open": "Öffnen",
+      "type": {
+        "course": "Kurs",
+        "repertoire": "Repertoire"
+      },
+      "admin": {
+        "grantsTitle": "Wer darf meinen Katalog sehen?",
+        "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
+        "users": "User",
+        "groups": "Gruppen",
+        "grantsSaved": "Freigabe gespeichert.",
+        "requestsTitle": "Offene Anforderungen",
+        "noRequests": "Keine offenen Anforderungen.",
+        "approve": "Genehmigen",
+        "decline": "Ablehnen",
+        "approved": "Genehmigt & freigegeben."
+      }
     },
-    "admin": {
-      "grantsTitle": "Wer darf meinen Katalog sehen?",
-      "grantsHint": "Ausgewählte User und Gruppenmitglieder sehen die Liste deiner Kurse & Repertoires und können einzelne anfordern.",
-      "users": "User",
-      "groups": "Gruppen",
-      "grantsSaved": "Freigabe gespeichert.",
-      "requestsTitle": "Offene Anforderungen",
-      "noRequests": "Keine offenen Anforderungen.",
-      "approve": "Genehmigen",
-      "decline": "Ablehnen",
-      "approved": "Genehmigt & freigegeben."
-    }
-  },
     "nav": {
       "first": "Erster Zug",
       "previous": "Vorheriger Zug",
@@ -444,7 +445,7 @@
     "chessResultsApplied": "ChessResults-Daten übernommen",
     "fideApplied": "FIDE-Daten übernommen",
     "discord": {
-    "catalog": "Katalog",
+      "catalog": "Katalog",
       "title": "Discord",
       "hint": "Öffne einen persönlichen Link des RookHub-Discord-Bots (dessen /link-Befehl oder eine Puzzle-DM), um dein Discord-Konto zu verknüpfen.",
       "unlink": "Verknüpfung trennen",
@@ -2088,7 +2089,7 @@
         ]
       },
       "discord": {
-    "catalog": "Katalog",
+        "catalog": "Katalog",
         "t": "Discord verknüpfen",
         "p": [
           "Wenn der Schach-Bot in deinem Discord aktiv ist, kannst du dein RookHub-Konto mit Discord verknüpfen. Der Bot schickt dir einen Link mit Token; bist du eingeloggt, wird die Verknüpfung sofort hergestellt, sonst nach der nächsten Anmeldung.",
@@ -2359,5 +2360,21 @@
     "doneEmpty": "Alles ist bereits aktuell.",
     "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen.",
     "dismiss": "Verstanden"
+  },
+  "remembered": {
+    "title": "Gemerkte Stellungen",
+    "hint": "Stellungen, die du über die RepCheck-Extension aus Chessable gemerkt hast („Remember line“).",
+    "empty": "Noch keine gemerkten Stellungen. Nutze „Remember line“ in der RepCheck-Extension auf chessable.com.",
+    "unknownCourse": "Unbekannter Kurs",
+    "analyze": "Analysieren",
+    "copyFen": "FEN kopieren",
+    "delete": "Löschen",
+    "copied": "FEN kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "deleteConfirm": "Diese gemerkte Stellung löschen?",
+    "errors": {
+      "load": "Gemerkte Stellungen konnten nicht geladen werden",
+      "delete": "Löschen fehlgeschlagen"
+    }
   }
 }

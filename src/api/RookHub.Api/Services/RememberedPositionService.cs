@@ -106,6 +106,17 @@ public class RememberedPositionService
         return list;
     }
 
+    /// <summary>Löscht eine gemerkte Stellung des Users (idempotent). <c>false</c> wenn nicht vorhanden/fremd.</summary>
+    public async Task<bool> DeleteAsync(int userId, int id)
+    {
+        var entity = await _db.RememberedPositions
+            .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+        if (entity is null) return false;
+        _db.RememberedPositions.Remove(entity);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     /// <summary>Löst den Kursnamen aus dem gespeicherten Chessable-Bearer des Users auf:
     /// erst aus der gecachten Kursliste, sonst best-effort per Live-Abruf. Nie werfend.</summary>
     private async Task<string?> ResolveCourseNameAsync(int userId, string? courseId)

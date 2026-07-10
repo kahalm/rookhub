@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.289.0';
+export const APP_VERSION = '0.290.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.290.0", date: "2026-07-10", changes: [
+    { en: "New „Remembered“ page: shows the positions you saved from Chessable via the RepCheck extension (its „Remember line“ button). Each entry shows a board preview of the FEN, the course name (linked back to Chessable when available) and when it was captured, plus actions: open in Analysis, copy FEN, and delete. New nav entry (logged-in), route /remembered, and a delete endpoint DELETE /api/extension/remembered-lines/{id}. +1 backend test.", de: "Neue Seite „Gemerkt“: zeigt die Stellungen, die du über die RepCheck-Extension aus Chessable gemerkt hast (Knopf „Remember line“). Jeder Eintrag zeigt eine Brett-Vorschau der FEN, den Kursnamen (mit Rücklink zu Chessable, wenn vorhanden) und wann er erfasst wurde, dazu Aktionen: In Analyse öffnen, FEN kopieren und Löschen. Neuer Menüpunkt (eingeloggt), Route /remembered und ein Lösch-Endpoint DELETE /api/extension/remembered-lines/{id}. +1 Backend-Test." },
+  ]},
   { version: "0.289.0", date: "2026-07-10", changes: [
     { en: "New „In which repertoires?“ button in Analysis, the game-replay/recap dialog and the shared-game page: for the current board position it lists all of your own repertoires that contain it (repertoire → chapter → line), transpositions included. Each found line has two actions — „Train“ (opens the repertoire trainer focused on that line) and „View“ (opens the repertoire detail at that line, spooled to the position). Matching ignores the en-passant square and move counters so move-order transpositions are found. New backend endpoint POST /api/repertoires/position-lookup with a per-user cached position index (reuses the extension-analysis walk); the target line's identity (lineKey) is computed from the client-side parse so it always matches the trainer. Only visible when logged in. +5 backend tests.", de: "Neuer Knopf „In welchen Repertoires?“ im Analysemodus, im Nachspiel-/Recap-Dialog und auf der geteilten-Partie-Seite: zeigt für die aktuelle Brett-Stellung alle eigenen Repertoires, in denen sie vorkommt (Repertoire → Kapitel → Linie), Zugumstellungen inklusive. Pro gefundener Linie zwei Aktionen — „Trainieren“ (öffnet den Repertoire-Trainer fokussiert auf diese Linie) und „Ansehen“ (öffnet das Repertoire-Detail bei dieser Linie, bis zur Stellung vorgespult). Das Matching ignoriert en-passant-Feld und Zugzähler, damit Zugumstellungen gefunden werden. Neuer Backend-Endpoint POST /api/repertoires/position-lookup mit einem pro-User gecachten Positions-Index (nutzt den Walk der Extension-Analyse); die Ziel-Linien-Identität (lineKey) wird aus dem Client-Parse berechnet und passt so immer zum Trainer. Nur für eingeloggte Nutzer sichtbar. +5 Backend-Tests." },
   ]},

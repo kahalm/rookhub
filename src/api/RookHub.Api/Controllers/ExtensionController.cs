@@ -134,6 +134,14 @@ public class ExtensionController : BaseApiController
         return Ok(await _rememberedPositionService.ListAsync(GetUserId(), take));
     }
 
+    /// <summary>Löscht eine gemerkte Stellung des Users (idempotent).</summary>
+    [HttpDelete("remembered-lines/{id:int}")]
+    public async Task<IActionResult> DeleteRememberedLine(int id)
+    {
+        if (ScopeGuard() is { } forbid) return forbid;
+        return await _rememberedPositionService.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();
+    }
+
     /// <summary>
     /// Speichert die aktuell auf chess.com/lichess angeschaute Partie (Button „Partie speichern").
     /// Der Client schickt die SAN-Zugliste + Best-Effort-Metadaten; der Server baut das PGN und

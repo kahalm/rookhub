@@ -199,7 +199,8 @@
     "help": "Pomoć",
     "chessable": "Chessable",
     "leaderboards": "Ljestvice",
-    "messages": "Poruke"
+    "messages": "Poruke",
+    "remembered": "Zapamćeno"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -388,32 +389,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Partija",
-  "catalog": {
-    "title": "Katalog",
-    "listTitle": "Dostupni tečajevi i repertoari",
-    "empty": "Nijedan katalog ti još nije podijeljen.",
-    "request": "Zatraži",
-    "requested": "Zatraženo — vlasnik odlučuje.",
-    "requestFailed": "Zahtjev nije uspio.",
-    "pending": "Zatraženo",
-    "open": "Otvori",
-    "type": {
-      "course": "Tečaj",
-      "repertoire": "Repertoar"
+    "catalog": {
+      "title": "Katalog",
+      "listTitle": "Dostupni tečajevi i repertoari",
+      "empty": "Nijedan katalog ti još nije podijeljen.",
+      "request": "Zatraži",
+      "requested": "Zatraženo — vlasnik odlučuje.",
+      "requestFailed": "Zahtjev nije uspio.",
+      "pending": "Zatraženo",
+      "open": "Otvori",
+      "type": {
+        "course": "Tečaj",
+        "repertoire": "Repertoar"
+      },
+      "admin": {
+        "grantsTitle": "Tko smije vidjeti moj katalog?",
+        "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
+        "users": "Korisnici",
+        "groups": "Grupe",
+        "grantsSaved": "Pristup spremljen.",
+        "requestsTitle": "Otvoreni zahtjevi",
+        "noRequests": "Nema otvorenih zahtjeva.",
+        "approve": "Odobri",
+        "decline": "Odbij",
+        "approved": "Odobreno i podijeljeno."
+      }
     },
-    "admin": {
-      "grantsTitle": "Tko smije vidjeti moj katalog?",
-      "grantsHint": "Odabrani korisnici i članovi grupa vide popis tvojih tečajeva i repertoara te mogu zatražiti pojedine.",
-      "users": "Korisnici",
-      "groups": "Grupe",
-      "grantsSaved": "Pristup spremljen.",
-      "requestsTitle": "Otvoreni zahtjevi",
-      "noRequests": "Nema otvorenih zahtjeva.",
-      "approve": "Odobri",
-      "decline": "Odbij",
-      "approved": "Odobreno i podijeljeno."
-    }
-  },
     "nav": {
       "first": "Prvi potez",
       "previous": "Prethodni potez",
@@ -444,7 +445,7 @@
     "chessResultsApplied": "ChessResults podaci preuzeti",
     "fideApplied": "FIDE podaci preuzeti",
     "discord": {
-    "catalog": "Katalog",
+      "catalog": "Katalog",
       "title": "Discord",
       "hint": "Otvori osobnu poveznicu RookHub Discord bota (njegovu /link naredbu ili DM sa zagonetkom) kako bi povezao svoj Discord račun.",
       "unlink": "Prekini povezivanje",
@@ -2086,7 +2087,7 @@
         ]
       },
       "discord": {
-    "catalog": "Katalog",
+        "catalog": "Katalog",
         "t": "Povezivanje Discorda",
         "p": [
           "Ako je šahovski bot aktivan na tvom Discordu, možeš povezati svoj RookHub račun s Discordom. Bot ti šalje poveznicu s tokenom; ako si prijavljen, veza se uspostavlja odmah, inače nakon sljedeće prijave.",
@@ -2357,5 +2358,21 @@
     "doneEmpty": "Sve je već ažurno.",
     "failed": "Ažuriranje nije uspjelo. Pokušajte ponovno.",
     "dismiss": "U redu"
+  },
+  "remembered": {
+    "title": "Zapamćene pozicije",
+    "hint": "Pozicije koje si spremio s Chessablea preko RepCheck ekstenzije („Remember line“).",
+    "empty": "Još nema zapamćenih pozicija. Koristi „Remember line“ u RepCheck ekstenziji na chessable.com.",
+    "unknownCourse": "Nepoznati tečaj",
+    "analyze": "Analiziraj",
+    "copyFen": "Kopiraj FEN",
+    "delete": "Obriši",
+    "copied": "FEN kopiran",
+    "copyFailed": "Kopiranje nije uspjelo",
+    "deleteConfirm": "Obrisati ovu zapamćenu poziciju?",
+    "errors": {
+      "load": "Zapamćene pozicije nije moguće učitati",
+      "delete": "Brisanje nije uspjelo"
+    }
   }
 }

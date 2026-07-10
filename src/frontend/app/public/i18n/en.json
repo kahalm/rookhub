@@ -199,7 +199,8 @@
     "help": "Help",
     "chessable": "Chessable",
     "messages": "Messages",
-    "leaderboards": "Leaderboards"
+    "leaderboards": "Leaderboards",
+    "remembered": "Remembered"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -388,32 +389,32 @@
   },
   "pgnViewer": {
     "gameLabel": "Game",
-  "catalog": {
-    "title": "Catalog",
-    "listTitle": "Available courses & repertoires",
-    "empty": "No catalog has been shared with you yet.",
-    "request": "Request",
-    "requested": "Requested — the owner will decide.",
-    "requestFailed": "Request failed.",
-    "pending": "Requested",
-    "open": "Open",
-    "type": {
-      "course": "Course",
-      "repertoire": "Repertoire"
+    "catalog": {
+      "title": "Catalog",
+      "listTitle": "Available courses & repertoires",
+      "empty": "No catalog has been shared with you yet.",
+      "request": "Request",
+      "requested": "Requested — the owner will decide.",
+      "requestFailed": "Request failed.",
+      "pending": "Requested",
+      "open": "Open",
+      "type": {
+        "course": "Course",
+        "repertoire": "Repertoire"
+      },
+      "admin": {
+        "grantsTitle": "Who can see my catalog?",
+        "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
+        "users": "Users",
+        "groups": "Groups",
+        "grantsSaved": "Access saved.",
+        "requestsTitle": "Open requests",
+        "noRequests": "No open requests.",
+        "approve": "Approve",
+        "decline": "Decline",
+        "approved": "Approved & shared."
+      }
     },
-    "admin": {
-      "grantsTitle": "Who can see my catalog?",
-      "grantsHint": "Selected users and group members see the list of your courses & repertoires and can request individual items.",
-      "users": "Users",
-      "groups": "Groups",
-      "grantsSaved": "Access saved.",
-      "requestsTitle": "Open requests",
-      "noRequests": "No open requests.",
-      "approve": "Approve",
-      "decline": "Decline",
-      "approved": "Approved & shared."
-    }
-  },
     "nav": {
       "first": "First move",
       "previous": "Previous move",
@@ -444,7 +445,7 @@
     "chessResultsApplied": "ChessResults data applied",
     "fideApplied": "FIDE data applied",
     "discord": {
-    "catalog": "Catalog",
+      "catalog": "Catalog",
       "title": "Discord",
       "hint": "Open a personal link from the RookHub Discord bot (its /link command or a puzzle DM) to connect your Discord account.",
       "unlink": "Unlink",
@@ -2088,7 +2089,7 @@
         ]
       },
       "discord": {
-    "catalog": "Catalog",
+        "catalog": "Catalog",
         "t": "Link Discord",
         "p": [
           "If the chess bot is active in your Discord, you can link your RookHub account to Discord. The bot sends you a link with a token; if you are logged in the link is established immediately, otherwise after your next sign-in.",
@@ -2359,5 +2360,21 @@
     "doneEmpty": "Everything is already up to date.",
     "failed": "Update failed. Please try again.",
     "dismiss": "Got it"
+  },
+  "remembered": {
+    "title": "Remembered positions",
+    "hint": "Positions you saved from Chessable via the RepCheck extension („Remember line“).",
+    "empty": "No remembered positions yet. Use „Remember line“ in the RepCheck extension on chessable.com.",
+    "unknownCourse": "Unknown course",
+    "analyze": "Analyze",
+    "copyFen": "Copy FEN",
+    "delete": "Delete",
+    "copied": "FEN copied",
+    "copyFailed": "Copy failed",
+    "deleteConfirm": "Delete this remembered position?",
+    "errors": {
+      "load": "Failed to load remembered positions",
+      "delete": "Delete failed"
+    }
   }
 }

@@ -158,6 +158,18 @@ public class RememberedPositionServiceTests : IDisposable
         Assert.Equal("Backfilled Course", list[0].CourseName);
     }
 
+    [Fact]
+    public async Task DeleteAsync_RemovesOwnEntry_NotForeign()
+    {
+        var mine = await _svc.SaveAsync(1, new RememberLineInputDto { Fen = Fen, CourseName = "c" });
+        await _svc.SaveAsync(2, new RememberLineInputDto { Fen = Fen, CourseName = "c" });
+
+        Assert.False(await _svc.DeleteAsync(1, 99999));            // unbekannt
+        Assert.False(await _svc.DeleteAsync(2, mine.Id));          // fremder Eintrag → nicht löschbar
+        Assert.True(await _svc.DeleteAsync(1, mine.Id));           // eigener → gelöscht
+        Assert.Empty(await _svc.ListAsync(1));
+    }
+
     private class StubHandler : HttpMessageHandler
     {
         public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }
