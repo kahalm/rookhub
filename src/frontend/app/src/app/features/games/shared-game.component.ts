@@ -11,6 +11,7 @@ import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { GamesService, SharedGame } from './games.service';
+import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 /**
  * Öffentliche Nachspiel-Seite einer geteilten Partie (Route <c>/g/:token</c>, kein Login nötig).
@@ -21,7 +22,7 @@ import { GamesService, SharedGame } from './games.service';
   standalone: true,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule,
-    TranslateModule, ChessBoardComponent, MoveListComponent,
+    TranslateModule, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -62,6 +63,7 @@ import { GamesService, SharedGame } from './games.service';
                 <button mat-icon-button (click)="service.goToEnd()" [disabled]="!service.currentGame || service.currentMoveIndex >= service.currentGame.moves.length - 1"><mat-icon>skip_next</mat-icon></button>
                 <button mat-icon-button (click)="flipped = !flipped"><mat-icon>swap_vert</mat-icon></button>
               </div>
+              <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
             </div>
             <div class="moves-section">
               @if (service.currentGame; as g) {
@@ -104,6 +106,7 @@ import { GamesService, SharedGame } from './games.service';
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
+    .pr-slot { display: block; width: 100%; }
     .moves-section { flex: 1; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); border-radius: 4px; min-width: 180px; overflow: auto; max-height: 60vh; }
     .original { margin-top: 12px; }
     @media (max-width: 768px) {

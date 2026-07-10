@@ -21,6 +21,27 @@ export interface RepertoireShareRecipient {
   sharedAt: string;
 }
 
+/** Eine gefundene Repertoire-Linie, in der eine gesuchte Stellung vorkommt. */
+export interface RepertoireLineMatch {
+  chapter: string;
+  lineName: string;
+  gameIndex: number;
+  /** Halbzüge bis zur Stellung auf der Hauptlinie (0 = Start); -1 = nur in einer Variante. */
+  ply: number;
+}
+
+/** Ein Repertoire mit allen Linien, in denen die gesuchte Stellung vorkommt. */
+export interface RepertoirePositionMatch {
+  repertoireId: number;
+  repertoireName: string;
+  kind: string;
+  lines: RepertoireLineMatch[];
+}
+
+export interface PositionLookupResult {
+  repertoires: RepertoirePositionMatch[];
+}
+
 /** Öffentliche Sicht einer geteilten Einzel-Linie (Nur-Ansehen-Link `/l/{token}`). */
 export interface SharedLine {
   shareToken: string;
@@ -95,6 +116,11 @@ export class RepertoireService {
   /** Kombinierter PGN-Text (zum Anzeigen, nicht als Blob-Download). */
   getPgnText(id: number): Observable<string> {
     return this.http.get(`${this.apiUrl}/${id}/pgn`, { responseType: 'text' });
+  }
+
+  /** „In welchen eigenen Repertoire-Linien kommt diese Stellung vor?" (Repertoire → Kapitel → Linie). */
+  lookupPosition(fen: string): Observable<PositionLookupResult> {
+    return this.http.post<PositionLookupResult>(`${this.apiUrl}/position-lookup`, { fen });
   }
 
   /** PGN-Datei hochladen (multipart). */

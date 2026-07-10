@@ -19,6 +19,7 @@ import { AnalysisBoardComponent } from './analysis-board.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine } from './analysis-engine.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 
 interface LineNode { san: string; fen: string; uci: string; }
 interface EngineDisplayLine { evalText: string; san: string; positive: boolean; }
@@ -36,7 +37,8 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, TranslateModule, AnalysisBoardComponent, PositionSetupComponent
+    MatTooltipModule, TranslateModule, AnalysisBoardComponent, PositionSetupComponent,
+    PositionRepertoiresComponent
   ],
   template: `
     <div class="analysis-page">
@@ -138,6 +140,12 @@ const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
                   }
                 </div>
               }
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="reps-card">
+            <mat-card-content>
+              <app-position-repertoires [fen]="currentFen" />
             </mat-card-content>
           </mat-card>
 

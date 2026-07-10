@@ -181,6 +181,9 @@ export class RepertoireDetailComponent implements OnInit {
   repertoire: RepertoireDetail | null = null;
   loading = true;
   mode: ViewMode = 'lines';
+  /** Deep-Link-Ziel aus der Stellungssuche („Ansehen"): lineKey + Halbzug, einmalig nach dem Laden angewandt. */
+  private focusLineKey: string | null = null;
+  private focusPly: number | null = null;
   id!: number;
 
   constructor(
@@ -215,6 +218,12 @@ export class RepertoireDetailComponent implements OnInit {
     if (modeParam === 'tree' || modeParam === 'edit') {
       this.mode = modeParam;
     }
+    // Deep-Link „Ansehen" aus der Stellungssuche: ?line=<lineKey>&ply=<n> → nach dem Laden auf genau
+    // diese Linie springen (Linien-Ansicht) und bis zur gesuchten Stellung vorspulen.
+    this.focusLineKey = this.route.snapshot.queryParamMap.get('line');
+    const plyParam = this.route.snapshot.queryParamMap.get('ply');
+    this.focusPly = plyParam != null ? parseInt(plyParam, 10) : null;
+    if (this.focusLineKey && !modeParam) this.mode = 'lines';
     this.loadRepertoire();
   }
 
@@ -274,11 +283,26 @@ export class RepertoireDetailComponent implements OnInit {
       next: (pgn) => {
         this.viewerService.loadPgn(pgn);
         this.treeService.buildTree(pgn);
+        this.applyFocusLine();
       },
       error: () => {
         this.viewerService.loadPgn('');
         this.treeService.buildTree('');
       }
     });
+  }
+
+  /** Springt einmalig auf die per Deep-Link (?line=&ply=) gewählte Linie/Stellung (Stellungssuche „Ansehen"). */
+  private applyFocusLine(): void {
+    if (!this.focusLineKey) return;
+    const key = this.focusLineKey;
+    const ply = this.focusPly;
+    this.focusLineKey = null; // nur einmal anwenden
+    this.focusPly = null;
+    const index = this.viewerService.lines.findIndex(l => l.lineKey === key);
+    if (index < 0) return;
+    this.mode = 'lines';
+    this.viewerService.selectLine(index);
+    if (ply != null && ply > 0) this.viewerService.goToMove(ply - 1);
   }
 }

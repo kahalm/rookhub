@@ -376,6 +376,16 @@
       "showAria": "Kachel einblenden"
     }
   },
+  "positionInReps": {
+    "button": "In welchen Repertoires?",
+    "loading": "Durchsuche deine Repertoires…",
+    "error": "Suche fehlgeschlagen. Bitte erneut versuchen.",
+    "none": "Diese Stellung kommt in keinem deiner Repertoires vor.",
+    "foundCount": "{{reps}} Repertoire(s) · {{lines}} Linie(n)",
+    "unnamedLine": "(unbenannte Linie)",
+    "train": "Diese Linie trainieren",
+    "view": "Diese Linie ansehen"
+  },
   "pgnViewer": {
     "gameLabel": "Partie",
   "catalog": {

@@ -10,6 +10,7 @@ import { ChessBoardComponent } from './chess-board.component';
 import { MoveListComponent } from './move-list.component';
 import { PgnViewerService } from './pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { PositionRepertoiresComponent } from '../../features/repertoire/position-repertoires.component';
 
 export interface PgnViewerData {
   pgn: string;
@@ -23,6 +24,7 @@ export interface PgnViewerData {
   imports: [
     CommonModule, MatDialogModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatFormFieldModule, TranslateModule, ChessBoardComponent, MoveListComponent,
+    PositionRepertoiresComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -105,6 +107,7 @@ export interface PgnViewerData {
               <mat-icon>swap_vert</mat-icon>
             </button>
           </div>
+          <app-position-repertoires class="pr-slot" [fen]="service.currentFen" (navigated)="dialogRef.close()" />
         </div>
         <div class="moves-section">
           @if (service.currentGame; as game) {
@@ -177,6 +180,7 @@ export interface PgnViewerData {
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav-buttons { display: flex; gap: 4px; }
+    .pr-slot { display: block; width: 100%; }
     .moves-section {
       flex: 1;
       overflow: hidden;

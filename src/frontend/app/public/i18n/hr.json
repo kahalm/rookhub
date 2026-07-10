@@ -376,6 +376,16 @@
       "showAria": "Prikaži pločicu"
     }
   },
+  "positionInReps": {
+    "button": "U kojim repertoarima?",
+    "loading": "Pretražujem tvoje repertoare…",
+    "error": "Pretraga nije uspjela. Pokušaj ponovno.",
+    "none": "Ova pozicija nije ni u jednom tvom repertoaru.",
+    "foundCount": "{{reps}} repertoar(a) · {{lines}} linija",
+    "unnamedLine": "(neimenovana linija)",
+    "train": "Treniraj ovu liniju",
+    "view": "Pogledaj ovu liniju"
+  },
   "pgnViewer": {
     "gameLabel": "Partija",
   "catalog": {

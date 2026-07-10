@@ -376,6 +376,16 @@
       "showAria": "Show tile"
     }
   },
+  "positionInReps": {
+    "button": "In which repertoires?",
+    "loading": "Searching your repertoires…",
+    "error": "Search failed. Please try again.",
+    "none": "This position isn't in any of your repertoires.",
+    "foundCount": "{{reps}} repertoire(s) · {{lines}} line(s)",
+    "unnamedLine": "(unnamed line)",
+    "train": "Train this line",
+    "view": "View this line"
+  },
   "pgnViewer": {
     "gameLabel": "Game",
   "catalog": {

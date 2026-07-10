@@ -10,6 +10,7 @@ public class RepertoireService
 {
     private readonly AppDbContext _db;
     private readonly RepertoireAnalyzeService _analyzeCache;
+    private readonly RepertoirePositionLookupService? _positionLookup;
     private readonly FriendService _friends;
     private readonly NotificationService _notifications;
     public const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
@@ -23,12 +24,20 @@ public class RepertoireService
 
     // FriendService/NotificationService sind optional, damit bestehende Test-Konstruktionen ohne
     // Änderung kompilieren; im DI-Container werden immer die echten Instanzen injiziert.
-    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService? friends = null, NotificationService? notifications = null)
+    public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService? friends = null, NotificationService? notifications = null, RepertoirePositionLookupService? positionLookup = null)
     {
         _db = db;
         _analyzeCache = analyzeCache;
+        _positionLookup = positionLookup;
         _notifications = notifications ?? new NotificationService(db);
         _friends = friends ?? new FriendService(db, _notifications);
+    }
+
+    /// <summary>Beide Repertoire-Positions-Caches eines Users invalidieren (Extension-Analyse + Stellungssuche).</summary>
+    private void InvalidateCaches(int userId)
+    {
+        _analyzeCache.Invalidate(userId);
+        _positionLookup?.Invalidate(userId);
     }
 
     /// <summary>Gehört das Repertoire dem User? (Schreib-/Verwaltungs-Rechte — nur der Besitzer.)</summary>
@@ -183,6 +192,7 @@ public class RepertoireService
             .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
 
+        var nameChanged = dto.Name != null && dto.Name != rep.Name;
         if (dto.Name != null) rep.Name = dto.Name;
         if (dto.Description != null) rep.Description = dto.Description;
         if (dto.IsPublic.HasValue) rep.IsPublic = dto.IsPublic.Value;
@@ -197,6 +207,8 @@ public class RepertoireService
 
         await _db.SaveChangesAsync();
         if (kindChanged || extChanged) _analyzeCache.Invalidate(userId);
+        // Stellungssuche zeigt Name/Kind je Treffer → auch bei Namens-/Kind-Änderung verwerfen.
+        if (kindChanged || nameChanged) _positionLookup?.Invalidate(userId);
 
         var fileCount = await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == id);
 
@@ -224,7 +236,7 @@ public class RepertoireService
         _db.RepertoireShares.RemoveRange(_db.RepertoireShares.Where(s => s.RepertoireId == id));
         _db.Repertoires.Remove(rep);
         await _db.SaveChangesAsync();
-        _analyzeCache.Invalidate(userId);
+        InvalidateCaches(userId);
     }
 
     // --- Repertoire mit ausgewählten Personen teilen (analog CourseService) -------------------
@@ -367,7 +379,7 @@ public class RepertoireService
         rep.UpdatedAt = DateTime.UtcNow;
         rep.ImportVersion = ImportPipeline.CurrentVersion; // frisch aufbereiteter Inhalt = aktuelle Pipeline
         await _db.SaveChangesAsync();
-        _analyzeCache.Invalidate(userId);
+        InvalidateCaches(userId);
 
         return new RepertoireFileDto
         {
@@ -401,7 +413,7 @@ public class RepertoireService
         _db.RepertoireFiles.Remove(file);
         file.Repertoire.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-        _analyzeCache.Invalidate(userId);
+        InvalidateCaches(userId);
     }
 
     public async Task<string> GetCombinedPgnAsync(int repertoireId, int userId)

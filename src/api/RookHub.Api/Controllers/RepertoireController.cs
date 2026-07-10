@@ -16,8 +16,9 @@ public class RepertoireController : BaseApiController
     private readonly RepertoireTrainingService _training;
     private readonly CourseService _courseService;
     private readonly SharedLineService _sharedLines;
+    private readonly RepertoirePositionLookupService _positionLookup;
 
-    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines)
+    public RepertoireController(RepertoireService repertoireService, ImportReprocessService reprocess, IReprocessLauncher reprocessLauncher, RepertoireTrainingService training, CourseService courseService, SharedLineService sharedLines, RepertoirePositionLookupService positionLookup)
     {
         _repertoireService = repertoireService;
         _reprocess = reprocess;
@@ -25,6 +26,18 @@ public class RepertoireController : BaseApiController
         _training = training;
         _courseService = courseService;
         _sharedLines = sharedLines;
+        _positionLookup = positionLookup;
+    }
+
+    // ===== Stellungs-Rückwärtssuche: „In welchen Repertoire-Linien kommt diese Stellung vor?" =====
+
+    /// <summary>Findet alle eigenen Repertoire-Linien (Repertoire → Kapitel → Linie), in denen die
+    /// gegebene Stellung vorkommt (Zugumstellungen inklusive). Literale Route MUSS vor `{id}` stehen.</summary>
+    [HttpPost("position-lookup")]
+    public async Task<ActionResult<PositionLookupResultDto>> PositionLookup([FromBody] PositionLookupRequestDto dto, CancellationToken ct)
+    {
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        return Ok(await _positionLookup.LookupAsync(GetUserId(), dto.Fen, ct));
     }
 
     // ===== Einzelne Linie öffentlich teilen (Nur-Ansehen-Link /l/{token}) =====
