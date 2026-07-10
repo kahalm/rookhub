@@ -18,7 +18,7 @@ import {
   latestCommentUpTo as latestCommentUpToUtil,
   displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
 } from './book-comment.util';
-import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatSecondsClock } from './book-nav.util';
+import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatSecondsClock, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -1125,6 +1125,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** mm:ss bzw. h:mm:ss aus Sekunden (für die Kurs-Zeitanzeige). */
   courseTime(seconds: number): string { return formatSecondsClock(seconds); }
+
+  /** Geschätzte Restzeit für das ganze Buch/Kapitel bei bisherigem Tempo (z. B. „~1 h 20 min").
+   *  `null`, solange nichts abschätzbar ist (nichts versucht bzw. alles gelöst). */
+  courseEta(stats: CourseScopeStats): string | null {
+    const secs = estimateRemainingSeconds(stats);
+    return secs == null ? null : formatEtaShort(secs);
+  }
 
   /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */
   private loadDaily(dateParam: string): void {

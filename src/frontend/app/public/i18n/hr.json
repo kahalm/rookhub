@@ -1532,6 +1532,7 @@
       "noChapter": "Bez poglavlja",
       "accuracyHint": "Stopa pogodaka (1. pokušaj)",
       "timeHint": "Ukupno utrošeno vrijeme",
+      "etaHint": "Procijenjeno preostalo vrijeme do kraja pri tvojem dosadašnjem tempu",
       "switchLinkedTooltip": "Prebaci na {{name}}"
     },
     "weekly": {

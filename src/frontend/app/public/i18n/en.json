@@ -1534,6 +1534,7 @@
       "noChapter": "No chapter",
       "accuracyHint": "First-try success rate",
       "timeHint": "Total time spent",
+      "etaHint": "Estimated time left to finish at your current pace",
       "switchLinkedTooltip": "Switch to {{name}}"
     },
     "weekly": {

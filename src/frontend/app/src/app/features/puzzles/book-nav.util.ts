@@ -36,3 +36,24 @@ export function formatSecondsClock(seconds: number): string {
   const p2 = (n: number) => n.toString().padStart(2, '0');
   return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
 }
+
+/** Grobe Restzeit-Schätzung als `N min` bzw. `H h M min` (mind. 1 min). Für die Kurs-ETA
+ *  „so lange dauert noch das ganze Buch/Kapitel bei deinem bisherigen Tempo". */
+export function formatEtaShort(seconds: number): string {
+  const totalMin = Math.max(1, Math.round(Math.max(0, seconds) / 60));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m} min`;
+  return m > 0 ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** Geschätzte Restzeit (Sekunden), um die noch offenen Puzzles eines Scopes (Buch/Kapitel) zu lösen,
+ *  extrapoliert aus der bisher pro angefasstem Puzzle verbrachten Zeit. `null`, wenn nichts abschätzbar
+ *  (nichts versucht bzw. bereits alles gelöst). */
+export function estimateRemainingSeconds(stats: { total: number; solvedCount: number; attemptedCount: number; totalSeconds: number }): number | null {
+  const remaining = stats.total - stats.solvedCount;
+  if (remaining <= 0) return null;
+  if (stats.attemptedCount <= 0 || stats.totalSeconds <= 0) return null;
+  const perPuzzle = stats.totalSeconds / stats.attemptedCount;
+  return Math.round(perPuzzle * remaining);
+}

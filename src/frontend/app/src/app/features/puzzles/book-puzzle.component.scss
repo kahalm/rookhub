@@ -98,6 +98,8 @@
     .context-card .course-stats .cs-stats > span { display: inline-flex; align-items: center; gap: 0.2rem; }
     .context-card .course-stats .cs-stats mat-icon { font-size: 1.05em; width: 1.05em; height: 1.05em; }
     .context-card .course-stats .cs-acc mat-icon { color: #2e7d32; }
+    .context-card .course-stats .cs-eta { color: color-mix(in srgb, currentColor 65%, transparent); }
+    .context-card .course-stats .cs-eta mat-icon { color: #6a5acd; }
     .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: #2e7d32; font-weight: 600; margin: 0.5rem 0 0; }
     .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
     .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }

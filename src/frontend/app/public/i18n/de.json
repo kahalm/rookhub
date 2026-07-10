@@ -1534,6 +1534,7 @@
       "noChapter": "Ohne Kapitel",
       "accuracyHint": "Trefferquote (1. Versuch)",
       "timeHint": "Gesamte aufgewendete Zeit",
+      "etaHint": "Geschätzte Restzeit bis zum Abschluss bei deinem bisherigen Tempo",
       "switchLinkedTooltip": "Zu {{name}} wechseln"
     },
     "weekly": {

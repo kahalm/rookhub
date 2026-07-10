@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.290.0';
+export const APP_VERSION = '0.291.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.0", date: "2026-07-10", changes: [
+    { en: "Course solving now shows an estimated time-to-finish next to the elapsed time — for BOTH the whole book and the current chapter (⏳ ~1 h 20 min). The estimate extrapolates from your pace so far (total time ÷ puzzles attempted × puzzles still open) and disappears once a scope is complete. Frontend-only (uses the stats already returned per solve). +util tests.", de: "Beim Kurslösen steht jetzt neben der aufgewendeten Zeit eine geschätzte Restzeit bis zum Abschluss — für BEIDES, das ganze Buch UND das aktuelle Kapitel (⏳ ~1 h 20 min). Die Schätzung extrapoliert dein bisheriges Tempo (Gesamtzeit ÷ angefasste Puzzles × noch offene Puzzles) und verschwindet, sobald ein Bereich fertig ist. Nur Frontend (nutzt die ohnehin je Lösung gelieferte Statistik). +Util-Tests." },
+  ]},
   { version: "0.290.0", date: "2026-07-10", changes: [
     { en: "New „Remembered“ page: shows the positions you saved from Chessable via the RepCheck extension (its „Remember line“ button). Each entry shows a board preview of the FEN, the course name (linked back to Chessable when available) and when it was captured, plus actions: open in Analysis, copy FEN, and delete. New nav entry (logged-in), route /remembered, and a delete endpoint DELETE /api/extension/remembered-lines/{id}. +1 backend test.", de: "Neue Seite „Gemerkt“: zeigt die Stellungen, die du über die RepCheck-Extension aus Chessable gemerkt hast (Knopf „Remember line“). Jeder Eintrag zeigt eine Brett-Vorschau der FEN, den Kursnamen (mit Rücklink zu Chessable, wenn vorhanden) und wann er erfasst wurde, dazu Aktionen: In Analyse öffnen, FEN kopieren und Löschen. Neuer Menüpunkt (eingeloggt), Route /remembered und ein Lösch-Endpoint DELETE /api/extension/remembered-lines/{id}. +1 Backend-Test." },
   ]},

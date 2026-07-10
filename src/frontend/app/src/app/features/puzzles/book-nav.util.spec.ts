@@ -1,4 +1,4 @@
-import { formatUtcDate, shiftDailyDate, weeklyStartIndex, formatSecondsClock } from './book-nav.util';
+import { formatUtcDate, shiftDailyDate, weeklyStartIndex, formatSecondsClock, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
 
 describe('book-nav.util', () => {
   describe('formatUtcDate', () => {
@@ -39,6 +39,27 @@ describe('book-nav.util', () => {
       expect(formatSecondsClock(3661)).toBe('1:01:01');
       expect(formatSecondsClock(-5)).toBe('0:00');   // negativ → 0
       expect(formatSecondsClock(90.9)).toBe('1:30');  // floored
+    });
+  });
+
+  describe('formatEtaShort', () => {
+    it('rundet auf Minuten (mind. 1) bzw. Stunden+Minuten', () => {
+      expect(formatEtaShort(0)).toBe('1 min');       // mind. 1 min
+      expect(formatEtaShort(30)).toBe('1 min');
+      expect(formatEtaShort(150)).toBe('3 min');     // 2,5 min → 3
+      expect(formatEtaShort(60 * 60)).toBe('1 h');
+      expect(formatEtaShort(80 * 60)).toBe('1 h 20 min');
+    });
+  });
+
+  describe('estimateRemainingSeconds', () => {
+    it('extrapoliert aus Zeit pro angefasstem Puzzle × offene Puzzles', () => {
+      // 5 versucht, 300 s → 60 s/Puzzle; 10 gesamt, 4 gelöst → 6 offen → 360 s
+      expect(estimateRemainingSeconds({ total: 10, solvedCount: 4, attemptedCount: 5, totalSeconds: 300 })).toBe(360);
+    });
+    it('liefert null wenn alles gelöst oder nichts versucht', () => {
+      expect(estimateRemainingSeconds({ total: 10, solvedCount: 10, attemptedCount: 10, totalSeconds: 600 })).toBeNull();
+      expect(estimateRemainingSeconds({ total: 10, solvedCount: 0, attemptedCount: 0, totalSeconds: 0 })).toBeNull();
     });
   });
 });

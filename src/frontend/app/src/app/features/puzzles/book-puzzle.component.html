@@ -158,6 +158,11 @@
                           <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
                             <mat-icon>schedule</mat-icon>{{ courseTime(bk.totalSeconds) }}
                           </span>
+                          @if (courseEta(bk); as eta) {
+                            <span class="cs-eta" [matTooltip]="'book.course.etaHint' | translate">
+                              <mat-icon>hourglass_bottom</mat-icon>~{{ eta }}
+                            </span>
+                          }
                         </div>
                       </div>
                       <!-- Aktuelles Kapitel (nur wenn das Buch mehrere Kapitel hat) -->
@@ -175,6 +180,11 @@
                             <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
                               <mat-icon>schedule</mat-icon>{{ courseTime(ch.totalSeconds) }}
                             </span>
+                            @if (courseEta(ch); as eta) {
+                              <span class="cs-eta" [matTooltip]="'book.course.etaHint' | translate">
+                                <mat-icon>hourglass_bottom</mat-icon>~{{ eta }}
+                              </span>
+                            }
                           </div>
                         </div>
                       }
