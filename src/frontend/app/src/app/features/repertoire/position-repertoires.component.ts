@@ -52,6 +52,7 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
                   <button class="pr-rep-head" (click)="toggleRep(rep.repertoireId)">
                     <mat-icon>{{ isRepOpen(rep.repertoireId) ? 'expand_more' : 'chevron_right' }}</mat-icon>
                     <span class="pr-rep-name">{{ rep.repertoireName }}</span>
+                    @if (rep.shared) { <span class="pr-shared" [matTooltip]="'positionInReps.sharedHint' | translate"><mat-icon>group</mat-icon>{{ 'positionInReps.sharedBadge' | translate }}</span> }
                     <span class="pr-badge">{{ rep.lines.length }}</span>
                   </button>
                   @if (isRepOpen(rep.repertoireId)) {
@@ -96,6 +97,8 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
     .pr-rep-head:hover { background: color-mix(in srgb, currentColor 7%, transparent); border-radius: 4px; }
     .pr-rep-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pr-badge { font-size: .72rem; background: #1976d2; color: #fff; border-radius: 10px; padding: 1px 7px; }
+    .pr-shared { display: inline-flex; align-items: center; gap: 2px; font-size: .68rem; color: color-mix(in srgb, currentColor 65%, transparent); border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 10px; padding: 0 6px 0 3px; }
+    .pr-shared mat-icon { font-size: 13px; width: 13px; height: 13px; }
     .pr-chapter { margin: 2px 0 6px 22px; }
     .pr-chapter-name { font-size: .78rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 4px 0 2px; }
     .pr-line { display: flex; align-items: center; gap: 6px; padding-left: 6px; }

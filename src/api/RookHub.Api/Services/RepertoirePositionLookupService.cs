@@ -74,6 +74,7 @@ public class RepertoirePositionLookupService
                 RepertoireId = first.RepertoireId,
                 RepertoireName = first.RepertoireName,
                 Kind = first.Kind,
+                Shared = first.Shared,
             };
             // Ein Eintrag pro Linie (gameIndex); niedrigsten echten Ply bevorzugen.
             foreach (var lineGroup in repGroup.GroupBy(o => o.GameIndex).OrderBy(g => g.Key))
@@ -93,7 +94,7 @@ public class RepertoirePositionLookupService
     }
 
     private sealed record Occurrence(
-        int RepertoireId, string RepertoireName, string Kind,
+        int RepertoireId, string RepertoireName, string Kind, bool Shared,
         string Chapter, string LineName, int GameIndex, int Ply);
 
     private async Task<Dictionary<string, List<Occurrence>>> GetIndexAsync(int userId, CancellationToken ct)
@@ -102,16 +103,19 @@ public class RepertoirePositionLookupService
         if (_cache.TryGetValue<Dictionary<string, List<Occurrence>>>(key, out var cached) && cached != null)
             return cached;
 
-        // Reihenfolge (Repertoire.Id, dann File.Id) muss mit GetCombinedPgnAsync + parsePgnText
-        // übereinstimmen, damit gameIndex zwischen Server und Client dieselbe Linie meint.
+        // Eigene UND mit dem User geteilte Repertoires. Reihenfolge (Repertoire.Id, dann File.Id) muss
+        // mit GetCombinedPgnAsync + parsePgnText übereinstimmen, damit gameIndex zwischen Server und
+        // Client dieselbe Linie meint (gameIndex ist pro Repertoire, das Mischen owned/geteilt ist egal).
         var reps = await _db.Repertoires
-            .Where(r => r.UserId == userId)
+            .Where(r => r.UserId == userId
+                || _db.RepertoireShares.Any(s => s.RepertoireId == r.Id && s.RecipientId == userId))
             .OrderBy(r => r.Id)
             .Select(r => new
             {
                 r.Id,
                 r.Name,
                 r.Kind,
+                Owned = r.UserId == userId,
                 Pgns = r.Files.OrderBy(f => f.Id).Select(f => f.PgnContent).ToList(),
             })
             .ToListAsync(ct);
@@ -130,7 +134,7 @@ public class RepertoirePositionLookupService
                 foreach (var game in games)
                 {
                     if (gamesSeen++ > MaxGamesPerUser) break;
-                    IndexGame(index, rep.Id, rep.Name, kindName, game, gameIndex);
+                    IndexGame(index, rep.Id, rep.Name, kindName, !rep.Owned, game, gameIndex);
                     gameIndex++;
                 }
             }
@@ -145,7 +149,7 @@ public class RepertoirePositionLookupService
     }
 
     private static void IndexGame(Dictionary<string, List<Occurrence>> index,
-        int repId, string repName, string kind, ParsedGame game, int gameIndex)
+        int repId, string repName, string kind, bool shared, ParsedGame game, int gameIndex)
     {
         // Pro Linie zuerst die beste (kleinste echte) Ply je Stellung sammeln, dann in den Index legen.
         var perLine = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -156,7 +160,7 @@ public class RepertoirePositionLookupService
         foreach (var (norm, ply) in perLine)
         {
             var list = index.TryGetValue(norm, out var l) ? l : (index[norm] = new List<Occurrence>());
-            list.Add(new Occurrence(repId, repName, kind, game.Chapter, game.LineName, gameIndex, ply));
+            list.Add(new Occurrence(repId, repName, kind, shared, game.Chapter, game.LineName, gameIndex, ply));
         }
     }
 

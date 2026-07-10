@@ -18,6 +18,8 @@ public class RepertoirePositionMatchDto
     public string RepertoireName { get; set; } = string.Empty;
     /// <summary>Enum-Name des <see cref="Models.RepertoireKind"/> (None/Opening/Middlegame/Endgame).</summary>
     public string Kind { get; set; } = string.Empty;
+    /// <summary><c>true</c>, wenn dieses Repertoire mit dem User geteilt wurde (nicht sein eigenes).</summary>
+    public bool Shared { get; set; }
     public List<RepertoireLineMatchDto> Lines { get; set; } = new();
 }
 

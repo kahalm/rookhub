@@ -49,6 +49,12 @@ public class RepertoirePositionLookupServiceTests : IDisposable
         return rep.Id;
     }
 
+    private async Task ShareAsync(int repertoireId, int ownerId, int recipientId)
+    {
+        _db.RepertoireShares.Add(new RepertoireShare { RepertoireId = repertoireId, OwnerId = ownerId, RecipientId = recipientId });
+        await _db.SaveChangesAsync();
+    }
+
     /// <summary>Baut die normalisierte FEN nach einer SAN-Zugfolge — robust gegen FEN-Tippfehler im Test.</summary>
     private static string FenAfter(params string[] sans)
     {
@@ -72,11 +78,28 @@ public class RepertoirePositionLookupServiceTests : IDisposable
         var rep = Assert.Single(res.Repertoires);
         Assert.Equal("My Sicilian", rep.RepertoireName);
         Assert.Equal("Opening", rep.Kind);
+        Assert.False(rep.Shared);
         var line = Assert.Single(rep.Lines);
         Assert.Equal("Sicilian Defence", line.Chapter);          // [Black]
         Assert.Equal("Open Sicilian: 2...d6", line.LineName);      // [White]
         Assert.Equal(0, line.GameIndex);
         Assert.Equal(3, line.Ply);
+    }
+
+    [Fact]
+    public async Task Lookup_IncludesRepertoiresSharedWithMe_FlaggedShared()
+    {
+        var me = await AddUserAsync("me");
+        var owner = await AddUserAsync("owner");
+        var repId = await AddRepertoireAsync(owner, "Owner's Sicilian", SicilianPgn);
+        await ShareAsync(repId, owner, me);
+
+        var res = await _svc.LookupAsync(me, FenAfter("e4", "c5", "Nf3"), CancellationToken.None);
+
+        var rep = Assert.Single(res.Repertoires);
+        Assert.Equal("Owner's Sicilian", rep.RepertoireName);
+        Assert.True(rep.Shared);
+        Assert.Single(rep.Lines);
     }
 
     [Fact]

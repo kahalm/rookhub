@@ -385,7 +385,9 @@
     "foundCount": "{{reps}} repertoire(s) · {{lines}} line(s)",
     "unnamedLine": "(unnamed line)",
     "train": "Train this line",
-    "view": "View this line"
+    "view": "View this line",
+    "sharedBadge": "shared",
+    "sharedHint": "Shared with you by another user"
   },
   "pgnViewer": {
     "gameLabel": "Game",

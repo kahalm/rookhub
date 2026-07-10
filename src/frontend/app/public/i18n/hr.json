@@ -385,7 +385,9 @@
     "foundCount": "{{reps}} repertoar(a) · {{lines}} linija",
     "unnamedLine": "(neimenovana linija)",
     "train": "Treniraj ovu liniju",
-    "view": "Pogledaj ovu liniju"
+    "view": "Pogledaj ovu liniju",
+    "sharedBadge": "podijeljeno",
+    "sharedHint": "Podijelio s tobom drugi korisnik"
   },
   "pgnViewer": {
     "gameLabel": "Partija",

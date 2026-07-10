@@ -35,6 +35,8 @@ export interface RepertoirePositionMatch {
   repertoireId: number;
   repertoireName: string;
   kind: string;
+  /** true = mit dem Nutzer geteiltes (fremdes) Repertoire, nicht sein eigenes. */
+  shared: boolean;
   lines: RepertoireLineMatch[];
 }
 

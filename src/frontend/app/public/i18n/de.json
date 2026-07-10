@@ -385,7 +385,9 @@
     "foundCount": "{{reps}} Repertoire(s) · {{lines}} Linie(n)",
     "unnamedLine": "(unbenannte Linie)",
     "train": "Diese Linie trainieren",
-    "view": "Diese Linie ansehen"
+    "view": "Diese Linie ansehen",
+    "sharedBadge": "geteilt",
+    "sharedHint": "Von einem anderen Nutzer mit dir geteilt"
   },
   "pgnViewer": {
     "gameLabel": "Partie",

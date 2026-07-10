@@ -6,7 +6,7 @@ describe('PositionRepertoiresComponent', () => {
   const result: PositionLookupResult = {
     repertoires: [
       {
-        repertoireId: 7, repertoireName: 'My Sicilian', kind: 'Opening',
+        repertoireId: 7, repertoireName: 'My Sicilian', kind: 'Opening', shared: false,
         lines: [
           { chapter: 'Najdorf', lineName: 'Main line', gameIndex: 0, ply: 6 },
           { chapter: 'Najdorf', lineName: 'English Attack', gameIndex: 1, ply: 8 },

@@ -40,6 +40,19 @@ public class RepertoireService
         _positionLookup?.Invalidate(userId);
     }
 
+    /// <summary>Stellungssuche-Cache aller Empfänger eines geteilten Repertoires invalidieren — deren
+    /// Index enthält dieses Repertoire ebenfalls (Extension-Analyse nutzt nur eigene, daher hier nicht).
+    /// <paramref name="recipientIds"/> wird bei Lösch-Operationen VOR dem Entfernen der Shares übergeben.</summary>
+    private async Task InvalidateRecipientPositionCachesAsync(int repertoireId, IEnumerable<int>? recipientIds = null)
+    {
+        if (_positionLookup == null) return;
+        var ids = recipientIds?.ToList() ?? await _db.RepertoireShares
+            .Where(s => s.RepertoireId == repertoireId)
+            .Select(s => s.RecipientId)
+            .ToListAsync();
+        foreach (var rid in ids) _positionLookup.Invalidate(rid);
+    }
+
     /// <summary>Gehört das Repertoire dem User? (Schreib-/Verwaltungs-Rechte — nur der Besitzer.)</summary>
     public Task<bool> IsOwnerAsync(int repertoireId, int userId)
         => _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId);
@@ -207,8 +220,13 @@ public class RepertoireService
 
         await _db.SaveChangesAsync();
         if (kindChanged || extChanged) _analyzeCache.Invalidate(userId);
-        // Stellungssuche zeigt Name/Kind je Treffer → auch bei Namens-/Kind-Änderung verwerfen.
-        if (kindChanged || nameChanged) _positionLookup?.Invalidate(userId);
+        // Stellungssuche zeigt Name/Kind je Treffer → auch bei Namens-/Kind-Änderung verwerfen
+        // (eigener Cache + der aller Freigabe-Empfänger).
+        if (kindChanged || nameChanged)
+        {
+            _positionLookup?.Invalidate(userId);
+            await InvalidateRecipientPositionCachesAsync(id);
+        }
 
         var fileCount = await _db.RepertoireFiles.CountAsync(f => f.RepertoireId == id);
 
@@ -232,11 +250,15 @@ public class RepertoireService
         var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
             ?? throw new KeyNotFoundException("Repertoire not found.");
 
+        // Empfänger VOR dem Entfernen der Shares merken (danach nicht mehr abfragbar).
+        var recipientIds = await _db.RepertoireShares
+            .Where(s => s.RepertoireId == id).Select(s => s.RecipientId).ToListAsync();
         // Freigaben explizit entfernen (FK-Cascade greift bei InMemory-Tests nicht).
         _db.RepertoireShares.RemoveRange(_db.RepertoireShares.Where(s => s.RepertoireId == id));
         _db.Repertoires.Remove(rep);
         await _db.SaveChangesAsync();
         InvalidateCaches(userId);
+        await InvalidateRecipientPositionCachesAsync(id, recipientIds);
     }
 
     // --- Repertoire mit ausgewählten Personen teilen (analog CourseService) -------------------
@@ -295,6 +317,9 @@ public class RepertoireService
             var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
             await _notifications.CreateManyAsync(toNotify, NotificationType.RepertoireShared,
                 new Dictionary<string, string> { ["username"] = ownerName, ["repertoireName"] = rep.Name }, "/repertoires");
+
+            // Neue Empfänger: Stellungssuche-Cache verwerfen, damit das Repertoire dort sofort auftaucht.
+            foreach (var rid in toNotify) _positionLookup?.Invalidate(rid);
         }
 
         return result;
@@ -326,6 +351,8 @@ public class RepertoireService
         if (share == null) return;
         _db.RepertoireShares.Remove(share);
         await _db.SaveChangesAsync();
+        // Empfänger verliert Zugriff → Stellungssuche-Cache verwerfen, damit das Repertoire verschwindet.
+        _positionLookup?.Invalidate(recipientId);
     }
 
     public async Task<RepertoireFileDto> UploadFileAsync(int repertoireId, int userId, string fileName, Stream fileStream)
@@ -380,6 +407,7 @@ public class RepertoireService
         rep.ImportVersion = ImportPipeline.CurrentVersion; // frisch aufbereiteter Inhalt = aktuelle Pipeline
         await _db.SaveChangesAsync();
         InvalidateCaches(userId);
+        await InvalidateRecipientPositionCachesAsync(repertoireId);
 
         return new RepertoireFileDto
         {
@@ -414,6 +442,7 @@ public class RepertoireService
         file.Repertoire.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         InvalidateCaches(userId);
+        await InvalidateRecipientPositionCachesAsync(repertoireId);
     }
 
     public async Task<string> GetCombinedPgnAsync(int repertoireId, int userId)
