@@ -131,21 +131,27 @@ public class EndlessProgressService
 
     // --- Sessions ---
 
+    /// <summary>EINE Stelle, die aus dem DTO eine <see cref="EndlessSession"/> baut — vorher vier
+    /// Copy-Paste-Initialisierer, von denen die Bulk-Import-Kopien still PuzzleAttemptsJson
+    /// wegließen (importierte Läufe hatten keine Detail-Ansicht, falls der Client Puzzles mitschickt).</summary>
+    private static EndlessSession BuildSession(RecordEndlessSessionDto dto, int? userId, string? anonymousSessionId) => new()
+    {
+        UserId = userId,
+        AnonymousSessionId = anonymousSessionId,
+        Timestamp = dto.Timestamp,
+        TotalSolved = dto.TotalSolved,
+        MaxRating = dto.MaxRating,
+        DurationSeconds = dto.DurationSeconds,
+        ConfigJson = dto.ConfigJson,
+        MistakeAtRatings = dto.MistakeAtRatings,
+        Seed = dto.Seed,
+        ChainPuzzleIds = dto.ChainPuzzleIds,
+        PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
+    };
+
     public async Task<EndlessSessionDto> RecordSessionAsync(int userId, RecordEndlessSessionDto dto)
     {
-        var session = new EndlessSession
-        {
-            UserId = userId,
-            Timestamp = dto.Timestamp,
-            TotalSolved = dto.TotalSolved,
-            MaxRating = dto.MaxRating,
-            DurationSeconds = dto.DurationSeconds,
-            ConfigJson = dto.ConfigJson,
-            MistakeAtRatings = dto.MistakeAtRatings,
-            Seed = dto.Seed,
-            ChainPuzzleIds = dto.ChainPuzzleIds,
-            PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
-        };
+        var session = BuildSession(dto, userId, null);
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
@@ -156,25 +162,12 @@ public class EndlessProgressService
             "EndlessSessionCompleted: User {UserId} solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
             userId, dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
 
-        await TrimSessionsAsync(userId: userId);
-        return MapSessionDto(session);
+        return MapSessionDto(session);   // eingeloggte Sessions werden nicht getrimmt (unbegrenzt)
     }
 
     public async Task<EndlessSessionDto> RecordAnonymousSessionAsync(string sessionId, RecordEndlessSessionDto dto)
     {
-        var session = new EndlessSession
-        {
-            AnonymousSessionId = sessionId,
-            Timestamp = dto.Timestamp,
-            TotalSolved = dto.TotalSolved,
-            MaxRating = dto.MaxRating,
-            DurationSeconds = dto.DurationSeconds,
-            ConfigJson = dto.ConfigJson,
-            MistakeAtRatings = dto.MistakeAtRatings,
-            Seed = dto.Seed,
-            ChainPuzzleIds = dto.ChainPuzzleIds,
-            PuzzleAttemptsJson = SerializeAttempts(dto.Puzzles)
-        };
+        var session = BuildSession(dto, null, sessionId);
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
@@ -183,7 +176,7 @@ public class EndlessProgressService
             "EndlessSessionCompleted: Anonymous solved {TotalSolved} maxRating {MaxRating} in {DurationSeconds}s",
             dto.TotalSolved, dto.MaxRating, dto.DurationSeconds);
 
-        await TrimSessionsAsync(anonymousSessionId: sessionId);
+        await TrimAnonymousSessionsAsync(sessionId);
         return MapSessionDto(session);
     }
 
@@ -222,23 +215,11 @@ public class EndlessProgressService
         var count = 0;
         foreach (var dto in dtos)
         {
-            _db.EndlessSessions.Add(new EndlessSession
-            {
-                UserId = userId,
-                Timestamp = dto.Timestamp,
-                TotalSolved = dto.TotalSolved,
-                MaxRating = dto.MaxRating,
-                DurationSeconds = dto.DurationSeconds,
-                ConfigJson = dto.ConfigJson,
-                MistakeAtRatings = dto.MistakeAtRatings,
-                Seed = dto.Seed,
-                ChainPuzzleIds = dto.ChainPuzzleIds
-            });
+            _db.EndlessSessions.Add(BuildSession(dto, userId, null));
             count++;
         }
         await _db.SaveChangesAsync();
-        await TrimSessionsAsync(userId: userId);
-        return count;
+        return count;   // eingeloggte Sessions werden nicht getrimmt (unbegrenzt)
     }
 
     public async Task<int> BulkImportAnonymousSessionsAsync(string sessionId, List<RecordEndlessSessionDto> dtos)
@@ -246,22 +227,11 @@ public class EndlessProgressService
         var count = 0;
         foreach (var dto in dtos)
         {
-            _db.EndlessSessions.Add(new EndlessSession
-            {
-                AnonymousSessionId = sessionId,
-                Timestamp = dto.Timestamp,
-                TotalSolved = dto.TotalSolved,
-                MaxRating = dto.MaxRating,
-                DurationSeconds = dto.DurationSeconds,
-                ConfigJson = dto.ConfigJson,
-                MistakeAtRatings = dto.MistakeAtRatings,
-                Seed = dto.Seed,
-                ChainPuzzleIds = dto.ChainPuzzleIds
-            });
+            _db.EndlessSessions.Add(BuildSession(dto, null, sessionId));
             count++;
         }
         await _db.SaveChangesAsync();
-        await TrimSessionsAsync(anonymousSessionId: sessionId);
+        await TrimAnonymousSessionsAsync(sessionId);
         return count;
     }
 
@@ -323,8 +293,7 @@ public class EndlessProgressService
         }
 
         await _db.SaveChangesAsync();
-        await TrimSessionsAsync(userId: userId);
-        return transferred;
+        return transferred;   // eingeloggte Sessions werden nicht getrimmt (unbegrenzt)
     }
 
     // --- History ---
@@ -429,15 +398,11 @@ public class EndlessProgressService
 
     private record StoredAttempt(int PuzzleId, string? LichessId, int Rating, bool Solved);
 
-    private async Task TrimSessionsAsync(int? userId = null, string? anonymousSessionId = null)
+    /// <summary>Kappt anonyme Sessions auf <see cref="MaxSessions"/>. NUR anonyme — eingeloggte
+    /// Nutzer haben unbegrenzte Sessions (die früheren TrimSessionsAsync(userId:)-Aufrufe waren
+    /// No-ops und täuschten eine Kappung vor, die es nie gab).</summary>
+    private async Task TrimAnonymousSessionsAsync(string anonymousSessionId)
     {
-        // Authenticated users have unlimited sessions — only trim anonymous
-        if (userId.HasValue)
-            return;
-
-        if (anonymousSessionId == null)
-            return;
-
         var query = _db.EndlessSessions.Where(s => s.AnonymousSessionId == anonymousSessionId);
 
         var count = await query.CountAsync();

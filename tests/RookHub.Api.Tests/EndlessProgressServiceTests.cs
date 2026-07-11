@@ -436,6 +436,26 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task BulkImport_PersistsPuzzleAttempts_LikeRecordSession()
+    {
+        // Regression: die Bulk-Import-Kopie des Session-Initialisierers ließ PuzzleAttemptsJson
+        // still weg — mitgeschickte Puzzle-Versuche gingen (nur) beim Import verloren und die
+        // Detail-Ansicht importierter Läufe blieb leer. Jetzt EINE BuildSession-Factory.
+        var userId = await CreateUserAsync();
+        var dto = MakeSessionDto(timestamp: 100);
+        dto.Puzzles = new List<EndlessSessionPuzzleDto>
+        {
+            new() { PuzzleId = 7, LichessId = "abc", Rating = 1500, Solved = true },
+        };
+
+        await _service.BulkImportSessionsAsync(userId, new List<RecordEndlessSessionDto> { dto });
+
+        var session = await _db.EndlessSessions.SingleAsync();
+        Assert.NotNull(session.PuzzleAttemptsJson);
+        Assert.Contains("abc", session.PuzzleAttemptsJson);
+    }
+
+    [Fact]
     public async Task BulkImport_DoesNotTrimForAuthenticatedUsers()
     {
         var userId = await CreateUserAsync();

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.23';
+export const APP_VERSION = '0.291.24';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.24", date: "2026-07-12", changes: [
+    { en: "Fix+Refactor (endless mode, backend): the four copy-pasted EndlessSession initializers are now ONE factory — the bulk-import copies (localStorage migration) silently omitted the per-puzzle attempt details, so imported runs lost them and their detail view stayed empty. Also removed the three dead trim calls for signed-in users (the trim helper returned immediately for them, faking a session cap that never existed) — the helper is now explicitly anonymous-only. +1 backend test.", de: "Fix+Refactor (Endlos-Modus, Backend): die vier kopierten EndlessSession-Initialisierer sind jetzt EINE Factory — die Bulk-Import-Kopien (localStorage-Migration) ließen die Pro-Puzzle-Versuchsdetails still weg, importierte Läufe verloren sie und ihre Detail-Ansicht blieb leer. Außerdem die drei toten Trim-Aufrufe für eingeloggte Nutzer entfernt (der Trim-Helper kehrte für sie sofort zurück und täuschte eine Session-Kappung vor, die es nie gab) — der Helper ist jetzt explizit anonym-only. +1 Backend-Test." },
+  ]},
   { version: "0.291.23", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the page/pageSize clamping for paginated endpoints (1..100) was copy-pasted in FIVE services (notifications, endless history, puzzle history, admin users, course history) with stylistic drift — a policy change would have to be repeated everywhere. Now one shared helper (Paging.Normalize). +2 backend tests.", de: "Refactor (Backend, keine Verhaltensänderung): die page/pageSize-Klemmung paginierter Endpoints (1..100) war in FÜNF Services kopiert (Benachrichtigungen, Endless-History, Puzzle-History, Admin-Userliste, Kurs-History) — mit stilistischer Drift; eine Policy-Änderung hätte überall wiederholt werden müssen. Jetzt ein geteilter Helfer (Paging.Normalize). +2 Backend-Tests." },
   ]},
