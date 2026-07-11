@@ -148,6 +148,13 @@ public class RoundMonitorService : BackgroundService
                 _logger.LogWarning(ex,
                     "Error checking monitor for tournament {TournamentId}",
                     monitor.CrawlerTournamentId);
+                // Die (teil-)geänderte Entität dieses Monitors aus dem GETEILTEN ChangeTracker der
+                // Schleife nehmen: ein liegen gebliebener dirty Eintrag (z. B. DbUpdateConcurrency-
+                // Exception, weil ein User den Monitor parallel abbestellt/gelöscht hat) ließe sonst
+                // JEDEN folgenden SaveChangesAsync erneut scheitern — kein Monitor dahinter würde
+                // mehr persistiert (LastCheckedAt/LastKnownRounds) und dessen „neue Runde"-
+                // Benachrichtigungen feuerten beim nächsten 30-s-Durchlauf doppelt.
+                db.Entry(monitor).State = EntityState.Detached;
             }
         }
     }

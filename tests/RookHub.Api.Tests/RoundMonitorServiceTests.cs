@@ -25,6 +25,42 @@ public class RoundMonitorServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public async Task FailedMonitorSave_DetachUnblocksSubsequentSaves()
+    {
+        // Regression zur CheckAllMonitorsAsync-Schleife: EIN DbContext für ALLE Monitore. Schlug
+        // SaveChanges für Monitor A fehl (z. B. parallel abbestellt/gelöscht →
+        // DbUpdateConcurrencyException), blieb As dirty Entity im Tracker liegen und ließ auch
+        // die Saves aller FOLGENDEN Monitore scheitern (LastCheckedAt nie persistiert →
+        // Benachrichtigungen feuerten im nächsten Durchlauf doppelt). Der Fix detacht die
+        // gescheiterte Entität; hier wird genau diese Schleifen-Semantik nachgestellt.
+        var dbName = Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options;
+        using var db = new AppDbContext(options);
+        db.TournamentMonitors.AddRange(
+            new TournamentMonitor { CrawlerTournamentId = "A", CrawlerTournamentDbId = 1, ActiveUntil = DateTime.UtcNow.AddHours(1) },
+            new TournamentMonitor { CrawlerTournamentId = "B", CrawlerTournamentDbId = 2, ActiveUntil = DateTime.UtcNow.AddHours(1) });
+        await db.SaveChangesAsync();
+        var monitors = await db.TournamentMonitors.OrderBy(m => m.Id).ToListAsync();
+
+        // Paralleler Unsubscribe: Monitor A verschwindet über einen ZWEITEN Kontext.
+        using (var other = new AppDbContext(options))
+        {
+            other.TournamentMonitors.Remove(await other.TournamentMonitors.SingleAsync(m => m.CrawlerTournamentId == "A"));
+            await other.SaveChangesAsync();
+        }
+
+        monitors[0].LastCheckedAt = DateTime.UtcNow;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db.SaveChangesAsync());
+        db.Entry(monitors[0]).State = EntityState.Detached;   // der Fix im catch der Schleife
+
+        monitors[1].LastCheckedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();                           // MUSS jetzt gelingen
+
+        var b = await db.TournamentMonitors.AsNoTracking().SingleAsync(m => m.CrawlerTournamentId == "B");
+        Assert.NotNull(b.LastCheckedAt);
+    }
+
+    [Fact]
     public async Task ExpiredMonitors_AreRemoved()
     {
         _db.TournamentMonitors.AddRange(

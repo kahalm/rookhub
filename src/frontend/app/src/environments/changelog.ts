@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.7';
+export const APP_VERSION = '0.291.8';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.8", date: "2026-07-12", changes: [
+    { en: "Fix (tournament round monitor): one failing monitor no longer blocks all the others. The 30-second monitor loop shares a single DbContext; if saving one monitor failed (e.g. a user unsubscribed in parallel and the row was deleted mid-check → concurrency exception), its dirty entity stayed in the change tracker and made EVERY subsequent monitor's save in the same pass fail too — their LastCheckedAt was never persisted, so „new round" notifications fired again (duplicate bells) on the next pass. The failed entity is now detached in the error handler. +1 backend test.", de: "Fix (Turnier-Runden-Monitor): ein fehlschlagender Monitor blockiert nicht mehr alle anderen. Die 30-Sekunden-Monitor-Schleife teilt sich einen DbContext; schlug das Speichern eines Monitors fehl (z. B. paralleles Abbestellen — die Zeile war mitten im Check gelöscht → Concurrency-Fehler), blieb dessen dirty Entity im Change-Tracker und ließ die Saves ALLER folgenden Monitore desselben Durchlaufs ebenfalls scheitern — deren LastCheckedAt wurde nie persistiert, „neue Runde"-Benachrichtigungen feuerten im nächsten Durchlauf erneut (doppelte Glocken). Die gescheiterte Entität wird jetzt im Fehlerzweig detacht. +1 Backend-Test." },
+  ]},
   { version: "0.291.7", date: "2026-07-12", changes: [
     { en: "Fix (backend, background queue): the shared background task queue could silently LOSE work. It was bounded (100 items) with drop-oldest semantics — when a burst of Chessable import tickets filled it (e.g. the resume service re-enqueueing hundreds of jobs after a deploy), the oldest waiting items were evicted without any log line; the „queue full" warning was dead code because the write always succeeded by evicting. Evicted import tickets survive via their DB state + watchdog, but hint generation, auto-subscription checks and tag backfills have no re-drive and were lost permanently. The queue now uses wait-on-full semantics (nothing is ever dropped; an enqueuer waits for a free slot) with a 2048-item runaway bound that bursts never reach. +1 strengthened backend test.", de: "Fix (Backend, Hintergrund-Queue): die geteilte Hintergrund-Task-Queue konnte Arbeit still VERLIEREN. Sie war auf 100 Einträge begrenzt mit Verdränge-den-Ältesten-Semantik — füllte ein Schwung Chessable-Import-Tickets sie (z. B. der Resume-Service nach einem Deploy mit hunderten Jobs), wurden die ältesten wartenden Einträge ohne jede Log-Zeile verdrängt; die „Queue voll"-Warnung war toter Code, weil das Schreiben durch Verdrängen immer gelang. Verdrängte Import-Tickets überleben über ihren DB-Status + Watchdog, aber Hint-Generierung, Auto-Subscription-Checks und Tag-Backfills haben kein Re-Drive und waren dauerhaft verloren. Die Queue nutzt jetzt Warte-bei-voll-Semantik (nichts geht mehr verloren; der Einreiher wartet auf einen freien Slot) mit 2048er-Runaway-Schranke, die Bursts nie erreichen. +1 geschärfter Backend-Test." },
   ]},
