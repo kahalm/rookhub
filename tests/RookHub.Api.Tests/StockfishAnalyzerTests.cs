@@ -80,9 +80,12 @@ public class StockfishAnalyzerTests
         if (!OperatingSystem.IsLinux()) return;   // Fake-Engine ist ein Shell-Skript
 
         var script = Path.Combine(Path.GetTempPath(), $"fake-stockfish-{Guid.NewGuid():N}.sh");
-        // Endlos 'info'-Zeilen, NIE 'bestmove' → erzwingt den Timeout-Pfad.
+        // SOFORT einen großen Burst 'info'-Zeilen ausgeben (deterministisch auch unter paralleler
+        // Test-Last: der Reader hat vor dem Timeout garantiert Zeilen), dann endlos weiter OHNE je
+        // 'bestmove' → erzwingt den Timeout-Pfad. NIE 'bestmove' = der Reader bricht nicht selbst ab.
         await File.WriteAllTextAsync(script,
-            "#!/bin/sh\nwhile true; do echo 'info depth 1 score cp 42 pv e2e4'; sleep 0.02; done\n");
+            "#!/bin/sh\nfor i in $(seq 1 200); do echo 'info depth 1 score cp 42 pv e2e4'; done\n" +
+            "while true; do echo 'info depth 1 score cp 42 pv e2e4'; sleep 0.05; done\n");
         File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         try
@@ -92,7 +95,7 @@ public class StockfishAnalyzerTests
                 .Build();
             var analyzer = new StockfishAnalyzer(config,
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<StockfishAnalyzer>.Instance)
-            { TimeoutMs = 500 };
+            { TimeoutMs = 2000 };
 
             var hint = await analyzer.AnalyzeAsync("8/8/8/8/8/8/8/K6k w - - 0 1");
 
