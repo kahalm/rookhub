@@ -25,9 +25,12 @@ public class DailyLeaderboardService
 
     /// <summary>
     /// Lädt für alle Tagespuzzles im optionalen Datumsfenster [<paramref name="from"/>,
-    /// <paramref name="to"/>] je (Tag, eingeloggtem User) den ERSTEN Versuch und behält nur die
-    /// gelösten — dieselbe Fairness-Regel wie <see cref="BookPuzzleService.GetResultsAsync"/>. Ranking/Punkte
-    /// berechnet der Aufrufer in-memory (kleine Datenmengen: ein Puzzle pro Tag).
+    /// <paramref name="to"/>] je (Tag, eingeloggtem User) den ERSTEN Versuch AM UTC-TAG des
+    /// Tagespuzzles und behält nur die gelösten. Der Tages-Fence ist Teil der Fairness-Regel:
+    /// ohne ihn entschied der erste Versuch ÜBERHAUPT (auch Monate vor/nach dem Daily-Tag, z. B.
+    /// beim Buch-Browsen über einen geteilten Link) über Credit, Zeit und 🥇 — ein Alt-Fail nahm
+    /// einem echten Tages-Löser die Wertung, und Buch-Löser von früher bekamen Daily-Punkte.
+    /// Ranking/Punkte berechnet der Aufrufer in-memory (kleine Datenmengen: ein Puzzle pro Tag).
     /// </summary>
     private async Task<List<DailyScoreRow>> LoadDailyFirstAttemptsAsync(DateOnly? from, DateOnly? to)
     {
@@ -39,33 +42,33 @@ public class DailyLeaderboardService
 
         var puzzleIds = dailies.Select(d => d.BookPuzzleId).Distinct().ToList();
 
-        // Pro (Puzzle, User) der erste Versuch — Solved/Zeit/Zeitpunkt. Gleiche EF-übersetzbare
-        // Aggregat-Form wie in GetResultsAsync.
-        var firstAttempts = await _db.BookPuzzleAttempts
-            .Where(a => a.UserId != null && puzzleIds.Contains(a.BookPuzzleId))
-            .GroupBy(a => new { a.BookPuzzleId, a.UserId })
-            .Select(g => new
-            {
-                g.Key.BookPuzzleId,
-                UserId = g.Key.UserId!.Value,
-                FirstSolved = g.OrderBy(a => a.AttemptedAt).Select(a => a.Solved).FirstOrDefault(),
-                TimeSeconds = g.OrderBy(a => a.AttemptedAt).Select(a => a.TimeSeconds).FirstOrDefault(),
-                FirstAt = g.OrderBy(a => a.AttemptedAt).Select(a => a.AttemptedAt).FirstOrDefault()
-            })
-            .Where(x => x.FirstSolved)
+        // Versuche roh laden (nur Schlüsselfelder), grob aufs Gesamtfenster der Tage begrenzt;
+        // der exakte Pro-Tag-Fence passiert in-memory (das Fenster variiert je Puzzle → nicht
+        // sinnvoll provider-sicher in EINEM GroupBy ausdrückbar). Mengen bleiben klein
+        // (ein Puzzle pro Tag, wenige Löser pro Tag).
+        var winFrom = dailies.Min(d => d.Date).ToDateTime(TimeOnly.MinValue);
+        var winTo = dailies.Max(d => d.Date).AddDays(1).ToDateTime(TimeOnly.MinValue);
+        var attempts = await _db.BookPuzzleAttempts
+            .Where(a => a.UserId != null && puzzleIds.Contains(a.BookPuzzleId)
+                     && a.AttemptedAt >= winFrom && a.AttemptedAt < winTo)
+            .Select(a => new { a.BookPuzzleId, UserId = a.UserId!.Value, a.Solved, a.TimeSeconds, a.AttemptedAt })
             .ToListAsync();
 
-        // Solver je Puzzle gruppieren, damit ein (selten) an zwei Tagen wiederholtes Puzzle
-        // an beiden Tagen wertet.
-        var byPuzzle = firstAttempts.GroupBy(x => x.BookPuzzleId)
+        var byPuzzle = attempts.GroupBy(a => a.BookPuzzleId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var rows = new List<DailyScoreRow>();
         foreach (var d in dailies)
         {
-            if (!byPuzzle.TryGetValue(d.BookPuzzleId, out var solvers)) continue;
+            if (!byPuzzle.TryGetValue(d.BookPuzzleId, out var all)) continue;
+            // Erster Versuch je User AM Daily-Tag; nur gelöste werten (Fairness wie Solver-Liste).
+            var solvers = all
+                .Where(a => DateOnly.FromDateTime(a.AttemptedAt) == d.Date)
+                .GroupBy(a => a.UserId)
+                .Select(g => g.OrderBy(a => a.AttemptedAt).First())
+                .Where(a => a.Solved);
             foreach (var s in solvers)
-                rows.Add(new DailyScoreRow(d.Date, s.UserId, s.TimeSeconds, s.FirstAt));
+                rows.Add(new DailyScoreRow(d.Date, s.UserId, s.TimeSeconds, s.AttemptedAt));
         }
         return rows;
     }

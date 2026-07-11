@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.9';
+export const APP_VERSION = '0.291.10';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.10", date: "2026-07-12", changes: [
+    { en: "Fix (daily puzzle scoring): daily credit now only counts attempts made ON the daily's UTC date. Previously the monthly ladder and hall of fame scored each user's first attempt on the puzzle EVER — a failed book-browsing attempt months before the puzzle became the daily robbed a genuine same-day first-try solver of all points, while someone who had solved it in a course long ago was credited as a daily solver with their old time. The same held for the „Daily puzzles" category of the general leaderboards: any solved attempt on a puzzle that was EVER a daily counted (book grinders outranked actual daily solvers). Both now require the attempt to be on the assignment date. +2 backend tests.", de: "Fix (Tagespuzzle-Wertung): Daily-Credit zählt jetzt nur noch Versuche AM UTC-Tag des Tagespuzzles. Bisher wertete die Monats-Ladder samt Hall of Fame den ersten Versuch des Users an dem Puzzle ÜBERHAUPT — ein Buch-Browsing-Fail Monate bevor das Puzzle Daily wurde, nahm einem echten Am-Tag-First-Try-Löser alle Punkte, während jemand, der es längst im Kurs gelöst hatte, mit seiner alten Zeit als Daily-Löser gutgeschrieben wurde. Dasselbe galt für die Kategorie „Tagespuzzles" der allgemeinen Bestenlisten: jeder gelöste Versuch an einem Puzzle, das IRGENDWANN Daily war, zählte (Buch-Grinder überholten echte Daily-Löser). Beide verlangen jetzt einen Versuch am Zuordnungs-Datum. +2 Backend-Tests." },
+  ]},
   { version: "0.291.9", date: "2026-07-12", changes: [
     { en: "Fix (web push, backend-only): a dead/black-holing push endpoint could stall the notification worker for minutes. Web-push deliveries share the single sequential webhook worker with the latency-sensitive Discord solver webhooks; the WebPush HTTP client has a ~100-second default timeout and the cancellation token was not passed through — one unreachable endpoint blocked the worker ~100 s PER subscription and shutdown could not abort an in-flight send. Deliveries are now hard-capped at 15 s each, the token is passed through, and on shutdown the remaining subscriptions of a fan-out are skipped. +1 backend test.", de: "Fix (Web-Push, nur Backend): ein toter/blackholender Push-Endpoint konnte den Benachrichtigungs-Worker minutenlang blockieren. Web-Push-Zustellungen teilen sich den einen sequenziellen Webhook-Worker mit den latenzsensiblen Discord-Solver-Webhooks; der WebPush-HTTP-Client hat ~100 Sekunden Default-Timeout und das CancellationToken wurde nicht durchgereicht — ein unerreichbarer Endpoint blockierte den Worker ~100 s JE Subscription, und der Shutdown konnte einen laufenden Send nicht abbrechen. Zustellungen sind jetzt hart auf 15 s gedeckelt, das Token wird durchgereicht, und beim Shutdown werden die restlichen Subscriptions eines Fan-outs übersprungen. +1 Backend-Test." },
   ]},

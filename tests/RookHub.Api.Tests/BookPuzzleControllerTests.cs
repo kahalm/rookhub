@@ -899,6 +899,30 @@ public class BookPuzzleControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task DailyLeaderboard_AttemptsOutsideTheDailyDate_DoNotCount()
+    {
+        // Regression: gewertet wurde der erste Versuch ÜBERHAUPT (jedes Datum, jeder Modus) —
+        // ein Buch-Browsing-Fail Monate VOR dem Daily-Tag nahm einem echten Tages-Löser die
+        // Wertung, und ein Buch-Solve NACH dem Daily-Tag bekam fälschlich Daily-Credit.
+        var p = await CreateBookPuzzleAsync(lineId: "lbd.pgn:1", bookFileName: "lbd.pgn");
+        await AssignDailyAsync(new DateOnly(2026, 6, 20), p);
+        var eva = await CreateUserAsync("eva");
+        var finn = await CreateUserAsync("finn");
+
+        // eva failte das Puzzle Monate vor dem Daily-Tag (Buch) und löst es AM Tag first-try.
+        await AddAttemptAsync(p, eva, false, 10, new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc));
+        await AddAttemptAsync(p, eva, true, 12, new DateTime(2026, 6, 20, 8, 0, 0, DateTimeKind.Utc));
+        // finn löste das Puzzle nur AUSSERHALB des Daily-Tags → kein Daily-Credit.
+        await AddAttemptAsync(p, finn, true, 5, new DateTime(2026, 6, 21, 8, 0, 0, DateTimeKind.Utc));
+
+        var lb = LadderOf(await _controller.GetDailyLeaderboard("2026-06"));
+        var entry = Assert.Single(lb.Entries);
+        Assert.Equal("eva", entry.Name);
+        Assert.Equal(1, entry.Solved);
+        Assert.Equal(1, entry.Golds);   // evas Tages-Erstversuch war gelöst — der Alt-Fail zählt nicht mehr
+    }
+
+    [Fact]
     public async Task DailyLeaderboard_InvalidMonth_BadRequest()
         => Assert.IsType<BadRequestObjectResult>(await _controller.GetDailyLeaderboard("2026/06"));
 

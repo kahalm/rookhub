@@ -82,17 +82,26 @@ public class LeaderboardService
             .ToListAsync())
             .ToDictionary(x => x.UserId, x => x.Count);
 
-        // #daily puzzles: einzigartige gelöste Tagespuzzles je Nutzer. Daily = Buch-Puzzle, das
-        // in DailyPuzzles einem Datum zugeordnet ist; gezählt wird ein gelöster BookPuzzleAttempt
-        // (im Fenster nach Lösezeit), distinct je BookPuzzleId.
-        var dailyIds = await _db.DailyPuzzles.Select(d => d.BookPuzzleId).Distinct().ToListAsync();
-        var dailyPairs = await _db.BookPuzzleAttempts
-            .Where(a => a.UserId != null && a.Solved && a.AttemptedAt >= from && dailyIds.Contains(a.BookPuzzleId))
-            .Select(a => new { UserId = a.UserId!.Value, a.BookPuzzleId })
-            .Distinct()
+        // #daily puzzles: einzigartige gelöste Tagespuzzles je Nutzer. Gewertet wird NUR ein am
+        // UTC-TAG der Daily-Zuordnung gelöster Versuch — vorher zählte JEDER gelöste Versuch an
+        // einem Puzzle, das irgendwann Daily war (z. B. Buch-Browsing über den Zufallsmodus),
+        // als „Tagespuzzle gelöst", sodass Buch-Löser echte Daily-Löser überholten.
+        var dailies = await _db.DailyPuzzles
+            .Select(d => new { d.Date, d.BookPuzzleId })
             .ToListAsync();
-        var dailyPerUser = dailyPairs
-            .GroupBy(p => p.UserId)
+        var dailyIds = dailies.Select(d => d.BookPuzzleId).Distinct().ToList();
+        var dailyAttempts = await _db.BookPuzzleAttempts
+            .Where(a => a.UserId != null && a.Solved && a.AttemptedAt >= from && dailyIds.Contains(a.BookPuzzleId))
+            .Select(a => new { UserId = a.UserId!.Value, a.BookPuzzleId, a.AttemptedAt })
+            .ToListAsync();
+        var datesByPuzzle = dailies.GroupBy(d => d.BookPuzzleId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Date).ToHashSet());
+        var dailyPerUser = dailyAttempts
+            .Where(a => datesByPuzzle.TryGetValue(a.BookPuzzleId, out var dates)
+                     && dates.Contains(DateOnly.FromDateTime(a.AttemptedAt)))
+            .Select(a => new { a.UserId, Date = DateOnly.FromDateTime(a.AttemptedAt) })
+            .Distinct()
+            .GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => g.Count());
 
         // Identitäten (Name + Discord) für alle vorkommenden Nutzer einmal auflösen.

@@ -179,14 +179,14 @@ public class LeaderboardServiceTests : IDisposable
         AddDaily(today, 100);
         AddDaily(today.AddDays(-1), 101);
 
-        // anna: 100 zweimal gelöst (zählt einmal) + 101 gelöst → 2 einzigartige Dailies.
+        // anna: 100 zweimal gelöst (zählt einmal) + 101 AM Daily-Tag gelöst → 2 einzigartige Dailies.
         AddBookSolve(anna.Id, 100, true, now);
         AddBookSolve(anna.Id, 100, true, now);
-        AddBookSolve(anna.Id, 101, true, now);
+        AddBookSolve(anna.Id, 101, true, now.AddDays(-1));
         // ben: 100 gelöst (1 Daily) + 999 gelöst (kein Daily → zählt nicht) + 101 nur versucht (nicht gelöst).
         AddBookSolve(ben.Id, 100, true, now);
         AddBookSolve(ben.Id, 999, true, now);
-        AddBookSolve(ben.Id, 101, false, now);
+        AddBookSolve(ben.Id, 101, false, now.AddDays(-1));
         await _db.SaveChangesAsync();
 
         var res = await _service.GetAsync("alltime", viewerId: 0);
@@ -196,6 +196,25 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal(2, res.DailyPuzzles[0].Count);
         Assert.Equal("ben", res.DailyPuzzles[1].Name);
         Assert.Equal(1, res.DailyPuzzles[1].Count);   // nur das Daily, nicht 999
+    }
+
+    [Fact]
+    public async Task GetAsync_DailyPuzzles_SolvesOutsideTheDailyDate_DoNotCount()
+    {
+        // Regression: gezählt wurde JEDER gelöste Versuch an einem Puzzle, das irgendwann Daily
+        // war — Buch-Löser (Zufallsmodus/geteilter Link, Tage später) sammelten so „Tagespuzzle"-
+        // Credit im Leaderboard, ohne je ein Daily geöffnet zu haben.
+        var carl = await CreateUserAsync("carl");
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+
+        AddDaily(today.AddDays(-10), 200);            // Puzzle 200 war vor 10 Tagen das Daily
+        AddBookSolve(carl.Id, 200, true, now);        // carl löst es HEUTE im Buch
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime", viewerId: 0);
+
+        Assert.Empty(res.DailyPuzzles);               // kein Daily-Credit für den Buch-Solve
     }
 
     [Fact]
