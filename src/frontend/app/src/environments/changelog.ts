@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.21';
+export const APP_VERSION = '0.291.22';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.22", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the anonymous puzzle-attempt response hand-built its PuzzleAttemptDto field by field instead of calling the shared MapAttemptToDto used by all other return sites in the same service — any future DTO field would silently be missing only from the anonymous response. Now uses the shared mapper (EloAfter/EloChange are never set on anonymous attempts, so the mapping is identical). Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): die Antwort des anonymen Puzzle-Versuchs baute ihr PuzzleAttemptDto Feld für Feld von Hand, statt den geteilten MapAttemptToDto-Mapper zu nutzen, den alle anderen Rückgabestellen desselben Services verwenden — jedes künftige DTO-Feld hätte still nur in der anonymen Antwort gefehlt. Jetzt der geteilte Mapper (EloAfter/EloChange sind bei anonymen Versuchen nie gesetzt, das Mapping ist identisch). Durch bestehende Tests abgedeckt." },
+  ]},
   { version: "0.291.21", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the GitHub webhook signature check in the CI controller re-implemented HMAC-SHA256-hex instead of reusing the repo-wide SchachBotWebhookService.ComputeHmacHex (as BotStatsController already does, and as CLAUDE.md mandates) — two independent HMAC implementations would drift on any fix/hardening. Now one implementation; the constant-time comparison stays. Covered by existing webhook-signature tests.", de: "Refactor (Backend, keine Verhaltensänderung): der GitHub-Webhook-Signatur-Check im CI-Controller re-implementierte HMAC-SHA256-hex, statt das repo-weite SchachBotWebhookService.ComputeHmacHex wiederzuverwenden (wie es BotStatsController schon tut und CLAUDE.md vorschreibt) — zwei unabhängige HMAC-Implementierungen würden bei jedem Fix/jeder Härtung auseinanderlaufen. Jetzt eine Implementierung; der konstant-zeitige Vergleich bleibt. Durch bestehende Webhook-Signatur-Tests abgedeckt." },
   ]},

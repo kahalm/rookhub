@@ -517,20 +517,10 @@ public class PuzzleService
             "PuzzleAttempt: Anonymous {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight}",
             dto.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, startedAt, solvedAt, dto.TimeSpentSeconds, dto.ScreenWidth, dto.ScreenHeight);
 
-        return new PuzzleAttemptDto
-        {
-            Id = attempt.Id,
-            PuzzleId = attempt.PuzzleId,
-            LichessId = puzzle.LichessId,
-            PuzzleRating = puzzle.Rating,
-            Solved = attempt.Solved,
-            TimeSpentSeconds = attempt.TimeSpentSeconds,
-            AttemptedAt = attempt.AttemptedAt,
-            MoveLog = attempt.MoveLog,
-            EloAfter = null,
-            EloChange = null,
-            VisualizationLevel = attempt.VisualizationLevel
-        };
+        // Gleicher Mapper wie die eingeloggten Pfade (EloAfter/EloChange sind beim anonymen
+        // Versuch ohnehin nie gesetzt → null) — sonst fehlt jedes künftig ergänzte DTO-Feld
+        // still nur in der anonymen Antwort.
+        return MapAttemptToDto(attempt, puzzle);
     }
 
 
