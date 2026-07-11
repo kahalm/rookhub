@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.11';
+export const APP_VERSION = '0.291.12';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.12", date: "2026-07-12", changes: [
+    { en: "Fix (backend, engine hints): the Stockfish analyzer (used during import for hint generation) had a race on its 30-second timeout. The reader task kept appending output lines while the parser was already iterating the same non-thread-safe list (intermittent crash swallowed as „engine unavailable"), and after the process was disposed the reader still read from the closed stdout (unobserved exceptions). The cancellation token now reaches the read loop, and the reader is drained before parsing/dispose — partial output at timeout is parsed cleanly. Timeout made test-overridable. +1 backend test with a fake engine.", de: "Fix (Backend, Engine-Tipps): der Stockfish-Analyzer (beim Import für die Tipp-Generierung genutzt) hatte ein Race am 30-Sekunden-Timeout. Der Reader-Task hängte weiter Ausgabezeilen an, während der Parser bereits über dieselbe nicht threadsichere Liste iterierte (sporadischer Absturz, als „Engine nicht verfügbar" geschluckt), und nach dem Dispose des Prozesses las der Reader noch aus dem geschlossenen stdout (unbeobachtete Exceptions). Das CancellationToken erreicht jetzt die Lese-Schleife, und der Reader wird vor dem Parsen/Dispose quiesziert — Partial-Output beim Timeout wird sauber geparst. Timeout für Tests überschreibbar. +1 Backend-Test mit Fake-Engine." },
+  ]},
   { version: "0.291.11", date: "2026-07-12", changes: [
     { en: "Fix (daily puzzle, abuse hardening): requesting a daily puzzle for an arbitrary PAST date no longer creates a new assignment on the fly. The anonymous /api/book-puzzles/daily/{date} endpoint and the Open-Graph preview image (/api/og/img/daily/...) called the same get-or-assign logic, which persisted a DailyPuzzles row for ANY past date — an anonymous client enumerating historical dates could mass-create rows and „consume" puzzles from the forDaily pool (skewing future daily selection). On-demand assignment is now limited to today and yesterday (timezone/outage grace; the scheduler assigns at 00:00 UTC anyway); older dates return the stored assignment or 404. +2 backend tests.", de: "Fix (Tagespuzzle, Missbrauchs-Härtung): das Abrufen eines Tagespuzzles für ein beliebiges VERGANGENES Datum legt keine neue Zuordnung mehr on-the-fly an. Der anonyme /api/book-puzzles/daily/{date}-Endpoint und das Open-Graph-Vorschaubild (/api/og/img/daily/...) riefen dieselbe Get-or-Assign-Logik, die für JEDES vergangene Datum eine DailyPuzzles-Zeile persistierte — ein anonymer Client konnte per Datums-Enumeration massenhaft Zeilen anlegen und dabei Puzzles aus dem forDaily-Pool „verbrauchen" (verzerrt die künftige Daily-Auswahl). On-demand-Zuordnung gilt jetzt nur noch für heute und gestern (Zeitzonen-/Ausfall-Kulanz; der Scheduler ordnet ohnehin täglich 00:00 UTC zu); ältere Daten liefern die gespeicherte Zuordnung oder 404. +2 Backend-Tests." },
   ]},

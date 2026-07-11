@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -67,5 +68,40 @@ public class StockfishAnalyzerTests
     public void ParseUciOutput_Empty_ReturnsNull()
     {
         Assert.Null(StockfishAnalyzer.ParseUciOutput(System.Array.Empty<string>()));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_Timeout_QuiescesReaderAndParsesPartialOutput()
+    {
+        // Regression: nach dem Timeout lief der Reader-Task weiter und mutierte `lines`,
+        // WÄHREND ParseUciOutput iterierte (Race → InvalidOperationException → null) bzw. las
+        // nach dem Dispose aus dem geschlossenen stdout. Jetzt wird der Reader vor dem Parsen
+        // quiesziert; das bis dahin Gelesene wird sauber ausgewertet.
+        if (!OperatingSystem.IsLinux()) return;   // Fake-Engine ist ein Shell-Skript
+
+        var script = Path.Combine(Path.GetTempPath(), $"fake-stockfish-{Guid.NewGuid():N}.sh");
+        // Endlos 'info'-Zeilen, NIE 'bestmove' → erzwingt den Timeout-Pfad.
+        await File.WriteAllTextAsync(script,
+            "#!/bin/sh\nwhile true; do echo 'info depth 1 score cp 42 pv e2e4'; sleep 0.02; done\n");
+        File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        try
+        {
+            var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Stockfish:Path"] = script })
+                .Build();
+            var analyzer = new StockfishAnalyzer(config,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<StockfishAnalyzer>.Instance)
+            { TimeoutMs = 500 };
+
+            var hint = await analyzer.AnalyzeAsync("8/8/8/8/8/8/8/K6k w - - 0 1");
+
+            Assert.NotNull(hint);
+            Assert.Equal("+0.4", hint!.EvalText);   // 42 cp aus dem Partial-Output
+        }
+        finally
+        {
+            File.Delete(script);
+        }
     }
 }

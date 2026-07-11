@@ -20,6 +20,9 @@ public class StockfishAnalyzer
     private readonly int _depth;
     private readonly ILogger<StockfishAnalyzer> _logger;
 
+    /// <summary>Hartes Analyse-Zeitlimit (intern überschreibbar für Tests).</summary>
+    internal int TimeoutMs = 30_000;
+
     public StockfishAnalyzer(IConfiguration config, ILogger<StockfishAnalyzer> logger)
     {
         _path = config["Stockfish:Path"] ?? "stockfish";
@@ -52,13 +55,15 @@ public class StockfishAnalyzer
             if (proc == null) return null;
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            timeout.CancelAfter(TimeoutMs);
 
             var lines = new List<string>();
             var readTask = Task.Run(async () =>
             {
+                // Token bis in ReadLineAsync durchreichen: das Task.Run-Token verhindert nur den
+                // START, nicht das Weiterlaufen — ohne Token las der Loop nach Timeout munter weiter.
                 string? line;
-                while ((line = await proc.StandardOutput.ReadLineAsync()) != null)
+                while ((line = await proc.StandardOutput.ReadLineAsync(timeout.Token)) != null)
                 {
                     lines.Add(line);
                     if (line.StartsWith("bestmove", StringComparison.Ordinal)) break;
@@ -83,6 +88,11 @@ public class StockfishAnalyzer
             finally
             {
                 if (!proc.HasExited) { try { proc.Kill(true); } catch { /* ignore */ } }
+                // Reader-Task ZU ENDE laufen lassen, bevor `lines` gelesen und `proc` disposed wird:
+                // sonst schreibt er nebenläufig in die (nicht threadsichere) Liste, während
+                // ParseUciOutput iteriert, bzw. liest nach dem Dispose aus dem geschlossenen stdout
+                // (unbeobachtete ObjectDisposedException). Cancel/Kill beenden ihn zeitnah.
+                try { await readTask; } catch { /* Timeout/Kill sind hier erwartete Enden */ }
             }
 
             return ParseUciOutput(lines);
