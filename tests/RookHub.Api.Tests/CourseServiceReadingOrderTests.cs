@@ -116,4 +116,33 @@ public class CourseServiceReadingOrderTests : IDisposable
 
         Assert.Equal(new[] { "Introduction", "1. Double Attack" }, chapters.Select(c => c.Name).ToArray());
     }
+
+    /// <summary>Regression: ein Kapitel, das NUR aus Info-/Erklärlinien besteht (Chessable-Intro),
+    /// erscheint nicht in <c>GetChaptersAsync</c> — die Kapitel-Index-Auflösung von
+    /// <c>?chapterIndex</c> muss denselben (gefilterten) Index-Raum verwenden, sonst verschiebt
+    /// sich ab dem Info-Kapitel jedes Kapitel um eins und der Solver liefert Puzzles des
+    /// FALSCHEN Kapitels (bzw. „completed" fürs leere Info-Kapitel).</summary>
+    [Fact]
+    public async Task ChapterIndex_SkipsInfoOnlyChapters_MatchesGetChapters()
+    {
+        var book = new Book { FileName = "ix.pgn", DisplayName = "IX", OwnerUserId = UserId, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        await AddPuzzleAsync(book, "intro1", "001.001", "Introduction", info: true); // reines Info-Kapitel
+        var a = await AddPuzzleAsync(book, "a1", "002.001", "Tactics A");
+        var b = await AddPuzzleAsync(book, "b1", "003.001", "Tactics B");
+
+        var chapters = await _svc.GetChaptersAsync(UserId, book.Id, isAdmin: false);
+        Assert.Equal(new[] { "Tactics A", "Tactics B" }, chapters.Select(c => c.Name).ToArray());
+
+        // Index 0 (laut Frontend-Liste „Tactics A") muss auch Tactics A liefern — nicht die Intro.
+        var next0 = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: 0);
+        Assert.NotNull(next0.Puzzle);
+        Assert.Equal(a.LineId, next0.Puzzle!.LineId);
+
+        var next1 = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: 1);
+        Assert.NotNull(next1.Puzzle);
+        Assert.Equal(b.LineId, next1.Puzzle!.LineId);
+    }
 }

@@ -72,7 +72,7 @@ public class CourseService
     }
 
     /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
-    private static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
+    private static string? NormalizeChapter(string? raw) => ChapterOrder.NormalizeChapter(raw);
 
     /// <summary>Gültige Buch-Themen-Keys (= <see cref="Models.ChessableTheme"/>-Namen, kleingeschrieben).</summary>
     private static readonly string[] ValidThemeKeys = { "opening", "middlegame", "endgame", "tactics", "other" };
@@ -92,29 +92,15 @@ public class CourseService
     }
 
     /// <summary>
-    /// Die eindeutigen Kapitel eines Buchs in Lesereihenfolge (= aufsteigend nach kleinstem
-    /// <see cref="BookPuzzle.Round"/> je Kapitel; die Chessable-Zeilennummer ist die maßgebliche
-    /// Quell-Reihenfolge — die DB-<c>Id</c> nicht, da nachträglich re-gefetchte Linien höhere Ids
-    /// bekommen). Index in dieser Liste = stabiler Kapitel-Selektor; muss mit der Reihenfolge in
-    /// <see cref="GetChaptersAsync"/> übereinstimmen.
+    /// Die eindeutigen Kapitel eines Buchs in Lesereihenfolge — geteilte Logik in
+    /// <see cref="ChapterOrder"/>, damit der Index-Kontrakt mit <see cref="GetChaptersAsync"/>
+    /// (liefert die Indizes ans Frontend) und dem Wochenpost-aus-Kapitel-Pfad IDENTISCH bleibt.
+    /// Insbesondere zählen nur Quiz-Linien (<c>!IsInfoOnly</c>): ein reines Info-/Intro-Kapitel
+    /// erscheint nicht in der Frontend-Liste und darf hier keinen Index belegen, sonst löst
+    /// <c>?chapterIndex</c> ab diesem Kapitel auf das FALSCHE (um eins verschobene) Kapitel auf.
     /// </summary>
-    private async Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
-    {
-        var rows = await _db.BookPuzzles
-            .Where(bp => bp.BookId == bookId)
-            .GroupBy(bp => bp.Chapter)
-            .Select(g => new { Chapter = g.Key, MinRound = g.Min(bp => bp.Round), MinId = g.Min(bp => bp.Id) })
-            .ToListAsync();
-        // null und "" (und Whitespace) auf dieselbe „ohne Kapitel"-Gruppe zusammenführen; je Gruppe
-        // das kleinste Round (dann Id) für die Lesereihenfolge.
-        return rows
-            .Select(r => new { Name = NormalizeChapter(r.Chapter), r.MinRound, r.MinId })
-            .GroupBy(x => x.Name)
-            .Select(g => new { Name = g.Key, MinRound = g.Min(x => x.MinRound), MinId = g.Min(x => x.MinId) })
-            .OrderBy(x => x.MinRound, StringComparer.Ordinal).ThenBy(x => x.MinId)
-            .Select(x => x.Name)
-            .ToList();
-    }
+    private Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
+        => ChapterOrder.GetOrderedChapterNamesAsync(_db, bookId);
 
     /// <summary>Schränkt eine Puzzle-Query auf ein Kapitel ein (null = Sammel-„ohne Kapitel").</summary>
     private static IQueryable<BookPuzzle> FilterByChapter(IQueryable<BookPuzzle> q, string? chapterName) =>
@@ -152,7 +138,7 @@ public class CourseService
         // In Lesereihenfolge gruppieren (erste-Erscheinung = Reihenfolge der nach Round sortierten Puzzles).
         var groups = new List<(string? Name, int Count, int Solved)>();
         var indexByKey = new Dictionary<string, int>();
-        const string noneKey = " __none__";
+        const string noneKey = "\0__none__";
         foreach (var p in puzzles)
         {
             var name = NormalizeChapter(p.Chapter);

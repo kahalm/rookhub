@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.3';
+export const APP_VERSION = '0.291.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.4", date: "2026-07-12", changes: [
+    { en: "Fix (courses): selecting a chapter could train the WRONG chapter when the book contains a chapter consisting only of info/explanation lines (e.g. a Chessable intro kept since v0.238.2). The chapter list shown in the UI filters such chapters out, but the backend resolver for ?chapterIndex did not — every chapter after the info-only one was shifted by one (and the info chapter itself reported „completed" with no puzzles). Chapter ordering/index resolution now lives in ONE shared helper (ChapterOrder) used by the course solver, the chapter list AND the weekly-post-from-chapter path. Also removed a stray raw NUL byte in CourseService.cs that made grep tools treat the file as binary. +1 backend test.", de: "Fix (Kurse): die Kapitel-Auswahl konnte das FALSCHE Kapitel trainieren, wenn das Buch ein Kapitel nur aus Info-/Erklärlinien enthält (z. B. ein seit v0.238.2 behaltenes Chessable-Intro). Die im UI angezeigte Kapitelliste filtert solche Kapitel heraus, der Backend-Resolver für ?chapterIndex aber nicht — jedes Kapitel nach dem Info-Kapitel war um eins verschoben (und das Info-Kapitel selbst meldete „abgeschlossen" ohne Puzzles). Kapitel-Reihenfolge/Index-Auflösung liegt jetzt in EINEM geteilten Helfer (ChapterOrder), genutzt vom Kurs-Solver, der Kapitelliste UND dem Wochenpost-aus-Kapitel-Pfad. Nebenbei ein rohes NUL-Byte in CourseService.cs entfernt, das grep-Tools die Datei als binär behandeln ließ. +1 Backend-Test." },
+  ]},
   { version: "0.291.3", date: "2026-07-12", changes: [
     { en: "Fix (standard puzzles): solving a puzzle right after failing it could be silently discarded. The 30-second duplicate-submit protection only compared user/puzzle/visualization level — NOT the outcome — so a genuine second attempt with a different result (fail → reload → solve within 30 s) was treated as a double-submit and the stale failed attempt was returned: no solved record was stored, the puzzle stayed „unsolved" for the random-pool exclusion, leaderboards and streaks. Duplicate detection now also requires the same outcome. +2 backend tests.", de: "Fix (Standard-Puzzles): ein Puzzle direkt nach einem Fehlversuch zu lösen konnte still verworfen werden. Der 30-Sekunden-Doppel-Submit-Schutz verglich nur User/Puzzle/Visualisierungsstufe — NICHT das Ergebnis —, sodass ein echter Zweitversuch mit anderem Ausgang (Fail → neu laden → Solve innerhalb von 30 s) als Doppel-Submit galt und der alte Fehlversuch zurückgegeben wurde: keine Lösung gespeichert, das Puzzle blieb für Zufallspool-Ausschluss, Bestenlisten und Serien „ungelöst". Die Duplikat-Erkennung verlangt jetzt zusätzlich dasselbe Ergebnis. +2 Backend-Tests." },
   ]},

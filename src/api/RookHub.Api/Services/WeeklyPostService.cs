@@ -51,9 +51,6 @@ public class WeeklyPostService
     // werden dann live aus den BookPuzzles gebaut — dieselbe Reihenfolge/Filterung wie im Kurs
     // (Round dann Id, Info-/Erklärlinien raus). Kapitel-Grouping analog CourseService.
 
-    /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
-    private static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
-
     /// <summary>Quiz-Puzzles (ohne Info-/Erklärlinien) eines Buch-Kapitels in Lesereihenfolge (Round, dann Id).
     /// <paramref name="chapterName"/> = null ⇒ Sammel-„ohne Kapitel".</summary>
     private IQueryable<BookPuzzle> ChapterQuizPuzzles(int bookId, string? chapterName)
@@ -65,25 +62,11 @@ public class WeeklyPostService
         return q.OrderBy(bp => bp.Round).ThenBy(bp => bp.Id);
     }
 
-    /// <summary>Die Kapitelnamen eines Buchs in Lesereihenfolge (erste Erscheinung in Round/Id-Sortierung),
-    /// nur Quiz-Linien — deckungsgleich mit <c>CourseService.GetChaptersAsync</c>, damit der von der
+    /// <summary>Die Kapitelnamen eines Buchs in Lesereihenfolge — geteilte Logik in
+    /// <see cref="ChapterOrder"/> (deckungsgleich mit <c>CourseService</c>), damit der von der
     /// Kapitel-Liste gelieferte Index hier denselben Namen auflöst.</summary>
-    private async Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
-    {
-        var chapters = await _db.BookPuzzles
-            .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .OrderBy(bp => bp.Round).ThenBy(bp => bp.Id)
-            .Select(bp => bp.Chapter)
-            .ToListAsync();
-        var names = new List<string?>();
-        var seen = new HashSet<string>();
-        foreach (var c in chapters)
-        {
-            var name = NormalizeChapter(c);
-            if (seen.Add(name ?? "\0__none__")) names.Add(name);
-        }
-        return names;
-    }
+    private Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
+        => ChapterOrder.GetOrderedChapterNamesAsync(_db, bookId);
 
     /// <summary>
     /// Puzzle-Sequenz eines Wochenposts zum Durchspielen. Buch-Kapitel-Quelle → live aus den BookPuzzles
