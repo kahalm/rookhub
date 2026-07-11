@@ -18,9 +18,7 @@ public class AdminService
 
     public async Task<(List<AdminUserDto> items, int totalCount, int page, int pageSize)> GetUsersAsync(string? search, int page, int pageSize)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > 100) pageSize = 100;
+        (page, pageSize) = Paging.Normalize(page, pageSize);
 
         var query = _db.AppUsers.AsQueryable();
 

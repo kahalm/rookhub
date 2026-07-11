@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.22';
+export const APP_VERSION = '0.291.23';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.23", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the page/pageSize clamping for paginated endpoints (1..100) was copy-pasted in FIVE services (notifications, endless history, puzzle history, admin users, course history) with stylistic drift — a policy change would have to be repeated everywhere. Now one shared helper (Paging.Normalize). +2 backend tests.", de: "Refactor (Backend, keine Verhaltensänderung): die page/pageSize-Klemmung paginierter Endpoints (1..100) war in FÜNF Services kopiert (Benachrichtigungen, Endless-History, Puzzle-History, Admin-Userliste, Kurs-History) — mit stilistischer Drift; eine Policy-Änderung hätte überall wiederholt werden müssen. Jetzt ein geteilter Helfer (Paging.Normalize). +2 Backend-Tests." },
+  ]},
   { version: "0.291.22", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the anonymous puzzle-attempt response hand-built its PuzzleAttemptDto field by field instead of calling the shared MapAttemptToDto used by all other return sites in the same service — any future DTO field would silently be missing only from the anonymous response. Now uses the shared mapper (EloAfter/EloChange are never set on anonymous attempts, so the mapping is identical). Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): die Antwort des anonymen Puzzle-Versuchs baute ihr PuzzleAttemptDto Feld für Feld von Hand, statt den geteilten MapAttemptToDto-Mapper zu nutzen, den alle anderen Rückgabestellen desselben Services verwenden — jedes künftige DTO-Feld hätte still nur in der anonymen Antwort gefehlt. Jetzt der geteilte Mapper (EloAfter/EloChange sind bei anonymen Versuchen nie gesetzt, das Mapping ist identisch). Durch bestehende Tests abgedeckt." },
   ]},

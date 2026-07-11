@@ -72,8 +72,7 @@ public class NotificationService
     /// <summary>Eine Seite der vollständigen History eines Users (neueste zuerst) + Gesamtzahl.</summary>
     public async Task<NotificationHistoryDto> GetHistoryAsync(int userId, int page, int pageSize)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 100);
+        (page, pageSize) = Paging.Normalize(page, pageSize);
         var q = _db.Notifications.Where(n => n.UserId == userId);
         var total = await q.CountAsync();
         var list = await q

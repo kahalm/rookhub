@@ -219,9 +219,7 @@ public class PuzzleStatsService
 
     public async Task<List<PuzzleAttemptDto>> GetHistoryAsync(int userId, int page, int pageSize)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > 100) pageSize = 100;
+        (page, pageSize) = Paging.Normalize(page, pageSize);
 
         return await _db.PuzzleAttempts
             .Where(a => a.UserId == userId)

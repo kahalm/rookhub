@@ -62,9 +62,7 @@ public class CourseStatsService
     /// <summary>Paginierte Kurs-Versuchs-History des Users (neueste zuerst), inkl. Buch-Puzzle-Infos.</summary>
     public async Task<List<CourseAttemptDto>> GetHistoryAsync(int userId, int page, int pageSize)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 1;
-        if (pageSize > 100) pageSize = 100;
+        (page, pageSize) = Paging.Normalize(page, pageSize);
 
         return await _db.CourseAttempts
             .Where(a => a.UserId == userId)

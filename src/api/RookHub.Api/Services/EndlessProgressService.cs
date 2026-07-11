@@ -331,8 +331,7 @@ public class EndlessProgressService
 
     public async Task<EndlessHistoryResponseDto> GetSessionHistoryAsync(int userId, int page, int pageSize, bool? archived = null)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 100);
+        (page, pageSize) = Paging.Normalize(page, pageSize);
 
         var query = _db.EndlessSessions.Where(s => s.UserId == userId);
         if (archived.HasValue)
