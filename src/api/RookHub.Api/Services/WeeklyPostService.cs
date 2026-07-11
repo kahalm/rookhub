@@ -353,12 +353,24 @@ public class WeeklyPostService
         foreach (var grp in attempts.GroupBy(a => a.WeeklyPostId))
         {
             if (!posts.TryGetValue(grp.Key, out var post)) continue;   // Post inzwischen gelöscht → ignorieren
-            var total = post.PuzzleCount;
-            if (total <= 0)
+            int total;
+            if (post.SourceBookId != null)
             {
-                // Alt-Datensatz ohne gecachte Anzahl: einmal parsen und für künftige Aufrufe persistieren.
-                total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
-                if (total > 0) { post.PuzzleCount = total; needsBackfill = true; }
+                // Kapitel-Quelle: Inhalt hängt live am Buch — Anzahl frisch zählen (wie GetTotalAsync/
+                // RecordAttempt). Der beim Anlegen gecachte PuzzleCount veraltet, sobald ein Re-Fetch
+                // das Kapitel wachsen/schrumpfen lässt → Übersicht meldete sonst „erledigt", während
+                // die Post-Ansicht noch offene Puzzles zeigte (bzw. umgekehrt nie erreichbar wurde).
+                total = await GetTotalAsync(post);
+            }
+            else
+            {
+                total = post.PuzzleCount;
+                if (total <= 0)
+                {
+                    // Alt-Datensatz ohne gecachte Anzahl: einmal parsen und für künftige Aufrufe persistieren.
+                    total = PgnImportService.ParsePgn(post.FileName, post.PgnContent).Puzzles.Count;
+                    if (total > 0) { post.PuzzleCount = total; needsBackfill = true; }
+                }
             }
             var played = grp.Count();
             result.Add(new WeeklyPostProgressDto

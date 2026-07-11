@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.12';
+export const APP_VERSION = '0.291.13';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.13", date: "2026-07-12", changes: [
+    { en: "Fix (weekly posts): the overview list could disagree with the per-post view for chapter-sourced weekly posts. The overview used the puzzle count cached at creation time, while the post view and attempt recording count the chapter's quiz lines LIVE — after a Chessable re-fetch grew (or shrank) the source chapter, the overview showed „completed" although open puzzles remained (or a completion that could never be reached). Chapter-sourced posts now count live in the overview too. +1 backend test.", de: "Fix (Wochenposts): die Übersichtsliste konnte bei Kapitel-basierten Wochenposts der Post-Ansicht widersprechen. Die Übersicht nutzte die beim Anlegen gecachte Puzzle-Anzahl, während Post-Ansicht und Versuchs-Erfassung die Quiz-Linien des Kapitels LIVE zählen — wuchs (oder schrumpfte) das Quell-Kapitel durch einen Chessable-Re-Fetch, zeigte die Übersicht „erledigt", obwohl offene Puzzles blieben (bzw. ein nie erreichbares Soll). Kapitel-basierte Posts zählen jetzt auch in der Übersicht live. +1 Backend-Test." },
+  ]},
   { version: "0.291.12", date: "2026-07-12", changes: [
     { en: "Fix (backend, engine hints): the Stockfish analyzer (used during import for hint generation) had a race on its 30-second timeout. The reader task kept appending output lines while the parser was already iterating the same non-thread-safe list (intermittent crash swallowed as „engine unavailable"), and after the process was disposed the reader still read from the closed stdout (unobserved exceptions). The cancellation token now reaches the read loop, and the reader is drained before parsing/dispose — partial output at timeout is parsed cleanly. Timeout made test-overridable. +1 backend test with a fake engine.", de: "Fix (Backend, Engine-Tipps): der Stockfish-Analyzer (beim Import für die Tipp-Generierung genutzt) hatte ein Race am 30-Sekunden-Timeout. Der Reader-Task hängte weiter Ausgabezeilen an, während der Parser bereits über dieselbe nicht threadsichere Liste iterierte (sporadischer Absturz, als „Engine nicht verfügbar" geschluckt), und nach dem Dispose des Prozesses las der Reader noch aus dem geschlossenen stdout (unbeobachtete Exceptions). Das CancellationToken erreicht jetzt die Lese-Schleife, und der Reader wird vor dem Parsen/Dispose quiesziert — Partial-Output beim Timeout wird sauber geparst. Timeout für Tests überschreibbar. +1 Backend-Test mit Fake-Engine." },
   ]},

@@ -623,6 +623,37 @@ public class WeeklyPostControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllProgress_ChapterSourcedPost_UsesLiveTotal_NotStaleCachedCount()
+    {
+        // Regression: die Übersicht nahm den beim Anlegen gecachten PuzzleCount, während
+        // Per-Post-Fortschritt/RecordAttempt live zählen — wuchs das Quell-Kapitel durch einen
+        // Re-Fetch, meldete die Übersicht „erledigt", obwohl die Post-Ansicht offene Puzzles zeigte.
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+
+        // Beide (aktuellen) Kapitel-Puzzles spielen → wäre nach gecachtem Total „completed".
+        await _controller.RecordAttempt(post.Id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5 });
+        await _controller.RecordAttempt(post.Id, new RecordWeeklyAttemptDto { PuzzleIndex = 1, Solved = true, TimeSeconds = 5 });
+
+        // Re-Fetch vergrößert das Kapitel um eine dritte Quiz-Linie.
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = "book:001.003", BookFileName = "book.pgn", BookId = bookId,
+            Round = "001.003", Chapter = "Kapitel 1", Fen = "8/8/8/8/8/8/3K4/4k3 w - - 0 1", Moves = "d2d3", StartPly = -1,
+        });
+        await _db.SaveChangesAsync();
+
+        var list = Unwrap<List<WeeklyPostProgressDto>>(await _controller.GetAllProgress());
+        var p = Assert.Single(list);
+        Assert.Equal(3, p.Total);        // live gezählt, nicht der gecachte Anlage-Stand (2)
+        Assert.False(p.Completed);       // 2 von 3 gespielt
+    }
+
+    [Fact]
     public async Task CreateFromChapter_InvalidChapterIndex_ReturnsBadRequest()
     {
         var bookId = await SeedBookWithChaptersAsync();
