@@ -74,22 +74,8 @@ public class CourseService
     /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
     private static string? NormalizeChapter(string? raw) => ChapterOrder.NormalizeChapter(raw);
 
-    /// <summary>Gültige Buch-Themen-Keys (= <see cref="Models.ChessableTheme"/>-Namen, kleingeschrieben).</summary>
-    private static readonly string[] ValidThemeKeys = { "opening", "middlegame", "endgame", "tactics", "other" };
-
-    /// <summary>Parst die CSV-Themen-Tags eines Buchs zu einer Key-Liste (Reihenfolge stabil, dedupliziert).
-    /// Leer/unset → Default <c>["tactics"]</c> (jedes Buch ist standardmäßig Taktik).</summary>
-    private static List<string> ParseThemeKeys(string? csv)
-    {
-        if (string.IsNullOrWhiteSpace(csv)) return new List<string> { "tactics" };
-        var seen = new List<string>();
-        foreach (var raw in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var key = raw.ToLowerInvariant();
-            if (Array.IndexOf(ValidThemeKeys, key) >= 0 && !seen.Contains(key)) seen.Add(key);
-        }
-        return seen.Count > 0 ? seen : new List<string> { "tactics" };
-    }
+    // Buch-Themen-Semantik (Keys/Parsing/Default) zentral in BookThemeTags — geteilt mit dem
+    // Trainingsziele-Routing in TrainingGoalService.
 
     /// <summary>
     /// Die eindeutigen Kapitel eines Buchs in Lesereihenfolge — geteilte Logik in
@@ -364,7 +350,7 @@ public class CourseService
                 SharedByUsername = sharedByBook.TryGetValue(b.Id, out var sharedBy) ? sharedBy : null,
                 LinkedBookId = linkByBook.TryGetValue(b.Id, out var linkedId) ? linkedId : null,
                 LinkedDisplayName = linkByBook.TryGetValue(b.Id, out var lid) && linkedNameById.TryGetValue(lid, out var ln) ? ln : null,
-                Themes = ParseThemeKeys(b.Themes),
+                Themes = BookThemeTags.ParseKeys(b.Themes),
             };
         }).ToList();
     }
@@ -409,7 +395,7 @@ public class CourseService
         {
             var key = (raw ?? string.Empty).Trim().ToLowerInvariant();
             if (key.Length == 0) continue;
-            if (Array.IndexOf(ValidThemeKeys, key) < 0)
+            if (!BookThemeTags.IsValidKey(key))
                 throw new InvalidOperationException($"Unknown theme '{raw}'.");
             if (!normalized.Contains(key)) normalized.Add(key);
         }
@@ -419,7 +405,7 @@ public class CourseService
             ? null
             : string.Join(",", normalized);
         await _db.SaveChangesAsync();
-        return ParseThemeKeys(book.Themes);
+        return BookThemeTags.ParseKeys(book.Themes);
     }
 
     /// <summary>Hat der User Zugriff auf mindestens einen Kurs? (Basis für die Menü-Sichtbarkeit.)</summary>

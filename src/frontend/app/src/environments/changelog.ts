@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.25';
+export const APP_VERSION = '0.291.26';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.26", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the Book.Themes CSV parser (whitelist opening/middlegame/endgame/tactics/other, dedupe, „default tactics" rule) was implemented twice — once in the course service (UI/validation) and once in the training-goal service (time routing). Adding or renaming a theme key required synchronized edits; on drift, course time would silently land in the wrong tracker bucket while the course UI showed the tag as valid. Now one shared BookThemeTags helper; the training service only maps keys to its enum. +3 backend tests.", de: "Refactor (Backend, keine Verhaltensänderung): der Book.Themes-CSV-Parser (Whitelist opening/middlegame/endgame/tactics/other, Dedupe, „Default Taktik"-Regel) war zweimal implementiert — einmal im Kurs-Service (UI/Validierung) und einmal im Trainingsziele-Service (Zeit-Routing). Ein neuer/umbenannter Themen-Key verlangte synchrone Edits; bei Drift wäre Kurszeit still im falschen Tracker-Topf gelandet, während die Kurs-UI den Tag als gültig zeigte. Jetzt ein geteilter BookThemeTags-Helfer; der Trainings-Service mappt nur noch Keys auf sein Enum. +3 Backend-Tests." },
+  ]},
   { version: "0.291.25", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the count → random-skip → FirstOrDefault-or-404 random-draw block was copy-pasted three times in the book-puzzle service (random pool, daily assignment, daily regenerate) — the race-safety detail (FirstOrDefault instead of First when the pool shrinks mid-draw) had to be remembered in all three places. Now one PickRandomAsync helper. Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): der Count → Random-Skip → FirstOrDefault-oder-404-Zufallszieh-Block war im Buch-Puzzle-Service dreimal kopiert (Zufallspool, Daily-Zuweisung, Daily-Regenerieren) — das Race-Sicherheitsdetail (FirstOrDefault statt First, wenn der Pool mitten im Zug schrumpft) musste an allen drei Stellen mitgedacht werden. Jetzt ein PickRandomAsync-Helper. Durch bestehende Tests abgedeckt." },
   ]},

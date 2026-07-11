@@ -626,25 +626,17 @@ public class TrainingGoalService
     /// <summary>Parst die CSV-Themen-Tags eines Kurs-Buchs (<see cref="Models.Book.Themes"/>) zur Themen-Liste
     /// (Reihenfolge stabil, dedupliziert). Unset/leer/nur-ungültig → Default <c>[Taktik]</c> — jedes Buch
     /// ist standardmäßig Taktik.</summary>
-    private static List<Thm> BookThemes(string? csv)
-    {
-        var list = new List<Thm>();
-        if (!string.IsNullOrWhiteSpace(csv))
-            foreach (var raw in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                Thm? t = raw.ToLowerInvariant() switch
-                {
-                    "opening" => Thm.Opening,
-                    "middlegame" => Thm.Middlegame,
-                    "endgame" => Thm.Endgame,
-                    "tactics" => Thm.Tactics,
-                    "other" => Thm.Other,
-                    _ => null,
-                };
-                if (t.HasValue && !list.Contains(t.Value)) list.Add(t.Value);
-            }
-        return list.Count > 0 ? list : new List<Thm> { Thm.Tactics };
-    }
+    private static List<Thm> BookThemes(string? csv) =>
+        // Keys/Dedupe/Default zentral in BookThemeTags (geteilt mit CourseService) — hier nur
+        // noch das Mapping Key → Thm-Enum fürs Zeit-Routing.
+        BookThemeTags.ParseKeys(csv).Select(k => k switch
+        {
+            "opening" => Thm.Opening,
+            "middlegame" => Thm.Middlegame,
+            "endgame" => Thm.Endgame,
+            "tactics" => Thm.Tactics,
+            _ => Thm.Other,
+        }).ToList();
 
     // ----- Helfer ----------------------------------------------------------
 
