@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.19';
+export const APP_VERSION = '0.291.20';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.20", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): four anonymous-optional endpoints (random puzzle, random batch, menu visibility, client log) re-parsed the user-id claim by hand instead of using the shared BaseApiController.GetUserIdOrNull helper — if claim resolution ever changes (e.g. impersonation-aware), the stale copies would attribute requests to the wrong/no user. All four now use the helper; covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): vier anonym-optionale Endpoints (Zufallspuzzle, Random-Batch, Menü-Sichtbarkeit, Client-Log) parsten den User-Id-Claim von Hand, statt den geteilten Helper BaseApiController.GetUserIdOrNull zu nutzen — ändert sich die Claim-Auflösung je (z. B. Impersonation-bewusst), würden die veralteten Kopien Requests dem falschen/keinem User zuordnen. Alle vier nutzen jetzt den Helper; durch bestehende Tests abgedeckt." },
+  ]},
   { version: "0.291.19", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the „owner OR share recipient" read-access rule for repertoires existed in FOUR copies (repertoire service, trainer access check, file download, position lookup index) — a future change to sharing semantics (e.g. revocable/expiring shares) would silently have reached only part of the paths (authorization drift). The rule now lives in ONE helper (RepertoireAccess: ReadableBy/CanReadAsync) used by all four. +1 backend test.", de: "Refactor (Backend, keine Verhaltensänderung): die „Besitzer ODER Freigabe-Empfänger"-Leseregel für Repertoires existierte in VIER Kopien (Repertoire-Service, Trainer-Zugriffscheck, Datei-Download, Positionssuche-Index) — eine künftige Änderung der Sharing-Semantik (z. B. widerrufbare/ablaufende Freigaben) hätte still nur einen Teil der Pfade erreicht (Autorisierungs-Drift). Die Regel liegt jetzt in EINEM Helfer (RepertoireAccess: ReadableBy/CanReadAsync), den alle vier nutzen. +1 Backend-Test." },
   ]},

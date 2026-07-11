@@ -18,7 +18,7 @@ public class MenuController : BaseApiController
     [AllowAnonymous]
     public async Task<IActionResult> Get()
     {
-        int? userId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : null;
+        int? userId = GetUserIdOrNull();
         var isAdmin = User.IsInRole("Admin");
         return Ok(await _menu.GetVisibleKeysAsync(userId, isAdmin));
     }

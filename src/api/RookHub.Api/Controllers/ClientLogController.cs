@@ -33,7 +33,7 @@ public class ClientLogController : BaseApiController
         var detail = Truncate(dto.Detail, 500);
         var url = Truncate(dto.Url, 300);
         var userAgent = Truncate(Request.Headers.UserAgent.ToString(), 300);
-        int? userId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : null;
+        int? userId = GetUserIdOrNull();
 
         // Routine-Heartbeats auf Information; nur echte Diagnose-Events (Crash/Hänger) auf Warning,
         // sonst lösen die häufigen Heartbeats einen warn_spike im log-watcher aus (Fehlalarm).

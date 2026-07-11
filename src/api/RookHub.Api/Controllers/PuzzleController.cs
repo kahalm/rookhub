@@ -45,7 +45,7 @@ public class PuzzleController : BaseApiController
         [FromQuery] bool excludeSolved = false,
         [FromQuery] string? themesAny = null)
     {
-        int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
+        int? userId = GetUserIdOrNull();
         var puzzle = await _puzzleService.GetRandomAsync(userId, minRating, maxRating, themes, excludeSolved, themesAny);
         if (puzzle == null)
             return NotFound(new { message = "No puzzles found matching criteria." });
@@ -64,7 +64,7 @@ public class PuzzleController : BaseApiController
             return Ok(new List<PuzzleDto>());
         // Schutz gegen überzogene Anfragen.
         var windows = dto.Windows.Take(100).Select(w => (w.MinRating, w.MaxRating));
-        int? userId = int.TryParse(User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier), out var id) ? id : null;
+        int? userId = GetUserIdOrNull();
         var puzzles = await _puzzleService.GetRandomBatchAsync(userId, windows, dto.Themes, dto.ExcludeSolved, dto.ThemesAny);
         return Ok(puzzles);
     }
