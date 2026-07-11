@@ -36,6 +36,24 @@ public class AuthServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void IsUniqueViolation_ClassifiesDuplicateKey_ButNotTransientFailures()
+    {
+        // Regression: JEDE DbUpdateException wurde als „Username or email already exists" (409)
+        // maskiert — auch Deadlocks/Timeouts/Verbindungsabrisse, bei denen ein Retry genügt hätte.
+        Assert.True(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Duplicate entry 'bob' for key 'IX_AppUsers_Username'"))));
+        Assert.True(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Cannot insert duplicate values for the unique index"))));
+
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Deadlock found when trying to get lock; try restarting transaction"))));
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Lock wait timeout exceeded; try restarting transaction"))));
+        Assert.False(AuthService.IsUniqueViolation(new DbUpdateException("save failed",
+            new Exception("Connection reset by peer"))));
+    }
+
+    [Fact]
     public async Task Register_CreatesUserAndReturnsToken()
     {
         var dto = new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" };

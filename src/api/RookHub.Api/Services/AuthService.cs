@@ -63,10 +63,13 @@ public class AuthService
         {
             await _db.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
             // Race/Kollision am Unique-Index (gleichzeitige Registrierung oder
             // Casing-Kollision) -> sauberer Conflict (409) statt unbehandeltem 500.
+            // NUR echte Duplikat-Fehler: ein transienter DB-Fehler (Deadlock/Timeout/
+            // Verbindungsabriss) hiess sonst faelschlich "Username already exists" -
+            // der User haelt den Namen fuer vergeben, obwohl ein Retry genuegt haette.
             throw new InvalidOperationException("Username or email already exists.");
         }
 
@@ -155,6 +158,16 @@ public class AuthService
 
     /// <summary>Erzeugt einen frischen, kompakten Security-Stamp (Basis für die Token-Invalidierung).</summary>
     public static string NewSecurityStamp() => Guid.NewGuid().ToString("N");
+
+    /// <summary>Ist die <see cref="DbUpdateException"/> eine Unique-Index-Verletzung (Duplikat)?
+    /// Primär strukturiert über den MariaDB-/MySQL-Fehlercode 1062; Nachrichts-Fallback deckt
+    /// andere Provider (z. B. die InMemory-Test-DB) ab. Alles andere (Deadlock, Timeout,
+    /// Verbindungsabriss) ist KEIN Duplikat und darf nicht als „already exists" maskiert werden.</summary>
+    internal static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is MySqlConnector.MySqlException { ErrorCode: MySqlConnector.MySqlErrorCode.DuplicateKeyEntry }
+        || (ex.InnerException?.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (ex.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) ?? false)
+        || ex.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase);
 
     private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null)
     {

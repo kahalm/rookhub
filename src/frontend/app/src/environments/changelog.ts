@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.13';
+export const APP_VERSION = '0.291.14';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.14", date: "2026-07-12", changes: [
+    { en: "Fix (registration): a transient database failure during sign-up (deadlock, lock timeout, dropped connection) was reported as „Username or email already exists". The save-error handler mapped EVERY database update exception to the 409 conflict message — the user believed the name was taken although the account simply wasn't created and a retry would have succeeded. Only genuine unique-index violations (structured MariaDB error code 1062, with a message fallback for other providers) map to the conflict now; everything else surfaces as a server error. +1 backend test.", de: "Fix (Registrierung): ein transienter Datenbank-Fehler beim Registrieren (Deadlock, Lock-Timeout, Verbindungsabriss) wurde als „Username or email already exists" gemeldet. Der Speicher-Fehlerpfad mappte JEDE Datenbank-Update-Exception auf die 409-Konflikt-Meldung — der User hielt den Namen für vergeben, obwohl das Konto schlicht nicht angelegt wurde und ein erneuter Versuch genügt hätte. Nur echte Unique-Index-Verletzungen (strukturierter MariaDB-Fehlercode 1062, mit Nachrichts-Fallback für andere Provider) ergeben jetzt den Konflikt; alles andere erscheint als Serverfehler. +1 Backend-Test." },
+  ]},
   { version: "0.291.13", date: "2026-07-12", changes: [
     { en: "Fix (weekly posts): the overview list could disagree with the per-post view for chapter-sourced weekly posts. The overview used the puzzle count cached at creation time, while the post view and attempt recording count the chapter's quiz lines LIVE — after a Chessable re-fetch grew (or shrank) the source chapter, the overview showed „completed" although open puzzles remained (or a completion that could never be reached). Chapter-sourced posts now count live in the overview too. +1 backend test.", de: "Fix (Wochenposts): die Übersichtsliste konnte bei Kapitel-basierten Wochenposts der Post-Ansicht widersprechen. Die Übersicht nutzte die beim Anlegen gecachte Puzzle-Anzahl, während Post-Ansicht und Versuchs-Erfassung die Quiz-Linien des Kapitels LIVE zählen — wuchs (oder schrumpfte) das Quell-Kapitel durch einen Chessable-Re-Fetch, zeigte die Übersicht „erledigt", obwohl offene Puzzles blieben (bzw. ein nie erreichbares Soll). Kapitel-basierte Posts zählen jetzt auch in der Übersicht live. +1 Backend-Test." },
   ]},
