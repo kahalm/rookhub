@@ -118,8 +118,7 @@ public class SchachBotWebhookService
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(secret))
             return;
         // ".../webhook/puzzle-attempt" → ".../webhook/weekly-progress"
-        var slash = baseUrl.LastIndexOf('/');
-        var url = slash > 0 ? baseUrl[..slash] + "/weekly-progress" : baseUrl;
+        var url = SiblingWebhookUrl(baseUrl, "weekly-progress");
 
         var payload = new
         {
@@ -179,8 +178,7 @@ public class SchachBotWebhookService
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(secret))
             return;
 
-        var slash = baseUrl.LastIndexOf('/');
-        var url = slash > 0 ? baseUrl[..slash] + "/daily-regenerate" : baseUrl;
+        var url = SiblingWebhookUrl(baseUrl, "daily-regenerate");
 
         var payload = new { date = date.ToString("yyyy-MM-dd"), puzzleId = newPuzzleId };
         string body;
@@ -206,6 +204,27 @@ public class SchachBotWebhookService
         }
         catch (TaskCanceledException) { _logger.LogDebug("SchachBot-DailyRegenerate-Webhook abgebrochen (date={Date})", date); }
         catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook fehlgeschlagen (date={Date})", date); }
+    }
+
+    /// <summary>
+    /// Leitet aus <c>SchachBot:WebhookUrl</c> die Schwester-Webhook-URL ab, indem das LETZTE
+    /// Pfadsegment ersetzt wird (".../webhook/puzzle-attempt" → ".../webhook/{sibling}").
+    /// Robust gegen Konfigurations-Varianten, an denen das frühere naive
+    /// <c>LastIndexOf('/')</c>-Schneiden still kaputtging:
+    /// - Trailing-Slash (".../puzzle-attempt/") → würde sonst ".../puzzle-attempt/{sibling}" bauen;
+    /// - URL OHNE Pfad ("http://schach-bot:9000") → schnitt sonst am "//" des Schemas und
+    ///   erzeugte "http://{sibling}" (falscher HOST!); jetzt wird der dokumentierte Bot-Pfad
+    ///   "/webhook/{sibling}" angehängt.
+    /// </summary>
+    internal static string SiblingWebhookUrl(string baseUrl, string sibling)
+    {
+        var trimmed = baseUrl.TrimEnd('/');
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) && uri.AbsolutePath.Length > 1)
+        {
+            var slash = trimmed.LastIndexOf('/');
+            return trimmed[..slash] + "/" + sibling;
+        }
+        return trimmed + "/webhook/" + sibling;
     }
 
     /// <summary>HMAC-SHA256 ueber <paramref name="body"/> mit <paramref name="secret"/>, als lowercase-hex.</summary>

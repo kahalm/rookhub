@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.15';
+export const APP_VERSION = '0.291.16';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.16", date: "2026-07-12", changes: [
+    { en: "Fix (Discord bot webhooks, backend-only): the weekly-progress and daily-regenerate webhook URLs are derived from SchachBot:WebhookUrl by replacing the last path segment — the previous naive cut at the last '/' silently produced garbage for config variants: with a trailing slash the segment was appended instead of replaced, and with a host-only URL (no path) the cut hit the '//' of the scheme and produced „http://weekly-progress" (wrong HOST entirely); the webhook then failed with only a swallowed warning and Discord embeds never updated. New robust helper incl. documented fallback path. +1 backend test.", de: "Fix (Discord-Bot-Webhooks, nur Backend): die weekly-progress- und daily-regenerate-Webhook-URLs werden aus SchachBot:WebhookUrl durch Ersetzen des letzten Pfadsegments abgeleitet — das bisherige naive Schneiden am letzten '/' produzierte bei Konfigurations-Varianten still Müll: mit Trailing-Slash wurde das Segment angehängt statt ersetzt, und bei einer Host-only-URL (ohne Pfad) schnitt der Cut am '//' des Schemas und erzeugte „http://weekly-progress" (komplett falscher HOST); der Webhook scheiterte dann mit nur einer geschluckten Warnung und Discord-Embeds aktualisierten nie. Neuer robuster Helper inkl. dokumentiertem Fallback-Pfad. +1 Backend-Test." },
+  ]},
   { version: "0.291.15", date: "2026-07-12", changes: [
     { en: "Fix (admin CI, backend-only): the build SHA reported by remote stacks (build-info endpoints / POST /api/ci/build-report) was interpolated into the GitHub API query string without escaping or validation — a value like „abc&per_page=100" could inject/alter query parameters, whitespace produced an invalid URI. Reported SHAs are now validated (7–64 hex chars, otherwise dropped) and the query value is escaped. +2 backend tests.", de: "Fix (Admin-CI, nur Backend): die von Remote-Stacks gemeldete Build-SHA (build-info-Endpoints / POST /api/ci/build-report) wurde ohne Escaping oder Validierung in die GitHub-API-Query interpoliert — ein Wert wie „abc&per_page=100" konnte Query-Parameter injizieren/verändern, Whitespace erzeugte eine ungültige URI. Gemeldete SHAs werden jetzt validiert (7–64 Hex-Zeichen, sonst verworfen) und der Query-Wert escaped. +2 Backend-Tests." },
   ]},

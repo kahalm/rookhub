@@ -142,4 +142,20 @@ public class SchachBotWebhookServiceTests
         var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes("hello"))).ToLowerInvariant();
         Assert.Equal(expected, actual);
     }
+    [Fact]
+    public void SiblingWebhookUrl_ReplacesLastSegment_AndSurvivesConfigVariants()
+    {
+        // Normalfall: letztes Pfadsegment ersetzen.
+        Assert.Equal("http://schach-bot:9000/webhook/weekly-progress",
+            SchachBotWebhookService.SiblingWebhookUrl("http://schach-bot:9000/webhook/puzzle-attempt", "weekly-progress"));
+
+        // Regression Trailing-Slash: ergab frueher ".../puzzle-attempt/weekly-progress".
+        Assert.Equal("http://schach-bot:9000/webhook/daily-regenerate",
+            SchachBotWebhookService.SiblingWebhookUrl("http://schach-bot:9000/webhook/puzzle-attempt/", "daily-regenerate"));
+
+        // Regression ohne Pfad: LastIndexOf('/') schnitt am "//" des Schemas -> "http://weekly-progress"
+        // (falscher HOST); jetzt wird der dokumentierte Bot-Pfad angehaengt.
+        Assert.Equal("http://schach-bot:9000/webhook/weekly-progress",
+            SchachBotWebhookService.SiblingWebhookUrl("http://schach-bot:9000", "weekly-progress"));
+    }
 }
