@@ -248,6 +248,39 @@ public class ChessableImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RunNextAsync_FastLane_StaleCacheDemotesToDownloadLane()
+    {
+        // FullyCached wurde beim Enqueue klassifiziert; ist der piratechess-Cache zur LAUFZEIT nicht
+        // mehr gedeckt (und existiert noch kein FetchedPgn-Checkpoint), darf die Fast-Lane den Job
+        // NICHT netzfrei-gedacht ausführen (würde Gate + Bearer-Breaker umgehen), sondern stuft ihn
+        // in die Download-Lane zurück.
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var stale = new ChessableImport
+        {
+            UserId = 1, Bid = "stale", CourseName = "S", Target = "repertoire",
+            Status = "running", Phase = "queued", FullyCached = true, FetchedPgn = null,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.ChessableImports.Add(stale);
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/stale/cached")) return JsonOk(new { cached = false });
+            throw new InvalidOperationException($"Unerwarteter Proxy-Aufruf: {req.RequestUri}");
+        }));
+
+        await svc.RunNextAsync(fastLane: true);
+
+        var reloaded = await _db.ChessableImports.AsNoTracking().FirstAsync(i => i.Id == stale.Id);
+        Assert.Equal("running", reloaded.Status);
+        Assert.Equal("queued", reloaded.Phase);      // wieder wartend — jetzt für die Download-Lane
+        Assert.False(reloaded.FullyCached);          // zurückgestuft
+        Assert.Null(reloaded.FetchJobId);            // KEIN Chessable-Fetch gestartet
+    }
+
+    [Fact]
     public async Task RunNextAsync_DownloadLane_ClaimsNonCachedIncludingUnclassified()
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))

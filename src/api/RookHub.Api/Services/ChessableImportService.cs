@@ -244,6 +244,29 @@ public class ChessableImportService : ICourseReimporter
             if (!await TryClaimAsync(next.Id, ct))
                 continue; // jemand anderes war schneller → nächsten wartenden Job probieren
 
+            // Fast-Lane-Klassifikation gilt nur zum ENQUEUE-Zeitpunkt — Jobs können tagelang liegen
+            // (z. B. bearer-blocked) und der piratechess-Cache kann inzwischen invalidiert sein. Ohne
+            // Re-Check würde der Job hier netzfrei-gedacht, aber tatsächlich mit echtem Chessable-Abruf
+            // laufen: parallel (MaxParallel Fast-Lane-Runner), am _downloadLaneGate vorbei UND am
+            // Bearer-Breaker vorbei (der FullyCached==true ausnimmt) → IP-Block-Risiko. Nur nötig,
+            // solange noch kein FetchedPgn-Checkpoint existiert (danach ist der Job wirklich netzfrei).
+            if (fastLane && string.IsNullOrEmpty(next.FetchedPgn)
+                && !await _proxy.IsCourseCachedAsync(next.Bid, ct))
+            {
+                _db.ChangeTracker.Clear();
+                var stale = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == next.Id, ct);
+                if (stale is not null && stale.Status == "running")
+                {
+                    stale.FullyCached = false;
+                    stale.Phase = "queued";
+                    await _db.SaveChangesAsync(ct);
+                    _logger.LogWarning(
+                        "Chessable-Import {Id} (bid {Bid}) ist nicht mehr voll gecacht — zurückgestuft in die Download-Lane",
+                        stale.Id, stale.Bid);
+                }
+                continue; // nächsten Fast-Lane-Kandidaten probieren; der Job läuft künftig gedrosselt als Download
+            }
+
             // Der lokal getrackte Entity-Stand ist nach dem Claim veraltet → frisch laden lassen.
             _db.ChangeTracker.Clear();
             await RunAsync(next.Id, ct);

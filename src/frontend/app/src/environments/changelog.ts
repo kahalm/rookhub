@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.1';
+export const APP_VERSION = '0.291.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.2", date: "2026-07-12", changes: [
+    { en: "Fix (Chessable import, backend-only): the fast lane for fully cached courses now RE-CHECKS at claim time whether the course is still covered by the piratechess raw cache. The cached/uncached classification was frozen at enqueue time — a job could wait for days (e.g. while the bearer was blocked) and, once the cache had been invalidated, up to 3 fast-lane runners would perform REAL Chessable downloads in parallel, bypassing both the single-download gate and the bearer circuit breaker (IP-block risk). Such stale jobs are now demoted back into the throttled download lane instead. +1 backend test.", de: "Fix (Chessable-Import, nur Backend): die Fast-Lane für voll gecachte Kurse prüft beim Übernehmen eines Jobs jetzt NEU, ob der Kurs noch vom piratechess-Rohdaten-Cache gedeckt ist. Die gecacht/ungecacht-Einstufung war bisher auf dem Stand des Einreihens eingefroren — ein Job konnte tagelang warten (z. B. bei gesperrtem Bearer), und war der Cache inzwischen invalidiert, starteten bis zu 3 Fast-Lane-Läufe parallel ECHTE Chessable-Abrufe, vorbei am Ein-Download-Gate UND am Bearer-Circuit-Breaker (IP-Block-Risiko). Solche veralteten Jobs werden jetzt stattdessen in die gedrosselte Download-Lane zurückgestuft. +1 Backend-Test." },
+  ]},
   { version: "0.291.1", date: "2026-07-11", changes: [
     { en: "Fix: the daily puzzle could land on a Chessable info/explanation line (IsInfoOnly) — which is not a quiz and shouldn't appear in the daily/random pools. The general pool query already excluded such lines, but the daily assignment + regenerate paths built their own query without that filter. Both now exclude IsInfoOnly (like Retired). +2 backend tests.", de: "Fix: das Tagespuzzle konnte auf eine Chessable-Info-/Erklärlinie (IsInfoOnly) fallen — die ist keine Quizaufgabe und darf in den Daily-/Random-Töpfen nicht vorkommen. Die allgemeine Pool-Abfrage schloss solche Linien schon aus, aber die Daily-Zuweisung + das Regenerieren bauten ihre eigene Abfrage OHNE diesen Filter. Beide schließen jetzt IsInfoOnly aus (wie Retired). +2 Backend-Tests." },
   ]},
