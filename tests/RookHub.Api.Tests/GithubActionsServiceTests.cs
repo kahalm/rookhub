@@ -158,6 +158,36 @@ public class GithubActionsServiceTests
     }
 
     [Fact]
+    public void IsPlausibleSha_AcceptsHex_RejectsInjection()
+    {
+        // Regression: bi.Sha (von Remote-build-info-Endpoints / POST /api/ci/build-report) wurde
+        // unescaped in die GitHub-Query interpoliert — ein Wert wie „abc&per_page=100" konnte
+        // Query-Parameter injizieren, Whitespace baute eine ungültige URI.
+        Assert.True(GithubActionsService.IsPlausibleSha("abc1234"));
+        Assert.True(GithubActionsService.IsPlausibleSha("ABC1234def5678"));
+        Assert.False(GithubActionsService.IsPlausibleSha("abc12"));                    // zu kurz
+        Assert.False(GithubActionsService.IsPlausibleSha("abc1234&per_page=100"));     // Query-Injection
+        Assert.False(GithubActionsService.IsPlausibleSha("v1.2 dirty"));               // kein Hex
+        Assert.False(GithubActionsService.IsPlausibleSha(new string('a', 65)));        // zu lang
+    }
+
+    [Fact]
+    public async Task ReportBuildAsync_DropsImplausibleSha()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(dbName).Options);
+        var settings = new Dictionary<string, string?> { ["GitHub:Repos:0"] = "chessresults_crawler" };
+        var svc = Build(new StubHandler((_, _) => Json(RunsJson)), extraSettings: settings, db: db);
+
+        await svc.ReportBuildAsync("chessresults_crawler", "abc1234&per_page=100", "master");
+
+        var report = Assert.Single(db.CiBuildReports);
+        Assert.Null(report.Sha);              // verworfen — landet nie in einer GitHub-Query
+        Assert.Equal("master", report.Ref);
+    }
+
+    [Fact]
     public async Task ReportedBuild_PersistsAcrossServiceInstances()
     {
         // Persistenz-Kern: ein gemeldeter Build überlebt einen rookhub-api-Neustart. Simuliert über eine

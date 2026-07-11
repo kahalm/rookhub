@@ -59,12 +59,20 @@ public class GithubActionsService
     /// 10 min) zu warten. Früher nur ein prozessweiter In-Memory-Cache → nach jedem Restart weg.</summary>
     public async Task ReportBuildAsync(string repo, string? sha, string? refName, CancellationToken ct = default)
     {
+        // Sha kommt von aussen (Build-Report-Endpoint mit Shared-Key / Remote-build-info-Endpoints)
+        // und wird spaeter in GitHub-API-Querys interpoliert → nur plausible Git-SHAs übernehmen.
+        if (sha != null && !IsPlausibleSha(sha)) sha = null;
         var existing = await _db.CiBuildReports.FirstOrDefaultAsync(x => x.Repo == repo, ct);
         if (existing is null)
             _db.CiBuildReports.Add(new CiBuildReport { Repo = repo, Sha = sha, Ref = refName, ReportedAt = DateTime.UtcNow });
         else { existing.Sha = sha; existing.Ref = refName; existing.ReportedAt = DateTime.UtcNow; }
         await _db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Plausible Git-SHA: 7–64 Hex-Zeichen. Alles andere (z. B. „abc&amp;per_page=100",
+    /// Whitespace, „v1.2 dirty") würde die GitHub-Query verfälschen bzw. eine ungültige URI bauen.</summary>
+    internal static bool IsPlausibleSha(string sha) =>
+        sha.Length is >= 7 and <= 64 && sha.All(Uri.IsHexDigit);
 
     /// <summary>Per GitHub-<c>workflow_run</c>-Webhook gemeldete Läufe je Repo (Run-Id → Run). Damit
     /// zeigt die CI-Seite Start/Ende SOFORT, ohne die GitHub-API abzufragen (Push statt Pull). Prozessweit;
@@ -209,7 +217,7 @@ public class GithubActionsService
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
-                $"/repos/{owner}/{repo}/actions/runs?head_sha={bi.Sha}&per_page=10&exclude_pull_requests=true");
+                $"/repos/{owner}/{repo}/actions/runs?head_sha={Uri.EscapeDataString(bi.Sha!)}&per_page=10&exclude_pull_requests=true");
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using var resp = await _http.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode) return null;

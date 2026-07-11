@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.14';
+export const APP_VERSION = '0.291.15';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.15", date: "2026-07-12", changes: [
+    { en: "Fix (admin CI, backend-only): the build SHA reported by remote stacks (build-info endpoints / POST /api/ci/build-report) was interpolated into the GitHub API query string without escaping or validation — a value like „abc&per_page=100" could inject/alter query parameters, whitespace produced an invalid URI. Reported SHAs are now validated (7–64 hex chars, otherwise dropped) and the query value is escaped. +2 backend tests.", de: "Fix (Admin-CI, nur Backend): die von Remote-Stacks gemeldete Build-SHA (build-info-Endpoints / POST /api/ci/build-report) wurde ohne Escaping oder Validierung in die GitHub-API-Query interpoliert — ein Wert wie „abc&per_page=100" konnte Query-Parameter injizieren/verändern, Whitespace erzeugte eine ungültige URI. Gemeldete SHAs werden jetzt validiert (7–64 Hex-Zeichen, sonst verworfen) und der Query-Wert escaped. +2 Backend-Tests." },
+  ]},
   { version: "0.291.14", date: "2026-07-12", changes: [
     { en: "Fix (registration): a transient database failure during sign-up (deadlock, lock timeout, dropped connection) was reported as „Username or email already exists". The save-error handler mapped EVERY database update exception to the 409 conflict message — the user believed the name was taken although the account simply wasn't created and a retry would have succeeded. Only genuine unique-index violations (structured MariaDB error code 1062, with a message fallback for other providers) map to the conflict now; everything else surfaces as a server error. +1 backend test.", de: "Fix (Registrierung): ein transienter Datenbank-Fehler beim Registrieren (Deadlock, Lock-Timeout, Verbindungsabriss) wurde als „Username or email already exists" gemeldet. Der Speicher-Fehlerpfad mappte JEDE Datenbank-Update-Exception auf die 409-Konflikt-Meldung — der User hielt den Namen für vergeben, obwohl das Konto schlicht nicht angelegt wurde und ein erneuter Versuch genügt hätte. Nur echte Unique-Index-Verletzungen (strukturierter MariaDB-Fehlercode 1062, mit Nachrichts-Fallback für andere Provider) ergeben jetzt den Konflikt; alles andere erscheint als Serverfehler. +1 Backend-Test." },
   ]},
