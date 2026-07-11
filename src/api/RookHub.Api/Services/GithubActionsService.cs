@@ -160,10 +160,11 @@ public class GithubActionsService
         await Task.WhenAll(runsTask, buildInfoTask);
 
         var running = buildInfoTask.Result;
-        var results = new List<CiRepoDto>();
-        foreach (var r in runsTask.Result)
-            results.Add(await MergeRunningAsync(r, running, owner, token, ct));
-        return new CiOverviewDto(true, results, DateTime.UtcNow);
+        // Unabhängige Repos parallel anreichern (analog zum FetchRepoAsync-Fan-out oben): das
+        // sequenzielle await je Repo addierte bei Cache-Miss pro Repo mit nachzuladendem Run
+        // einen vollen GitHub-Roundtrip (~0,3–0,8 s) in Serie.
+        var results = await Task.WhenAll(runsTask.Result.Select(r => MergeRunningAsync(r, running, owner, token, ct)));
+        return new CiOverviewDto(true, results.ToList(), DateTime.UtcNow);
     }
 
     /// <summary>Reichert einen Repo-DTO um die laufende Build-SHA/Ref an und lädt — falls der laufende

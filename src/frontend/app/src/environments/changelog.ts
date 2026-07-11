@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.17';
+export const APP_VERSION = '0.291.18';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.18", date: "2026-07-12", changes: [
+    { en: "Perf (admin CI, backend-only): the CI overview enriched the repos sequentially with their running-build info — on a cache miss, every repo whose running build had dropped out of its top-5 runs added a full GitHub round-trip (~0.3–0.8 s) IN SERIES, stacking up to multi-second responses. The per-repo enrichment now runs in parallel (matching the already-parallel repo fetch fan-out). Existing tests cover the behavior.", de: "Perf (Admin-CI, nur Backend): die CI-Übersicht reicherte die Repos sequenziell mit ihrer Laufender-Build-Info an — bei Cache-Miss addierte jedes Repo, dessen laufender Build aus seinen Top-5-Läufen gefallen war, einen vollen GitHub-Roundtrip (~0,3–0,8 s) IN SERIE, bis zu mehrsekündigen Antworten. Die Pro-Repo-Anreicherung läuft jetzt parallel (analog zum bereits parallelen Repo-Fetch-Fan-out). Bestehende Tests decken das Verhalten ab." },
+  ]},
   { version: "0.291.17", date: "2026-07-12", changes: [
     { en: "Hardening (hint flagging): the „flag hints as bad" endpoints (standard + book puzzles) let any signed-in user set/clear the global review flag on ANY puzzle with no per-user throttle and no audit trail — a user iterating puzzle ids could mass-flag (or mass-UNflag) the admin review backlog of the whole catalog (~6000 flags/hour under the global IP limiter), untraceably. Both endpoints now use a per-user rate limit (10/min, new „user-flag" policy) and every flag change is audit-logged with the acting user id. +1 backend test.", de: "Härtung (Tipps-Flagging): die „Tipps als schlecht markieren"-Endpoints (Standard- + Buch-Puzzles) ließen jeden eingeloggten User das globale Review-Flag an JEDEM Puzzle setzen/aufheben — ohne Pro-User-Drossel und ohne Audit-Spur; per Id-Iteration ließ sich der Admin-Review-Bestand des ganzen Katalogs massenhaft umflaggen (~6000 Flags/Stunde unter dem globalen IP-Limiter), nicht zuordenbar. Beide Endpoints nutzen jetzt ein Pro-User-Rate-Limit (10/min, neue „user-flag"-Policy), und jede Flag-Änderung wird mit der User-Id audit-geloggt. +1 Backend-Test." },
   ]},
