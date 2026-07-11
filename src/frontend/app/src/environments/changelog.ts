@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.27';
+export const APP_VERSION = '0.291.28';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.28", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the per-day TrackerDayDto projection was duplicated field by field between the tracker heatmap and the full daily series — a new per-day field (like HasManual once) or a day-status change had to be edited in both, or heatmap and history silently disagreed. Now one MapDay helper. The timer-stop response also re-inlined the existing ManualActivity mapper; it now calls ToDto. Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): die Pro-Tag-TrackerDayDto-Projektion war Feld für Feld zwischen Tracker-Heatmap und vollständiger Tagesreihe dupliziert — ein neues Pro-Tag-Feld (wie einst HasManual) oder eine Tagesstatus-Änderung musste in beiden editiert werden, sonst widersprachen sich Heatmap und Historie still. Jetzt ein MapDay-Helper. Die Timer-Stopp-Antwort re-inlinete zudem den vorhandenen ManualActivity-Mapper; sie ruft jetzt ToDto. Durch bestehende Tests abgedeckt." },
+  ]},
   { version: "0.291.27", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the replace-repertoire-PGN-in-place sequence (snapshot old file ids → upload new file → delete old files) was duplicated verbatim in the Chessable re-fetch target path and the sibling-repertoire bump — the deliberate ordering invariant („never a window with 0 files") was enforced only by keeping both copies in sync. Now one ReplaceRepertoireFileAsync helper. Covered by existing import/sibling tests.", de: "Refactor (Backend, keine Verhaltensänderung): die Replace-Repertoire-PGN-in-place-Sequenz (alte Datei-Ids merken → neue Datei hochladen → alte löschen) war im Chessable-Re-Fetch-Zielpfad und im Geschwister-Repertoire-Bump wortgleich dupliziert — die bewusste Reihenfolge-Invariante („nie ein Zeitfenster mit 0 Dateien") wurde nur durch synchron gehaltene Kopien erzwungen. Jetzt ein ReplaceRepertoireFileAsync-Helper. Durch bestehende Import-/Geschwister-Tests abgedeckt." },
   ]},

@@ -335,6 +335,21 @@ public class TrainingGoalService
         Theme = m.Theme,
     };
 
+    /// <summary>EIN Mapping Aggregat-Tag → <see cref="TrackerDayDto"/> — genutzt von Tracker-Heatmap
+    /// UND vollständiger Tagesreihe. Vorher zwei Feld-für-Feld-Kopien: ein neues Pro-Tag-Feld
+    /// (wie seinerzeit HasManual) oder eine DayStatus-Änderung musste in beiden Projektionen
+    /// nachgezogen werden, sonst widersprachen sich Heatmap und Historie still.</summary>
+    private static TrackerDayDto MapDay(DateOnly date, DayBuckets agg, TrainingGoalDto goal) => new()
+    {
+        Date = date.ToString("yyyy-MM-dd"),
+        TotalSeconds = agg.Total,
+        BySource = SourceDto(agg.Source),
+        ByTheme = ThemeDto(agg.Theme),
+        PlayGames = agg.PlayGames,
+        Status = DayStatus(agg.Total, goal.DailyMinutes),
+        HasManual = agg.HasManual,
+    };
+
     // ----- Tracker / Heute -------------------------------------------------
 
     /// <summary>Tagesreihe (nur Tage mit Aktivität) der letzten <paramref name="weeks"/> Wochen + effektives Ziel
@@ -356,16 +371,7 @@ public class TrainingGoalService
             {
                 Accumulate(bySource, kv.Value.Source);
                 Accumulate(byTheme, kv.Value.Theme);
-                return new TrackerDayDto
-                {
-                    Date = kv.Key.ToString("yyyy-MM-dd"),
-                    TotalSeconds = kv.Value.Total,
-                    BySource = SourceDto(kv.Value.Source),
-                    ByTheme = ThemeDto(kv.Value.Theme),
-                    PlayGames = kv.Value.PlayGames,
-                    Status = DayStatus(kv.Value.Total, goal.DailyMinutes),
-                    HasManual = kv.Value.HasManual,
-                };
+                return MapDay(kv.Key, kv.Value, goal);
             })
             .ToList();
 
@@ -389,16 +395,7 @@ public class TrainingGoalService
 
         var days = agg
             .OrderBy(kv => kv.Key)
-            .Select(kv => new TrackerDayDto
-            {
-                Date = kv.Key.ToString("yyyy-MM-dd"),
-                TotalSeconds = kv.Value.Total,
-                BySource = SourceDto(kv.Value.Source),
-                ByTheme = ThemeDto(kv.Value.Theme),
-                PlayGames = kv.Value.PlayGames,
-                Status = DayStatus(kv.Value.Total, goal.DailyMinutes),
-                HasManual = kv.Value.HasManual,
-            })
+            .Select(kv => MapDay(kv.Key, kv.Value, goal))
             .ToList();
 
         return new DailySeriesDto { Days = days };
@@ -863,15 +860,7 @@ public class TrainingGoalService
         _db.ActivityTimers.Remove(timer);
         await _db.SaveChangesAsync();
 
-        return new ManualActivityDto
-        {
-            Id = manual.Id,
-            Date = manual.Date.ToString("yyyy-MM-dd"),
-            Kind = manual.Kind,
-            Amount = manual.Amount,
-            Note = manual.Note,
-            Theme = manual.Theme,
-        };
+        return ToDto(manual);
     }
 
     /// <summary>Wirft den laufenden Timer weg, ohne einen Eintrag zu erzeugen. true wenn etwas
