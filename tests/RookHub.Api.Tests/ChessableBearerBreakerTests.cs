@@ -33,6 +33,10 @@ public class ChessableBearerBreakerTests : IDisposable
     [InlineData("Chessable: account banned")]
     [InlineData("Chessable-Token ist abgelaufen — bitte den Bearer neu hinterlegen.")]
     [InlineData("Chessable-Token abgelaufen/ungültig (Expired token) — bitte den Bearer neu hinterlegen.")]
+    // Englische Rewordings (robuster gegen Meldungs-Änderungen des Proxys/Chessable):
+    [InlineData("Chessable: Expired token")]
+    [InlineData("Please re-enter your bearer token")]
+    [InlineData("401 Unauthorized")]
     public void IsBearerFatal_DeadBearer_True(string message)
         => Assert.True(ChessableBearerBreaker.IsBearerFatal(message));
 

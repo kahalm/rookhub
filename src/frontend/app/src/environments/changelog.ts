@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.29';
+export const APP_VERSION = '0.291.30';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.30", date: "2026-07-12", changes: [
+    { en: "Hardening (Chessable bearer circuit breaker): the „dead bearer" classification substring-matches free-text proxy error messages, so an English rewording (e.g. „Expired token" without the German „abgelaufen") could let a dead bearer slip past the breaker — the watchdog would then keep hammering Chessable with the banned account. The fatal-keyword list now covers both languages (expired/invalid token/re-enter/unauthorized alongside the German terms); the VPN/Cloudflare/IP exclusions still run first so an ambiguous IP-block message stays non-fatal. Proper deep fix (a structured error code from the piratechess proxy instead of message sniffing) is noted in code. +3 backend tests.", de: "Härtung (Chessable-Bearer-Circuit-Breaker): die „toter Bearer"-Klassifikation matcht Freitext-Fehlermeldungen des Proxys per Substring, sodass ein englisches Rewording (z. B. „Expired token" ohne das deutsche „abgelaufen") einen toten Bearer am Breaker vorbeirutschen lassen konnte — der Watchdog würde dann weiter mit dem gesperrten Account gegen Chessable hämmern. Die Fatal-Schlüsselwortliste deckt jetzt beide Sprachen ab (expired/invalid token/re-enter/unauthorized neben den deutschen Begriffen); die VPN-/Cloudflare-/IP-Ausschlüsse laufen weiterhin zuerst, sodass eine mehrdeutige IP-Block-Meldung nicht-fatal bleibt. Der eigentliche Tiefen-Fix (ein strukturierter Fehlercode aus dem piratechess-Proxy statt Meldungs-Sniffing) ist im Code vermerkt. +3 Backend-Tests." },
+  ]},
   { version: "0.291.29", date: "2026-07-12", changes: [
     { en: "Fix (observability, Chessable import): the cache-status calls to the piratechess proxy swallowed EVERY error with bare catch blocks and zero logging — when the proxy was down or misconfigured, every course silently appeared uncached, all imports took the slow download queue, and there was not a single log line to diagnose why the fast lane had stopped working. Failures are now logged as warnings (behavior stays soft: uncached → normal download path), and caller cancellation is no longer masked as „not cached". +2 backend tests.", de: "Fix (Observability, Chessable-Import): die Cache-Status-Aufrufe zum piratechess-Proxy schluckten JEDEN Fehler mit nackten catch-Blöcken und null Logging — war der Proxy down oder fehlkonfiguriert, erschien jeder Kurs still als ungecacht, alle Importe liefen über die langsame Download-Queue, und es gab keine einzige Log-Zeile, um zu diagnostizieren, warum die Fast-Lane nicht mehr arbeitete. Fehler werden jetzt als Warnung geloggt (Verhalten bleibt weich: ungecacht → normaler Download-Weg), und ein Abbruch des Aufrufers wird nicht mehr als „nicht gecacht" maskiert. +2 Backend-Tests." },
   ]},

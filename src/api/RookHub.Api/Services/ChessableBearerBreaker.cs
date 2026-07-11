@@ -59,18 +59,20 @@ public class ChessableBearerBreaker
             || m.Contains("IP rotieren", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        // Account gesperrt/gelöscht (z. B. Chessable: „User is banned or deleted").
-        if (m.Contains("banned", StringComparison.OrdinalIgnoreCase)
-            || m.Contains("deleted", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        // Token endgültig unbrauchbar (abgelaufen/ungültig → „bitte den Bearer neu hinterlegen").
-        if (m.Contains("abgelaufen", StringComparison.OrdinalIgnoreCase)
-            || m.Contains("ungültig", StringComparison.OrdinalIgnoreCase)
-            || m.Contains("neu hinterlegen", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
+        // HINWEIS (Altitude/[[chessable-bearer-circuit-breaker]]): diese Klassifikation matcht
+        // FREITEXT-Fehlermeldungen des piratechess-Proxys. Der robuste Fix wäre ein STRUKTURIERTER
+        // Fehlercode aus dem Proxy (z. B. BEARER_DEAD/IP_BLOCKED) statt Substring-Sniffing — solange
+        // der nicht existiert, decken wir hier bewusst BEIDE Sprachen ab (piratechess wickelt Meldungen
+        // meist auf Deutsch ein, reicht aber rohe Chessable-Meldungen wie „Expired token" durch).
+        var fatal = new[]
+        {
+            // Account gesperrt/gelöscht (z. B. Chessable: „User is banned or deleted").
+            "banned", "deleted", "gesperrt", "gelöscht",
+            // Token endgültig unbrauchbar (abgelaufen/ungültig → „bitte den Bearer neu hinterlegen").
+            "abgelaufen", "ungültig", "neu hinterlegen",
+            "expired", "invalid token", "re-enter", "reauth", "unauthorized",
+        };
+        return fatal.Any(k => m.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Öffnet den Breaker für den Bearer des angegebenen Users (idempotent: ein bereits
