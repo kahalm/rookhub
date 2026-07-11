@@ -113,15 +113,18 @@ public class CiBuildReportController : ControllerBase
             actor, Str("head_sha"), string.IsNullOrEmpty(branch) ? null : branch, false);
     }
 
+    /// <summary>Verifiziert GitHubs <c>X-Hub-Signature-256</c>. HMAC-Berechnung bewusst über den
+    /// geteilten <see cref="Services.SchachBotWebhookService.ComputeHmacHex"/> (eine Implementierung
+    /// im Repo, wie in BotStatsController — CLAUDE.md-Konvention) statt einer eigenen Kopie.</summary>
     private static bool VerifyGithubSignature(string secret, string body, string? header)
     {
         if (string.IsNullOrEmpty(header) || !header.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
             return false;
-        using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
-        var computed = Convert.ToHexString(hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        var computed = Services.SchachBotWebhookService.ComputeHmacHex(secret, body);
         return FixedTimeEquals(computed, header.Substring("sha256=".Length).ToLowerInvariant());
     }
 
+    /// <summary>Konstant-zeitiger String-Vergleich (Shared-Key/Signatur-Checks).</summary>
     private static bool FixedTimeEquals(string? a, string? b)
     {
         if (a is null || b is null) return false;

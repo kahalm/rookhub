@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.20';
+export const APP_VERSION = '0.291.21';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.21", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the GitHub webhook signature check in the CI controller re-implemented HMAC-SHA256-hex instead of reusing the repo-wide SchachBotWebhookService.ComputeHmacHex (as BotStatsController already does, and as CLAUDE.md mandates) — two independent HMAC implementations would drift on any fix/hardening. Now one implementation; the constant-time comparison stays. Covered by existing webhook-signature tests.", de: "Refactor (Backend, keine Verhaltensänderung): der GitHub-Webhook-Signatur-Check im CI-Controller re-implementierte HMAC-SHA256-hex, statt das repo-weite SchachBotWebhookService.ComputeHmacHex wiederzuverwenden (wie es BotStatsController schon tut und CLAUDE.md vorschreibt) — zwei unabhängige HMAC-Implementierungen würden bei jedem Fix/jeder Härtung auseinanderlaufen. Jetzt eine Implementierung; der konstant-zeitige Vergleich bleibt. Durch bestehende Webhook-Signatur-Tests abgedeckt." },
+  ]},
   { version: "0.291.20", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): four anonymous-optional endpoints (random puzzle, random batch, menu visibility, client log) re-parsed the user-id claim by hand instead of using the shared BaseApiController.GetUserIdOrNull helper — if claim resolution ever changes (e.g. impersonation-aware), the stale copies would attribute requests to the wrong/no user. All four now use the helper; covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): vier anonym-optionale Endpoints (Zufallspuzzle, Random-Batch, Menü-Sichtbarkeit, Client-Log) parsten den User-Id-Claim von Hand, statt den geteilten Helper BaseApiController.GetUserIdOrNull zu nutzen — ändert sich die Claim-Auflösung je (z. B. Impersonation-bewusst), würden die veralteten Kopien Requests dem falschen/keinem User zuordnen. Alle vier nutzen jetzt den Helper; durch bestehende Tests abgedeckt." },
   ]},
