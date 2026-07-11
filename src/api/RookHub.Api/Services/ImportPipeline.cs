@@ -73,10 +73,19 @@ namespace RookHub.Api.Services;
 ///   /„Evaluate …"-Seiten (z. B. <c>⏲Exercise #N - Introduction</c>) zeigten sonst die Grundstellung
 ///   statt der besprochenen Position. Die richtige FEN steht bereits im <c>Book.SourcePgn</c> → rein
 ///   lokal aufbereitbar (kein Chessable-Re-Fetch nötig).</item>
+/// <item><c>12</c> — Spiel-Splitting robuster (<c>PgnParser.SplitGames</c>): (a) umbruch-bedingte
+///   Kommentar-Fortsetzungszeilen, die mit <c>[</c> beginnen (<c>[%cal …]</c>/<c>[%tqu …]</c> am
+///   Zeilenanfang), wurden als „Tag-Zeile" verworfen — samt ggf. schließendem <c>}</c>, wodurch
+///   nachfolgende echte Züge als Kommentartext gefressen wurden (fehlende/verschobene Züge und
+///   Kommentare, ohne Fehler). Jetzt zählt eine Klammertiefe über Zeilen hinweg: Inhalt offener
+///   <c>{…}</c>-Kommentare bleibt erhalten, auch header-artige Zeilen darin splitten kein Spiel mehr.
+///   (b) Header-only-Spiele (Header ohne Movetext) mischten ihre Header (z. B. die FEN) still in das
+///   NÄCHSTE Spiel; sie werden jetzt separat geflusht. Der Quelltext steht im <c>Book.SourcePgn</c>
+///   → lokal aufbereitbar; Chessable-Bücher laufen (wie bisher) über einen Re-Fetch.</item>
 /// </list>
 /// </summary>
 public static class ImportPipeline
 {
     /// <summary>Aktuelle Pipeline-Version. Beim Bump: Eintrag in der Versionshistorie oben ergänzen.</summary>
-    public const int CurrentVersion = 11;
+    public const int CurrentVersion = 12;
 }

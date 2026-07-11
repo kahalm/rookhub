@@ -52,14 +52,21 @@ public static partial class PgnParser
         var moves = new StringBuilder();
         bool inMoves = false;
         bool hasContent = false;
+        // Offene {…}-Kommentar-Klammertiefe über Zeilenumbrüche hinweg: eine umbruch-bedingte
+        // Fortsetzungszeile eines Kommentars kann mit '[' beginnen ([%cal ...], [%tqu ...]) oder
+        // sogar wie ein Header aussehen — solche Zeilen sind KOMMENTAR-INHALT, kein Tag/Header.
+        int openComments = 0;
 
         foreach (var rawLine in pgnText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
-            var m = HeaderLineRegex().Match(rawLine);
+            var m = openComments == 0 ? HeaderLineRegex().Match(rawLine) : Match.Empty;
             if (m.Success)
             {
-                // Neuer Header nach Movetext ⇒ vorheriges Spiel abschließen
-                if (inMoves)
+                // Neuer Header nach Movetext ⇒ vorheriges Spiel abschließen. Ebenso bei einem
+                // WIEDERHOLTEN Header-Key ohne Movetext (Header-only-Spiel, z. B. verwaiste Tags):
+                // sonst würden die Header des vorherigen Spiels (etwa dessen FEN) still in das
+                // nächste Spiel hineingemischt.
+                if (inMoves || (hasContent && headers.ContainsKey(m.Groups[1].Value)))
                 {
                     yield return (headers, moves.ToString());
                     headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -70,9 +77,10 @@ public static partial class PgnParser
                 headers[m.Groups[1].Value] = m.Groups[2].Value;
                 hasContent = true;
             }
-            else if (rawLine.TrimStart().StartsWith('['))
+            else if (openComments == 0 && rawLine.TrimStart().StartsWith('['))
             {
-                // Tag-artige Zeile, die nicht das Header-Muster trifft – ignorieren
+                // Tag-artige Zeile AUSSERHALB eines Kommentars, die nicht das Header-Muster trifft —
+                // ignorieren ([%…]-Annotationen stehen laut Spez nur INNERHALB von {…}-Kommentaren).
                 continue;
             }
             else if (!string.IsNullOrWhiteSpace(rawLine))
@@ -80,6 +88,13 @@ public static partial class PgnParser
                 moves.Append(rawLine).Append(' ');
                 inMoves = true;
                 hasContent = true;
+                // Klammertiefe fortschreiben ({…} nestet in PGN nicht; '}' darf laut Spez nicht im
+                // Kommentartext vorkommen) — nie unter 0 (verirrte '}' nicht verschleppen).
+                foreach (var ch in rawLine)
+                {
+                    if (ch == '{') openComments++;
+                    else if (ch == '}' && openComments > 0) openComments--;
+                }
             }
         }
         if (hasContent)

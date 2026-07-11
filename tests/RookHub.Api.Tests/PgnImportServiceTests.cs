@@ -34,6 +34,51 @@ public class PgnImportServiceTests : IDisposable
 ";
 
     [Fact]
+    public void SplitGames_KeepsBracketStartingCommentContinuationLines()
+    {
+        // Regression: eine umbruch-bedingte Kommentar-Fortsetzungszeile, die mit '[' beginnt
+        // ([%cal ...]), wurde als „Tag-artige Zeile" verworfen — samt ggf. schließendem '}',
+        // wodurch der Kommentar-Scanner nachfolgende echte Züge fraß.
+        var pgn = "[Event \"X\"]\n[Round \"1\"]\n\n{ Kommentar mit Pfeil\n[%cal Gd8g8] und Ende }\n1. e4 e5 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        var g = Assert.Single(games);
+        Assert.Contains("[%cal Gd8g8]", g.MoveText);
+        Assert.Contains("1. e4 e5", g.MoveText);
+    }
+
+    [Fact]
+    public void SplitGames_HeaderLikeLineInsideComment_IsCommentContentNotHeader()
+    {
+        var pgn = "[Event \"Echt\"]\n[Round \"1\"]\n\n{ Zitat:\n[White \"unecht\"]\nEnde } 1. e4 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        var g = Assert.Single(games);                       // KEIN Spiel-Split mitten im Kommentar
+        Assert.False(g.Headers.ContainsKey("White"));       // Zitat wird nicht als Header übernommen
+        Assert.Contains("[White \"unecht\"]", g.MoveText);
+        Assert.Contains("1. e4", g.MoveText);
+    }
+
+    [Fact]
+    public void SplitGames_HeaderOnlyGame_DoesNotLeakHeadersIntoNextGame()
+    {
+        // Regression: ein Spiel nur aus Headern (kein Movetext) wurde nie geflusht — seine Header
+        // (z. B. die FEN) mischten sich still in das NÄCHSTE Spiel.
+        var pgn = "[Event \"Orphan\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n[Event \"Real\"]\n[Round \"2\"]\n\n1. e4 *\n";
+
+        var games = PgnParser.SplitGames(pgn).ToList();
+
+        Assert.Equal(2, games.Count);
+        Assert.Equal("Orphan", games[0].Headers["Event"]);
+        Assert.True(string.IsNullOrWhiteSpace(games[0].MoveText));
+        Assert.Equal("Real", games[1].Headers["Event"]);
+        Assert.False(games[1].Headers.ContainsKey("FEN"));  // FEN des Orphans leakt nicht
+        Assert.Contains("1. e4", games[1].MoveText);
+    }
+
+    [Fact]
     public void ParsePgn_ExtractsMainlineAsUci_StrippingVariationsNagsNumbers()
     {
         var (puzzles, invalid) = PgnImportService.ParsePgn("book.pgn", SamplePgn);
