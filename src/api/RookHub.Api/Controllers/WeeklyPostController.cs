@@ -55,6 +55,16 @@ public class WeeklyPostController : BaseApiController
         return Ok(posts);
     }
 
+    /// <summary>
+    /// Fortschritt des eingeloggten Users über alle Wochenposts (für die Übersicht) — nur Posts mit
+    /// Versuchen. Literal-Route „progress" MUSS vor „{id}" stehen (CLAUDE.md-Konvention: Literal-
+    /// Routen vor Parameter-Routen, sonst matcht der Router „progress" als ID).
+    /// </summary>
+    [Authorize]
+    [HttpGet("progress")]
+    public async Task<ActionResult<List<WeeklyPostProgressDto>>> GetAllProgress()
+        => Ok(await _progress.GetAllProgressAsync(GetUserId()));
+
     [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
@@ -111,15 +121,6 @@ public class WeeklyPostController : BaseApiController
             return NotFound(new { message = ex.Message });
         }
     }
-
-    /// <summary>
-    /// Fortschritt des eingeloggten Users über alle Wochenposts (für die Übersicht) — nur Posts mit
-    /// Versuchen. Literal-Route „progress" hat Vorrang vor „{id}".
-    /// </summary>
-    [Authorize]
-    [HttpGet("progress")]
-    public async Task<ActionResult<List<WeeklyPostProgressDto>>> GetAllProgress()
-        => Ok(await _progress.GetAllProgressAsync(GetUserId()));
 
     /// <summary>Aggregierte Ergebnisse eines Wochenposts (wer wie weit + Gesamtzeit) — für die Discord-Anzeige.</summary>
     [AllowAnonymous]

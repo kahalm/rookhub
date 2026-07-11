@@ -69,16 +69,6 @@ public class PuzzleController : BaseApiController
         return Ok(puzzles);
     }
 
-    [AllowAnonymous]
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
-    {
-        var puzzle = await _puzzleService.GetByIdAsync(id);
-        if (puzzle == null)
-            return NotFound(new { message = "Puzzle not found." });
-        return Ok(puzzle);
-    }
-
     [HttpPost("{id}/attempt")]
     public async Task<IActionResult> RecordAttempt(int id, [FromBody] RecordPuzzleAttemptDto dto)
     {
@@ -149,6 +139,19 @@ public class PuzzleController : BaseApiController
     [HttpGet("themes")]
     public async Task<ActionResult<List<string>>> GetThemes()
         => Ok(await _stats.GetAllThemesAsync());
+
+    // Parameter-Route NACH allen Literal-GET-Routen (rating-range/random/stats/history/elo-history/
+    // themes) — CLAUDE.md-Konvention: Literal-Routen vor Parameter-Routen, sonst matcht der Router
+    // z. B. „stats" als {id}.
+    [AllowAnonymous]
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var puzzle = await _puzzleService.GetByIdAsync(id);
+        if (puzzle == null)
+            return NotFound(new { message = "Puzzle not found." });
+        return Ok(puzzle);
+    }
 
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.31';
+export const APP_VERSION = '0.291.32';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.32", date: "2026-07-12", changes: [
+    { en: "Convention (backend routing): two controllers declared a literal GET route after the parameter route `{id}`, violating the CLAUDE.md rule „literal routes before parameter routes" — GET /api/weekly-posts/progress was declared after /{id}, and PuzzleController had stats/history/etc. after /{id}. Runtime was safe (ASP.NET ranks literal segments above parameters regardless of order), but the stated convention is now honored: the literal routes are declared first and the puzzle {id} route carries an :int constraint. The other flagged controllers (course/friend/tournament-proxy) have no single-segment literal-after-parameter GET conflict. No behavior change; covered by existing tests.", de: "Konvention (Backend-Routing): zwei Controller deklarierten eine Literal-GET-Route NACH der Parameter-Route `{id}` und verletzten damit die CLAUDE.md-Regel „Literal-Routen vor Parameter-Routen" — GET /api/weekly-posts/progress stand nach /{id}, und PuzzleController hatte stats/history/etc. nach /{id}. Zur Laufzeit unkritisch (ASP.NET reiht Literal-Segmente unabhängig von der Reihenfolge vor Parameter), aber die dokumentierte Konvention wird jetzt eingehalten: die Literal-Routen stehen zuerst und die Puzzle-{id}-Route trägt eine :int-Constraint. Die übrigen gemeldeten Controller (course/friend/tournament-proxy) haben keine einsegmentige Literal-nach-Parameter-GET-Kollision. Keine Verhaltensänderung; durch bestehende Tests abgedeckt." },
+  ]},
   { version: "0.291.31", date: "2026-07-12", changes: [
     { en: "Fix (training goals, phase classification): course/theme time was bucketed into opening/middlegame/endgame by sniffing English/German substrings in free-text names — so Croatian (the app ships hr) or Spanish (ES content was imported) names like „završnica"/„finales"/„apertura" silently fell through to Tactics, under-counting the right phase bucket. Added es/hr keywords. Proper deep fix (a structured phase field on the course/repertoire instead of name sniffing) is noted in code. +1 backend test.", de: "Fix (Trainingsziele, Phasen-Klassifikation): Kurs-/Themenzeit wurde nach Eröffnung/Mittelspiel/Endspiel einsortiert, indem englische/deutsche Teilstrings in Freitext-Namen gesucht wurden — kroatische (die App läuft hr) oder spanische (ES-Inhalte importiert) Namen wie „završnica"/„finales"/„apertura" fielen so still auf Taktik zurück und zählten im richtigen Phasen-Topf zu wenig. es/hr-Schlüsselwörter ergänzt. Der eigentliche Tiefen-Fix (ein strukturiertes Phasen-Feld am Kurs/Repertoire statt Namens-Sniffing) ist im Code vermerkt. +1 Backend-Test." },
   ]},
