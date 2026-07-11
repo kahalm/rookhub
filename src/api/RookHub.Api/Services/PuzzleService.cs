@@ -378,10 +378,14 @@ public class PuzzleService
         var vizLevel = Math.Clamp(dto.VisualizationLevel, 0, 4);
 
         // Idempotenz: Doppel-Submit innerhalb von 30 Sekunden → bestehenden Versuch zurückgeben.
+        // Nur bei GLEICHEM Ergebnis (Solved): ein echter Zweitversuch mit anderem Ausgang
+        // (Fail → sofort neu laden → Solve) ist kein Doppel-Submit und muss gespeichert werden,
+        // sonst bleibt das Puzzle trotz Lösung „ungelöst" (excludeSolved/Leaderboards/Streaks).
         var idempotencyCutoff = DateTime.UtcNow.AddSeconds(-30);
         var duplicate = await _db.PuzzleAttempts
             .Where(a => a.UserId == userId && a.PuzzleId == puzzleId
-                     && a.VisualizationLevel == vizLevel && a.AttemptedAt >= idempotencyCutoff)
+                     && a.VisualizationLevel == vizLevel && a.Solved == dto.Solved
+                     && a.AttemptedAt >= idempotencyCutoff)
             .OrderByDescending(a => a.AttemptedAt)
             .FirstOrDefaultAsync();
         if (duplicate != null)

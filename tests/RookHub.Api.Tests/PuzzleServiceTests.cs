@@ -223,6 +223,36 @@ public class PuzzleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAttempt_FailThenSolveWithin30s_RecordsTheSolve()
+    {
+        // Regression: das 30-s-Idempotenz-Fenster ignorierte dto.Solved — ein Fail gefolgt von
+        // einem echten Solve innerhalb von 30 s gab den alten FAILED-Versuch zurück und
+        // verwarf die Lösung (Puzzle blieb für excludeSolved/Leaderboards ungelöst).
+        var userId = await CreateUserAsync();
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "idem1");
+
+        var fail = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = false, TimeSpentSeconds = 10 });
+        var solve = await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 12 });
+
+        Assert.False(fail.Solved);
+        Assert.True(solve.Solved);
+        Assert.Equal(2, await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.PuzzleId == puzzle.Id));
+        Assert.True(await _db.PuzzleAttempts.AnyAsync(a => a.UserId == userId && a.PuzzleId == puzzle.Id && a.Solved));
+    }
+
+    [Fact]
+    public async Task RecordAttempt_SameOutcomeWithin30s_IsDeduplicated()
+    {
+        var userId = await CreateUserAsync();
+        var puzzle = await CreatePuzzleAsync(rating: 1500, lichessId: "idem2");
+
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+        await _service.RecordAttemptAsync(userId, puzzle.Id, new RecordPuzzleAttemptDto { Solved = true, TimeSpentSeconds = 10 });
+
+        Assert.Equal(1, await _db.PuzzleAttempts.CountAsync(a => a.UserId == userId && a.PuzzleId == puzzle.Id));
+    }
+
+    [Fact]
     public async Task GetRandom_ExcludesSolvedPuzzles()
     {
         var userId = await CreateUserAsync();

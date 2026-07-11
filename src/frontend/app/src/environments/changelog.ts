@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.2';
+export const APP_VERSION = '0.291.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.3", date: "2026-07-12", changes: [
+    { en: "Fix (standard puzzles): solving a puzzle right after failing it could be silently discarded. The 30-second duplicate-submit protection only compared user/puzzle/visualization level — NOT the outcome — so a genuine second attempt with a different result (fail → reload → solve within 30 s) was treated as a double-submit and the stale failed attempt was returned: no solved record was stored, the puzzle stayed „unsolved" for the random-pool exclusion, leaderboards and streaks. Duplicate detection now also requires the same outcome. +2 backend tests.", de: "Fix (Standard-Puzzles): ein Puzzle direkt nach einem Fehlversuch zu lösen konnte still verworfen werden. Der 30-Sekunden-Doppel-Submit-Schutz verglich nur User/Puzzle/Visualisierungsstufe — NICHT das Ergebnis —, sodass ein echter Zweitversuch mit anderem Ausgang (Fail → neu laden → Solve innerhalb von 30 s) als Doppel-Submit galt und der alte Fehlversuch zurückgegeben wurde: keine Lösung gespeichert, das Puzzle blieb für Zufallspool-Ausschluss, Bestenlisten und Serien „ungelöst". Die Duplikat-Erkennung verlangt jetzt zusätzlich dasselbe Ergebnis. +2 Backend-Tests." },
+  ]},
   { version: "0.291.2", date: "2026-07-12", changes: [
     { en: "Fix (Chessable import, backend-only): the fast lane for fully cached courses now RE-CHECKS at claim time whether the course is still covered by the piratechess raw cache. The cached/uncached classification was frozen at enqueue time — a job could wait for days (e.g. while the bearer was blocked) and, once the cache had been invalidated, up to 3 fast-lane runners would perform REAL Chessable downloads in parallel, bypassing both the single-download gate and the bearer circuit breaker (IP-block risk). Such stale jobs are now demoted back into the throttled download lane instead. +1 backend test.", de: "Fix (Chessable-Import, nur Backend): die Fast-Lane für voll gecachte Kurse prüft beim Übernehmen eines Jobs jetzt NEU, ob der Kurs noch vom piratechess-Rohdaten-Cache gedeckt ist. Die gecacht/ungecacht-Einstufung war bisher auf dem Stand des Einreihens eingefroren — ein Job konnte tagelang warten (z. B. bei gesperrtem Bearer), und war der Cache inzwischen invalidiert, starteten bis zu 3 Fast-Lane-Läufe parallel ECHTE Chessable-Abrufe, vorbei am Ein-Download-Gate UND am Bearer-Circuit-Breaker (IP-Block-Risiko). Solche veralteten Jobs werden jetzt stattdessen in die gedrosselte Download-Lane zurückgestuft. +1 Backend-Test." },
   ]},
