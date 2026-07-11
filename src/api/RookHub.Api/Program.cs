@@ -385,6 +385,19 @@ try
                 });
         options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10));
         options.AddPolicy("anonymous-puzzle", ctx => PerIpFixedWindow(ctx, 30));
+        // Community-Review-Flags (flag-hints): jeder eingeloggte User darf setzen/aufheben — aber
+        // gedrosselt PRO USER, damit niemand per Id-Iteration den Admin-Review-Bestand des ganzen
+        // Katalogs umflaggt (der globale 100/min-IP-Limiter erlaubte ~6000 Flags/h).
+        options.AddPolicy("user-flag", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.

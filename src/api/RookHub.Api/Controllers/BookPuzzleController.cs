@@ -21,15 +21,19 @@ public class BookPuzzleController : BaseApiController
     private readonly HintGenerationService _hints;
     private readonly IBackgroundTaskQueue _bgQueue;
     private readonly AppDbContext _db;
+    private readonly ILogger<BookPuzzleController> _logger;
 
+    // logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
     public BookPuzzleController(BookPuzzleService service, DailyLeaderboardService leaderboard,
-        HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db)
+        HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db,
+        ILogger<BookPuzzleController>? logger = null)
     {
         _service = service;
         _leaderboard = leaderboard;
         _hints = hints;
         _bgQueue = bgQueue;
         _db = db;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<BookPuzzleController>.Instance;
     }
 
     [AllowAnonymous]
@@ -259,16 +263,20 @@ public class BookPuzzleController : BaseApiController
     }
 
     /// <summary>Markiert die Tipps eines Buch-Puzzles als „dumm/schlecht" (oder hebt das auf) —
-    /// Review-Flag fürs spätere gezielte Neu-Generieren. Darf jeder eingeloggte User setzen.
-    /// 404 wenn das Puzzle fehlt.</summary>
+    /// Review-Flag fürs spätere gezielte Neu-Generieren. Darf jeder eingeloggte User setzen —
+    /// pro User gedrosselt („user-flag") und mit Audit-Log (das Flag ist global, ein Missbrauch
+    /// muss dem Verursacher zuordenbar sein). 404 wenn das Puzzle fehlt.</summary>
     [HttpPost("{id:int}/flag-hints")]
     [Authorize]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("user-flag")]
     public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
     {
         var bp = await _db.BookPuzzles.FindAsync(id);
         if (bp == null) return NotFound(new { message = "Puzzle not found." });
         bp.HintsFlagged = body.Flagged;
         await _db.SaveChangesAsync();
+        _logger.LogInformation("HintsFlagged: BookPuzzle {PuzzleId} → {Flagged} durch User {UserId}",
+            bp.Id, body.Flagged, GetUserId());
         return Ok(new { id = bp.Id, hintsFlagged = bp.HintsFlagged });
     }
 

@@ -15,11 +15,15 @@ public class PuzzleController : BaseApiController
 {
     private readonly PuzzleService _puzzleService;
     private readonly PuzzleStatsService _stats;
+    private readonly ILogger<PuzzleController> _logger;
 
-    public PuzzleController(PuzzleService puzzleService, PuzzleStatsService stats)
+    // logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    public PuzzleController(PuzzleService puzzleService, PuzzleStatsService stats,
+        ILogger<PuzzleController>? logger = null)
     {
         _puzzleService = puzzleService;
         _stats = stats;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PuzzleController>.Instance;
     }
 
     [AllowAnonymous]
@@ -90,11 +94,16 @@ public class PuzzleController : BaseApiController
     }
 
     /// <summary>Markiert die (on-the-fly-)Tipps eines Standard-Puzzles als „dumm/schlecht" (oder hebt das
-    /// auf) — jeder eingeloggte User. 404 wenn das Puzzle fehlt.</summary>
+    /// auf) — jeder eingeloggte User, pro User gedrosselt („user-flag") und mit Audit-Log (das Flag ist
+    /// global; Missbrauch muss zuordenbar sein). 404 wenn das Puzzle fehlt.</summary>
     [HttpPost("{id}/flag-hints")]
+    [EnableRateLimiting("user-flag")]
     public async Task<IActionResult> FlagHints(int id, [FromBody] FlagHintsDto body)
     {
         var ok = await _puzzleService.FlagHintsAsync(id, body.Flagged);
+        if (ok)
+            _logger.LogInformation("HintsFlagged: Puzzle {PuzzleId} → {Flagged} durch User {UserId}",
+                id, body.Flagged, GetUserId());
         return ok ? Ok(new { id, hintsFlagged = body.Flagged }) : NotFound(new { message = "Puzzle not found." });
     }
 

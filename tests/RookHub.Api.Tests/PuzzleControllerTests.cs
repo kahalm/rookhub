@@ -275,4 +275,24 @@ public class PuzzleControllerTests : IDisposable
         Assert.NotNull(history);
         Assert.Single(history);
     }
+    [Fact]
+    public void FlagHints_Endpoints_AreUserRateLimited()
+    {
+        // Regression: flag-hints (Standard + Buch) war fuer jeden eingeloggten User voellig
+        // ungedrosselt (nur globaler 100/min-IP-Limiter ~= 6000 Flags/h) -- Massen-Umflaggen des
+        // Admin-Review-Bestands per Id-Iteration. Beide Endpoints muessen die pro-User-Policy tragen.
+        foreach (var (type, name) in new[]
+        {
+            (typeof(PuzzleController), nameof(PuzzleController.FlagHints)),
+            (typeof(BookPuzzleController), nameof(BookPuzzleController.FlagHints)),
+        })
+        {
+            var attr = type.GetMethod(name)!
+                .GetCustomAttributes(typeof(Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute), false)
+                .Cast<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>()
+                .SingleOrDefault();
+            Assert.NotNull(attr);
+            Assert.Equal("user-flag", attr!.PolicyName);
+        }
+    }
 }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.16';
+export const APP_VERSION = '0.291.17';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.17", date: "2026-07-12", changes: [
+    { en: "Hardening (hint flagging): the „flag hints as bad" endpoints (standard + book puzzles) let any signed-in user set/clear the global review flag on ANY puzzle with no per-user throttle and no audit trail — a user iterating puzzle ids could mass-flag (or mass-UNflag) the admin review backlog of the whole catalog (~6000 flags/hour under the global IP limiter), untraceably. Both endpoints now use a per-user rate limit (10/min, new „user-flag" policy) and every flag change is audit-logged with the acting user id. +1 backend test.", de: "Härtung (Tipps-Flagging): die „Tipps als schlecht markieren"-Endpoints (Standard- + Buch-Puzzles) ließen jeden eingeloggten User das globale Review-Flag an JEDEM Puzzle setzen/aufheben — ohne Pro-User-Drossel und ohne Audit-Spur; per Id-Iteration ließ sich der Admin-Review-Bestand des ganzen Katalogs massenhaft umflaggen (~6000 Flags/Stunde unter dem globalen IP-Limiter), nicht zuordenbar. Beide Endpoints nutzen jetzt ein Pro-User-Rate-Limit (10/min, neue „user-flag"-Policy), und jede Flag-Änderung wird mit der User-Id audit-geloggt. +1 Backend-Test." },
+  ]},
   { version: "0.291.16", date: "2026-07-12", changes: [
     { en: "Fix (Discord bot webhooks, backend-only): the weekly-progress and daily-regenerate webhook URLs are derived from SchachBot:WebhookUrl by replacing the last path segment — the previous naive cut at the last '/' silently produced garbage for config variants: with a trailing slash the segment was appended instead of replaced, and with a host-only URL (no path) the cut hit the '//' of the scheme and produced „http://weekly-progress" (wrong HOST entirely); the webhook then failed with only a swallowed warning and Discord embeds never updated. New robust helper incl. documented fallback path. +1 backend test.", de: "Fix (Discord-Bot-Webhooks, nur Backend): die weekly-progress- und daily-regenerate-Webhook-URLs werden aus SchachBot:WebhookUrl durch Ersetzen des letzten Pfadsegments abgeleitet — das bisherige naive Schneiden am letzten '/' produzierte bei Konfigurations-Varianten still Müll: mit Trailing-Slash wurde das Segment angehängt statt ersetzt, und bei einer Host-only-URL (ohne Pfad) schnitt der Cut am '//' des Schemas und erzeugte „http://weekly-progress" (komplett falscher HOST); der Webhook scheiterte dann mit nur einer geschluckten Warnung und Discord-Embeds aktualisierten nie. Neuer robuster Helper inkl. dokumentiertem Fallback-Pfad. +1 Backend-Test." },
   ]},
