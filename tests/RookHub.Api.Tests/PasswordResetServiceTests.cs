@@ -105,6 +105,28 @@ public class PasswordResetServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RequestReset_MailFailure_KeepsExistingTokensValid()
+    {
+        // Regression: alte Tokens wurden ENTWERTET und committet, BEVOR die Mail rausging —
+        // ein SMTP-Ausfall beim zweiten Anfordern liess den User mit null gueltigen Links
+        // zurueck (alter Link tot, neuer nie zugestellt). Jetzt wird erst nach erfolgreichem
+        // Versand entwertet/persistiert.
+        await CreateUserAsync("known@test.com");
+        await _service.RequestResetAsync("known@test.com");            // Link 1 zugestellt
+        var token1 = ExtractToken(_email.LastText!);
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["App:BaseUrl"] = "https://rookhub.example" })
+            .Build();
+        var failingSvc = new PasswordResetService(_db, new FailingEmailSender(), config, NullLogger<PasswordResetService>.Instance);
+        await failingSvc.RequestResetAsync("known@test.com");          // SMTP down
+
+        Assert.Single(_db.PasswordResetTokens);                        // kein zweites Token persistiert
+        Assert.Null(_db.PasswordResetTokens.Single().UsedAt);          // Link 1 weiterhin offen …
+        await _service.ResetPasswordAsync(token1, "BrandNew1!");       // … und funktioniert noch
+    }
+
+    [Fact]
     public async Task RequestReset_InvalidatesPreviousOpenTokens()
     {
         await CreateUserAsync("known@test.com");
@@ -167,6 +189,13 @@ public class PasswordResetServiceTests : IDisposable
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => _service.ResetPasswordAsync("totally-made-up", "BrandNew1!"));
+    }
+
+    private sealed class FailingEmailSender : IEmailSender
+    {
+        public bool IsEnabled => true;
+        public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
+            => throw new InvalidOperationException("SMTP down");
     }
 
     private sealed class CapturingEmailSender : IEmailSender

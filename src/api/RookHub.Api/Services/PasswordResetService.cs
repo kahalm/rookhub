@@ -53,6 +53,25 @@ public class PasswordResetService
             return;
         }
 
+        // ERST die Mail verschicken, DANN alte Tokens entwerten + das neue persistieren.
+        // Umgekehrt (entwerten+committen vor dem Versand) liess ein SMTP-Ausfall den User mit
+        // NULL funktionierenden Links zurueck: der bereits zugestellte alte Link war entwertet,
+        // der neue kam nie an (Send-Fehler wird bewusst geschluckt, s. u.).
+        var rawToken = GenerateRawToken();
+        var link = BuildResetLink(rawToken);
+        var (subject, html, text) = BuildEmail(user.Username, link);
+        try
+        {
+            await _email.SendAsync(user.Email!, subject, html, text, ct);
+        }
+        catch (Exception ex)
+        {
+            // Nicht nach aussen reichen (Enumeration/UX) — aber sichtbar fuers Monitoring.
+            // Nichts entwertet/persistiert → ein frueher zugestellter Link bleibt gueltig.
+            _logger.LogError(ex, "PasswordReset: sending mail failed for user {UserId} — existing tokens kept", user.Id);
+            return;
+        }
+
         // Frueher angeforderte, noch offene Tokens des Users entwerten (nur das jeweils neueste gilt).
         var open = await _db.PasswordResetTokens
             .Where(t => t.UserId == user.Id && t.UsedAt == null)
@@ -60,7 +79,6 @@ public class PasswordResetService
         var now = DateTime.UtcNow;
         foreach (var t in open) t.UsedAt = now;
 
-        var rawToken = GenerateRawToken();
         _db.PasswordResetTokens.Add(new PasswordResetToken
         {
             UserId = user.Id,
@@ -69,19 +87,7 @@ public class PasswordResetService
             ExpiresAt = now.Add(TokenTtl),
         });
         await _db.SaveChangesAsync(ct);
-
-        var link = BuildResetLink(rawToken);
-        var (subject, html, text) = BuildEmail(user.Username, link);
-        try
-        {
-            await _email.SendAsync(user.Email!, subject, html, text, ct);
-            _logger.LogInformation("PasswordReset: token issued + mail dispatched for user {UserId}", user.Id);
-        }
-        catch (Exception ex)
-        {
-            // Nicht nach aussen reichen (Enumeration/UX) — aber sichtbar fuers Monitoring.
-            _logger.LogError(ex, "PasswordReset: sending mail failed for user {UserId}", user.Id);
-        }
+        _logger.LogInformation("PasswordReset: token issued + mail dispatched for user {UserId}", user.Id);
     }
 
     /// <summary>

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.5';
+export const APP_VERSION = '0.291.6';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.6", date: "2026-07-12", changes: [
+    { en: "Fix (forgot password): requesting a new reset link no longer kills your working one when mail delivery fails. Previously, all open reset tokens were invalidated and COMMITTED before the mail was sent; if SMTP was briefly down, the already-delivered old link was dead and the new one never arrived (send errors are deliberately swallowed to avoid user enumeration) — zero working links until SMTP recovered AND another request was made. The order is now: send the mail first, only on success invalidate old tokens and persist the new one. +1 backend test.", de: "Fix (Passwort vergessen): das Anfordern eines neuen Reset-Links macht den funktionierenden alten nicht mehr kaputt, wenn der Mailversand fehlschlägt. Bisher wurden alle offenen Reset-Tokens entwertet und COMMITTET, bevor die Mail rausging; war SMTP kurz down, war der bereits zugestellte alte Link tot und der neue kam nie an (Versandfehler werden gegen User-Enumeration bewusst geschluckt) — null funktionierende Links, bis SMTP wieder lief UND erneut angefordert wurde. Reihenfolge jetzt: erst Mail versenden, nur bei Erfolg alte Tokens entwerten und das neue persistieren. +1 Backend-Test." },
+  ]},
   { version: "0.291.5", date: "2026-07-12", changes: [
     { en: "Fix (PGN import): two silent-corruption bugs in game splitting. (1) A line-wrapped comment continuation starting with '[' (e.g. an [%cal ...] arrow annotation at the start of a wrapped line) was discarded as a „tag-like line" — if it contained the closing '}', the comment scanner then swallowed the following real moves (missing/shifted moves and comments, no error reported). The splitter now tracks the open-comment brace depth across lines: content of open {...} comments is kept, and header-looking lines inside a comment no longer split the game. (2) A header-only game (headers, no movetext) silently merged its headers (e.g. its FEN) into the NEXT game; it is now flushed separately. ImportPipeline version 11→12 — affected books show the „Update" banner and can be reprocessed locally from the stored source PGN. +3 backend tests.", de: "Fix (PGN-Import): zwei Stille-Korruptions-Bugs im Spiel-Splitting. (1) Eine umbruch-bedingte Kommentar-Fortsetzungszeile, die mit '[' beginnt (z. B. eine [%cal ...]-Pfeil-Annotation am Zeilenanfang), wurde als „Tag-artige Zeile" verworfen — enthielt sie das schließende '}', fraß der Kommentar-Scanner anschließend die folgenden echten Züge (fehlende/verschobene Züge und Kommentare, ohne Fehlermeldung). Der Splitter führt jetzt die Kommentar-Klammertiefe über Zeilen hinweg: Inhalt offener {...}-Kommentare bleibt erhalten, und header-artige Zeilen im Kommentar splitten kein Spiel mehr. (2) Ein Header-only-Spiel (Header ohne Movetext) mischte seine Header (z. B. die FEN) still ins NÄCHSTE Spiel; es wird jetzt separat geflusht. ImportPipeline-Version 11→12 — betroffene Bücher zeigen das „Aktualisieren"-Banner und sind lokal aus dem gespeicherten Quell-PGN aufbereitbar. +3 Backend-Tests." },
   ]},
