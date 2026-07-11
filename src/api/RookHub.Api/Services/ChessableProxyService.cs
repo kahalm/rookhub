@@ -27,11 +27,14 @@ public class ChessableProxyException : Exception
 public class ChessableProxyService
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<ChessableProxyService> _logger;
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
-    public ChessableProxyService(HttpClient httpClient)
+    // logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    public ChessableProxyService(HttpClient httpClient, ILogger<ChessableProxyService>? logger = null)
     {
         _httpClient = httpClient;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ChessableProxyService>.Instance;
     }
 
     public async Task<ChessableTestResultDto> TestAsync(string bearer, CancellationToken ct = default)
@@ -98,8 +101,16 @@ public class ChessableProxyService
             var dto = await _httpClient.GetFromJsonAsync<CachedDto>($"/api/chessable/direct/course/{Uri.EscapeDataString(bid)}/cached", JsonOpts, ct);
             return dto?.Cached ?? false;
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw;   // Shutdown/Timeout des Aufrufers nicht als „nicht gecacht" maskieren
+        }
+        catch (Exception ex)
+        {
+            // Bewusst weich (false = normaler Download-Queue-Weg), aber SICHTBAR: ein down/
+            // fehlkonfigurierter piratechess ließ sonst still ALLE Kurse ungecacht erscheinen —
+            // die Fast-Lane starb undiagnostizierbar, ohne eine einzige Log-Zeile.
+            _logger.LogWarning(ex, "Chessable-Proxy: Cache-Check für bid {Bid} fehlgeschlagen — als ungecacht behandelt.", bid);
             return false;
         }
     }
@@ -113,8 +124,13 @@ public class ChessableProxyService
             var dto = await _httpClient.GetFromJsonAsync<CachedBidsDto>("/api/chessable/direct/courses/cached", JsonOpts, ct);
             return dto?.Bids is { Count: > 0 } ? new HashSet<string>(dto.Bids) : new HashSet<string>();
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Chessable-Proxy: Batch-Cache-Abruf fehlgeschlagen — behandle alle Kurse als ungecacht.");
             return new HashSet<string>();
         }
     }

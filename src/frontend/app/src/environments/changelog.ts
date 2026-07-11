@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.28';
+export const APP_VERSION = '0.291.29';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.29", date: "2026-07-12", changes: [
+    { en: "Fix (observability, Chessable import): the cache-status calls to the piratechess proxy swallowed EVERY error with bare catch blocks and zero logging — when the proxy was down or misconfigured, every course silently appeared uncached, all imports took the slow download queue, and there was not a single log line to diagnose why the fast lane had stopped working. Failures are now logged as warnings (behavior stays soft: uncached → normal download path), and caller cancellation is no longer masked as „not cached". +2 backend tests.", de: "Fix (Observability, Chessable-Import): die Cache-Status-Aufrufe zum piratechess-Proxy schluckten JEDEN Fehler mit nackten catch-Blöcken und null Logging — war der Proxy down oder fehlkonfiguriert, erschien jeder Kurs still als ungecacht, alle Importe liefen über die langsame Download-Queue, und es gab keine einzige Log-Zeile, um zu diagnostizieren, warum die Fast-Lane nicht mehr arbeitete. Fehler werden jetzt als Warnung geloggt (Verhalten bleibt weich: ungecacht → normaler Download-Weg), und ein Abbruch des Aufrufers wird nicht mehr als „nicht gecacht" maskiert. +2 Backend-Tests." },
+  ]},
   { version: "0.291.28", date: "2026-07-12", changes: [
     { en: "Refactor (backend, no behavior change): the per-day TrackerDayDto projection was duplicated field by field between the tracker heatmap and the full daily series — a new per-day field (like HasManual once) or a day-status change had to be edited in both, or heatmap and history silently disagreed. Now one MapDay helper. The timer-stop response also re-inlined the existing ManualActivity mapper; it now calls ToDto. Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): die Pro-Tag-TrackerDayDto-Projektion war Feld für Feld zwischen Tracker-Heatmap und vollständiger Tagesreihe dupliziert — ein neues Pro-Tag-Feld (wie einst HasManual) oder eine Tagesstatus-Änderung musste in beiden editiert werden, sonst widersprachen sich Heatmap und Historie still. Jetzt ein MapDay-Helper. Die Timer-Stopp-Antwort re-inlinete zudem den vorhandenen ManualActivity-Mapper; sie ruft jetzt ToDto. Durch bestehende Tests abgedeckt." },
   ]},
