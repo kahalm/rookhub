@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.24';
+export const APP_VERSION = '0.291.25';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.25", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the count → random-skip → FirstOrDefault-or-404 random-draw block was copy-pasted three times in the book-puzzle service (random pool, daily assignment, daily regenerate) — the race-safety detail (FirstOrDefault instead of First when the pool shrinks mid-draw) had to be remembered in all three places. Now one PickRandomAsync helper. Covered by existing tests.", de: "Refactor (Backend, keine Verhaltensänderung): der Count → Random-Skip → FirstOrDefault-oder-404-Zufallszieh-Block war im Buch-Puzzle-Service dreimal kopiert (Zufallspool, Daily-Zuweisung, Daily-Regenerieren) — das Race-Sicherheitsdetail (FirstOrDefault statt First, wenn der Pool mitten im Zug schrumpft) musste an allen drei Stellen mitgedacht werden. Jetzt ein PickRandomAsync-Helper. Durch bestehende Tests abgedeckt." },
+  ]},
   { version: "0.291.24", date: "2026-07-12", changes: [
     { en: "Fix+Refactor (endless mode, backend): the four copy-pasted EndlessSession initializers are now ONE factory — the bulk-import copies (localStorage migration) silently omitted the per-puzzle attempt details, so imported runs lost them and their detail view stayed empty. Also removed the three dead trim calls for signed-in users (the trim helper returned immediately for them, faking a session cap that never existed) — the helper is now explicitly anonymous-only. +1 backend test.", de: "Fix+Refactor (Endlos-Modus, Backend): die vier kopierten EndlessSession-Initialisierer sind jetzt EINE Factory — die Bulk-Import-Kopien (localStorage-Migration) ließen die Pro-Puzzle-Versuchsdetails still weg, importierte Läufe verloren sie und ihre Detail-Ansicht blieb leer. Außerdem die drei toten Trim-Aufrufe für eingeloggte Nutzer entfernt (der Trim-Helper kehrte für sie sofort zurück und täuschte eine Session-Kappung vor, die es nie gab) — der Helper ist jetzt explizit anonym-only. +1 Backend-Test." },
   ]},

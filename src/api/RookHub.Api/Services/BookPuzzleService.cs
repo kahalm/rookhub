@@ -354,6 +354,20 @@ public class BookPuzzleService
         };
     }
 
+    /// <summary>Zieht ein zufälliges Puzzle aus dem Pool (Count → Random-Skip → FirstOrDefault).
+    /// FirstOrDefault statt First ist Teil des Kontrakts: schrumpft der Pool zwischen CountAsync
+    /// und dem Skip (paralleler Import/Delete), zeigt Skip(index) sonst ins Leere und FirstAsync
+    /// würfe einen unbehandelten 500 statt eines sauberen 404. Diese Race-Absicherung lag vorher
+    /// als Copy-Paste in drei Methoden (GetRandom/GetOrAssignDaily/RegenerateDaily).</summary>
+    private static async Task<BookPuzzle> PickRandomAsync(IQueryable<BookPuzzle> pool, string poolName)
+    {
+        var count = await pool.CountAsync();
+        if (count == 0)
+            throw new KeyNotFoundException($"No book puzzle available for pool '{poolName}'.");
+        return await pool.OrderBy(bp => bp.Id).Skip(Random.Shared.Next(count)).FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"No book puzzle available for pool '{poolName}'.");
+    }
+
     /// <summary>
     /// Zufälliges Buch-Puzzle aus dem gewünschten Pool. pool=random|blind → echtes Zufallspuzzle;
     /// pool=daily → deterministisch pro UTC-Tag. exclude=id,id schließt IDs aus; bookId überschreibt den Pool.
@@ -395,17 +409,7 @@ public class BookPuzzleService
             return await GetOrAssignDailyAsync(DateOnly.FromDateTime(DateTime.UtcNow));
         }
 
-        var count = await query.CountAsync();
-        if (count == 0)
-            throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
-
-        var index = Random.Shared.Next(count);
-
-        // FirstOrDefault statt First: schrumpft der Pool zwischen CountAsync und hier
-        // (paralleler Import/Delete), zeigt Skip(index) sonst ins Leere -> FirstAsync
-        // wuerfe einen unbehandelten 500 statt eines sauberen 404.
-        var puzzle = await query.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
+        var puzzle = await PickRandomAsync(query, pool);
         return MapToDto(puzzle);
     }
 
@@ -442,13 +446,7 @@ public class BookPuzzleService
         // 2) Zufaelliges Puzzle aus dem forDaily-Pool (ausgemusterte + Info-/Erklaerlinien ausgenommen).
         var pool = _db.BookPuzzles.Include(bp => bp.Book)
             .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired && !bp.IsInfoOnly);
-        var count = await pool.CountAsync();
-        if (count == 0)
-            throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
-
-        var index = Random.Shared.Next(count);
-        var picked = await pool.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+        var picked = await PickRandomAsync(pool, "daily");
 
         _db.DailyPuzzles.Add(new Models.DailyPuzzle
         {
@@ -510,13 +508,7 @@ public class BookPuzzleService
         var pool = _db.BookPuzzles.Include(bp => bp.Book)
             .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired && !bp.IsInfoOnly
                          && (retiredId == null || bp.Id != retiredId.Value));
-        var count = await pool.CountAsync();
-        if (count == 0)
-            throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
-
-        var index = Random.Shared.Next(count);
-        var picked = await pool.OrderBy(bp => bp.Id).Skip(index).FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
+        var picked = await PickRandomAsync(pool, "daily");
 
         var now = DateTime.UtcNow;
         if (existing != null)
