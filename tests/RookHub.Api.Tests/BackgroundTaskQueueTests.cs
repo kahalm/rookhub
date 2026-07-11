@@ -62,23 +62,33 @@ public class BackgroundTaskQueueTests
     }
 
     [Fact]
-    public async Task BoundedCapacity_WaitsWhenFull()
+    public async Task BoundedCapacity_WaitsWhenFull_AndNeverDropsItems()
     {
+        // Regression: unter dem früheren DropOldest-Modus verdrängte ein Enqueue über die Kapazität
+        // hinaus STILL den ältesten wartenden Eintrag (TryWrite gelang immer, der Warn-Zweig war
+        // toter Code) — Arbeiten ohne Watchdog (Hint-Generierung, Auto-Subscription) gingen dabei
+        // lautlos verloren. Jetzt gilt FullMode.Wait: der Enqueuer wartet, kein Item geht verloren.
         var queue = new BackgroundTaskQueue(2);
+        var order = new List<int>();
 
-        await queue.EnqueueAsync(async (_, _) => { });
-        await queue.EnqueueAsync(async (_, _) => { });
+        await queue.EnqueueAsync(async (_, _) => order.Add(1));
+        await queue.EnqueueAsync(async (_, _) => order.Add(2));
 
-        // Third enqueue should block (queue is full with capacity 2)
-        var enqueueTask = queue.EnqueueAsync(async (_, _) => { });
-        var completed = enqueueTask.IsCompleted;
+        // Drittes Enqueue blockiert (Kapazität 2 voll) — statt Item 1 zu verdrängen.
+        var enqueueTask = queue.EnqueueAsync(async (_, _) => order.Add(3));
+        Assert.False(enqueueTask.IsCompleted);
 
-        // Dequeue one to make room
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        await queue.DequeueAsync(cts.Token);
+        var item1 = await queue.DequeueAsync(cts.Token);   // macht Platz
+        await enqueueTask;                                 // Enqueue #3 läuft durch
 
-        // Now the enqueue should complete
-        await enqueueTask;
+        var item2 = await queue.DequeueAsync(cts.Token);
+        var item3 = await queue.DequeueAsync(cts.Token);
+        await item1(null!, CancellationToken.None);
+        await item2(null!, CancellationToken.None);
+        await item3(null!, CancellationToken.None);
+
+        Assert.Equal([1, 2, 3], order);                    // ALLE drei Items ausgeführt, FIFO
     }
 
     [Fact]

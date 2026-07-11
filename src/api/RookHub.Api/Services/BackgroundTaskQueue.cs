@@ -14,7 +14,15 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     private readonly ILogger? _logger;
     private readonly string _name;
 
-    public BackgroundTaskQueue(int capacity = 100, ILogger<BackgroundTaskQueue>? logger = null)
+    // FRÜHER: capacity 100 + DropOldest. Unter DropOldest gelingt TryWrite IMMER (der älteste
+    // wartende Eintrag wird still verdrängt) — der Warn-Zweig unten war toter Code und Verluste
+    // unsichtbar. Verdrängt wurden dabei auch Arbeiten OHNE Watchdog/Re-Drive (Hint-Generierung,
+    // Auto-Subscription-Checks, Tag-Backfills) → permanent und lautlos verloren (die Chessable-
+    // Importe selbst überleben Drops über ihren DB-Status + Watchdog/Resume). JETZT: FullMode.Wait
+    // (kein Verlust; ist die Queue voll, wartet der Enqueuer auf einen freien Slot — echte
+    // Backpressure) + Kapazität 2048 als reine Runaway-Schranke: selbst ein Resume-Sturm mit
+    // hunderten Import-Tickets bleibt weit darunter, ein Warten tritt praktisch nie ein.
+    public BackgroundTaskQueue(int capacity = 2048, ILogger<BackgroundTaskQueue>? logger = null)
         : this(capacity, logger, "Background") { }
 
     protected BackgroundTaskQueue(int capacity, ILogger? logger, string name)
@@ -22,14 +30,14 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         _logger = logger;
         _name = name;
         _queue = Channel.CreateBounded<Func<IServiceProvider, CancellationToken, Task>>(
-            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.DropOldest });
+            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait });
     }
 
     public async ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
     {
         if (!_queue.Writer.TryWrite(workItem))
         {
-            _logger?.LogWarning("{Name} task queue is full, dropping oldest item", _name);
+            _logger?.LogWarning("{Name} task queue is full — enqueue waits for a free slot (no items are dropped)", _name);
             await _queue.Writer.WriteAsync(workItem);
         }
     }

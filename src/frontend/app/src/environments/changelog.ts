@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.6';
+export const APP_VERSION = '0.291.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.7", date: "2026-07-12", changes: [
+    { en: "Fix (backend, background queue): the shared background task queue could silently LOSE work. It was bounded (100 items) with drop-oldest semantics — when a burst of Chessable import tickets filled it (e.g. the resume service re-enqueueing hundreds of jobs after a deploy), the oldest waiting items were evicted without any log line; the „queue full" warning was dead code because the write always succeeded by evicting. Evicted import tickets survive via their DB state + watchdog, but hint generation, auto-subscription checks and tag backfills have no re-drive and were lost permanently. The queue now uses wait-on-full semantics (nothing is ever dropped; an enqueuer waits for a free slot) with a 2048-item runaway bound that bursts never reach. +1 strengthened backend test.", de: "Fix (Backend, Hintergrund-Queue): die geteilte Hintergrund-Task-Queue konnte Arbeit still VERLIEREN. Sie war auf 100 Einträge begrenzt mit Verdränge-den-Ältesten-Semantik — füllte ein Schwung Chessable-Import-Tickets sie (z. B. der Resume-Service nach einem Deploy mit hunderten Jobs), wurden die ältesten wartenden Einträge ohne jede Log-Zeile verdrängt; die „Queue voll"-Warnung war toter Code, weil das Schreiben durch Verdrängen immer gelang. Verdrängte Import-Tickets überleben über ihren DB-Status + Watchdog, aber Hint-Generierung, Auto-Subscription-Checks und Tag-Backfills haben kein Re-Drive und waren dauerhaft verloren. Die Queue nutzt jetzt Warte-bei-voll-Semantik (nichts geht mehr verloren; der Einreiher wartet auf einen freien Slot) mit 2048er-Runaway-Schranke, die Bursts nie erreichen. +1 geschärfter Backend-Test." },
+  ]},
   { version: "0.291.6", date: "2026-07-12", changes: [
     { en: "Fix (forgot password): requesting a new reset link no longer kills your working one when mail delivery fails. Previously, all open reset tokens were invalidated and COMMITTED before the mail was sent; if SMTP was briefly down, the already-delivered old link was dead and the new one never arrived (send errors are deliberately swallowed to avoid user enumeration) — zero working links until SMTP recovered AND another request was made. The order is now: send the mail first, only on success invalidate old tokens and persist the new one. +1 backend test.", de: "Fix (Passwort vergessen): das Anfordern eines neuen Reset-Links macht den funktionierenden alten nicht mehr kaputt, wenn der Mailversand fehlschlägt. Bisher wurden alle offenen Reset-Tokens entwertet und COMMITTET, bevor die Mail rausging; war SMTP kurz down, war der bereits zugestellte alte Link tot und der neue kam nie an (Versandfehler werden gegen User-Enumeration bewusst geschluckt) — null funktionierende Links, bis SMTP wieder lief UND erneut angefordert wurde. Reihenfolge jetzt: erst Mail versenden, nur bei Erfolg alte Tokens entwerten und das neue persistieren. +1 Backend-Test." },
   ]},
