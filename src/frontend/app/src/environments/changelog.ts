@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.8';
+export const APP_VERSION = '0.291.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.9", date: "2026-07-12", changes: [
+    { en: "Fix (web push, backend-only): a dead/black-holing push endpoint could stall the notification worker for minutes. Web-push deliveries share the single sequential webhook worker with the latency-sensitive Discord solver webhooks; the WebPush HTTP client has a ~100-second default timeout and the cancellation token was not passed through — one unreachable endpoint blocked the worker ~100 s PER subscription and shutdown could not abort an in-flight send. Deliveries are now hard-capped at 15 s each, the token is passed through, and on shutdown the remaining subscriptions of a fan-out are skipped. +1 backend test.", de: "Fix (Web-Push, nur Backend): ein toter/blackholender Push-Endpoint konnte den Benachrichtigungs-Worker minutenlang blockieren. Web-Push-Zustellungen teilen sich den einen sequenziellen Webhook-Worker mit den latenzsensiblen Discord-Solver-Webhooks; der WebPush-HTTP-Client hat ~100 Sekunden Default-Timeout und das CancellationToken wurde nicht durchgereicht — ein unerreichbarer Endpoint blockierte den Worker ~100 s JE Subscription, und der Shutdown konnte einen laufenden Send nicht abbrechen. Zustellungen sind jetzt hart auf 15 s gedeckelt, das Token wird durchgereicht, und beim Shutdown werden die restlichen Subscriptions eines Fan-outs übersprungen. +1 Backend-Test." },
+  ]},
   { version: "0.291.8", date: "2026-07-12", changes: [
     { en: "Fix (tournament round monitor): one failing monitor no longer blocks all the others. The 30-second monitor loop shares a single DbContext; if saving one monitor failed (e.g. a user unsubscribed in parallel and the row was deleted mid-check → concurrency exception), its dirty entity stayed in the change tracker and made EVERY subsequent monitor's save in the same pass fail too — their LastCheckedAt was never persisted, so „new round" notifications fired again (duplicate bells) on the next pass. The failed entity is now detached in the error handler. +1 backend test.", de: "Fix (Turnier-Runden-Monitor): ein fehlschlagender Monitor blockiert nicht mehr alle anderen. Die 30-Sekunden-Monitor-Schleife teilt sich einen DbContext; schlug das Speichern eines Monitors fehl (z. B. paralleles Abbestellen — die Zeile war mitten im Check gelöscht → Concurrency-Fehler), blieb dessen dirty Entity im Change-Tracker und ließ die Saves ALLER folgenden Monitore desselben Durchlaufs ebenfalls scheitern — deren LastCheckedAt wurde nie persistiert, „neue Runde"-Benachrichtigungen feuerten im nächsten Durchlauf erneut (doppelte Glocken). Die gescheiterte Entität wird jetzt im Fehlerzweig detacht. +1 Backend-Test." },
   ]},

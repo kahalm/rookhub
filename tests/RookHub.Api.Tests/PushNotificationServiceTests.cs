@@ -40,12 +40,16 @@ public class PushNotificationServiceTests : IDisposable
     {
         public readonly List<string> SentEndpoints = new();
         public HashSet<string> GoneEndpoints = new();
+        /// <summary>Wird nach dem ersten erfolgreichen Send gecancelt (simuliert Shutdown mitten im Fan-out).</summary>
+        public CancellationTokenSource? CancelAfterFirstSend;
         public Task SendAsync(UserPushSubscription sub, string payloadJson, WebPushOptions opts, CancellationToken ct = default)
         {
+            ct.ThrowIfCancellationRequested();
             if (GoneEndpoints.Contains(sub.Endpoint))
                 throw new WebPushException("gone", new PushSubscription(sub.Endpoint, sub.P256dh, sub.Auth),
                     new HttpResponseMessage(HttpStatusCode.Gone));
             SentEndpoints.Add(sub.Endpoint);
+            CancelAfterFirstSend?.Cancel();
             return Task.CompletedTask;
         }
     }
@@ -116,6 +120,25 @@ public class PushNotificationServiceTests : IDisposable
         _sender.SentEndpoints.Clear();
         await svc.SendToUserAsync(1, "friend_request_received", null, null);
         Assert.Empty(_sender.SentEndpoints);
+    }
+
+    [Fact]
+    public async Task Send_StopsRemainingSubscriptions_OnCancellation()
+    {
+        // Regression: SendToUserAsync reichte das CancellationToken nicht an den Sender durch —
+        // beim Shutdown (bzw. Timeout) hing der sequenzielle Worker am laufenden HTTP-Send fest
+        // und die restlichen Subscriptions wurden trotzdem noch angestoßen.
+        var svc = Svc();
+        await AddSubAsync(1, "https://push/ep1");
+        await AddSubAsync(1, "https://push/ep2");
+        await svc.SetEnabledCategoriesAsync(1, new[] { "courses" }, isAdmin: false);
+
+        using var cts = new CancellationTokenSource();
+        _sender.CancelAfterFirstSend = cts;   // Shutdown mitten im Fan-out
+
+        await svc.SendToUserAsync(1, "course_shared", null, "/courses", cts.Token);
+
+        Assert.Single(_sender.SentEndpoints); // zweiter Send wird nicht mehr versucht, kein Fehler
     }
 
     [Fact]

@@ -51,7 +51,7 @@ public class NotificationService
                 await _pushQueue.EnqueueAsync(async (sp, ct) =>
                 {
                     var push = sp.GetRequiredService<PushNotificationService>();
-                    await push.SendToUserAsync(uid, type, data, link);
+                    await push.SendToUserAsync(uid, type, data, link, ct);
                 });
             }
     }

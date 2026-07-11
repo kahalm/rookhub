@@ -28,13 +28,22 @@ public interface IWebPushSender
 /// <summary>Echte Implementierung mit <see cref="WebPushClient"/>.</summary>
 public sealed class WebPushSender : IWebPushSender
 {
+    /// <summary>Hartes Zeitlimit je Zustellung. Der <see cref="WebPushClient"/> nutzt intern einen
+    /// HttpClient mit ~100-s-Default-Timeout — ein toter/blackholender Push-Endpoint blockierte damit
+    /// den EINEN sequenziellen WebhookTaskWorker minutenlang je Subscription und verzögerte die
+    /// latenzsensiblen schach-bot-Webhooks in derselben Queue (genau die Starvation, gegen die die
+    /// separate Webhook-Queue gebaut wurde). Push ist best-effort → kurz und hart deckeln.</summary>
+    private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(15);
+
     private readonly WebPushClient _client = new();
 
-    public Task SendAsync(UserPushSubscription sub, string payloadJson, WebPushOptions opts, CancellationToken ct = default)
+    public async Task SendAsync(UserPushSubscription sub, string payloadJson, WebPushOptions opts, CancellationToken ct = default)
     {
         var subscription = new PushSubscription(sub.Endpoint, sub.P256dh, sub.Auth);
         var vapid = new VapidDetails(opts.Subject, opts.PublicKey, opts.PrivateKey);
-        return _client.SendNotificationAsync(subscription, payloadJson, vapid, ct);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(SendTimeout);
+        await _client.SendNotificationAsync(subscription, payloadJson, vapid, timeout.Token);
     }
 }
 
@@ -149,24 +158,30 @@ public class PushNotificationService
     /// <summary>Stellt eine Benachrichtigung als Web-Push zu, sofern konfiguriert, der Bereich beim User
     /// aktiviert ist und Subscriptions existieren. „Gone" (404/410) räumt die tote Subscription ab.
     /// Best-effort: Fehler werden nur geloggt.</summary>
-    public async Task SendToUserAsync(int userId, string type, IReadOnlyDictionary<string, string>? data, string? link)
+    public async Task SendToUserAsync(int userId, string type, IReadOnlyDictionary<string, string>? data, string? link, CancellationToken ct = default)
     {
         if (!IsConfigured) return;
         var category = CategoryOf(type);
         var enabled = await GetEnabledCategoriesAsync(userId);
         if (!enabled.Contains(category)) return;
 
-        var subs = await _db.UserPushSubscriptions.Where(s => s.UserId == userId).ToListAsync();
+        var subs = await _db.UserPushSubscriptions.Where(s => s.UserId == userId).ToListAsync(ct);
         if (subs.Count == 0) return;
 
         var payload = BuildPayload(category, string.IsNullOrWhiteSpace(link) ? "/notifications" : link!);
         var gone = new List<UserPushSubscription>();
         foreach (var sub in subs)
         {
-            try { await _sender.SendAsync(sub, payload, _opts); }
+            // ct durchreichen: beim Shutdown darf der (sequenzielle) Worker nicht am laufenden
+            // HTTP-Send festhängen; das harte Per-Send-Timeout sitzt im WebPushSender.
+            try { await _sender.SendAsync(sub, payload, _opts, ct); }
             catch (WebPushException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
             {
                 gone.Add(sub);   // Subscription abgelaufen/abgemeldet → aufräumen
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return;          // Shutdown — Rest nicht mehr zustellen
             }
             catch (Exception ex) { _log.LogWarning(ex, "Web-Push an User {UserId} fehlgeschlagen.", userId); }
         }
