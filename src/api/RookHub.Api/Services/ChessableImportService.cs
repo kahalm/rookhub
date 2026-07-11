@@ -551,16 +551,7 @@ public class ChessableImportService : ICourseReimporter
         if (import.TargetRepertoireId is int target
             && await _db.Repertoires.AnyAsync(r => r.Id == target && r.UserId == import.UserId, ct))
         {
-            // Erst die neue Datei hochladen, dann die alten löschen → nie ein Zeitfenster mit 0 Dateien.
-            var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == target).Select(f => f.Id).ToListAsync(ct);
-            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
-                await _repertoires.UploadFileAsync(target, import.UserId, $"chessable-{import.Bid}.pgn", ms); // setzt ImportVersion + ChessableCourseId neu
-            if (oldIds.Count > 0)
-            {
-                var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
-                _db.RepertoireFiles.RemoveRange(olds);
-                await _db.SaveChangesAsync(ct);
-            }
+            await ReplaceRepertoireFileAsync(target, import.UserId, $"chessable-{import.Bid}.pgn", pgn, ct);
             import.ResultId = target;
             import.Imported = import.LineCount;
             import.Skipped = 0;
@@ -607,6 +598,23 @@ public class ChessableImportService : ICourseReimporter
         import.Invalid = 0;
     }
 
+    /// <summary>Ersetzt das PGN eines bestehenden Repertoires IN-PLACE (Id/Trainings-Fortschritt
+    /// bleiben): erst die neue Datei hochladen, DANN die alten löschen — die Reihenfolge ist die
+    /// Invariante „nie ein Zeitfenster mit 0 Dateien" und lag vorher als Copy-Paste in Ziel- und
+    /// Geschwister-Pfad (eine Änderung an Ordnung/Fehlerbehandlung hätte nur einen Pfad erreicht).</summary>
+    private async Task ReplaceRepertoireFileAsync(int repId, int userId, string fileName, string pgn, CancellationToken ct)
+    {
+        var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == repId).Select(f => f.Id).ToListAsync(ct);
+        using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
+            await _repertoires.UploadFileAsync(repId, userId, fileName, ms); // hebt ImportVersion + ChessableCourseId
+        if (oldIds.Count > 0)
+        {
+            var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
+            _db.RepertoireFiles.RemoveRange(olds);
+            await _db.SaveChangesAsync(ct);
+        }
+    }
+
     /// <summary>Schreibt das frisch geholte PGN zusätzlich in alle WEITEREN Repertoires desselben Users, die
     /// auf demselben Chessable-Kurs (bid) beruhen (per ChessableCourseId oder Dateiname), außer dem bereits
     /// aktualisierten <paramref name="target"/>. In-place (Id/Fortschritt bleiben) → UploadFileAsync hebt die
@@ -620,17 +628,7 @@ public class ChessableImportService : ICourseReimporter
             .Select(r => r.Id).ToListAsync(ct);
 
         foreach (var repId in siblingIds)
-        {
-            var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == repId).Select(f => f.Id).ToListAsync(ct);
-            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
-                await _repertoires.UploadFileAsync(repId, import.UserId, fileName, ms); // hebt ImportVersion + ChessableCourseId
-            if (oldIds.Count > 0)
-            {
-                var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
-                _db.RepertoireFiles.RemoveRange(olds);
-                await _db.SaveChangesAsync(ct);
-            }
-        }
+            await ReplaceRepertoireFileAsync(repId, import.UserId, fileName, pgn, ct);
     }
 
     private async Task ImportAsBookAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
