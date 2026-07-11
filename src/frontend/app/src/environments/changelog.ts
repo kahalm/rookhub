@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.18';
+export const APP_VERSION = '0.291.19';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.19", date: "2026-07-12", changes: [
+    { en: "Refactor (backend, no behavior change): the „owner OR share recipient" read-access rule for repertoires existed in FOUR copies (repertoire service, trainer access check, file download, position lookup index) — a future change to sharing semantics (e.g. revocable/expiring shares) would silently have reached only part of the paths (authorization drift). The rule now lives in ONE helper (RepertoireAccess: ReadableBy/CanReadAsync) used by all four. +1 backend test.", de: "Refactor (Backend, keine Verhaltensänderung): die „Besitzer ODER Freigabe-Empfänger"-Leseregel für Repertoires existierte in VIER Kopien (Repertoire-Service, Trainer-Zugriffscheck, Datei-Download, Positionssuche-Index) — eine künftige Änderung der Sharing-Semantik (z. B. widerrufbare/ablaufende Freigaben) hätte still nur einen Teil der Pfade erreicht (Autorisierungs-Drift). Die Regel liegt jetzt in EINEM Helfer (RepertoireAccess: ReadableBy/CanReadAsync), den alle vier nutzen. +1 Backend-Test." },
+  ]},
   { version: "0.291.18", date: "2026-07-12", changes: [
     { en: "Perf (admin CI, backend-only): the CI overview enriched the repos sequentially with their running-build info — on a cache miss, every repo whose running build had dropped out of its top-5 runs added a full GitHub round-trip (~0.3–0.8 s) IN SERIES, stacking up to multi-second responses. The per-repo enrichment now runs in parallel (matching the already-parallel repo fetch fan-out). Existing tests cover the behavior.", de: "Perf (Admin-CI, nur Backend): die CI-Übersicht reicherte die Repos sequenziell mit ihrer Laufender-Build-Info an — bei Cache-Miss addierte jedes Repo, dessen laufender Build aus seinen Top-5-Läufen gefallen war, einen vollen GitHub-Roundtrip (~0,3–0,8 s) IN SERIE, bis zu mehrsekündigen Antworten. Die Pro-Repo-Anreicherung läuft jetzt parallel (analog zum bereits parallelen Repo-Fetch-Fan-out). Bestehende Tests decken das Verhalten ab." },
   ]},

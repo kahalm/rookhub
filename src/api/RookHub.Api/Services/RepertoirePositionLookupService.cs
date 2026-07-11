@@ -106,9 +106,7 @@ public class RepertoirePositionLookupService
         // Eigene UND mit dem User geteilte Repertoires. Reihenfolge (Repertoire.Id, dann File.Id) muss
         // mit GetCombinedPgnAsync + parsePgnText übereinstimmen, damit gameIndex zwischen Server und
         // Client dieselbe Linie meint (gameIndex ist pro Repertoire, das Mischen owned/geteilt ist egal).
-        var reps = await _db.Repertoires
-            .Where(r => r.UserId == userId
-                || _db.RepertoireShares.Any(s => s.RepertoireId == r.Id && s.RecipientId == userId))
+        var reps = await RepertoireAccess.ReadableBy(_db, userId)
             .OrderBy(r => r.Id)
             .Select(r => new
             {

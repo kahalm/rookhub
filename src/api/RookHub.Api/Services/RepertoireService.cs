@@ -57,12 +57,9 @@ public class RepertoireService
     public Task<bool> IsOwnerAsync(int repertoireId, int userId)
         => _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId);
 
-    /// <summary>Darf der User das Repertoire LESEN/trainieren? Besitzer ODER Empfänger einer Freigabe.</summary>
-    public async Task<bool> CanAccessAsync(int repertoireId, int userId)
-    {
-        if (await _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId)) return true;
-        return await _db.RepertoireShares.AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId);
-    }
+    /// <summary>Darf der User das Repertoire LESEN/trainieren? Regel zentral in <see cref="RepertoireAccess"/>.</summary>
+    public Task<bool> CanAccessAsync(int repertoireId, int userId)
+        => RepertoireAccess.CanReadAsync(_db, repertoireId, userId);
 
     /// <summary>
     /// S-13-Heuristik: Sieht der Inhalt nach echtem PGN aus (Tag-Pair ODER echter erster Zug)?
@@ -420,13 +417,11 @@ public class RepertoireService
 
     public async Task<(string FileName, string Content)> DownloadFileAsync(int repertoireId, int fileId, int userId)
     {
-        // Lesend: Besitzer ODER Empfänger einer Freigabe.
+        // Lesend: Besitzer ODER Empfänger einer Freigabe (Regel zentral in RepertoireAccess).
         var file = await _db.RepertoireFiles
-            .Include(f => f.Repertoire)
-            .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId &&
-                (f.Repertoire.UserId == userId ||
-                 _db.RepertoireShares.Any(s => s.RepertoireId == repertoireId && s.RecipientId == userId)))
-            ?? throw new KeyNotFoundException("File not found.");
+            .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId);
+        if (file == null || !await RepertoireAccess.CanReadAsync(_db, repertoireId, userId))
+            throw new KeyNotFoundException("File not found.");
 
         return (file.FileName, file.PgnContent);
     }

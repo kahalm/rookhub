@@ -271,9 +271,6 @@ public class RepertoireTrainingService
     /// Der SR-Fortschritt (RepertoireCardState) ist ohnehin pro User — ein geteiltes Repertoire
     /// trainiert der Empfänger mit eigenem Fortschritt. (Das Bearbeiten der pro-Repertoire-Intervalle
     /// bleibt in <see cref="SetRepertoireConfigAsync"/> owner-only.)</summary>
-    private async Task<bool> CanTrainAsync(int userId, int repertoireId, CancellationToken ct)
-    {
-        if (await _db.Repertoires.AnyAsync(r => r.Id == repertoireId && r.UserId == userId, ct)) return true;
-        return await _db.RepertoireShares.AnyAsync(s => s.RepertoireId == repertoireId && s.RecipientId == userId, ct);
-    }
+    private Task<bool> CanTrainAsync(int userId, int repertoireId, CancellationToken ct)
+        => RepertoireAccess.CanReadAsync(_db, repertoireId, userId, ct);
 }
