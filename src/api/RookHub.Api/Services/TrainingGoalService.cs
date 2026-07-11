@@ -596,9 +596,12 @@ public class TrainingGoalService
         {
             if (string.IsNullOrWhiteSpace(raw)) continue;
             var t = raw.ToLowerInvariant();
-            if (t.Contains("endgame") || t.Contains("endspiel")) return Thm.Endgame;
-            if (t.Contains("middlegame") || t.Contains("middle game") || t.Contains("mittelspiel")) return Thm.Middlegame;
-            if (t.Contains("opening") || t.Contains("eröffnung") || t.Contains("eroeffnung")) return Thm.Opening;
+            // Freitext-Heuristik über mehrere Sprachen (en/de/es/hr) — die App läuft mit de/en/hr,
+            // und es wurden ES-Inhalte importiert. HINWEIS: der robuste Fix wäre ein strukturiertes
+            // Phasen-Feld am Kurs/Repertoire statt Namens-Sniffing; bis dahin die geläufigen Begriffe.
+            if (t.Contains("endgame") || t.Contains("endspiel") || t.Contains("finales") || t.Contains("završnic") || t.Contains("zavrsnic")) return Thm.Endgame;
+            if (t.Contains("middlegame") || t.Contains("middle game") || t.Contains("mittelspiel") || t.Contains("medio juego") || t.Contains("srednjica")) return Thm.Middlegame;
+            if (t.Contains("opening") || t.Contains("eröffnung") || t.Contains("eroeffnung") || t.Contains("apertura") || t.Contains("otvaranj")) return Thm.Opening;
         }
         return null;
     }

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.30';
+export const APP_VERSION = '0.291.31';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.31", date: "2026-07-12", changes: [
+    { en: "Fix (training goals, phase classification): course/theme time was bucketed into opening/middlegame/endgame by sniffing English/German substrings in free-text names — so Croatian (the app ships hr) or Spanish (ES content was imported) names like „završnica"/„finales"/„apertura" silently fell through to Tactics, under-counting the right phase bucket. Added es/hr keywords. Proper deep fix (a structured phase field on the course/repertoire instead of name sniffing) is noted in code. +1 backend test.", de: "Fix (Trainingsziele, Phasen-Klassifikation): Kurs-/Themenzeit wurde nach Eröffnung/Mittelspiel/Endspiel einsortiert, indem englische/deutsche Teilstrings in Freitext-Namen gesucht wurden — kroatische (die App läuft hr) oder spanische (ES-Inhalte importiert) Namen wie „završnica"/„finales"/„apertura" fielen so still auf Taktik zurück und zählten im richtigen Phasen-Topf zu wenig. es/hr-Schlüsselwörter ergänzt. Der eigentliche Tiefen-Fix (ein strukturiertes Phasen-Feld am Kurs/Repertoire statt Namens-Sniffing) ist im Code vermerkt. +1 Backend-Test." },
+  ]},
   { version: "0.291.30", date: "2026-07-12", changes: [
     { en: "Hardening (Chessable bearer circuit breaker): the „dead bearer" classification substring-matches free-text proxy error messages, so an English rewording (e.g. „Expired token" without the German „abgelaufen") could let a dead bearer slip past the breaker — the watchdog would then keep hammering Chessable with the banned account. The fatal-keyword list now covers both languages (expired/invalid token/re-enter/unauthorized alongside the German terms); the VPN/Cloudflare/IP exclusions still run first so an ambiguous IP-block message stays non-fatal. Proper deep fix (a structured error code from the piratechess proxy instead of message sniffing) is noted in code. +3 backend tests.", de: "Härtung (Chessable-Bearer-Circuit-Breaker): die „toter Bearer"-Klassifikation matcht Freitext-Fehlermeldungen des Proxys per Substring, sodass ein englisches Rewording (z. B. „Expired token" ohne das deutsche „abgelaufen") einen toten Bearer am Breaker vorbeirutschen lassen konnte — der Watchdog würde dann weiter mit dem gesperrten Account gegen Chessable hämmern. Die Fatal-Schlüsselwortliste deckt jetzt beide Sprachen ab (expired/invalid token/re-enter/unauthorized neben den deutschen Begriffen); die VPN-/Cloudflare-/IP-Ausschlüsse laufen weiterhin zuerst, sodass eine mehrdeutige IP-Block-Meldung nicht-fatal bleibt. Der eigentliche Tiefen-Fix (ein strukturierter Fehlercode aus dem piratechess-Proxy statt Meldungs-Sniffing) ist im Code vermerkt. +3 Backend-Tests." },
   ]},

@@ -335,6 +335,28 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Theme_PhaseFromText_RecognizesSpanishAndCroatian()
+    {
+        // Regression: PhaseFromText kannte nur en/de — hr/es-Kurs-/Themen-Text (App läuft hr,
+        // ES-Inhalte importiert) landete still als Taktik statt in der richtigen Phase.
+        var u = await CreateUserAsync();
+        await _service.SetPersonalGoalAsync(u.Id, Input(daily: 10));
+        var now = DateTime.UtcNow;
+        await CreatePuzzleAsync(1, themes: "finales de torre");     // es → Endgame
+        await CreatePuzzleAsync(2, themes: "apertura española");    // es → Opening
+        await CreatePuzzleAsync(3, themes: "završnica");            // hr → Endgame
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 1, Solved = true, TimeSpentSeconds = 100, AttemptedAt = now });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 2, Solved = true, TimeSpentSeconds = 50, AttemptedAt = now });
+        _db.PuzzleAttempts.Add(new PuzzleAttempt { UserId = u.Id, PuzzleId = 3, Solved = true, TimeSpentSeconds = 30, AttemptedAt = now });
+        await _db.SaveChangesAsync();
+
+        var day = Assert.Single((await _service.GetTrackerAsync(u.Id, 1)).Days);
+        Assert.Equal(130, day.ByTheme.EndgameSeconds);   // finales + završnica
+        Assert.Equal(50, day.ByTheme.OpeningSeconds);    // apertura
+        Assert.Equal(0, day.ByTheme.TacticsSeconds);
+    }
+
+    [Fact]
     public async Task Theme_Chessable_FromCourseKind_NoneIsOther()
     {
         var u = await CreateUserAsync();
