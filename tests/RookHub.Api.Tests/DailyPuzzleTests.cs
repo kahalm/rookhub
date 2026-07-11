@@ -60,6 +60,37 @@ public class DailyPuzzleTests : IDisposable
     }
 
     [Fact]
+    public async Task GetOrAssignDailyAsync_NeverPicksInfoOnlyLine()
+    {
+        var book = await CreateDailyBookAsync();
+        var info = await AddPuzzleAsync(book, "info.pgn:1");
+        info.IsInfoOnly = true;
+        var quiz = await AddPuzzleAsync(book, "quiz.pgn:1");
+        await _db.SaveChangesAsync();
+
+        // Über viele (vergangene) Tage würfeln — nie darf die Info-/Erklärlinie gezogen werden.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        for (var i = 1; i <= 25; i++)
+        {
+            var dto = await _service.GetOrAssignDailyAsync(today.AddDays(-i));
+            Assert.Equal(quiz.Id, dto.Id);
+        }
+    }
+
+    [Fact]
+    public async Task GetOrAssignDailyAsync_OnlyInfoOnly_Throws()
+    {
+        var book = await CreateDailyBookAsync();
+        var info = await AddPuzzleAsync(book, "info.pgn:1");
+        info.IsInfoOnly = true;
+        await _db.SaveChangesAsync();
+
+        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.GetOrAssignDailyAsync(yesterday));
+    }
+
+    [Fact]
     public async Task GetOrAssignDailyAsync_AssignsAndPersists_FirstCall()
     {
         var book = await CreateDailyBookAsync();

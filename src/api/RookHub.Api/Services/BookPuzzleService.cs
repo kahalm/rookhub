@@ -431,9 +431,9 @@ public class BookPuzzleService
         if (existing?.BookPuzzle != null)
             return MapToDto(existing.BookPuzzle);
 
-        // 2) Zufaelliges Puzzle aus dem forDaily-Pool (ausgemusterte ausgenommen).
+        // 2) Zufaelliges Puzzle aus dem forDaily-Pool (ausgemusterte + Info-/Erklaerlinien ausgenommen).
         var pool = _db.BookPuzzles.Include(bp => bp.Book)
-            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired);
+            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired && !bp.IsInfoOnly);
         var count = await pool.CountAsync();
         if (count == 0)
             throw new KeyNotFoundException("No book puzzle available for pool 'daily'.");
@@ -497,9 +497,10 @@ public class BookPuzzleService
                 old.Retired = true;
         }
 
-        // Neues Puzzle aus dem forDaily-Pool ziehen (ausgemusterte – inkl. des gerade ausgemusterten – ausgenommen).
+        // Neues Puzzle aus dem forDaily-Pool ziehen (ausgemusterte – inkl. des gerade ausgemusterten –
+        // sowie Info-/Erklaerlinien ausgenommen).
         var pool = _db.BookPuzzles.Include(bp => bp.Book)
-            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired
+            .Where(bp => bp.Book != null && bp.Book.ForDaily && !bp.Retired && !bp.IsInfoOnly
                          && (retiredId == null || bp.Id != retiredId.Value));
         var count = await pool.CountAsync();
         if (count == 0)

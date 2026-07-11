@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.0';
+export const APP_VERSION = '0.291.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.1", date: "2026-07-11", changes: [
+    { en: "Fix: the daily puzzle could land on a Chessable info/explanation line (IsInfoOnly) — which is not a quiz and shouldn't appear in the daily/random pools. The general pool query already excluded such lines, but the daily assignment + regenerate paths built their own query without that filter. Both now exclude IsInfoOnly (like Retired). +2 backend tests.", de: "Fix: das Tagespuzzle konnte auf eine Chessable-Info-/Erklärlinie (IsInfoOnly) fallen — die ist keine Quizaufgabe und darf in den Daily-/Random-Töpfen nicht vorkommen. Die allgemeine Pool-Abfrage schloss solche Linien schon aus, aber die Daily-Zuweisung + das Regenerieren bauten ihre eigene Abfrage OHNE diesen Filter. Beide schließen jetzt IsInfoOnly aus (wie Retired). +2 Backend-Tests." },
+  ]},
   { version: "0.291.0", date: "2026-07-10", changes: [
     { en: "Course solving now shows an estimated time-to-finish next to the elapsed time — for BOTH the whole book and the current chapter (⏳ ~1 h 20 min). The estimate extrapolates from your pace so far (total time ÷ puzzles attempted × puzzles still open) and disappears once a scope is complete. Frontend-only (uses the stats already returned per solve). +util tests.", de: "Beim Kurslösen steht jetzt neben der aufgewendeten Zeit eine geschätzte Restzeit bis zum Abschluss — für BEIDES, das ganze Buch UND das aktuelle Kapitel (⏳ ~1 h 20 min). Die Schätzung extrapoliert dein bisheriges Tempo (Gesamtzeit ÷ angefasste Puzzles × noch offene Puzzles) und verschwindet, sobald ein Bereich fertig ist. Nur Frontend (nutzt die ohnehin je Lösung gelieferte Statistik). +Util-Tests." },
   ]},
