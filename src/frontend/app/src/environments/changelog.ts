@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.10';
+export const APP_VERSION = '0.291.11';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.11", date: "2026-07-12", changes: [
+    { en: "Fix (daily puzzle, abuse hardening): requesting a daily puzzle for an arbitrary PAST date no longer creates a new assignment on the fly. The anonymous /api/book-puzzles/daily/{date} endpoint and the Open-Graph preview image (/api/og/img/daily/...) called the same get-or-assign logic, which persisted a DailyPuzzles row for ANY past date — an anonymous client enumerating historical dates could mass-create rows and „consume" puzzles from the forDaily pool (skewing future daily selection). On-demand assignment is now limited to today and yesterday (timezone/outage grace; the scheduler assigns at 00:00 UTC anyway); older dates return the stored assignment or 404. +2 backend tests.", de: "Fix (Tagespuzzle, Missbrauchs-Härtung): das Abrufen eines Tagespuzzles für ein beliebiges VERGANGENES Datum legt keine neue Zuordnung mehr on-the-fly an. Der anonyme /api/book-puzzles/daily/{date}-Endpoint und das Open-Graph-Vorschaubild (/api/og/img/daily/...) riefen dieselbe Get-or-Assign-Logik, die für JEDES vergangene Datum eine DailyPuzzles-Zeile persistierte — ein anonymer Client konnte per Datums-Enumeration massenhaft Zeilen anlegen und dabei Puzzles aus dem forDaily-Pool „verbrauchen" (verzerrt die künftige Daily-Auswahl). On-demand-Zuordnung gilt jetzt nur noch für heute und gestern (Zeitzonen-/Ausfall-Kulanz; der Scheduler ordnet ohnehin täglich 00:00 UTC zu); ältere Daten liefern die gespeicherte Zuordnung oder 404. +2 Backend-Tests." },
+  ]},
   { version: "0.291.10", date: "2026-07-12", changes: [
     { en: "Fix (daily puzzle scoring): daily credit now only counts attempts made ON the daily's UTC date. Previously the monthly ladder and hall of fame scored each user's first attempt on the puzzle EVER — a failed book-browsing attempt months before the puzzle became the daily robbed a genuine same-day first-try solver of all points, while someone who had solved it in a course long ago was credited as a daily solver with their old time. The same held for the „Daily puzzles" category of the general leaderboards: any solved attempt on a puzzle that was EVER a daily counted (book grinders outranked actual daily solvers). Both now require the attempt to be on the assignment date. +2 backend tests.", de: "Fix (Tagespuzzle-Wertung): Daily-Credit zählt jetzt nur noch Versuche AM UTC-Tag des Tagespuzzles. Bisher wertete die Monats-Ladder samt Hall of Fame den ersten Versuch des Users an dem Puzzle ÜBERHAUPT — ein Buch-Browsing-Fail Monate bevor das Puzzle Daily wurde, nahm einem echten Am-Tag-First-Try-Löser alle Punkte, während jemand, der es längst im Kurs gelöst hatte, mit seiner alten Zeit als Daily-Löser gutgeschrieben wurde. Dasselbe galt für die Kategorie „Tagespuzzles" der allgemeinen Bestenlisten: jeder gelöste Versuch an einem Puzzle, das IRGENDWANN Daily war, zählte (Buch-Grinder überholten echte Daily-Löser). Beide verlangen jetzt einen Versuch am Zuordnungs-Datum. +2 Backend-Tests." },
   ]},

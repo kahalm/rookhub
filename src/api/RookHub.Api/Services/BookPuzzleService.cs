@@ -413,9 +413,14 @@ public class BookPuzzleService
     /// Liefert das Tagespuzzle fuer ein bestimmtes UTC-Datum.
     ///
     /// - Datum > heute → <see cref="InvalidOperationException"/> (400)
-    /// - Datum ≤ heute und bereits zugeordnet → gespeicherter Eintrag
-    /// - Datum ≤ heute und noch nicht zugeordnet → JETZT ausloesen, speichern, liefern
-    ///   (Race-safe: Unique-Constraint auf Date macht parallele Inserts idempotent)
+    /// - bereits zugeordnet → gespeicherter Eintrag
+    /// - noch nicht zugeordnet und Datum ist HEUTE oder GESTERN → JETZT ausloesen, speichern,
+    ///   liefern (Race-safe: Unique-Constraint auf Date macht parallele Inserts idempotent)
+    /// - aelteres Datum ohne Zuordnung → <see cref="KeyNotFoundException"/> (404). Der Endpoint
+    ///   (und das OG-Vorschaubild) ist AllowAnonymous — on-demand-Anlage fuer BELIEBIGE
+    ///   Vergangenheit erlaubte anonyme DB-Write-Amplification per Datums-Enumeration und
+    ///   „verbrauchte" dabei Puzzles aus dem forDaily-Pool. Der Scheduler ordnet ohnehin
+    ///   taeglich um 00:00 UTC zu; Gestern bleibt als Zeitzonen-/Ausfall-Kulanz on-demand.
     /// </summary>
     public async Task<BookPuzzleDto> GetOrAssignDailyAsync(DateOnly date)
     {
@@ -430,6 +435,9 @@ public class BookPuzzleService
             .FirstOrDefaultAsync();
         if (existing?.BookPuzzle != null)
             return MapToDto(existing.BookPuzzle);
+
+        if (date < today.AddDays(-1))
+            throw new KeyNotFoundException("No daily puzzle was assigned for this date.");
 
         // 2) Zufaelliges Puzzle aus dem forDaily-Pool (ausgemusterte + Info-/Erklaerlinien ausgenommen).
         var pool = _db.BookPuzzles.Include(bp => bp.Book)

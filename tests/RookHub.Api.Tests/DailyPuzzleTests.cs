@@ -68,13 +68,43 @@ public class DailyPuzzleTests : IDisposable
         var quiz = await AddPuzzleAsync(book, "quiz.pgn:1");
         await _db.SaveChangesAsync();
 
-        // Über viele (vergangene) Tage würfeln — nie darf die Info-/Erklärlinie gezogen werden.
+        // Oft würfeln (Zuordnung jeweils löschen = Re-Roll) — nie darf die Info-Linie gezogen werden.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         for (var i = 1; i <= 25; i++)
         {
-            var dto = await _service.GetOrAssignDailyAsync(today.AddDays(-i));
+            _db.DailyPuzzles.RemoveRange(_db.DailyPuzzles);
+            await _db.SaveChangesAsync();
+            var dto = await _service.GetOrAssignDailyAsync(today);
             Assert.Equal(quiz.Id, dto.Id);
         }
+    }
+
+    [Fact]
+    public async Task GetOrAssignDailyAsync_OldDateWithoutAssignment_Throws404_InsteadOfCreating()
+    {
+        // Regression: on-demand-Anlage galt für JEDES vergangene Datum — der anonyme
+        // /daily/{date}-Endpoint (und das OG-Vorschaubild) erlaubte damit DB-Write-Amplification
+        // per Datums-Enumeration und verbrauchte Puzzles aus dem forDaily-Pool.
+        var book = await CreateDailyBookAsync();
+        await AddPuzzleAsync(book, "old.pgn:1");
+        var old = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-7);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetOrAssignDailyAsync(old));
+        Assert.Equal(0, await _db.DailyPuzzles.CountAsync());   // nichts angelegt
+    }
+
+    [Fact]
+    public async Task GetOrAssignDailyAsync_OldDateWithExistingAssignment_StillReturnsIt()
+    {
+        var book = await CreateDailyBookAsync();
+        var p = await AddPuzzleAsync(book, "hist.pgn:1");
+        var old = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-30);
+        _db.DailyPuzzles.Add(new DailyPuzzle { Date = old, BookPuzzleId = p.Id, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+
+        var dto = await _service.GetOrAssignDailyAsync(old);
+
+        Assert.Equal(p.Id, dto.Id);   // historische Zuordnungen bleiben abrufbar (prevDaily-Navigation)
     }
 
     [Fact]
@@ -300,10 +330,13 @@ public class DailyPuzzleTests : IDisposable
         var first = await _service.GetOrAssignDailyAsync(today);
         var regenerated = await _service.RegenerateDailyAsync(today);
 
-        // Das ausgemusterte (erste) Puzzle darf in keinem Pool mehr auftauchen.
+        // Das ausgemusterte (erste) Puzzle darf in keinem Pool mehr auftauchen
+        // (Zuordnung jeweils löschen = Re-Roll für heute; historische Daten legen nicht mehr an).
         for (var i = 0; i < 20; i++)
         {
-            var rnd = await _service.GetOrAssignDailyAsync(today.AddDays(-(i + 1)));
+            _db.DailyPuzzles.RemoveRange(_db.DailyPuzzles);
+            await _db.SaveChangesAsync();
+            var rnd = await _service.GetOrAssignDailyAsync(today);
             Assert.NotEqual(first.Id, rnd.Id);
         }
     }
