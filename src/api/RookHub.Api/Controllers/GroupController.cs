@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -10,7 +11,7 @@ namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/groups")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.GroupsManage)]
 public class GroupController : BaseApiController
 {
     private readonly AppDbContext _db;

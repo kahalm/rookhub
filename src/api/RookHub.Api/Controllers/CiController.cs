@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -8,7 +10,7 @@ namespace RookHub.Api.Controllers;
 /// <summary>Admin-CI-Übersicht: letzte GitHub-Actions-Läufe der beteiligten Repos.</summary>
 [ApiController]
 [Route("api/admin/ci")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.CiView)]
 public class CiController : BaseApiController
 {
     private readonly GithubActionsService _github;

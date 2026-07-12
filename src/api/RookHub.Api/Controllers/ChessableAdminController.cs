@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ namespace RookHub.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/chessable")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.ChessableAdmin)]
 // Wie der User-Controller vom globalen Minutenlimit ausnehmen (Kurs-Schwung/Polling).
 [DisableRateLimiting]
 public class ChessableAdminController : BaseApiController

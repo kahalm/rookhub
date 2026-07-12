@@ -3,14 +3,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class AdminController : BaseApiController
 {
     private readonly AdminService _admin;
@@ -41,6 +43,7 @@ public class AdminController : BaseApiController
     /// Env-Var bleibt der Kibana-Root.
     /// </remarks>
     [HttpGet("config")]
+    [HasPermission(Permissions.UsersManage)]
     public IActionResult GetConfig()
     {
         var root = (_config["Kibana:Url"] ?? string.Empty).TrimEnd('/');
@@ -54,6 +57,7 @@ public class AdminController : BaseApiController
     // ---- Benutzer ---------------------------------------------------------
 
     [HttpGet("users")]
+    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var (items, totalCount, resolvedPage, resolvedPageSize) = await _admin.GetUsersAsync(search, page, pageSize);
@@ -61,6 +65,7 @@ public class AdminController : BaseApiController
     }
 
     [HttpDelete("users/{id}")]
+    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> DeleteUser(int id)
     {
         try
@@ -79,6 +84,7 @@ public class AdminController : BaseApiController
     }
 
     [HttpPost("users/{id}/toggle-admin")]
+    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> ToggleAdmin(int id)
     {
         try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId())); }
@@ -88,6 +94,7 @@ public class AdminController : BaseApiController
 
     /// <summary>„Als Nutzer einsteigen": liefert ein Token, mit dem der Admin als Zielnutzer agiert.</summary>
     [HttpPost("users/{id}/impersonate")]
+    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> Impersonate(int id)
     {
         var adminName = User.Identity?.Name ?? string.Empty;
@@ -99,6 +106,7 @@ public class AdminController : BaseApiController
     // ---- Puzzles ----------------------------------------------------------
 
     [HttpPost("puzzles/import")]
+    [HasPermission(Permissions.PuzzlesManage)]
     [RequestSizeLimit(500 * 1024 * 1024)]
     public async Task<IActionResult> ImportPuzzles(
         IFormFile file,
@@ -119,9 +127,11 @@ public class AdminController : BaseApiController
     }
 
     [HttpGet("puzzles/count")]
+    [HasPermission(Permissions.PuzzlesManage)]
     public async Task<IActionResult> GetPuzzleCount() => Ok(new { count = await _admin.GetPuzzleCountAsync() });
 
     [HttpDelete("puzzles")]
+    [HasPermission(Permissions.PuzzlesManage)]
     public async Task<IActionResult> ClearPuzzles()
     {
         await _admin.ClearPuzzlesAsync();
@@ -134,6 +144,7 @@ public class AdminController : BaseApiController
     /// danach pflegt der Import die Tags automatisch mit. Idempotent (überspringt bereits Verknüpftes).
     /// </summary>
     [HttpPost("puzzles/backfill-tags")]
+    [HasPermission(Permissions.PuzzlesManage)]
     public async Task<IActionResult> BackfillPuzzleTags()
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
@@ -150,6 +161,7 @@ public class AdminController : BaseApiController
     /// den Themes-String UND die normalisierte PuzzleTags-Tabelle. Idempotent (überspringt bereits Getaggtes).
     /// </summary>
     [HttpPost("puzzles/tag-en-passant")]
+    [HasPermission(Permissions.PuzzlesManage)]
     public async Task<IActionResult> TagEnPassantPossible()
     {
         await _taskQueue.EnqueueAsync(async (sp, ct) =>
@@ -164,6 +176,7 @@ public class AdminController : BaseApiController
 
     /// <summary>Lädt eine oder mehrere PGN-Dateien als Bücher hoch (serverseitiges Parsing).</summary>
     [HttpPost("books/import")]
+    [HasPermission(Permissions.BooksManage)]
     [RequestSizeLimit(200 * 1024 * 1024)]
     public async Task<IActionResult> ImportBooks([FromForm] List<IFormFile> files, CancellationToken ct)
     {
@@ -188,10 +201,12 @@ public class AdminController : BaseApiController
     }
 
     [HttpGet("books")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> GetBooks() => Ok(await _bookAdmin.GetBooksAsync());
 
     /// <summary>Gruppen-Ids, die dieses Buch als Kurs sehen dürfen.</summary>
     [HttpGet("books/{id}/groups")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> GetBookGroups(int id)
     {
         try { return Ok(await _bookAdmin.GetBookGroupsAsync(id)); }
@@ -200,6 +215,7 @@ public class AdminController : BaseApiController
 
     /// <summary>Setzt die vollständige Gruppen-Freigabe eines Buchs (ersetzt bestehende Einträge).</summary>
     [HttpPut("books/{id}/groups")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> SetBookGroups(int id, [FromBody] SetBookGroupsDto dto)
     {
         try { return Ok(await _bookAdmin.SetBookGroupsAsync(id, dto)); }
@@ -207,6 +223,7 @@ public class AdminController : BaseApiController
     }
 
     [HttpPut("books/{id}")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookDto dto)
     {
         try { return Ok(await _bookAdmin.UpdateBookAsync(id, dto)); }
@@ -215,6 +232,7 @@ public class AdminController : BaseApiController
     }
 
     [HttpDelete("books/{id}")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> DeleteBook(int id)
     {
         try { await _bookAdmin.DeleteBookAsync(id); return NoContent(); }

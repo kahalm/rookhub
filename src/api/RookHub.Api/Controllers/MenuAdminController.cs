@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -8,7 +10,7 @@ namespace RookHub.Api.Controllers;
 /// <summary>Admin: Sichtbarkeit der Menüeinträge konfigurieren.</summary>
 [ApiController]
 [Route("api/admin/menu")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.MenuManage)]
 public class MenuAdminController : BaseApiController
 {
     private readonly MenuVisibilityService _menu;

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -212,7 +214,7 @@ public class BookPuzzleController : BaseApiController
     public async Task<IActionResult> GetBooks() => Ok(await _service.GetBooksAsync());
 
     [HttpPost("/api/admin/book-puzzles/import")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.BooksManage)]
     [RequestSizeLimit(50 * 1024 * 1024)]
     public async Task<IActionResult> Import([FromBody] List<BookPuzzleImportDto> puzzles)
     {
@@ -230,7 +232,7 @@ public class BookPuzzleController : BaseApiController
     /// <paramref name="date"/> als <c>yyyyMMdd</c> oder das Literal <c>today</c>.
     /// </summary>
     [HttpPost("/api/admin/book-puzzles/daily/{date}/regenerate")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.DailyManage)]
     public async Task<IActionResult> RegenerateDaily(string date)
     {
         DateOnly parsed;
@@ -252,7 +254,7 @@ public class BookPuzzleController : BaseApiController
     /// <summary>Admin: Tipps eines einzelnen Buch-Puzzles (neu) generieren — synchron, fürs Testen.
     /// 400 wenn kein API-Key konfiguriert ist; 404 wenn das Puzzle fehlt; sonst die generierten Tipps.</summary>
     [HttpPost("/api/admin/book-puzzles/{id:int}/regenerate-hints")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> RegenerateHints(int id)
     {
         if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });
@@ -283,7 +285,7 @@ public class BookPuzzleController : BaseApiController
     /// <summary>Admin: Tipps für ein ganzes Buch im Hintergrund (neu) generieren. <paramref name="force"/>
     /// regeneriert auch bereits vorhandene; sonst nur fehlende/veraltete.</summary>
     [HttpPost("/api/admin/books/{bookId}/generate-hints")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.BooksManage)]
     public async Task<IActionResult> GenerateBookHints(int bookId, [FromQuery] bool force = false)
     {
         if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic API key not configured." });

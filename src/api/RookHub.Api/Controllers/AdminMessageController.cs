@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Models;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -9,7 +11,7 @@ namespace RookHub.Api.Controllers;
 /// schreiben/antworten und User-Antworten als gelesen markieren.</summary>
 [ApiController]
 [Route("api/admin/messages")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.MessagesAdmin)]
 public class AdminMessageController : BaseApiController
 {
     private readonly AdminMessageService _messages;

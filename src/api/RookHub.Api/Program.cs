@@ -137,6 +137,13 @@ try
     .AddScheme<ApiTokenAuthenticationOptions, ApiTokenAuthenticationHandler>(
         ApiTokenAuthenticationHandler.SchemeName, _ => { });
 
+    // RBAC: dynamischer Policy-Provider für [HasPermission("…")] (perm:<key>-Policies on the fly)
+    // + Handler, der Admin-Rolle ODER perm-Claim akzeptiert.
+    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
+        RookHub.Api.Authorization.PermissionPolicyProvider>();
+    builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+        RookHub.Api.Authorization.PermissionAuthorizationHandler>();
+
     // Services
     builder.Services.AddScoped<AuthService>();
     builder.Services.AddSingleton<EncryptionService>();

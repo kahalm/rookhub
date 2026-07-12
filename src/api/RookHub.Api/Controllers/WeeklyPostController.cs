@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -144,7 +145,7 @@ public class WeeklyPostController : BaseApiController
     /// Admin-Detailaufschlüsselung eines Spielers: eine Zeile je gespieltem Puzzle (Zeit, Tipps,
     /// Fehlzüge, Mausrutscher). Nur für Admins — hinter dem (i) in der Bestenliste.
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.WeeklyPostsManage)]
     [HttpGet("{id:int}/players/{userId:int}/breakdown")]
     public async Task<ActionResult<WeeklyPlayerBreakdownDto>> GetPlayerBreakdown(int id, int userId)
     {
@@ -177,7 +178,7 @@ public class WeeklyPostController : BaseApiController
     }
 
     [HttpPost("/api/admin/weekly-posts")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.WeeklyPostsManage)]
     [RequestSizeLimit(RepertoireService.MaxFileSize)]
     public async Task<IActionResult> Create(IFormFile file, [FromForm] DateTime scheduledAt, [FromForm] string? title, [FromForm] string? description = null, CancellationToken ct = default)
     {
@@ -229,7 +230,7 @@ public class WeeklyPostController : BaseApiController
     /// Die Puzzles kommen dann live aus den BookPuzzles dieses Kapitels.
     /// </summary>
     [HttpPost("/api/admin/weekly-posts/from-chapter")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.WeeklyPostsManage)]
     public async Task<IActionResult> CreateFromChapter([FromBody] CreateWeeklyFromChapterDto dto)
     {
         try
@@ -244,7 +245,7 @@ public class WeeklyPostController : BaseApiController
     }
 
     [HttpPut("/api/admin/weekly-posts/{id}")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.WeeklyPostsManage)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateWeeklyPostDto dto)
     {
         var post = await _db.WeeklyPosts.FindAsync(id);
@@ -270,7 +271,7 @@ public class WeeklyPostController : BaseApiController
     }
 
     [HttpDelete("/api/admin/weekly-posts/{id}")]
-    [Authorize(Roles = "Admin")]
+    [HasPermission(Permissions.WeeklyPostsManage)]
     public async Task<IActionResult> Delete(int id)
     {
         var post = await _db.WeeklyPosts.FindAsync(id);

@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.0';
+export const APP_VERSION = '0.292.1';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.1", date: "2026-07-12", changes: [
+    { en: "RBAC role system, phase 2 (permission enforcement, no behavior change for admins): added a HasPermission attribute backed by a dynamic authorization policy provider and a handler that grants when the user is in the Admin role OR carries the matching permission claim. All admin-gated endpoints were switched from Authorize(Roles=Admin) to per-area permissions (users/books/puzzles/daily/weeklyposts/groups/messages/chessable/ci/menu). The mixed admin controller now carries a permission per method instead of one blanket role gate. Admins keep full access (the Admin role satisfies every permission); non-admin roles gain nothing yet (their permission claims arrive in phase 3). +4 backend tests.", de: "RBAC-Rollensystem, Phase 2 (Permission-Durchsetzung, keine Verhaltensänderung für Admins): neues HasPermission-Attribut mit dynamischem Policy-Provider + Handler, der bei Admin-Rolle ODER passendem Permission-Claim gewährt. Alle admin-geschützten Endpoints von Authorize(Roles=Admin) auf Bereichs-Permissions umgestellt (users/books/puzzles/daily/weeklyposts/groups/messages/chessable/ci/menu). Der gemischte Admin-Controller trägt jetzt eine Permission je Methode statt eines pauschalen Rollen-Gates. Admins behalten vollen Zugriff (die Admin-Rolle erfüllt jede Permission); Nicht-Admin-Rollen bekommen noch nichts (ihre Permission-Claims kommen in Phase 3). +4 Backend-Tests." },
+  ]},
   { version: "0.292.0", date: "2026-07-12", changes: [
     { en: "RBAC role system, phase 1 (backend foundation, no behavior change): new Role / UserRole / RolePermission tables (migration AddRbacRoles) plus a code-owned Permissions constant set (one key per admin area). A startup seeder ensures the system roles admin (holds all permissions) and member, and mirrors the existing IsAdmin flag into admin-role membership. Nothing reads roles yet - IsAdmin stays the source of truth; this only fills the infrastructure so later phases can enforce per-permission and add Trainer/Moderator roles. +2 backend tests.", de: "RBAC-Rollensystem, Phase 1 (Backend-Grundgerüst, keine Verhaltensänderung): neue Tabellen Role / UserRole / RolePermission (Migration AddRbacRoles) plus ein Code-eigener Permissions-Konstantensatz (ein Schlüssel je Admin-Bereich). Ein Start-Seeder stellt die System-Rollen admin (trägt alle Permissions) und member sicher und spiegelt das bestehende IsAdmin-Flag in die admin-Rollenmitgliedschaft. Noch liest nichts Rollen - IsAdmin bleibt die Quelle der Wahrheit; das befüllt nur die Infrastruktur, damit spätere Phasen pro Permission durchsetzen und Trainer/Moderator-Rollen ergänzen können. +2 Backend-Tests." },
   ]},
