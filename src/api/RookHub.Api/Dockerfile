@@ -13,7 +13,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl stockfish \
     && rm -rf /var/lib/apt/lists/*
 
-RUN adduser --disabled-password --no-create-home appuser
+# Ubuntu-24.04-Basis (.NET 10) hat kein adduser mehr — useradd nutzen
+RUN useradd --no-create-home appuser
 
 WORKDIR /app
 COPY --from=build /app .

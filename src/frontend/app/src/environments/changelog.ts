@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.18';
+export const APP_VERSION = '0.292.19';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.19", date: "2026-07-13", changes: [
+    { en: "Fix (CI, red master since the .NET 10 upgrade in 0.292.10): the Docker build of rookhub-api and the crawler failed with exit 127 at adduser — the new .NET 10 base images are Ubuntu 24.04 based and no longer ship adduser. Both Dockerfiles now use useradd --no-create-home. Verified against mcr.microsoft.com/dotnet/aspnet:10.0 locally. No app code change.", de: "Fix (CI, roter master seit dem .NET-10-Upgrade in 0.292.10): der Docker-Build von rookhub-api und dem Crawler scheiterte mit exit 127 an adduser — die neuen .NET-10-Basis-Images sind Ubuntu-24.04-basiert und liefern kein adduser mehr mit. Beide Dockerfiles nutzen jetzt useradd --no-create-home. Lokal gegen mcr.microsoft.com/dotnet/aspnet:10.0 verifiziert. Keine App-Code-Änderung." },
+  ]},
   { version: "0.292.18", date: "2026-07-13", changes: [
     { en: "Frontend test coverage (final batch): added creation smoke specs for all 42 remaining untested components (puzzles cards, tournaments, repertoire, courses, training-goals, admin tabs, dialogs, analysis, stats, games, etc.). Each test AOT-compiles the component template and resolves its DI graph (kitchen-sink providers + MatDialog tokens where needed) — precisely the check that catches framework-major regressions (e.g. the ngx-translate/Angular breaks). Every frontend component now has a spec; 1185 unit tests green. Deeper behavioural tests for the board/engine/dialog components stay out of scope (low value / worker+WASM flakiness).", de: "Frontend-Testabdeckung (letzter Batch): Creation-Smoke-Specs für alle 42 verbliebenen ungetesteten Komponenten ergänzt (Puzzle-Karten, Turniere, Repertoire, Kurse, Trainingsziele, Admin-Tabs, Dialoge, Analyse, Stats, Partien usw.). Jeder Test AOT-kompiliert das Komponenten-Template und löst den DI-Graph auf (Kitchen-Sink-Provider + MatDialog-Tokens wo nötig) — genau die Prüfung, die Framework-Major-Regressionen fängt (z. B. die ngx-translate/Angular-Brüche). Jede Frontend-Komponente hat jetzt ein Spec; 1185 Unit-Tests grün. Tiefere Verhaltenstests für Brett-/Engine-/Dialog-Komponenten bleiben bewusst außen vor (geringer Wert / Worker+WASM-Flakiness)." },
   ]},
