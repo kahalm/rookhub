@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.3';
+export const APP_VERSION = '0.292.4';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.4", date: "2026-07-12", changes: [
+    { en: "Docs only (internal TODO): marked the RBAC role-system item as done (phases 1-4 shipped in v0.292.0-0.292.3; the IsAdmin column is deliberately kept as the sync source for admin-role membership), and broadened the periodic dependency task to actively cover framework/runtime major upgrades (.NET, Angular) across all stack repos (rookhub, crawler, piratechess, schach-bot, log-watcher). No code change.", de: "Nur Doku (interne TODO): den RBAC-Rollensystem-Punkt als erledigt markiert (Phasen 1-4 in v0.292.0-0.292.3; IsAdmin-Spalte bleibt bewusst Sync-Quelle der admin-Rollenmitgliedschaft) und die periodische Dependency-Aufgabe erweitert, sodass sie Framework-/Runtime-Major-Upgrades (.NET, Angular) über alle Stack-Repos aktiv abdeckt (rookhub, Crawler, piratechess, schach-bot, log-watcher). Keine Code-Änderung." },
+  ]},
   { version: "0.292.3", date: "2026-07-12", changes: [
     { en: "RBAC role system, phase 4 (admin UI for roles & permissions): a new admin tab „Roles“ lets you create, edit and delete roles, pick their abilities from the fixed permission set (checkboxes, one per admin area) and assign roles to individual users (search a user, toggle their roles). Backend: RolesManage permission + RoleAdminService + endpoints under /api/admin/roles (list, permissions, create, update, delete) and /api/admin/users/{id}/roles (get/set). Guard rails match the model: the system role admin is the superuser (all permissions, not editable) and stays driven by the IsAdmin toggle on the Users tab — so it is neither editable nor assignable here; member is not deletable. +4 backend tests, +6 frontend tests, i18n en/de/hr. RBAC feature complete (IsAdmin kept as the sync source for admin-role membership).", de: "RBAC-Rollensystem, Phase 4 (Admin-UI für Rollen & Berechtigungen): ein neuer Admin-Tab „Rollen“ erlaubt Rollen anzulegen, zu bearbeiten und zu löschen, ihre Fähigkeiten aus dem festen Berechtigungssatz zu wählen (Checkboxen, eine je Admin-Bereich) und Rollen einzelnen Nutzern zuzuweisen (Nutzer suchen, Rollen umschalten). Backend: RolesManage-Permission + RoleAdminService + Endpoints unter /api/admin/roles (Liste, Permissions, anlegen, ändern, löschen) und /api/admin/users/{id}/roles (holen/setzen). Leitplanken spiegeln das Modell: die System-Rolle admin ist der Superuser (alle Rechte, nicht editierbar) und folgt weiter dem Admin-Schalter im Nutzer-Tab — sie ist hier also weder editier- noch zuweisbar; member ist nicht löschbar. +4 Backend-Tests, +6 Frontend-Tests, i18n en/de/hr. RBAC-Feature abgeschlossen (IsAdmin bleibt Sync-Quelle der admin-Rollenmitgliedschaft)." },
   ]},
