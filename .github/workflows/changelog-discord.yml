@@ -1,0 +1,29 @@
+name: Changelog → Discord
+
+# Postet neue changelog.ts-Einträge (deutscher Text) in den Discord-Changelog-
+# Channel — als silent messages, ohne Push-Benachrichtigungen. Deckt den ganzen
+# Stack ab (RookHub + Crawler + piratechess + log-watcher + RepCheck), weil
+# changelog.ts die Single Source of Truth für alle Repos ist.
+# workflow_dispatch postet den neuesten Eintrag (manueller Test/Nachreichen).
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - src/frontend/app/src/environments/changelog.ts
+  workflow_dispatch:
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Neue Changelog-Einträge posten
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CHANGELOG_WEBHOOK }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          REPO_LABEL: RookHub
+        run: python3 .github/scripts/changelog_discord.py
