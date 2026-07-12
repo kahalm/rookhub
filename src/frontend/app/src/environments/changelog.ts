@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.4';
+export const APP_VERSION = '0.292.5';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.5", date: "2026-07-12", changes: [
+    { en: "First stack-wide framework/dependency upgrade run. piratechess-api moved from .NET 8 to .NET 9 (the last straggler; whole .NET side now on 9) - all TFMs net8->net9, EF Core/Pomelo/JwtBearer/Design 8->9, Serilog.AspNetCore 8->9, Swashbuckle 6.5->6.9, Mvc.Testing/InMemory 8->9, Dockerfile sdk/aspnet 8.0->9.0; fixed an EF Core 9 breaking change in the test factory (EF 9 forbids two DB providers in one service provider - the InMemory swap now also removes the new IDbContextOptionsConfiguration that carried the MySQL config); 285 tests green. Crawler: AngleSharp 1.4->1.5.2, xunit 2.9.2->2.9.3 (201 green). RookHub API: Anthropic 12.29.1->12.35.1 (1438 green). Deferred with reason: .NET 10 for rookhub/crawler (Pomelo MySQL has no EF Core 10 release yet - latest is 9.0.0), and the Angular 19->20 major (ng update aborts on mixed 20/21 peer-dependency conflicts - needs its own focused pass, frontend stays on 19.2). Python repos (bot/log-watcher) use floating >= ranges (latest pulled at Docker build).", de: "Erster stack-weiter Framework-/Dependency-Upgrade-Durchlauf. piratechess-api von .NET 8 auf .NET 9 gehoben (der letzte Nachzügler; die ganze .NET-Seite jetzt auf 9) - alle TFMs net8->net9, EF Core/Pomelo/JwtBearer/Design 8->9, Serilog.AspNetCore 8->9, Swashbuckle 6.5->6.9, Mvc.Testing/InMemory 8->9, Dockerfile sdk/aspnet 8.0->9.0; einen EF-Core-9-Breaking-Change in der Test-Factory gefixt (EF 9 verbietet zwei DB-Provider in einem ServiceProvider - der InMemory-Tausch entfernt jetzt auch das neue IDbContextOptionsConfiguration, das die MySQL-Config trug); 285 Tests gruen. Crawler: AngleSharp 1.4->1.5.2, xunit 2.9.2->2.9.3 (201 gruen). RookHub-API: Anthropic 12.29.1->12.35.1 (1438 gruen). Bewusst zurueckgestellt (mit Grund): .NET 10 fuer rookhub/crawler (Pomelo MySQL hat noch kein EF-Core-10-Release - aktuell 9.0.0) und der Angular-19->20-Major (ng update bricht an gemischten 20/21-Peer-Dependency-Konflikten ab - braucht einen eigenen fokussierten Durchlauf, Frontend bleibt auf 19.2). Python-Repos (Bot/log-watcher) nutzen floatende >=-Ranges (latest beim Docker-Build)." },
+  ]},
   { version: "0.292.4", date: "2026-07-12", changes: [
     { en: "Docs only (internal TODO): marked the RBAC role-system item as done (phases 1-4 shipped in v0.292.0-0.292.3; the IsAdmin column is deliberately kept as the sync source for admin-role membership), and broadened the periodic dependency task to actively cover framework/runtime major upgrades (.NET, Angular) across all stack repos (rookhub, crawler, piratechess, schach-bot, log-watcher). No code change.", de: "Nur Doku (interne TODO): den RBAC-Rollensystem-Punkt als erledigt markiert (Phasen 1-4 in v0.292.0-0.292.3; IsAdmin-Spalte bleibt bewusst Sync-Quelle der admin-Rollenmitgliedschaft) und die periodische Dependency-Aufgabe erweitert, sodass sie Framework-/Runtime-Major-Upgrades (.NET, Angular) über alle Stack-Repos aktiv abdeckt (rookhub, Crawler, piratechess, schach-bot, log-watcher). Keine Code-Änderung." },
   ]},
