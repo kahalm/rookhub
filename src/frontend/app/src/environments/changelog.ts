@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.13';
+export const APP_VERSION = '0.292.14';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.14", date: "2026-07-13", changes: [
+    { en: "Frontend test coverage: reviewed the app for missing tests (140 specs / 200 source files) and filled the highest-value gaps among the pure logic units + guards. Added specs for goal.util (clampGoal), manual-activity.util (isMinutesKind/MANUAL_KINDS), repertoire-line-key.util (SR line-key hashing incl. SAN normalization), duration.util (stepped min/h/day formatting + the ngx-translate-18 null-lang tolerance) and permission.guard (the RBAC route guard). +5 spec files, +20 cases; 1101 unit tests green. Remaining untested files are mostly presentational components (lower value); logged as optional follow-up in TODO.", de: "Frontend-Testabdeckung: die App auf fehlende Tests geprüft (140 Specs / 200 Quelldateien) und die wertvollsten Lücken bei den reinen Logik-Units + Guards geschlossen. Specs ergänzt für goal.util (clampGoal), manual-activity.util (isMinutesKind/MANUAL_KINDS), repertoire-line-key.util (SR-Linien-Schlüssel-Hash inkl. SAN-Normalisierung), duration.util (gestufte min/h/Tag-Formatierung + die ngx-translate-18-null-Sprache-Toleranz) und permission.guard (der RBAC-Routen-Guard). +5 Spec-Dateien, +20 Fälle; 1101 Unit-Tests grün. Übrige ungetestete Dateien sind überwiegend präsentationale Komponenten (geringerer Wert); als optionaler Folgeschritt in TODO vermerkt." },
+  ]},
   { version: "0.292.13", date: "2026-07-13", changes: [
     { en: "npm dependency majors: @ngx-translate/core + http-loader 17 -> 18, and the test stack jasmine-core + @types/jasmine 5 -> 6 (+ karma-jasmine-html-reporter 2.2). ngx-translate 18 is fully standalone: TranslateModule was removed (99 files switched to importing TranslatePipe), currentLang/fallbackLang are now Signals (currentLang() calls + formatDuration tolerates null), defaultLang/getDefaultLang() -> getFallbackLang(), and specs use provideTranslateService({ fallbackLang: 'en' }) instead of TranslateModule.forRoot(). Production build clean, all 1081 unit tests green. TypeScript stays 6.0 (Angular 22 caps it at <6.1, so TS 7 is intentionally not taken). Remaining npm majors are dev-only vulns in the webpack-dev-server chain (not in the shipped bundle).", de: "npm-Dependency-Majors: @ngx-translate/core + http-loader 17 -> 18, und der Test-Stack jasmine-core + @types/jasmine 5 -> 6 (+ karma-jasmine-html-reporter 2.2). ngx-translate 18 ist voll standalone: TranslateModule entfernt (99 Dateien auf TranslatePipe-Import umgestellt), currentLang/fallbackLang sind jetzt Signals (currentLang()-Aufrufe + formatDuration toleriert null), defaultLang/getDefaultLang() -> getFallbackLang(), und Specs nutzen provideTranslateService({ fallbackLang: 'en' }) statt TranslateModule.forRoot(). Prod-Build sauber, alle 1081 Unit-Tests gruen. TypeScript bleibt 6.0 (Angular 22 deckelt auf <6.1, TS 7 daher bewusst nicht genommen). Uebrige npm-Majors sind Dev-only-Vulns in der webpack-dev-server-Kette (nicht im ausgelieferten Bundle)." },
   ]},
