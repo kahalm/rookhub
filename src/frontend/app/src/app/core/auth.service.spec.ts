@@ -88,3 +88,49 @@ describe('AuthService stopImpersonation', () => {
     expect(svc.isLoggedIn).toBeFalse();
   });
 });
+
+// JWT mit exp + optionalen perm-Claims (Array oder String) für die RBAC-Tests.
+function jwtWithPerms(perm: unknown, expSecondsFromNow = 3600): string {
+  const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSecondsFromNow, perm }));
+  return `header.${payload}.sig`;
+}
+
+describe('AuthService RBAC permissions/has', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+  });
+  afterEach(() => localStorage.clear());
+
+  // localStorage VOR dem ersten inject() setzen — AuthService seedt seinen Zustand im Konstruktor.
+  function svcWith(token: string, isAdmin = false): AuthService {
+    localStorage.setItem('rookhub_user',
+      JSON.stringify({ token, username: 'u', userId: 1, isAdmin }));
+    return TestBed.inject(AuthService);
+  }
+
+  it('parses an array of perm claims and answers has()', () => {
+    const svc = svcWith(jwtWithPerms(['books.manage', 'ci.view']));
+    expect(Array.from(svc.permissions).sort()).toEqual(['books.manage', 'ci.view']);
+    expect(svc.has('books.manage')).toBeTrue();
+    expect(svc.has('users.manage')).toBeFalse();
+  });
+
+  it('parses a single string perm claim', () => {
+    const svc = svcWith(jwtWithPerms('groups.manage'));
+    expect(svc.has('groups.manage')).toBeTrue();
+    expect(svc.has('books.manage')).toBeFalse();
+  });
+
+  it('admin satisfies every permission regardless of perm claims', () => {
+    const svc = svcWith(jwtWithPerms(undefined), /*isAdmin*/ true);
+    expect(svc.has('anything.at.all')).toBeTrue();
+  });
+
+  it('no token / no perms → has() is false', () => {
+    const svc = TestBed.inject(AuthService);
+    expect(svc.has('books.manage')).toBeFalse();
+  });
+});

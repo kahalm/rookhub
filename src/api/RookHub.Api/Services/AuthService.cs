@@ -135,11 +135,27 @@ public class AuthService
 
         return new AuthResponseDto
         {
-            Token = GenerateJwt(user, dto.RememberMe),
+            Token = GenerateJwt(user, dto.RememberMe, await ResolvePermissionClaimsAsync(user.Id)),
             Username = user.Username,
             UserId = user.Id,
             IsAdmin = user.IsAdmin
         };
+    }
+
+    /// <summary>Löst die effektiven Permissions eines Users (über seine Rollen) als <c>perm</c>-Claims
+    /// auf — landen im JWT und werden vom <see cref="Authorization.PermissionAuthorizationHandler"/>
+    /// geprüft. Trade-off: das Token ist bis zum nächsten Login stale; eine Rollenänderung wirkt erst
+    /// dann (bzw. sofort für Admins über die separate Admin-Rolle + SecurityStamp bei PW-Änderung).</summary>
+    private async Task<List<Claim>> ResolvePermissionClaimsAsync(int userId)
+    {
+        var perms = await _db.RolePermissions
+            .Where(rp => _db.UserRoles.Any(ur => ur.UserId == userId && ur.RoleId == rp.RoleId))
+            .Select(rp => rp.Permission)
+            .Distinct()
+            .ToListAsync();
+        return perms
+            .Select(p => new Claim(Authorization.PermissionAuthorizationHandler.PermissionClaimType, p))
+            .ToList();
     }
 
     public async Task ChangePasswordAsync(int userId, ChangePasswordDto dto)
@@ -218,10 +234,11 @@ public class AuthService
         var target = await _db.AppUsers.FindAsync(targetUserId)
             ?? throw new KeyNotFoundException("User not found.");
 
-        var token = GenerateJwt(
-            target,
-            extraClaims: new[] { new Claim("imp", adminId.ToString()) },
-            lifetime: TimeSpan.FromHours(2));
+        // Impersonation trägt die Rollen/Permissions des ZIEL-Users (der Admin agiert als dieser)
+        // plus den imp-Claim zur Nachvollziehbarkeit.
+        var impClaims = new List<Claim> { new Claim("imp", adminId.ToString()) };
+        impClaims.AddRange(await ResolvePermissionClaimsAsync(target.Id));
+        var token = GenerateJwt(target, extraClaims: impClaims, lifetime: TimeSpan.FromHours(2));
 
         // Audit-relevant -> landet strukturiert in ES/Kibana (auditierbar bleibt es auf Information).
         // Bewusst NICHT Warning: Impersonation ist ein legitimer Admin-Vorgang und verfälschte sonst

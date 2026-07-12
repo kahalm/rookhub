@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.1';
+export const APP_VERSION = '0.292.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.2", date: "2026-07-12", changes: [
+    { en: "RBAC role system, phase 3 (permission claims in the JWT + frontend has()): login and impersonation tokens now carry the user's effective permissions (resolved from their roles) as perm claims, so non-admin roles can actually be granted access - a role gains an ability the moment its permissions are in the token (stale until next login; admins stay immediate via the Admin role). Frontend AuthService gained permissions + has(p) (isAdmin OR the perm claim) and a generic permissionGuard(p) for routes. Existing isAdmin checks are left untouched and get migrated gradually. +4 frontend tests. RBAC is now functional end-to-end; assigning custom roles (Trainer/Moderator) via an admin UI is the remaining phase 4.", de: "RBAC-Rollensystem, Phase 3 (Permission-Claims im JWT + Frontend has()): Login- und Impersonation-Token tragen jetzt die effektiven Permissions des Nutzers (aus seinen Rollen aufgelöst) als perm-Claims, sodass Nicht-Admin-Rollen tatsächlich Zugriff bekommen können - eine Rolle erhält eine Fähigkeit, sobald ihre Permissions im Token stehen (stale bis zum nächsten Login; Admins bleiben sofort über die Admin-Rolle). Frontend-AuthService bekam permissions + has(p) (isAdmin ODER perm-Claim) und einen generischen permissionGuard(p) für Routen. Bestehende isAdmin-Checks bleiben unangetastet und werden schrittweise migriert. +4 Frontend-Tests. RBAC ist jetzt Ende-zu-Ende funktional; das Zuweisen eigener Rollen (Trainer/Moderator) per Admin-UI ist die verbleibende Phase 4." },
+  ]},
   { version: "0.292.1", date: "2026-07-12", changes: [
     { en: "RBAC role system, phase 2 (permission enforcement, no behavior change for admins): added a HasPermission attribute backed by a dynamic authorization policy provider and a handler that grants when the user is in the Admin role OR carries the matching permission claim. All admin-gated endpoints were switched from Authorize(Roles=Admin) to per-area permissions (users/books/puzzles/daily/weeklyposts/groups/messages/chessable/ci/menu). The mixed admin controller now carries a permission per method instead of one blanket role gate. Admins keep full access (the Admin role satisfies every permission); non-admin roles gain nothing yet (their permission claims arrive in phase 3). +4 backend tests.", de: "RBAC-Rollensystem, Phase 2 (Permission-Durchsetzung, keine Verhaltensänderung für Admins): neues HasPermission-Attribut mit dynamischem Policy-Provider + Handler, der bei Admin-Rolle ODER passendem Permission-Claim gewährt. Alle admin-geschützten Endpoints von Authorize(Roles=Admin) auf Bereichs-Permissions umgestellt (users/books/puzzles/daily/weeklyposts/groups/messages/chessable/ci/menu). Der gemischte Admin-Controller trägt jetzt eine Permission je Methode statt eines pauschalen Rollen-Gates. Admins behalten vollen Zugriff (die Admin-Rolle erfüllt jede Permission); Nicht-Admin-Rollen bekommen noch nichts (ihre Permission-Claims kommen in Phase 3). +4 Backend-Tests." },
   ]},

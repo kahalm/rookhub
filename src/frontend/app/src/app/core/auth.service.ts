@@ -38,6 +38,31 @@ export class AuthService {
     return this.getValidUser()?.isAdmin ?? false;
   }
 
+  /**
+   * Effektive Permissions des aktuellen Tokens (RBAC), aus den `perm`-Claims des JWT dekodiert.
+   * Mehrere Claims desselben Namens landen im JWT als Array, ein einzelner als String — beides wird
+   * normalisiert. Admins tragen die Admin-Rolle separat (siehe `has`), daher hier ggf. leer.
+   */
+  get permissions(): ReadonlySet<string> {
+    const token = this.token;
+    if (!token) return new Set();
+    try {
+      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(base64));
+      const p = payload['perm'];
+      if (Array.isArray(p)) return new Set(p.map(String));
+      if (typeof p === 'string') return new Set([p]);
+      return new Set();
+    } catch {
+      return new Set();
+    }
+  }
+
+  /** Darf der aktuelle Nutzer die Aktion? Admin erfüllt jede Permission (Superuser). */
+  has(permission: string): boolean {
+    return this.isAdmin || this.permissions.has(permission);
+  }
+
   private readonly adminBackupKey = 'rookhub_admin_user';
 
   /** Läuft gerade eine Admin-Impersonation? */
