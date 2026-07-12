@@ -90,14 +90,16 @@ public class CourseStatsService
     /// <c>BookPuzzle.Tags</c> (leerzeichen-/kommagetrennt), Bänder aus <c>BookPuzzle.BookRating</c>.</summary>
     public async Task<PuzzleBreakdownDto> GetBreakdownAsync(int userId)
     {
-        var rows = await _db.CourseAttempts
-            .Where(a => a.UserId == userId)
-            .Select(a => new { a.Solved, a.AttemptedAt, Rating = a.BookPuzzle!.BookRating, Tags = a.BookPuzzle.Tags })
+        // Themen: Buch-Puzzles haben KEINE normalisierte Tag-Tabelle (PuzzleTags gilt nur für
+        // Standard-Puzzles), daher bleibt der Split des leerzeichen-/kommagetrennten Tags-Strings
+        // in-memory. Aber nur die dafür nötigen Spalten {Solved, Tags} laden (nicht mehr Rating +
+        // AttemptedAt je Zeile) — Bänder und Aktivität kommen jetzt als server-seitige Aggregate.
+        var themeRows = await _db.CourseAttempts
+            .Where(a => a.UserId == userId && a.BookPuzzle!.Tags != null && a.BookPuzzle.Tags != "")
+            .Select(a => new { a.Solved, Tags = a.BookPuzzle!.Tags })
             .ToListAsync();
-
-        // Themen (Buch-Tags sind leerzeichen- oder kommagetrennt im Tags-String).
         var themeAgg = new Dictionary<string, (int attempts, int solved)>();
-        foreach (var r in rows)
+        foreach (var r in themeRows)
         {
             if (string.IsNullOrWhiteSpace(r.Tags)) continue;
             foreach (var theme in r.Tags.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -111,27 +113,25 @@ public class CourseStatsService
             .OrderByDescending(t => t.Attempts).ThenBy(t => t.Theme)
             .Take(20).ToList();
 
-        // Rating-Bänder (200er-Schritte) — nur Versuche mit gesetztem BookRating.
-        var bandAgg = new Dictionary<int, (int attempts, int solved)>();
-        foreach (var r in rows)
-        {
-            if (r.Rating == null) continue;
-            var bucket = (r.Rating.Value / 200) * 200;
-            var (att, sol) = bandAgg.TryGetValue(bucket, out var v) ? v : (0, 0);
-            bandAgg[bucket] = (att + 1, sol + (r.Solved ? 1 : 0));
-        }
-        var ratingBands = bandAgg
-            .OrderBy(kv => kv.Key)
-            .Select(kv => new RatingBandStatDto { From = kv.Key, To = kv.Key + 199, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+        // Rating-Bänder (200er-Schritte) — server-seitig, nur Versuche mit gesetztem BookRating.
+        var ratingBands = (await _db.CourseAttempts
+            .Where(a => a.UserId == userId && a.BookPuzzle!.BookRating != null)
+            .GroupBy(a => a.BookPuzzle!.BookRating!.Value / 200)
+            .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
+            .ToListAsync())
+            .OrderBy(b => b.Bucket)
+            .Select(b => new RatingBandStatDto { From = b.Bucket * 200, To = b.Bucket * 200 + 199, Attempts = b.Attempts, Solved = b.Solved })
             .ToList();
 
-        // Aktivität pro Tag (letzte 365 Tage).
+        // Aktivität pro Tag (letzte 365 Tage) — server-seitig via GROUP BY CAST(AttemptedAt AS date).
         var since = DateTime.UtcNow.Date.AddDays(-364);
-        var activity = rows
-            .Where(r => r.AttemptedAt.Date >= since)
-            .GroupBy(r => r.AttemptedAt.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new ActivityDayDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+        var activity = (await _db.CourseAttempts
+            .Where(a => a.UserId == userId && a.AttemptedAt >= since)
+            .GroupBy(a => a.AttemptedAt.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync())
+            .OrderBy(x => x.Day)
+            .Select(x => new ActivityDayDto { Date = x.Day.ToString("yyyy-MM-dd"), Count = x.Count })
             .ToList();
 
         return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };

@@ -40,17 +40,19 @@ public class LeaderboardService
         if (!Periods.Contains(period)) period = "alltime";
         var from = WindowStart(period, DateTime.UtcNow);
 
-        // #puzzles: einzigartige gelöste Standard-Puzzles je Nutzer.
-        // Distinct-Paare (UserId, PuzzleId) ziehen (übersetzt zu SELECT DISTINCT — provider-sicher),
-        // dann je Nutzer zählen. Vermeidet COUNT(DISTINCT …) im GroupBy.
-        var puzzlePairs = await _db.PuzzleAttempts
+        // #puzzles: einzigartige gelöste Standard-Puzzles je Nutzer. Die Zählung läuft SERVER-SEITIG
+        // als GROUP BY über eine DISTINCT-Subquery (SELECT UserId, COUNT(*) FROM (SELECT DISTINCT
+        // UserId, PuzzleId …) GROUP BY UserId) — EF Core 9/Pomelo-übersetzbar, ohne COUNT(DISTINCT).
+        // Vorher wurde JEDES distinct (UserId, PuzzleId)-Paar der gesamten (alltime = ganzen) Historie
+        // in den Speicher gezogen, nur um daraus je Nutzer einen Zähler zu bilden.
+        var puzzlePerUser = (await _db.PuzzleAttempts
             .Where(a => a.UserId != null && a.Solved && a.AttemptedAt >= from)
             .Select(a => new { UserId = a.UserId!.Value, a.PuzzleId })
             .Distinct()
-            .ToListAsync();
-        var puzzlePerUser = puzzlePairs
-            .GroupBy(p => p.UserId)
-            .ToDictionary(g => g.Key, g => g.Count());
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToListAsync())
+            .ToDictionary(x => x.UserId, x => x.Count);
 
         // Wochenpost-Puzzles fließen in den allgemeinen Puzzle-Pool ein. WeeklyPostAttempt ist
         // idempotent je (WeeklyPostId, UserId, PuzzleIndex) → eine gelöste Zeile = ein einzigartig

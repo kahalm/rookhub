@@ -72,7 +72,7 @@ public class PuzzleServiceTests : IDisposable
         return user.Id;
     }
 
-    private async Task<Puzzle> CreatePuzzleAsync(int rating = 1500, string themes = "middlegame fork", string lichessId = "")
+    private async Task<Puzzle> CreatePuzzleAsync(int rating = 1500, string themes = "middlegame fork", string lichessId = "", bool syncTags = true)
     {
         var puzzle = new Puzzle
         {
@@ -83,6 +83,18 @@ public class PuzzleServiceTests : IDisposable
             Themes = themes
         };
         _db.Puzzles.Add(puzzle);
+        await _db.SaveChangesAsync();
+        // Wie der echte Import (PuzzleTaggingService.SyncPuzzleTagsAsync): die normalisierten
+        // PuzzleTags/Tags mitpflegen, damit die Themen-Auswertung (GetWorstThemes/GetBreakdown,
+        // die jetzt server-seitig über die Tags aggregiert) im Test denselben Pfad wie in Prod nimmt.
+        // syncTags:false = bewusst leere Tags-Tabelle (z. B. für den GetAllThemes-Fallback-Test).
+        if (!syncTags) return puzzle;
+        foreach (var name in (themes ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct())
+        {
+            var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == name);
+            if (tag == null) { tag = new Tag { Name = name }; _db.Tags.Add(tag); await _db.SaveChangesAsync(); }
+            _db.PuzzleTags.Add(new PuzzleTag { PuzzleId = puzzle.Id, TagId = tag.Id, Rating = rating });
+        }
         await _db.SaveChangesAsync();
         return puzzle;
     }
@@ -1135,8 +1147,8 @@ public class PuzzleServiceTests : IDisposable
     [Fact]
     public async Task GetAllThemesAsync_TagTableEmpty_FallsBackToPuzzleThemes()
     {
-        await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "tf1");
-        await CreatePuzzleAsync(rating: 1600, themes: "pin fork", lichessId: "tf2");
+        await CreatePuzzleAsync(rating: 1500, themes: "fork endgame", lichessId: "tf1", syncTags: false);
+        await CreatePuzzleAsync(rating: 1600, themes: "pin fork", lichessId: "tf2", syncTags: false);
         // KEIN Backfill → Tags-Tabelle leer → Fallback auf die Puzzle.Themes-Tokens.
 
         var themes = await _stats.GetAllThemesAsync();

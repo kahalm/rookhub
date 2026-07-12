@@ -31,25 +31,23 @@ public class PuzzleStatsService
     /// </summary>
     public async Task<List<ThemeStatDto>> GetWorstThemesAsync(int userId, int count = 5, int minAttempts = 3)
     {
-        var themeStrings = await _db.PuzzleAttempts
-            .Where(a => a.UserId == userId && a.Puzzle.Themes != null)
-            .Select(a => new { a.Solved, a.Puzzle.Themes })
+        // SERVER-SEITIG über die normalisierten Tags (PuzzleTags/Tags) aggregieren statt für JEDEN
+        // Versuch den leerzeichengetrennten Themes-String in den Speicher zu ziehen und dort zu splitten.
+        // Der Join Versuch→PuzzleTag→Tag liefert je (Versuch, Thema) eine Zeile → GROUP BY Thema mit
+        // Count/Count(Solved) ist semantisch identisch zum String-Split (der Import pflegt PuzzleTags
+        // vollständig zu jedem Themes-Token; einmaliger Backfill deckt Altbestand). minAttempts-Filter
+        // als HAVING serverseitig, Sortierung nach Lösungsquote in-memory (kleine Ergebnismenge).
+        var themes = await (
+            from a in _db.PuzzleAttempts
+            where a.UserId == userId
+            join pt in _db.PuzzleTags on a.PuzzleId equals pt.PuzzleId
+            join t in _db.Tags on pt.TagId equals t.Id
+            group a by t.Name into g
+            where g.Count() >= minAttempts
+            select new ThemeStatDto { Theme = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
             .ToListAsync();
 
-        var agg = new Dictionary<string, (int attempts, int solved)>();
-        foreach (var r in themeStrings)
-        {
-            if (string.IsNullOrWhiteSpace(r.Themes)) continue;
-            foreach (var theme in r.Themes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var (att, sol) = agg.TryGetValue(theme, out var v) ? v : (0, 0);
-                agg[theme] = (att + 1, sol + (r.Solved ? 1 : 0));
-            }
-        }
-
-        return agg
-            .Where(kv => kv.Value.attempts >= minAttempts)
-            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+        return themes
             .OrderBy(t => (double)t.Solved / t.Attempts)   // niedrigste Lösungsquote zuerst
             .ThenByDescending(t => t.Attempts)             // bei Gleichstand: mehr Daten zuerst
             .ThenBy(t => t.Theme)
@@ -269,47 +267,41 @@ public class PuzzleStatsService
     /// <summary>Aufschlüsselung der Versuche nach Thema, Rating-Band und Tag (für die Statistikseite).</summary>
     public async Task<PuzzleBreakdownDto> GetBreakdownAsync(int userId)
     {
-        var rows = await _db.PuzzleAttempts
-            .Where(a => a.UserId == userId)
-            .Select(a => new { a.Solved, a.AttemptedAt, Rating = a.Puzzle.Rating, a.Puzzle.Themes })
-            .ToListAsync();
+        // Alle drei Aufschlüsselungen server-seitig aggregieren, statt die GESAMTE Versuchs-Historie
+        // des Users (mit Rating + Themes-String je Zeile) in den Speicher zu ziehen.
 
-        // Themen (Lichess-Themes sind leerzeichengetrennt im Themes-String).
-        var themeAgg = new Dictionary<string, (int attempts, int solved)>();
-        foreach (var r in rows)
-        {
-            if (string.IsNullOrWhiteSpace(r.Themes)) continue;
-            foreach (var theme in r.Themes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var (att, sol) = themeAgg.TryGetValue(theme, out var v) ? v : (0, 0);
-                themeAgg[theme] = (att + 1, sol + (r.Solved ? 1 : 0));
-            }
-        }
-        var themes = themeAgg
-            .Select(kv => new ThemeStatDto { Theme = kv.Key, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+        // Themen: über die normalisierten Tags (PuzzleTags/Tags) — je (Versuch, Thema) eine Zeile,
+        // GROUP BY Thema. Semantisch identisch zum früheren String-Split (siehe GetWorstThemesAsync).
+        var themes = (await (
+            from a in _db.PuzzleAttempts
+            where a.UserId == userId
+            join pt in _db.PuzzleTags on a.PuzzleId equals pt.PuzzleId
+            join t in _db.Tags on pt.TagId equals t.Id
+            group a by t.Name into g
+            select new ThemeStatDto { Theme = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
+            .ToListAsync())
             .OrderByDescending(t => t.Attempts).ThenBy(t => t.Theme)
             .Take(20).ToList();
 
-        // Rating-Bänder (200er-Schritte).
-        var bandAgg = new Dictionary<int, (int attempts, int solved)>();
-        foreach (var r in rows)
-        {
-            var bucket = (r.Rating / 200) * 200;
-            var (att, sol) = bandAgg.TryGetValue(bucket, out var v) ? v : (0, 0);
-            bandAgg[bucket] = (att + 1, sol + (r.Solved ? 1 : 0));
-        }
-        var ratingBands = bandAgg
-            .OrderBy(kv => kv.Key)
-            .Select(kv => new RatingBandStatDto { From = kv.Key, To = kv.Key + 199, Attempts = kv.Value.attempts, Solved = kv.Value.solved })
+        // Rating-Bänder (200er-Schritte): GROUP BY (Rating DIV 200) server-seitig.
+        var ratingBands = (await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId)
+            .GroupBy(a => a.Puzzle.Rating / 200)
+            .Select(g => new { Bucket = g.Key, Attempts = g.Count(), Solved = g.Count(x => x.Solved) })
+            .ToListAsync())
+            .OrderBy(b => b.Bucket)
+            .Select(b => new RatingBandStatDto { From = b.Bucket * 200, To = b.Bucket * 200 + 199, Attempts = b.Attempts, Solved = b.Solved })
             .ToList();
 
-        // Aktivität pro Tag (letzte 365 Tage).
+        // Aktivität pro Tag (letzte 365 Tage): GROUP BY CAST(AttemptedAt AS date) server-seitig.
         var since = DateTime.UtcNow.Date.AddDays(-364);
-        var activity = rows
-            .Where(r => r.AttemptedAt.Date >= since)
-            .GroupBy(r => r.AttemptedAt.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new ActivityDayDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+        var activity = (await _db.PuzzleAttempts
+            .Where(a => a.UserId == userId && a.AttemptedAt >= since)
+            .GroupBy(a => a.AttemptedAt.Date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .ToListAsync())
+            .OrderBy(x => x.Day)
+            .Select(x => new ActivityDayDto { Date = x.Day.ToString("yyyy-MM-dd"), Count = x.Count })
             .ToList();
 
         return new PuzzleBreakdownDto { Themes = themes, RatingBands = ratingBands, Activity = activity };
