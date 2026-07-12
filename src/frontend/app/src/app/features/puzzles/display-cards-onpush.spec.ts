@@ -53,11 +53,17 @@ describe('Display cards (OnPush)', () => {
   });
 
   it('re-renders the viz level badge when the bound input changes', () => {
-    const el = fixture.nativeElement as HTMLElement;
+    // Direkt gegen die OnPush-Karte via setInput (kanonischer, versions-stabiler Weg, der die
+    // OnPush-Komponente als dirty markiert) — ab Angular 22 propagiert ein direkter Host-Feld-Wechsel
+    // + manuelles detectChanges nicht mehr zuverlässig an das OnPush-Kind.
+    const child = TestBed.createComponent(VizCardComponent);
+    child.componentRef.setInput('visualizationMode', 1);
+    child.detectChanges();
+    const el = child.nativeElement as HTMLElement;
     expect(el.querySelector('.viz-level-badge')?.textContent).toContain('1');
 
-    host.vizLevel = 4;
-    fixture.detectChanges();
+    child.componentRef.setInput('visualizationMode', 4);
+    child.detectChanges();
     expect(el.querySelector('.viz-level-badge')?.textContent).toContain('4');
   });
 

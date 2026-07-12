@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { QRCodeComponent } from 'angularx-qrcode';
+import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
 /**
@@ -14,12 +14,12 @@ import { SnackbarService } from '../../core/snackbar.service';
 @Component({
   selector: 'app-share-line-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QRCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QrCodeComponent],
   template: `
     <h2 class="dialog-title">{{ 'repertoire.shareLine.title' | translate }}</h2>
     @if (data.lineTitle) { <div class="line-name">{{ data.lineTitle }}</div> }
     <div class="qr-container">
-      <qrcode [qrdata]="data.url" [width]="220" errorCorrectionLevel="M"></qrcode>
+      <app-qr-code [data]="data.url" [width]="220" />
     </div>
     <div class="link-row">
       <input class="link-input" [value]="data.url" readonly />

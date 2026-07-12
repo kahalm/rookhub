@@ -19,12 +19,12 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 
 | Komponente | Version |
 |-----------|---------|
-| Angular | 21.2 |
-| Angular Material | 21.2.14 |
-| Angular CDK | 21.2.14 |
-| TypeScript | 5.9 |
+| Angular | 22.0 |
+| Angular Material | 22.0.4 |
+| Angular CDK | 22.0.4 |
+| TypeScript | 6.0 |
 | RxJS | 7.8 |
-| Node (Build) | 24 (Docker), lokal: 24.14 |
+| Node (Build) | node:24-alpine (Docker); lokal ≥22.22.3 bzw. ≥24.15 (Angular 22 laesst Node 20 fallen) |
 | SCSS | - |
 
 ## Architektur-Entscheidungen

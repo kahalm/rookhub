@@ -5,16 +5,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { QRCodeComponent } from 'angularx-qrcode';
+import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 
 @Component({
   selector: 'app-share-tournament-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QRCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QrCodeComponent],
   template: `
     <h2 class="dialog-title">{{ 'tournaments.share.title' | translate }}</h2>
     <div class="qr-container">
-      <qrcode [qrdata]="data.url" [width]="220" errorCorrectionLevel="M"></qrcode>
+      <app-qr-code [data]="data.url" [width]="220" />
     </div>
     <div class="link-row">
       <input class="link-input" [value]="data.url" readonly #linkInput />
