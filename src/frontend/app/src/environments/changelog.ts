@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.19';
+export const APP_VERSION = '0.292.20';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.20", date: "2026-07-13", changes: [
+    { en: "Backend test coverage review (same pass as the frontend): analysed all services/controllers without a dedicated test file. The API is well-covered via the 'controller test drives real service + InMemory EF' convention, so only ~8 genuine gaps existed — closed the high/medium-value ones (33 new tests): ApiTokenAuthenticationHandler (the RepCheck extension auth boundary incl. deleted-owner guard, was zero-covered), MeController (group merge), CatalogController (admin-only Forbid gate), EndlessController input guards (SessionId regex/IDOR + count clamps/DoS), NotificationController push wiring (unknown-category 400, admin-category gating, incomplete-subscription 400), TournamentMonitorController (id 400 / dbId<=0→502 / create / deactivate) and ChessableImportResumeService (startup requeue of interrupted imports). 1471 backend tests green. ReprocessLauncher (thin fire-and-forget shell over the already-tested ImportReprocessService) deliberately left out.", de: "Backend-Testabdeckung geprüft (gleicher Durchlauf wie beim Frontend): alle Services/Controller ohne dedizierte Testdatei analysiert. Die API ist über die Konvention 'Controller-Test treibt echten Service + InMemory-EF' gut abgedeckt, daher nur ~8 echte Lücken — die hoch/mittel-wertigen geschlossen (33 neue Tests): ApiTokenAuthenticationHandler (Auth-Boundary der RepCheck-Extension inkl. Gelöscht-Besitzer-Guard, war ungetestet), MeController (Gruppen-Merge), CatalogController (admin-only Forbid-Gate), EndlessController-Eingangs-Guards (SessionId-Regex/IDOR + Count-Klemmen/DoS), NotificationController-Push-Verdrahtung (unbekannter Bereich 400, admin-Bereich-Gate, unvollständige Subscription 400), TournamentMonitorController (id 400 / dbId<=0→502 / anlegen / deaktivieren) und ChessableImportResumeService (Requeue unterbrochener Importe beim Start). 1471 Backend-Tests grün. ReprocessLauncher (dünne Fire-and-forget-Hülle über dem bereits getesteten ImportReprocessService) bewusst ausgelassen." },
+  ]},
   { version: "0.292.19", date: "2026-07-13", changes: [
     { en: "Fix (CI, red master since the .NET 10 upgrade in 0.292.10): the Docker build of rookhub-api and the crawler failed with exit 127 at adduser — the new .NET 10 base images are Ubuntu 24.04 based and no longer ship adduser. Both Dockerfiles now use useradd --no-create-home. Verified against mcr.microsoft.com/dotnet/aspnet:10.0 locally. No app code change.", de: "Fix (CI, roter master seit dem .NET-10-Upgrade in 0.292.10): der Docker-Build von rookhub-api und dem Crawler scheiterte mit exit 127 an adduser — die neuen .NET-10-Basis-Images sind Ubuntu-24.04-basiert und liefern kein adduser mehr mit. Beide Dockerfiles nutzen jetzt useradd --no-create-home. Lokal gegen mcr.microsoft.com/dotnet/aspnet:10.0 verifiziert. Keine App-Code-Änderung." },
   ]},

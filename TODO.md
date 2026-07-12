@@ -67,6 +67,7 @@ Dinge die nicht direkt angegangen werden, aber nicht vergessen werden sollen.
 
 ## Refactoring / Qualität
 - [x] **FE-Test-Abdeckung (erledigt 2026-07-12, v0.292.14–0.292.18):** ALLE Quelldateien haben ein Spec — Logik-Units/Guards/Services + auth + alle 42 Feature-Komponenten (Creation-Smoke: AOT-Template-Compile + DI). 1185 Tests grün. Tiefere Verhaltenstests für Brett-/Engine-/Dialog-Komponenten bewusst ausgelassen (Worker+WASM-Flakiness).
+- [x] **BE-Test-Abdeckung geprüft (2026-07-12, v0.292.20):** API über Controller-treibt-Service-Konvention gut abgedeckt (1471 Tests); nur ~8 echte Lücken, die hoch/mittel-wertigen geschlossen (ApiTokenAuthenticationHandler/MeController/CatalogController/EndlessController-Guards/NotificationController-Push/TournamentMonitorController/ChessableImportResumeService). ReprocessLauncher (fire-and-forget-Hülle) bewusst ausgelassen.
 _Sortiert: sinnvoll/einfach → aufwändig/marginal. Stand der Sichtung: 2026-06-13 (gegen Code geprüft)._
 
 - [x] CI: Docker-Push an grüne Tests koppeln (`needs:`-Gate) — bereits behoben (war nach dem Audit gefixt, aber nicht abgehakt). RookHub: `docker.yml` hat `tests`-Job (`uses: ./.github/workflows/test.yml`, `workflow_call`), `build-api`/`build-frontend` mit `needs: tests` (Commit e26f44a, 0.114.1). Crawler: `test`-Job + `build-crawler: needs: test` (Commit 9b8804c). Verifiziert 2026-06-14: kein ungated Push-Pfad mehr, beide committed + in sync.
