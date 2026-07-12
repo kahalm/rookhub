@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.6';
+export const APP_VERSION = '0.292.7';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.7", date: "2026-07-12", changes: [
+    { en: "Frontend framework upgrade: Angular 20.3 -> 21.2 (dedicated pass, same controlled method as 19->20). All @angular packages to 21.2.18, CLI/build-angular 21.2.19, CDK/Material 21.2.14, angularx-qrcode 21.0.5, TypeScript 5.8 -> 5.9 (required by Angular 21). Node 20.19.2 still satisfies Angular 21s engine range. Pinned in package.json + fresh install (regenerated lockfile). Production build clean and all 1081 unit tests green with zero code changes. Next: 21 -> 22.", de: "Frontend-Framework-Upgrade: Angular 20.3 -> 21.2 (dedizierter Durchlauf, gleiche kontrollierte Methode wie 19->20). Alle @angular-Pakete auf 21.2.18, CLI/build-angular 21.2.19, CDK/Material 21.2.14, angularx-qrcode 21.0.5, TypeScript 5.8 -> 5.9 (von Angular 21 verlangt). Node 20.19.2 erfuellt weiterhin Angular 21s Engine-Range. In package.json gepinnt + Frisch-Install (Lockfile neu). Prod-Build sauber und alle 1081 Unit-Tests gruen ohne Code-Aenderung. Naechster Schritt: 21 -> 22." },
+  ]},
   { version: "0.292.6", date: "2026-07-12", changes: [
     { en: "Frontend framework upgrade: Angular 19.2 -> 20.3 (dedicated pass). All @angular packages to 20.3.26, CLI/build-angular 20.3.32, CDK/Material 20.2.14, angularx-qrcode 20, TypeScript 5.7 -> 5.8 (required by Angular 20). Done via clean package.json pinning + fresh install + regenerated lockfile (ng update's automatic resolver kept pulling mixed 20/21 peers). Production build clean and all 1081 unit tests green with zero code changes needed. Next: 20 -> 21 -> 22 step by step in a later run.", de: "Frontend-Framework-Upgrade: Angular 19.2 -> 20.3 (dedizierter Durchlauf). Alle @angular-Pakete auf 20.3.26, CLI/build-angular 20.3.32, CDK/Material 20.2.14, angularx-qrcode 20, TypeScript 5.7 -> 5.8 (von Angular 20 verlangt). Umgesetzt via sauberem package.json-Pinning + Frisch-Install + neu erzeugtem Lockfile (der Auto-Resolver von ng update zog immer wieder gemischte 20/21-Peers). Prod-Build sauber und alle 1081 Unit-Tests gruen ohne noetige Code-Aenderung. Naechster Schritt: 20 -> 21 -> 22 schrittweise in einem spaeteren Durchlauf." },
   ]},
