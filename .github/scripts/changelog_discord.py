@@ -67,7 +67,10 @@ def _post(webhook: str, content: str) -> None:
     payload = {'content': content, 'flags': _SILENT_FLAG}
     req = urllib.request.Request(
         webhook, data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}, method='POST')
+        # Expliziter User-Agent: Discords Cloudflare blockt Pythons
+        # urllib-Default-UA mit 403 (error code 1010).
+        headers={'Content-Type': 'application/json',
+                 'User-Agent': 'rookhub-changelog-webhook/1.0'}, method='POST')
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp.read()
 

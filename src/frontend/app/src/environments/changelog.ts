@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.8';
+export const APP_VERSION = '0.292.9';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.9", date: "2026-07-13", changes: [
+    { en: "Fix (Changelog→Discord workflow, 0.292.8): the webhook POST was blocked by Discords Cloudflare with 403 (error code 1010) because Pythons default urllib user agent is banned — the post now sends an explicit User-Agent header. No app code change.", de: "Fix (Changelog→Discord-Workflow, 0.292.8): der Webhook-POST wurde von Discords Cloudflare mit 403 (error code 1010) geblockt, weil Pythons urllib-Default-User-Agent gesperrt ist — der Post sendet jetzt einen expliziten User-Agent-Header. Keine App-Code-Änderung." },
+  ]},
   { version: "0.292.8", date: "2026-07-13", changes: [
     { en: "CI: new workflow changelog-discord.yml posts newly added changelog.ts entries (German text) to the Discord changelog channel after every push to master — as silent messages (no push notifications for anyone). Covers the whole stack (RookHub + crawler + piratechess + log-watcher + RepCheck), since changelog.ts is the single source of truth for all repos. Stdlib-only script .github/scripts/changelog_discord.py detects the entries added in the push via git diff (oldest first, one message per version, truncated to Discords 2000-char limit); without the DISCORD_CHANGELOG_WEBHOOK secret the job is a no-op and stays green; workflow_dispatch re-posts the latest entry manually. Verified via dry-run against the real changelog.ts (850 entries parsed, diff detection over the last pushes correct). No app code change.", de: "CI: neuer Workflow changelog-discord.yml postet neu hinzugekommene changelog.ts-Einträge (deutscher Text) nach jedem Push auf master in den Discord-Changelog-Channel — als silent messages (keine Push-Benachrichtigungen für niemanden). Deckt den ganzen Stack ab (RookHub + Crawler + piratechess + log-watcher + RepCheck), da changelog.ts die Single Source of Truth für alle Repos ist. Stdlib-Python-Script .github/scripts/changelog_discord.py erkennt die im Push hinzugekommenen Einträge per git diff (älteste zuerst, eine Nachricht je Version, auf Discords 2000-Zeichen-Limit gekappt); ohne das Secret DISCORD_CHANGELOG_WEBHOOK ist der Job ein No-op und bleibt grün; workflow_dispatch postet den neuesten Eintrag manuell nach. Per Dry-Run gegen die echte changelog.ts verifiziert (850 Einträge geparst, Diff-Erkennung über die letzten Pushes korrekt). Keine App-Code-Änderung." },
   ]},
