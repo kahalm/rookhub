@@ -44,10 +44,14 @@ public static class Permissions
     /// <summary>Katalog-Freigaben (CatalogGrants) verwalten.</summary>
     public const string CatalogManage = "catalog.manage";
 
+    /// <summary>Rollen &amp; Berechtigungen verwalten (Rollen anlegen/bearbeiten/zuweisen). Sensibel —
+    /// wer das hat, kann sich effektiv beliebige weitere Rechte geben; standardmäßig nur die admin-Rolle.</summary>
+    public const string RolesManage = "roles.manage";
+
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
     {
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
-        GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
+        GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage, RolesManage,
     };
 }

@@ -1575,7 +1575,8 @@
       "menu": "Izbornik",
       "messages": "Poruke",
       "courseDl": "Preuzimanje tečajeva",
-      "ci": "CI / Actions"
+      "ci": "CI / Actions",
+      "roles": "Uloge"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -1813,6 +1814,45 @@
       "estimateError": "Procjena nije uspjela",
       "cachedInstant": "predmemorirano (odmah)",
       "min": "min"
+    },
+    "roles": {
+      "title": "Uloge i dozvole",
+      "systemBadge": "Sustav",
+      "intro": "Definirajte uloge iz fiksnog skupa dozvola i dodijelite ih korisnicima. Uloga „admin\" je superkorisnik (sve dozvole) i prati administratorski prekidač na kartici Korisnici.",
+      "members": "{{count}} članova",
+      "loadError": "Nije moguće učitati uloge.",
+      "saveError": "Nije moguće spremiti.",
+      "created": "Uloga stvorena.",
+      "saved": "Uloga spremljena.",
+      "deleted": "Uloga izbrisana.",
+      "confirmDelete": "Izbrisati ulogu „{{name}}\"? Korisnici je gube.",
+      "nameLabel": "Naziv",
+      "keyLabel": "Ključ",
+      "keyHint": "mala slova, npr. trainer (kasnije nepromjenjivo)",
+      "createTitle": "Stvori ulogu",
+      "createBtn": "Stvori ulogu",
+      "allPermissions": "Sve dozvole (superkorisnik).",
+      "noPermissions": "Nema dozvola.",
+      "assignTitle": "Dodijeli uloge korisniku",
+      "assignHint": "Pretražite korisnika, zatim uključite njegove uloge.",
+      "searchUser": "Pretraži korisnika",
+      "rolesFor": "Uloge za {{name}}",
+      "adminUserNote": "Ovaj korisnik je administrator i automatski ima admin ulogu (upravlja se administratorskim prekidačem).",
+      "userRolesSaved": "Korisničke uloge spremljene.",
+      "perm": {
+        "users_manage": "Upravljanje korisnicima",
+        "books_manage": "Upravljanje knjigama/tečajevima",
+        "puzzles_manage": "Upravljanje standardnim zagonetkama",
+        "daily_manage": "Upravljanje dnevnom zagonetkom",
+        "weeklyposts_manage": "Upravljanje tjednim objavama",
+        "groups_manage": "Upravljanje grupama",
+        "messages_admin": "Administratorske poruke",
+        "chessable_admin": "Chessable administracija",
+        "ci_view": "Prikaz CI / Actions",
+        "menu_manage": "Upravljanje vidljivošću izbornika",
+        "catalog_manage": "Upravljanje odobrenjima kataloga",
+        "roles_manage": "Upravljanje ulogama i dozvolama"
+      }
     }
   },
   "favorites": {

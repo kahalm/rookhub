@@ -1575,7 +1575,8 @@
       "menu": "Menu",
       "messages": "Messages",
       "courseDl": "Course download",
-      "ci": "CI / Actions"
+      "ci": "CI / Actions",
+      "roles": "Roles"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -1813,6 +1814,45 @@
       "estimateError": "Estimate failed",
       "cachedInstant": "cached (instant)",
       "min": "min"
+    },
+    "roles": {
+      "title": "Roles & permissions",
+      "systemBadge": "System",
+      "intro": "Define roles from the fixed permission set and assign them to users. The \"admin\" role is the superuser (all permissions) and follows the admin toggle on the Users tab.",
+      "members": "{{count}} members",
+      "loadError": "Could not load roles.",
+      "saveError": "Could not save.",
+      "created": "Role created.",
+      "saved": "Role saved.",
+      "deleted": "Role deleted.",
+      "confirmDelete": "Delete role \"{{name}}\"? Users lose it.",
+      "nameLabel": "Name",
+      "keyLabel": "Key",
+      "keyHint": "lowercase, e.g. trainer (cannot be changed later)",
+      "createTitle": "Create role",
+      "createBtn": "Create role",
+      "allPermissions": "All permissions (superuser).",
+      "noPermissions": "No permissions.",
+      "assignTitle": "Assign roles to a user",
+      "assignHint": "Search a user, then toggle their roles.",
+      "searchUser": "Search user",
+      "rolesFor": "Roles for {{name}}",
+      "adminUserNote": "This user is an admin and holds the admin role automatically (managed via the admin toggle).",
+      "userRolesSaved": "User roles saved.",
+      "perm": {
+        "users_manage": "Manage users",
+        "books_manage": "Manage books/courses",
+        "puzzles_manage": "Manage standard puzzles",
+        "daily_manage": "Manage daily puzzle",
+        "weeklyposts_manage": "Manage weekly posts",
+        "groups_manage": "Manage groups",
+        "messages_admin": "Admin messages",
+        "chessable_admin": "Chessable admin",
+        "ci_view": "View CI / Actions",
+        "menu_manage": "Manage menu visibility",
+        "catalog_manage": "Manage catalog grants",
+        "roles_manage": "Manage roles & permissions"
+      }
     }
   },
   "favorites": {

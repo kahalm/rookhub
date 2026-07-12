@@ -1575,7 +1575,8 @@
       "menu": "Menü",
       "messages": "Nachrichten",
       "courseDl": "Kurse holen",
-      "ci": "CI / Actions"
+      "ci": "CI / Actions",
+      "roles": "Rollen"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -1813,6 +1814,45 @@
       "estimateError": "Schätzung fehlgeschlagen",
       "cachedInstant": "gecacht (sofort)",
       "min": "Min"
+    },
+    "roles": {
+      "title": "Rollen & Berechtigungen",
+      "systemBadge": "System",
+      "intro": "Rollen aus dem festen Berechtigungssatz definieren und Nutzern zuweisen. Die Rolle „admin\" ist der Superuser (alle Rechte) und folgt dem Admin-Schalter im Nutzer-Tab.",
+      "members": "{{count}} Mitglieder",
+      "loadError": "Rollen konnten nicht geladen werden.",
+      "saveError": "Konnte nicht gespeichert werden.",
+      "created": "Rolle angelegt.",
+      "saved": "Rolle gespeichert.",
+      "deleted": "Rolle gelöscht.",
+      "confirmDelete": "Rolle „{{name}}\" löschen? Nutzer verlieren sie.",
+      "nameLabel": "Name",
+      "keyLabel": "Schlüssel",
+      "keyHint": "kleingeschrieben, z. B. trainer (später nicht änderbar)",
+      "createTitle": "Rolle anlegen",
+      "createBtn": "Rolle anlegen",
+      "allPermissions": "Alle Berechtigungen (Superuser).",
+      "noPermissions": "Keine Berechtigungen.",
+      "assignTitle": "Rollen einem Nutzer zuweisen",
+      "assignHint": "Nutzer suchen, dann seine Rollen umschalten.",
+      "searchUser": "Nutzer suchen",
+      "rolesFor": "Rollen für {{name}}",
+      "adminUserNote": "Dieser Nutzer ist Admin und trägt die admin-Rolle automatisch (über den Admin-Schalter gesteuert).",
+      "userRolesSaved": "Nutzer-Rollen gespeichert.",
+      "perm": {
+        "users_manage": "Nutzer verwalten",
+        "books_manage": "Bücher/Kurse verwalten",
+        "puzzles_manage": "Standard-Puzzles verwalten",
+        "daily_manage": "Tagespuzzle verwalten",
+        "weeklyposts_manage": "Wochenposts verwalten",
+        "groups_manage": "Gruppen verwalten",
+        "messages_admin": "Admin-Nachrichten",
+        "chessable_admin": "Chessable-Admin",
+        "ci_view": "CI / Actions ansehen",
+        "menu_manage": "Menü-Sichtbarkeit verwalten",
+        "catalog_manage": "Katalog-Freigaben verwalten",
+        "roles_manage": "Rollen & Berechtigungen verwalten"
+      }
     }
   },
   "favorites": {

@@ -29,6 +29,7 @@ import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
 import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
+import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 
@@ -40,7 +41,8 @@ import { clampGoal } from '../training-goals/goal.util';
     MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
     MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, TranslateModule, LoadingSpinnerComponent,
     AdminGithubActionsComponent, AdminChessableDownloadComponent,
-    AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent
+    AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent,
+    AdminRolesComponent
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],

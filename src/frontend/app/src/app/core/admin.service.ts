@@ -12,6 +12,33 @@ export interface AdminUser {
   groups: string[];
 }
 
+/** RBAC: eine Rolle mit ihren Permission-Schlüsseln + Mitgliederzahl. */
+export interface Role {
+  id: number;
+  key: string;
+  name: string;
+  /** System-Rollen (admin/member) sind nicht löschbar; admins Permission-Menge nicht editierbar. */
+  isSystem: boolean;
+  permissions: string[];
+  memberCount: number;
+}
+
+export interface CreateRole {
+  key: string;
+  name: string;
+  permissions: string[];
+}
+
+export interface UpdateRole {
+  name: string;
+  permissions: string[];
+}
+
+export interface UserRoles {
+  userId: number;
+  roleIds: number[];
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -144,6 +171,36 @@ export class AdminService {
   /** „Als Nutzer einsteigen": liefert ein Impersonation-Token für den Zielnutzer. */
   impersonate(id: number): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`/api/admin/users/${id}/impersonate`, {});
+  }
+
+  // --- Rollen & Berechtigungen (RBAC) ----------------------------------
+  getRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>('/api/admin/roles');
+  }
+
+  /** Alle im Code definierten Permission-Schlüssel (Basis der Checkbox-Auswahl). */
+  getPermissions(): Observable<string[]> {
+    return this.http.get<string[]>('/api/admin/roles/permissions');
+  }
+
+  createRole(dto: CreateRole): Observable<Role> {
+    return this.http.post<Role>('/api/admin/roles', dto);
+  }
+
+  updateRole(id: number, dto: UpdateRole): Observable<Role> {
+    return this.http.put<Role>(`/api/admin/roles/${id}`, dto);
+  }
+
+  deleteRole(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/admin/roles/${id}`);
+  }
+
+  getUserRoles(userId: number): Observable<UserRoles> {
+    return this.http.get<UserRoles>(`/api/admin/users/${userId}/roles`);
+  }
+
+  setUserRoles(userId: number, roleIds: number[]): Observable<void> {
+    return this.http.put<void>(`/api/admin/users/${userId}/roles`, { roleIds });
   }
 
   // --- Buch-Puzzles -----------------------------------------------------

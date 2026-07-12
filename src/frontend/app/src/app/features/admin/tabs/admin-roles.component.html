@@ -1,0 +1,142 @@
+<div class="tab-content">
+  <h2>{{ 'admin.roles.title' | translate }}</h2>
+  <p class="hint">{{ 'admin.roles.intro' | translate }}</p>
+
+  @if (loading) {
+    <app-loading-spinner />
+  } @else {
+    <!-- Rollen-Liste -->
+    <div class="roles-list">
+      @for (role of roles; track role.id) {
+        <div class="role-card">
+          <div class="role-head">
+            <div class="role-title">
+              <strong>{{ role.name }}</strong>
+              <code class="role-key">{{ role.key }}</code>
+              @if (role.isSystem) {
+                <span class="badge system">{{ 'admin.roles.systemBadge' | translate }}</span>
+              }
+              <span class="member-count">{{ 'admin.roles.members' | translate: { count: role.memberCount } }}</span>
+            </div>
+            <div class="role-actions">
+              @if (editingId !== role.id && !isAdminRole(role)) {
+                <button mat-icon-button [attr.aria-label]="'common.edit' | translate"
+                        [matTooltip]="'common.edit' | translate" (click)="startEdit(role)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
+              @if (!role.isSystem) {
+                <button mat-icon-button color="warn" [attr.aria-label]="'common.delete' | translate"
+                        [matTooltip]="'common.delete' | translate" (click)="deleteRole(role)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (editingId === role.id) {
+            <!-- Bearbeiten -->
+            <mat-form-field appearance="outline" class="role-name-field">
+              <mat-label>{{ 'admin.roles.nameLabel' | translate }}</mat-label>
+              <input matInput [(ngModel)]="editName" maxlength="100" />
+            </mat-form-field>
+            <div class="perm-grid">
+              @for (p of allPermissions; track p) {
+                <mat-checkbox [checked]="editPerms.has(p)" (change)="toggleEditPerm(p)">
+                  {{ permKey(p) | translate }}
+                </mat-checkbox>
+              }
+            </div>
+            <div class="edit-buttons">
+              <button mat-raised-button color="primary" [disabled]="savingRole || !editName.trim()" (click)="saveEdit(role)">
+                <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+              </button>
+              <button mat-button [disabled]="savingRole" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
+            </div>
+          } @else {
+            <!-- Anzeige -->
+            @if (isAdminRole(role)) {
+              <p class="all-perms">{{ 'admin.roles.allPermissions' | translate }}</p>
+            } @else if (role.permissions.length) {
+              <mat-chip-set>
+                @for (p of role.permissions; track p) {
+                  <mat-chip>{{ permKey(p) | translate }}</mat-chip>
+                }
+              </mat-chip-set>
+            } @else {
+              <p class="no-perms">{{ 'admin.roles.noPermissions' | translate }}</p>
+            }
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Rolle anlegen -->
+    <div class="create-role">
+      <h3>{{ 'admin.roles.createTitle' | translate }}</h3>
+      <div class="create-fields">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'admin.roles.keyLabel' | translate }}</mat-label>
+          <input matInput [(ngModel)]="newKey" maxlength="50" placeholder="trainer" />
+          <mat-hint>{{ 'admin.roles.keyHint' | translate }}</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'admin.roles.nameLabel' | translate }}</mat-label>
+          <input matInput [(ngModel)]="newName" maxlength="100" />
+        </mat-form-field>
+      </div>
+      <div class="perm-grid">
+        @for (p of allPermissions; track p) {
+          <mat-checkbox [checked]="newPerms.has(p)" (change)="toggleNewPerm(p)">
+            {{ permKey(p) | translate }}
+          </mat-checkbox>
+        }
+      </div>
+      <button mat-raised-button color="primary" [disabled]="!canCreate || creating" (click)="createRole()">
+        <mat-icon>add</mat-icon> {{ 'admin.roles.createBtn' | translate }}
+      </button>
+    </div>
+
+    <!-- Rollen einem Nutzer zuweisen -->
+    <div class="assign-roles">
+      <h3>{{ 'admin.roles.assignTitle' | translate }}</h3>
+      <p class="hint">{{ 'admin.roles.assignHint' | translate }}</p>
+      <mat-form-field appearance="outline" class="user-search">
+        <mat-label>{{ 'admin.roles.searchUser' | translate }}</mat-label>
+        <input matInput [(ngModel)]="userSearch" (ngModelChange)="onUserSearch($event)" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      @if (searchingUsers) {
+        <app-loading-spinner />
+      } @else if (userResults.length) {
+        <div class="user-results">
+          @for (u of userResults; track u.id) {
+            <button type="button" class="user-chip" [class.active]="selectedUser?.id === u.id" (click)="selectUser(u)">
+              {{ u.username }} @if (u.isAdmin) { <span class="badge system">admin</span> }
+            </button>
+          }
+        </div>
+      }
+
+      @if (selectedUser) {
+        <div class="user-roles">
+          <h4>{{ 'admin.roles.rolesFor' | translate: { name: selectedUser.username } }}</h4>
+          @if (selectedUser.isAdmin) {
+            <p class="hint">{{ 'admin.roles.adminUserNote' | translate }}</p>
+          }
+          <div class="perm-grid">
+            @for (role of assignableRoles; track role.id) {
+              <mat-checkbox [checked]="userRoleIds.has(role.id)" (change)="toggleUserRole(role.id)">
+                {{ role.name }}
+              </mat-checkbox>
+            }
+          </div>
+          <button mat-raised-button color="primary" [disabled]="savingUserRoles" (click)="saveUserRoles()">
+            <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

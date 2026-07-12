@@ -195,6 +195,7 @@ try
     builder.Services.AddScoped<BotStatsService>();
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
+    builder.Services.AddScoped<RoleAdminService>();
     builder.Services.AddScoped<BookAdminService>();
     // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
     builder.Services.AddSingleton<StockfishAnalyzer>();

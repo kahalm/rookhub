@@ -1,0 +1,135 @@
+.tab-content {
+  padding: 1rem 0;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant, #666);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.role-card {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.role-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-key {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  background: rgba(128, 128, 128, 0.15);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badge.system {
+  background: #1565c0;
+  color: #fff;
+}
+
+.member-count {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.all-perms,
+.no-perms {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin: 0.5rem 0 0;
+}
+
+.perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.role-name-field {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 0.5rem;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.create-role,
+.assign-roles {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.create-fields {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-search {
+  width: 100%;
+  max-width: 360px;
+}
+
+.user-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.user-chip {
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  border-radius: 16px;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+}
+
+.user-chip.active {
+  background: #1565c0;
+  color: #fff;
+  border-color: #1565c0;
+}
+
+.user-roles {
+  margin-top: 1rem;
+}

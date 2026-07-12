@@ -14,6 +14,7 @@ export const ADMIN_TAB_KEYS = [
   'messages',  // 6
   'courseDl',  // 7
   'ci',        // 8
+  'roles',     // 9
 ] as const;
 
 export type AdminTabKey = typeof ADMIN_TAB_KEYS[number];
