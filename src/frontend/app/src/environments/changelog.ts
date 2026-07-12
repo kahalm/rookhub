@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.15';
+export const APP_VERSION = '0.292.16';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.16", date: "2026-07-13", changes: [
+    { en: "Frontend test coverage (batch 2 — auth + presentational components): LoginComponent (returnUrl open-redirect sanitization, submit success/error), plus render-safety specs for the legal pages (impressum/privacy/account-deletion), loading-spinner and the new qr-code component. +5 spec files / +12 cases; 1143 unit tests green.", de: "Frontend-Testabdeckung (Batch 2 — Auth + präsentationale Komponenten): LoginComponent (returnUrl-Open-Redirect-Bereinigung, Submit Erfolg/Fehler) plus Render-Safety-Specs für die Rechtsseiten (Impressum/Datenschutz/Konto-Löschung), Loading-Spinner und die neue QR-Code-Komponente. +5 Spec-Dateien / +12 Fälle; 1143 Unit-Tests grün." },
+  ]},
   { version: "0.292.15", date: "2026-07-13", changes: [
     { en: "Frontend test coverage (batch 1 of the remaining gaps): added specs for the untested logic units + guard/services — breakdown.util (period math: bounds/shiftAnchor/sumBreakdown/rows), download.util, course-play.guard (anonymous pass-through + menu gating + fail-open), and the HTTP service wrappers favorites/remembered/catalog + offline-prefetch (online/pool-guard branches). +7 spec files; 1131 unit tests green.", de: "Frontend-Testabdeckung (Batch 1 der verbleibenden Lücken): Specs für die ungetesteten Logik-Units + Guard/Services ergänzt — breakdown.util (Perioden-Mathematik: bounds/shiftAnchor/sumBreakdown/rows), download.util, course-play.guard (anonym durchlassen + Menü-Gating + fail-open) und die HTTP-Service-Wrapper favorites/remembered/catalog + offline-prefetch (Online-/Pool-Guard-Zweige). +7 Spec-Dateien; 1131 Unit-Tests grün." },
   ]},
