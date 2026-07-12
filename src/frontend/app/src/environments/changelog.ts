@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.11';
+export const APP_VERSION = '0.292.12';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.12", date: "2026-07-13", changes: [
+    { en: "Runtime bump in the two Python stack repos: schach-bot and log-watcher Docker base image python:3.12-slim -> 3.13-slim. Verified on Python 3.13: log-watcher full suite (105 tests) green; schach-bot runtime deps import and the board-render test (the one the image build runs) green. Their requirements use floating >= ranges (latest pulled at build), so nothing to pin. repcheck has no dependencies. Not deployed.", de: "Runtime-Bump in den zwei Python-Stack-Repos: Docker-Basis-Image von schach-bot und log-watcher python:3.12-slim -> 3.13-slim. Auf Python 3.13 verifiziert: log-watcher komplette Suite (105 Tests) gruen; schach-bot Runtime-Deps importieren + Board-Render-Test (der im Image-Build laeuft) gruen. Ihre requirements nutzen floatende >=-Ranges (latest beim Build), daher nichts zu pinnen. repcheck hat keine Dependencies. Nicht deployed." },
+  ]},
   { version: "0.292.11", date: "2026-07-13", changes: [
     { en: "Frontend framework upgrade: Angular 21.2 -> 22.0 (final step of the major sweep) + TypeScript 5.9 -> 6.0. Two things blocked it and were resolved: (1) Angular 22 drops Node 20 (needs >=22.22.3 / >=24.15) — the Docker build already uses node:24-alpine (fine); local dev now needs Node >=22.22.3/>=24.15. (2) angularx-qrcode has no Angular-22 build and always lags majors, so it was replaced by a small framework-agnostic QrCodeComponent built on the plain qrcode library (renders to <canvas> to keep the strict CSP intact) — used by the 3 share dialogs (puzzle/line/tournament); this removes the Angular-version coupling of QR for good. All @angular packages to 22.0.6, CDK/Material 22.0.4. Production build clean, all 1081 unit tests green (one OnPush test switched to componentRef.setInput, the version-stable way to verify an OnPush re-render). Whole Angular major sweep 19->22 done.", de: "Frontend-Framework-Upgrade: Angular 21.2 -> 22.0 (letzter Schritt der Major-Serie) + TypeScript 5.9 -> 6.0. Zwei Blocker geloest: (1) Angular 22 laesst Node 20 fallen (braucht >=22.22.3 / >=24.15) — der Docker-Build nutzt bereits node:24-alpine (passt); lokale Entwicklung braucht jetzt Node >=22.22.3/>=24.15. (2) angularx-qrcode hat kein Angular-22-Build und hinkt jedem Major hinterher, daher ersetzt durch eine kleine framework-agnostische QrCodeComponent auf Basis der reinen qrcode-Lib (rendert auf <canvas>, damit die strikte CSP unberuehrt bleibt) — genutzt von den 3 Teilen-Dialogen (Puzzle/Linie/Turnier); das entkoppelt QR dauerhaft von der Angular-Version. Alle @angular-Pakete auf 22.0.6, CDK/Material 22.0.4. Prod-Build sauber, alle 1081 Unit-Tests gruen (ein OnPush-Test auf componentRef.setInput umgestellt, der versions-stabile Weg, ein OnPush-Re-Render zu pruefen). Damit ist die ganze Angular-Major-Serie 19->22 durch." },
   ]},
