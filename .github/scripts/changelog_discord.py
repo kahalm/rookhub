@@ -4,7 +4,7 @@
 Läuft im GitHub-Actions-Workflow ``changelog-discord.yml`` nach jedem Push auf
 master, der changelog.ts ändert. Ermittelt aus dem Push-Diff (``BEFORE..AFTER``)
 die NEU hinzugekommenen Versions-Einträge und postet jeden einzeln (älteste
-zuerst, deutscher Text) als „silent message" (keine Push-Benachrichtigung).
+zuerst, englischer Text) als „silent message" (keine Push-Benachrichtigung).
 
 RookHubs changelog.ts ist die Single Source of Truth für den ganzen Stack —
 Crawler-/piratechess-/log-watcher-/RepCheck-Änderungen stehen ebenfalls hier.
@@ -26,7 +26,7 @@ import urllib.request
 CHANGELOG = 'src/frontend/app/src/environments/changelog.ts'
 _ENTRY_RE = re.compile(
     r'\{\s*version:\s*"(?P<version>[^"]+)",\s*date:\s*"(?P<date>[^"]+)"')
-_DE_RE = re.compile(r'\bde:\s*"(?P<de>(?:[^"\\]|\\.)*)"')
+_EN_RE = re.compile(r'\ben:\s*"(?P<en>(?:[^"\\]|\\.)*)"')
 _DISCORD_LIMIT = 2000
 _TRUNCATE_AT = 1900
 # SUPPRESS_NOTIFICATIONS ("silent message"): kein Push/Desktop-Ping.
@@ -34,15 +34,15 @@ _SILENT_FLAG = 4096
 
 
 def parse_entries(text: str) -> dict[str, tuple[str, list[str]]]:
-    """changelog.ts → {version: (date, [de-Texte])}, Reihenfolge wie in der Datei."""
+    """changelog.ts → {version: (date, [en-Texte])}, Reihenfolge wie in der Datei."""
     entries: dict[str, tuple[str, list[str]]] = {}
     matches = list(_ENTRY_RE.finditer(text))
     for i, m in enumerate(matches):
         start = m.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         block = text[start:end]
-        de_texts = [d.group('de').replace('\\"', '"') for d in _DE_RE.finditer(block)]
-        entries[m.group('version')] = (m.group('date'), de_texts)
+        en_texts = [d.group('en').replace('\\"', '"') for d in _EN_RE.finditer(block)]
+        entries[m.group('version')] = (m.group('date'), en_texts)
     return entries
 
 
@@ -55,8 +55,8 @@ def added_versions(diff_text: str) -> list[str]:
     return list(reversed(versions))  # Datei ist neueste-zuerst → chronologisch drehen
 
 
-def build_message(label: str, version: str, date: str, de_texts: list[str]) -> str:
-    body = '\n'.join(f'• {t}' for t in de_texts) or '(kein Text)'
+def build_message(label: str, version: str, date: str, en_texts: list[str]) -> str:
+    body = '\n'.join(f'• {t}' for t in en_texts) or '(kein Text)'
     msg = f'**{label} v{version}** ({date})\n{body}'
     if len(msg) > _DISCORD_LIMIT:
         msg = msg[:_TRUNCATE_AT].rstrip() + ' …'
@@ -104,8 +104,8 @@ def main() -> int:
         versions = [next(iter(entries))]  # neuester Eintrag (Datei ist neueste-zuerst)
 
     for v in versions:
-        date, de_texts = entries[v]
-        _post(webhook, build_message(label, v, date, de_texts))
+        date, en_texts = entries[v]
+        _post(webhook, build_message(label, v, date, en_texts))
         print(f'Gepostet: {label} v{v}')
         time.sleep(1)
     return 0
