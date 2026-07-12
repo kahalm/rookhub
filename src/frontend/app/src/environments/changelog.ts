@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.33';
+export const APP_VERSION = '0.291.34';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.34", date: "2026-07-12", changes: [
+    { en: "i18n: filled the two missing Croatian keys (repertoire.dialog.chessableCourseId + its hint) so hr is complete again (en/de/hr all 1867 keys, all 25 language files valid JSON). Found during the periodic translation review.", de: "i18n: die zwei fehlenden kroatischen Keys ergänzt (repertoire.dialog.chessableCourseId + Hinweis), damit hr wieder vollständig ist (en/de/hr je 1867 Keys, alle 25 Sprachdateien JSON-valide). Beim periodischen Übersetzungs-Review gefunden." },
+  ]},
   { version: "0.291.33", date: "2026-07-12", changes: [
     { en: "Perf (backend statistics, no behavior change): four statistics queries that materialized whole attempt histories into memory now aggregate server-side. (E1) The leaderboard's unique-solved-puzzles count no longer pulls every distinct (user, puzzle) pair of the entire history — it groups over a DISTINCT subquery in SQL. (E2/E3) The per-user weakest-themes and stats breakdown aggregate themes over the normalized PuzzleTags/Tags tables and rating bands / daily activity via server-side GROUP BY. (E5) The course-stats breakdown does rating bands and activity server-side too; course themes stay string-based (book puzzles have no normalized tag table) but load only the two needed columns. Verified against the real dev MariaDB that all four translate under Pomelo (InMemory tests don't prove SQL translation). Test helper now seeds PuzzleTags like the import.", de: "Perf (Backend-Statistik, keine Verhaltensänderung): vier Statistik-Queries, die ganze Versuchs-Historien in den Speicher zogen, aggregieren jetzt server-seitig. (E1) Die Bestenlisten-Zählung einzigartig gelöster Puzzles zieht nicht mehr jedes distinct (User, Puzzle)-Paar der gesamten Historie, sondern gruppiert in SQL über eine DISTINCT-Subquery. (E2/E3) Schwächste Themen + Stats-Aufschlüsselung je User aggregieren Themen über die normalisierten PuzzleTags/Tags-Tabellen und Rating-Bänder / Tages-Aktivität via server-seitigem GROUP BY. (E5) Die Kurs-Stats-Aufschlüsselung macht Bänder und Aktivität ebenfalls server-seitig; Kurs-Themen bleiben string-basiert (Buch-Puzzles haben keine normalisierte Tag-Tabelle), laden aber nur die zwei nötigen Spalten. Gegen die echte Dev-MariaDB verifiziert, dass alle vier unter Pomelo übersetzen (InMemory-Tests beweisen keine SQL-Übersetzung). Test-Helper legt PuzzleTags jetzt wie der Import an." },
   ]},

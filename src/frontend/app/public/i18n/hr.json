@@ -720,7 +720,9 @@
       "editTitle": "Uredi repertoar",
       "save": "Spremi",
       "useForExtension": "Koristi za proširenje",
-      "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika/userscript koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu."
+      "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika/userscript koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu.",
+      "chessableCourseId": "ID Chessable tečaja",
+      "chessableCourseIdHint": "Numerički ID tečaja iz Chessable URL-a (npr. 12345). Povezuje ovaj repertoar s Chessable tečajem."
     },
     "kind": {
       "none": "—",
