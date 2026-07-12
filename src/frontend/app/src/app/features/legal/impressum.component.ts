@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { OPERATOR } from '../../../environments/operator';
 
 /**
@@ -14,7 +14,7 @@ import { OPERATOR } from '../../../environments/operator';
 @Component({
   selector: 'app-impressum',
   standalone: true,
-  imports: [CommonModule, MatCardModule, RouterModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, RouterModule, TranslatePipe],
   template: `
     <div class="legal-container">
       <mat-card>

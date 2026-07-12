@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { timer, switchMap, catchError, of } from 'rxjs';
 
@@ -29,7 +29,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
 @Component({
   selector: 'app-admin-github-actions',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslateModule],
+  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],
   template: `
     <div class="ci">
       <div class="ci-head">

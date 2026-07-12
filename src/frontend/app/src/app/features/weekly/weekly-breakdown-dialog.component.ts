@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { WeeklyService, WeeklyPlayerBreakdown } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 
@@ -21,7 +21,7 @@ export interface WeeklyBreakdownDialogData {
 @Component({
   selector: 'app-weekly-breakdown-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <h2 mat-dialog-title>
       {{ 'weekly.breakdown.title' | translate:{ name: data.playerName } }}

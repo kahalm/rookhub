@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LeaderboardService, Leaderboards, LeaderboardEntry, LeaderboardPeriod } from './leaderboard.service';
 
@@ -21,7 +21,7 @@ interface CategoryDef {
 @Component({
   selector: 'app-leaderboards',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonToggleModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonToggleModule, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="lb-page">
       <h1 class="lb-title"><mat-icon>leaderboard</mat-icon> {{ 'leaderboards.title' | translate }}</h1>

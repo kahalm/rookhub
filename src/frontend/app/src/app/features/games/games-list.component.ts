@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { GamesService, SavedGame } from './games.service';
 import { PgnViewerComponent } from '../../shared/pgn-viewer/pgn-viewer.component';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -19,7 +19,7 @@ import { SnackbarService } from '../../core/snackbar.service';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatDialogModule, TranslateModule,
+    MatProgressSpinnerModule, MatDialogModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">

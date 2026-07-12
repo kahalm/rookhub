@@ -1,7 +1,7 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ReprocessBannerComponent } from './reprocess-banner.component';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -23,8 +23,8 @@ describe('ReprocessBannerComponent', () => {
   beforeEach(() => {
     snackbar = jasmine.createSpyObj<SnackbarService>('SnackbarService', ['info']);
     TestBed.configureTestingModule({
-      imports: [ReprocessBannerComponent, TranslateModule.forRoot()],
-      providers: [
+      imports: [ReprocessBannerComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), 
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: SnackbarService, useValue: snackbar },

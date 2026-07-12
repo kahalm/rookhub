@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
 import { RepertoireTrainingService, SrLevel } from './repertoire-training.service';
 
@@ -22,7 +22,7 @@ import { RepertoireTrainingService, SrLevel } from './repertoire-training.servic
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule,
-    MatInputModule, MatSelectModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule,
+    MatInputModule, MatSelectModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'srConfig.title' | translate }}</h2>

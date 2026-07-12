@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { Friend } from '../../core/models';
 
@@ -31,8 +31,8 @@ describe('ChallengeFriendsComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [ChallengeFriendsComponent, TranslateModule.forRoot()],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
+      imports: [ChallengeFriendsComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations()],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });

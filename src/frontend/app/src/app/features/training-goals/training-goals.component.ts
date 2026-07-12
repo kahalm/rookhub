@@ -8,7 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
   TrainingGoalService, TrainingGoal, TrainingGoalInput, TodayProgress, GoalStatus, TrackerDay,
@@ -95,7 +95,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule,
-    TranslateModule, LoadingSpinnerComponent,
+    TranslatePipe, LoadingSpinnerComponent,
     ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
     PeriodBreakdownCardComponent,
   ],
@@ -396,11 +396,11 @@ export class TrainingGoalsComponent implements OnInit {
 
   /** Gestufte Dauer-Anzeige: Zahlteil (Min < 2 h, Std < 48 h, sonst Tage). */
   durValue(seconds: number): string {
-    return formatDuration(seconds, this.translate.currentLang).value;
+    return formatDuration(seconds, this.translate.currentLang()).value;
   }
   /** i18n-Einheitenschlüssel passend zu {@link durValue} (min/hours/days). */
   durUnit(seconds: number): string {
-    return formatDuration(seconds, this.translate.currentLang).unitKey;
+    return formatDuration(seconds, this.translate.currentLang()).unitKey;
   }
 
   ngOnInit(): void { this.reload(); }

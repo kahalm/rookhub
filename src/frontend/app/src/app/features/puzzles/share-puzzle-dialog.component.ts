@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleChallengeSource } from '../../core/challenge.service';
@@ -12,7 +12,7 @@ import { PuzzleChallengeSource } from '../../core/challenge.service';
 @Component({
   selector: 'app-share-puzzle-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QrCodeComponent, ChallengeFriendsComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, QrCodeComponent, ChallengeFriendsComponent],
   template: `
     <h2 class="dialog-title">{{ 'puzzles.share.title' | translate }}</h2>
     <div class="which-label" *ngIf="data.previousUrl">

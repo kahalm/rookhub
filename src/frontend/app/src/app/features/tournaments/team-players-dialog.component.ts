@@ -4,13 +4,13 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { TournamentPlayer } from '../../core/models';
 
 @Component({
   selector: 'app-team-players-dialog',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
   template: `
     <h2 class="dialog-title">{{ data.teamName }}</h2>
     <div class="dialog-table-scroll">

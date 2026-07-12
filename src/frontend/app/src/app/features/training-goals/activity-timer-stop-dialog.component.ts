@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ActivityTheme, ACTIVITY_THEMES } from './training-goals.service';
 
 export interface StopDialogData {
@@ -45,7 +45,7 @@ export interface StopDialogResult {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, TranslateModule,
+    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'trainingGoals.timer.stopTitle' | translate }}</h2>

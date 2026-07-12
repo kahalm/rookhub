@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseListItem, CourseChapter } from './course.service';
 
@@ -23,7 +23,7 @@ import { CourseListItem, CourseChapter } from './course.service';
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressBarModule, MatTooltipModule, MatMenuModule, TranslateModule, LoadingSpinnerComponent,
+    MatProgressBarModule, MatTooltipModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   template: `
       <mat-card class="course-card">

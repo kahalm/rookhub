@@ -7,7 +7,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FriendsService } from '../../core/friends.service';
 import { Friend } from '../../core/models';
 import { CourseService, CourseShareRecipient } from './course.service';
@@ -28,7 +28,7 @@ export interface ShareCourseDialogData {
   standalone: true,
   imports: [
     CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatCheckboxModule,
-    MatProgressSpinnerModule, MatTooltipModule, TranslateModule
+    MatProgressSpinnerModule, MatTooltipModule, TranslatePipe
   ],
   template: `
     <h2 mat-dialog-title>{{ 'courses.share.title' | translate:{ name: data.courseName } }}</h2>

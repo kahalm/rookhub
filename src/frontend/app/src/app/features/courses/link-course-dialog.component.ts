@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService } from './course.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -28,7 +28,7 @@ export interface LinkCourseDialogData {
 @Component({
   selector: 'app-link-course-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule, TranslateModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatTooltipModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'courses.link.title' | translate:{ name: data.displayName } }}</h2>
     <mat-dialog-content>

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Ausführliche Hilfe-/Anleitungsseite. Route: /help (offen, kein Login nötig).
@@ -18,7 +18,7 @@ interface HelpSection { id: string; icon: string; }
 @Component({
   selector: 'app-help',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, RouterModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, RouterModule, TranslatePipe],
   template: `
     <div class="help-container">
       <header class="help-header">

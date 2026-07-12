@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TrackerDay, SourceBreakdown, ThemeBreakdown, SOURCE_KEYS, THEME_KEYS } from './training-goals.service';
 import {
   BreakRow, BreakdownPeriod, BREAKDOWN_PERIODS,
@@ -20,7 +20,7 @@ import { formatDuration } from './duration.util';
 @Component({
   selector: 'app-period-breakdown-card',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule, TranslateModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule, TranslatePipe],
   templateUrl: './period-breakdown-card.component.html',
   styles: [`
     :host { display: block; }
@@ -62,8 +62,8 @@ export class PeriodBreakdownCardComponent implements OnChanges {
 
   ngOnChanges(): void { this.recomputePeriod(); }
 
-  durValue(seconds: number): string { return formatDuration(seconds, this.translate.currentLang).value; }
-  durUnit(seconds: number): string { return formatDuration(seconds, this.translate.currentLang).unitKey; }
+  durValue(seconds: number): string { return formatDuration(seconds, this.translate.currentLang()).value; }
+  durUnit(seconds: number): string { return formatDuration(seconds, this.translate.currentLang()).unitKey; }
 
   /** Periode wechseln → Anker auf heute zurücksetzen (man startet bei der jüngsten Periode). */
   setPeriod(period: BreakdownPeriod): void {
@@ -101,7 +101,7 @@ export class PeriodBreakdownCardComponent implements OnChanges {
   /** Lesbares Label der aktuellen Periode in der aktiven UI-Sprache. */
   private formatPeriodLabel(start: string, end: string): string {
     if (this.period === 'all') return this.translate.instant('trainingGoals.period.all');
-    const lang = this.translate.currentLang || this.translate.getDefaultLang() || 'en';
+    const lang = this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
     const fmt = (s: string, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(lang, opts).format(parseYmd(s));
     if (this.period === 'day') return fmt(start, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
     if (this.period === 'week') {

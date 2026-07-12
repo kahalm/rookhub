@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, Group, MenuItemConfig, MenuVisibilityLevel } from '../../../core/admin.service';
@@ -21,7 +21,7 @@ import { MenuService } from '../../../core/menu.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule,
-    TranslateModule, LoadingSpinnerComponent,
+    TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './admin-menu-visibility.component.html',
   styleUrl: './admin-menu-visibility.component.scss',

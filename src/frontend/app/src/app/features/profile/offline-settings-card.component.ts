@@ -5,7 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -20,7 +20,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, TranslateModule,
+    MatButtonModule, MatIconModule, TranslatePipe,
   ],
   template: `
     <div class="offline-section">

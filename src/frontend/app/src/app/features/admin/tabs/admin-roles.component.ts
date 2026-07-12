@@ -10,7 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, AdminUser, Role } from '../../../core/admin.service';
@@ -29,7 +29,7 @@ import { AdminService, AdminUser, Role } from '../../../core/admin.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatCheckboxModule, MatChipsModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent,
+    MatCheckboxModule, MatChipsModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './admin-roles.component.html',
   styleUrl: './admin-roles.component.scss',

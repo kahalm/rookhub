@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
@@ -38,7 +38,7 @@ export function activityKindIcon(kind: ManualActivityKind): string {
   standalone: true,
   imports: [
     CommonModule, RouterModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatDialogModule, TranslateModule,
+    MatDialogModule, TranslatePipe,
   ],
   template: `
     @if (running) {

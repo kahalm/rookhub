@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { PwaInstallService } from '../../core/pwa-install.service';
 
 /**
@@ -27,7 +27,7 @@ export const APK_DOWNLOAD_URL =
 @Component({
   selector: 'app-install',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe],
   template: `
     <div class="install-container">
       <header class="install-header">

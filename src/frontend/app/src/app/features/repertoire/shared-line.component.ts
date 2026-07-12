@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
@@ -22,7 +22,7 @@ import { RepertoireService, SharedLine } from '../../core/repertoire.service';
   standalone: true,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule,
-    TranslateModule, ChessBoardComponent, MoveListComponent,
+    TranslatePipe, ChessBoardComponent, MoveListComponent,
   ],
   providers: [PgnViewerService],
   template: `

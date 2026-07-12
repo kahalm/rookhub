@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
@@ -27,7 +27,7 @@ interface WeeklyPostRow extends WeeklyPost {
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule,
-    TranslateModule, LoadingSpinnerComponent
+    TranslatePipe, LoadingSpinnerComponent
   ],
   template: `
     <div class="weekly-container">

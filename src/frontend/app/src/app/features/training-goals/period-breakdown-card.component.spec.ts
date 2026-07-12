@@ -3,8 +3,8 @@ import { PeriodBreakdownCardComponent } from './period-breakdown-card.component'
 function make() {
   const translate = {
     instant: (k: string) => k,
-    currentLang: 'en',
-    getDefaultLang: () => 'en',
+    currentLang: () => 'en',
+    getFallbackLang: () => 'en',
   } as any;
   return new PeriodBreakdownCardComponent(translate);
 }

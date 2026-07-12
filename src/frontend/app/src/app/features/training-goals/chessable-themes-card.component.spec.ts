@@ -10,7 +10,7 @@ function make() {
     clearChessableCourseTheme: jasmine.createSpy('clearChessableCourseTheme').and.returnValue(of({})),
   } as any;
   const snackbar = { success: () => {}, warn: () => {} } as any;
-  const translate = { instant: (k: string) => k, currentLang: 'en' } as any;
+  const translate = { instant: (k: string) => k, currentLang: () => 'en', getFallbackLang: () => 'en' } as any;
   return { c: new ChessableThemesCardComponent(service, snackbar, translate), service };
 }
 

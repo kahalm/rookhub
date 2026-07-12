@@ -9,7 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { forkJoin } from 'rxjs';
 import { Tournament, Subscription, CrawlJob } from '../../core/models';
@@ -18,7 +18,7 @@ import { TournamentListService } from '../../core/tournament-list.service';
 @Component({
   selector: 'app-tournament-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, RouterModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="tournament-container">
       <h1>{{ 'tournaments.list.title' | translate }}</h1>

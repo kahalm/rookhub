@@ -11,7 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { ApiTokensComponent } from './api-tokens.component';
@@ -59,7 +59,7 @@ interface PlayerSearchItem {
   standalone: true,
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatProgressSpinnerModule, MatListModule,
-    MatIconModule, MatDividerModule, TranslateModule, LoadingSpinnerComponent,
+    MatIconModule, MatDividerModule, TranslatePipe, LoadingSpinnerComponent,
     ApiTokensComponent, OfflineSettingsCardComponent, ThemeCardComponent,
     ChangePasswordCardComponent, DeleteAccountCardComponent],
   template: `

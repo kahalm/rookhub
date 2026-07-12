@@ -8,7 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { ActivatedRoute } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from 'rxjs/operators';
 import { SnackbarService } from '../../../core/snackbar.service';
@@ -28,7 +28,7 @@ import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/m
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatMenuModule, TranslateModule, LoadingSpinnerComponent,
+    MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './admin-messages.component.html',
   styleUrl: './admin-messages.component.scss',

@@ -10,7 +10,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { LocaleService } from '../../core/locale.service';
 
@@ -51,7 +51,7 @@ interface EndlessHistoryResponse {
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatPaginatorModule, MatProgressSpinnerModule,
-    MatCheckboxModule, MatButtonToggleModule, TranslateModule
+    MatCheckboxModule, MatButtonToggleModule, TranslatePipe
   ],
   template: `
     <div class="history-container">

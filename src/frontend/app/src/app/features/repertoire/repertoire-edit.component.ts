@@ -4,7 +4,7 @@ import { RepertoireService } from '../../core/repertoire.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -12,7 +12,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 @Component({
   selector: 'app-repertoire-edit',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslateModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatListModule, TranslatePipe],
   template: `
     <div class="edit-container">
       <div class="upload-area"

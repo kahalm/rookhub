@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key, Role, Piece } from 'chessground/types';
@@ -63,7 +63,7 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
   standalone: true,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
-    MatTooltipModule, TranslateModule
+    MatTooltipModule, TranslatePipe
   ],
   template: `
     <div class="ps-editor">

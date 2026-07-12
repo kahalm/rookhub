@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { clampGoal } from './goal.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import {
@@ -27,7 +27,7 @@ import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, TranslateModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe,
   ],
   templateUrl: './manual-activities-card.component.html',
   styles: [`

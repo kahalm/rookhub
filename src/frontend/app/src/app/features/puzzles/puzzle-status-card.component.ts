@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleYourTurnComponent, PuzzleMode } from './puzzle-your-turn.component';
 import { ReviewNavComponent } from './review-nav.component';
 
@@ -64,7 +64,7 @@ const CK = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatCardModule, TranslateModule, PuzzleYourTurnComponent, ReviewNavComponent,
+    MatCardModule, TranslatePipe, PuzzleYourTurnComponent, ReviewNavComponent,
   ],
   template: `
     <mat-card class="psc-card">

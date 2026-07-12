@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ShareRepertoireDialogComponent } from './share-repertoire-dialog.component';
 import { RepertoireService } from '../../core/repertoire.service';
 import { FriendsService } from '../../core/friends.service';
@@ -26,8 +26,8 @@ describe('ShareRepertoireDialogComponent', () => {
     repertoireService.getShareRecipients.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
-      imports: [ShareRepertoireDialogComponent, TranslateModule.forRoot()],
-      providers: [
+      imports: [ShareRepertoireDialogComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), 
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MAT_DIALOG_DATA, useValue: { repertoireId: 10, repertoireName: 'X' } },
         { provide: RepertoireService, useValue: repertoireService },

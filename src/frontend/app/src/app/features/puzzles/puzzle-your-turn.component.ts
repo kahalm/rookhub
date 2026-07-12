@@ -4,7 +4,7 @@ import { formatPuzzleTime } from './puzzle-format.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export type ActivePuzzleState = 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING';
 export type PuzzleMode = 'standard' | 'endless' | 'book';
@@ -51,7 +51,7 @@ const ACTION_KEYS = {
   selector: 'app-puzzle-your-turn',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslateModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe],
   template: `
     <div class="ytp-center">
       @if (state === 'THINKING') {

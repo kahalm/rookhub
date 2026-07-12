@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export interface CourseThemesDialogData {
   bookId: number;
@@ -23,7 +23,7 @@ const ALL_THEMES = ['tactics', 'endgame', 'opening', 'middlegame', 'other'] as c
 @Component({
   selector: 'app-course-themes-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, TranslateModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'courses.themes.title' | translate }}</h2>
     <mat-dialog-content>

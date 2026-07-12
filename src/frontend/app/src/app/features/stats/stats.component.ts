@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay, PuzzleBreakdown, CourseStatsDto } from '../puzzles/puzzle.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -159,7 +159,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslateModule, LoadingSpinnerComponent
+    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent
   ],
   template: `
     <div class="stats-container">

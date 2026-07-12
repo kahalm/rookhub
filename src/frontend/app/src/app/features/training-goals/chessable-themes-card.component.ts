@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { TrainingGoalService, ChessableCourseSummary, ChessableTheme } from './training-goals.service';
@@ -22,7 +22,7 @@ import { formatDuration } from './duration.util';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatSelectModule, MatTooltipModule,
-    TranslateModule, LoadingSpinnerComponent,
+    TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './chessable-themes-card.component.html',
   styles: [`
@@ -63,8 +63,8 @@ export class ChessableThemesCardComponent implements OnInit {
     this.loadChessableCourses();
   }
 
-  durValue(seconds: number): string { return formatDuration(seconds, this.translate.currentLang).value; }
-  durUnit(seconds: number): string { return formatDuration(seconds, this.translate.currentLang).unitKey; }
+  durValue(seconds: number): string { return formatDuration(seconds, this.translate.currentLang()).value; }
+  durUnit(seconds: number): string { return formatDuration(seconds, this.translate.currentLang()).unitKey; }
 
   loadChessableCourses(): void {
     this.loadingCourses = true;

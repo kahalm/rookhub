@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FavoritesService, FavoritePuzzle } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -16,7 +16,7 @@ import { SnackbarService } from '../../core/snackbar.service';
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, TranslateModule,
+    MatProgressSpinnerModule, TranslatePipe,
   ],
   template: `
     <div class="fav-page">

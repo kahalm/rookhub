@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Wiederverwendbare Visualisierungs-Karte (Blindschach-Hilfe) für Standard-,
@@ -14,7 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
   selector: 'app-viz-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatIconModule, TranslateModule],
+  imports: [MatCardModule, MatIconModule, TranslatePipe],
   template: `
     <mat-card class="viz-card">
       <mat-card-content>

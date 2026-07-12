@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ThemeService } from '../../core/theme.service';
 
 /**
@@ -12,7 +12,7 @@ import { ThemeService } from '../../core/theme.service';
 @Component({
   selector: 'app-theme-card',
   standalone: true,
-  imports: [CommonModule, MatButtonToggleModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatButtonToggleModule, MatIconModule, TranslatePipe],
   template: `
     <div class="theme-section">
       <h4>{{ 'profile.theme.title' | translate }}</h4>

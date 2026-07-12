@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.12';
+export const APP_VERSION = '0.292.13';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.13", date: "2026-07-13", changes: [
+    { en: "npm dependency majors: @ngx-translate/core + http-loader 17 -> 18, and the test stack jasmine-core + @types/jasmine 5 -> 6 (+ karma-jasmine-html-reporter 2.2). ngx-translate 18 is fully standalone: TranslateModule was removed (99 files switched to importing TranslatePipe), currentLang/fallbackLang are now Signals (currentLang() calls + formatDuration tolerates null), defaultLang/getDefaultLang() -> getFallbackLang(), and specs use provideTranslateService({ fallbackLang: 'en' }) instead of TranslateModule.forRoot(). Production build clean, all 1081 unit tests green. TypeScript stays 6.0 (Angular 22 caps it at <6.1, so TS 7 is intentionally not taken). Remaining npm majors are dev-only vulns in the webpack-dev-server chain (not in the shipped bundle).", de: "npm-Dependency-Majors: @ngx-translate/core + http-loader 17 -> 18, und der Test-Stack jasmine-core + @types/jasmine 5 -> 6 (+ karma-jasmine-html-reporter 2.2). ngx-translate 18 ist voll standalone: TranslateModule entfernt (99 Dateien auf TranslatePipe-Import umgestellt), currentLang/fallbackLang sind jetzt Signals (currentLang()-Aufrufe + formatDuration toleriert null), defaultLang/getDefaultLang() -> getFallbackLang(), und Specs nutzen provideTranslateService({ fallbackLang: 'en' }) statt TranslateModule.forRoot(). Prod-Build sauber, alle 1081 Unit-Tests gruen. TypeScript bleibt 6.0 (Angular 22 deckelt auf <6.1, TS 7 daher bewusst nicht genommen). Uebrige npm-Majors sind Dev-only-Vulns in der webpack-dev-server-Kette (nicht im ausgelieferten Bundle)." },
+  ]},
   { version: "0.292.12", date: "2026-07-13", changes: [
     { en: "Runtime bump in the two Python stack repos: schach-bot and log-watcher Docker base image python:3.12-slim -> 3.13-slim. Verified on Python 3.13: log-watcher full suite (105 tests) green; schach-bot runtime deps import and the board-render test (the one the image build runs) green. Their requirements use floating >= ranges (latest pulled at build), so nothing to pin. repcheck has no dependencies. Not deployed.", de: "Runtime-Bump in den zwei Python-Stack-Repos: Docker-Basis-Image von schach-bot und log-watcher python:3.12-slim -> 3.13-slim. Auf Python 3.13 verifiziert: log-watcher komplette Suite (105 Tests) gruen; schach-bot Runtime-Deps importieren + Board-Render-Test (der im Image-Build laeuft) gruen. Ihre requirements nutzen floatende >=-Ranges (latest beim Build), daher nichts zu pinnen. repcheck hat keine Dependencies. Nicht deployed." },
   ]},

@@ -16,7 +16,7 @@ function makeComponent(): any {
   const weeklyService: any = {};
   const router: any = { navigate: jasmine.createSpy('navigate'), url: '/puzzles/book/1' };
   // gibt den Key zurück; Params werden angehängt (damit Tipp-Stufe 2/3 mit {piece}/{move} prüfbar sind).
-  const translate: any = { instant: (k: string, p?: object) => (p ? k + ' ' + JSON.stringify(p) : k) };
+  const translate: any = { instant: (k: string, p?: object) => (p ? k + ' ' + JSON.stringify(p) : k), currentLang: () => null, getFallbackLang: () => null };
   const auth: any = { isLoggedIn: false };
   const snackbar: any = { info: () => {} };
   const offlineQueue: any = { enqueue: () => {} };

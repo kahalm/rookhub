@@ -9,7 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -47,7 +47,7 @@ type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PL
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
+    MatProgressSpinnerModule, MatMenuModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
     PuzzleRatingCardComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './puzzle.component.html',

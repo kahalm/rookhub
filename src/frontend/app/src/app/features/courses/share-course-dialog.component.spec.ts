@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { ShareCourseDialogComponent } from './share-course-dialog.component';
 import { CourseService } from './course.service';
 import { FriendsService } from '../../core/friends.service';
@@ -26,8 +26,8 @@ describe('ShareCourseDialogComponent', () => {
     courseService.getShareRecipients.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
-      imports: [ShareCourseDialogComponent, TranslateModule.forRoot()],
-      providers: [
+      imports: [ShareCourseDialogComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), 
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MAT_DIALOG_DATA, useValue: { bookId: 10, courseName: 'X' } },
         { provide: CourseService, useValue: courseService },

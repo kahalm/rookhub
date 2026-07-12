@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CatalogService, CatalogItem, CatalogRequest } from './catalog.service';
 import { AuthService } from '../../core/auth.service';
 import { AdminService, AdminUser, Group } from '../../core/admin.service';
@@ -18,7 +18,7 @@ import { SnackbarService } from '../../core/snackbar.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatChipsModule, TranslateModule,
+    MatSelectModule, MatChipsModule, TranslatePipe,
   ],
   template: `
   <div class="catalog">

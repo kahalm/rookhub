@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EMPTY, catchError, filter, switchMap } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 
@@ -30,7 +30,7 @@ interface ApiTokenCreated extends ApiToken {
 @Component({
   selector: 'app-create-token-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, TranslateModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'profile.tokens.dialog.title' | translate }}</h2>
     <mat-dialog-content>
@@ -69,7 +69,7 @@ export class CreateTokenDialogComponent {
 @Component({
   selector: 'app-show-token-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'profile.tokens.show.title' | translate }}</h2>
     <mat-dialog-content>
@@ -126,7 +126,7 @@ export class ShowTokenDialogComponent implements OnDestroy {
 @Component({
   selector: 'app-api-tokens',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
   template: `
     <mat-card class="tokens-card">
       <mat-card-header>

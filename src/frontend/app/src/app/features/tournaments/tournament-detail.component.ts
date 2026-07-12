@@ -8,7 +8,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { NotificationService } from '../../core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
@@ -22,7 +22,7 @@ import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites,
 @Component({
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatDialogModule, TranslateModule, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })

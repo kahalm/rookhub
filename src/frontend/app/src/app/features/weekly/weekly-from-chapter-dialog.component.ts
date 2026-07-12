@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from '../courses/course.service';
 import { WeeklyService } from './weekly.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -27,7 +27,7 @@ export interface WeeklyFromChapterDialogData {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
-    MatInputModule, MatButtonModule, MatIconModule, TranslateModule,
+    MatInputModule, MatButtonModule, MatIconModule, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'weekly.fromChapter.title' | translate }}</h2>

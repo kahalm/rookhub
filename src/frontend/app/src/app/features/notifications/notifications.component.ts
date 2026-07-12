@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
 import {
   notificationText, notificationIcon, notificationCategory,
@@ -24,7 +24,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslateModule, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="notif-container">
       <h1>{{ 'notifications.historyTitle' | translate }}</h1>

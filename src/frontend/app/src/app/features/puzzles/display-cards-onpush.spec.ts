@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { VizCardComponent } from './viz-card.component';
 import { PuzzleRatingCardComponent } from './puzzle-rating-card.component';
 
@@ -40,7 +40,8 @@ describe('Display cards (OnPush)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HostComponent, TranslateModule.forRoot()],
+      imports: [HostComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' })],
     }).compileComponents();
     fixture = TestBed.createComponent(HostComponent);
     host = fixture.componentInstance;

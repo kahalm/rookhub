@@ -45,7 +45,7 @@ import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyService } from '../weekly/weekly.service';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE' | 'INFO';
@@ -60,7 +60,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, PuzzleTagsComponent,
-    TranslateModule, PuzzleStatusCardComponent, ChallengeFriendsComponent
+    TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -154,7 +154,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // gestuften Tipps zum AKTUELL erwarteten Zug (currentMoveHint), sodass Tipps überall funktionieren.
     const h = this.puzzle?.hints;
     if (h && this.atFirstSolverMove) {
-      const lang = this.translate.currentLang || this.translate.defaultLang || 'en';
+      const lang = this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
       return h[lang] ?? h['en'] ?? h['de'] ?? [];
     }
     return this.hintsForMove(this.currentMoveHint);

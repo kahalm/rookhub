@@ -2,7 +2,7 @@ import { Component, OnInit, HostListener, DestroyRef, inject } from '@angular/co
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -27,7 +27,7 @@ import { APK_VERSION } from '../environments/changelog';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslateModule, A11yModule, MatIconModule],
+  imports: [RouterOutlet, RouterLink, NavbarComponent, TranslatePipe, A11yModule, MatIconModule],
   template: `
     @if (showApkUpdate) {
       <div class="apk-banner">
@@ -195,7 +195,7 @@ export class AppComponent implements OnInit {
 
   /** Changelog-Eintrag in der aktiven UI-Sprache (de → Deutsch, sonst Englisch als Default/Fallback). */
   changeText(change: { en: string; de: string }): string {
-    return this.translate.currentLang === 'de' ? change.de : change.en;
+    return this.translate.currentLang() === 'de' ? change.de : change.en;
   }
 
   private destroyRef = inject(DestroyRef);

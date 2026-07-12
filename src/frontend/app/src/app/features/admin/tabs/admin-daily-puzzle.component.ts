@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
@@ -20,7 +20,7 @@ import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, TranslateModule, LoadingSpinnerComponent,
+    MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent,
   ],
   templateUrl: './admin-daily-puzzle.component.html',
   styleUrl: './admin-daily-puzzle.component.scss',

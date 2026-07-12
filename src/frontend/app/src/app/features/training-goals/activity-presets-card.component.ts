@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import {
   TrainingGoalService, ActivityPreset, ActivityPresetInput, ManualActivityKind,
@@ -25,7 +25,7 @@ import { activityKindIcon } from './activity-timer-tile.component';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, TranslateModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, TranslatePipe,
   ],
   templateUrl: './activity-presets-card.component.html',
   styles: [`

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { AdminService } from '../../../core/admin.service';
 
@@ -14,7 +14,7 @@ import { AdminService } from '../../../core/admin.service';
 @Component({
   selector: 'app-admin-puzzle-tags',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe],
   templateUrl: './admin-puzzle-tags.component.html',
   styles: ['.tab-content { padding: 16px 0; }'],
 })

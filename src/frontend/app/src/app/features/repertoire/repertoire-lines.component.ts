@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 import { Move } from 'chess.js';
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
@@ -28,7 +28,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatListModule, MatIconModule, MatButtonModule, MatMenuModule,
-    MatTooltipModule, TranslateModule, MoveListComponent,
+    MatTooltipModule, TranslatePipe, MoveListComponent,
   ],
   template: `
     @if (selectedIndex >= 0) {

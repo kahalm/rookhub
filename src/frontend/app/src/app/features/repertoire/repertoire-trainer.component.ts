@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
@@ -57,7 +57,7 @@ const LEARN_REPEATS = 3;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule,
-    MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, TranslateModule, PuzzleBoardComponent,
+    MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
   ],
   templateUrl: './repertoire-trainer.component.html',
   styleUrls: ['./repertoire-trainer.component.scss'],

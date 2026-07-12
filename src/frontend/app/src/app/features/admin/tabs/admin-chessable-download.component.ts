@@ -9,7 +9,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { timer, Subscription } from 'rxjs';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
@@ -27,7 +27,7 @@ import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable.component';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule,
-    MatCheckboxModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslateModule,
+    MatCheckboxModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslatePipe,
     LoadingSpinnerComponent,
   ],
   templateUrl: './admin-chessable-download.component.html',

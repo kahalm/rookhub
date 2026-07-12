@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Nachfrage bei auffällig langer Lösezeit (> Schwellwert): vermutlich lag der Tab offen,
@@ -14,7 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
 @Component({
   selector: 'app-long-solve-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
   template: `
     <h2 class="ls-title"><mat-icon>schedule</mat-icon> {{ 'book.longSolve.title' | translate }}</h2>
     <p class="ls-text">{{ 'book.longSolve.question' | translate:{ time: formatted } }}</p>

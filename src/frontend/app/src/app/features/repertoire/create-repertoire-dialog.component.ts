@@ -7,14 +7,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { RepertoireKind } from '../../core/repertoire.types';
 import { Repertoire } from '../../core/models';
 
 @Component({
   selector: 'app-create-repertoire-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, MatSelectModule, TranslateModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, MatSelectModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ (editMode ? 'repertoire.dialog.editTitle' : 'repertoire.dialog.title') | translate }}</h2>
     <mat-dialog-content>

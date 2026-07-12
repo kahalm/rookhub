@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 import { AdminGithubActionsComponent, CiRun, CiRepo } from './admin-github-actions.component';
 
 function makeRun(partial: Partial<CiRun>): CiRun {
@@ -27,8 +27,8 @@ describe('AdminGithubActionsComponent.isRunningBuild', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [AdminGithubActionsComponent, TranslateModule.forRoot()],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      imports: [AdminGithubActionsComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
     });
     comp = TestBed.createComponent(AdminGithubActionsComponent).componentInstance;
     httpMock = TestBed.inject(HttpTestingController);

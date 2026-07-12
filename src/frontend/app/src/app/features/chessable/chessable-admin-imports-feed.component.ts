@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { ChessableService, ChessableImport, ChessableAdminImport } from './chessable.service';
 import { chessableQueueLabel, formatDuration } from './chessable-progress.util';
@@ -15,7 +15,7 @@ import { chessableQueueLabel, formatDuration } from './chessable-progress.util';
 @Component({
   selector: 'app-chessable-admin-imports-feed',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, TranslatePipe],
   template: `
     @if (imports !== null) {
       <mat-card class="admin-imports-card">

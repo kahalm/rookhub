@@ -2,13 +2,13 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
 
 @Component({
   selector: 'app-repertoire-tree',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, TranslateModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, TranslatePipe],
   template: `
     <div class="tree-container">
       <div class="breadcrumbs">

@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChallengeService, PuzzleChallengeSource } from '../../core/challenge.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { Friend } from '../../core/models';
@@ -18,7 +18,7 @@ import { Friend } from '../../core/models';
 @Component({
   selector: 'app-challenge-friends',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslateModule],
+  imports: [CommonModule, MatButtonModule, MatMenuModule, MatIconModule, MatCheckboxModule, TranslatePipe],
   template: `
     <button mat-stroked-button class="challenge-btn" [matMenuTriggerFor]="friendMenu" (menuOpened)="onMenuOpened()">
       <mat-icon>send</mat-icon>

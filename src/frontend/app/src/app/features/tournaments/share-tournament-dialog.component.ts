@@ -4,13 +4,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 
 @Component({
   selector: 'app-share-tournament-dialog',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslateModule, QrCodeComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe, QrCodeComponent],
   template: `
     <h2 class="dialog-title">{{ 'tournaments.share.title' | translate }}</h2>
     <div class="qr-container">

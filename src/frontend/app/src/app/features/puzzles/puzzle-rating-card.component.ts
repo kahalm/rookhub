@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 
 /**
@@ -14,7 +14,7 @@ import { PuzzleTagsComponent } from './puzzle-tags.component';
   selector: 'app-puzzle-rating-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatCardModule, MatButtonModule, MatIconModule, TranslateModule, PuzzleTagsComponent],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, PuzzleTagsComponent],
   template: `
     <mat-card class="prc-card">
       <mat-card-content>

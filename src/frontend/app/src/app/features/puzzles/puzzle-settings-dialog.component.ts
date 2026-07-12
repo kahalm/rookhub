@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode } from './board-theme.util';
 
 export interface PuzzleSettingsDialogData {
@@ -46,7 +46,7 @@ export interface PuzzleSettingsDialogResult {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatSlideToggleModule, TranslateModule
+    MatSelectModule, MatSlideToggleModule, TranslatePipe
   ],
   template: `
     <div class="psd-header" mat-dialog-title>
