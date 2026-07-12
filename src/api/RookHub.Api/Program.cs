@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using RookHub.Api.Data;
 using RookHub.Api.Services;
 using Serilog;
@@ -430,14 +430,14 @@ try
             Type = SecuritySchemeType.ApiKey,
             Scheme = "Bearer"
         });
-        c.AddSecurityRequirement(new OpenApiSecurityRequirement
+        // Microsoft.OpenApi 2.0 (Swashbuckle 10): AddSecurityRequirement nimmt jetzt eine Factory
+        // (OpenApiDocument → Requirement); OpenApiReference/ReferenceType wurden durch dedizierte
+        // Referenztypen ersetzt — OpenApiSecuritySchemeReference verweist auf das „Bearer"-Schema.
+        c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
         {
             {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                },
-                Array.Empty<string>()
+                new OpenApiSecuritySchemeReference("Bearer", doc),
+                new List<string>()
             }
         });
     });

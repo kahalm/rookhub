@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY RookHub.Api.csproj .
 RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 # curl für den Docker-Healthcheck (GET /health); stockfish für den Tipp-Generator
 # (StockfishAnalyzer, nur Import-/Reprocess-Pfad). --no-install-recommends hält das Image schlank.

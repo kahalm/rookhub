@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.9';
+export const APP_VERSION = '0.292.10';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.10", date: "2026-07-13", changes: [
+    { en: "Backend: switched the MySQL/MariaDB EF provider from Pomelo to the maintained Microting fork and moved the whole .NET side to .NET 10 / EF Core 10 (rookhub API, crawler, piratechess). Original Pomelo has no EF Core 10 release (issue open since Aug 2025, no ETA); the Microting fork is a MIT compatibility fork with EF Core 10 support, unchanged MySql: annotation keys (existing migrations verified compatible via has-pending-model-changes) and UseMySql/MariaDbServerVersion still in the Microsoft.EntityFrameworkCore namespace, so the EF layer needed zero code changes. TFM net9->net10, EF/AspNetCore packages 9->10, Serilog.AspNetCore 10, Swashbuckle 6.9->10.2.3 (net10 pulls Microsoft.OpenApi 2.0 -> the Swagger JWT setup was rewritten to OpenApiSecuritySchemeReference + the AddSecurityRequirement factory overload), Dockerfiles 9.0->10.0. All suites green: rookhub 1438, crawler 201, piratechess 285. Not deployed.", de: "Backend: den MySQL/MariaDB-EF-Provider von Pomelo auf den gepflegten Microting-Fork umgestellt und die ganze .NET-Seite auf .NET 10 / EF Core 10 gehoben (rookhub-API, Crawler, piratechess). Das originale Pomelo hat kein EF-Core-10-Release (Issue seit Aug 2025 offen, kein ETA); der Microting-Fork ist ein MIT-Kompatibilitaets-Fork mit EF-Core-10-Support, unveraenderten MySql:-Annotation-Keys (bestehende Migrations via has-pending-model-changes als kompatibel verifiziert) und UseMySql/MariaDbServerVersion weiter im Microsoft.EntityFrameworkCore-Namespace -> die EF-Schicht brauchte null Code-Aenderung. TFM net9->net10, EF/AspNetCore-Pakete 9->10, Serilog.AspNetCore 10, Swashbuckle 6.9->10.2.3 (net10 zieht Microsoft.OpenApi 2.0 -> das Swagger-JWT-Setup auf OpenApiSecuritySchemeReference + den AddSecurityRequirement-Factory-Overload umgeschrieben), Dockerfiles 9.0->10.0. Alle Suites gruen: rookhub 1438, Crawler 201, piratechess 285. Nicht deployed." },
+  ]},
   { version: "0.292.9", date: "2026-07-13", changes: [
     { en: "Fix (Changelog→Discord workflow, 0.292.8): the webhook POST was blocked by Discords Cloudflare with 403 (error code 1010) because Pythons default urllib user agent is banned — the post now sends an explicit User-Agent header. No app code change.", de: "Fix (Changelog→Discord-Workflow, 0.292.8): der Webhook-POST wurde von Discords Cloudflare mit 403 (error code 1010) geblockt, weil Pythons urllib-Default-User-Agent gesperrt ist — der Post sendet jetzt einen expliziten User-Agent-Header. Keine App-Code-Änderung." },
   ]},
