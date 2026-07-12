@@ -445,6 +445,7 @@ try
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
         await AdminSeeder.SeedAsync(db, app.Configuration);
+        await RoleSeeder.SeedAsync(db);   // RBAC-Grundgerüst (System-Rollen + IsAdmin→admin-Rolle spiegeln)
     }
 
     // H-5: Global exception handler

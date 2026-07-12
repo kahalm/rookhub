@@ -31,6 +31,9 @@ public class AppDbContext : DbContext
     public DbSet<CatalogRequest> CatalogRequests => Set<CatalogRequest>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
@@ -358,6 +361,33 @@ public class AppDbContext : DbContext
             e.HasOne(ug => ug.Group)
              .WithMany(g => g.Members)
              .HasForeignKey(ug => ug.GroupId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Role>(e =>
+        {
+            e.HasIndex(r => r.Key).IsUnique();
+        });
+
+        modelBuilder.Entity<UserRole>(e =>
+        {
+            e.HasKey(ur => new { ur.UserId, ur.RoleId });
+            e.HasOne(ur => ur.User)
+             .WithMany(u => u.Roles)
+             .HasForeignKey(ur => ur.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ur => ur.Role)
+             .WithMany(r => r.Users)
+             .HasForeignKey(ur => ur.RoleId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RolePermission>(e =>
+        {
+            e.HasKey(rp => new { rp.RoleId, rp.Permission });
+            e.HasOne(rp => rp.Role)
+             .WithMany(r => r.Permissions)
+             .HasForeignKey(rp => rp.RoleId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

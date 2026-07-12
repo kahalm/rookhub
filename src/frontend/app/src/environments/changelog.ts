@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.34';
+export const APP_VERSION = '0.292.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.292.0", date: "2026-07-12", changes: [
+    { en: "RBAC role system, phase 1 (backend foundation, no behavior change): new Role / UserRole / RolePermission tables (migration AddRbacRoles) plus a code-owned Permissions constant set (one key per admin area). A startup seeder ensures the system roles admin (holds all permissions) and member, and mirrors the existing IsAdmin flag into admin-role membership. Nothing reads roles yet - IsAdmin stays the source of truth; this only fills the infrastructure so later phases can enforce per-permission and add Trainer/Moderator roles. +2 backend tests.", de: "RBAC-Rollensystem, Phase 1 (Backend-Grundgerüst, keine Verhaltensänderung): neue Tabellen Role / UserRole / RolePermission (Migration AddRbacRoles) plus ein Code-eigener Permissions-Konstantensatz (ein Schlüssel je Admin-Bereich). Ein Start-Seeder stellt die System-Rollen admin (trägt alle Permissions) und member sicher und spiegelt das bestehende IsAdmin-Flag in die admin-Rollenmitgliedschaft. Noch liest nichts Rollen - IsAdmin bleibt die Quelle der Wahrheit; das befüllt nur die Infrastruktur, damit spätere Phasen pro Permission durchsetzen und Trainer/Moderator-Rollen ergänzen können. +2 Backend-Tests." },
+  ]},
   { version: "0.291.34", date: "2026-07-12", changes: [
     { en: "i18n: filled the two missing Croatian keys (repertoire.dialog.chessableCourseId + its hint) so hr is complete again (en/de/hr all 1867 keys, all 25 language files valid JSON). Found during the periodic translation review.", de: "i18n: die zwei fehlenden kroatischen Keys ergänzt (repertoire.dialog.chessableCourseId + Hinweis), damit hr wieder vollständig ist (en/de/hr je 1867 Keys, alle 25 Sprachdateien JSON-valide). Beim periodischen Übersetzungs-Review gefunden." },
   ]},
