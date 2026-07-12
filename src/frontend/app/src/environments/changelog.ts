@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.291.1';
+export const APP_VERSION = '0.291.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.291.2", date: "2026-07-12", changes: [
+    { en: "The „Chessable“ menu entry (course-bearer settings) is now admin-only — it was previously visible to any logged-in user, but it only makes sense for admins who manage per-user Chessable credentials for course downloads. Changed the default menu visibility level for the „chessable“ key from Registered to Admin (Services/MenuRegistry.cs); admins can still override it via the menu-visibility admin settings.", de: "Der Menüpunkt „Chessable“ (Kurs-Bearer-Einstellungen) ist jetzt nur noch für Admins sichtbar — vorher war er für jeden eingeloggten User sichtbar, ergibt aber nur für Admins Sinn, die pro-User-Chessable-Zugangsdaten für Kurs-Downloads verwalten. Default-Sichtbarkeitsstufe des Menü-Keys „chessable“ von Registered auf Admin geändert (Services/MenuRegistry.cs); Admins können das weiterhin über die Menü-Sichtbarkeits-Einstellungen überschreiben." },
+  ]},
   { version: "0.291.1", date: "2026-07-11", changes: [
     { en: "Fix: the daily puzzle could land on a Chessable info/explanation line (IsInfoOnly) — which is not a quiz and shouldn't appear in the daily/random pools. The general pool query already excluded such lines, but the daily assignment + regenerate paths built their own query without that filter. Both now exclude IsInfoOnly (like Retired). +2 backend tests.", de: "Fix: das Tagespuzzle konnte auf eine Chessable-Info-/Erklärlinie (IsInfoOnly) fallen — die ist keine Quizaufgabe und darf in den Daily-/Random-Töpfen nicht vorkommen. Die allgemeine Pool-Abfrage schloss solche Linien schon aus, aber die Daily-Zuweisung + das Regenerieren bauten ihre eigene Abfrage OHNE diesen Filter. Beide schließen jetzt IsInfoOnly aus (wie Retired). +2 Backend-Tests." },
   ]},

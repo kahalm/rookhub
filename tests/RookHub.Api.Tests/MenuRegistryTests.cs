@@ -42,10 +42,17 @@ public class MenuRegistryTests
     }
 
     [Fact]
-    public void EveryDefault_IsAllOrRegistered()
+    public void EveryDefault_IsAllOrRegisteredOrAdmin()
     {
-        // Aktuell gibt es keine Admin-/Groups-Defaults — Overrides liegen in der DB.
+        // "chessable" ist bewusst Admin-only; alle anderen Overrides liegen in der DB.
         Assert.All(MenuRegistry.Items, i =>
-            Assert.True(i.Default is MenuVisibilityLevel.All or MenuVisibilityLevel.Registered));
+            Assert.True(i.Default is MenuVisibilityLevel.All or MenuVisibilityLevel.Registered or MenuVisibilityLevel.Admin));
+    }
+
+    [Fact]
+    public void Chessable_DefaultsToAdmin()
+    {
+        var item = MenuRegistry.Items.Single(i => i.Key == "chessable");
+        Assert.Equal(MenuVisibilityLevel.Admin, item.Default);
     }
 }
