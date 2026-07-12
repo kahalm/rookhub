@@ -174,6 +174,7 @@ try
     builder.Services.AddScoped<ChessableImportService>();
     builder.Services.AddScoped<ChessableImportQueueService>();
     builder.Services.AddScoped<ChessableBearerBreaker>();
+    builder.Services.AddScoped<ChessableRateLimiter>();
     builder.Services.AddScoped<ChessableCourseRefreshService>();
     builder.Services.AddScoped<EndlessProgressService>();
     builder.Services.AddScoped<BookPuzzleService>();

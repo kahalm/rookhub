@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -64,5 +66,74 @@ public class ChessableImportWatchdogServiceTests : IDisposable
     public async Task IsDrainStalled_False_OnEmptyQueue()
     {
         Assert.False(await ChessableImportWatchdogService.IsDrainStalledAsync(_db));
+    }
+
+    private ChessableImportWatchdogService Watchdog()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(_db);
+        var provider = services.BuildServiceProvider();
+        return new ChessableImportWatchdogService(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<ChessableImportWatchdogService>.Instance);
+    }
+
+    [Fact]
+    public async Task ResumeExpiredRateLimited_FlipsBackToQueued_WhenPauseElapsed()
+    {
+        var stale = new ChessableImport
+        {
+            UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
+            Status = "paused", Phase = "rate-limited", RateLimitedAt = DateTime.UtcNow.AddHours(-25),
+        };
+        _db.ChessableImports.Add(stale);
+        await _db.SaveChangesAsync();
+
+        var count = await Watchdog().ResumeExpiredRateLimitedAsync(_db, CancellationToken.None);
+
+        Assert.Equal(1, count);
+        await _db.Entry(stale).ReloadAsync();
+        Assert.Equal("running", stale.Status);
+        Assert.Equal("queued", stale.Phase);
+        Assert.Null(stale.RateLimitedAt);
+    }
+
+    [Fact]
+    public async Task ResumeExpiredRateLimited_LeavesRecentPauseUntouched()
+    {
+        var recent = new ChessableImport
+        {
+            UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
+            Status = "paused", Phase = "rate-limited", RateLimitedAt = DateTime.UtcNow.AddHours(-1),
+        };
+        _db.ChessableImports.Add(recent);
+        await _db.SaveChangesAsync();
+
+        var count = await Watchdog().ResumeExpiredRateLimitedAsync(_db, CancellationToken.None);
+
+        Assert.Equal(0, count);
+        await _db.Entry(recent).ReloadAsync();
+        Assert.Equal("paused", recent.Status);
+        Assert.Equal("rate-limited", recent.Phase);
+    }
+
+    [Fact]
+    public async Task ResumeExpiredRateLimited_IgnoresOtherPausedPhases()
+    {
+        // Bearer-blocked pausierte Importe werden NICHT vom Rate-Limit-Resume angefasst
+        // (die nimmt nur ein erfolgreicher „Testen"-Klick wieder auf).
+        var bearerBlocked = new ChessableImport
+        {
+            UserId = 1, Bid = "b", CourseName = "C", Target = "repertoire",
+            Status = "paused", Phase = "bearer-blocked", RateLimitedAt = DateTime.UtcNow.AddHours(-25),
+        };
+        _db.ChessableImports.Add(bearerBlocked);
+        await _db.SaveChangesAsync();
+
+        var count = await Watchdog().ResumeExpiredRateLimitedAsync(_db, CancellationToken.None);
+
+        Assert.Equal(0, count);
+        await _db.Entry(bearerBlocked).ReloadAsync();
+        Assert.Equal("bearer-blocked", bearerBlocked.Phase);
     }
 }

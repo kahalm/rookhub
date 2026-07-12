@@ -2329,6 +2329,7 @@
     "phase_fetching": "hole Kurs…",
     "phase_importing": "importiere…",
     "phase_done": "fertig",
+    "phase_rate-limited": "Tageslimit erreicht, erneuter Versuch in 24h…",
     "fetchProgress": "Kapitel {{ch}}/{{total}} · {{lines}} Linien",
     "fetchProgressTotal": "Kapitel {{ch}}/{{total}} · {{lines}}/{{linesTotal}} Linien",
     "adminImportsTitle": "Alle Importe (Admin)",

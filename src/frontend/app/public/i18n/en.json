@@ -2329,6 +2329,7 @@
     "phase_fetching": "fetching course…",
     "phase_importing": "importing…",
     "phase_done": "done",
+    "phase_rate-limited": "daily line quota reached, retrying in 24h…",
     "fetchProgress": "chapter {{ch}}/{{total}} · {{lines}} lines",
     "fetchProgressTotal": "chapter {{ch}}/{{total}} · {{lines}}/{{linesTotal}} lines",
     "adminImportsTitle": "All imports (Admin)",

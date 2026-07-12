@@ -49,6 +49,7 @@ public class ChessableImportService : ICourseReimporter
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly NotificationService _notifications;
     private readonly ChessableBearerBreaker _breaker;
+    private readonly ChessableRateLimiter _rateLimiter;
     private readonly ILogger<ChessableImportService> _logger;
 
     public ChessableImportService(
@@ -60,6 +61,7 @@ public class ChessableImportService : ICourseReimporter
         IBackgroundTaskQueue taskQueue,
         NotificationService notifications,
         ChessableBearerBreaker breaker,
+        ChessableRateLimiter rateLimiter,
         ILogger<ChessableImportService> logger)
     {
         _db = db;
@@ -70,6 +72,7 @@ public class ChessableImportService : ICourseReimporter
         _taskQueue = taskQueue;
         _notifications = notifications;
         _breaker = breaker;
+        _rateLimiter = rateLimiter;
         _logger = logger;
     }
 
@@ -369,6 +372,30 @@ public class ChessableImportService : ICourseReimporter
                         return;
                     }
 
+                    // Tageslimit (Standard 2000 Zeilen/24h, Chessable:DailyLineLimitPerUser): wie der
+                    // Bearer-Breaker AUSGENOMMEN bei voll-gecachten Kursen (kostet Chessable nichts).
+                    // Bei Überschreitung 24h pausieren (Phase "rate-limited") — der
+                    // ChessableImportWatchdogService gibt den Import danach automatisch wieder frei
+                    // und diese Prüfung läuft dann erneut (das Fenster ist bis dahin ohnehin abgelaufen).
+                    if (import.FullyCached != true)
+                    {
+                        var now = DateTime.UtcNow;
+                        _rateLimiter.EnsureFreshWindow(cred, now);
+                        if (_rateLimiter.IsOverLimit(cred))
+                        {
+                            import.Status = "paused";
+                            import.Phase = "rate-limited";
+                            import.Attempts = 0;
+                            import.RateLimitedAt = now;
+                            await _db.SaveChangesAsync(ct);
+                            _logger.LogInformation(
+                                "Chessable-Import {Id} pausiert: Tageslimit ({Limit} Zeilen/24h) für User {UserId} erreicht — Re-Check in 24h",
+                                import.Id, _rateLimiter.DailyLimit, bearerUserId);
+                            return;
+                        }
+                        await _db.SaveChangesAsync(ct); // ggf. frisch zurückgesetztes Fenster persistieren
+                    }
+
                     var decrypted = _encryption.TryDecrypt(cred.EncryptedBearer);
                     if (decrypted is null)
                     {
@@ -435,6 +462,11 @@ public class ChessableImportService : ICourseReimporter
                             import.CourseName = !string.IsNullOrWhiteSpace(prog.CourseName) ? prog.CourseName! : $"Chessable {import.Bid}";
                         import.FetchedPgn = pgn;
                         await _db.SaveChangesAsync(ct); // Checkpoint: ab hier kein erneuter Fetch nötig
+                        if (import.FullyCached != true)
+                        {
+                            var linesFetched = import.LineCount > 0 ? import.LineCount : import.LinesDone;
+                            await _rateLimiter.RecordUsageAsync(bearerUserId, linesFetched, ct);
+                        }
                         break;
                     }
                     if (prog.Status == "failed")

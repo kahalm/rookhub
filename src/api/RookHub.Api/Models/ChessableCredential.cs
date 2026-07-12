@@ -40,4 +40,15 @@ public class ChessableCredential
 
     /// <summary>Die Fehlermeldung, die den Circuit-Breaker ausgelöst hat (für die UI-Anzeige).</summary>
     public string? BlockedReason { get; set; }
+
+    /// <summary>
+    /// Tages-Zeilenlimit (siehe <see cref="Services.ChessableRateLimiter"/>): Beginn des aktuellen
+    /// 24h-Fensters. <c>null</c> oder älter als 24h ⇒ das Fenster wird bei der nächsten Prüfung
+    /// zurückgesetzt (<see cref="RateLimitLinesUsed"/> auf 0, Zeitpunkt auf jetzt).
+    /// </summary>
+    public DateTime? RateLimitWindowStartedAt { get; set; }
+
+    /// <summary>Im aktuellen 24h-Fenster bereits über Chessable abgerufene Zeilen (nur echte
+    /// Netz-Fetches, nicht voll-gecachte Kurse). Wird bei Fensterreset auf 0 zurückgesetzt.</summary>
+    public int RateLimitLinesUsed { get; set; }
 }

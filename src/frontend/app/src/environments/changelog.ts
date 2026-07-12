@@ -2,7 +2,7 @@
 // Wird von BEIDEN Environment-Dateien importiert (environment.ts = dev,
 // environment.prod.ts = prod-Build via fileReplacements). Dadurch zeigt der
 // Footer in JEDEM Build dieselbe Version/Changelog — ein Bump aendert nur hier.
-export const APP_VERSION = '0.292.21';
+export const APP_VERSION = '0.293.0';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 2;
 
@@ -14,6 +14,9 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.293.0", date: "2026-07-12", changes: [
+    { en: "Two Chessable-crawl throttling changes (on request, backend-only): (1) the inter-request delay between line/chapter fetches was raised 10x (200ms → 2000ms default in piratechess) to make the crawl noticeably less aggressive, independent of the existing rotate-on-block IP logic. (2) New per-user daily line quota: each Chessable bearer-user may fetch at most 2000 lines/24h (configurable via Chessable:DailyLineLimitPerUser) — cached/fast-lane courses don't count, only real network fetches do. The check runs whenever a new course import is about to start fetching; if the quota is used up, the import pauses (phase „rate-limited“) and the ChessableImportWatchdogService automatically retries it 24h later (same pattern as the existing bearer circuit-breaker). New ChessableRateLimiter service + ChessableCredential.RateLimitWindowStartedAt/RateLimitLinesUsed + ChessableImport.RateLimitedAt (+migration). +15 backend tests.", de: "Zwei Chessable-Crawl-Drosselungen (auf Zuruf, nur Backend): (1) der Inter-Request-Delay zwischen Zeilen-/Kapitel-Abrufen wurde 10x hochgesetzt (200ms → 2000ms Default in piratechess), damit der Crawl spürbar weniger aggressiv läuft — unabhängig von der bestehenden Rotate-on-Block-IP-Logik. (2) Neues Tages-Zeilenlimit pro User: jeder Chessable-Bearer-User darf höchstens 2000 Zeilen/24h abrufen (konfigurierbar via Chessable:DailyLineLimitPerUser) — gecachte/Fast-Lane-Kurse zählen nicht, nur echte Netz-Fetches. Die Prüfung läuft immer, wenn ein neuer Kurs-Import zu holen beginnt; ist das Limit ausgeschöpft, pausiert der Import (Phase „rate-limited“) und der ChessableImportWatchdogService nimmt ihn automatisch 24h später wieder auf (analog zum bestehenden Bearer-Circuit-Breaker). Neuer ChessableRateLimiter-Service + ChessableCredential.RateLimitWindowStartedAt/RateLimitLinesUsed + ChessableImport.RateLimitedAt (+Migration). +15 Backend-Tests." },
+  ]},
   { version: "0.292.21", date: "2026-07-13", changes: [
     { en: "log-watcher v0.17.0: new Linux system-log heuristic over the Filebeat/journald data stream (host + VMs, opt-in via LINUX_INDICES, e.g. filebeat-*). Per-host deterministic signals: linux_ssh_bruteforce (forced alert like the security signals), linux_oom (kernel OOM killer), linux_disk_errors (I/O/filesystem corruption), linux_unit_failures (systemd), linux_host_silent (host stopped logging — dead Filebeat/VM). Thresholds/fields configurable; also runs in replay mode. +11 tests (119 green). Not enabled in prod until LINUX_INDICES is set in the log-watcher config.", de: "log-watcher v0.17.0: neue Linux-System-Log-Heuristik über den Filebeat-/journald-Datastream (Host + VMs, Opt-in via LINUX_INDICES, z.B. filebeat-*). Deterministische Signale je Host: linux_ssh_bruteforce (erzwungener Alarm wie die Security-Signale), linux_oom (Kernel-OOM-Killer), linux_disk_errors (I/O-/Dateisystem-Korruption), linux_unit_failures (systemd), linux_host_silent (Host verstummt — toter Filebeat/VM). Schwellen/Felder konfigurierbar; läuft auch im Replay-Modus. +11 Tests (119 grün). In Prod erst aktiv, wenn LINUX_INDICES in der log-watcher-Config gesetzt ist." },
   ]},

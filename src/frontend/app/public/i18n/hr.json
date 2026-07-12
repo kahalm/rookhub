@@ -2340,6 +2340,7 @@
     "phase_fetching": "dohvaćam tečaj…",
     "phase_importing": "uvozim…",
     "phase_done": "gotovo",
+    "phase_rate-limited": "dnevna kvota redaka dosegnuta, ponovni pokušaj za 24h…",
     "fetchProgress": "poglavlje {{ch}}/{{total}} · {{lines}} linija",
     "fetchProgressTotal": "poglavlje {{ch}}/{{total}} · {{lines}}/{{linesTotal}} linija",
     "throughputHint": "Dohvaćanje ide otprilike 15–20 linija/min (uključujući VPN pauze). Tečaj s 500 linija traje oko 30 min, 1000 linija oko 1 sat.",

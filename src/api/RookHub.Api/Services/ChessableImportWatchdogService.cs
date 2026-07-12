@@ -29,6 +29,9 @@ public class ChessableImportWatchdogService : BackgroundService
     internal TimeSpan StartupDelay = TimeSpan.FromMinutes(1);
     internal TimeSpan IdleInterval = TimeSpan.FromMinutes(2);
     internal TimeSpan BusyDelay = TimeSpan.FromSeconds(2);
+    /// <summary>Wie lange ein wegen Tageslimit pausierter Import (<c>Phase="rate-limited"</c>) wartet,
+    /// bevor er automatisch wieder freigegeben wird (siehe <see cref="ChessableRateLimiter"/>).</summary>
+    internal TimeSpan RateLimitPause = TimeSpan.FromHours(24);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChessableImportWatchdogService> _logger;
@@ -68,7 +71,14 @@ public class ChessableImportWatchdogService : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (!await IsDrainStalledAsync(db, ct)) return false;
+
+        var resumedCount = await ResumeExpiredRateLimitedAsync(db, ct);
+        if (resumedCount > 0)
+            _logger.LogInformation(
+                "Chessable-Import-Watchdog: {Count} wegen Tageslimit pausierte Importe nach 24h automatisch freigegeben",
+                resumedCount);
+
+        if (!await IsDrainStalledAsync(db, ct)) return resumedCount > 0;
 
         var queued = await db.ChessableImports.CountAsync(
             i => i.Status == "running" && i.Phase == "queued" && i.FullyCached != true, ct);
@@ -78,6 +88,31 @@ public class ChessableImportWatchdogService : BackgroundService
         var svc = scope.ServiceProvider.GetRequiredService<ChessableImportService>();
         await svc.RunNextAsync(ct);   // Download-Lane (fastLane=false default): claimt + verarbeitet einen Job
         return true;
+    }
+
+    /// <summary>Gibt Importe frei, die wegen des Tages-Zeilenlimits (<c>Phase="rate-limited"</c>)
+    /// seit mindestens <see cref="RateLimitPause"/> pausiert sind: zurück auf <c>Status="running"</c>/
+    /// <c>Phase="queued"</c> (nimmt der normale Drain danach wieder auf). Die Rate-Limit-Prüfung in
+    /// <see cref="ChessableImportService.RunAsync"/> läuft beim nächsten Anlauf erneut — das 24h-Fenster
+    /// des Bearer-Users ist bis dahin ohnehin abgelaufen, pausiert also nur erneut, falls der User in
+    /// der Zwischenzeit über einen ANDEREN Import schon wieder das Limit gerissen hat. Liefert die
+    /// Anzahl freigegebener Importe.</summary>
+    internal async Task<int> ResumeExpiredRateLimitedAsync(AppDbContext db, CancellationToken ct)
+    {
+        var threshold = DateTime.UtcNow - RateLimitPause;
+        var expired = await db.ChessableImports
+            .Where(i => i.Status == "paused" && i.Phase == "rate-limited"
+                && i.RateLimitedAt != null && i.RateLimitedAt <= threshold)
+            .ToListAsync(ct);
+        foreach (var import in expired)
+        {
+            import.Status = "running";
+            import.Phase = "queued";
+            import.Attempts = 0;
+            import.RateLimitedAt = null;
+        }
+        if (expired.Count > 0) await db.SaveChangesAsync(ct);
+        return expired.Count;
     }
 
     /// <summary>Der Drain steht: mindestens ein Import wartet (Phase "queued") und KEINER ist gerade

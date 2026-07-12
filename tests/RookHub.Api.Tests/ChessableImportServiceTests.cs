@@ -41,12 +41,17 @@ public class ChessableImportServiceTests : IDisposable
         _svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")));
     }
 
-    private ChessableImportService BuildSvc(HttpMessageHandler handler)
+    private ChessableImportService BuildSvc(HttpMessageHandler handler, int? dailyLineLimit = null)
     {
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://piratechess-api:8080") });
         var breaker = new ChessableBearerBreaker(_db, _queue, NullLogger<ChessableBearerBreaker>.Instance);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Chessable:DailyLineLimitPerUser"] = dailyLineLimit?.ToString(),
+        }).Build();
+        var rateLimiter = new ChessableRateLimiter(_db, config);
         return new ChessableImportService(_db, _encryption, proxy, _repertoires, new PgnImportService(_db),
-            _queue, new NotificationService(_db), breaker, NullLogger<ChessableImportService>.Instance);
+            _queue, new NotificationService(_db), breaker, rateLimiter, NullLogger<ChessableImportService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -479,6 +484,108 @@ public class ChessableImportServiceTests : IDisposable
             BlockedReason = blocked ? "Chessable: User is banned or deleted" : null,
         });
         await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitExhausted_PausesWithoutCallingProxy()
+    {
+        // Tageslimit auf 5 gesetzt und schon voll ausgeschöpft → der Import darf Chessable NICHT anfragen.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null); // braucht Fetch → Bearer-Pfad
+        var svc = BuildSvc(new ScriptedHandler(_ => throw new InvalidOperationException("Proxy unerwartet aufgerufen")), dailyLineLimit: 5);
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("paused", reloaded!.Status);
+        Assert.Equal("rate-limited", reloaded.Phase);
+        Assert.NotNull(reloaded.RateLimitedAt);
+        Assert.Equal(0, await _db.Repertoires.CountAsync());
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitWindowExpired_ResetsAndProceeds()
+    {
+        // Fenster ist älter als 24h → wird zurückgesetzt, obwohl es "voll" war; der Import läuft durch.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow.AddHours(-25);
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 3,
+                chapterCount = 1, lineCount = 3, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }), dailyLineLimit: 5);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("completed", reloaded!.Status);
+        Assert.Equal(1, await _db.Repertoires.CountAsync(r => r.UserId == 7));
+        var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(3, reloadedCred.RateLimitLinesUsed); // Fenster reset (0) + 3 frisch gefetchte Zeilen
+    }
+
+    [Fact]
+    public async Task RunAsync_SuccessfulFetch_RecordsLinesAgainstRateLimit()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 7,
+                chapterCount = 1, lineCount = 7, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(7, cred.RateLimitLinesUsed);
+        Assert.NotNull(cred.RateLimitWindowStartedAt);
+    }
+
+    [Fact]
+    public async Task RunAsync_DailyLineLimitExhausted_ButFullyCached_ProceedsFromCache()
+    {
+        // Voll-gecachte Kurse kosten Chessable nichts → das Tageslimit blockt sie NICHT.
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        await _db.SaveChangesAsync();
+
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null);
+        imp.FullyCached = true;
+        await _db.SaveChangesAsync();
+
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            return JsonOk(new { status = "completed", chaptersDone = 1, chaptersTotal = 1, linesDone = 1,
+                chapterCount = 1, lineCount = 1, courseName = "Course X", pgn = "1. e4 e5 *", error = (string?)null });
+        }), dailyLineLimit: 5);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(imp.Id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal("completed", reloaded!.Status);
+        Assert.NotEqual("rate-limited", reloaded.Phase);
+        // Voll-gecachte Fetches werden nicht gegen das Limit verbucht.
+        var reloadedCred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        Assert.Equal(5, reloadedCred.RateLimitLinesUsed);
     }
 
     [Fact]

@@ -37,6 +37,12 @@ public class ChessableImport
     /// Anlegen via <c>IsCourseCachedAsync</c> gesetzt; Altbestand klassifiziert die Fast-Lane lazy nach.</summary>
     public bool? FullyCached { get; set; }
 
+    /// <summary>Gesetzt, wenn dieser Import wegen Überschreitung des Tages-Zeilenlimits
+    /// (<see cref="Services.ChessableRateLimiter"/>, <c>Phase="rate-limited"</c>) pausiert wurde —
+    /// der <see cref="Services.ChessableImportWatchdogService"/> nimmt ihn 24h danach automatisch
+    /// wieder auf (unabhängig vom Fenster des Bearer-Users, das ggf. schon vorher zurückgesetzt ist).</summary>
+    public DateTime? RateLimitedAt { get; set; }
+
     /// <summary>
     /// Das von piratechess geholte Kurs-PGN (Checkpoint): einmal geholt, wird es hier persistiert,
     /// damit ein Resume nach einem Neustart NICHT erneut über die VPN bei Chessable abrufen muss.
